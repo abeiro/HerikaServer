@@ -1,0 +1,134 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <h4 class="my-2">Dear Player, the development team wants to share these notes with you to try and improve the experience.</h4>
+
+            <ol class="list-group list-group-numbered">
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">The AI's are not deterministic</div>
+                        Meaning the same input does not always produce the same result. Therefore, despite numerous tests, sometimes it
+                        simply doesn't work as it should.
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">Herika is not a character from Skyrim</div>
+                        She is an AI interpreting a character from Skyrim. Sometimes, she may misinterpret and break certain rules. If that
+                        happens, just remind her not to do it.
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">
+                            The <u>GPT-4</u> model is more expensive and slower than <u>GPT-3.5</u>, but significantly better
+                        </div>
+                        It adheres better to the rules of roleplay and makes more logical decisions. The functionality of commands/actions
+                        with this model is much better. Our base model remains <strong>GPT-3.5</strong>, but sometimes it doesn't work well. 
+                        Over time, GPT-4 will become the reference model through "natural" evolution, so we know we are on the right track.
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">Error Phrases</div>
+                        Herika has certain phrases that are for when there is an error with the AI generation. It is a good idea to check the Log page for more information.
+                        <ul>
+                            <li>"Didn't hear you, can you repeat?" = There is an error connecting to OpenAI/Local LLM</li>
+                            <li>"Be quiet, I'm having a flashback, give me a minute" = To many request being sent to OpenAI/Local LLM</li>
+                            <li>"I can't think clearly now..." = You broke OpenAI's useage policy</li>
+                          </ul>
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">Adjust the prompts</div>
+                        Create the files prompts_custom.php and command_prompt_custom.php. Look at the variables defined in the original
+                        prompts.php and command_prompt.php, and redefine them in their respective custom files. Example:
+
+                        <pre><code class="language-php">// We have this in prompts.php
+"goodmorning"=&gt;[
+    "(Complete the text replacing the hashtag #CHAT#)(Generate chat completion for $HERIKA_NAME commenting about {$GLOBALS["PLAYER_NAME"]}'s nap )  $HERIKA_NAME: #CHAT#",
+    "(waking up after sleep). ahhhh  "
+],
+</code>
+                        </pre>
+
+                        So we can write in prompts_custom.php this new definition:
+
+                        <pre><code class="language-php">$PROMPTS["goodmorning"]=
+[
+    "(Complete the text replacing the hashtag #CHAT#)(Generate chat completion for $HERIKA_NAME laughing at {$GLOBALS["PLAYER_NAME"]}'s hair )  $HERIKA_NAME: #CHAT#",
+    "(waking up after sleep). ahhhh  "
+];</code></pre>
+
+                        You can disable some events by just adding this named key "extra". Take a look in prompts.php to see
+                        other interesting properties.
+
+                        <pre><code class="language-php">$PROMPTS["goodmorning"]=
+[
+    "(Complete the text replacing the hashtag #CHAT#)(Generate chat completion for $HERIKA_NAME laughing at {$GLOBALS["PLAYER_NAME"]}'s hair )  $HERIKA_NAME: #CHAT#",
+    "(waking up after sleep). ahhhh  ",
+    "extra"=&gt;["dontuse"=&gt;true]
+];</code></pre>
+
+                        command_prompt_custom.php follow the same rules, but be cautious as that file contains important rule prompts.<br/>
+                        <br/>
+                        This way we can release updates with new prompts definitions for new events, and your customized prompts will
+                        always overwrite vanilla ones. GPT-3.5 and GPT-4 work different with the same prompts, so customizing is the way
+                        to go to fit your best experience.
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">Disabling functions</div>
+                        Just create the file functions_custom.php (top level dir, same directory level as conf.php), and just redeclare
+                        there enabled functions array.Example:
+
+                        <pre><code class="language-php">$ENABLED_FUNCTIONS=[
+    'Inspect',
+    'LookAt',
+    'InspectSurroundings',
+    //'MoveTo',             // Will not be available
+    'OpenInventory',
+    'Attack',
+    'Follow',
+    'CheckInventory',
+    'SheatheWeapon',
+    'Relax',
+    //'LeadTheWayTo',       // Will not be available
+    //'TakeASeat',          // Will not be available
+    'ReadQuestJournal',
+    'SetSpeed',
+    'GetDateTime',
+    'SearchDiary',
+    'SetCurrentTask'
+];
+</code></pre>
+                    </div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <h4 class="my-3">
+        You can find us at Discord.
+        <a class="icon-link" href="https://discord.com/invite/NDn9qud2ug">
+            https://discord.com/invite/NDn9qud2ug <i class='bi-discord'></i>
+        </a>
+    </h4>
+
+    <h4 class="my-3">Have fun! And remember, it's Herika, not Haruka.</h4>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", (event) => {
+        document.querySelectorAll("pre code").forEach((el) => {
+            hljs.highlightElement(el);
+        });
+    });
+</script>

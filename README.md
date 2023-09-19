@@ -6,7 +6,9 @@ Part of the mod for Skyrim: Herika - The ChatGPT Companion. This component serve
 
 It also serves as the character's memory, employing various techniques to mitigate the lack of long-term memory in current LLMs (Language Model Models)
 
-To run this you will only need a valid Apache/PHP8.2 working install.
+To run this you will only need a working Apache/PHP8.2 installation.
+
+Full mod page:
 
 https://www.nexusmods.com/skyrimspecialedition/mods/89931
 

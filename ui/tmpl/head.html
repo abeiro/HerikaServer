@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+
+<html lang="en" data-bs-theme="dark">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <!-- bootstrap -->
+        <link href="./lib/ui/bootstrap/bootstrap.min.css" rel="stylesheet" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+        <script src="./lib/ui/bootstrap/bootstrap.bundle.min.js"></script>
+
+        <title>#TITLE#</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.7.0/styles/default.min.css" />
+        <!-- always have a css file to override things -->
+        <link rel="stylesheet" href="css/style_new.css" /> 
+
+        <script src="https://unpkg.com/@highlightjs/cdn-assets@11.7.0/highlight.min.js"></script>
+        <script src="https://unpkg.com/@highlightjs/cdn-assets@11.7.0/languages/javascript.min.js"></script>
+
+        <script>
+            function togglePre(element) {
+                if (element.parentElement.lastChild.className == "") element.parentElement.lastChild.className = "foldable";
+                else element.parentElement.lastChild.className = "";
+            }
+
+            function toggleDP() {
+                document.querySelector(".debugpane").classList.toggle("d-none");
+            }
+            
+            function checkRetVal(json) {
+                if (json.status==0) {
+                    alert("URL seems ok. Connection info:"+json.info)
+                } else  if (json.status==1) {
+                    alert("URL seems ok, but cannot connect. Connection info:"+json.info)
+                } else  if (json.status==2) {
+                    alert("URL seems wrong and malformed: "+json.info)
+                }
+                document.body.style.cursor=""
+                document.body.style.opacity=1
+                console.log(json);
+                return true;
+            }
+            function checkUrlFromServer(formFieldName) {
+                document.body.style.cursor="wait";
+                document.body.style.opacity=0.5;
+                ele=document.querySelector("input[name='"+formFieldName+"']");
+                console.log(ele.value);
+                fetch('tools/check_url.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({"url": ele.value})
+                })
+                .then(response => response.json())
+                .then(json => checkRetVal(json))
+
+            }
+        </script>
+    </head>
+    <body>

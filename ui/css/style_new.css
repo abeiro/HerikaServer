@@ -1,0 +1,98 @@
+@charset "utf-8";
+
+
+body > div.container-fluid > div.datatable > table > tbody > tr > td > pre {
+	font-size:11px;
+}
+
+
+pre.foldable {
+  display:none
+}
+
+
+p.conf-item {
+	display: inline-block;
+	font-size:12px;
+	min-width:45%;
+}
+
+p.conf-item label{
+	display:block;
+	font-family: monospace;
+}
+
+p.conf-item textarea{
+	display:block;
+	min-width:640px;
+	min-height:240px;
+}
+
+p.conf-item input {
+	display:block;
+	min-width:240px;
+}
+
+p.conf-item input.url {
+	display:inline-block;
+	min-width:400px;
+}
+
+p.conf-item input.apikey {
+	min-width:400px;
+}
+
+p.conf-item button.url {
+	display:inline-block;
+	min-width:50px;
+	clear:both;
+}
+
+p.conf-item input[type=checkbox] {
+	display:inline-block;
+	min-width:50px;
+}
+
+p.conf-item input[type=radio] {
+	display:inline-block;
+	min-width:50px;
+}
+
+p.conf-item input[type=radio]  + label {
+	display:inline-block;
+	font-family: unset;
+}
+
+p.conf-item span {
+	display:block;
+	font-style: italic;
+	max-width: 400px;
+	padding:3px;
+}
+
+
+
+
+form.confwizard > fieldset  {
+	border: 1px solid black;
+    border-radius: 5px;
+    margin: 5px;
+    padding: 5px;
+    background-color: rgb(32,32,32);
+}
+
+form.confwizard > fieldset > fieldset {
+    border: 1px outset black;
+    margin:5px;
+	padding:5px;
+	
+}
+
+
+form.confwizard > fieldset > legend {
+	color:lightblue;
+}
+
+form.confwizard > fieldset > fieldset > legend {
+	color:goldenrod;
+}

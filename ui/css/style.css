@@ -1,0 +1,291 @@
+@charset "utf-8";
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fasthand&family=Germania+One&family=Spline+Sans+Mono:wght@300&display=swap');
+/*					
+	Author		CrystalCommerce.com // Ross Dallaire
+    https://gist.githubusercontent.com/rdallaire/3902324/raw/6c9afaea533d48bee489b903854cdc6493db82de/CC%2520Starter%2520CSS	
+	Colors
+*/
+
+
+
+
+/* RESET */
+html, body, div, span, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, code,
+del, dfn, em, img, q, dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-weight: inherit;
+  font-style: inherit;
+  font-size: 100%;
+  font-family: inherit;
+}
+
+em {
+	font-style: italic;
+}
+
+strong {
+	font-weight: bold;
+}
+
+html,
+body {
+	margin:0;
+	padding:0;
+	height:100%;
+}
+/* /END RESET */
+body {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 12px;
+}
+
+p {
+	line-height: 150%;
+	margin: 0 0 10px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	color: #2E4A74;
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+h1 {
+	font-size: 20px;
+	margin: 0 0 15px;
+	font-weight: normal;
+}
+
+h2 {
+	font-size: 18px;
+	margin: 0 0 12px;
+	font-weight: normal;
+}
+
+h3 {
+	font-size: 15px;
+	margin: 0 0 12px;
+	font-weight: normal;
+}
+
+
+h4, h5, h6 {
+	margin: 5px 0 5px;
+	font-weight: bold;
+}
+
+h1 a,
+h2 a,
+h3 a,
+h4 a,
+h5 a,
+h6 a {}
+
+a img {
+	border: none;
+	outline: none;
+}
+
+a {
+	color: #363636;
+	outline: none;
+	text-decoration: none;
+}
+
+a:hover {
+	color: #999;
+}
+
+/* remove dotted lines on some links in FF browser */
+
+a,
+a:active,
+a:visited,
+a img {
+	outline: none;
+}
+
+/* / */
+	
+/* CLEARFIX */
+.clearfix:after {
+	content: ".";
+	display: block;
+	clear: both;
+	visibility: hidden;
+	line-height: 0;
+	height: 0;
+}
+ 
+.clearfix {
+	display: inline-block;
+}
+ 
+html[xmlns] .clearfix {
+	display: block;
+}
+ 
+* html .clearfix {
+	height: 1%;
+}
+
+a.buttonify,span.buttonify {
+    display:inline-block;
+    border:1px solid grey;
+    cursor:pointer;
+    background-color:lightgrey;
+    min-width:64px;
+    padding:2px;
+    border-radius:1px 1px 1px;
+    text-align:Center;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
+}
+  
+div.menupane {
+    min-height: 38px;
+  
+}
+
+div.debugpane {
+    padding:5px;
+    background-color:grey;
+    display:none;
+    
+}
+
+table {
+    font-size:small;
+    border:1px solid grey;
+    background-color:grey;
+}
+
+td {
+    font-size:small;
+    background-color:white;
+    padding:1px;
+  
+}
+
+div.datatable {
+	max-height: 700px;
+    overflow: scroll;
+	font-family: "Spline Sans Mono";
+	font-weight:bold;
+	border:1px solid lightgray;
+}
+
+h1 {
+    font-family: 'Germania One';
+    font-size: 32px;
+}
+
+body > div:nth-child(3) > p {
+	
+	font-family: 'Germania One';
+    font-size: 22px;
+	margin-top:10px;
+	
+}
+
+h1 {
+  font-family: 'Germania One';
+  font-size:26px;
+}
+pre.foldable {
+  display:none
+}
+
+/* menu */
+
+#menu ul {
+ list-style:none;
+ margin:0;
+ padding:0;
+}
+
+#menu{
+	z-index:100
+
+}
+/* items del menu */
+
+#menu ul li {
+ background-color:#2e518b;
+}
+
+/* enlaces del menu */
+
+#menu ul a {
+ display:block;
+ color:#fff;
+ text-decoration:none;
+ font-weight:400;
+ font-size:22px;
+ padding:10px;
+ font-family: 'Germania One';
+ letter-spacing:1px;
+}
+
+/* items del menu */
+
+#menu ul li {
+ position:relative;
+ float:left;
+ margin:0;
+ padding:0;
+}
+
+/* efecto al pasar el ratón por los items del menu */
+
+#menu ul li:hover {
+ background:#5b78a7;
+}
+
+#menu ul ul {
+ display:none;
+ position:absolute;
+ top:100%;
+ left:0;
+ background:#eee;
+ padding:0;
+}
+
+#menu ul ul li {
+ float:none;
+ width:150px
+}
+
+#menu ul ul a {
+ line-height:120%;
+ padding:10px 15px;
+}
+
+#menu ul li:hover > ul {
+ display:block;
+ z-index:101;
+}
+
+.confeditor {
+	
+	
+	
+}
+
+.confeditor textarea{
+	font-family: monospace;
+    font-size: 11px;
+}
+
+div.datatable pre {
+	line-height: 10px;
+}
+
+
+

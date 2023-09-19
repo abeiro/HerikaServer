@@ -1,0 +1,121 @@
+{
+  "DRIVER": {"type":"select","values":["sql"],"description":"Primary database handler. Only sqlite atm."},
+  "PLAYER_NAME": {"type":"string","description":"Player Name"},
+  "HERIKA_NAME": {"type":"string","description":"Follower Name"},
+  "PROMPT_HEAD": {"type":"longstring","description":"System prompt."},
+  "HERIKA_PERS": {"type":"longstring","description":"Follower personality.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
+  "CONTEXT_HISTORY": {"type":"integer","description":"How much context history (chats, events) will be pushed to LLM. More context => more tokens use, and slower processing speed in local LLMs."},
+  "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for LLM/AI http requests. "},
+  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga"],"description":"Connectors to use. Connectors are use to actually talk with the AI provider. You should configure selected connectors below.","_title":"Selected AI/LLM Connectors"},
+  "CONNECTOR": {
+    "_title":"LLM/AI Connectors",
+    "openai": {
+      "_title":"OpenAI's API",
+      "url": {"type":"url","description":"OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "presence_penalty": {"type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"}
+    },
+    "koboldcpp": {
+      "_title":"KoboldCPP API",
+      "url": {"type":"url","description":"KoboldCPP API endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature"},
+      "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
+      "top_p": {"type":"number","description":"LLM parameter top_p"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"}
+    },
+    "openrouter": {
+      "_title":"Openrouter.ai API",
+      "url": {"type":"url","description":"Openrouter API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://openrouter.ai/docs#models"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"},
+      "xreferer": {"type":"string","description":"Stub needed header. Keep default."},
+      "xtitle": {"type":"string","description":"Stub needed header. Keep default."}
+            
+    },
+     "oobabooga": {
+      "_title":"Oobabooga text-generation-webui API",
+      "HOST": {"type":"string","description":"Oobabooga API WS HOST"},
+      "PORT": {"type":"integer","description":"Oobabooga API WS PORT"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"},
+      "temperature": {"type":"number","description":"LLM parameter temperature"},
+      "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
+    }
+  },
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp"],"description":"Service to use to perform text to speech. Follower voice.","_title":"Current Text To Speech Provider"},
+  "TTS": {
+    "_title":"Text to Speech (Follower voice) :: Providers Configuration",
+    "AZURE": {
+      "_title":"Azure Text-To-Speech",
+      "fixedMood": {"type":"string","description":"Force mood (voice style)"},
+      "region": {"type":"string","description":"Region provided by azure"},
+      "voice": {"type":"string","description":"Voice","helpurl":"https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support?tabs=tts"},
+      "volume": {"type":"integer","description":"Volume"},
+      "rate": {"type":"number","description":"Talk speed"},
+      "countour": {"type":"string","description":"Voice contour"},
+      "validMoods": {"type":"selectmultiple","values":["angry","chat","cheerful","customerservice","empathetic","excited","friendly","hopeful","narration-professional","newscast-casual","newscast-formal","sad","shouting","terrified","unfriendly","whispering","default"],"description":"Allowed voice styles"},
+      "API_KEY": {"type":"apikey","description":"Azure TTS API KEY","code":"AZURE_API_KEY"}
+    },
+    "MIMIC3": {
+      "_title":"MIMIC3 Local server install",
+      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, should be printed on console"},
+      "voice": {"type":"string","description":"Voice code"},
+      "rate": {"type":"number","description":"Talk speed"},
+      "volume": {"type":"integer","description":"Volume"}
+    },
+    "ELEVEN_LABS": {
+      "_title":"ElevenLabs API",
+      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://api.elevenlabs.io/v1/voices"},
+      "optimize_streaming_latency": {"type":"string","description":"Optimize Streaming Latency","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
+      "model_id": {"type":"string","description":"Model ID","helpurl":"https://beta.elevenlabs.io/speech-synthesis"},
+      "stability":{"type":"number","description":"Stability"},
+      "similarity_boost": {"type":"number","description":"similarity_boost"},
+      "API_KEY": {"type":"apikey","description":"Eleven labs API KEY","code":"11LABS_API_KEY"}
+    },
+    "GCP": {
+      "_title":"Google Cloud Platform",
+      "GCP_SA_FILEPATH": {"type":"string","description":"Google Cloud Platform auth file"},
+      "CONF": {"type":"string","description":"JSON array in string format"}
+    }
+  },
+  "STTFUNCTION": {"type":"select","values":["whisper","localwhisper","azure"],"description":"Service to use to perform voice recognition", "_title":"Current Voice Recognition Provider"},
+  "STT": {
+   "_title":"Voice Recognition :: Providers Configuration",
+    "LOCALWHISPER": {
+       "_title":"Local whisper installation",
+      "URL": {"type":"url","description":"Local whisper endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"}
+    },
+    "AZURE": {
+      "_title":"Azure Advanced Voice Recognition",
+      "LANG": {"type":"string","description":"Language to use in STT"},
+      "API_KEY": {"type":"apikey","description":"Azure API key. Probably the same as Azure TTS API KEY","code":"AZURE_API_KEY"}
+    },
+    "WHISPER": {
+       "_title":"OpenAI's Whisper speech transcription",
+      "LANG": {"type":"string","description":"Language to use in STT"},
+      "API_KEY": {"type":"apikey","description":"OpenAI API key.Probably the same as OpenAI's API","code":"OPENAI_API_KEY"}
+    }
+  },
+  "FEATURES": {
+    "_title":"Misc features",
+    "MEMORY_EMBEDDING": {
+      "_title":"Memory Embedding",
+      "ENABLED": {"type":"boolean","description":"Enable memory embedding features.Use ChromaDB and a text embedding provider (currently only if using openai) to automatically store memories, and offer then automatically using user prompt"},
+      "CHROMADB_URL": {"type":"url","description":"ChromaDB endpoint. If using DwemerDistro, it should be printed on console."},
+      "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to consider a previous chat as a memory. Used to avoid pushing too recent dialogues as memories. (that should be covered by context history)."},
+      "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many memory records will be injected in prompt."}
+    },
+    "COST_MONITOR": {
+      "_title":"Tokenizer counter & Cost monitoring",
+      "ENABLED":{"type":"boolean","description":"Enable cost/token counter monitoring. Currently only supports OpenAI."}
+    }
+  }
+  
+}

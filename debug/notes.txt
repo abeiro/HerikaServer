@@ -1,0 +1,19 @@
+
+# Debug commands. Should adjust timestamps to your database.
+
+# Inputtext, functions/actions enabled
+php streamv2.php "inputtext|594939787246001|788840576|Draven: Look at me"
+
+# Lockpick event
+php comm.php "lockpicked|594939787246001|788840576|secret door"
+
+# Wake up event
+php comm.php "goodmorning|594939787246001|788840576|Draven wakes up"
+
+# Write diary entry
+php main.php 		"diary|594939787246001|788840576|Please, write in your diary a summary"
+php streamv2.php 	"diary|594939787246001|788840576|Please, write in your diary a summary"
+php stream.php 		"diary|594939787246001|788840576|Please, write in your diary a summary"
+
+# Togggl model
+ php comm.php "togglemodel|594939787246001|788840576|"
