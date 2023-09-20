@@ -9,13 +9,29 @@ require_once($localpath . "$DRIVER.class.php");
 require_once($localpath . "Misc.php");
 
 
+function getEmbedding($text) {
+	
+	if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"]=="local") {
+		
+		return getEmbeddingLocal($text);
+		
+		
+	} else if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"]=="remote") {
+		
+		return getEmbeddingRemote($text);
+
+		
+	}
+}
+
+
 function getEmbeddingLocal($text)
 {
 
-	$url = 'http://172.16.1.128:8080/predictions/my_model/';
+	$url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TEXT2VEC_URL"];
 
 	$data = [
-		"input" => "$text"
+		"inputs" => ["$text"]
 
 	];
 

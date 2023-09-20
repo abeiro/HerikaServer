@@ -63,6 +63,7 @@ class connector
 
         }
 
+        
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
         $headers = array(

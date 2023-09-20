@@ -78,17 +78,17 @@ class connector
 
          if (isset($GLOBALS["FORCE_MAX_TOKENS"]))
              if ($GLOBALS["FORCE_MAX_TOKENS"]==null) {
-                unset($data["max_tokens"]);
+                unset($postData["max_length"]);
             } elseif ($customParms["MAX_TOKENS"]) {
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
+                $postData["max_length"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
                 
             }
         
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==null) {
-                unset($data["max_tokens"]);
+                unset($postData["max_length"]);
             } elseif ($customParms["MAX_TOKENS"]) {
-                $data["max_tokens"]=$customParms["MAX_TOKENS"];
+                $postData["max_length"]=$customParms["MAX_TOKENS"]+0;
             }
         }
             

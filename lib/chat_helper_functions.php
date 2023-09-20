@@ -257,16 +257,16 @@ function logMemory($speaker,$listener,$message,$momentum,$gamets) {
                 'momentum'=>$momentum
 		)
 	);
-    if (isset($GLOBALS["MEMORY_EMBEDDING"]) && $GLOBALS["MEMORY_EMBEDDING"]) {
+    if (isset($GLOBALS["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["MEMORY_EMBEDDING"]["ENABLED"]) {
 		$insertedSeq=$db->fetchAll("SELECT SEQ from sqlite_sequence WHERE name='memory'");
-		$embeddings=getEmbeddingRemote($message);
+		$embeddings=getEmbedding($message);
 		storeMemory($embeddings,$message,$insertedSeq[0]["seq"]);	
 	}
     
 }
 
 function offerMemory($gameRequest,$DIALOGUE_TARGET) {
-   if (isset($GLOBALS["MEMORY_EMBEDDING"]) && $GLOBALS["MEMORY_EMBEDDING"]) {
+   if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
 	if (($gameRequest[0] == "inputtext") || ($gameRequest[0] == "inputtext_s")) {
 		$memory=array();
 		
@@ -275,13 +275,13 @@ function offerMemory($gameRequest,$DIALOGUE_TARGET) {
 		$textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
 		$textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:","",$textToEmbedFinal);
 
-		$embeddings=getEmbeddingRemote($textToEmbedFinal);
+		$embeddings=getEmbedding($textToEmbedFinal);
 		$memories=queryMemory($embeddings);
 		if ($memories["content"]) {
 			$GLOBALS["DEBUG_DATA"]["memories"]=$textToEmbedFinal;
 			return $GLOBALS["MEMORY_OFFERING"].json_encode($memories["content"]);
 		}
-	} else if (($gameRequest[0] == "funcret") ) {
+	} else if (($gameRequest[0] == "funcret") ) {	//$gameRequest[3] will not contain last user chat, we must query database 
 		$memory=array();
 		$lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
 
@@ -290,7 +290,7 @@ function offerMemory($gameRequest,$DIALOGUE_TARGET) {
 		$textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
 		$textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:","",$textToEmbedFinal);
 
-		$embeddings=getEmbeddingRemote($textToEmbedFinal);
+		$embeddings=getEmbedding($textToEmbedFinal);
 		$memories=queryMemory($embeddings);
 		if ($memories["content"]) {
 			$GLOBALS["DEBUG_DATA"]["memories"]=$textToEmbedFinal;

@@ -109,6 +109,8 @@
       "_title":"Memory Embedding",
       "ENABLED": {"type":"boolean","description":"Enable memory embedding features.Use ChromaDB and a text embedding provider (currently only if using openai) to automatically store memories, and offer then automatically using user prompt"},
       "CHROMADB_URL": {"type":"url","description":"ChromaDB endpoint. If using DwemerDistro, it should be printed on console."},
+      "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
+      "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs OpenAI APIKEY. Local is the one provide by DwemerDistro"},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to consider a previous chat as a memory. Used to avoid pushing too recent dialogues as memories. (that should be covered by context history)."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many memory records will be injected in prompt."}
     },

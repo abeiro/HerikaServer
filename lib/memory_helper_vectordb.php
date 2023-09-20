@@ -174,13 +174,25 @@ function deleteCollection()
 
 }
 
+
+function countMemories()
+{
+
+	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION_NAME, $VECTORDB_URL_COLLECTION;
+
+	$VECTORDB_URL_COLLECTION = getCollectionUID();
+
+	$response = file_get_contents($VECTORDB_URL . "/api/v1/collections/$VECTORDB_URL_COLLECTION/count", false);
+	
+	return json_decode($response,true);
+
+}
+
+
 function storeMemory($embeddings, $text, $id)
 {
 
 	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION;
-
-	if ($GLOBALS["MODEL"] != "openai")
-		return null;
 
 	$VECTORDB_URL_COLLECTION = getCollectionUID();
 
@@ -232,10 +244,8 @@ function storeMemory($embeddings, $text, $id)
 
 function queryMemory($embeddings)
 {
-	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION, $VECTORDB_TIME_DELAY;
+	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION, $VECTORDB_TIME_DELAY,$db;
 
-	if ($GLOBALS["MODEL"] != "openai")
-		return null;
 
 	$VECTORDB_URL_COLLECTION = getCollectionUID();
 
@@ -276,14 +286,10 @@ function queryMemory($embeddings)
 	// Decode the JSON response
 	$responseData = json_decode($response, true);
 
-	// Handle the response data as needed
-	//var_dump($responseData);
-	$link = new SQLite3(__DIR__ . "/../mysqlitedb.db");
-
 	$dbResults = [];
 	
 	foreach ($responseData["ids"][0] as $n => $id) {
-		$results = $link->query("select message as content,uid,localts,momentum from memory where uid=$id order by uid asc");
+		$results = $db->query("select message as content,uid,localts,momentum from memory where uid=$id order by uid asc");
 		while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
 
 			if ($row["localts"] > (time() - 60 * $VECTORDB_TIME_DELAY)) // Ten minutes to get things as memories
