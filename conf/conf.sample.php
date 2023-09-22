@@ -64,8 +64,6 @@ $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_URL"]="http://127.0.0.1:7860";
 $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"]="local";
 
 
-$FEATURES["COST_MONITOR_ENABLED"]=false;
-
 $CONNECTORS=["koboldcpp","openai"];  
 
 $CONNECTOR["openai"]["url"]="https://api.openai.com/v1/chat/completions";
@@ -98,6 +96,7 @@ $CONNECTOR["oobabooga"]["max_tokens"]=100;
 $CONNECTOR["oobabooga"]["temperature"]=0.7;
 $CONNECTOR["oobabooga"]["rep_pen"]=1.18;
 
-
+$FEATURES["COST_MONITOR"]["ENABLED"]=true;	//Enable cost/token counter monitoring. Currently only supports OpenAI.
+$FEATURES["COST_MONITOR"]["URL"]="http://127.0.0.1:8090";	//We can use 127.0.0.1 because server is on same machine by default.
 			
 ?>

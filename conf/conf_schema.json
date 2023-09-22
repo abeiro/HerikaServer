@@ -117,7 +117,8 @@
     },
     "COST_MONITOR": {
       "_title":"Tokenizer counter & Cost monitoring",
-      "ENABLED":{"type":"boolean","description":"Enable cost/token counter monitoring. Currently only supports OpenAI."}
+      "ENABLED":{"type":"boolean","description":"Enable cost/token counter monitoring. Currently only supports OpenAI."},
+      "URL":{"type":"url","description":"URL of API. Should be printed in DwemerDistro console."}
     }
   }
   
