@@ -95,6 +95,7 @@
     "AZURE": {
       "_title":"Azure Advanced Voice Recognition",
       "LANG": {"type":"string","description":"Language to use in STT"},
+      "profanity": {"type":"select","values":["masked","removed","raw"],"description":"Specifies how to handle profanity in recognition results. Accepted values are:masked, which replaces profanity with asterisks.removed, which removes all profanity from the result.raw, which includes profanity in the result.","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short"},
       "API_KEY": {"type":"apikey","description":"Azure API key. Probably the same as Azure TTS API KEY","code":"AZURE_API_KEY"}
     },
     "WHISPER": {

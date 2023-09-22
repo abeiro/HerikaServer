@@ -22,7 +22,7 @@ $pattern = '/\([^)]+\)/';
 $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
 $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:","",$textToEmbedFinal);
 
-$embeddings=getEmbeddingLocal($textToEmbedFinal);
+$embeddings=getEmbedding($textToEmbedFinal);
 
 print_r($embeddings);
 

@@ -28,7 +28,7 @@ function getEmbedding($text) {
 function getEmbeddingLocal($text)
 {
 
-	$url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TEXT2VEC_URL"];
+	$url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TEXT2VEC_URL"]."/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2";
 
 	$data = [
 		"inputs" => ["$text"]

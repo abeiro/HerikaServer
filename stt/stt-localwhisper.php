@@ -1,12 +1,13 @@
 <?php
-$path = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($path . "conf.php"); // API KEY must be there
+
+$localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 
 
 function stt($file)
 {
 
-    $url = $GLOBALS["LOCALWHISPER"]["URL"];
+    $url = $GLOBALS["STT"]["LOCALWHISPER"]["URL"];
     ;
     $filePath = $file;
     $boundary = '----WebKitFormBoundary' . md5(mt_rand() . microtime());

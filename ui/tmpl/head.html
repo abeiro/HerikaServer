@@ -32,9 +32,9 @@
             
             function checkRetVal(json) {
                 if (json.status==0) {
-                    alert("URL seems ok. Connection info:"+json.info)
+                    alert("URL seems ok. Connection info: (This test only tests connection, so you can get 404 Headers. It's normal)\r\n "+json.info)
                 } else  if (json.status==1) {
-                    alert("URL seems ok, but cannot connect. Connection info:"+json.info)
+                    alert("URL seems ok, but cannot connect. Connection test:"+json.info)
                 } else  if (json.status==2) {
                     alert("URL seems wrong and malformed: "+json.info)
                 }

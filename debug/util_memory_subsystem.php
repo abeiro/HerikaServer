@@ -17,7 +17,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
 
 
-if (!$argv[1]) {
+if (!isset($argv[1])) {
 	die(
 "Use ".basename(__FILE__)." command parm
 
@@ -67,6 +67,10 @@ commands:
 	} else if ($argv[1]=="count") {
 		echo countMemories().PHP_EOL;
 		
+	} else {
+		echo "Command not found: {$argv[1]}".PHP_EOL;
+		echo "Use ".basename(__FILE__)." without args to see help".PHP_EOL;
+
 	}
 	
 }

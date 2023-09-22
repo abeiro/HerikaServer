@@ -308,7 +308,6 @@ if ($connectionHandler->primary_handler === false) {
         $totalProcessedData.=trim($buffer);
     }
 
-    //tokenizeResponse($numOutputTokens);
 
     $actions=$connectionHandler->processActions();
     if (sizeof($actions)>0) {

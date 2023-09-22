@@ -26,11 +26,12 @@ if ($regexpVal==0) {
     $buffer=ob_get_clean();
     ini_set('display_errors', 0);
 
-    if(!$file_headers || $file_headers[0] == 'HTTP/1.1 404 Not Found') {
+    if(!$file_headers ) {
         $exists = 1;
         $file_headers[0]=strip_tags($buffer);
     } else {
         $exists = 0;
+        $file_headers[0]=strip_tags(print_r($file_headers,true));
     }
 }
 

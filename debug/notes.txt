@@ -1,8 +1,12 @@
 
-# Debug commands. Should adjust timestamps to your database.
+# Some Debug/Test scripts. Should adjust timestamps to your database.
+# Run in run directory
 
 # Inputtext, functions/actions enabled
 php streamv2.php "inputtext|594939787246001|788840576|Draven: Look at me"
+
+# Inputtext, functions/actions disabled
+php stream.php "inputtext|594939787246001|788840576|Draven: Look at me"
 
 # Lockpick event
 php comm.php "lockpicked|594939787246001|788840576|secret door"
@@ -16,4 +20,13 @@ php streamv2.php 	"diary|594939787246001|788840576|Please, write in your diary a
 php stream.php 		"diary|594939787246001|788840576|Please, write in your diary a summary"
 
 # Togggl model
- php comm.php "togglemodel|594939787246001|788840576|"
+php comm.php "togglemodel|594939787246001|788840576|"
+
+ 
+ 
+# Test text2vec service
+php debug/simple_text2vec_request.php "Let's try and make some progress before nightfall."
+
+# Test memory subsystem 
+php debug/util_memory_subsystem.php 
+

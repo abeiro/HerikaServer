@@ -1,5 +1,8 @@
 <?php
 
+$enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_functions.php");
+
 
 class connector
 {
@@ -9,6 +12,8 @@ class connector
     private $_functionName;
     private $_parameterBuff;
     private $_commandBuffer;
+    private $_numOutputTokens;
+    private $_dataSent;
 
 
     public function __construct()
@@ -83,8 +88,9 @@ class connector
         $context = stream_context_create($options);
         $this->primary_handler = fopen($url, 'r', false, $context);
 
-        //tokenizePrompt(json_encode($data));
-
+        $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
+        
+        
         return true;
 
 
@@ -95,6 +101,8 @@ class connector
     {
         global $alreadysent;
 
+        static $numOutputTokens=0;
+        
         $line = fgets($this->primary_handler);
         $buffer="";
         $totalBuffer="";
@@ -105,7 +113,7 @@ class connector
         if (isset($data["choices"][0]["delta"]["content"])) {
             if (strlen(trim($data["choices"][0]["delta"]["content"]))>0) {
                 $buffer.=$data["choices"][0]["delta"]["content"];
-                //$numOutputTokens += 1;
+                $this->_numOutputTokens += 1;
 
             }
             $totalBuffer.=$data["choices"][0]["delta"]["content"];
@@ -142,13 +150,22 @@ class connector
 
         }
 
+       
+        
         return $buffer;
     }
 
     // Method to close the data processing operation
     public function close()
     {
+        
         fclose($this->primary_handler);
+        if ($GLOBALS["FEATURES"]["COST_MONITOR"]["ENABLED"]) {
+            // Call rest of tokenizer functions now, relevant data was sent
+
+            TkTokenizePrompt($this->_dataSent,$GLOBALS["CONNECTOR"][$this->name]["model"]);
+            TkTokenizeResponse($this->_numOutputTokens,$GLOBALS["CONNECTOR"][$this->name]["model"]);
+        }
     }
 
     // Method to close the data processing operation
