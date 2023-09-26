@@ -6,6 +6,8 @@
 
 	$useFunctionsAgain = false;
 	
+	$forceAttackingText = false;
+	
 	if (isset($returnFunction[2])) {
 		if ($functionCodeName == "GetTopicInfo") {
 			$argName = "topic";

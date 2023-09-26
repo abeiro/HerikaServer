@@ -8,10 +8,10 @@
 // Full Prompt then is $PROMPT_HEAD + $HERIKA_PERS + $COMMAND_PROMPT + CONTEXT + requirement + cue
 
 // Common patterns to use in most functions
-$TEMPLATE_DIALOG="roleplay as $HERIKA_NAME completing $HERIKA_NAME's dialogue using this format '$HERIKA_NAME: (optional mood from this list [" . implode(",", (@is_array($GLOBALS["AZURETTS_CONF"]["validMoods"])?$GLOBALS["AZURETTS_CONF"]["validMoods"]:array())) . "]) ...'";
+$TEMPLATE_DIALOG="roleplay only as $HERIKA_NAME by completing $HERIKA_NAME's dialogue using this format '$HERIKA_NAME: (optional mood from this list [" . implode(",", (@is_array($GLOBALS["AZURETTS_CONF"]["validMoods"])?$GLOBALS["AZURETTS_CONF"]["validMoods"]:array())) . "]) ...'";
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-    $TEMPLATE_ACTION="specify action for $HERIKA_NAME or";
+    $TEMPLATE_ACTION="call a function to control $HERIKA_NAME or";
 } else {
     $TEMPLATE_ACTION="";
 }

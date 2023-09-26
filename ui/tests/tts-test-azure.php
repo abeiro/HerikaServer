@@ -1,14 +1,15 @@
 <?php
 
-$path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-require_once($path . "conf.php");
-require_once($path . "lib/Misc.php");
-require_once($path . "tts/tts-azure.php");
+$localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($localPath . "lib".DIRECTORY_SEPARATOR."Misc.php");
+require_once($localPath . "tts".DIRECTORY_SEPARATOR."tts-azure.php");
+
 
 error_reporting(E_ALL);
 
 // Delete TTS(STT cache
-$directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache".DIRECTORY_SEPARATOR; 
+$directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache".DIRECTORY_SEPARATOR; 
 
 $handle = opendir($directory);
 if ($handle) {
@@ -24,24 +25,19 @@ if ($handle) {
 		
 
 $testString="In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
-
-if (isset($GLOBALS["CORE_LANG"])) {
-	require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."command_prompt.php");
-	$testString=$GLOBALS["ERROR_OPENAI_REQLIMIT"];
-}
-
+$mood="";
 $file=tts($testString,$mood,$testString);
 
 if ($file) {
 	echo "<h3>$testString</h3>
 	<audio controls>
-	<source src='../$file' type='audio/wav'>
+	<source src='../../$file' type='audio/wav'>
 	Your browser does not support the audio element.
 	</audio>
 	";
 } else {
 	echo "Error<br/>";
-	echo file_get_contents(".." . DIRECTORY_SEPARATOR . "soundcache" . DIRECTORY_SEPARATOR.md5(trim($testString)) . ".err");
+	echo file_get_contents(__DIR__.DIRECTORY_SEPARATOR.".." . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR . "soundcache" . DIRECTORY_SEPARATOR.md5(trim($testString)) . ".err");
 
 }
 

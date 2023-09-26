@@ -2,8 +2,8 @@
 
 
 // Example of server plugin.
-$GLOBALS["F_NAMES"]["Heal"]="Heal";
-$GLOBALS["F_TRANSLATIONS"]["Heal"]="Heals target using magic spell";
+$GLOBALS["F_NAMES"]["ExtCmdHeal"]="Heal";
+$GLOBALS["F_TRANSLATIONS"]["ExtCmdHeal"]="Heals target using magic spell";
 
 // $FUNCTION_PARM_INSPECT will contain an enum of visible NPC
 // Later reference: https://github.com/NightQuest/SKSE/blob/master/Data/Scripts/Source/ModEvent.psc
@@ -11,8 +11,8 @@ $GLOBALS["F_TRANSLATIONS"]["Heal"]="Heals target using magic spell";
 
 $GLOBALS["FUNCTIONS"][] =
     [
-        "name" => $GLOBALS["F_NAMES"]["Heal"],
-        "description" => $GLOBALS["F_TRANSLATIONS"]["Heal"],
+        "name" => $GLOBALS["F_NAMES"]["ExtCmdHeal"],
+        "description" => $GLOBALS["F_TRANSLATIONS"]["ExtCmdHeal"],
         "parameters" => [
             "type" => "object",
             "properties" => [
@@ -29,4 +29,4 @@ $GLOBALS["FUNCTIONS"][] =
 ;
 
 
-$GLOBALS["ENABLED_FUNCTIONS"][]="Heal";
+$GLOBALS["ENABLED_FUNCTIONS"][]="ExtCmdHeal";

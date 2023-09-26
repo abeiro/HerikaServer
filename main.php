@@ -2,7 +2,7 @@
 
 
 /* Definitions and main includes */
-error_reporting(E_ALL);
+error_reporting(E_ERROR);
 
 define("MAXIMUM_SENTENCE_SIZE", 125);
 define("MINIMUM_SENTENCE_SIZE", 25);
@@ -57,6 +57,8 @@ if (php_sapi_name()=="cli") {
     // You can run this script directly with php: main.php "Player text"
     $receivedData = "inputtext|108826400925500|770416256|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
     $receivedData = "{$argv[1]}";
+    error_reporting(E_ALL);
+
 
 } else {
     $receivedData = base64_decode(stripslashes($_GET["DATA"]));

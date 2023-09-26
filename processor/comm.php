@@ -88,6 +88,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         );
 
     }
+    $MUST_END=true;
 
 
 
@@ -113,6 +114,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
             'localts' => time()
         )
     );
+    $MUST_END=true;
 
 } elseif ($gameRequest[0] == "book") {
     $db->insert(
@@ -158,6 +160,10 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 		)
 	);
     
+    $MUST_END=true;
+
+} else if ($gameRequest[0] == "death") {
+	
     $MUST_END=true;
 
 } 

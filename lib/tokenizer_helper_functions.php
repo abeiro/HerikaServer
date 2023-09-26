@@ -22,7 +22,7 @@ function TkGetCostPerThousandInputTokens($CURRENT_MODEL)
     } elseif ($CURRENT_MODEL == 'gpt-4-32k-0613') {
         $costPerThousandTokens = 0.06;
     } else {
-        error_log("Cannot tokenize - unrecognized model {$CURRENT_MODEL}");
+        trigger_error("Cannot tokenize - unrecognized model {$CURRENT_MODEL}",E_USER_WARNING);
         $costPerThousandTokens = 0; // model unknown
     }
 
@@ -49,7 +49,7 @@ function TkGetCostPerThousandOutputTokens($CURRENT_MODEL)
     } elseif ($CURRENT_MODEL == 'gpt-4-32k-0613') {
         $costPerThousandTokens = 0.12;
     } else {
-        error_log("Cannot tokenize - unrecognized model {$CURRENT_MODEL}");
+        trigger_error("Cannot tokenize - unrecognized model {$CURRENT_MODEL}",E_USER_WARNING);
         $costPerThousandTokens = 0; // model unknown
     }
 
@@ -92,7 +92,7 @@ function TkTokenizePrompt($jsonEncodedData, $CURRENT_MODEL)
             );
         }
     } else {
-        error_log("error: tokenizer buf false");
+        trigger_error("error: tokenizer buf false",E_USER_WARNING);
     }
 
 

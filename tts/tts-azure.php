@@ -1,21 +1,20 @@
 <?php
-$path = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($path . "conf.php"); // API KEY must be there
-require_once($path . "lib/sharedmem.class.php"); // Caching token
+$localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
+require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // Caching token
 
 function tts($textString, $mood = "default", $stringforhash)
 {
-    global $AZURETTS_CONF;
 
-    $region = $AZURETTS_CONF["region"];
+    $region = $GLOBALS["TTS"]["AZURE"]["region"];
     $AccessTokenUri = "https://" . $region . ".api.cognitive.microsoft.com/sts/v1.0/issueToken";
-    $apiKey = $GLOBALS["AZURE_API_KEY"];
+    $apiKey = $GLOBALS["TTS"]["AZURE"]["API_KEY"];
 
     if (empty(trim($mood)))
         $mood = "default";
 
-    if ($GLOBALS["AZURETTS_CONF"]["validMoods"])
-        $valid_tokens = $GLOBALS["AZURETTS_CONF"]["validMoods"];
+    if ($GLOBALS["TTS"]["AZURE"]["validMoods"])
+        $valid_tokens = $GLOBALS["TTS"]["AZURE"]["validMoods"];
     else
         $valid_tokens = array('angry', 'cheerful', 'assistant', 'calm', 'embarrassed', 'excited', 'lyrical', 'sad', 'shouting', 'whispering', 'terrified');
 
@@ -85,23 +84,23 @@ function tts($textString, $mood = "default", $stringforhash)
         $voice = $doc->createElement("voice");
         //$voice->setAttribute( "xml:lang" , "en-us" );
         $voice->setAttribute("xml:gender", "Female");
-        $voice->setAttribute("name", $AZURETTS_CONF["voice"]); // Read https://learn.microsoft.com/es-es/azure/cognitive-services/speech-service/language-support?tabs=tts
+        $voice->setAttribute("name", $GLOBALS["TTS"]["AZURE"]["voice"]); // Read https://learn.microsoft.com/es-es/azure/cognitive-services/speech-service/language-support?tabs=tts
 
         $text = $doc->createTextNode($textString);
 
 
         $prosody = $doc->createElement("prosody");
-        $prosody->setAttribute("rate", $AZURETTS_CONF["rate"]); //https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup-voice#adjust-prosody
-        $prosody->setAttribute("volume", $AZURETTS_CONF["volume"]);
-        if ($AZURETTS_CONF["countour"])
-            $prosody->setAttribute("contour", $AZURETTS_CONF["countour"]);
+        $prosody->setAttribute("rate", $GLOBALS["TTS"]["AZURE"]["rate"]); //https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup-voice#adjust-prosody
+        $prosody->setAttribute("volume", $GLOBALS["TTS"]["AZURE"]["volume"]);
+        if ($GLOBALS["TTS"]["AZURE"]["countour"])
+            $prosody->setAttribute("contour", $GLOBALS["TTS"]["AZURE"]["countour"]);
 
 
 
         $prosody->appendChild($text);
 
         $style = $doc->createElement("mstts:express-as");
-        if ($AZURETTS_CONF["fixedMood"])
+        if ($GLOBALS["TTS"]["AZURE"]["fixedMood"])
             $style->setAttribute("style", $AZURETTS_CONF["fixedMood"]); // not supported for all voices
         else
             $style->setAttribute("style", $validMood); // not supported for all voices

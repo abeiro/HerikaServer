@@ -1,12 +1,18 @@
 
 # Some Debug/Test scripts. Should adjust timestamps to your database.
-# Run in run directory
+# Run in root directory
+
 
 # Inputtext, functions/actions enabled
 php streamv2.php "inputtext|594939787246001|788840576|Draven: Look at me"
 
 # Inputtext, functions/actions disabled
 php stream.php "inputtext|594939787246001|788840576|Draven: Look at me"
+
+# Function return value test (needs openai)
+
+php streamv2.php "funcret|594939787246001|788840576|command@LookAt@Draven@Herika looks at Draven, he is  wearing a strange hat"
+
 
 # Lockpick event
 php comm.php "lockpicked|594939787246001|788840576|secret door"
@@ -16,14 +22,13 @@ php comm.php "goodmorning|594939787246001|788840576|Draven wakes up"
 
 # Write diary entry
 php main.php 		"diary|594939787246001|788840576|Please, write in your diary a summary"
-php streamv2.php 	"diary|594939787246001|788840576|Please, write in your diary a summary"
+php streamv2.php 	"diary|594939787246001|788840576|Please, write in your diary a summary" # Functions enabled if openai active
 php stream.php 		"diary|594939787246001|788840576|Please, write in your diary a summary"
 
-# Togggl model
+# Toggle model
 php comm.php "togglemodel|594939787246001|788840576|"
 
- 
- 
+  
 # Test text2vec service
 php debug/simple_text2vec_request.php "Let's try and make some progress before nightfall."
 

@@ -1,27 +1,28 @@
 <?php
-$path = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($path . "conf.php"); // API KEY must be there
+
+$localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); 
 
 function ttsMimic($textString, $mood = "cheerful", $stringforhash='')
 {
 
     $start = microtime(true);
 
-    $ttsServiceUri = $GLOBALS["MIMIC3"] . "/api/tts";
+    $ttsServiceUri = $GLOBALS["TTS"]["MIMIC3"]["URL"] . "/api/tts";
 
     $doc = new DOMDocument();
 
     $root = $doc->createElement("speak");
 
     $voice = $doc->createElement("voice");
-    $voice->setAttribute("name", $GLOBALS["MIMIC3_CONF"]["voice"]);
+    $voice->setAttribute("name", $GLOBALS["TTS"]["MIMIC3"]["voice"]);
 
     $text = $doc->createTextNode($textString);
 
 
     $prosody = $doc->createElement("prosody");
-    $prosody->setAttribute("rate", $GLOBALS["MIMIC3_CONF"]["rate"]);
-    $prosody->setAttribute("volume", $GLOBALS["MIMIC3_CONF"]["volume"]);
+    $prosody->setAttribute("rate", $GLOBALS["TTS"]["MIMIC3"]["rate"]);
+    $prosody->setAttribute("volume", $GLOBALS["TTS"]["MIMIC3"]["volume"]);
 
     $sentence = $doc->createElement("s");
     $sentence->appendChild($text);
