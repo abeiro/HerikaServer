@@ -28,9 +28,9 @@ echo "Trying to instantiate...";
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."$DRIVER.class.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."Misc.php");
+
 
 echo "ok<br/>";
 
@@ -81,9 +81,10 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
      }
      
-     echo "$buffer";
      print_r($GLOBALS["DEBUG_DATA"]);  
 }
+
+echo "</pre>LLM Response:<strong>$buffer</strong>";
 
 
 ?>

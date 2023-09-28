@@ -364,6 +364,7 @@ function logMemory($speaker, $listener, $message, $momentum, $gamets)
 
 function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
+    global $db;
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
         if (($gameRequest[0] == "inputtext") || ($gameRequest[0] == "inputtext_s")) {
             $memory=array();
@@ -375,7 +376,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
 
             $embeddings=getEmbedding($textToEmbedFinal);
             $memories=queryMemory($embeddings);
-            if ($memories["content"]) {
+            if (isset($memories["content"])) {
                 $GLOBALS["DEBUG_DATA"]["memories"]=$textToEmbedFinal;
                 return $GLOBALS["MEMORY_OFFERING"].json_encode($memories["content"]);
             }
