@@ -102,32 +102,6 @@ class connector
 
         }
 
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            // $data["functions"]=$GLOBALS["FUNCTIONS"]; Translate this to a  GBNF grammar
-            $postData["max_length"]=10;
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "#"answer "\n"
-answer ::= openInventoryFunction"." | lookAtFunction"." | attackFunction"." | travelFunction"." | walkFunction"."
-# Show Inventory to Draven
-openInventoryFunction ::= "OpenInventory@"
-# Look at something
-lookAtFunction ::= "LookAt@" target 
-# Attack Something
-attackFunction ::= "Attack@" target
-# Start travel to some city
-travelFunction ::= "TravelTo@" place
-# Start moving to some place
-walkFunction ::= "MoveTo@" place
-place ::= [a-zA-Z]+
-target ::= "Draven"|"Herika"|"Chicken"
-';
-
-            if (isset($GLOBALS["FUNCTIONS_FORCE_CALL"])) {  // Restrict to one functions
-                $data["function_call"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
-            }
-
-        }
 
         $headers = array(
             'Content-Type: application/json'
