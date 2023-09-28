@@ -27,7 +27,7 @@ include("tmpl/head.html");
 $debugPaneLink = false;
 include("tmpl/navbar.php");
 
-echo "<pre>$result</pre";;
+echo "<pre>$result</pre>";;
 
 echo '
 <form action="import_db.php" method="POST" enctype="multipart/form-data">

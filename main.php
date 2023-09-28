@@ -2,7 +2,7 @@
 
 
 /* Definitions and main includes */
-error_reporting(E_ERROR);
+error_reporting(E_ALL);
 
 define("MAXIMUM_SENTENCE_SIZE", 125);
 define("MINIMUM_SENTENCE_SIZE", 25);
@@ -12,9 +12,9 @@ date_default_timezone_set('Europe/Madrid');
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."$DRIVER.class.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."Misc.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
 
@@ -125,7 +125,7 @@ if ($gameRequest[0] != "diary") {
             'ts' => $gameRequest[1],
             'gamets' => $gameRequest[2],
             'type' => $gameRequest[0],
-            'data' => SQLite3::escapeString($gameRequest[3]),
+            'data' => ($gameRequest[3]),
             'sess' => 'pending',
             'localts' => time()
         )
@@ -135,12 +135,12 @@ if ($gameRequest[0] != "diary") {
 
 $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 // Historic context (last dialogues, events,...)
-$contextDataHistoric = $db->lastDataNewFor("", $lastNDataForContext * -1);
+$contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1);
 // Info about location and npcs in first position
-$contextDataWorld = $db->lastInfoFor("", -2);
+$contextDataWorld = DataLastInfoFor("", -2);
 
 // Add current motto to COMMAND_PROMPT
-$GLOBALS["COMMAND_PROMPT"].=$db->get_current_task();
+$GLOBALS["COMMAND_PROMPT"].=DataGetCurrentTask();
 
 // Offer memory in COMMAND_PROMPT
 $GLOBALS["COMMAND_PROMPT"].=offerMemory($gameRequest, $DIALOGUE_TARGET);
@@ -229,9 +229,9 @@ if ($connectionHandler->primary_handler === false) {
         'log',
         array(
             'localts' => time(),
-            'prompt' => nl2br(SQLite3::escapeString(json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
-            'response' => (SQLite3::escapeString(print_r(error_get_last(), true))),
-            'url' => nl2br(SQLite3::escapeString("$receivedData in " . (time() - $startTime) . " secs "))
+            'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
+            'response' => ((print_r(error_get_last(), true))),
+            'url' => nl2br(("$receivedData in " . (time() - $startTime) . " secs "))
 
 
         )
@@ -330,9 +330,9 @@ if (sizeof($talkedSoFar) == 0) {
             'log',
             array(
                 'localts' => time(),
-                'prompt' => nl2br(SQLite3::escapeString(json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
-                'response' => SQLite3::escapeString(print_r($alreadysent, true)),
-                'url' => nl2br(SQLite3::escapeString("$receivedData in " . (time() - $startTime) . " secs "))
+                'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
+                'response' => (print_r($alreadysent, true)),
+                'url' => nl2br(("$receivedData in " . (time() - $startTime) . " secs "))
 
 
             )
@@ -347,9 +347,9 @@ if (sizeof($talkedSoFar) == 0) {
             'log',
             array(
                 'localts' => time(),
-                'prompt' => nl2br(SQLite3::escapeString(json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
-                'response' => SQLite3::escapeString(print_r($alreadysent, true)),
-                'url' => nl2br(SQLite3::escapeString("$receivedData in " . (time() - $startTime) . " secs "))
+                'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
+                'response' => (print_r($alreadysent, true)),
+                'url' => nl2br(("$receivedData in " . (time() - $startTime) . " secs "))
 
 
             )
@@ -363,24 +363,24 @@ if (sizeof($talkedSoFar) == 0) {
             'log',
             array(
                 'localts' => time(),
-                'prompt' => nl2br(SQLite3::escapeString(json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
-                'response' => SQLite3::escapeString(print_r($alreadysent, true)),
-                'url' => nl2br(SQLite3::escapeString("$receivedData in " . (time() - $startTime) . " secs "))
+                'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
+                'response' => (print_r($alreadysent, true)),
+                'url' => nl2br(("$receivedData in " . (time() - $startTime) . " secs "))
             )
         );
     }
 
     if (!$ERROR_TRIGGERED) {
         if ($gameRequest[0] == "diary") {
-            $topic=$db->lastKnowDate();
-            $location=$db->lastKnownLocation();
+            $topic=DataLastKnowDate();
+            $location=DataLastKnownLocation();
             $db->insert(
                 'diarylog',
                 array(
                     'ts' => $gameRequest[1],
                     'gamets' => $gameRequest[2],
                     'topic' => "$topic",
-                    'content' => SQLite3::escapeString(implode(" ", $talkedSoFar)),
+                    'content' => (implode(" ", $talkedSoFar)),
                     'tags' => "Pending",
                     'people' => "Pending",
                     'location' => "$location",
@@ -392,8 +392,8 @@ if (sizeof($talkedSoFar) == 0) {
             $db->insert(
 			'diarylogv2',
 			array(
-				'topic' => SQLite3::escapeString($topic),
-				'content' => SQLite3::escapeString(implode(" ", $talkedSoFar)),
+				'topic' => ($topic),
+				'content' => (implode(" ", $talkedSoFar)),
 				'tags' => "Pending",
                 'people' => "Pending",
                 'location' => "$location"

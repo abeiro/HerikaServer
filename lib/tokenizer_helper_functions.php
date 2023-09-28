@@ -56,6 +56,33 @@ function TkGetCostPerThousandOutputTokens($CURRENT_MODEL)
     return $costPerThousandTokens;
 }
 
+
+function TkInsertAndCalcTotals($table, $data)
+    {
+        global $db;
+        
+        // Fetch the last row
+        $latestRowQuery = "SELECT * FROM $table ORDER BY ROWID DESC LIMIT 1";
+        $latestRowResult = $db->fetchAll($latestRowQuery);
+
+        if (!empty($latestRowResult)) {
+            // If the table is not empty
+            $latestRow = $latestRowResult[0];
+
+            // Calculate totals
+            $data['total_tokens_so_far'] = $latestRow['total_tokens_so_far'] + $data['input_tokens'] + $data['output_tokens'];
+            $data['total_cost_so_far_USD'] = $latestRow['total_cost_so_far_USD'] + $data['cost_USD'];
+        } else {
+            // If the table is empty
+            $data['total_tokens_so_far'] = $data['input_tokens'] + $data['output_tokens'];
+            $data['total_cost_so_far_USD'] = $data['cost_USD'];
+        }
+
+        // Insert new row
+       $db->execQuery("INSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')");
+    }
+
+    
 function TkTokenizePrompt($jsonEncodedData, $CURRENT_MODEL)
 {
 
@@ -79,7 +106,7 @@ function TkTokenizePrompt($jsonEncodedData, $CURRENT_MODEL)
         if (ctype_digit($tokenizer_buffer)) { // make sure the response from tokenizer is a number (num of tokens)
             $numTokens = intval($tokenizer_buffer);
             $cost = $numTokens * $costPerThousandTokens * 0.001;
-            $db->insert_and_calc_totals(
+            TkInsertAndCalcTotals(
                 'openai_token_count',
                 array(
                     'input_tokens' => $tokenizer_buffer,
@@ -100,12 +127,12 @@ function TkTokenizePrompt($jsonEncodedData, $CURRENT_MODEL)
 
 function TkTokenizeResponse($numOutputTokens, $CURRENT_MODEL)
 {
-    global $db;
+    
 
     if (isset($CURRENT_MODEL)) {
         $costPerThousandTokens = TkGetCostPerThousandOutputTokens($CURRENT_MODEL);
         $cost = $numOutputTokens * $costPerThousandTokens * 0.001;
-        $db->insert_and_calc_totals(
+        TkInsertAndCalcTotals(
             'openai_token_count',
             array(
                 'input_tokens' => '0',

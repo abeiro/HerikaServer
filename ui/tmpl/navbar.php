@@ -105,13 +105,6 @@
                 </ul>
             </li>
 
-            <?php
-            if (isset($debugPaneLink) && $debugPaneLink) {
-            ?>
-                <li class="nav-item mx-2"><a class="nav-link" href="#" onclick="toggleDP()">Debug Pane</a></li>
-            <?php
-            }
-            ?>
         </ul>
     </div>
 </nav>

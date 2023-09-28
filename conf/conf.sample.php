@@ -1,6 +1,6 @@
 <?php
 
-$DRIVER="sql";
+$DBDRIVER="sqlite3";
 
 $PLAYER_NAME="Prisoner";
 $HERIKA_NAME="Herika";

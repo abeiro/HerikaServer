@@ -71,7 +71,96 @@ function findDotPosition($string)
     return false;
 }
 
+function br2nl($string)
+{
+    return preg_replace('/[\r\n]+/', '', preg_replace('/\<br(\s*)?\/?\>/i', "", $string));
+}
 
+function split_sentences($paragraph)
+{
+    $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
+    // Split the paragraph into an array of sentences using a regular expression
+    preg_match_all('/[^\n?.!]+[?.!]/', $paragraphNcr, $matches);
+    //print_r($matches);
+    $sentences = $matches[0];
+    // Check if the last sentence is truncated (i.e., doesn't end with a period)
+    /*$last_sentence = end($sentences);
+    if (!preg_match('/[.?|]$/', $last_sentence)) {
+        // Remove the last sentence if it's truncated
+        array_pop($sentences);
+    }*/
+
+    if (is_array($sentences)) {
+        return $sentences;
+    } else {
+        return array($sentences);
+    }
+}
+
+function checkOAIComplains($responseTextUnmooded)
+{
+
+    $scoring = 0;
+    if (stripos($responseTextUnmooded, "can't") !== false) {
+        $scoring++;
+    }
+    if (stripos($responseTextUnmooded, "apologi") !== false) {
+        $scoring++;
+    }
+    if (stripos($responseTextUnmooded, "sorry") !== false) {
+        $scoring++;
+    }
+    if (stripos($responseTextUnmooded, "not able") !== false) {
+        $scoring++;
+    }
+    if (stripos($responseTextUnmooded, "won't be able") !== false) {
+        $scoring++;
+    }
+    if (stripos($responseTextUnmooded, "that direction") !== false) {
+        $scoring += 2;
+    }
+    if (stripos($responseTextUnmooded, "AI language model") !== false) {
+        $scoring += 4;
+    }
+    if (stripos($responseTextUnmooded, "openai") !== false) {
+        $scoring += 3;
+    }
+    if (stripos($responseTextUnmooded, "generate") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "request") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "policy") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "to provide") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "context") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "unable") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "assist") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "inappropriate") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "explicit") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "roleplay") !== false) {
+        $scoring += 1;
+    }
+    if (stripos($responseTextUnmooded, "please provide an alternative scenario") !== false) {
+        $scoring += 3;
+    }
+
+    return $scoring;
+}
 
 
 function split_sentences_stream($paragraph)

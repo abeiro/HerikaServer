@@ -9,10 +9,10 @@ if (!file_exists($configFilepath."conf.php")) {
 }
 
 
+require_once($rootEnginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."misc_ui_functions.php");
 
-require_once($rootEnginePath."lib/sql.class.php");
-require_once($rootEnginePath."lib/Misc.php");
-require_once($configFilepath."conf.php");
 ob_start();
 include("tmpl/head.html");
 $db = new sql();

@@ -1,5 +1,5 @@
 {
-  "DRIVER": {"type":"select","values":["sql"],"description":"Primary database handler. Only sqlite atm."},
+  "DBDRIVER": {"type":"select","values":["sqlite3"],"description":"Primary database handler. Only sqlite3 atm."},
   "PLAYER_NAME": {"type":"string","description":"Player Name"},
   "HERIKA_NAME": {"type":"string","description":"Follower Name"},
   "PROMPT_HEAD": {"type":"longstring","description":"System prompt."},

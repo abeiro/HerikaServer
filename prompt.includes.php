@@ -7,13 +7,13 @@ $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s rol
  * Info gathering to mangle function definitions. This will enforce some parameters to be fixed-
  */
 
-$FUNCTION_PARM_MOVETO=$db->posibleLocationsToGo();		// To avoid moving to non existant target, lets limit available targets to the real ones in function definition
+$FUNCTION_PARM_MOVETO=DataPosibleLocationsToGo();		// To avoid moving to non existant target, lets limit available targets to the real ones in function definition
 if (!isset($FUNCTION_PARM_MOVETO))
 	$FUNCTION_PARM_MOVETO=[];
 $FUNCTION_PARM_MOVETO[]=$GLOBALS["PLAYER_NAME"];
 
 
-$FUNCTION_PARM_INSPECT=$db->posibleInspectTargets();	// To avoid moving to non existant target, lets limit available targets to the real ones in function definition
+$FUNCTION_PARM_INSPECT=DataPosibleInspectTargets();	// To avoid moving to non existant target, lets limit available targets to the real ones in function definition
 if (!isset($FUNCTION_PARM_INSPECT))
 	$FUNCTION_PARM_INSPECT=[];
 $FUNCTION_PARM_INSPECT[]=$GLOBALS["PLAYER_NAME"];
