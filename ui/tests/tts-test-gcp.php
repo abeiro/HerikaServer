@@ -24,7 +24,15 @@ if ($handle) {
 		
 $testString="In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
 $mood="";
-$file=tts($testString,$mood,$testString);
+
+try {
+	$file=tts($testString,$mood,$testString);
+} catch (Exception $e) {
+	
+	echo "<pre>".print_r($e,true)."</pre>";
+	die();
+	
+}
 
 if ($file) {
 	echo "<h3>$testString</h3>

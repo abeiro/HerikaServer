@@ -8,67 +8,66 @@
 // Full Prompt then is $PROMPT_HEAD + $HERIKA_PERS + $COMMAND_PROMPT + CONTEXT + requirement + cue
 
 // Common patterns to use in most functions
-$TEMPLATE_DIALOG="roleplay only as $HERIKA_NAME by completing $HERIKA_NAME's dialogue using this format '$HERIKA_NAME: (optional mood from this list [" . implode(",", (@is_array($GLOBALS["AZURETTS_CONF"]["validMoods"])?$GLOBALS["AZURETTS_CONF"]["validMoods"]:array())) . "]) ...'";
+$TEMPLATE_DIALOG="roleplay only as {$GLOBALS["HERIKA_NAME"]} by completing {$GLOBALS["HERIKA_NAME"]}'s dialogue using this format '{$GLOBALS["HERIKA_NAME"]}: (optional mood from this list [" . implode(",", (@is_array($GLOBALS["AZURETTS_CONF"]["validMoods"])?$GLOBALS["AZURETTS_CONF"]["validMoods"]:array())) . "]) ...'";
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-    $TEMPLATE_ACTION="call a function to control $HERIKA_NAME or";
+    $TEMPLATE_ACTION="call a function to control {$GLOBALS["HERIKA_NAME"]} or";
 } else {
     $TEMPLATE_ACTION="";
 }
 
 $PROMPTS=array(
     "location"=>[
-            "cue"=>["(Chat as $HERIKA_NAME)"], // give way to
+            "cue"=>["(Chat as {$GLOBALS["HERIKA_NAME"]})"], // give way to
             "player_request"=>["{$gameRequest[3]} What do you know about this place?"]  //requirement
         ],
     
     "book"=>[
-        "cue"=>["(Note that despite her poor memory, $HERIKA_NAME is capable of remembering entire books)"],
-        "player_request"=>["{$GLOBALS["PLAYER_NAME"]}: $HERIKA_NAME, summarize this book shortly: "]  //requirement
+        "cue"=>["(Note that despite her poor memory, {$GLOBALS["HERIKA_NAME"]} is capable of remembering entire books)"],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["HERIKA_NAME"]}, summarize this book shortly: "]  //requirement
         
     ],
     
     "combatend"=>[
         "cue"=>[
-            "($HERIKA_NAME comments about the last combat encounter) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME admires  {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} comments about the last combat encounter) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} admires  {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
         ],
-        "extra"=>["mood"=>"whispering","force_tokens_max"=>"50","dontuse"=>(time()%5!=0)]   //20% chance
-
+        "extra"=>["force_tokens_max"=>"50","dontuse"=>(time()%5!=0)]   //20% chance
     ],
     
     "quest"=>[
         "cue"=>["$TEMPLATE_DIALOG"],
-        //"player_request"=>"$HERIKA_NAME, what should we do about this quest '{$questName}'?"
-        "player_request"=>"$HERIKA_NAME, what should we do about this quest?"
+        //"player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest '{$questName}'?"
+        "player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest?"
     ],
 
     "bleedout"=>[
-        "cue"=>["$HERIKA_NAME complains about almost being defeated, $TEMPLATE_DIALOG"]
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} complains about almost being defeated, $TEMPLATE_DIALOG"]
     ],
 
     "bored"=>[
         "cue"=>[
-            "($HERIKA_NAME makes a casual comment a joke about current location) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about the current weather) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about the time and date) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about the last event) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about a Skyrim Meme) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about any of the Gods in Skyrim) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about the politics of Skyrim) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about a historical event from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about a book from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment starting with: I once had to )$TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment starting with: Did you hear about what happened in)$TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment starting with: A wise Akaviri man once told me)$TEMPLATE_DIALOG",
-            "($HERIKA_NAME makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]})$TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment a joke about current location) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the current weather) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the time and date) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the last event) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about a Skyrim Meme) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about any of the Gods in Skyrim) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the politics of Skyrim) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about a historical event from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about a book from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: I once had to )$TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: Did you hear about what happened in)$TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: A wise Akaviri man once told me)$TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]})$TEMPLATE_DIALOG"
         ]
     ],
 
     "goodmorning"=>[
-        "cue"=>["($HERIKA_NAME commens about {$GLOBALS["PLAYER_NAME"]}'s nap. $TEMPLATE_DIALOG"],
+        "cue"=>["({$GLOBALS["HERIKA_NAME"]} commens about {$GLOBALS["PLAYER_NAME"]}'s nap. $TEMPLATE_DIALOG"],
         "player_request"=>["(waking up after sleep). ahhhh  "]
     ],
 
@@ -83,19 +82,19 @@ $PROMPTS=array(
     "afterfunc"=>[
         "extra"=>[],
         "cue"=>[
-            "default"=>"$HERIKA_NAME talks to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG",
-            "TakeASeat"=>"($HERIKA_NAME talks about sitting location)$TEMPLATE_DIALOG",
-            "GetDateTime"=>"($HERIKA_NAME answers with the current date and time in short sentence)$TEMPLATE_DIALOG",
-            "MoveTo"=>"($HERIKA_NAME makes a comment about movement destination)$TEMPLATE_DIALOG"
+            "default"=>"{$GLOBALS["HERIKA_NAME"]} talks to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG",
+            "TakeASeat"=>"({$GLOBALS["HERIKA_NAME"]} talks about sitting location)$TEMPLATE_DIALOG",
+            "GetDateTime"=>"({$GLOBALS["HERIKA_NAME"]} answers with the current date and time in short sentence)$TEMPLATE_DIALOG",
+            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} makes a comment about movement destination)$TEMPLATE_DIALOG"
             ]
     ],
     "lockpicked"=>[
-        "cue"=>["($HERIKA_NAME comments about lockpicked item) $TEMPLATE_DIALOG"],
+        "cue"=>["({$GLOBALS["HERIKA_NAME"]} comments about lockpicked item) $TEMPLATE_DIALOG"],
         "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked {$gameRequest[3]})"],
         "extra"=>["mood"=>"whispering"]
     ],
      "afterattack"=>[
-        "cue"=>["(roleplay as $HERIKA_NAME, she shouts a catchphrase for combat) $TEMPLATE_DIALOG"]
+        "cue"=>["(roleplay as {$GLOBALS["HERIKA_NAME"]}, she shouts a catchphrase for combat) $TEMPLATE_DIALOG"]
     ],
     // Like inputtext, but without the functions calls part. It's likely to be used in papyrus scripts
     "chatnf"=>[ 
@@ -103,7 +102,7 @@ $PROMPTS=array(
         
     ],
     "diary"=>[ 
-        "cue"=>["Please, write in your personal diary style a short summary of {$GLOBALS["PLAYER_NAME"]} and $HERIKA_NAME's last dialogues and events written above. Write only as $HERIKA_NAME."],
+        "cue"=>["Please, write in your personal diary style a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above. Write only as {$GLOBALS["HERIKA_NAME"]}."],
         "extra"=>["force_tokens_max"=>0]
     ],
     
@@ -114,8 +113,8 @@ $PROMPTS=array(
 
 
 if (isset($GLOBALS["CORE_LANG"]))
-	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) 
-		require_once(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
+	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) 
+		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
   
 // You can override prompts here
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php"))

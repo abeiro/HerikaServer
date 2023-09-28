@@ -8,7 +8,9 @@ $HERIKA_NAME="Herika";
 $PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. I'm Prisoner.";
 $HERIKA_PERS="You are Herika, a Breton female who likes jokes and sarcastic comments. You're Prisoner's companion.";
 
- 
+
+$CORE_LANG="";
+
 $TTS["AZURE"]["fixedMood"]="";
 $TTS["AZURE"]["region"]="westeurope";			
 $TTS["AZURE"]["voice"]="en-US-NancyNeural";	
@@ -18,7 +20,6 @@ $TTS["AZURE"]["countour"]="(11%, +15%) (60%, -23%) (80%, -34%)";
 $TTS["AZURE"]["validMoods"]=array("whispering","default");			
 $TTS["AZURE"]["API_KEY"]="";
 
-//$CORE_LANG="es";
 
 $TTS["MIMIC3"]["URL"]="http://127.0.0.1:59125";   
 $TTS["MIMIC3"]["voice"]="en_US/hifi-tts_low#92";

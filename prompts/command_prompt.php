@@ -1,6 +1,5 @@
 <?php
 
-//$GLOBALS["HERIKA_PERS"].="{$GLOBALS["HERIKA_NAME"]} has memory problems, needs to read her diary to remember things. ";
 
 $COMMAND_PROMPT = "
 
@@ -28,8 +27,8 @@ $ERROR_OPENAI_POLICY="I can't think clearly now...";							// Say something logi
 
 
 if (isset($GLOBALS["CORE_LANG"]))
-	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."command_prompt.php")) 
-		require_once(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."command_prompt.php");
+	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."command_prompt.php")) 
+		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."command_prompt.php");
 	
 // You can override prompts here
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."command_prompt_custom.php"))

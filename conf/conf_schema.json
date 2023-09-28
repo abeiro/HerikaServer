@@ -6,6 +6,7 @@
   "HERIKA_PERS": {"type":"longstring","description":"Follower personality.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "CONTEXT_HISTORY": {"type":"integer","description":"How much context history (chats, events) will be pushed to LLM. More context => more tokens use, and slower processing speed in local LLMs."},
   "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for LLM/AI http requests. "},
+  "CORE_LANG": {"type":"select","description":"Custom lang. a lang folder should exists. Leave blank for default english."},
   "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga"],"description":"Connectors to use. Connectors are use to actually talk with the AI provider. You should configure selected connectors below.","_title":"Selected AI/LLM Connectors"},
   "CONNECTOR": {
     "_title":"LLM/AI Connectors",

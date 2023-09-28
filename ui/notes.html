@@ -50,30 +50,38 @@
                         prompts.php and command_prompt.php, and redefine them in their respective custom files. Example:
 
                         <pre><code class="language-php">// We have this in prompts.php
-"goodmorning"=&gt;[
-    "(Complete the text replacing the hashtag #CHAT#)(Generate chat completion for $HERIKA_NAME commenting about {$GLOBALS["PLAYER_NAME"]}'s nap )  $HERIKA_NAME: #CHAT#",
-    "(waking up after sleep). ahhhh  "
-],
+"combatend"=&gt;[
+        "cue"=&gt;[
+            "({$GLOBALS["HERIKA_NAME"]} comments about the last combat encounter) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} admires  {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
+        ],
+        "extra"=&gt;["mood"=>"whispering","force_tokens_max"=&gt;"50","dontuse"=&gt;(time()%5!=0)]   //20% chance
+    ],
 </code>
                         </pre>
 
                         So we can write in prompts_custom.php this new definition:
 
-                        <pre><code class="language-php">$PROMPTS["goodmorning"]=
-[
-    "(Complete the text replacing the hashtag #CHAT#)(Generate chat completion for $HERIKA_NAME laughing at {$GLOBALS["PLAYER_NAME"]}'s hair )  $HERIKA_NAME: #CHAT#",
-    "(waking up after sleep). ahhhh  "
-];</code></pre>
+                        <pre><code class="language-php">
+// $TEMPLATE_DIALOG is at prompts.php and is the standard cue. Cue is the last instruction sent to LLM. If cue is an array, a random cue will be choosen from
+// that array.
+// You can disable some events by just adding this named key ["extra"]["dontuse"], so
+// * "dontuse"=true -> will disable the event
+// * "dontuse"=(time()%5!=0) -> will disable the event 4 from each 5 times (20%)
+// * "force_tokens_max" => will change token limit for this event
+// * "mood" => will force mood
 
-                        You can disable some events by just adding this named key "extra". Take a look in prompts.php to see
-                        other interesting properties.
+$PROMPTS["combatend"]=[
+        "cue"=&gt;[
+            "({$GLOBALS["HERIKA_NAME"]} boasts that she has defeated all the enemies by herself.) $TEMPLATE_DIALOG"
+        ],
+        "extra"=&gt;["mood"=>"whispering","force_tokens_max"=&gt;"50","dontuse"=&gt;(time()%5!=0)]   //20% chance
+    ],</code></pre>
 
-                        <pre><code class="language-php">$PROMPTS["goodmorning"]=
-[
-    "(Complete the text replacing the hashtag #CHAT#)(Generate chat completion for $HERIKA_NAME laughing at {$GLOBALS["PLAYER_NAME"]}'s hair )  $HERIKA_NAME: #CHAT#",
-    "(waking up after sleep). ahhhh  ",
-    "extra"=&gt;["dontuse"=&gt;true]
-];</code></pre>
+                        
+
 
                         command_prompt_custom.php follow the same rules, but be cautious as that file contains important rule prompts.<br/>
                         <br/>

@@ -19,7 +19,7 @@ include("tmpl/head.html");
 $debugPaneLink = false;
 include("tmpl/navbar.php");
 
-echo ' <form action="" method="post" name="mainC" class="confwizard">';
+echo ' <form action="" method="post" name="mainC" class="confwizard" id="top">';
 
 
 $currentConf=conf_loader_load();
@@ -55,10 +55,13 @@ foreach ($currentConf as $pname=>$parms) {
         if (isset($currentConfTitles["{$pnameA[0]}"])) {
             $legend=$currentConfTitles["{$pnameA[0]}"];
         }
-        else
+        else {
             $legend=$primaryGroups[$pnameA[0]];
-        
-        echo "<fieldset><legend>$legend</legend>";
+            
+        }
+        if (trim($legend))
+            $summary[md5($legend)]=$legend;
+        echo "<fieldset><legend id='".md5($legend)."'>$legend</legend>";
         $lvl1=1;
         $lvl2=0;
 
@@ -70,11 +73,14 @@ foreach ($currentConf as $pname=>$parms) {
         
         if (isset($currentConfTitles["{$pnameA[0]} {$pnameA[1]}"])) {
             $legend=$currentConfTitles["{$pnameA[0]} {$pnameA[1]}"];
+            
         }
-        else
+        else {
+            
             $legend=$primarySubGroups[$pnameA[1]];
+        }
         
-        
+       
         echo "<fieldset><legend>$legend</legend>";
         
         if (!isset($pSeparator["{$pnameA[0]}"])) {
@@ -155,14 +161,32 @@ echo str_repeat("</fieldset>", $lvl1);
 echo str_repeat("</fieldset>", $lvl2);
 
 echo '</form>';
-echo '<p><input class="btn btn-info" type="button" name="check" value="Check" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php";document.forms[0].submit()\' />';
+
+echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:5px;padding:5px;'><span>Quick access</span><ul>";
+echo "<li><a href='#top'>Top</a></li>";
+foreach ($summary as $item) {
+    if (strpos($item,"::")!==false)
+        continue;
+    echo "<li><a href='#".md5($item)."'>$item</a></li>";
+}
+   echo "<li><a href='#end'>Check&Save</a></li>";
+echo "</ul></div>";
+
+
+echo '<p id="end"><input class="btn btn-info" type="button" name="check" value="Check" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php";document.forms[0].submit()\' />';
 echo ' :: <input class="btn btn-info" type="button" name="save" value="Save" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php?save=true";document.forms[0].submit()\' /></p>';
-echo '<iframe class="w-75" name="checker" border="1" style="min-height:200px;" scrolling="no" src="tmpl/black.html"/>';
+echo '<iframe class="w-75" name="checker" border="1" style="min-height:200px;" scrolling="no" src="tmpl/black.html"></iframe>';
+
+
+
 
 include("tmpl/footer.html");
+
 
 $buffer = ob_get_contents();
 ob_end_clean();
 $title = "Gateway Server CP for {$GLOBALS["PLAYER_NAME"]}";
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
+
+

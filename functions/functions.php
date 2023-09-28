@@ -390,6 +390,15 @@ $folderPath = __DIR__.DIRECTORY_SEPARATOR."../ext/";
 requireFunctionFilesRecursively($folderPath);
 
 
+if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) {
+    require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
+}
+
+if (file_exists(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php")) {
+    require(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php");
+}
+
+
 // Delete non wanted functions    
 
 foreach ($FUNCTIONS as $n=>$v)

@@ -6,6 +6,17 @@ function conf_loader_load() {
 
 	$confSchema=json_decode(file_get_contents($localPath."conf_schema.json"),true);
 
+	$langFolders=scandir($rootPath."lang".DIRECTORY_SEPARATOR);
+	foreach ($langFolders as $n=>$folder)
+		if (!is_dir($rootPath."lang".DIRECTORY_SEPARATOR.$folder))
+			unset($langFolders[$n]);
+		else if (strpos($folder,".")===0)
+			unset($langFolders[$n]);
+
+	$langFolders[]="";	// Default empty always
+	
+	$confSchema["CORE_LANG"]["values"]=array_values($langFolders);
+	
 	foreach ($confSchema as $name=>$definition) {
 		if (isset($definition["type"])) {
 			$definition["currentValue"]=$GLOBALS[$name];
