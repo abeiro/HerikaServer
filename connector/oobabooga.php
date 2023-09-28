@@ -276,24 +276,24 @@ class connector
         ];
         //}
 
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-            if ($GLOBALS["FORCE_MAX_TOKENS"]==null) {
-                unset($data["max_new_tokens"]);
-            } elseif ($customParms["MAX_TOKENS"]) {
-                $data["max_new_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
 
-            }
-        }
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==null) {
                 unset($data["max_new_tokens"]);
-            } elseif ($customParms["MAX_TOKENS"]) {
+            } else {
                 $data["max_new_tokens"]=$customParms["MAX_TOKENS"];
             }
         }
 
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            if ($GLOBALS["FORCE_MAX_TOKENS"]==null) {
+                unset($data["max_new_tokens"]);
+            } else {
+                $data["max_new_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
 
+            }
+        }
 
         // ws://0.0.0.0:5005/api/v1/stream
 

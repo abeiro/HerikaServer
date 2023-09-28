@@ -7,6 +7,11 @@ class connector
     public $primary_handler;
     public $name;
 
+    private $_functionMode;
+    private $_functionRawName;
+    private $_functionName;
+    private $_parameterBuff;
+    private $_commandBuffer;
 
     public function __construct()
     {
@@ -14,7 +19,7 @@ class connector
     }
 
 
-    public function open($contextData,$customParms)
+    public function open($contextData, $customParms)
     {
         $path='/api/extra/generate/stream/';
         $url=$GLOBALS["CONNECTOR"][$this->name]["url"].$path;
@@ -41,7 +46,7 @@ class connector
 
         foreach ($normalizedContext as $n=>$s_msg) {
             if ($n==(sizeof($normalizedContext)-1)) {
-                $context.="### Instruction: \n".$s_msg.". Write a single reply only.";
+                $context.="### Instruction: ".$s_msg.". Write a single reply only.\n";
                 $GLOBALS["DEBUG_DATA"][]="### Instruction: ".$s_msg."";
 
             } else {
@@ -52,11 +57,11 @@ class connector
 
         }
 
-        $context.="\n### Response:\n";
+        $context.="\n### Response: ";
         $GLOBALS["DEBUG_DATA"][]="\n### Response:";
-		
-		
-		$GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+
+        $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         $TEMPERATURE=((isset($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? $GLOBALS["CONNECTOR"][$this->name]["temperature"] : 0.9)+0);
         $REP_PEN=((isset($GLOBALS["CONNECTOR"][$this->name]["rep_pen"]) ? $GLOBALS["CONNECTOR"][$this->name]["rep_pen"] : 1.12)+0);
@@ -64,6 +69,7 @@ class connector
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
         $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author\'s notes","\n"];
+
         $postData = array(
 
             "prompt"=>$context,
@@ -72,18 +78,13 @@ class connector
             "max_context_length"=>1024,
             "max_length"=>$MAX_TOKENS,
             "rep_pen"=>$REP_PEN,
-            "stop_sequence"=>$stop_sequence
-        );
-        //}
+            "stop_sequence"=>$stop_sequence,
 
-         if (isset($GLOBALS["FORCE_MAX_TOKENS"]))
-             if ($GLOBALS["FORCE_MAX_TOKENS"]==null) {
-                unset($postData["max_length"]);
-            } elseif ($customParms["MAX_TOKENS"]) {
-                $postData["max_length"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
-                
-            }
-        
+        );
+
+
+
+
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==null) {
                 unset($postData["max_length"]);
@@ -91,8 +92,43 @@ class connector
                 $postData["max_length"]=$customParms["MAX_TOKENS"]+0;
             }
         }
-            
-        
+
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            if ($GLOBALS["FORCE_MAX_TOKENS"]==null) {
+                unset($postData["max_length"]);
+            } else {
+                $postData["max_length"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
+            }
+
+        }
+
+        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            // $data["functions"]=$GLOBALS["FUNCTIONS"]; Translate this to a  GBNF grammar
+            $postData["max_length"]=10;
+            $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "#"answer "\n"
+answer ::= openInventoryFunction"." | lookAtFunction"." | attackFunction"." | travelFunction"." | walkFunction"."
+# Show Inventory to Draven
+openInventoryFunction ::= "OpenInventory@"
+# Look at something
+lookAtFunction ::= "LookAt@" target 
+# Attack Something
+attackFunction ::= "Attack@" target
+# Start travel to some city
+travelFunction ::= "TravelTo@" place
+# Start moving to some place
+walkFunction ::= "MoveTo@" place
+place ::= [a-zA-Z]+
+target ::= "Draven"|"Herika"|"Chicken"
+';
+
+            if (isset($GLOBALS["FUNCTIONS_FORCE_CALL"])) {  // Restrict to one functions
+                $data["function_call"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
+            }
+
+        }
+
         $headers = array(
             'Content-Type: application/json'
         );
@@ -148,18 +184,36 @@ class connector
         $totalBuffer="";
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
 
+
+
         if (strpos($line, 'data: {') !== 0) {
-            return false;
+            return "";
         }
+
+        if (strpos($line, 'data: {"token": "#"}') === 0) {
+
+            $this->_functionMode=true;
+            return "";
+        }
+
         $data=json_decode(substr($line, 6), true);
+
+        if ((isset($this->_functionMode))&&($this->_functionMode)) {
+
+            $this->_functionRawName.=$data["token"];
+            return "";
+
+
+        }
+
         if (isset($data["token"])) {
             if (strlen(trim($data["token"]))>0) {
                 $buffer.=$data["token"];
             }
             $totalBuffer.=$data["token"];
         }
-        
-		return $buffer;
+
+        return $buffer;
     }
 
 
@@ -172,11 +226,17 @@ class connector
     {
         return feof($this->primary_handler);
     }
-    
+
     public function processActions()
     {
-       return [];
+        global $alreadysent;
+        if ((isset($this->_functionMode))&&($this->_functionMode)) {
+            $alreadysent[md5("Herika|command|{$this->_functionRawName}r\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+            return $alreadysent;
+        } else {
+            return [];
+        }
     }
-    
+
 
 }

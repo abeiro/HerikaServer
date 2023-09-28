@@ -382,7 +382,7 @@ function requireFunctionFilesRecursively($dir) {
             requireFunctionFilesRecursively($path);
         } elseif (is_file($path) && $file === 'functions.php') {
             require_once $path;
-        }
+        } 
     }
 }
 

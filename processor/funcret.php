@@ -89,7 +89,21 @@
 
 
 		} else {
-			$argName = "target";
+			
+			if (isset($GLOBALS["FUNCRET"][$functionCodeName])) {
+				
+					$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName],["gameRequest"=>$gameRequest]);
+					
+					if (isset($frResponse["argName"]))
+						$argName = $frResponse["argName"];
+					if (isset($frResponse["request"]))
+						$request = $frResponse["request"];
+					if (isset($frResponse["useFunctionsAgain"]))
+						$useFunctionsAgain = $frResponse["useFunctionsAgain"];
+				
+				
+			} else
+				$argName = "target";
 
 		}
 		$functionCalled[] = array('role' => 'assistant', 'content' => null, 'function_call' => array("name" => $functionLocaleName, "arguments" => "{\"$argName\":\"{$returnFunction[2]}\"}"));

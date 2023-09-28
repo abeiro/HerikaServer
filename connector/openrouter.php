@@ -37,19 +37,22 @@ class connector
 
         // Override
 
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"]))
-             if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
-            } elseif ($customParms["MAX_TOKENS"]) {
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
-                
-            }
-        
+
+
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
                 unset($data["max_tokens"]);
             } elseif ($customParms["MAX_TOKENS"]) {
                 $data["max_tokens"]=$customParms["MAX_TOKENS"];
+            }
+        }
+
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
+                unset($data["max_tokens"]);
+            } else {
+                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
+
             }
         }
 
@@ -66,8 +69,8 @@ class connector
         $headers = array(
             'Content-Type: application/json',
             "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
-            "HTTP-Referer:  {$GLOBALS["CONNECTOR"][$this->name]["xreferer"]}",	
-            "X-Title: {$GLOBALS["CONNECTOR"][$this->name]["xtitle"]}"	
+            "HTTP-Referer:  {$GLOBALS["CONNECTOR"][$this->name]["xreferer"]}",
+            "X-Title: {$GLOBALS["CONNECTOR"][$this->name]["xtitle"]}"
         );
 
         $options = array(

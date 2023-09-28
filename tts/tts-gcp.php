@@ -1,9 +1,6 @@
 <?php
 
-$path = dirname((__FILE__)) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR;
-
-require_once($path . 'conf.php'); // API KEY must be there
-require_once($path . 'vendor/autoload.php');
+require_once('vendor/autoload.php');
 
 use Google\Cloud\TextToSpeech\V1\AudioConfig;
 use Google\Cloud\TextToSpeech\V1\SynthesisInput;
@@ -14,9 +11,11 @@ use Google\Cloud\TextToSpeech\V1\VoiceSelectionParams;
 function tts($textString, $mood = 'default', $stringforhash)
 {
   $startTime = microtime(true);
+  $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
+  
   // Path to the service account key JSON file
-  $serviceAccountKeyFile = $GLOBALS['GCP_SA_FILEPATH'];
+  $serviceAccountKeyFile = $enginePath."data".DIRECTORY_SEPARATOR.$GLOBALS["TTS"]["GCP"]["GCP_SA_FILEPATH"];
   if (!file_exists($serviceAccountKeyFile)) {
     // Handle the error when the service account key file is missing
     error_log('Service account key file not found.');
@@ -29,15 +28,15 @@ function tts($textString, $mood = 'default', $stringforhash)
   ]);
 
   // Configure the synthesis input
-  $voiceName = $GLOBALS['GCP_CONF']['voice']['name'];
-  $languageCode = $GLOBALS['GCP_CONF']['voice']['languageCode'];
+  $voiceName = $GLOBALS["TTS"]["GCP"]['voice_name'];
+  $languageCode = $GLOBALS["TTS"]["GCP"]['voice_languageCode'];
 
   $input = new SynthesisInput();
       if(!in_array($voiceName, ['en-US-Studio-O', 'en-US-Studio-M']))
       {
         $input->setSsml('<speak>'
-            . '<prosody rate="' . $GLOBALS['GCP_CONF']['ssml']['rate']
-            . '" pitch="' . $GLOBALS['GCP_CONF']['ssml']['pitch'] . '">'
+            . '<prosody rate="' . $GLOBALS["TTS"]["GCP"]['ssml_rate']
+            . '" pitch="' . $GLOBALS["TTS"]["GCP"]['ssml_pitch'] . '">'
             . $textString
             . '</prosody>' . '<break time="500ms"/>'
             . '</speak>');

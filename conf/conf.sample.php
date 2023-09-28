@@ -34,7 +34,11 @@ $TTS["ELEVEN_LABS"]["API_KEY"]="";
 
 
 $TTS["GCP"]["GCP_SA_FILEPATH"]="meta-chassis-391906-122bdf85aa6f.json";
-$TTS["GCP"]["CONF"]='{"voice":{"name":"en-GB-Neural2-C","languageCode":"en-GB"},"ssml":{"rate":"1.15","pitch":"+3.6st"}}';
+$TTS["GCP"]["voice_name"]="en-GB-Neural2-C";
+$TTS["GCP"]["voice_languageCode"]="en-GB";
+$TTS["GCP"]["ssml_rate"]=1.15;
+$TTS["GCP"]["ssml_pitch"]="+3.6st";
+
 
 $STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:3000/transcribe";
 

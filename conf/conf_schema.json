@@ -81,8 +81,11 @@
     },
     "GCP": {
       "_title":"Google Cloud Platform",
-      "GCP_SA_FILEPATH": {"type":"string","description":"Google Cloud Platform auth file"},
-      "CONF": {"type":"string","description":"JSON array in string format"}
+      "GCP_SA_FILEPATH": {"type":"string","description":"Google Cloud Platform auth file. Should be located in data folder"},
+      "voice_name":{"type":"string","description":"Voice"},
+      "voice_languageCode":{"type":"string","description":"Language code"},
+      "ssml_rate":{"type":"number","description":"Rate"},
+      "ssml_pitch":{"type":"string","description":"Pitch"}
     }
   },
   "STTFUNCTION": {"type":"select","values":["whisper","localwhisper","azure"],"description":"Service to use to perform voice recognition", "_title":"Current Voice Recognition Provider"},

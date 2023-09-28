@@ -44,20 +44,22 @@ class connector
 
         // Override
 
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"]))
-             if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
-            } elseif ($customParms["MAX_TOKENS"]) {
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
-                
-            }
-        
+
+
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
                 unset($data["max_tokens"]);
-            } elseif ($customParms["MAX_TOKENS"]) {
+            } elseif (isset($customParms["MAX_TOKENS"])) {
                 $data["max_tokens"]=$customParms["MAX_TOKENS"];
             }
+        }
+
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
+                unset($data["max_tokens"]);
+            } else
+                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
+            
         }
 
         if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -68,7 +70,7 @@ class connector
 
         }
 
-        
+
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
         $headers = array(
@@ -89,8 +91,8 @@ class connector
         $this->primary_handler = fopen($url, 'r', false, $context);
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
-        
-        
+
+
         return true;
 
 
@@ -102,7 +104,7 @@ class connector
         global $alreadysent;
 
         static $numOutputTokens=0;
-        
+
         $line = fgets($this->primary_handler);
         $buffer="";
         $totalBuffer="";
@@ -150,21 +152,21 @@ class connector
 
         }
 
-       
-        
+
+
         return $buffer;
     }
 
     // Method to close the data processing operation
     public function close()
     {
-        
+
         fclose($this->primary_handler);
         if ($GLOBALS["FEATURES"]["COST_MONITOR"]["ENABLED"]) {
             // Call rest of tokenizer functions now, relevant data was sent
 
-            TkTokenizePrompt($this->_dataSent,$GLOBALS["CONNECTOR"][$this->name]["model"]);
-            TkTokenizeResponse($this->_numOutputTokens,$GLOBALS["CONNECTOR"][$this->name]["model"]);
+            TkTokenizePrompt($this->_dataSent, $GLOBALS["CONNECTOR"][$this->name]["model"]);
+            TkTokenizeResponse($this->_numOutputTokens, $GLOBALS["CONNECTOR"][$this->name]["model"]);
         }
     }
 

@@ -65,10 +65,12 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 				'localts' => time()
 			)
 		);
+	} else {
+		if (isset($GLOBALS["FUNCSERV"][$functionCodeName])) {
+			call_user_func_array($GLOBALS["FUNCSERV"][$functionCodeName],[]);
+		}
 		
-
-	} 
-	
+	}
 	
 } else if ($gameRequest[0] == "chatnf_book") { // Takea out the functions part
 	$request = $PROMPTS["book"]["cue"][0];

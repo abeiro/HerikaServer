@@ -78,6 +78,7 @@
                     <li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-11labs.php" target="_blank">Test ElevenLabs TTS connection</a></li>
+                    <li><a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test GCP TTS connection</a></li>
                 </ul>
             </li>
 

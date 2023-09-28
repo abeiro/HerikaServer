@@ -95,6 +95,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "_questreset") {
     error_reporting(E_ALL);
     $db->delete("quests", "1=1");
+    $MUST_END=true;
+
 
 } elseif ($gameRequest[0] == "_speech") {
     error_reporting(E_ALL);
