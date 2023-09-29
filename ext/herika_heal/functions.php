@@ -113,4 +113,4 @@ $GLOBALS["FUNCRET"]["ExtCmdHeal"]=function($gameRequest) {
     
 };
 
-
+?>

@@ -104,6 +104,12 @@
                     <li><a class="dropdown-item" href='index.php?notes=true'>Notes from developers</a></li>
                 </ul>
             </li>
+            <li class="nav-item dropdown mx-2">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server plugins</a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href='index.php?plugins_show=true'>Installed plugins</a></li>
+                </ul>
+            </li>
 
         </ul>
     </div>

@@ -57,8 +57,8 @@ class connector
 
         }
 
-        $context.="\n### Response: ";
-        $GLOBALS["DEBUG_DATA"][]="\n### Response:";
+        $context.="### Response: ";
+        $GLOBALS["DEBUG_DATA"][]="### Response:";
 
 
         $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
@@ -68,8 +68,11 @@ class connector
         $TOP_P=((isset($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? $GLOBALS["CONNECTOR"][$this->name]["top_p"] : 0.9)+0);
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
-        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author\'s notes","\n"];
+        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author\'s notes"];
 
+        if ($GLOBALS["CONNECTOR"][$this->name]["newline_as_stopseq"]) {
+            $stop_sequence[]="\n";
+        }
         $postData = array(
 
             "prompt"=>$context,
@@ -79,6 +82,7 @@ class connector
             "max_length"=>$MAX_TOKENS,
             "rep_pen"=>$REP_PEN,
             "stop_sequence"=>$stop_sequence,
+            "use_default_badwordsids"=>$GLOBALS["CONNECTOR"][$this->name]["use_default_badwordsids"]
 
         );
 
@@ -214,3 +218,4 @@ class connector
 
 
 }
+?>

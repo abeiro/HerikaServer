@@ -416,3 +416,4 @@ if (php_sapi_name()=="cli") {
     $db->delete("eventlog", "gamets>={$gameRequest[2]}");
 
 }
+?>

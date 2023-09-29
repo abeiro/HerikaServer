@@ -13,7 +13,7 @@ if (DMgetCurrentModel()=="openai") {
 	$FUNCTIONS_ARE_ENABLED=true;
 	require($path . "main.php");
 	die();
-} if (DMgetCurrentModel()=="koboldcpp") {
+} if (DMgetCurrentModel()=="koboldcpp--disabled") {
 	$FUNCTIONS_ARE_ENABLED=true;
 	require($path . "main.php");
 	die();

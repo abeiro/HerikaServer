@@ -27,7 +27,9 @@
       "temperature": {"type":"number","description":"LLM parameter temperature"},
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
       "top_p": {"type":"number","description":"LLM parameter top_p"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"}
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"},
+      "newline_as_stopseq": {"type":"boolean","description":"A newline in output will be considered a stop sequence."},
+      "use_default_badwordsids": {"type":"boolean","description":"aka Unban EOS tokens. LLM will stop generating with EOS token."}
     },
     "openrouter": {
       "_title":"Openrouter.ai API",
