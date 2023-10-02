@@ -95,6 +95,7 @@
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="addons/background" target="_blank">Background story generator</a></li>
                     <li><a class="dropdown-item" href="addons/diary" target="_blank">AI's diary</a></li>
+                    <li><a class="dropdown-item" href="addons/chatsim" target="_blank">Chat Simulation</a></li>
                 </ul>
             </li>
 
