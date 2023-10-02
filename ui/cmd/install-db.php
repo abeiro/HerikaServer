@@ -1,18 +1,16 @@
 <?php
-$path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-require_once($path . "conf.php");
-require_once($path . "dynmodel.php");
-require_once($path . "lib/$DRIVER.class.php");
-require_once($path . "lib/Misc.php");
 
-require_once($path . "lib/vectordb.php");
-require_once($path . "lib/embeddings.php");
+$enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-$db = new SQLite3('mysqlitedb.db');
+require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 
-$db->exec("DROP TABLE `eventlog`;");
+require_once($enginePath . "lib/memory_helper_vectordb.php");
+require_once($enginePath . "lib/memory_helper_embeddings.php");
 
-$db->exec("
+$db->execQuery("DROP TABLE `eventlog`;");
+
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `eventlog` (
   `ts` text NOT NULL,
   `type` varchar(128) ,
@@ -22,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `eventlog` (
   `localts` bigint NOT NULL
 );");
 
-$db->exec("
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `openai_token_count` (
   `input_tokens` bigint NOT NULL,
   `output_tokens` bigint NOT NULL ,
@@ -35,9 +33,9 @@ CREATE TABLE IF NOT EXISTS `openai_token_count` (
 );");
 
 
-$db->exec("DROP TABLE `responselog`;");
+$db->execQuery("DROP TABLE `responselog`;");
 
-$db->exec("
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `responselog` (
   `localts` bigint NOT NULL,
   `sent` bigint NOT NULL,
@@ -48,9 +46,9 @@ CREATE TABLE IF NOT EXISTS `responselog` (
 
 );");
 
-$db->exec("DROP TABLE `log`;");
+$db->execQuery("DROP TABLE `log`;");
 
-$db->exec("
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `log` (
   `localts` bigint NOT NULL,
   `prompt` text,
@@ -58,9 +56,9 @@ CREATE TABLE IF NOT EXISTS `log` (
   `url` text
 );");
 
-$db->exec("DROP TABLE `quests`;");
+$db->execQuery("DROP TABLE `quests`;");
 
-$db->exec("
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `quests` (
   `ts` text NOT NULL,
   `sess` varchar(1024) ,
@@ -81,9 +79,9 @@ CREATE TABLE IF NOT EXISTS `quests` (
   `status` text
 );");
 
-$db->exec("DROP TABLE `speech`;");
+$db->execQuery("DROP TABLE `speech`;");
 
-$db->exec("
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `speech` (
   `ts` text NOT NULL,
   `sess` varchar(1024) ,
@@ -96,9 +94,9 @@ CREATE TABLE IF NOT EXISTS `speech` (
   `gamets` bigint NOT NULL
 );");
 
-$db->exec("DROP TABLE `diarylog`;");
+$db->execQuery("DROP TABLE `diarylog`;");
 
-$db->exec("
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `diarylog` (
   `ts` text NOT NULL,
   `sess` varchar(1024) ,
@@ -111,10 +109,10 @@ CREATE TABLE IF NOT EXISTS `diarylog` (
   `gamets` bigint NOT NULL
 );");
 
-$db->exec("DROP TABLE `books`;");
+$db->execQuery("DROP TABLE `books`;");
 
 
-$db->exec("
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `books` (
   `ts` text NOT NULL,
   `sess` varchar(1024) ,
@@ -124,9 +122,9 @@ CREATE TABLE IF NOT EXISTS `books` (
   `gamets` bigint NOT NULL
 );");
 
-$db->exec("DROP TABLE `currentmission`;");
+$db->execQuery("DROP TABLE `currentmission`;");
 
-$db->exec("
+$db->execQuery("
 CREATE TABLE IF NOT EXISTS `currentmission` (
   `ts` text NOT NULL,
   `sess` varchar(1024) ,
@@ -135,16 +133,16 @@ CREATE TABLE IF NOT EXISTS `currentmission` (
   `gamets` bigint NOT NULL
 );");
 
-$db->exec("DROP TABLE `diarylogv2`;");
+$db->execQuery("DROP TABLE `diarylogv2`;");
 
 
-$db->exec("
+$db->execQuery("
 CREATE VIRTUAL TABLE diarylogv2 
 USING FTS5(topic,content,tags,people,location);");
 
-$db->exec("DROP TABLE `memory`;");
+$db->execQuery("DROP TABLE `memory`;");
 
-$db->exec("CREATE TABLE IF NOT EXISTS `memory` (
+$db->execQuery("CREATE TABLE IF NOT EXISTS `memory` (
 	`speaker`	TEXT,
 	`message`	TEXT,
 	`session`	TEXT,
@@ -156,9 +154,9 @@ $db->exec("CREATE TABLE IF NOT EXISTS `memory` (
 	PRIMARY KEY(`uid` AUTOINCREMENT)
 );");
 
-$db->exec("DROP TABLE `memory`;");
+$db->execQuery("DROP TABLE `memory`;");
 
-$db->exec("CREATE TABLE IF NOT EXISTS `memory` (
+$db->execQuery("CREATE TABLE IF NOT EXISTS `memory` (
 	`speaker`	TEXT,
 	`message`	TEXT,
 	`session`	TEXT,
