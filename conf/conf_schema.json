@@ -114,7 +114,7 @@
     "_title":"Misc features",
     "MEMORY_EMBEDDING": {
       "_title":"Memory Embedding",
-      "ENABLED": {"type":"boolean","description":"Enable memory embedding features.Use ChromaDB and a text embedding provider (currently only if using openai) to automatically store memories, and offer then automatically using user prompt"},
+      "ENABLED": {"type":"boolean","description":"Enable memory embedding features.Use ChromaDB and a text embedding provider (openai or local) to automatically store memories, and offer then automatically using user prompt"},
       "CHROMADB_URL": {"type":"url","description":"ChromaDB endpoint. If using DwemerDistro, it should be printed on console."},
       "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
       "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs OpenAI APIKEY. Local is the one provide by DwemerDistro"},

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Chat Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fasthand&family=Germania+One&family=Spline+Sans+Mono:wght@300&display=swap" rel="stylesheet">
+<style>
+body {
+    font-family: 'Germania One';
+    font-size: 22px;
+    background-image: url(images/paper.jpg);
+}
+* {
+  font-family: 'Germania One';
+  font-size:16px;
+}
+</style>
+<script>
+
+function parseReq(inputString) {
+  var lines = inputString.split("\n");
+
+  lines.forEach(function(line) {
+    // Split the line using "|" as the separator
+    var parts = line.split("|");
+
+    // Check if parts has more than one element
+    if (parts.length > 2) {
+      var newline=document.getElementById("herikaName").value+": "+parts[2];
+      document.getElementById("chatWindow").value=document.getElementById("chatWindow").value+newline
+      logChat(parts[2]);
+    } else {
+      console.log("Line:", line);
+      console.log("Parts:", parts);
+      console.log("parts has one or fewer elements.");
+    }
+  });
+
+  document.body.style="cursor:normal"
+  document.getElementById('inputText').value='';
+}
+
+function reqSend() {
+
+  document.body.style="cursor:wait";
+  document.getElementById("chatWindow").value=
+    document.getElementById("chatWindow").value+
+    document.getElementById('playerName').value+': '+
+    document.getElementById('inputText').value+"\n";
+    
+  var currentDate = new Date();
+  var timestampInSeconds = Math.floor(currentDate.getTime() / 1000);
+
+  var xhr = new XMLHttpRequest();
+
+  var urlDataRaw='inputtext|'+document.getElementById('gamets').value+'|'+timestampInSeconds+'|'+
+    document.getElementById('playerName').value+': '+document.getElementById('inputText').value;
+  var urlData = btoa(urlDataRaw);
+  
+
+  // Configure the request
+  xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData, true);
+
+  // Set up a function to handle the response
+  xhr.onload = function() {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      // Request was successful, handle the response here
+      parseReq(xhr.responseText);
+    } else {
+      // Request failed, handle the error here
+      console.error('Request failed with status code: ' + xhr.status);
+    }
+  };
+
+  // Set up a function to handle network errors
+  xhr.onerror = function() {
+    console.error('Network error occurred');
+  };
+
+  // Send the request
+  xhr.send();
+
+
+}
+
+function logChat(chatline) {
+
+  var xhr = new XMLHttpRequest();
+
+  var unescapedString = chatline.replace(/\\'/g, "'");
+
+  var currentDate = new Date();
+  var timestampInSeconds = Math.floor(currentDate.getTime() / 1000);
+  
+  var urlDataRaw='chat|'+document.getElementById('gamets').value+'|'+timestampInSeconds+'|'+
+    document.getElementById('herikaName').value+': '+unescapedString;
+    
+  var binaryData = new TextEncoder().encode(urlDataRaw);
+  // Encode the binary data in Base64
+  var base64String = btoa(String.fromCharCode.apply(null, binaryData));
+  var urlData = base64String;
+  
+  // Configure the request
+  xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData, true);
+
+  // Set up a function to handle the response
+  xhr.onload = function() {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      // Request was successful, handle the response here
+      parseReq(xhr.responseText);
+    } else {
+      // Request failed, handle the error here
+      console.error('Request failed with status code: ' + xhr.status);
+    }
+  };
+
+  // Set up a function to handle network errors
+  xhr.onerror = function() {
+    console.error('Network error occurred');
+  };
+
+  // Send the request
+  xhr.send();
+
+
+}
+
+</script>
+</head>
+<body>

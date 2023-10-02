@@ -32,10 +32,11 @@ foreach ($_POST as $k=>$v) {
            $oldGroup=$fullNameHierch[0];
     }
     
-    if ($oldSubGroup!=$fullNameHierch[1]) {
-           $buffer.=PHP_EOL;
-           $oldSubGroup=$fullNameHierch[1];
-    }
+    if (isset($fullNameHierch[1]))
+        if ($oldSubGroup!=$fullNameHierch[1]) {
+            $buffer.=PHP_EOL;
+            $oldSubGroup=$fullNameHierch[1];
+        }
     
     if (sizeof($fullNameHierch)==1) {
         if (isset($confSchema[$plainNameHierch]["description"])) {
@@ -66,7 +67,7 @@ foreach ($_POST as $k=>$v) {
 }
 $buffer.="?>".PHP_EOL;
 
-if ($_GET["save"]) {
+if (isset($_GET["save"])) {
     file_put_contents($enginePath."conf".DIRECTORY_SEPARATOR."conf.php",$buffer);
     echo '<!DOCTYPE html>
         <html lang="en" >

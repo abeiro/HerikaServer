@@ -22,8 +22,8 @@ class sql
     public function insert($table, $data)
     {
 
-        foreach ($data as $name=>$value)
-            $data[$name]=SQLite3::escapeString($value);
+        /*foreach ($data as $name=>$value)
+            $data[$name]=SQLite3::escapeString($value);*/
         
         self::$link->exec("INSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')");
 

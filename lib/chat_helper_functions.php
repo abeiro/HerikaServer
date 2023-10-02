@@ -413,7 +413,7 @@ function logEvent($dataArray)
             'ts' => $dataArray[1],
             'gamets' => $dataArray[2],
             'type' => $dataArray[0],
-            'data' => SQLite3::escapeString($dataArray[3]),
+            'data' => $dataArray[3],
             'sess' => 'pending',
             'localts' => time()
         )

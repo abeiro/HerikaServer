@@ -207,6 +207,10 @@ function DataPosibleInspectTargets()
         break;
     }
 
+    if (!isset($retData)||!is_array($retData)) {
+        $retData = [];
+    }
+    
     foreach ($retData as $k => $v) {
         if (strlen($v) < 2) {
             unset($retData[$k]);
@@ -217,9 +221,7 @@ function DataPosibleInspectTargets()
         }
 
     }
-    if (!is_array($retData)) {
-        $retData = [];
-    }
+  
     return array_values($retData);
 }
 
