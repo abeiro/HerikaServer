@@ -5,6 +5,8 @@ $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY
 require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 
+$db = new sql();
+
 $db->execQuery("delete from {$_GET["table"]} where rowid={$_GET["rowid"]}");
 
 if ($_GET["table"]=="diarylog") {
