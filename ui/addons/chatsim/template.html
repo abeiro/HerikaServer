@@ -15,6 +15,18 @@ body {
   font-family: 'Germania One';
   font-size:16px;
 }
+
+p.llm {
+  color:darkgreen;
+  margin:1px;
+}
+
+p.player {
+  color:blue;
+  margin-top:3px;;
+  margin-bottom:3px;;
+}
+
 </style>
 <script>
 
@@ -27,8 +39,8 @@ function parseReq(inputString) {
 
     // Check if parts has more than one element
     if (parts.length > 2) {
-      var newline=document.getElementById("herikaName").value+": "+parts[2];
-      document.getElementById("chatWindow").value=document.getElementById("chatWindow").value+newline
+      var newline="<p class='llm'>"+document.getElementById("herikaName").value+": "+parts[2]+"</p>";
+      document.getElementById("chatWindow").innerHTML+=newline;
       logChat(parts[2]);
     } else {
       console.log("Line:", line);
@@ -44,10 +56,9 @@ function parseReq(inputString) {
 function reqSend() {
 
   document.body.style="cursor:wait";
-  document.getElementById("chatWindow").value=
-    document.getElementById("chatWindow").value+
+  document.getElementById("chatWindow").innerHTML+="<p class='player'>"+
     document.getElementById('playerName').value+': '+
-    document.getElementById('inputText').value+"\n";
+    document.getElementById('inputText').value+"</p>";
     
   var currentDate = new Date();
   var timestampInSeconds = Math.floor(currentDate.getTime() / 1000);

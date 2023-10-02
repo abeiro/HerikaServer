@@ -37,7 +37,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'lockpicked' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret'  and type<>'quest'
-    and type<>'funccall'  and type<>'togglemodel' order by gamets desc,ts desc,localts desc LIMIT 0,50");
+    and type<>'funccall'  and type<>'togglemodel' order by gamets desc,ts desc,localts desc,rowid desc LIMIT 0,50");
     $lastData = "";
 
 
