@@ -41,6 +41,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
             $filePath = $directory . DIRECTORY_SEPARATOR . $file;
 
             if (is_file($filePath)) {
+                if (strpos($filePath,".placeholder")!==false)
+                    continue;
                 $fileMTime = filemtime($filePath);
                 if ($fileMTime < $sixHoursAgo) {
                     @unlink($filePath);

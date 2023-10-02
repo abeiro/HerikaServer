@@ -2,7 +2,6 @@
 
 $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($localPath . "lib".DIRECTORY_SEPARATOR."Misc.php");
 require_once($localPath . "tts".DIRECTORY_SEPARATOR."tts-azure.php");
 
 
