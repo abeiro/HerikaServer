@@ -36,7 +36,7 @@ if ($file) {
 	";
 } else {
 	echo "Error<br/>";
-	echo file_get_contents(".." . . DIRECTORY_SEPARATOR . "..".DIRECTORY_SEPARATOR . "soundcache" . DIRECTORY_SEPARATOR.md5(trim($testString)) . ".err");
+	echo file_get_contents(".."  . DIRECTORY_SEPARATOR . "..".DIRECTORY_SEPARATOR . "soundcache" . DIRECTORY_SEPARATOR.md5(trim($testString)) . ".err");
 
 }
 
