@@ -81,10 +81,10 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
                 'briefing' => $questParsedData["currentbrief"],
                 'data' => json_encode($questParsedData["currentbrief2"]),
                 'stage' => $questParsedData["stage"],
-                'giver_actor_id' => $questParsedData["data"]["questgiver"],
+                'giver_actor_id' => isset($questParsedData["data"]["questgiver"])?$questParsedData["data"]["questgiver"]:"",
                 'id_quest' => $questParsedData["formId"],
                 'sess' => 'pending',
-                'status' => $questParsedData["status"],
+                'status' => isset($questParsedData["status"])?$questParsedData["status"]:"",
                 'localts' => time()
             )
         );
@@ -167,6 +167,10 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
 
 } else if ($gameRequest[0] == "death") {
+	
+    $MUST_END=true;
+
+} else if ($gameRequest[0] == "location") {
 	
     $MUST_END=true;
 

@@ -168,7 +168,6 @@ class connector
 
     public function open($contextData, $customParms)
     {
-        $path='/api/extra/generate/stream/';
 
         $context="";
         $history=[];
@@ -299,7 +298,10 @@ class connector
 
         $host=$GLOBALS["CONNECTOR"][$this->name]["HOST"];
         $port=$GLOBALS["CONNECTOR"][$this->name]["PORT"];
+        
         $path="/api/v1/chat-stream";
+        
+        
         // Open a TCP connection
         $this->primary_handler = fsockopen('tcp://' . $host, $port, $errno, $errstr, 30);
 

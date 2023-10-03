@@ -126,7 +126,7 @@ if ($gameRequest[0] != "diary") {
             'gamets' => $gameRequest[2],
             'type' => $gameRequest[0],
             'data' => ($gameRequest[3]),
-            'sess' => 'pending',
+            'sess' => (php_sapi_name()=="cli")?'cli':'web',
             'localts' => time()
         )
     );
@@ -402,6 +402,7 @@ if (sizeof($talkedSoFar) == 0) {
             
             returnLines([$RESPONSE_OK_NOTED]);
         } else {
+            
             $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
             logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"], "{$lastPlayerLine[0]["data"]} \n\r {$GLOBALS["HERIKA_NAME"]}:".implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
         }
@@ -413,7 +414,7 @@ if (php_sapi_name()=="cli") {
     echo PHP_EOL;
     file_put_contents("log/debug_comm_".basename(__FILE__).".log", print_r($GLOBALS["DEBUG_DATA"], true));
 
-    $db->delete("eventlog", "gamets>={$gameRequest[2]}");
+    $db->delete("eventlog", "sess='cli'");
 
 }
 ?>

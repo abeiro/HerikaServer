@@ -354,7 +354,8 @@ function logMemory($speaker, $listener, $message, $momentum, $gamets)
                 'momentum'=>$momentum
         )
     );
-    if (isset($GLOBALS["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["MEMORY_EMBEDDING"]["ENABLED"]) {
+    
+    if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
         $insertedSeq=$db->fetchAll("SELECT SEQ from sqlite_sequence WHERE name='memory'");
         $embeddings=getEmbedding($message);
         storeMemory($embeddings, $message, $insertedSeq[0]["seq"]);

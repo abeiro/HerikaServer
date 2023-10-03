@@ -15,7 +15,7 @@ class CacheManager {
         if (file_put_contents($this->cacheFilePath, $serializedData) !== false) {
             // Set the modification timestamp as the expiration time
             $timeout = time() + (9 * 60); // 9 minutes
-            touch($this->cacheFilePath, $timeout);
+            @touch($this->cacheFilePath, $timeout);
 
             return true;
         } else {

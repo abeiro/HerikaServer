@@ -146,7 +146,10 @@ function deleteElement($id)
 
 	// Handle the response data as needed
 	// var_dump($responseData);
-	return $responseData["documents"][0];
+	if (isset($responseData["documents"][0]))
+		return $responseData["documents"][0];
+	else
+		return "";
 
 }
 
