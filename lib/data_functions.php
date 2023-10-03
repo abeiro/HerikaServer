@@ -544,7 +544,7 @@ function DataGetCurrentTask()
     global $db;
     $results = $db->fetchAll("SElECT  description  FROM currentmission order by gamets desc");
     if (!$results) {
-        return json_encode([]);
+        return "";
     }
 
     $data = "";

@@ -81,6 +81,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
      }
      
+     $connectionHandler->close();
+     
      print_r($GLOBALS["DEBUG_DATA"]);  
 }
 
