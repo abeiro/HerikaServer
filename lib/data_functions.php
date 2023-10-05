@@ -211,16 +211,22 @@ function DataPosibleInspectTargets()
         $retData = [];
     }
     
+    $compData=[];
+    
     foreach ($retData as $k => $v) {
         if (strlen($v) < 2) {
             unset($retData[$k]);
         } else {
             $retData[$k] = preg_replace("/\([^)]+\)/", '', $v);
+            $compData[preg_replace("/\([^)]+\)/", '', $v)]=preg_replace("/\([^)]+\)/", '', $v); // Reduce same names (Chicken, Chicken -> Chicken)
             //$retData[$k]=$v;
 
         }
 
     }
+    
+    if (sizeof($retData)>10)    // If too much entries, reduce.
+        $retData=$compData;
   
     return array_values($retData);
 }

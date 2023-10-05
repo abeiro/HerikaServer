@@ -86,7 +86,7 @@ class connector
 
         );
 
-
+        $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;
 
 
         if (isset($customParms["MAX_TOKENS"])) {

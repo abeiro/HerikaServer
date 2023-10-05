@@ -81,6 +81,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	
 } else if ($gameRequest[0] == "diary") {
 	$request = $PROMPTS["diary"]["cue"][0];
+	$GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];
 
 
 } else {

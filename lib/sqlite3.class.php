@@ -29,7 +29,22 @@ class sql
             } 
         }
         
-        file_put_contents("/tmp/test.sql.txt","\nINSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')\n",FILE_APPEND);
+        if ($table=="diarylog") {
+            foreach ($data as $name=>$value) {
+                if ($name=="content")
+                    $data[$name]=SQLite3::escapeString($value);
+            } 
+        }
+        
+        if ($table=="diarylogv2") {
+            foreach ($data as $name=>$value) {
+                if ($name=="content")
+                    $data[$name]=SQLite3::escapeString($value);
+            } 
+        }
+        
+        
+        //file_put_contents("/tmp/test.sql.txt","\nINSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')\n",FILE_APPEND);
         self::$link->exec("INSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')");
 
 

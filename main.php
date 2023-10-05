@@ -177,7 +177,7 @@ if ($gameRequest[0] == "funcret") {
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);
 
-    $data = array(
+    /*$data = array(
         'model' => (isset($GLOBALS["GPTMODEL"])) ? $GLOBALS["GPTMODEL"] : 'gpt-3.5-turbo-0613',
         'messages' =>
         $contextData,
@@ -185,7 +185,7 @@ if ($gameRequest[0] == "funcret") {
         'max_tokens' => ((isset($GLOBALS["OPENAI_MAX_TOKENS"]) ? $GLOBALS["OPENAI_MAX_TOKENS"] : 48) + 0),
         'temperature' => 1,
         'presence_penalty' => 1
-    );
+    );*/
 
 
 }  else {
@@ -193,6 +193,8 @@ if ($gameRequest[0] == "funcret") {
     $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);
+    
+    /*
     $data = array(
         'model' => (isset($GLOBALS["GPTMODEL"])) ? $GLOBALS["GPTMODEL"] : 'gpt-3.5-turbo-0613',
         'messages' =>
@@ -206,6 +208,7 @@ if ($gameRequest[0] == "funcret") {
         'function_call' => 'auto',
         'stop'=>["{$GLOBALS["PLAYER_NAME"]}:","The Narrator:"]
     );
+    */
 }
 
 /**********************
