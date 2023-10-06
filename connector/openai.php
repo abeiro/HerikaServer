@@ -50,7 +50,7 @@ class connector
             if ($customParms["MAX_TOKENS"]==0) {
                 unset($data["max_tokens"]);
             } elseif (isset($customParms["MAX_TOKENS"])) {
-                $data["max_tokens"]=$customParms["MAX_TOKENS"];
+                $data["max_tokens"]=$customParms["MAX_TOKENS"]+0;
             }
         }
 
@@ -58,7 +58,7 @@ class connector
             if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
                 unset($data["max_tokens"]);
             } else
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
+                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
             
         }
 

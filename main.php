@@ -403,7 +403,10 @@ if (sizeof($talkedSoFar) == 0) {
 			)
 		);
             
+            // Log Memory also.
+            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
             returnLines([$RESPONSE_OK_NOTED]);
+
         } else {
             
             $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");

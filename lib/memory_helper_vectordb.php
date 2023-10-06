@@ -318,6 +318,7 @@ function queryMemory($embeddings)
 		}
 		uasort($dbResults, 'cmp');
 		// Use $VECTORDB_QUERY_SIZE here
+		$GLOBALS["DEBUG_DATA"]["memory_system"][]=$responseData;
 		return ["item" => "{$GLOBALS["HERIKA_NAME"]}'s memories", "content" => $dbResults[0]];
 
 	} else {
