@@ -2,7 +2,7 @@
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf/conf.php");
-require_once($enginePath . "lib/$DRIVER.class.php");
+require_once($enginePath . "lib/$DBDRIVER.class.php");
 
 if ($STTFUNCTION=="azure") {
     

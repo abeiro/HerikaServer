@@ -23,20 +23,11 @@ function tts($textString, $mood = "default", $stringforhash)
         $validMood = $mood;
     else
         $validMood = "default";
-    /*
-    $distancia_minima = PHP_INT_MAX;
-    $token_mas_cercano = '';
 
-    // Iteramos sobre cada token del array
-    foreach ($valid_tokens as $token) {
-        $distancia = levenshtein($mood, $token);
-        if ($distancia < $distancia_minima) {
-            $distancia_minima = $distancia;
-            $token_mas_cercano = $token;
-        }
-    }
-    $validMood = $token_mas_cercano;
-    */
+    if ($validMood=="dazed")
+        $OverWriteRate=0.6;
+    
+    
     $starTime = microtime(true);
 
     $cache = new CacheManager();
@@ -90,7 +81,7 @@ function tts($textString, $mood = "default", $stringforhash)
 
 
         $prosody = $doc->createElement("prosody");
-        $prosody->setAttribute("rate", $GLOBALS["TTS"]["AZURE"]["rate"]); //https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup-voice#adjust-prosody
+        $prosody->setAttribute("rate", (isset($OverWriteRate))?$OverWriteRate:$GLOBALS["TTS"]["AZURE"]["rate"]); //https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup-voice#adjust-prosody
         $prosody->setAttribute("volume", $GLOBALS["TTS"]["AZURE"]["volume"]);
         if ($GLOBALS["TTS"]["AZURE"]["countour"])
             $prosody->setAttribute("contour", $GLOBALS["TTS"]["AZURE"]["countour"]);
@@ -101,7 +92,7 @@ function tts($textString, $mood = "default", $stringforhash)
 
         $style = $doc->createElement("mstts:express-as");
         if ($GLOBALS["TTS"]["AZURE"]["fixedMood"])
-            $style->setAttribute("style", $AZURETTS_CONF["fixedMood"]); // not supported for all voices
+            $style->setAttribute("style", $GLOBALS["TTS"]["fixedMood"]); // not supported for all voices
         else
             $style->setAttribute("style", $validMood); // not supported for all voices
 
@@ -144,9 +135,13 @@ function tts($textString, $mood = "default", $stringforhash)
         }
         //fwrite(STDOUT, $result);
 
+        
+        
         // Trying to avoid sync problems.
         $stream = fopen(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav", 'w');
+        
         $size = fwrite($stream, $result);
+        
         fsync($stream);
         fclose($stream);
 

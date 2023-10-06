@@ -8,8 +8,14 @@
 // Full Prompt then is $PROMPT_HEAD + $HERIKA_PERS + $COMMAND_PROMPT + CONTEXT + requirement + cue
 
 // Common patterns to use in most functions
-$TEMPLATE_DIALOG="roleplay only as {$GLOBALS["HERIKA_NAME"]} by completing {$GLOBALS["HERIKA_NAME"]}'s dialogue using this format '{$GLOBALS["HERIKA_NAME"]}: (optional mood from this list [" . implode(",", (@is_array($GLOBALS["AZURETTS_CONF"]["validMoods"])?$GLOBALS["AZURETTS_CONF"]["validMoods"]:array())) . "]) ...'";
+$TEMPLATE_DIALOG="roleplay only as {$GLOBALS["HERIKA_NAME"]} by completing {$GLOBALS["HERIKA_NAME"]}'s dialogue using this format '{$GLOBALS["HERIKA_NAME"]}: ";
 
+if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
+    $TEMPLATE_DIALOG.="(optional way of speaking from this list [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
+
+$TEMPLATE_DIALOG.=" ...'";
+
+    
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $TEMPLATE_ACTION="call a function to control {$GLOBALS["HERIKA_NAME"]} or";
 } else {

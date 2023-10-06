@@ -4,7 +4,11 @@ $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DI
 $rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 if (!file_exists($configFilepath."conf.php")) {
-    @copy($configFilepath."conf.sample.php", $configFilepath."conf.php");
+    @copy($configFilepath."conf.sample.php", $configFilepath."conf.php");   // Defaults
+    if (!file_exists($rootEnginePath."data".DIRECTORY_SEPARATOR."mysqlitedb.db")) {
+        require($rootEnginePath."ui".DIRECTORY_SEPARATOR."cmd".DIRECTORY_SEPARATOR."install-db.php");
+        
+    }
     die(header("Location: conf_wizard.php"));
 }
 

@@ -63,7 +63,7 @@
       "volume": {"type":"integer","description":"Volume"},
       "rate": {"type":"number","description":"Talk speed"},
       "countour": {"type":"string","description":"Voice contour"},
-      "validMoods": {"type":"selectmultiple","values":["angry","chat","cheerful","customerservice","empathetic","excited","friendly","hopeful","narration-professional","newscast-casual","newscast-formal","sad","shouting","terrified","unfriendly","whispering","default"],"description":"Allowed voice styles"},
+      "validMoods": {"type":"selectmultiple","values":["angry","chat","cheerful","customerservice","empathetic","excited","friendly","hopeful","narration-professional","newscast-casual","newscast-formal","sad","shouting","terrified","unfriendly","whispering","default","dazed"],"description":"Allowed voice styles"},
       "API_KEY": {"type":"apikey","description":"Azure TTS API KEY","code":"AZURE_API_KEY"}
     },
     "MIMIC3": {

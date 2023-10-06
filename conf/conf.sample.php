@@ -17,7 +17,7 @@ $TTS["AZURE"]["voice"]="en-US-NancyNeural";
 $TTS["AZURE"]["volume"]="20";					
 $TTS["AZURE"]["rate"]="1.25";					
 $TTS["AZURE"]["countour"]="(11%, +15%) (60%, -23%) (80%, -34%)";							
-$TTS["AZURE"]["validMoods"]=array("whispering","default");			
+$TTS["AZURE"]["validMoods"]=array("whispering","default","dazed");			
 $TTS["AZURE"]["API_KEY"]="";
 
 

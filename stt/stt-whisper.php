@@ -1,13 +1,13 @@
 <?php
 
 
-$path = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($path . "conf.php"); // API KEY must be there
+$localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 
 function stt($file)
 {
     $url = "https://api.openai.com/v1/audio/transcriptions";
-    $lang=($GLOBALS["TTSLANGUAGE_WHISPER"])?$GLOBALS["TTSLANGUAGE_WHISPER"]:"en";
+    $lang=(isset($GLOBALS["STT"]["WHISPER"]["LANG"]))?$GLOBALS["STT"]["WHISPER"]["LANG"]:"en";
 
     $filePath = $file;
     $boundary = '----WebKitFormBoundary' . md5(mt_rand() . microtime());
@@ -35,7 +35,7 @@ function stt($file)
     $contextOptions = [
         'http' => [
             'method' => 'POST',
-            'header' => "Authorization: Bearer  {$GLOBALS["OPENAI_API_KEY"]}\r\n"."Content-Type: {$contentType}\r\n" .
+            'header' => "Authorization: Bearer  {$GLOBALS["STT"]["WHISPER"]["API_KEY"]}\r\n"."Content-Type: {$contentType}\r\n" .
             "Content-Length: " . strlen($multipartBody) . "\r\n",
             'content' => $multipartBody,
         ],
