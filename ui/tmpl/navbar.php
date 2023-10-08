@@ -85,8 +85,10 @@
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="conf_editor.php" target="_blank">Conf. Editor</a></li>
-                    <li><a class="dropdown-item" href="conf_wizard.php">Conf. Wizard</a></li>
+                    <li><a class="dropdown-item" href="conf_editor.php" target="_blank">Configuration Editor</a></li>
+                    <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
+                    <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration" target="_blank">Export Configuration</a></li>
+                    <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration" target="_blank">Import Configuration</a></li>
                 </ul>
             </li>
 
