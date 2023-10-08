@@ -1,24 +1,24 @@
 {
-  "DBDRIVER": {"type":"select","values":["sqlite3"],"description":"Primary database handler. Only sqlite3 atm."},
-  "PLAYER_NAME": {"type":"string","description":"Player Name"},
-  "HERIKA_NAME": {"type":"string","description":"Follower Name"},
-  "PROMPT_HEAD": {"type":"longstring","description":"System prompt."},
-  "HERIKA_PERS": {"type":"longstring","description":"Follower personality.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
-  "CONTEXT_HISTORY": {"type":"integer","description":"How much context history (chats, events) will be pushed to LLM. More context => more tokens use, and slower processing speed in local LLMs."},
-  "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for LLM/AI http requests. "},
-  "CORE_LANG": {"type":"select","description":"Custom lang. a lang folder should exists. Leave blank for default english."},
-  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga"],"description":"Connectors to use. Connectors are use to actually talk with the AI provider. You should configure selected connectors below.","_title":"Selected AI/LLM Connectors"},
+  "DBDRIVER": {"type":"select","values":["sqlite3"],"description":"Primary database handler. Currently only sqlite3."},
+  "PLAYER_NAME": {"type":"string","description":"Your current character name"},
+  "HERIKA_NAME": {"type":"string","description":"Custom name for Herika"},
+  "PROMPT_HEAD": {"type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
+  "HERIKA_PERS": {"type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
+  "CONTEXT_HISTORY": {"type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. More context => more tokens used, and slower processing speed in local LLMs."},
+  "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for LLM/AI requests. "},
+  "CORE_LANG": {"type":"select","description":"Custom Language. A lang folder is in the Herika Server. Leave it blank for default english."},
+  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
   "CONNECTOR": {
-    "_title":"LLM/AI Connectors",
+    "_title":"AI/LLM Service",
     "openai": {
-      "_title":"OpenAI's API",
+      "_title":"OpenAI/ChatGPT API",
       "url": {"type":"url","description":"OpenAI API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"}
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"}
     },
     "koboldcpp": {
       "_title":"KoboldCPP API",
@@ -27,104 +27,104 @@
       "temperature": {"type":"number","description":"LLM parameter temperature"},
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
       "top_p": {"type":"number","description":"LLM parameter top_p"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"},
-      "newline_as_stopseq": {"type":"boolean","description":"A newline in output will be considered a stop sequence."},
-      "use_default_badwordsids": {"type":"boolean","description":"aka Unban EOS tokens. LLM will stop generating with EOS token."}
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
+      "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence."},
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Setence (EOS) tokens. LLM will stop generating when it detects an EOS token."}
     },
     "openrouter": {
-      "_title":"Openrouter.ai API",
-      "url": {"type":"url","description":"Openrouter API endpoint"},
+      "_title":"OpenRouter API",
+      "url": {"type":"url","description":"OpenRouter API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://openrouter.ai/docs#models"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
-      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"},
+      "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
       "xreferer": {"type":"string","description":"Stub needed header. Keep default."},
       "xtitle": {"type":"string","description":"Stub needed header. Keep default."}
             
     },
-     "oobabooga": {
+    "oobabooga": {
       "_title":"Oobabooga text-generation-webui API",
       "HOST": {"type":"string","description":"Oobabooga API WS HOST"},
       "PORT": {"type":"integer","description":"Oobabooga API WS PORT"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarize (example:write diary)"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarizing (example:write diary)"},
       "temperature": {"type":"number","description":"LLM parameter temperature"},
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp"],"description":"Service to use to perform text to speech. Follower voice.","_title":"Current Text To Speech Provider"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
-    "_title":"Text to Speech (Follower voice) :: Providers Configuration",
+    "_title":"Text-to-Speech Service",
     "AZURE": {
       "_title":"Azure Text-To-Speech",
-      "fixedMood": {"type":"string","description":"Force mood (voice style)"},
-      "region": {"type":"string","description":"Region provided by azure"},
-      "voice": {"type":"string","description":"Voice","helpurl":"https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support?tabs=tts"},
-      "volume": {"type":"integer","description":"Volume"},
-      "rate": {"type":"number","description":"Talk speed"},
-      "countour": {"type":"string","description":"Voice contour"},
+      "fixedMood": {"type":"string","description":"Force mood (voice style)","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#use-speaking-styles-and-roles"},
+      "region": {"type":"string","description":"Region location of your API key"},
+      "voice": {"type":"string","description":"Voice","helpurl":"https://speech.microsoft.com/portal/voicegallery"},
+      "volume": {"type":"integer","description":"Volume","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#adjust-prosody"},
+      "rate": {"type":"number","description":"Talk speed","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#adjust-prosody"},
+      "countour": {"type":"string","description":"Voice contour","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#adjust-prosody"},
       "validMoods": {"type":"selectmultiple","values":["angry","chat","cheerful","customerservice","empathetic","excited","friendly","hopeful","narration-professional","newscast-casual","newscast-formal","sad","shouting","terrified","unfriendly","whispering","default","dazed"],"description":"Allowed voice styles"},
       "API_KEY": {"type":"apikey","description":"Azure TTS API KEY","code":"AZURE_API_KEY"}
     },
     "MIMIC3": {
-      "_title":"MIMIC3 Local server install",
-      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, should be printed on console"},
+      "_title":"MIMIC3 Text-To-Speech (Automatically installed with DwemerDistro)",
+      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, it is displayed in the console window."},
       "voice": {"type":"string","description":"Voice code"},
       "rate": {"type":"number","description":"Talk speed"},
       "volume": {"type":"integer","description":"Volume"}
     },
     "ELEVEN_LABS": {
-      "_title":"ElevenLabs API",
-      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://api.elevenlabs.io/v1/voices"},
+      "_title":"ElevenLabs Text-To-Speech",
+      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5578"},
       "optimize_streaming_latency": {"type":"string","description":"Optimize Streaming Latency","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
       "model_id": {"type":"string","description":"Model ID","helpurl":"https://beta.elevenlabs.io/speech-synthesis"},
       "stability":{"type":"number","description":"Stability"},
-      "similarity_boost": {"type":"number","description":"similarity_boost"},
-      "API_KEY": {"type":"apikey","description":"Eleven labs API KEY","code":"11LABS_API_KEY"}
+      "similarity_boost": {"type":"number","description":"Similarity_Boost"},
+      "API_KEY": {"type":"apikey","description":"Eleven Labs API key","code":"11LABS_API_KEY"}
     },
     "GCP": {
-      "_title":"Google Cloud Platform",
-      "GCP_SA_FILEPATH": {"type":"string","description":"Google Cloud Platform auth file. Should be located in data folder"},
-      "voice_name":{"type":"string","description":"Voice"},
-      "voice_languageCode":{"type":"string","description":"Language code"},
+      "_title":"Google Cloud Platform Text-To-Speech",
+      "GCP_SA_FILEPATH": {"type":"string","description":"Google Cloud Platform auth file. Should be placed in the data folder.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5581"},
+      "voice_name":{"type":"string","description":"Voice","helpurl":"https://cloud.google.com/text-to-speech/docs/voices"},
+      "voice_languageCode":{"type":"string","description":"Language code","helpurl":"https://developers.google.com/admin-sdk/directory/v1/languages"},
       "ssml_rate":{"type":"number","description":"Rate"},
       "ssml_pitch":{"type":"string","description":"Pitch"}
     }
   },
-  "STTFUNCTION": {"type":"select","values":["whisper","localwhisper","azure"],"description":"Service to use to perform voice recognition", "_title":"Current Voice Recognition Provider"},
+  "STTFUNCTION": {"type":"select","values":["whisper","localwhisper","azure"],"description":"Speech-to-Text service options. Translates your voice to text.", "_title":"Speech-to-Text Service"},
   "STT": {
-   "_title":"Voice Recognition :: Providers Configuration",
-    "LOCALWHISPER": {
-       "_title":"Local whisper installation",
-      "URL": {"type":"url","description":"Local whisper endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"}
+  "_title":"Speech-to-Text Service",
+    "WHISPER": {
+      "_title":"OpenAI's Whisper Speech-to-Text",
+      "LANG": {"type":"string","description":"Language to detect for STT"},
+      "API_KEY": {"type":"apikey","description":"OpenAI API key. Same used for OpenAI/ChatGPT AI service.","code":"OPENAI_API_KEY"}
     },
     "AZURE": {
-      "_title":"Azure Advanced Voice Recognition",
-      "LANG": {"type":"string","description":"Language to use in STT"},
-      "profanity": {"type":"select","values":["masked","removed","raw"],"description":"Specifies how to handle profanity in recognition results. Accepted values are:masked, which replaces profanity with asterisks.removed, which removes all profanity from the result.raw, which includes profanity in the result.","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short"},
-      "API_KEY": {"type":"apikey","description":"Azure API key. Probably the same as Azure TTS API KEY","code":"AZURE_API_KEY"}
+      "_title":"Azure Speech-to-Text",
+      "LANG": {"type":"string","description":"Language to detect for STT"},
+      "profanity": {"type":"select","values":["masked","removed","raw"],"description":"Specifies how to handle profanity in recognition results. Accepted values are:MASKED, which replaces profanity with asterisks. REMOVED, which removes all profanity from the result. RAW, which includes profanity in the result.","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short"},
+      "API_KEY": {"type":"apikey","description":"Azure API key. Same used for Azure TTS Service","code":"AZURE_API_KEY"}
     },
-    "WHISPER": {
-       "_title":"OpenAI's Whisper speech transcription",
-      "LANG": {"type":"string","description":"Language to use in STT"},
-      "API_KEY": {"type":"apikey","description":"OpenAI API key.Probably the same as OpenAI's API","code":"OPENAI_API_KEY"}
+    "LOCALWHISPER": {
+      "_title":"Local Whisper Speech-to-Text (Installed with DwemerDistro)",
+      "URL": {"type":"url","description":"Local whisper endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"}
     }
   },
   "FEATURES": {
-    "_title":"Misc features",
+    "_title":"Other Features",
     "MEMORY_EMBEDDING": {
-      "_title":"Memory Embedding",
-      "ENABLED": {"type":"boolean","description":"Enable memory embedding features.Use ChromaDB and a text embedding provider (openai or local) to automatically store memories, and offer then automatically using user prompt"},
-      "CHROMADB_URL": {"type":"url","description":"ChromaDB endpoint. If using DwemerDistro, it should be printed on console."},
+      "_title":"Long Term Memory (DwemerDistro Only!)",
+      "ENABLED": {"type":"boolean","description":"Enable Long Term Memory.  It uses ChromaDB and a text embedding provider to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
+      "CHROMADB_URL": {"type":"url","description":"ChromaDB Endpoint. If using DwemerDistro, it should be displayed in the console window."},
       "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
-      "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs OpenAI APIKEY. Local is the one provide by DwemerDistro"},
-      "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to consider a previous chat as a memory. Used to avoid pushing too recent dialogues as memories. (that should be covered by context history)."},
-      "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many memory records will be injected in prompt."}
+      "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs your OpenAI API key. Local is the one provided by DwemerDistro"},
+      "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing too recent dialogues as memories. As that is covered by context history."},
+      "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many of the most relevant memory records will be injected in prompt."}
     },
     "COST_MONITOR": {
-      "_title":"Tokenizer counter & Cost monitoring",
-      "ENABLED":{"type":"boolean","description":"Enable cost/token counter monitoring. Currently only supports OpenAI."},
-      "URL":{"type":"url","description":"URL of API. Should be printed in DwemerDistro console."}
+      "_title":"Cost Monitoring (DwemerDistro Only!)",
+      "ENABLED":{"type":"boolean","description":"Enable Cost Monitoring. Currently only tracks OpenAI cost."},
+      "URL":{"type":"url","description":"URL of API. Should be displayed in DwemerDistro console window."}
     }
   }
   
