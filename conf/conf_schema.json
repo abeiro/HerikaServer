@@ -1,7 +1,7 @@
 {
   "DBDRIVER": {"type":"select","values":["sqlite3"],"description":"Primary database handler. Currently only sqlite3."},
-  "PLAYER_NAME": {"type":"string","description":"Your current character name"},
-  "HERIKA_NAME": {"type":"string","description":"Custom name for Herika"},
+  "PLAYER_NAME": {"type":"string","description":"Your current character name."},
+  "HERIKA_NAME": {"type":"string","description":"Custom name for Herika. Make sure it matches the Skyrim NPC name."},
   "PROMPT_HEAD": {"type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "HERIKA_PERS": {"type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "CONTEXT_HISTORY": {"type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. More context => more tokens used, and slower processing speed in local LLMs."},
@@ -34,8 +34,8 @@
     "openrouter": {
       "_title":"OpenRouter API",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
-      "model": {"type":"string","description":"Model to use","helpurl":"https://openrouter.ai/docs#models"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "model": {"type":"string","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
       "xreferer": {"type":"string","description":"Stub needed header. Keep default."},
@@ -47,7 +47,7 @@
       "HOST": {"type":"string","description":"Oobabooga API WS HOST"},
       "PORT": {"type":"integer","description":"Oobabooga API WS PORT"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when using a summarizing (example:write diary)"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
       "temperature": {"type":"number","description":"LLM parameter temperature"},
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
@@ -68,7 +68,7 @@
     },
     "MIMIC3": {
       "_title":"MIMIC3 Text-To-Speech (Automatically installed with DwemerDistro)",
-      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, it is displayed in the console window."},
+      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, copy and paste the URL from the console window."},
       "voice": {"type":"string","description":"Voice code"},
       "rate": {"type":"number","description":"Talk speed"},
       "volume": {"type":"integer","description":"Volume"}
@@ -80,7 +80,7 @@
       "model_id": {"type":"string","description":"Model ID","helpurl":"https://beta.elevenlabs.io/speech-synthesis"},
       "stability":{"type":"number","description":"Stability"},
       "similarity_boost": {"type":"number","description":"Similarity_Boost"},
-      "API_KEY": {"type":"apikey","description":"Eleven Labs API key","code":"11LABS_API_KEY"}
+      "API_KEY": {"type":"apikey","description":"Eleven Labs API key.","code":"11LABS_API_KEY"}
     },
     "GCP": {
       "_title":"Google Cloud Platform Text-To-Speech",
@@ -96,18 +96,18 @@
   "_title":"Speech-to-Text Service",
     "WHISPER": {
       "_title":"OpenAI's Whisper Speech-to-Text",
-      "LANG": {"type":"string","description":"Language to detect for STT"},
+      "LANG": {"type":"string","description":"Language to detect for STT."},
       "API_KEY": {"type":"apikey","description":"OpenAI API key. Same used for OpenAI/ChatGPT AI service.","code":"OPENAI_API_KEY"}
     },
     "AZURE": {
       "_title":"Azure Speech-to-Text",
-      "LANG": {"type":"string","description":"Language to detect for STT"},
+      "LANG": {"type":"string","description":"Language to detect for STT."},
       "profanity": {"type":"select","values":["masked","removed","raw"],"description":"Specifies how to handle profanity in recognition results. Accepted values are:MASKED, which replaces profanity with asterisks. REMOVED, which removes all profanity from the result. RAW, which includes profanity in the result.","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short"},
-      "API_KEY": {"type":"apikey","description":"Azure API key. Same used for Azure TTS Service","code":"AZURE_API_KEY"}
+      "API_KEY": {"type":"apikey","description":"Azure API key. Same used for Azure TTS Service.","code":"AZURE_API_KEY"}
     },
     "LOCALWHISPER": {
       "_title":"Local Whisper Speech-to-Text (Installed with DwemerDistro)",
-      "URL": {"type":"url","description":"Local whisper endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"}
+      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"}
     }
   },
   "FEATURES": {
@@ -115,8 +115,8 @@
     "MEMORY_EMBEDDING": {
       "_title":"Long Term Memory (DwemerDistro Only!)",
       "ENABLED": {"type":"boolean","description":"Enable Long Term Memory.  It uses ChromaDB and a text embedding provider to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
-      "CHROMADB_URL": {"type":"url","description":"ChromaDB Endpoint. If using DwemerDistro, it should be displayed in the console window."},
-      "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
+      "CHROMADB_URL": {"type":"url","description":"ChromaDB Endpoint. Copy and paste the URL from the console window."},
+      "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint. Copy and paste the URL from the console window.","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
       "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs your OpenAI API key. Local is the one provided by DwemerDistro"},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing too recent dialogues as memories. As that is covered by context history."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many of the most relevant memory records will be injected in prompt."}
