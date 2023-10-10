@@ -304,6 +304,15 @@ function returnLines($lines)
                 tts($responseTextUnmooded, $mood, $responseText);
 
             }
+            
+            if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
+
+                require_once(__DIR__."/../tts/tts-coqui-ai.php");
+                tts($responseTextUnmooded, $mood, $responseText);
+
+            }
+            
+            
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
             }

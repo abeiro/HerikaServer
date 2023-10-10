@@ -40,6 +40,11 @@ $TTS["GCP"]["voice_languageCode"]="en-GB";
 $TTS["GCP"]["ssml_rate"]=1.15;
 $TTS["GCP"]["ssml_pitch"]="+3.6st";
 
+$TTS["COQUI_AI"]["voice_id"]='f05c5b91-7540-4b26-b534-e820d43065d1';	//Voice code
+$TTS["COQUI_AI"]["speed"]=1;	//Speed
+$TTS["COQUI_AI"]["language"]='en';	//Language to speak
+$TTS["COQUI_AI"]["API_KEY"]='';	//Coqui.ai API key.
+
 
 $STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:3000/transcribe";
 

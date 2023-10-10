@@ -52,7 +52,7 @@
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "AZURE": {
@@ -81,6 +81,13 @@
       "stability":{"type":"number","description":"Stability"},
       "similarity_boost": {"type":"number","description":"Similarity_Boost"},
       "API_KEY": {"type":"apikey","description":"Eleven Labs API key.","code":"11LABS_API_KEY"}
+    },
+    "COQUI_AI": {
+      "_title":"Coqui.ai Text-To-Speech",
+      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://docs.coqui.ai/reference/speakers_retrieve"},
+      "speed": {"type":"number","description":"Speed","helpurl":"https://docs.coqui.ai/reference/samples_xtts_stream_create"},
+      "language": {"type":"select","values":["en","de","fr","es","it","pt","pl"],"description":"Language to speak"},
+      "API_KEY": {"type":"apikey","description":"Coqui.ai API key.","code":"COQUI_AI_API_KEY"}
     },
     "GCP": {
       "_title":"Google Cloud Platform Text-To-Speech",
