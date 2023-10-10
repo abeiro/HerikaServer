@@ -18,6 +18,7 @@ $TEMPLATE_DIALOG.=" ...'";
     
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $TEMPLATE_ACTION="call a function to control {$GLOBALS["HERIKA_NAME"]} or";
+    $TEMPLATE_ACTION="";    // WIP
 } else {
     $TEMPLATE_ACTION="";
 }
