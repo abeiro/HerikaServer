@@ -92,6 +92,7 @@ $CONNECTOR["koboldcpp"]["top_p"]=0.9;
 $CONNECTOR["koboldcpp"]["MAX_TOKENS_MEMORY"]=256;
 $CONNECTOR["koboldcpp"]["newline_as_stopseq"]=true;
 $CONNECTOR["koboldcpp"]["use_default_badwordsids"]=true;
+$CONNECTOR["koboldcpp"]["template"]="alpaca";
 
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions";
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-2-70b-chat";

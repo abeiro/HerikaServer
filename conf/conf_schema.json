@@ -29,7 +29,8 @@
       "top_p": {"type":"number","description":"LLM parameter top_p"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
       "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence."},
-      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Setence (EOS) tokens. LLM will stop generating when it detects an EOS token."}
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Setence (EOS) tokens. LLM will stop generating when it detects an EOS token."},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT"],"description":"Prompt Format. Usually specified in HugginFace's model card"}
     },
     "openrouter": {
       "_title":"OpenRouter API",

@@ -8,6 +8,7 @@ class connector
     public $name;
 
     private $_functionMode;
+    private $_ignoreRest;
     private $_functionRawName;
     private $_functionName;
     private $_parameterBuff;
@@ -44,31 +45,177 @@ class connector
             }
         }
 
-        foreach ($normalizedContext as $n=>$s_msg) {
-            if ($n==(sizeof($normalizedContext)-1)) {
-                $context.="### Instruction: ".$s_msg.". Write a single reply only.\n";
-                $GLOBALS["DEBUG_DATA"][]="### Instruction: ".$s_msg."";
+        if ($GLOBALS["CONNECTOR"][$this->name]["template"]=="alpaca") {
+            foreach ($normalizedContext as $n=>$s_msg) {
+                if ($n==(sizeof($normalizedContext)-1)) {   // Last prompt line
+                    $context.="### Instruction: ".$s_msg.". Write a single reply only.\n";
+                    $GLOBALS["DEBUG_DATA"][]="### Instruction: ".$s_msg."";
 
-            } else {
-                $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
-                $context.="$s_msg_p\n";
-                $GLOBALS["DEBUG_DATA"][]=$s_msg_p;
+                } else {
+                    $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
+                    $context.="$s_msg_p\n";
+                    $GLOBALS["DEBUG_DATA"][]=$s_msg_p;
+                }
+
             }
 
+            $context.="### Response: ";
+            $GLOBALS["DEBUG_DATA"][]="### Response:";
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="vicuna-1") {
+
+
+            $context="USER: {$GLOBALS["PROMPT_HEAD"]}\n";
+            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
+            $context.="Dialogue history:\n";
+
+            $contextHistory="";
+            $n=0;
+            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+
+                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $instruction="".$s_msg["content"]."\n";
+
+                } else {
+                    if ($s_msg["role"]=="user") {
+                        $contextHistory.="".$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="assistant") {
+                        $contextHistory.="".$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="system") {
+                    }  // Must rebuild this
+                }
+
+                $n++;
+            }
+
+            $context.="$contextHistory $instruction ASSISTANT: ";
+            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+        }  elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="vicuna-1.1") {
+
+
+            $context="{$GLOBALS["PROMPT_HEAD"]}\n";
+            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
+            $context.="{$GLOBALS["HERIKA_NAME"]} IS THE ASSISTANT, {$GLOBALS["PLAYER_NAME"]} IS THE USER\n";
+
+            $contextHistory="";
+            $n=0;
+            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+
+                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $instruction="USER: ".$s_msg["content"]."\n";
+
+                } else {
+                    if ($s_msg["role"]=="user") {
+                        $contextHistory.="USER:".$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="assistant") {
+                        $contextHistory.="ASSISTANT:".$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="system") {
+                    }  // Must rebuild this
+                }
+
+                $n++;
+            }
+
+            $context.="$instruction $contextHistory  ASSISTANT:";
+            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="synthia") {
+            
+            $context.="SYSTEM:";
+            foreach ($normalizedContext as $n=>$s_msg) {
+                if ($n==(sizeof($normalizedContext)-1)) {   // Last prompt line
+                    $context.="USER: ".$s_msg.". Write a single reply only.\n";
+                    $GLOBALS["DEBUG_DATA"][]="USER:  ".$s_msg."";
+
+                } else {
+                    $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
+                    $context.="$s_msg_p\n";
+                    $GLOBALS["DEBUG_DATA"][]=$s_msg_p;
+                }
+
+            }
+
+            $context.="ASSISTANT: ";
+            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="extended-alpaca") {
+
+            $context="Character's Persona: {$GLOBALS["HERIKA_PERS"]}\n";
+            $context.="User's Persona: {$GLOBALS["PLAYER_NAME"]}\n";
+            $context.="Scenario: {$GLOBALS["PROMPT_HEAD"]} \n";
+            $context.="Play the role of {$GLOBALS["HERIKA_NAME"]}. You must engage in a roleplaying chat with {$GLOBALS["PLAYER_NAME"]} below this line.Do not write dialogues for {$GLOBALS["PLAYER_NAME"]} and don't write narration.";
+            $contextHistory="";
+            $n=0;
+            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+
+                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $context.=$s_msg["content"];
+
+                } else {
+                    if ($s_msg["role"]=="user") {
+                        $contextHistory.="### Input:\n".$s_msg["content"];
+                    } elseif ($s_msg["role"]=="assistant") {
+                        $contextHistory.="### Response:\n".$s_msg["content"];
+                    } elseif ($s_msg["role"]=="system") {
+                    }  // Must rebuild this
+                }
+
+                $n++;
+            }
+
+            $context.="$contextHistory ### Response\n: ";
+            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="superHOT") {
+
+            $context="---\nstyle: roleplay\n";
+            $context.="characters:\n   {$GLOBALS["HERIKA_NAME"]}:{$GLOBALS["HERIKA_PERS"]}\n   {$GLOBALS["PLAYER_NAME"]}:Human\n";
+            $context.="summary: {$GLOBALS["PROMPT_HEAD"]} \n---\n";
+            $contextHistory="";
+            $n=0;
+            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+
+                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $instruction=$s_msg["content"];
+
+
+                } else {
+                    if ($s_msg["role"]=="user") {
+                        $contextHistory.=$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="assistant") {
+                        $contextHistory.=$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="system") {
+                    }  // Must rebuild this
+                }
+
+                $GLOBALS["DEBUG_DATA"][]=$s_msg["content"];
+
+                $n++;
+            }
+
+            $context.="$contextHistory Human: $instruction\n{$GLOBALS["HERIKA_NAME"]}:";
+
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
         }
-
-        $context.="### Response: ";
-        $GLOBALS["DEBUG_DATA"][]="### Response:";
-
-
-        $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         $TEMPERATURE=((isset($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? $GLOBALS["CONNECTOR"][$this->name]["temperature"] : 0.9)+0);
         $REP_PEN=((isset($GLOBALS["CONNECTOR"][$this->name]["rep_pen"]) ? $GLOBALS["CONNECTOR"][$this->name]["rep_pen"] : 1.12)+0);
         $TOP_P=((isset($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? $GLOBALS["CONNECTOR"][$this->name]["top_p"] : 0.9)+0);
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
-        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author\'s notes"];
+        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author\'s notes","###"];
 
         if ($GLOBALS["CONNECTOR"][$this->name]["newline_as_stopseq"]) {
             $stop_sequence[]="\n";
@@ -167,7 +314,9 @@ class connector
         if (strpos($line, 'data: {') !== 0) {
             return "";
         }
+        //$_ignoreRest
 
+        
         if (strpos($line, 'data: {"token": "#"}') === 0) {
 
             $this->_functionMode=true;
@@ -218,4 +367,3 @@ class connector
 
 
 }
-?>
