@@ -30,7 +30,7 @@ function cleanResponse($rawResponse)
         $toSplit = $rawResponse;
     }
 
-    if (strpos($toSplit, "{$GLOBALS["HERIKA_NAME"]}:") !== false) {
+    if (stripos($toSplit, "{$GLOBALS["HERIKA_NAME"]}:") !== false) {
         $rawResponseSplited = explode(":", $toSplit);
         array_shift($rawResponseSplited);
         $toSplit = implode(":", $rawResponseSplited);
@@ -428,4 +428,17 @@ function logEvent($dataArray)
             'localts' => time()
         )
     );
+}
+
+
+function selectRandomInArray($arraySource) {
+    
+    $n=sizeof($arraySource);
+    if ($n==1)
+        return $arraySource[0];
+    
+    return $arraySource[rand(0,$n-1)];
+    
+    
+    
 }

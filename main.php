@@ -5,7 +5,7 @@
 error_reporting(E_ALL);
 
 define("MAXIMUM_SENTENCE_SIZE", 125);
-define("MINIMUM_SENTENCE_SIZE", 25);
+define("MINIMUM_SENTENCE_SIZE", 15);
 
 date_default_timezone_set('Europe/Madrid');
 

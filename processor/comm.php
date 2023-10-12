@@ -174,4 +174,21 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 	
     $MUST_END=true;
 
-} 
+} else if ($gameRequest[0] == "force_current_task") {
+	$db->insert(
+			'currentmission',
+			array(
+				'ts' => $gameRequest[1],
+				'gamets' => $gameRequest[2],
+				'description' => $gameRequest[3],
+				'sess' => 'pending',
+				'localts' => time()
+			)
+	);
+    $MUST_END=true;
+} else if (strpos($gameRequest[0],"info")===0) {    // info_whatever commands
+	
+   logEvent($gameRequest);
+    
+    $MUST_END=true;
+}

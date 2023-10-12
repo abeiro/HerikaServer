@@ -17,6 +17,7 @@ class connector
     public function __construct()
     {
         $this->name="koboldcpp";
+         $this->_ignoreRest=false;
     }
 
 
@@ -97,11 +98,14 @@ class connector
 
         }  elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="vicuna-1.1") {
 
-
+            $GLOBALS["more_stopseq"][]="USER:";
             $context="{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
             $context.="{$GLOBALS["HERIKA_NAME"]} IS THE ASSISTANT, {$GLOBALS["PLAYER_NAME"]} IS THE USER\n";
 
+            
+            $GLOBALS["DEBUG_DATA"][]=$context;
+            
             $contextHistory="";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
@@ -113,10 +117,14 @@ class connector
                 } else {
                     if ($s_msg["role"]=="user") {
                         $contextHistory.="USER:".$s_msg["content"]."\n";
+                          $GLOBALS["DEBUG_DATA"][]="USER:".$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="assistant") {
+                         $GLOBALS["DEBUG_DATA"][]="ASSISTANT:".$s_msg["content"]."\n";
                         $contextHistory.="ASSISTANT:".$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
+                    
+                     
                 }
 
                 $n++;
@@ -124,6 +132,42 @@ class connector
 
             $context.="$instruction $contextHistory  ASSISTANT:";
             $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="chatml") {
+
+            $GLOBALS["more_stopseq"][]="<|im_start|>user";
+            $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
+            $context.="{$GLOBALS["HERIKA_PERS"]}<|im_end|>\n";
+           
+            $GLOBALS["DEBUG_DATA"][]=$context;
+            
+            $contextHistory="";
+            $n=0;
+            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+
+                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $instruction="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
+
+                } else {
+                    if ($s_msg["role"]=="user") {
+                        $contextHistory.="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
+                          $GLOBALS["DEBUG_DATA"][]="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
+                    } elseif ($s_msg["role"]=="assistant") {
+                         $GLOBALS["DEBUG_DATA"][]="<|im_start|>assistant\n".$s_msg["content"]."<|im_end|>\n";
+                        $contextHistory.="<|im_start|>assistant\n".$s_msg["content"]."<|im_end|>\n";
+                    } elseif ($s_msg["role"]=="system") {
+                    }  // Must rebuild this
+                    
+                     
+                }
+
+                $n++;
+            }
+
+            $context.="$contextHistory  $instruction";
+            $GLOBALS["DEBUG_DATA"][]="$instruction";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="synthia") {
@@ -142,8 +186,8 @@ class connector
 
             }
 
-            $context.="ASSISTANT: ";
-            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
+            $context.="ASSISTANT: {$GLOBALS["HERIKA_NAME"]}:";
+            $GLOBALS["DEBUG_DATA"][]="ASSISTANT: {$GLOBALS["HERIKA_NAME"]}:";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="extended-alpaca") {
@@ -215,11 +259,17 @@ class connector
         $TOP_P=((isset($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? $GLOBALS["CONNECTOR"][$this->name]["top_p"] : 0.9)+0);
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
-        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author\'s notes","###"];
+        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###","```"];
 
         if ($GLOBALS["CONNECTOR"][$this->name]["newline_as_stopseq"]) {
             $stop_sequence[]="\n";
         }
+        
+        if (isset($GLOBALS["more_stopseq"])) {
+            foreach ($GLOBALS["more_stopseq"] as $stopseq)
+                $stop_sequence[]=$stopseq;
+        }
+        
         $postData = array(
 
             "prompt"=>$context,
@@ -309,19 +359,27 @@ class connector
         $totalBuffer="";
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
 
-
+        if ($this->_ignoreRest)
+            return "";
 
         if (strpos($line, 'data: {') !== 0) {
             return "";
         }
         //$_ignoreRest
 
+        if (strpos($line, 'data: {"token": "{"}') !== false) {
+            $this->_ignoreRest=true;
+            return "";
+            
+        }
         
-        if (strpos($line, 'data: {"token": "#"}') === 0) {
+        /*
+         if (strpos($line, 'data: {"token": "#"}') === 0) {
 
             $this->_functionMode=true;
             return "";
         }
+        */
 
         $data=json_decode(substr($line, 6), true);
 
@@ -351,6 +409,9 @@ class connector
 
     public function isDone()
     {
+        if ($this->_ignoreRest)
+            return true;
+        
         return feof($this->primary_handler);
     }
 
