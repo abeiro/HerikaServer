@@ -170,6 +170,10 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 	
     $MUST_END=true;
 
+} else if ($gameRequest[0] == "quest") {
+	
+    $MUST_END=true;
+
 } else if ($gameRequest[0] == "location") {
 	
     $MUST_END=true;

@@ -300,6 +300,8 @@ if ($connectionHandler->primary_handler === false) {
         }
 
     }
+    
+    
     if (trim($buffer)) {
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
         $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];

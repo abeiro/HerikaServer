@@ -60,7 +60,7 @@ class connector
 
             }
 
-            $context.="### Response: ";
+            $context.="### Response:";
             $GLOBALS["DEBUG_DATA"][]="### Response:";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
@@ -113,7 +113,7 @@ class connector
                 if ($n==(sizeof($contextData)-1)) {   // Last prompt line
 
                     $instruction="USER: ".$s_msg["content"]."\n";
-
+                    $GLOBALS["DEBUG_DATA"][]=$instruction;
                 } else {
                     if ($s_msg["role"]=="user") {
                         $contextHistory.="USER:".$s_msg["content"]."\n";
@@ -130,7 +130,7 @@ class connector
                 $n++;
             }
 
-            $context.="$instruction $contextHistory  ASSISTANT:";
+            $context.="$contextHistory  $instruction ASSISTANT:{$GLOBALS["HERIKA_NAME"]}:";
             $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
@@ -192,23 +192,26 @@ class connector
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="extended-alpaca") {
 
-            $context="Character's Persona: {$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="User's Persona: {$GLOBALS["PLAYER_NAME"]}\n";
+            $context="{$GLOBALS["HERIKA_NAME"]}'s Persona: {$GLOBALS["HERIKA_PERS"]}\n";
+            $context.="{$GLOBALS["PLAYER_NAME"]}'s Persona: {$GLOBALS["PLAYER_NAME"]}\n";
             $context.="Scenario: {$GLOBALS["PROMPT_HEAD"]} \n";
-            $context.="Play the role of {$GLOBALS["HERIKA_NAME"]}. You must engage in a roleplaying chat with {$GLOBALS["PLAYER_NAME"]} below this line.Do not write dialogues for {$GLOBALS["PLAYER_NAME"]} and don't write narration.";
+            $context.="Play the role of {$GLOBALS["HERIKA_NAME"]}. You must engage in a roleplaying chat with {$GLOBALS["PLAYER_NAME"]} below this line.Do not write dialogues for {$GLOBALS["PLAYER_NAME"]} and don't write narration.\n";
             $contextHistory="";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
 
                 if ($n==(sizeof($contextData)-1)) {   // Last prompt line
-
-                    $context.=$s_msg["content"];
+                    $instruction="### Input:\n".$s_msg["content"]."\n";
+                    $GLOBALS["DEBUG_DATA"][]=$instruction;
 
                 } else {
                     if ($s_msg["role"]=="user") {
                         $contextHistory.="### Input:\n".$s_msg["content"];
+                        $GLOBALS["DEBUG_DATA"][]="### Input:\n".$s_msg["content"];
                     } elseif ($s_msg["role"]=="assistant") {
                         $contextHistory.="### Response:\n".$s_msg["content"];
+                        $GLOBALS["DEBUG_DATA"][]="### Response:\n".$s_msg["content"];
+
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
                 }
@@ -216,7 +219,7 @@ class connector
                 $n++;
             }
 
-            $context.="$contextHistory ### Response\n: ";
+            $context.="$contextHistory $instruction ### Response\n{$GLOBALS["HERIKA_NAME"]}:";
             $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
@@ -282,6 +285,17 @@ class connector
             "use_default_badwordsids"=>$GLOBALS["CONNECTOR"][$this->name]["use_default_badwordsids"]
 
         );
+
+        $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].':" answer "\n"
+answer ::= sentence "." answer | sentence
+sentence ::= words
+words ::= word words | word
+word ::= ANY_TEXT
+ANY_TEXT ::= "[a-zA-Z0-9.,?! ]*"
+';
+
 
         $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;
 
@@ -392,7 +406,7 @@ class connector
         }
 
         if (isset($data["token"])) {
-            if (strlen(trim($data["token"]))>0) {
+            if (strlen(trim($data["token"],"\t\0\x0B"))>0) {
                 $buffer.=$data["token"];
             }
             $totalBuffer.=$data["token"];

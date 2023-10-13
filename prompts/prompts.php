@@ -8,12 +8,13 @@
 // Full Prompt then is $PROMPT_HEAD + $HERIKA_PERS + $COMMAND_PROMPT + CONTEXT + requirement + cue
 
 // Common patterns to use in most functions
-$TEMPLATE_DIALOG="roleplay only as {$GLOBALS["HERIKA_NAME"]} by completing {$GLOBALS["HERIKA_NAME"]}'s dialogue using this format '{$GLOBALS["HERIKA_NAME"]}: ";
+$TEMPLATE_DIALOG="complete {$GLOBALS["HERIKA_NAME"]}'s dialogue using this format '{$GLOBALS["HERIKA_NAME"]}: ";
 
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
-    $TEMPLATE_DIALOG.="(optional way of speaking from this list [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
+    if ($GLOBALS["TTSFUNCTION"]=="azure")
+        $TEMPLATE_DIALOG.="(optional way of speaking from this list [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
 
-$TEMPLATE_DIALOG.=" ...'";
+$TEMPLATE_DIALOG.=" '";
 
     
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -57,7 +58,7 @@ $PROMPTS=array(
 
     "bored"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment a joke about current location) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a joke about current location) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the current weather) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the time and date) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the last event) $TEMPLATE_DIALOG",
@@ -66,10 +67,10 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the politics of Skyrim) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about a historical event from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about a book from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: I once had to )$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: Did you hear about what happened in)$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: A wise Akaviri man once told me)$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]})$TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: I once had to ) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: Did you hear about what happened in) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: A wise Akaviri man once told me) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG"
         ]
     ],
 
