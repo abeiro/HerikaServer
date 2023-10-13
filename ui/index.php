@@ -169,7 +169,7 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "eventlog") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 0,25");
+        $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 0,50");
         echo "<h3 class='my-2'>Event log</h3>";
         print_array_as_table($results);
         if ($_GET["autorefresh"]) {

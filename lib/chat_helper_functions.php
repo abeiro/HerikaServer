@@ -56,7 +56,7 @@ function cleanResponse($rawResponse)
         $sentenceX
     );
 
-
+    
     return $sentenceXX;
 }
 
@@ -91,7 +91,10 @@ function split_sentences($paragraph)
     }*/
 
     if (is_array($sentences)) {
-        return $sentences;
+        if (sizeof($sentences)==0)
+             return array($paragraphNcr);
+        else
+            return $sentences;
     } else {
         return array($sentences);
     }
@@ -231,7 +234,7 @@ function returnLines($lines)
         $scoring = checkOAIComplains($responseTextUnmooded);
 
         if ($scoring >= 3) { // Catch OpenAI brekaing policies stuff
-            $responseTextUnmooded = $ERROR_OPENAI_POLICY; // Key phrase to indicate OpenAI triggered warning
+            $responseTextUnmooded = $GLOBALS["ERROR_OPENAI_POLICY"]; // Key phrase to indicate OpenAI triggered warning
             $ERROR_TRIGGERED=true;
             $FORCED_STOP = true;
         } else {

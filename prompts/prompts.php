@@ -8,13 +8,13 @@
 // Full Prompt then is $PROMPT_HEAD + $HERIKA_PERS + $COMMAND_PROMPT + CONTEXT + requirement + cue
 
 // Common patterns to use in most functions
-$TEMPLATE_DIALOG="complete {$GLOBALS["HERIKA_NAME"]}'s dialogue using this format '{$GLOBALS["HERIKA_NAME"]}: ";
+$TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s dialogue using this format '{$GLOBALS["HERIKA_NAME"]}: ";
 
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
     if ($GLOBALS["TTSFUNCTION"]=="azure")
         $TEMPLATE_DIALOG.="(optional way of speaking from this list [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
 
-$TEMPLATE_DIALOG.=" '";
+$TEMPLATE_DIALOG.=" ', (stay in the roleplay)";
 
     
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -80,11 +80,11 @@ $PROMPTS=array(
     ],
 
     "inputtext"=>[
-        "cue"=>["$TEMPLATE_ACTION $TEMPLATE_DIALOG "] // Prompt is implicit
+        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} answers to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG "] // Prompt is implicit
 
     ],
     "inputtext_s"=>[
-        "cue"=>["$TEMPLATE_ACTION $TEMPLATE_DIALOG"], // Prompt is implicit
+        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} answers to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"], // Prompt is implicit
         "extra"=>["mood"=>"whispering"]
     ],
     "afterfunc"=>[
@@ -110,7 +110,7 @@ $PROMPTS=array(
         
     ],
     "diary"=>[ 
-        "cue"=>["Please, write in your personal diary style a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above. Write only as {$GLOBALS["HERIKA_NAME"]}."],
+        "cue"=>["Please write a summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
         "extra"=>["force_tokens_max"=>0]
     ],
     

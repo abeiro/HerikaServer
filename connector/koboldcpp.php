@@ -116,11 +116,11 @@ class connector
                     $GLOBALS["DEBUG_DATA"][]=$instruction;
                 } else {
                     if ($s_msg["role"]=="user") {
-                        $contextHistory.="USER:".$s_msg["content"]."\n";
-                          $GLOBALS["DEBUG_DATA"][]="USER:".$s_msg["content"]."\n";
+                        $contextHistory.=$s_msg["content"]."\n";
+                          $GLOBALS["DEBUG_DATA"][]=$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="assistant") {
-                         $GLOBALS["DEBUG_DATA"][]="ASSISTANT:".$s_msg["content"]."\n";
-                        $contextHistory.="ASSISTANT:".$s_msg["content"]."\n";
+                         $GLOBALS["DEBUG_DATA"][]=$s_msg["content"]."\n";
+                        $contextHistory.=$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
                     
@@ -130,7 +130,7 @@ class connector
                 $n++;
             }
 
-            $context.="$contextHistory  $instruction ASSISTANT:{$GLOBALS["HERIKA_NAME"]}:";
+            $context.="$contextHistory  $instruction ASSISTANT:";
             $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
@@ -172,23 +172,44 @@ class connector
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="synthia") {
             
-            $context.="SYSTEM:";
-            foreach ($normalizedContext as $n=>$s_msg) {
-                if ($n==(sizeof($normalizedContext)-1)) {   // Last prompt line
-                    $context.="USER: ".$s_msg.". Write a single reply only.\n";
-                    $GLOBALS["DEBUG_DATA"][]="USER:  ".$s_msg."";
+            
+            $context="SYSTEM: {$GLOBALS["PROMPT_HEAD"]}.";
+            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
+           
+            $GLOBALS["DEBUG_DATA"][]=$context;
+            
+            $contextHistory="";
+            $n=0;
+            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+
+                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $instruction="USER: ".$s_msg["content"]."\n";
 
                 } else {
-                    $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
-                    $context.="$s_msg_p\n";
-                    $GLOBALS["DEBUG_DATA"][]=$s_msg_p;
+                    if ($s_msg["role"]=="user") {
+                        $contextHistory.="USER: ".$s_msg["content"]."\n";
+                        $GLOBALS["DEBUG_DATA"][]="USER: ".$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="assistant") {
+                         
+                        $contextHistory.="ASSISTANT: ".$s_msg["content"]."\n";
+                        $GLOBALS["DEBUG_DATA"][]="ASSISTANT: ".$s_msg["content"]."\n";
+                        
+                    } elseif ($s_msg["role"]=="system") {
+                    }  // Must rebuild this
+                    
+                     
                 }
 
+                $n++;
             }
 
-            $context.="ASSISTANT: {$GLOBALS["HERIKA_NAME"]}:";
-            $GLOBALS["DEBUG_DATA"][]="ASSISTANT: {$GLOBALS["HERIKA_NAME"]}:";
+            $context.="{$contextHistory}{$instruction}ASSISTANT:";
+            $GLOBALS["DEBUG_DATA"][]="$instruction";
+            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
+            
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+            
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="extended-alpaca") {
 
@@ -286,15 +307,30 @@ class connector
 
         );
 
-        $postData["grammar"]='
+        if ($GLOBALS["gameRequest"][0]!="diary") {
+            $postData["grammar"]='
 root ::= fullanswer
 fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].':" answer "\n"
 answer ::= sentence "." answer | sentence
 sentence ::= words
 words ::= word words | word
-word ::= ANY_TEXT
-ANY_TEXT ::= "[a-zA-Z0-9.,?! ]*"
+word ::= ANYTEXT
+ANYTEXT ::= [a-zA-Z0-9.,?! ]
 ';
+
+        } else {
+
+            $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "Dear Diary." answer "\n"
+answer ::= sentence "." answer | sentence
+sentence ::= words
+words ::= word words | word
+word ::= ANYTEXT
+ANYTEXT ::= [a-zA-Z0-9.,?! ]
+';            
+            
+        }
 
 
         $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;

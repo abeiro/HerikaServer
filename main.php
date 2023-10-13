@@ -271,7 +271,7 @@ if ($connectionHandler->primary_handler === false) {
             $breakFlag=true;
         }
 
-        $buffer=strtr($buffer, array("\""=>""));
+        $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
         if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
             continue;
