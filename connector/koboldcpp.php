@@ -318,7 +318,7 @@ answer ::= sentence "." answer | sentence
 sentence ::= words
 words ::= word words | word
 word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?! ]
+ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 ';
 
         } else {
@@ -330,7 +330,7 @@ answer ::= sentence "." answer | sentence
 sentence ::= words
 words ::= word words | word
 word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?! ]
+ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 ';            
             
         }
