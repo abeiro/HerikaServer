@@ -78,6 +78,8 @@ function br2nl($string)
 
 function split_sentences($paragraph)
 {
+    $paragraph=strtr($paragraph,array('\n'=>".","\n"=>"."));
+    
     $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
     // Split the paragraph into an array of sentences using a regular expression
     preg_match_all('/[^\n?.!]+[?.!]/', $paragraphNcr, $matches);
@@ -91,9 +93,9 @@ function split_sentences($paragraph)
     }*/
 
     if (is_array($sentences)) {
-        if (sizeof($sentences)==0)
+        /*if (sizeof($sentences)==0)
              return array($paragraphNcr);
-        else
+        else*/
             return $sentences;
     } else {
         return array($sentences);

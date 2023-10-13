@@ -14,7 +14,7 @@ if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]
     if ($GLOBALS["TTSFUNCTION"]=="azure")
         $TEMPLATE_DIALOG.="(optional way of speaking from this list [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
 
-$TEMPLATE_DIALOG.=" ', (stay in the roleplay)";
+$TEMPLATE_DIALOG.=" ', (roleplay mode)";
 
     
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {

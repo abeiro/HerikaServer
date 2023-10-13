@@ -68,7 +68,7 @@ class connector
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="vicuna-1") {
 
 
-            $context="USER: {$GLOBALS["PROMPT_HEAD"]}\n";
+            $context="{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
             $context.="Dialogue history:\n";
 
@@ -78,13 +78,16 @@ class connector
 
                 if ($n==(sizeof($contextData)-1)) {   // Last prompt line
 
-                    $instruction="".$s_msg["content"]."\n";
+                    $instruction="USER: ".$s_msg["content"]."\n";
 
                 } else {
                     if ($s_msg["role"]=="user") {
                         $contextHistory.="".$s_msg["content"]."\n";
+                        $GLOBALS["DEBUG_DATA"][]=$s_msg["content"]."\n";
+
                     } elseif ($s_msg["role"]=="assistant") {
                         $contextHistory.="".$s_msg["content"]."\n";
+                        $GLOBALS["DEBUG_DATA"][]=$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
                 }
@@ -116,11 +119,11 @@ class connector
                     $GLOBALS["DEBUG_DATA"][]=$instruction;
                 } else {
                     if ($s_msg["role"]=="user") {
-                        $contextHistory.=$s_msg["content"]."\n";
-                          $GLOBALS["DEBUG_DATA"][]=$s_msg["content"]."\n";
+                        $contextHistory.="USER:".$s_msg["content"]."\n";
+                          $GLOBALS["DEBUG_DATA"][]="USER:".$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="assistant") {
-                         $GLOBALS["DEBUG_DATA"][]=$s_msg["content"]."\n";
-                        $contextHistory.=$s_msg["content"]."\n";
+                         $GLOBALS["DEBUG_DATA"][]="ASSISTANT:".$s_msg["content"]."\n";
+                        $contextHistory.="ASSISTANT:".$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
                     
@@ -130,7 +133,7 @@ class connector
                 $n++;
             }
 
-            $context.="$contextHistory  $instruction ASSISTANT:";
+            $context.="$contextHistory  $instruction ASSISTANT:{$GLOBALS["HERIKA_NAME"]}:";
             $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
@@ -178,7 +181,7 @@ class connector
            
             $GLOBALS["DEBUG_DATA"][]=$context;
             
-            $contextHistory="";
+            $contextHistory="\nCONTEXT:\n";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
 
@@ -188,12 +191,12 @@ class connector
 
                 } else {
                     if ($s_msg["role"]=="user") {
-                        $contextHistory.="USER: ".$s_msg["content"]."\n";
-                        $GLOBALS["DEBUG_DATA"][]="USER: ".$s_msg["content"]."\n";
+                        $contextHistory.="".$s_msg["content"]."\n";
+                        $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="assistant") {
                          
-                        $contextHistory.="ASSISTANT: ".$s_msg["content"]."\n";
-                        $GLOBALS["DEBUG_DATA"][]="ASSISTANT: ".$s_msg["content"]."\n";
+                        $contextHistory.="".$s_msg["content"]."\n";
+                        $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
                         
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
