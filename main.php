@@ -75,7 +75,7 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 // $gameRequest = type of message|localts|gamets|data
 
 // Exit if only a event info log.
-if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction"])) {
+if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death"])) {
     logEvent($gameRequest);
     die();
 }

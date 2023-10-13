@@ -325,9 +325,9 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 
             $postData["grammar"]='
 root ::= fullanswer
-fullanswer ::= "Dear Diary." answer "\n"
+fullanswer ::= "Dear Diary, " answer
 answer ::= sentence "." answer | sentence
-sentence ::= words
+sentence ::= words "\n"
 words ::= word words | word
 word ::= ANYTEXT
 ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
