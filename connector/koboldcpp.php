@@ -302,7 +302,7 @@ class connector
             "prompt"=>$context,
             "temperature"=> $TEMPERATURE,
             "top_p"=>$TOP_P,
-            "max_context_length"=>2048,
+            //"max_context_length"=>2048,
             "max_length"=>$MAX_TOKENS,
             "rep_pen"=>$REP_PEN,
             "stop_sequence"=>$stop_sequence,
