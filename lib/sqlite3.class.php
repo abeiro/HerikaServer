@@ -44,7 +44,7 @@ class sql
         }
         
         
-        //file_put_contents("/tmp/test.sql.txt","\nINSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')\n",FILE_APPEND);
+        file_put_contents("/tmp/test.sql.txt","\nINSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')\n",FILE_APPEND);
         self::$link->exec("INSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')");
 
 

@@ -254,7 +254,7 @@ function queryMemory($embeddings)
 
 	$requestData = array(
 		'query_embeddings' => [$embeddings],
-		'n_results' => 5
+		'n_results' => 10
 	);
 
 	// Convert the request data to JSON
@@ -308,6 +308,7 @@ function queryMemory($embeddings)
 
 	}
 
+	// Lets sort by distance
 	if (sizeof($dbResults) > 0) {
 		function cmp($a, $b)
 		{
@@ -319,7 +320,7 @@ function queryMemory($embeddings)
 		uasort($dbResults, 'cmp');
 		// Use $VECTORDB_QUERY_SIZE here
 		$GLOBALS["DEBUG_DATA"]["memory_system"][]=$responseData;
-		return ["item" => "{$GLOBALS["HERIKA_NAME"]}'s memories", "content" => $dbResults[0]];
+		return ["item" => "{$GLOBALS["HERIKA_NAME"]}'s memories", "content" => $dbResults];
 
 	} else {
 		return null;

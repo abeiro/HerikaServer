@@ -16,7 +16,7 @@ Only perform actions and functions if your character would find it necessary or 
 
 
 $DIALOGUE_TARGET="(Talking to {$GLOBALS["HERIKA_NAME"]})";
-$MEMORY_OFFERING="{$GLOBALS["HERIKA_NAME"]} has some potentially related memories:";
+$MEMORY_OFFERING="{$GLOBALS["HERIKA_NAME"]} has some potentially and fuzzy related memories:";
 
 $RESPONSE_OK_NOTED="Okay, noted.";
 

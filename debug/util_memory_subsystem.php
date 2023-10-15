@@ -38,13 +38,14 @@ commands:
 
 		
 	} else if ($argv[1]=="query") {
-		echo "Query memory for {$argv[1]}".PHP_EOL;
+		echo "Query memory for '{$argv[2]}'".PHP_EOL;
 		$embeddings=getEmbeddingLocal("{$argv[2]}");
 		//print_r($embeddings);
+		$db=new sql();
 		$res=queryMemory($embeddings);
-		print_r($res["content"]);
-
-		
+		print_r($res);
+		print_r($GLOBALS["DEBUG_DATA"]);
+			
 	} else if ($argv[1]=="sync") {
 		deleteCollection();
 		echo "Creating memories".PHP_EOL;;

@@ -70,6 +70,7 @@ class connector
 
             $context="{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
+	    $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
             $context.="Dialogue history:\n";
 
             $contextHistory="";
@@ -104,6 +105,7 @@ class connector
             $GLOBALS["more_stopseq"][]="USER:";
             $context="{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
+	    $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
             $context.="{$GLOBALS["HERIKA_NAME"]} IS THE ASSISTANT, {$GLOBALS["PLAYER_NAME"]} IS THE USER\n";
 
             
@@ -141,7 +143,8 @@ class connector
 
             $GLOBALS["more_stopseq"][]="<|im_start|>user";
             $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
-            $context.="{$GLOBALS["HERIKA_PERS"]}<|im_end|>\n";
+            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
+	    $context.="{$GLOBALS["COMMAND_PROMPT"]}<|im_end|>\n";
            
             $GLOBALS["DEBUG_DATA"][]=$context;
             
@@ -178,7 +181,7 @@ class connector
             
             $context="SYSTEM: {$GLOBALS["PROMPT_HEAD"]}.";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-           
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";  
             $GLOBALS["DEBUG_DATA"][]=$context;
             
             $contextHistory="\nCONTEXT:\n";
@@ -220,6 +223,8 @@ class connector
             $context.="{$GLOBALS["PLAYER_NAME"]}'s Persona: {$GLOBALS["PLAYER_NAME"]}\n";
             $context.="Scenario: {$GLOBALS["PROMPT_HEAD"]} \n";
             $context.="Play the role of {$GLOBALS["HERIKA_NAME"]}. You must engage in a roleplaying chat with {$GLOBALS["PLAYER_NAME"]} below this line.Do not write dialogues for {$GLOBALS["PLAYER_NAME"]} and don't write narration.\n";
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+
             $contextHistory="";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
@@ -252,6 +257,7 @@ class connector
             $context="---\nstyle: roleplay\n";
             $context.="characters:\n   {$GLOBALS["HERIKA_NAME"]}:{$GLOBALS["HERIKA_PERS"]}\n   {$GLOBALS["PLAYER_NAME"]}:Human\n";
             $context.="summary: {$GLOBALS["PROMPT_HEAD"]} \n---\n";
+	    $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
             $contextHistory="";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format

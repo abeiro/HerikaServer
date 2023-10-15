@@ -41,6 +41,8 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} comments about the last combat encounter) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} comments about foes defeated) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} comments about life and death) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} admires  {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
         ],
         "extra"=>["force_tokens_max"=>"50","dontuse"=>(time()%5!=0)]   //20% chance

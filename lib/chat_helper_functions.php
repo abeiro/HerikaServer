@@ -1,5 +1,27 @@
 <?php
 
+define("_MINIMAL_DISTANCE_TO_BE_THE_SAME",0.35);
+define("_MAXIMAL_DISTANCE_TO_BE_RELATED",0.55);
+define("_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE",3);
+
+
+
+function randomReplaceShortWordsWithPoints($inputString) {
+    // Split the input string into words
+    $words = explode(' ', $inputString);
+
+    // Iterate through each word and replace short words with points
+    foreach ($words as &$word) {
+	    if (rand(0,4)==0)	// 20% loss
+		    $word = " [memory gap] ";
+    }
+
+    // Join the words back into a string
+    $outputString = implode(' ', $words);
+
+    return $outputString;
+}
+
 function cleanResponse($rawResponse)
 {
     // Remove Context Location between parenthesys
@@ -391,9 +413,49 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
 
             $embeddings=getEmbedding($textToEmbedFinal);
             $memories=queryMemory($embeddings);
+	
+	
             if (isset($memories["content"])) {
-                $GLOBALS["DEBUG_DATA"]["memories"]=$textToEmbedFinal;
-                return $GLOBALS["MEMORY_OFFERING"].json_encode($memories["content"]);
+		$ncn=0;
+
+		// Analize
+		$tooManyMsg=false;
+		//$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$memories["content"];
+		if (sizeof($memories["content"])>4) {
+			foreach ($memories["content"] as $idx=>$memoryElement) {
+				if ($memoryElement["distance"]<_MINIMAL_DISTANCE_TO_BE_THE_SAME) {
+					$ncn++;
+				} else if ($memoryElement["distance"]>_MAXIMAL_DISTANCE_TO_BE_RELATED) {
+					unset($memories["content"][$idx]);
+				}
+			}
+			if ($ncn>=_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE)
+				$tooManyMsg=true;
+
+			
+
+		}
+		$outputMemory = array_slice($memories["content"], 0, $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]);
+		$outLocalBuffer="";
+		if (isset($outputMemory)&&(sizeof($outputMemory)>0)) {
+			foreach ($outputMemory as $singleMemory) {
+
+				// Memory fuzz
+				$fuzzMemoryElement="'".randomReplaceShortWordsWithPoints($singleMemory["briefing"])."'";
+					$alreadyAsked=strpos(trim($singleMemory["briefing"]),trim($gameRequest[3]));
+					if ( $alreadyAsked!==false &&  ($alreadyAsked<strlen($GLOBALS["PLAYER_NAME"])+5))	// Mmmm, arbitrary
+						 $fuzzMemoryElement.="(Note, {$GLOBALS["PLAYER_NAME"]} has asked/said this before, why {$GLOBALS["PLAYER_NAME"]} repeats so much?).";
+
+				$outLocalBuffer.="\n\tOld conversation ".round((time()-$singleMemory["timestamp"])/ (60),0)." minutes ago.: {$fuzzMemoryElement}";
+
+			}
+	                $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
+			$GLOBALS["DEBUG_DATA"]["memories"][]=$outLocalBuffer;
+
+			//$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$ncn;
+                	return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer.($tooManyMsg?".{$GLOBALS["HERIKA_NAME"]} HAS MANY MEMORIES ABOUT THIS TOPIC. You may ask {$GLOBALS["PLAYER_NAME"]} to focus question.":"");
+		} else
+			return "";
             }
         } elseif (($gameRequest[0] == "funcret")) {	//$gameRequest[3] will not contain last user chat, we must query database
             $memory=array();

@@ -308,13 +308,13 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
     $lastDialogFull = array();
     $results = $db->fetchAll("select  
     case 
-      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%' then 'The Narrator:'
+      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%' or a.data like '%background chat%' then 'The Narrator:'
       when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
       else '' 
     end||a.data  as data 
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret'  and type<>'quest'
+    and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret'  and type<>'quest' and type<>'book'
     and type<>'funccall'  and type<>'togglemodel'  order by gamets desc,ts desc,rowid desc LIMIT 0,150");
 
     foreach ($results as $row) {
