@@ -8,7 +8,8 @@ require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class
 require_once($enginePath . "lib/memory_helper_vectordb.php");
 require_once($enginePath . "lib/memory_helper_embeddings.php");
 
-$db->execQuery("DROP TABLE `eventlog`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `eventlog`;");
 
 $db->execQuery("
 CREATE TABLE IF NOT EXISTS `eventlog` (
@@ -32,8 +33,8 @@ CREATE TABLE IF NOT EXISTS `openai_token_count` (
   `model` text
 );");
 
-
-$db->execQuery("DROP TABLE `responselog`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `responselog`;");
 
 $db->execQuery("
 CREATE TABLE IF NOT EXISTS `responselog` (
@@ -46,7 +47,8 @@ CREATE TABLE IF NOT EXISTS `responselog` (
 
 );");
 
-$db->execQuery("DROP TABLE `log`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `log`;");
 
 $db->execQuery("
 CREATE TABLE IF NOT EXISTS `log` (
@@ -56,7 +58,8 @@ CREATE TABLE IF NOT EXISTS `log` (
   `url` text
 );");
 
-$db->execQuery("DROP TABLE `quests`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `quests`;");
 
 $db->execQuery("
 CREATE TABLE IF NOT EXISTS `quests` (
@@ -79,7 +82,8 @@ CREATE TABLE IF NOT EXISTS `quests` (
   `status` text
 );");
 
-$db->execQuery("DROP TABLE `speech`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `speech`;");
 
 $db->execQuery("
 CREATE TABLE IF NOT EXISTS `speech` (
@@ -94,7 +98,8 @@ CREATE TABLE IF NOT EXISTS `speech` (
   `gamets` bigint NOT NULL
 );");
 
-$db->execQuery("DROP TABLE `diarylog`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `diarylog`;");
 
 $db->execQuery("
 CREATE TABLE IF NOT EXISTS `diarylog` (
@@ -109,7 +114,8 @@ CREATE TABLE IF NOT EXISTS `diarylog` (
   `gamets` bigint NOT NULL
 );");
 
-$db->execQuery("DROP TABLE `books`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `books`;");
 
 
 $db->execQuery("
@@ -122,7 +128,8 @@ CREATE TABLE IF NOT EXISTS `books` (
   `gamets` bigint NOT NULL
 );");
 
-$db->execQuery("DROP TABLE `currentmission`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `currentmission`;");
 
 $db->execQuery("
 CREATE TABLE IF NOT EXISTS `currentmission` (
@@ -133,14 +140,16 @@ CREATE TABLE IF NOT EXISTS `currentmission` (
   `gamets` bigint NOT NULL
 );");
 
-$db->execQuery("DROP TABLE `diarylogv2`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `diarylogv2`;");
 
 
 $db->execQuery("
-CREATE VIRTUAL TABLE diarylogv2 
+CREATE VIRTUAL TABLE IF NOT EXISTS diarylogv2 
 USING FTS5(topic,content,tags,people,location);");
 
-$db->execQuery("DROP TABLE `memory`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `memory`;");
 
 $db->execQuery("CREATE TABLE IF NOT EXISTS `memory` (
 	`speaker`	TEXT,
@@ -154,7 +163,8 @@ $db->execQuery("CREATE TABLE IF NOT EXISTS `memory` (
 	PRIMARY KEY(`uid` AUTOINCREMENT)
 );");
 
-$db->execQuery("DROP TABLE `memory`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `memory`;");
 
 $db->execQuery("CREATE TABLE IF NOT EXISTS `memory` (
 	`speaker`	TEXT,
@@ -168,7 +178,8 @@ $db->execQuery("CREATE TABLE IF NOT EXISTS `memory` (
 	PRIMARY KEY(`uid` AUTOINCREMENT)
 );");
 
-$db->execQuery("DROP TABLE `memory_summary`;");
+if ($_GET["delete"])
+  $db->execQuery("DROP TABLE `memory_summary`;");
 
 $db->execQuery("CREATE TABLE IF NOT EXISTS memory_summary (
   `gamets_truncated`  bigint NOT NULL,

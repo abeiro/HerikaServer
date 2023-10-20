@@ -68,7 +68,7 @@ foreach ($_POST as $k=>$v) {
 $buffer.="?>".PHP_EOL;
 
 if (isset($_GET["save"])) {
-    file_put_contents($enginePath."conf".DIRECTORY_SEPARATOR."conf.php",$buffer);
+    $result=file_put_contents($enginePath."conf".DIRECTORY_SEPARATOR."conf.php",$buffer);
     echo '<!DOCTYPE html>
         <html lang="en" >
         <head>
@@ -86,8 +86,15 @@ if (isset($_GET["save"])) {
         <body>
     ';
     
-    echo "Writing config file.....";
-    echo '<script>alert("Config file has been written");parent.location.reload(true)</script>';
+    
+    if ($result!==false) {
+        echo "Writing config file.....";
+        echo '<script>alert("Config file has been written");parent.location.reload(true)</script>';
+    } else {
+        echo "Writing config file.....";
+        echo "Some error ocurred.".PHP_EOL;
+        
+    }
     
     
     

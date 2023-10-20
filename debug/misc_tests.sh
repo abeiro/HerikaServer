@@ -22,6 +22,10 @@ doRequest() {
 
 }
 
+doRequest "Draven : do you remember that history about a mage you told me at Haelga's place?"
+
+exit
+
 doRequest "Draven: Do you remember Brynjolf?" "Memory request."
 
 doRequest "Draven: Do you wanna some drinks?" "Try a situational context."

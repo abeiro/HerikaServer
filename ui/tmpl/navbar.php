@@ -43,8 +43,13 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true" title="Drop all tables and then create them" onclick="return confirm('Sure?')">
-                            Reinstall
+                        <a class="dropdown-item" href="index.php?reinstall=true" title="Create new tables if needed" onclick="return confirm('Sure?')">
+                            Create tables
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Drop all tables and then create them" onclick="return confirm('Sure?')">
+                            Full Database Reinstall
                         </a>
                     </li>
                     <li>
