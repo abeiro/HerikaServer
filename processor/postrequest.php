@@ -15,8 +15,8 @@ if ($FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) {
 
     } else {
         $results = $db->query("insert into memory_summary select * from ( 
-								select min(gamets) as gamets_truncated,count(*) as n,
-								GROUP_CONCAT(message,char(13) || char(10)|| char(13) || char(10)) as packed_message ,'','dialogue',min(uid) as uid
+								select max(gamets) as gamets_truncated,count(*) as n,
+								GROUP_CONCAT(message,char(13) || char(10)|| char(13) || char(10)) as packed_message ,'','dialogue',max(uid) as uid
 								from memory
 								where message not like 'Dear Diary%'
 								group by round(gamets/1000000 ,0) order by round(gamets/1000000 ,0) ASC
