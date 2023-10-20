@@ -22,7 +22,7 @@ doRequest() {
 
 }
 
-doRequest "Draven : do you remember that history about a mage you told me at Haelga's place?"
+doRequest "Draven : do you remember that doctor game we played at Haelga's in Riften?"
 
 exit
 

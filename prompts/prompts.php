@@ -90,7 +90,7 @@ $PROMPTS=array(
 
     "inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]} last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG "
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG "
         ]
             // Prompt is implicit
 
