@@ -421,7 +421,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             $textToEmbed=str_replace($DIALOGUE_TARGET, "", $gameRequest[3]);
             $pattern = '/\([^)]+\)/';
             $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
-            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:", "", $textToEmbedFinal);
+            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]} :", "", $textToEmbedFinal);
 
             $GLOBALS["DEBUG_DATA"]["textToEmbedFinal"]=$textToEmbedFinal;
             $embeddings=getEmbedding($textToEmbedFinal);

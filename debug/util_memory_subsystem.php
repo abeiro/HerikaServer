@@ -115,7 +115,7 @@ commands:
 				
 				$prompt=[];
                 $prompt[] = array('role' => 'user', 
-								  'content' => "write into {$GLOBALS["HERIKA_NAME"]}'s diary a summary of this: [... {$row["packed_message"]} ...]. Give special importance to the characters and their attitudes, as well as to the places. ");
+								  'content' => "write into {$GLOBALS["HERIKA_NAME"]}'s diary a summary of this: [... {$row["packed_message"]} ...]. mark down characters and places. ");
 
 				
                 $GLOBALS["FORCE_MAX_TOKENS"]=165;
