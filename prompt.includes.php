@@ -1,5 +1,23 @@
 <?php
 
+
+function requireFilesRecursively($dir,$name) {
+    $files = scandir($dir);
+    foreach ($files as $file) {
+        if ($file === '.' || $file === '..') {
+            continue;
+        }
+
+        $path = $dir . '/' . $file;
+
+        if (is_dir($path)) {
+            requireFilesRecursively($path,$name);
+        } elseif (is_file($path) && $file === $name) {
+            require_once($path);
+        } 
+    }
+}
+
 require_once(__DIR__ . DIRECTORY_SEPARATOR . "prompts/prompts.php");
 $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s roleplay in the Universe of Skyrim. I\'m {$GLOBALS["PLAYER_NAME"]} ";
 

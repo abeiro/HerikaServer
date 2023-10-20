@@ -59,7 +59,8 @@ function getElement($id)
 	$VECTORDB_URL_COLLECTION = getCollectionUID();
 
 	$requestData = array(
-		'ids' => [$id]
+		'ids' => [$id],
+		'include'=>["metadatas", "documents", "distances"]
 	);
 
 	// Convert the request data to JSON
@@ -96,6 +97,7 @@ function getElement($id)
 
 	// Handle the response data as needed
 	// var_dump($responseData);
+	$GLOBALS["DEBUG_DATA"]["chromadb_element"]=$responseData;
 	return $responseData["documents"][0];
 
 }
@@ -192,7 +194,7 @@ function countMemories()
 }
 
 
-function storeMemory($embeddings, $text, $id)
+function storeMemory($embeddings, $text, $id, $category='past dialogues' )
 {
 
 	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION;
@@ -201,7 +203,7 @@ function storeMemory($embeddings, $text, $id)
 
 	$requestData = array(
 		'documents' => [$text],
-		'metadatas' => [["category" => "background story"]],
+		'metadatas' => [["category" => "$category"]],
 		'embeddings' => [$embeddings],
 		'ids' => [$id]
 	);
@@ -240,12 +242,12 @@ function storeMemory($embeddings, $text, $id)
 
 	// Handle the response data as needed
 	// var_dump($responseData);
-
+	$GLOBALS["DEBUG_DATA"]["chromadb_element"]=$responseData;
 }
 
 
 
-function queryMemory($embeddings)
+function queryMemory($embeddings,$category='past dialogues')
 {
 	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION, $VECTORDB_TIME_DELAY,$db;
 
@@ -254,7 +256,8 @@ function queryMemory($embeddings)
 
 	$requestData = array(
 		'query_embeddings' => [$embeddings],
-		'n_results' => 10
+		'n_results' => 5
+		//'where'=>["category" => "$category"]
 	);
 
 	// Convert the request data to JSON
@@ -292,15 +295,19 @@ function queryMemory($embeddings)
 	$dbResults = [];
 	
 	foreach ($responseData["ids"][0] as $n => $id) {
-		$results = $db->query("select message as content,uid,localts,momentum from memory where uid=$id order by uid asc");
+		$results = $db->query("select summary as content,uid,gamets_truncated from memory_summary where uid=$id order by uid asc");
 		while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
 
-			if ($row["localts"] > (time() - 60 * $VECTORDB_TIME_DELAY)) // Ten minutes to get things as memories
+			if ($responseData["metadatas"][0][$n]["category"]=="diary") {
+				$responseData["distances"][0][$n]=$responseData["distances"][0][$n]/1.1;
+			}
+			
+			if ($row["gamets_truncated"] > (time() - (60 * 20  * $VECTORDB_TIME_DELAY))) // Ten minutes to get things as memories
 				continue;
 			$dbResults[] = [
 				"memory_id" => $row["uid"],
 				"briefing" => $row["content"],
-				"timestamp" => $row["localts"],
+				"timestamp" => $row["gamets_truncated"],
 				"distance" => $responseData["distances"][0][$n]
 			];
 

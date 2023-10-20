@@ -72,12 +72,10 @@ function getEmbeddingRemote($text)
 
 	global $db;
 
-	if ($GLOBALS["MODEL"] != "openai")
-		return array();
 
-	if (!$db) {
-		$db = new sql();
-	}
+	//if (!$db) {
+	//	$db = new sql();
+	//}
 	//// OPENAI CODE
 	$data = [
 		"model" => "text-embedding-ada-002",
@@ -88,7 +86,7 @@ function getEmbeddingRemote($text)
 
 	$headers = array(
 		'Content-Type: application/json',
-		"Authorization: Bearer {$GLOBALS["OPENAI_API_KEY"]}"
+		"Authorization: Bearer {$GLOBALS["CONNECTOR"]["openai"]["API_KEY"]}"
 	);
 
 	$options = array(

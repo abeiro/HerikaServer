@@ -85,7 +85,12 @@ if (isset($_GET["save"])) {
         </head>
         <body>
     ';
-    echo "Conf file wrote";
+    
+    echo "Writing config file.....";
+    echo '<script>alert("Config file has been written");parent.location.reload(true)</script>';
+    
+    
+    
 } else {
     $_POST["text"]=$buffer;
     require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf_checker.php");

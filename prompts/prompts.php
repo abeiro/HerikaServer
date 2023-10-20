@@ -8,18 +8,25 @@
 // Full Prompt then is $PROMPT_HEAD + $HERIKA_PERS + $COMMAND_PROMPT + CONTEXT + requirement + cue
 
 // Common patterns to use in most functions
-$TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s dialogue using this format '{$GLOBALS["HERIKA_NAME"]}: ";
+$TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
     if ($GLOBALS["TTSFUNCTION"]=="azure")
         $TEMPLATE_DIALOG.="(optional way of speaking from this list [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
 
-$TEMPLATE_DIALOG.=" ', (roleplay mode)";
+$TEMPLATE_DIALOG.=" \"";
 
-    
+
+if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
+    $GLOBALS["MEMORY_STATEMENT"]=".USE #MEMORY.";
+} else
+    $GLOBALS["MEMORY_STATEMENT"]="";
+
+
+      
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $TEMPLATE_ACTION="call a function to control {$GLOBALS["HERIKA_NAME"]} or";
-    $TEMPLATE_ACTION="";    // WIP
+    $TEMPLATE_ACTION=".YOU CAN USE FUNCTIONS.";    // WIP
 } else {
     $TEMPLATE_ACTION="";
 }
@@ -82,11 +89,14 @@ $PROMPTS=array(
     ],
 
     "inputtext"=>[
-        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} answers to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG "] // Prompt is implicit
+        "cue"=>[
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]} last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG "
+        ]
+            // Prompt is implicit
 
     ],
     "inputtext_s"=>[
-        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} answers to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"], // Prompt is implicit
+        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG"], // Prompt is implicit
         "extra"=>["mood"=>"whispering"]
     ],
     "afterfunc"=>[
@@ -115,8 +125,6 @@ $PROMPTS=array(
         "cue"=>["Please write a summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
         "extra"=>["force_tokens_max"=>0]
     ],
-    
-
 );
 
 
@@ -125,7 +133,11 @@ $PROMPTS=array(
 if (isset($GLOBALS["CORE_LANG"]))
 	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) 
 		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
-  
+
+// Prompts provided by plugins
+    
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prompts.php");
+
 // You can override prompts here
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php"))
     require_once(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php");

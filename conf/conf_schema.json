@@ -28,9 +28,10 @@
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
       "top_p": {"type":"number","description":"LLM parameter top_p"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
-      "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence."},
-      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Setence (EOS) tokens. LLM will stop generating when it detects an EOS token."},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml"],"description":"Prompt Format. Usually specified in HugginFace's model card"}
+      "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Leave blank if don't know about it."},
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Setence (EOS) tokens. if set to false  LLM will stop generating when it detects an EOS token."},
+      "eos_token": {"type":"string","description":"EOS token LLM uses. Related to use_default_badwordsids"},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c"],"description":"Prompt Format. Usually specified in HugginFace's model card"}
     },
     "openrouter": {
       "_title":"OpenRouter API",
@@ -127,12 +128,17 @@
       "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint. Copy and paste the URL from the console window.","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
       "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs your OpenAI API key. Local is the one provided by DwemerDistro"},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing too recent dialogues as memories. As that is covered by context history."},
-      "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many of the most relevant memory records will be injected in prompt."}
+      "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many of the most relevant memory records will be injected in prompt."},
+      "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will try to auto create summarys for better memory recovery. Will use tokens, don't use if tokens cost money to you"}
     },
     "COST_MONITOR": {
       "_title":"Cost Monitoring (DwemerDistro Only!)",
       "ENABLED":{"type":"boolean","description":"Enable Cost Monitoring. Currently only tracks OpenAI cost."},
       "URL":{"type":"url","description":"URL of API. Should be displayed in DwemerDistro console window."}
+    },
+     "MISC": {
+      "_title":"Misc features/options",
+      "ADD_TIME_MARKS":{"type":"boolean","description":"Add time marks in context, so AI will have a time refernce for past events and dialogues."}
     }
   }
   

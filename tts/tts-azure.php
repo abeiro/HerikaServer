@@ -3,9 +3,12 @@ $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARA
 require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // Caching token
 
-function tts($textString, $mood = "default", $stringforhash)
+function tts($textString, $mood , $stringforhash)
 {
 
+    if (empty($mood))
+        $mood="default";
+    
     $region = $GLOBALS["TTS"]["AZURE"]["region"];
     $AccessTokenUri = "https://" . $region . ".api.cognitive.microsoft.com/sts/v1.0/issueToken";
     $apiKey = $GLOBALS["TTS"]["AZURE"]["API_KEY"];
@@ -25,7 +28,7 @@ function tts($textString, $mood = "default", $stringforhash)
         $validMood = "default";
 
     if ($validMood=="dazed")
-        $OverWriteRate=0.6;
+        $OverWriteRate=0.7;
     
     
     $starTime = microtime(true);

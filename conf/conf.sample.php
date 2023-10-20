@@ -72,6 +72,7 @@ $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=10;
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1;
 $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_URL"]="http://127.0.0.1:7860";
 $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"]="local";
+$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=false;
 
 
 $CONNECTORS=["koboldcpp","openai"];  
@@ -93,6 +94,7 @@ $CONNECTOR["koboldcpp"]["MAX_TOKENS_MEMORY"]=256;
 $CONNECTOR["koboldcpp"]["newline_as_stopseq"]=true;
 $CONNECTOR["koboldcpp"]["use_default_badwordsids"]=true;
 $CONNECTOR["koboldcpp"]["template"]="alpaca";
+$CONNECTOR["koboldcpp"]["eos_token"]='</s>';
 
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions";
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-2-70b-chat";
@@ -111,5 +113,8 @@ $CONNECTOR["oobabooga"]["rep_pen"]=1.18;
 
 $FEATURES["COST_MONITOR"]["ENABLED"]=true;	//Enable cost/token counter monitoring. Currently only supports OpenAI.
 $FEATURES["COST_MONITOR"]["URL"]="http://127.0.0.1:8090";	//We can use 127.0.0.1 because server is on same machine by default.
-			
+
+$FEATURES["MISC"]["ADD_TIME_MARKS"]=true;	
+
+
 ?>

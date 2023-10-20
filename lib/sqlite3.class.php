@@ -8,51 +8,63 @@ class sql
     public function __construct()
     {
         self::$link = new SQLite3(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR ."data". DIRECTORY_SEPARATOR . "mysqlitedb.db");
-        self::$link->busyTimeOut(5000);
+        self::$link->busyTimeOut(10000);
 
     }
 
     public function __destruct()
     {
-        
+
         self::$link->close();
     }
 
 
-    public function insert($table, $data)
+    public function close()
     {
 
-        if ($table=="log") {
-            foreach ($data as $name=>$value) {
-                if ($name=="prompt")
-                    $data[$name]=SQLite3::escapeString($value);
-            } 
-        }
-        
-        if ($table=="diarylog") {
-            foreach ($data as $name=>$value) {
-                if ($name=="content")
-                    $data[$name]=SQLite3::escapeString($value);
-            } 
-        }
-        
-        if ($table=="diarylogv2") {
-            foreach ($data as $name=>$value) {
-                if ($name=="content")
-                    $data[$name]=SQLite3::escapeString($value);
-            } 
-        }
-        
-        
-        file_put_contents("/tmp/test.sql.txt","\nINSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')\n",FILE_APPEND);
-        self::$link->exec("INSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')");
+        self::$link->close();
+    }
+
+    public function insert($table, $data)
+    {
+       
+
+        $columns = implode(', ', array_keys($data));
+        $values = implode(', ', array_fill(0, count($data), '?'));
 
 
+        $query = "INSERT INTO $table ($columns) VALUES ($values)";
+
+
+        // Prepare the SQL query
+        $stmt = self::$link->prepare($query);
+
+        // Bind the values from the array to the placeholders
+        $n=1;
+        foreach ($data as $key => $value) {
+            if (in_array($key, ["gamets","localts","input_tokens","total_tokens_so_far","output_tokens","gamets_truncated","n"])) {
+                $type=SQLITE3_INTEGER;
+            } else {
+                $type=SQLITE3_TEXT;
+            }
+
+
+            $stmt->bindValue($n, strtr($value, ["''"=>"'"]), $type);
+            $n++;
+        }
+
+        //file_put_contents("/tmp/test.sql.txt","\n".print_r($stmt->getSQL(true))."\n",FILE_APPEND);
+        // Execute the prepared statement
+        $result = $stmt->execute();
+        if (!$result) {
+            error_log(self::$link->lastErrorMsg().debug_backtrace());
+
+        }
 
     }
 
 
-    function query($query)
+    public function query($query)
     {
         return self::$link->query($query);
     }
@@ -69,7 +81,10 @@ class sql
 
     public function execQuery($sqlquery)
     {
-        self::$link->exec($sqlquery);
+        $result=self::$link->exec($sqlquery);
+        if (!$result) {
+            error_log(self::$link->lastErrorMsg().print_r(debug_backtrace(), true));
+        }
     }
 
 
@@ -87,5 +102,5 @@ class sql
     }
 
 
-  
+
 }

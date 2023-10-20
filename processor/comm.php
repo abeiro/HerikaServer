@@ -12,6 +12,14 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     $db->delete("currentmission", "gamets>{$gameRequest[2]}  ");
     $db->delete("diarylog", "gamets>{$gameRequest[2]}  ");
     $db->delete("books", "gamets>{$gameRequest[2]}  ");
+    
+    if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
+        $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");
+        while ($memoryRow = $results->fetchArray(SQLITE3_ASSOC)) {
+            deleteElement($memoryRow["uid"]);
+        }
+    }
+    $db->delete("memory_summary", "gamets_truncated>{$gameRequest[2]}  ");
     $db->delete("memory", "gamets>{$gameRequest[2]}  ");
 
     $db->delete("diarylogv2", "true");
@@ -171,11 +179,13 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
 
 } else if ($gameRequest[0] == "quest") {
-	
+    //13333334
+    if ($gameRequest[2]>13333334)
+	logEvent($gameRequest);
     $MUST_END=true;
 
 } else if ($gameRequest[0] == "location") {
-	
+    logEvent($gameRequest);	
     $MUST_END=true;
 
 } else if ($gameRequest[0] == "force_current_task") {

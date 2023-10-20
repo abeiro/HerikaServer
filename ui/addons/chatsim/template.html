@@ -61,7 +61,7 @@ function reqSend() {
     document.getElementById('inputText').value+"</p>";
     
   var currentDate = new Date();
-  var timestampInSeconds = Math.floor(currentDate.getTime() / 1000);
+  var timestampInSeconds = parseInt(document.getElementById('last_gamets').value)+1;
 
   var xhr = new XMLHttpRequest();
 
@@ -69,6 +69,7 @@ function reqSend() {
     document.getElementById('playerName').value+': '+document.getElementById('inputText').value;
   var urlData = btoa(urlDataRaw);
   document.getElementById('gamets').value=parseInt(document.getElementById('gamets').value)+1;
+  document.getElementById('last_gamets').value=timestampInSeconds;
 
   // Configure the request
   xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData, true);
@@ -102,8 +103,8 @@ function logChat(chatline) {
   var unescapedString = chatline.replace(/\\'/g, "'");
 
   var currentDate = new Date();
-  var timestampInSeconds = Math.floor(currentDate.getTime() / 1000);
-  
+  var timestampInSeconds = parseInt(document.getElementById('last_gamets').value)+1;
+
   var urlDataRaw='chat|'+document.getElementById('gamets').value+'|'+timestampInSeconds+'|'+
     document.getElementById('herikaName').value+': '+unescapedString;
     

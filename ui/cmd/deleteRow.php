@@ -17,15 +17,25 @@ if ($_GET["table"]=="diarylog") {
 if ($_GET["table"]=="memory") {
     $path = __DIR__ . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     
+    /*
+    require_once($enginePath . "lib/memory_helper_vectordb.php");
+    require_once($enginePath . "lib/memory_helper_embeddings.php");    
+    
+    $data=deleteElement($_GET["rowid"]);
+    */
+
+}
+
+
+if ($_GET["table"]=="memory_summary") {
+    $path = __DIR__ . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+    
     require_once($enginePath . "lib/memory_helper_vectordb.php");
     require_once($enginePath . "lib/memory_helper_embeddings.php");    
     
     $data=deleteElement($_GET["rowid"]);
 
 }
-
-
-
 
 header("Location: ../index.php?table={$_GET["table"]}");
 

@@ -9,6 +9,11 @@ require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class
 // HTML template
 echo file_get_contents('template.html');
 
+$db=new sql();
+$res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");
+$last_gamets=$res[0]["last_gamets"]+1;
+
+
 
 echo "
 
@@ -21,6 +26,7 @@ echo "
 <input type='hidden' name='gamets' id='gamets' value='0' />
 <input type='hidden' name='playerName' id='playerName' value='{$GLOBALS["PLAYER_NAME"]}' />
 <input type='hidden' name='herikaName' id='herikaName' value='{$GLOBALS["HERIKA_NAME"]}' />
+<input type='hidden' name='last_gamets' id='last_gamets' value='$last_gamets' />
 <input type='button' name='send' value='Send' onclick='reqSend()'/>
 </form>
 

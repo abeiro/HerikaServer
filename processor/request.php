@@ -41,13 +41,13 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 		
 	} else if ($functionCodeName == "SearchDiary") {
 		
-		$returnFunction[3] = $db->diaryLogIndex($returnFunction[2]);	// Overwrite funrect content with info from database
+		$returnFunction[3] = DataDiaryLogIndex($returnFunction[2]);	// Overwrite funrect content with info from database
 		$gameRequest[3] .= $returnFunction[3];							// Add also to $gameRequest 
 		
 		
 	}  else if ($functionCodeName == "ReadDiaryPage") {
 		
-		$returnFunction[3] = $db->diaryLog($returnFunction[2]); // Overwrite funrect content with info from database
+		$returnFunction[3] = DataDiaryLog($returnFunction[2]); // Overwrite funrect content with info from database
 		$gameRequest[3] .= $returnFunction[3];					// Add also to $gameRequest 
 		
 	} else if ($functionCodeName == "SetCurrentTask") {

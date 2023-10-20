@@ -75,7 +75,7 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 // $gameRequest = type of message|localts|gamets|data
 
 // Exit if only a event info log.
-if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death"])) {
+if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight"])) {
     logEvent($gameRequest);
     die();
 }
@@ -134,16 +134,38 @@ if ($gameRequest[0] != "diary") {
 }
 
 $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
+
 // Historic context (last dialogues, events,...)
 $contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1);
+
 // Info about location and npcs in first position
 $contextDataWorld = DataLastInfoFor("", -2);
 
 // Add current motto to COMMAND_PROMPT
 $GLOBALS["COMMAND_PROMPT"].=DataGetCurrentTask();
 
-// Offer memory in COMMAND_PROMPT
-$GLOBALS["COMMAND_PROMPT"].=offerMemory($gameRequest, $DIALOGUE_TARGET);
+// Offer memory in CONTEXT 
+$memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+if ($memoryInjection) {
+    
+    //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
+    $memoryInjectionCtx[]= array('role' => 'user', 'content' => "#MEMORY: [$memoryInjection]");
+    $contextDataHistoric=array_merge($memoryInjectionCtx,$contextDataHistoric);
+
+    if (isset($GLOBALS["USE_MEMORY_STATEMENT_DELETE"]) && $GLOBALS["USE_MEMORY_STATEMENT_DELETE"] ) {
+        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+    }
+    //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
+    
+} else {
+    
+    $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+        
+}
+   
+
+// array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
+
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
@@ -151,6 +173,8 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
+
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
 $head[] = array('role' => 'system', 'content' =>  $GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] . $GLOBALS["COMMAND_PROMPT"]);
 
@@ -177,16 +201,6 @@ if ($gameRequest[0] == "funcret") {
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);
 
-    /*$data = array(
-        'model' => (isset($GLOBALS["GPTMODEL"])) ? $GLOBALS["GPTMODEL"] : 'gpt-3.5-turbo-0613',
-        'messages' =>
-        $contextData,
-        'stream' => true,
-        'max_tokens' => ((isset($GLOBALS["OPENAI_MAX_TOKENS"]) ? $GLOBALS["OPENAI_MAX_TOKENS"] : 48) + 0),
-        'temperature' => 1,
-        'presence_penalty' => 1
-    );*/
-
 
 }  else {
 
@@ -194,21 +208,6 @@ if ($gameRequest[0] == "funcret") {
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);
     
-    /*
-    $data = array(
-        'model' => (isset($GLOBALS["GPTMODEL"])) ? $GLOBALS["GPTMODEL"] : 'gpt-3.5-turbo-0613',
-        'messages' =>
-        $contextData
-        ,
-        'stream' => true,
-        'max_tokens' => ((isset($GLOBALS["OPENAI_MAX_TOKENS"]) ? $GLOBALS["OPENAI_MAX_TOKENS"] : 48) + 0),
-        'temperature' => 1,
-        'presence_penalty' => 1,
-        'functions' => $GLOBALS["FUNCTIONS"],
-        'function_call' => 'auto',
-        'stop'=>["{$GLOBALS["PLAYER_NAME"]}:","The Narrator:"]
-    );
-    */
 }
 
 /**********************
@@ -406,13 +405,19 @@ if (sizeof($talkedSoFar) == 0) {
 		);
             
             // Log Memory also.
-            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
+            if ((php_sapi_name()!="cli"))	
+	            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
             returnLines([$RESPONSE_OK_NOTED]);
 
         } else {
             
             $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
-            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"], "{$lastPlayerLine[0]["data"]} \n\r {$GLOBALS["HERIKA_NAME"]}:".implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
+            if (php_sapi_name()!="cli")	{
+                if (in_array($gameRequest[0],["inputtext","inputtext_s"]))
+                    logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"], "{$lastPlayerLine[0]["data"]} \n\r {$GLOBALS["HERIKA_NAME"]}:".implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
+                else
+                    logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"], "{$GLOBALS["HERIKA_NAME"]}:".implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
+            }
         }
     }
 }
@@ -425,4 +430,8 @@ if (php_sapi_name()=="cli") {
     $db->delete("eventlog", "sess='cli'");
 
 }
+
+require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
+
+
 ?>

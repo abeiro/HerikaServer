@@ -1,19 +1,27 @@
 <?php
 
-define("_MINIMAL_DISTANCE_TO_BE_THE_SAME",0.35);
-define("_MAXIMAL_DISTANCE_TO_BE_RELATED",0.55);
-define("_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE",3);
+define("_MINIMAL_DISTANCE_TO_BE_THE_SAME", 0.0);
+define("_MAXIMAL_DISTANCE_TO_BE_RELATED", 0.8);
+define("_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE", 3);
 
 
 
-function randomReplaceShortWordsWithPoints($inputString) {
+function randomReplaceShortWordsWithPoints($inputString,$distance)
+{
     // Split the input string into words
-    $words = explode(' ', $inputString);
+    $words = explode(' ', str_replace("Dear Diary","",$inputString));
 
+    $limit=round(30-($distance*30),0);
+    
     // Iterate through each word and replace short words with points
     foreach ($words as &$word) {
-	    if (rand(0,4)==0)	// 20% loss
-		    $word = " [memory gap] ";
+        
+        if (preg_match('/^[A-Z]/', trim($word))) // Skip names
+            continue;
+            
+        if ((rand(0, round($limit/2,0))==0) && true) {	
+            $word = "_";
+        }
     }
 
     // Join the words back into a string
@@ -78,7 +86,7 @@ function cleanResponse($rawResponse)
         $sentenceX
     );
 
-    
+
     return $sentenceXX;
 }
 
@@ -100,8 +108,8 @@ function br2nl($string)
 
 function split_sentences($paragraph)
 {
-    $paragraph=strtr($paragraph,array('\n'=>".","\n"=>"."));
-    
+    $paragraph=strtr($paragraph, array('\n'=>".","\n"=>"."));
+
     $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
     // Split the paragraph into an array of sentences using a regular expression
     preg_match_all('/[^\n?.!]+[?.!]/', $paragraphNcr, $matches);
@@ -118,7 +126,7 @@ function split_sentences($paragraph)
         /*if (sizeof($sentences)==0)
              return array($paragraphNcr);
         else*/
-            return $sentences;
+        return $sentences;
     } else {
         return array($sentences);
     }
@@ -331,15 +339,15 @@ function returnLines($lines)
                 tts($responseTextUnmooded, $mood, $responseText);
 
             }
-            
+
             if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
 
                 require_once(__DIR__."/../tts/tts-coqui-ai.php");
                 tts($responseTextUnmooded, $mood, $responseText);
 
             }
-            
-            
+
+
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
             }
@@ -378,24 +386,27 @@ function returnLines($lines)
 function logMemory($speaker, $listener, $message, $momentum, $gamets)
 {
     global $db;
+
     $db->insert(
         'memory',
         array(
                 'localts' => time(),
-                'speaker' => (SQLite3::escapeString($speaker)),
-                'listener' => (SQLite3::escapeString($listener)),
-                'message' => (SQLite3::escapeString($message)),
+                'speaker' => $speaker,
+                'listener' => $listener,
+                'message' => $message,
                 'gamets' => $gamets,
                 'session' => "pending",
                 'momentum'=>$momentum
         )
     );
-    
+    /*
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
         $insertedSeq=$db->fetchAll("SELECT SEQ from sqlite_sequence WHERE name='memory'");
         $embeddings=getEmbedding($message);
         storeMemory($embeddings, $message, $insertedSeq[0]["seq"]);
     }
+    */
+
 
 }
 
@@ -403,6 +414,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
+    
         if (($gameRequest[0] == "inputtext") || ($gameRequest[0] == "inputtext_s")) {
             $memory=array();
 
@@ -411,57 +423,50 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
             $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:", "", $textToEmbedFinal);
 
+            $GLOBALS["DEBUG_DATA"]["textToEmbedFinal"]=$textToEmbedFinal;
             $embeddings=getEmbedding($textToEmbedFinal);
             $memories=queryMemory($embeddings);
-	
-	
+
+
             if (isset($memories["content"])) {
-		$ncn=0;
+                $ncn=0;
 
-		// Analize
-		$tooManyMsg=false;
-		//$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$memories["content"];
-		if (sizeof($memories["content"])>4) {
-			foreach ($memories["content"] as $idx=>$memoryElement) {
-				if ($memoryElement["distance"]<_MINIMAL_DISTANCE_TO_BE_THE_SAME) {
-					$ncn++;
-				} else if ($memoryElement["distance"]>_MAXIMAL_DISTANCE_TO_BE_RELATED) {
-					unset($memories["content"][$idx]);
-				}
-			}
-			if ($ncn>=_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE)
-				$tooManyMsg=true;
+                // Analize
+                $tooManyMsg=false;
 
-			
+                $outputMemory = array_slice($memories["content"], 0, $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]);
+                $outLocalBuffer="";
+                $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=true;
+                if (isset($outputMemory)&&(sizeof($outputMemory)>0)) {
+                    foreach ($outputMemory as $singleMemory) {
 
-		}
-		$outputMemory = array_slice($memories["content"], 0, $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]);
-		$outLocalBuffer="";
-		if (isset($outputMemory)&&(sizeof($outputMemory)>0)) {
-			foreach ($outputMemory as $singleMemory) {
+                        // Memory fuzz
+                        $fuzzMemoryElement="".randomReplaceShortWordsWithPoints($singleMemory["briefing"],$singleMemory["distance"])."";
+    
+                        $outLocalBuffer.=round((time()-$singleMemory["timestamp"])/ (60*60*3420), 0)." days ago. {$fuzzMemoryElement}";
 
-				// Memory fuzz
-				$fuzzMemoryElement="'".randomReplaceShortWordsWithPoints($singleMemory["briefing"])."'";
-					$alreadyAsked=strpos(trim($singleMemory["briefing"]),trim($gameRequest[3]));
-					if ( $alreadyAsked!==false &&  ($alreadyAsked<strlen($GLOBALS["PLAYER_NAME"])+5))	// Mmmm, arbitrary
-						 $fuzzMemoryElement.="(Note, {$GLOBALS["PLAYER_NAME"]} has asked/said this before, why {$GLOBALS["PLAYER_NAME"]} repeats so much?).";
+                    }
+                    $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
+                    $GLOBALS["DEBUG_DATA"]["memories"][]=$outLocalBuffer;
+                    
+                    if ($singleMemory["distance"]<0.55)  {
+                        $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=false;
+                        
+                    }
 
-				$outLocalBuffer.="\n\tOld conversation ".round((time()-$singleMemory["timestamp"])/ (60),0)." minutes ago.: {$fuzzMemoryElement}";
-
-			}
-	                $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
-			$GLOBALS["DEBUG_DATA"]["memories"][]=$outLocalBuffer;
-
-			//$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$ncn;
-                	return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer.($tooManyMsg?".{$GLOBALS["HERIKA_NAME"]} HAS MANY MEMORIES ABOUT THIS TOPIC. You may ask {$GLOBALS["PLAYER_NAME"]} to focus question.":"");
-		} else
-			return "";
+                    //$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$ncn;
+                    return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
+                    
+                } else {
+                    return "";
+                }
             }
         } elseif (($gameRequest[0] == "funcret")) {	//$gameRequest[3] will not contain last user chat, we must query database
+            
             $memory=array();
             $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
 
-            $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine);
+            $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine[0]["data"]);
             $pattern = '/\([^)]+\)/';
             $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
             $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:", "", $textToEmbedFinal);
@@ -498,14 +503,16 @@ function logEvent($dataArray)
 }
 
 
-function selectRandomInArray($arraySource) {
-    
+function selectRandomInArray($arraySource)
+{
+
     $n=sizeof($arraySource);
-    if ($n==1)
+    if ($n==1) {
         return $arraySource[0];
-    
-    return $arraySource[rand(0,$n-1)];
-    
-    
-    
+    }
+
+    return $arraySource[rand(0, $n-1)];
+
+
+
 }

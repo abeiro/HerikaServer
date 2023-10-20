@@ -305,13 +305,16 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
 
     global $db;
 
+    $currentGameTs=$GLOBALS["gameRequest"][2];
+    
     $lastDialogFull = array();
     $results = $db->fetchAll("select  
     case 
-      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%' or a.data like '%background chat%' then 'The Narrator:'
+      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'The Narrator:'
+      when a.data like '%background chat%' then 'The Narrator: background dialogue: '
       when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
       else '' 
-    end||a.data  as data 
+    end||a.data  as data , gamets 
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret'  and type<>'quest' and type<>'book'
@@ -323,20 +326,21 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
 
     $orderedData = array_reverse($rawData);
 
-    $orderedData = array_slice($orderedData, $lastNelements);
+    //$orderedData = array_slice($orderedData, $lastNelements);
 
     $currentLocation = "";
     $writeLocation = true;
 
     $currentSpeaker = "user";
     $buffer = [];
-
+    $timeStampBuffer = [];
+    
     foreach ($orderedData as $row) {
         $rowData = $row["data"];
         // Extract location
         $pattern = '/\(Context location: (.*?),(.*?)\)/';
 
-        if (preg_match($pattern, str_replace(" background chat", "", $rowData), $matches)) {
+        if (preg_match($pattern, str_replace(" background dialogue", "", $rowData), $matches)) {
 
             $contextLocation = $matches[0];
             if ($currentLocation != $contextLocation) {
@@ -376,8 +380,26 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
             $buffer[] = $rowData;
             $currentSpeaker = $speaker;
         }
+        
+        if ($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"]) {
+            $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60*60 * 20 ) ,0);
+            if ($hoursAgo>12) {
+                if (!isset($timeStampBuffer[$hoursAgo])) {
+                    if ($currentLocation) {
+                        $timeStampBuffer[$hoursAgo]="set";
+                        $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: SCENARIO CHANGE, $currentLocation, timeline mark: $hoursAgo hours ago  ");
+                    }
+                }
+            }
+        }
+        
     }
 
+   // if (($currentGameTs-$row["gamets"])>600) {
+       
+        
+    //}
+    
     $lastDialogFull[] = array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
     // Compact Herika's lines
@@ -412,7 +434,9 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
     }
 
 
-    return $lastDialogFull;
+    $orderedData = array_slice($lastDialogFull, $lastNelements);
+    
+    return $orderedData;
 
 }
 

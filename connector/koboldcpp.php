@@ -70,7 +70,7 @@ class connector
 
             $context="{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-	    $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
             $context.="Dialogue history:\n";
 
             $contextHistory="";
@@ -97,7 +97,7 @@ class connector
             }
 
             $context.="$contextHistory $instruction ASSISTANT: ";
-            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
+            $GLOBALS["DEBUG_DATA"][]=" $instruction ASSISTANT:";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         }  elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="vicuna-1.1") {
@@ -141,10 +141,47 @@ class connector
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="chatml") {
 
-            $GLOBALS["more_stopseq"][]="<|im_start|>user";
+            $GLOBALS["more_stopseq"][]="<|im_start|>";
             $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-	    $context.="{$GLOBALS["COMMAND_PROMPT"]}<|im_end|>\n";
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+           
+            $GLOBALS["DEBUG_DATA"][]=$context;
+            
+            $contextHistory="";
+            $n=0;
+            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+
+                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $instruction="<|im_end|>\n<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
+
+                } else {
+                    if ($s_msg["role"]=="user") {
+                        $contextHistory.=$s_msg["content"]."\n";
+                          $GLOBALS["DEBUG_DATA"][]=$s_msg["content"];
+                    } elseif ($s_msg["role"]=="assistant") {
+                         $GLOBALS["DEBUG_DATA"][]=$s_msg["content"];
+                        $contextHistory.=$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="system") {
+                    }  // Must rebuild this
+                    
+                     
+                }
+
+                $n++;
+            }
+
+            $context.="$contextHistory  $instruction <|im_start|>assistant";
+            $GLOBALS["DEBUG_DATA"][]="$instruction";
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="chatml-c") {
+
+            $GLOBALS["more_stopseq"][]="<|im_start|>";
+            $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
+            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}<|im_end|>\n";
            
             $GLOBALS["DEBUG_DATA"][]=$context;
             
@@ -162,7 +199,7 @@ class connector
                           $GLOBALS["DEBUG_DATA"][]="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
                     } elseif ($s_msg["role"]=="assistant") {
                          $GLOBALS["DEBUG_DATA"][]="<|im_start|>assistant\n".$s_msg["content"]."<|im_end|>\n";
-                        $contextHistory.="<|im_start|>assistant\n".$s_msg["content"]."<|im_end|>\n";
+                        $contextHistory."<|im_start|>assistant\n".$s_msg["content"]."<|im_end|>\n";
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
                     
@@ -172,7 +209,7 @@ class connector
                 $n++;
             }
 
-            $context.="$contextHistory  $instruction";
+            $context.="$contextHistory  $instruction <|im_start|>assistant";
             $GLOBALS["DEBUG_DATA"][]="$instruction";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
@@ -181,21 +218,33 @@ class connector
             
             $context="SYSTEM: {$GLOBALS["PROMPT_HEAD"]}.";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";  
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\nUSER={$GLOBALS["PLAYER_NAME"]}";
+            
+            //$context = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $context);
+
+                                    
             $GLOBALS["DEBUG_DATA"][]=$context;
             
-            $contextHistory="\nCONTEXT:\n";
+            $contextHistory="\nSCENARIO:\n";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
 
+                $s_msg_p=$s_msg["content"];
+                
                 if ($n==(sizeof($contextData)-1)) {   // Last prompt line
 
                     $instruction="USER: ".$s_msg["content"]."\n";
 
                 } else {
                     if ($s_msg["role"]=="user") {
-                        $contextHistory.="".$s_msg["content"]."\n";
-                        $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
+              
+                       // $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg["content"]);
+                        
+                        $s_msg_p=$s_msg["content"]; // Overwrite
+                        
+                        $contextHistory.="$s_msg_p\n";
+                        $GLOBALS["DEBUG_DATA"][]="$s_msg_p\n";
+                        
                     } elseif ($s_msg["role"]=="assistant") {
                          
                         $contextHistory.="".$s_msg["content"]."\n";
@@ -257,7 +306,7 @@ class connector
             $context="---\nstyle: roleplay\n";
             $context.="characters:\n   {$GLOBALS["HERIKA_NAME"]}:{$GLOBALS["HERIKA_PERS"]}\n   {$GLOBALS["PLAYER_NAME"]}:Human\n";
             $context.="summary: {$GLOBALS["PROMPT_HEAD"]} \n---\n";
-	    $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
             $contextHistory="";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
@@ -316,33 +365,59 @@ class connector
 
         );
 
-        if ($GLOBALS["gameRequest"][0]!="diary") {
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].':" answer "\n"
-answer ::= sentence "." answer | sentence
-sentence ::= words
-words ::= word words | word
-word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
-';
-
-        } else {
+        if ((isset($GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"]))&&!empty($GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"])) {
+                $eos_token_allow_grammar='| "'.$GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"].'"';
+        } else
+            $eos_token_allow_grammar='';
+        
+        $moodsText='"';
+        //  ("["whispering"|"dazed"|"default"]*")"
+        if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
+            if ($GLOBALS["TTSFUNCTION"]=="azure")
+                $moodsText='("["' . implode('","', $GLOBALS["TTS"]["AZURE"]["validMoods"]) . '"]*")"';
+        
+       
+        // Grammar Sampling. 
+        if ($GLOBALS["gameRequest"][0]=="diary"){
 
             $postData["grammar"]='
 root ::= fullanswer
 fullanswer ::= "Dear Diary, " answer
-answer ::= sentence "." answer | sentence
-sentence ::= words "\n"
-words ::= word words | word
+answer ::= sentence "." answer | sentence 
+sentence ::= words 
+words ::= word words | word  '.$eos_token_allow_grammar.'
 word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
+ANYTEXT ::= [a-zA-Z0-9.,?!\' "\n"]
 ';            
             
-        }
+        } else if ($GLOBALS["gameRequest"][0]=="summary") {
+
+            $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "Summary:  " answer
+answer ::= sentence "." answer | sentence 
+sentence ::= words 
+words ::= word words | word  '.$eos_token_allow_grammar.'
+word ::= ANYTEXT
+ANYTEXT ::= [a-zA-Z0-9.,?!\' "\n"]
+';            
+            
+        } else {
+
+            $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].': '.$moodsText.' answer "\n"
+answer ::= sentence "." answer | sentence
+sentence ::= words
+words ::= word words | word '.$eos_token_allow_grammar.'
+word ::= ANYTEXT
+ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
+';
+//ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
+    }
 
 
-        $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;
+      
 
 
         if (isset($customParms["MAX_TOKENS"])) {
@@ -362,7 +437,8 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 
         }
 
-
+        $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;
+  
         $headers = array(
             'Content-Type: application/json'
         );
@@ -398,7 +474,9 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
         // Send the HTTP request
         if ($this->primary_handler !== false) {
             fwrite($this->primary_handler, $request);
+            fflush($this->primary_handler);
         } else {
+             error_log("Unable to connect to koboldcpp backend!");
             return false;
         }
 
@@ -463,6 +541,10 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 
     public function close()
     {
+        // /api/extra/abort ?
+        while (!feof($this->primary_handler))   // buffer flush?
+            fgets($this->primary_handler);
+        
         fclose($this->primary_handler);
     }
 

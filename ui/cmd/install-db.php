@@ -168,6 +168,19 @@ $db->execQuery("CREATE TABLE IF NOT EXISTS `memory` (
 	PRIMARY KEY(`uid` AUTOINCREMENT)
 );");
 
+$db->execQuery("DROP TABLE `memory_summary`;");
+
+$db->execQuery("CREATE TABLE IF NOT EXISTS memory_summary (
+  `gamets_truncated`  bigint NOT NULL,
+  `n` INTEGER,
+  packed_message TEXT,
+  summary TEXT,
+  classifier TEXT,
+  uid INTEGER
+);");
+
+
+
 if (isset($GLOBALS["MEMORY_EMBEDDING"]) && $GLOBALS["MEMORY_EMBEDDING"]) {
   deleteCollection();
   getCollectionUID();

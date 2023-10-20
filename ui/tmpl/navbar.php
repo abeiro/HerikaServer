@@ -20,6 +20,7 @@
 
                     <li><a class="dropdown-item" href="index.php?table=openai_token_count">OpenAI Token Pricing</a></li>
                     <li><a class="dropdown-item" href="index.php?table=memory">Memories</a></li>
+                    <li><a class="dropdown-item" href="index.php?table=memory_summary">Memories Summarized</a></li>
                     <li><a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor events</a></li>
                 </ul>
             </li>
