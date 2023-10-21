@@ -22,9 +22,7 @@ doRequest() {
 
 }
 
-doRequest "Draven : do you remember that doctor game we played at Haelga's in Riften?"
-
-exit
+doRequest "Draven : do you remember that doctor game we played at Haelga's in Riften?" "NSFW"
 
 doRequest "Draven: Do you remember Brynjolf?" "Memory request."
 
