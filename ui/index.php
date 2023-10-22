@@ -281,3 +281,5 @@ $title = "Gateway Server CP for {$GLOBALS["PLAYER_NAME"]}";
 $title .= (($_GET["autorefresh"]) ? " (autorefreshes every 5 secs)" : "");
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
+
+?>

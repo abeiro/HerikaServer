@@ -1,9 +1,52 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body
+        {
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .Title {
+            font-weight: bold;
+            font-size: 30px;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 5px 5px;
+            border: 1px solid #0b0c0d;
+            background-color: #448ee3;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #fff;
+            text-align: center;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            color: #fff;
+            background-color: #1055a3;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+
+        nav {
+            font-weight: bold;
+            font-size: 20px;
+        }
+    </style>
+</head>
+</html>
+
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
-        <a class="navbar-brand mr-2" href="./index.php" title="Go to main">Herika Server</a>&nbsp;|&nbsp;
-        <a class="navbar-brand mr-2" href="./index.php?togglemodel=true" title="Click to change active connector">
-        Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'),true)); ?>
+        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt="Herika Server"/>Herika Server
+        <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector">
+        Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
         </a>
 
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -81,7 +124,7 @@
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="../soundcache/" target="_blank">TTS cache</a></li>
+                    <li><a class="dropdown-item" href="../soundcache/" target="_blank">Text-to-Speech Cache</a></li>
                     <li><a class="dropdown-item" href="updater.php">Update Server</a></li>
                     <li><a class="dropdown-item" href="tests.php" target="_blank">Test ChatGPT/KoboldCPP Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
@@ -106,8 +149,8 @@
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="addons/background" target="_blank">Background story generator</a></li>
-                    <li><a class="dropdown-item" href="addons/diary" target="_blank">Herika's diary</a></li>
+                    <li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>
+                    <li><a class="dropdown-item" href="addons/diary" target="_blank">Herika's Diary</a></li>
                     <li><a class="dropdown-item" href="addons/chatsim" target="_blank">Chat Simulation</a></li>
                 </ul>
             </li>
