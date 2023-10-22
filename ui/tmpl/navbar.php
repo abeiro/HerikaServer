@@ -30,11 +30,6 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Actions</a>
                 <ul class="dropdown-menu">
                     <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true" title="Create new tables if needed." onclick="return confirm('Sure?')">
-                            Install Server Tables
-                        </a>
-                    </li>
-                    <li>
                         <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent responses." onclick="return confirm('Sure?')">
                             Clean Sent
                         </a>
@@ -70,8 +65,13 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the Herika Server." onclick="return confirm('Sure?')">
-                            Factory Reboot Server
+                        <a class="dropdown-item" href="index.php?reinstall=true" title="Create new tables if needed." onclick="return confirm('Will reinstall all database tables. Are you Sure?')">
+                            Install Server Tables
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the Herika Server." onclick="return confirm('This will wipe the entire server!!! Ignore this message if this is your initial installation. Are you really sure?')">
+                            Reinitialize Herika Server
                         </a>
                     </li>
                 </ul>

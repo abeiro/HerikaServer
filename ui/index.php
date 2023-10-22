@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+</head>
+<body>
+    
 <?php
 error_reporting(E_ERROR);
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
@@ -277,7 +284,7 @@ include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "Gateway Server CP for {$GLOBALS["PLAYER_NAME"]}";
+$title = "Herika Server";
 $title .= (($_GET["autorefresh"]) ? " (autorefreshes every 5 secs)" : "");
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
