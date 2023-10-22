@@ -169,7 +169,7 @@ foreach ($summary as $item) {
         continue;
     echo "<li><a href='#".md5($item)."'>$item</a></li>";
 }
-   echo "<li><a href='#end'>Check&Save</a></li>";
+   echo "<li><a href='#end'>Check & Save</a></li>";
 echo "</ul></div>";
 
 
