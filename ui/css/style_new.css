@@ -47,13 +47,15 @@ display:none
 
 p.conf-item {
 	display: inline-block;
-	font-size:12px;
 	min-width:45%;
+    font-size: 16px;
+	font-weight: bold;
+	font-family: 'Times New Roman', Times, serif;
 }
 
 p.conf-item label{
 	display: block;
-	font-size: 20px;
+	font-size: 16px;
 	font-weight: bold;
 	font-family: 'Times New Roman', Times, serif;
 }
@@ -104,6 +106,7 @@ p.conf-item span {
 	max-width: 400px;
 	padding: 3px;
 	font-size: 14px;
+    font-weight: normal;
 	font-family: 'Times New Roman', Times, serif;
 }
 
