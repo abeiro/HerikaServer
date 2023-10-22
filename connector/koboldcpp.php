@@ -389,7 +389,7 @@ words ::= word words | word  '.$eos_token_allow_grammar.'
 word ::= ANYTEXT
 ANYTEXT ::= [a-zA-Z0-9.,?!\' "\n"]
 ';            
-            
+            unset($postData["grammar"]);
         } else if ($GLOBALS["gameRequest"][0]=="summary") {
 
             $postData["grammar"]='
@@ -401,7 +401,8 @@ words ::= word words | word  '.$eos_token_allow_grammar.'
 word ::= ANYTEXT
 ANYTEXT ::= [a-zA-Z0-9.,?!\' "\n"]
 ';            
-            
+            unset($postData["grammar"]);
+
         } else {
 
             $postData["grammar"]='
@@ -414,10 +415,10 @@ word ::= ANYTEXT
 ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 ';
 //ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
-    }
+        }
 
 
-      
+        //unset($postData["grammar"]);
 
 
         if (isset($customParms["MAX_TOKENS"])) {
@@ -436,6 +437,7 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
             }
 
         }
+
 
         $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;
   

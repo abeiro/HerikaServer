@@ -32,7 +32,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 				'ts' => $gameRequest[1],
 				'gamets' => $gameRequest[2],
 				'type' => 'chat',
-				'data' => SQLite3::escapeString("The Narrator. Herika reads in diary:".$returnFunction[3]),
+				'data' => "The Narrator. Herika reads in diary:".$returnFunction[3],
 				'sess' => 'pending',
 				'localts' => time()
 			)
