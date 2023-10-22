@@ -162,7 +162,7 @@ echo str_repeat("</fieldset>", $lvl2);
 
 echo '</form>';
 
-echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:5px;padding:5px;'><span>Quick access</span><ul>";
+echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'><span><strong>Quick access</strong></span><ul>";
 echo "<li><a href='#top'>Character Configuration</a></li>";
 foreach ($summary as $item) {
     if (strpos($item,"::")!==false)
