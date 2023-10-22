@@ -11,7 +11,8 @@
         .Title {
             font-weight: bold;
             font-size: 30px;
-            text-align: center;
+            line-height: 1.5;
+            text-transform: uppercase;
         }
 
         .button {
@@ -44,7 +45,7 @@
 
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
-        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt="Herika Server"/>Herika Server
+        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt=" Herika Server" style="vertical-align:bottom;"/> Herika Server
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector">
         Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
         </a>
