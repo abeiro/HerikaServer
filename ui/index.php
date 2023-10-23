@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+</head>
+<body>
+    
 <?php
 error_reporting(E_ERROR);
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
@@ -164,13 +171,13 @@ include("tmpl/navbar.php");
     /* Actions */
     if ($_GET["table"] == "responselog") {
         $results = $db->fetchAll("select  A.*,ROWID FROM responselog a order by ROWID asc");
-        echo "<h3 class='my-2'>Response queue</h3>";
+        echo "<h3 class='my-2'>Response Queue</h3>";
         print_array_as_table($results);
     }
 
     if ($_GET["table"] == "eventlog") {
         $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 0,50");
-        echo "<h3 class='my-2'>Event log</h3>";
+        echo "<h3 class='my-2'>Event Log</h3>";
         print_array_as_table($results);
         if ($_GET["autorefresh"]) {
             header("Refresh:5");
@@ -178,12 +185,12 @@ include("tmpl/navbar.php");
     }
     if ($_GET["table"] == "cache") {
         $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a order by ts  desc");
-        echo "<h3 class='my-2'>Event log</h3>";
+        echo "<h3 class='my-2'>Event Log</h3>";
         print_array_as_table($results);
     }
     if ($_GET["table"] == "log") {
         $results = $db->fetchAll("select  A.*,ROWID FROM log a order by localts desc,rowid desc");
-        echo "<h3 class='my-2'>Debug log</h3>";
+        echo "<h3 class='my-2'>AI Log</h3>";
         print_array_as_table($results);
     }
 
@@ -196,46 +203,47 @@ include("tmpl/navbar.php");
             else
                 $finalRow[$row["id_quest"]] = $row;
         }
-        echo "<h3 class='my-2'>Quest log</h3>";
+        echo "<h3 class='my-2'>Current Active Quests</h3>";
 
         print_array_as_table(array_values($finalRow));
     }
 
     if ($_GET["table"] == "currentmission") {
         $results = $db->fetchAll("select  A.*,ROWID FROM currentmission A order by gamets desc,localts desc,rowid desc limit 0,150");
-        echo "<h3 class='my-2'>Current Mission log</h3>";
+        echo "<h3 class='my-2'>Current AI Task/Goal</h3>";
         print_array_as_table($results);
     }
 
     if ($_GET["table"] == "diarylog") {
+
         $results = $db->fetchAll("select  A.*,ROWID FROM diarylog A order by gamets desc,rowid desc limit 0,150");
-        echo "<h3 class='my-2'>Diary log</h3>";
+        echo "<h3 class='my-2'>Diary Entries</h3>";
         print_array_as_table($results);
     }
 
     if ($_GET["table"] == "books") {
         $results = $db->fetchAll("select  A.*,ROWID FROM books A order by gamets desc,rowid desc limit 0,150");
-        echo "<h3 class='my-2'>Book log</h3>";
+        echo "<h3 class='my-2'>Book Log</h3>";
         print_array_as_table($results);
     } 
 
 
     if ($_GET["table"] == "openai_token_count") {
         $results = $db->fetchAll("select  A.*,ROWID FROM openai_token_count A order by rowid desc limit 0,150");
-        echo "<h3 class='my-2'>OpenAI token pricing</h3>";
+        echo "<h3 class='my-2'>OpenAI Token Pricing</h3>";
         print_array_as_table($results);
     }
 
     
     if ($_GET["table"] == "memory") {
         $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory A order by gamets desc,rowid desc limit 0,150");
-        echo "<h3 class='my-2'>Memories log</h3>";
+        echo "<h3 class='my-2'>Memories Log</h3>";
         print_array_as_table($results);
     }
     
     if ($_GET["table"] == "memory_summary") {
         $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 0,100");
-        echo "<h3 class='my-2'>Memories Summarized log</h3>";
+        echo "<h3 class='my-2'>Summarized Memories Log</h3>";
         print_array_as_table($results);
     }
     
@@ -277,7 +285,9 @@ include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "Gateway Server CP for {$GLOBALS["PLAYER_NAME"]}";
+$title = "Herika Server";
 $title .= (($_GET["autorefresh"]) ? " (autorefreshes every 5 secs)" : "");
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
+
+?>

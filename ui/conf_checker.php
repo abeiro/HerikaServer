@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+</head>
+<body>
+
 <?php
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);

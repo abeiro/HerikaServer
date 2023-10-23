@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+</head>
+<body>
+
 <?php
 $file_path = '../conf/conf.php'; // Relative path from the location of conf_export.php
 

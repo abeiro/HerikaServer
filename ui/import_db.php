@@ -1,3 +1,11 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+</head>
+<body>
+    
+
 <?php
 
 if(isset($_POST["submit"])) {
@@ -41,7 +49,7 @@ echo '
 include("tmpl/footer.html");
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "Gateway Server CP for {$GLOBALS["PLAYER_NAME"]}";
+$title = "Gateway Server for {$GLOBALS["PLAYER_NAME"]}";
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
     

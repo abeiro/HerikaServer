@@ -1,7 +1,7 @@
 {
   "DBDRIVER": {"type":"select","values":["sqlite3"],"description":"Primary database handler. Currently only sqlite3."},
   "PLAYER_NAME": {"type":"string","description":"Your current character name."},
-  "HERIKA_NAME": {"type":"string","description":"Custom name for Herika. Make sure it matches the Skyrim NPC name."},
+  "HERIKA_NAME": {"type":"string","description":"Custom name for Herika. Make sure it matches her NPC name in Skyrim."},
   "PROMPT_HEAD": {"type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "HERIKA_PERS": {"type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "CONTEXT_HISTORY": {"type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. More context => more tokens used, and slower processing speed in local LLMs."},
@@ -18,20 +18,20 @@
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"}
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
     },
     "koboldcpp": {
       "_title":"KoboldCPP API",
-      "url": {"type":"url","description":"KoboldCPP API endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature"},
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
       "top_p": {"type":"number","description":"LLM parameter top_p"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
-      "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Leave blank if don't know about it."},
-      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Setence (EOS) tokens. if set to false  LLM will stop generating when it detects an EOS token."},
-      "eos_token": {"type":"string","description":"EOS token LLM uses. Related to use_default_badwordsids"},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c"],"description":"Prompt Format. Usually specified in HugginFace's model card"}
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
+      "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     },
     "openrouter": {
       "_title":"OpenRouter API",
@@ -39,7 +39,7 @@
       "model": {"type":"string","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
       "xreferer": {"type":"string","description":"Stub needed header. Keep default."},
       "xtitle": {"type":"string","description":"Stub needed header. Keep default."}
             
@@ -49,7 +49,7 @@
       "HOST": {"type":"string","description":"Oobabooga API WS HOST"},
       "PORT": {"type":"integer","description":"Oobabooga API WS PORT"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing (example:write diary)"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
       "temperature": {"type":"number","description":"LLM parameter temperature"},
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
@@ -70,7 +70,7 @@
     },
     "MIMIC3": {
       "_title":"MIMIC3 Text-To-Speech (Automatically installed with DwemerDistro)",
-      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, copy and paste the URL from the console window."},
+      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, copy and paste [MIMIC3 Configuration] URL from the console window."},
       "voice": {"type":"string","description":"Voice code"},
       "rate": {"type":"number","description":"Talk speed"},
       "volume": {"type":"integer","description":"Volume"}
@@ -123,22 +123,22 @@
     "_title":"Other Features",
     "MEMORY_EMBEDDING": {
       "_title":"Long Term Memory (DwemerDistro Only!)",
-      "ENABLED": {"type":"boolean","description":"Enable Long Term Memory.  It uses ChromaDB and a text embedding provider to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
-      "CHROMADB_URL": {"type":"url","description":"ChromaDB Endpoint. Copy and paste the URL from the console window."},
-      "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint. Copy and paste the URL from the console window.","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
+      "ENABLED": {"type":"boolean","description":"Enable long term memory.  It uses ChromaDB and a text embedding provider to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
+      "CHROMADB_URL": {"type":"url","description":"ChromaDB Endpoint. Copy and paste the [CHROMADB REST-API] URL from the console window."},
+      "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint. Copy and paste the [TEXT2VEC REST-API] URL from the console window.","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
       "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs your OpenAI API key. Local is the one provided by DwemerDistro"},
-      "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing too recent dialogues as memories. As that is covered by context history."},
+      "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing recent dialogues as memories. As that is covered by context history."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many of the most relevant memory records will be injected in prompt."},
-      "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will try to auto create summarys for better memory recovery. Will use tokens, don't use if tokens cost money to you"}
+      "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will summarize individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens."}
     },
     "COST_MONITOR": {
       "_title":"Cost Monitoring (DwemerDistro Only!)",
       "ENABLED":{"type":"boolean","description":"Enable Cost Monitoring. Currently only tracks OpenAI cost."},
       "URL":{"type":"url","description":"URL of API. Should be displayed in DwemerDistro console window."}
     },
-     "MISC": {
+    "MISC": {
       "_title":"Misc features/options",
-      "ADD_TIME_MARKS":{"type":"boolean","description":"Add time marks in context, so AI will have a time refernce for past events and dialogues."}
+      "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context longs. Helps with memory recollection."}
     }
   }
   

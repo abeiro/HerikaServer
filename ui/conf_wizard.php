@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+</head>
+<body>
+    
 <?php
 
 error_reporting(E_ERROR);
@@ -162,14 +169,14 @@ echo str_repeat("</fieldset>", $lvl2);
 
 echo '</form>';
 
-echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:5px;padding:5px;'><span>Quick access</span><ul>";
-echo "<li><a href='#top'>Top</a></li>";
+echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'><span><strong>Quick access</strong></span><ul>";
+echo "<li><a href='#top'>Character Configuration</a></li>";
 foreach ($summary as $item) {
     if (strpos($item,"::")!==false)
         continue;
     echo "<li><a href='#".md5($item)."'>$item</a></li>";
 }
-   echo "<li><a href='#end'>Check&Save</a></li>";
+   echo "<li><a href='#end'>Check & Save</a></li>";
 echo "</ul></div>";
 
 
@@ -185,7 +192,7 @@ include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "Gateway Server CP for {$GLOBALS["PLAYER_NAME"]}";
+$title = "Herika Server";
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 
