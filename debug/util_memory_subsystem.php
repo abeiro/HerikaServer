@@ -81,7 +81,7 @@ commands:
 								GROUP_CONCAT(message,char(13) || char(10)|| char(13) || char(10)) as packed_message ,'','dialogue',max(uid) as uid
 								from memory
 								where message not like 'Dear Diary%'
-								group by round(gamets/1000000 ,0) order by round(gamets/1000000 ,0) ASC
+								group by round(gamets/3000000 ,0) order by round(gamets/3000000 ,0) ASC
 							  ) where gamets_truncated>$maxRow
 							");
 
@@ -115,10 +115,10 @@ commands:
 				
 				$prompt=[];
                 $prompt[] = array('role' => 'user', 
-								  'content' => "write into {$GLOBALS["HERIKA_NAME"]}'s diary a summary of this: [... {$row["packed_message"]} ...]. mark down characters and places. ");
+								  'content' => "write into {$GLOBALS["HERIKA_NAME"]}'s diary a long summary of this: [... {$row["packed_message"]} ...]. mark down characters and places. ");
 
 				
-                $GLOBALS["FORCE_MAX_TOKENS"]=165;
+                $GLOBALS["FORCE_MAX_TOKENS"]=256;
 
                 $connectionHandler=new connector();
                 $connectionHandler->open($prompt, []);

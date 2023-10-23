@@ -46,6 +46,9 @@ class connector
             }
         }
 
+        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###","```"];
+
+
         if ($GLOBALS["CONNECTOR"][$this->name]["template"]=="alpaca") {
             foreach ($normalizedContext as $n=>$s_msg) {
                 if ($n==(sizeof($normalizedContext)-1)) {   // Last prompt line
@@ -105,12 +108,12 @@ class connector
             $GLOBALS["more_stopseq"][]="USER:";
             $context="{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-	    $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
             $context.="{$GLOBALS["HERIKA_NAME"]} IS THE ASSISTANT, {$GLOBALS["PLAYER_NAME"]} IS THE USER\n";
 
-            
+
             $GLOBALS["DEBUG_DATA"][]=$context;
-            
+
             $contextHistory="";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
@@ -128,8 +131,8 @@ class connector
                         $contextHistory.="ASSISTANT:".$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
-                    
-                     
+
+
                 }
 
                 $n++;
@@ -145,9 +148,9 @@ class connector
             $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
             $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
-           
+
             $GLOBALS["DEBUG_DATA"][]=$context;
-            
+
             $contextHistory="";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
@@ -165,8 +168,8 @@ class connector
                         $contextHistory.=$s_msg["content"]."\n";
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
-                    
-                     
+
+
                 }
 
                 $n++;
@@ -182,9 +185,9 @@ class connector
             $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
             $context.="{$GLOBALS["COMMAND_PROMPT"]}<|im_end|>\n";
-           
+
             $GLOBALS["DEBUG_DATA"][]=$context;
-            
+
             $contextHistory="";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
@@ -202,8 +205,8 @@ class connector
                         $contextHistory."<|im_start|>assistant\n".$s_msg["content"]."<|im_end|>\n";
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
-                    
-                     
+
+
                 }
 
                 $n++;
@@ -214,46 +217,46 @@ class connector
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="synthia") {
-            
-            
+
+
             $context="SYSTEM: {$GLOBALS["PROMPT_HEAD"]}.";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
             $context.="{$GLOBALS["COMMAND_PROMPT"]}\nUSER={$GLOBALS["PLAYER_NAME"]}";
-            
+
             //$context = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $context);
 
-                                    
+
             $GLOBALS["DEBUG_DATA"][]=$context;
-            
+
             $contextHistory="\nSCENARIO:\n";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
 
                 $s_msg_p=$s_msg["content"];
-                
+
                 if ($n==(sizeof($contextData)-1)) {   // Last prompt line
 
                     $instruction="USER: ".$s_msg["content"]."\n";
 
                 } else {
                     if ($s_msg["role"]=="user") {
-              
+
                        // $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg["content"]);
-                        
+
                         $s_msg_p=$s_msg["content"]; // Overwrite
-                        
+
                         $contextHistory.="$s_msg_p\n";
                         $GLOBALS["DEBUG_DATA"][]="$s_msg_p\n";
-                        
+
                     } elseif ($s_msg["role"]=="assistant") {
-                         
+
                         $contextHistory.="".$s_msg["content"]."\n";
                         $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
-                        
+
                     } elseif ($s_msg["role"]=="system") {
                     }  // Must rebuild this
-                    
-                     
+
+
                 }
 
                 $n++;
@@ -262,9 +265,9 @@ class connector
             $context.="{$contextHistory}{$instruction}ASSISTANT:";
             $GLOBALS["DEBUG_DATA"][]="$instruction";
             $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
-            
+
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
-            
+
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="extended-alpaca") {
 
@@ -341,17 +344,17 @@ class connector
         $TOP_P=((isset($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? $GLOBALS["CONNECTOR"][$this->name]["top_p"] : 0.9)+0);
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
-        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###","```"];
+
 
         if ($GLOBALS["CONNECTOR"][$this->name]["newline_as_stopseq"]) {
             $stop_sequence[]="\n";
         }
-        
+
         if (isset($GLOBALS["more_stopseq"])) {
             foreach ($GLOBALS["more_stopseq"] as $stopseq)
                 $stop_sequence[]=$stopseq;
         }
-        
+
         $postData = array(
 
             "prompt"=>$context,
@@ -369,39 +372,40 @@ class connector
                 $eos_token_allow_grammar='| "'.$GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"].'"';
         } else
             $eos_token_allow_grammar='';
-        
+
         $moodsText='"';
         //  ("["whispering"|"dazed"|"default"]*")"
-        if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
+        if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0)
             if ($GLOBALS["TTSFUNCTION"]=="azure")
                 $moodsText='("["' . implode('","', $GLOBALS["TTS"]["AZURE"]["validMoods"]) . '"]*")"';
-        
-       
-        // Grammar Sampling. 
+
+
+        // Grammar Sampling.
         if ($GLOBALS["gameRequest"][0]=="diary"){
 
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "Dear Diary, " answer
-answer ::= sentence "." answer | sentence 
-sentence ::= words 
-words ::= word words | word  '.$eos_token_allow_grammar.'
-word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?!\' "\n"]
-';            
-            unset($postData["grammar"]);
-        } else if ($GLOBALS["gameRequest"][0]=="summary") {
+            $postData["stop_sequence"]=["Author's notes","###","```"];
 
             $postData["grammar"]='
 root ::= fullanswer
-fullanswer ::= "Summary:  " answer
-answer ::= sentence "." answer | sentence 
-sentence ::= words 
-words ::= word words | word  '.$eos_token_allow_grammar.'
+fullanswer ::= "[Note: last '.$GLOBALS["PLAYER_NAME"].'\'s order is: " keywords "]" "\nDear Diary, " text
+text ::= char text | char | '.$eos_token_allow_grammar.'
+char ::= ANYTEXT
+keywords ::= char keywords | char
+ANYTEXT ::= [a-zA-Z0-9.,?!\' \n]
+';
+            //unset($postData["grammar"]);
+        } else if ($GLOBALS["gameRequest"][0]=="summary") {
+            $eos_token_allow_grammar='';
+            $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "Location: " answer "\nPeople: " answer "\nMission: " answer "\nSummary: " answer
+answer ::= sentence "." answer | sentence
+sentence ::= words
+words ::= word words | word '.$eos_token_allow_grammar.'
 word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?!\' "\n"]
-';            
-            unset($postData["grammar"]);
+ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
+';
+            //unset($postData["grammar"]);
 
         } else {
 
@@ -440,7 +444,7 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 
 
         $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;
-  
+
         $headers = array(
             'Content-Type: application/json'
         );
@@ -463,6 +467,7 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
         // Data to send in JSON format
         $dataJson = json_encode($postData);
 
+        //print_r($postData);
         $request = "POST $path HTTP/1.1\r\n";
         $request .= "Host: $host\r\n";
         $request .= "Content-Type: application/json\r\n";
@@ -506,12 +511,37 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
         }
         //$_ignoreRest
 
+        $data=json_decode(substr($line, 6), true);
+
+
         if (strpos($line, 'data: {"token": "{"}') !== false) {
             $this->_ignoreRest=true;
             return "";
-            
+
         }
-        
+
+         if (strpos($line, 'data: {"token": "["}') === 0) {
+
+            $this->_functionMode=true;
+            //$this->_functionRawName.=$data["token"];
+            return "";
+        }
+
+         if (strpos($line, 'data: {"token": "]"}') === 0 || strpos($data["token"], ']')!==false) {
+
+            $this->_functionMode=false;
+            //$this->_functionRawName.=$data["token"];
+            return "";
+        }
+
+        if ((isset($this->_functionMode))&&($this->_functionMode)) {
+
+            $this->_functionRawName.=$data["token"];
+            return "";
+
+
+        }
+
         /*
          if (strpos($line, 'data: {"token": "#"}') === 0) {
 
@@ -520,7 +550,6 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
         }
         */
 
-        $data=json_decode(substr($line, 6), true);
 
         if ((isset($this->_functionMode))&&($this->_functionMode)) {
 
@@ -546,7 +575,7 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
         // /api/extra/abort ?
         while (!feof($this->primary_handler))   // buffer flush?
             fgets($this->primary_handler);
-        
+
         fclose($this->primary_handler);
     }
 
@@ -554,15 +583,25 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
     {
         if ($this->_ignoreRest)
             return true;
-        
+
         return feof($this->primary_handler);
     }
 
     public function processActions()
     {
         global $alreadysent;
+
+        // Hack. To be revised. Primitive function handling for koboldcpp.
+        if (isset($this->_functionRawName) && strlen($this->_functionRawName)) {
+            $primitivefunction=explode(":",$this->_functionRawName);
+            $this->_functionRawName="SetCurrentTask@".$primitivefunction[2];
+            $this->_functionMode=true;
+        }
+        //print_r($this->_functionRawName);
+
+
         if ((isset($this->_functionMode))&&($this->_functionMode)) {
-            $alreadysent[md5("Herika|command|{$this->_functionRawName}r\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+            $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
             return $alreadysent;
         } else {
             return [];

@@ -90,7 +90,7 @@ $PROMPTS=array(
 
     "inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG "
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} SHORTLY replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG "
         ]
             // Prompt is implicit
 
@@ -109,7 +109,11 @@ $PROMPTS=array(
             ]
     ],
     "lockpicked"=>[
-        "cue"=>["({$GLOBALS["HERIKA_NAME"]} comments about lockpicked item) $TEMPLATE_DIALOG"],
+        "cue"=>[
+            "({$GLOBALS["HERIKA_NAME"]} comments about lockpicked item) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} what does she/he found) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} remember {$GLOBALS["PLAYER_NAME"]} to share loot) $TEMPLATE_DIALOG"
+        ],
         "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked {$gameRequest[3]})"],
         "extra"=>["mood"=>"whispering"]
     ],
@@ -122,7 +126,7 @@ $PROMPTS=array(
         
     ],
     "diary"=>[ 
-        "cue"=>["Please write a summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
+        "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
         "extra"=>["force_tokens_max"=>0]
     ],
 );

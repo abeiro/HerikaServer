@@ -142,7 +142,8 @@ $contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1);
 $contextDataWorld = DataLastInfoFor("", -2);
 
 // Add current motto to COMMAND_PROMPT
-$GLOBALS["COMMAND_PROMPT"].=DataGetCurrentTask();
+if ($gameRequest[0] != "diary")
+    $GLOBALS["COMMAND_PROMPT"].=DataGetCurrentTask();
 
 // Offer memory in CONTEXT 
 $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);

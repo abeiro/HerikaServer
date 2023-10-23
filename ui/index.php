@@ -208,7 +208,7 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "diarylog") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM diarylog A order by gamets asc,rowid asc limit 0,150");
+        $results = $db->fetchAll("select  A.*,ROWID FROM diarylog A order by gamets desc,rowid desc limit 0,150");
         echo "<h3 class='my-2'>Diary log</h3>";
         print_array_as_table($results);
     }

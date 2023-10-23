@@ -48,6 +48,16 @@ function print_array_as_table($data)
                         <i class='bi-trash'></i>
                     </a>
                 </td>";
+            } elseif ($n == "summary" || $n == "content") {
+                echo "<td class='$colorClass'><em>
+                    ".nl2br($cell)."</em>
+
+                </td>";
+            } elseif ($n == "packed_message") {
+                echo "<td class='$colorClass'><p style='max-height:200px;overflow-y:scroll'>
+                    ".nl2br($cell)."</p>
+
+                </td>";
             } elseif (strpos($cell, 'background chat') !== false) {
                 echo "<td class='$colorClass'><em>" . $cell . "</em></td>";
             } elseif (strpos($cell, $GLOBALS["PLAYER_NAME"] . ':') !== false) {

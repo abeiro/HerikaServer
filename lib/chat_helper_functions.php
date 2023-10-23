@@ -449,13 +449,17 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
                     $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
                     $GLOBALS["DEBUG_DATA"]["memories"][]=$outLocalBuffer;
                     
-                    if ($singleMemory["distance"]<0.55)  {
+                    if ($singleMemory["distance"]<0.35)  {
                         $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=false;
                         
-                    }
+                    } else if ($singleMemory["distance"]<0.55)  {
+                         return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
+
+                    } else
+                        return "";
 
                     //$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$ncn;
-                    return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
+
                     
                 } else {
                     return "";
