@@ -46,12 +46,12 @@
                     </li>
                     <li>
                         <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean log table" onclick="return confirm('Sure?')">
-                            Clean Log
+                            Clean AI Log
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="index.php?export=log" title="Export Log (debugging purposes)" target="_blank">
-                            Export Log
+                            Export AI Log
                         </a>
                     </li>
                     <li>
