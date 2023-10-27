@@ -59,11 +59,11 @@ function TkGetCostPerThousandOutputTokens($CURRENT_MODEL)
 
 function TkInsertAndCalcTotals($table, $data)
     {
-        global $db;
+        
         
         // Fetch the last row
         $latestRowQuery = "SELECT * FROM $table ORDER BY ROWID DESC LIMIT 1";
-        $latestRowResult = $db->fetchAll($latestRowQuery);
+        $latestRowResult = $GLOBALS["db"]->fetchAll($latestRowQuery);
 
         if (!empty($latestRowResult)) {
             // If the table is not empty
@@ -79,14 +79,13 @@ function TkInsertAndCalcTotals($table, $data)
         }
 
         // Insert new row
-       $db->execQuery("INSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')");
+       $GLOBALS["db"]->execQuery("INSERT INTO $table (" . implode(",", array_keys($data)) . ") VALUES ('" . implode("','", $data) . "')");
     }
 
     
 function TkTokenizePrompt($jsonEncodedData, $CURRENT_MODEL)
 {
 
-    global $db;
 
     $costPerThousandTokens = TkGetCostPerThousandOutputTokens($CURRENT_MODEL);
     // connect to local Python server servicing tokenizing requests
