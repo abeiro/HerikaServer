@@ -419,8 +419,8 @@ function lastKeyWords($n, $eventypes)
     $m=$n+1;
     
     $lastRecords = $db->fetchAll("SELECT message from memory order by gamets desc limit 0,$m");
-    
-    
+    $words=[];
+    $uniqueArray=[];
     $uppercaseWords = [];
     foreach ($lastRecords as $record) {
         $pattern = '/\([^)]+\)/';
@@ -451,6 +451,7 @@ function lastKeyWords($n, $eventypes)
         
     }
 
+    
     foreach ($words as $n=>$e) {
         if ($e>1)
             $uniqueArray[]=$n;
