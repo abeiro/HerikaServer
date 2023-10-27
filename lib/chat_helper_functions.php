@@ -747,6 +747,9 @@ function logEvent($dataArray)
 function selectRandomInArray($arraySource)
 {
 
+    if (!isset($arraySource))
+        return "";
+    
     $n=sizeof($arraySource);
     if ($n==1) {
         return $arraySource[0];
