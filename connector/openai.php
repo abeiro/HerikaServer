@@ -62,7 +62,7 @@ class connector
             
         }
 
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $data["functions"]=$GLOBALS["FUNCTIONS"];
             if (isset($GLOBALS["FUNCTIONS_FORCE_CALL"])) {
                 $data["function_call"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
@@ -113,7 +113,7 @@ class connector
 
         $data=json_decode(substr($line, 6), true);
         if (isset($data["choices"][0]["delta"]["content"])) {
-            if (strlen(trim($data["choices"][0]["delta"]["content"]))>0) {
+            if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
                 $buffer.=$data["choices"][0]["delta"]["content"];
                 $this->_numOutputTokens += 1;
 

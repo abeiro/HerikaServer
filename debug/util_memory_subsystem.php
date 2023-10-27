@@ -14,6 +14,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.cl
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 
 
 if (!isset($argv[1])) {
@@ -27,7 +28,9 @@ commands:
 	sync 		Sync ChromaDB database. 
 	get 		Get memory. Example: get 56
 	recreate	Recreate collection.
-	compact	    Recreate memories_summary database from memories
+	compact	    Recreate memories_summary database from memories nad other sources. Must resync later. Needs LLM.
+	
+Note: Memories are stored in memory_summary table. ChromaDB should be a vector representation of this table.
 
 ");
 } else {
@@ -72,25 +75,7 @@ commands:
         ;
         $db = new sql();
 
-        $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
-
-        $maxRow=$results[0]["gamets_truncated"]+0;
-
-        $results = $db->query("insert into memory_summary select * from ( 
-								select max(gamets) as gamets_truncated,count(*) as n,
-								GROUP_CONCAT(message,char(13) || char(10)|| char(13) || char(10)) as packed_message ,'','dialogue',max(uid) as uid
-								from memory
-								where message not like 'Dear Diary%'
-								group by round(gamets/3000000 ,0) order by round(gamets/3000000 ,0) ASC
-							  ) where gamets_truncated>$maxRow
-							");
-
-        $results = $db->query("insert into memory_summary 
-								select gamets,1,message,message,'diary',uid
-								from memory
-								where message like 'Dear Diary%'
-								and gamets>$maxRow
-							");
+        $maxRow=PackIntoSummary();
 
 
         echo "Creating memories".PHP_EOL;
@@ -113,9 +98,15 @@ commands:
 				
 				$gameRequest=["summary"];	// Fake a diary call.
 				
+				$CLFORMAT="
+ Location: {} 
+ People: {} 
+ Mission: {}
+ Summary: {}
+ ";
 				$prompt=[];
                 $prompt[] = array('role' => 'user', 
-								  'content' => "write into {$GLOBALS["HERIKA_NAME"]}'s diary a long summary of this: [... {$row["packed_message"]} ...]. mark down characters and places. ");
+								  'content' => "write into {$GLOBALS["HERIKA_NAME"]}'s diary a summary of this: \n[... {$row["packed_message"]} ...]. \nUse this format:\n $CLFORMAT");
 
 				
                 $GLOBALS["FORCE_MAX_TOKENS"]=256;
@@ -150,8 +141,8 @@ commands:
 
 
             $embeddings=getEmbedding($TEST_TEXT);
-            //print_r($embeddings);
-			echo $TEST_TEXT;
+            //print_r($GLOBALS["DEBUG_DATA"]);
+			echo PHP_EOL.$TEST_TEXT.PHP_EOL;
             
             storeMemory($embeddings, $TEST_TEXT, $row["uid"], $row["classifier"]);
             
@@ -159,6 +150,7 @@ commands:
             $counter++;
             echo "\nMemory created $counter\n";
 			sleep(1);
+            //break;
 			
         }
 

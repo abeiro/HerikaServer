@@ -10,8 +10,13 @@
 error_reporting(E_ALL);
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
 
 echo file_get_contents('template.html');
 
@@ -26,49 +31,34 @@ if ($_POST["doit"]) {
 
   $parms=array_merge($head,$prompt);
   
+   require($enginePath.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
   
-  
-  $url = 'https://api.openai.com/v1/chat/completions';
+    $connectionHandler=new connector();
+    $GLOBALS["gameRequest"][0]="diary"; // HAck to force diary grammar
+    $connectionHandler->open($parms,["MAX_TOKENS"=>$_POST["OPENAI_MAX_TOKENS_MEMORY"]]);
 
-  $data = array(
-		'model' => 'gpt-3.5-turbo-0613',
-		'messages' =>$parms,
-		'stream' => false,
-		//'max_tokens' => ((isset($GLOBALS["OPENAI_MAX_TOKENS_MEMORY"]) ? $GLOBALS["OPENAI_MAX_TOKENS_MEMORY"] : 1024) + 0),
-        'max_tokens' => $_POST["OPENAI_MAX_TOKENS_MEMORY"]+0,
-		'temperature' => 1,
-		'presence_penalty' => 1
-	);
-
-  $headers = array(
-      'Content-Type: application/json',
-      "Authorization: Bearer {$GLOBALS["OPENAI_API_KEY"]}"
-  );
-
-  $options = array(
-      'http' => array(
-          'method' => 'POST',
-          'header' => implode("\r\n", $headers),
-          'content' => json_encode($data),
-          'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
-      )
-  );
-
-
-  $context = stream_context_create($options);  
-  $handle = fopen($url, 'r', false, $context);
-  if ($handle === false) {
-    
-  } else {
     $buffer="";
-    while (!feof($handle)) 
-      $buffer.=fread($handle,1024);
-		
-    $response=json_decode($buffer,true);
+    $totalBuffer="";
+    $breakFlag=false;
     
-    $rawResponse = $response["choices"][0]["message"]["content"];
-    //echo $rawResponse;
-  }
+     while (true) {
+
+        if ($breakFlag) {
+            break;
+        }
+
+        $buffer.=$connectionHandler->process();
+        $totalBuffer.=$buffer;
+
+        if ($connectionHandler->isDone()) {
+            $breakFlag=true;
+        }
+        
+     }
+     
+     $rawResponse=$buffer;
+     
+     $connectionHandler->close();
 
 } else if ($_POST["store"]) {
   

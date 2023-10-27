@@ -26,7 +26,7 @@ function tts($textString, $mood = "default", $stringforhash) {
 		// Request data
 		$data = array(
 			'text' => $textString,
-			'model_id' => 'eleven_monolingual_v1',
+			'model_id' => $GLOBALS["TTS"]["ELEVEN_LABS"]["model_id"],
 			'voice_settings' => array(
 				'stability' => $GLOBALS["TTS"]["ELEVEN_LABS"]["stability"]+0.0,
 				'similarity_boost' => $GLOBALS["TTS"]["ELEVEN_LABS"]["similarity_boost"]+0.0

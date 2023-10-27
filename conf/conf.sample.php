@@ -56,9 +56,17 @@ $STT["WHISPER"]["LANG"]="en";
 $STT["WHISPER"]["API_KEY"]="";
 
 
+$ITT["AZURE"]["ENDPOINT"]="";			
+$ITT["AZURE"]["API_KEY"]="";
+
+
+$ITT["LLAMACPP"]["URL"]="http://127.0.0.1:8007";			
+
+
 
 $STTFUNCTION="whisper";								// Valid options are azure or whisper so far
 $TTSFUNCTION="none";								// Valid options are azure or mimic3, or 11labs so far
+$ITTFUNCTION="none";								// Valid options are azure or mimic3, or 11labs so far
 
 
 $CONTEXT_HISTORY="15";
@@ -73,7 +81,9 @@ $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1;
 $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_URL"]="http://127.0.0.1:7860";
 $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"]="local";
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=false;
-
+$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10;
+$FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]=33;
+$FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66;
 
 $CONNECTORS=["koboldcpp","openai"];  
 
@@ -114,7 +124,8 @@ $CONNECTOR["oobabooga"]["rep_pen"]=1.18;
 $FEATURES["COST_MONITOR"]["ENABLED"]=true;	//Enable cost/token counter monitoring. Currently only supports OpenAI.
 $FEATURES["COST_MONITOR"]["URL"]="http://127.0.0.1:8090";	//We can use 127.0.0.1 because server is on same machine by default.
 
-$FEATURES["MISC"]["ADD_TIME_MARKS"]=true;	
+$FEATURES["MISC"]["ADD_TIME_MARKS"]=true;
+$FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false;	
 
 
 ?>

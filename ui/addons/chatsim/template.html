@@ -69,7 +69,7 @@ function reqSend() {
     document.getElementById('playerName').value+': '+document.getElementById('inputText').value;
   var urlData = btoa(urlDataRaw);
   document.getElementById('gamets').value=parseInt(document.getElementById('gamets').value)+1;
-  document.getElementById('last_gamets').value=timestampInSeconds;
+  document.getElementById('last_gamets').value=parseInt(timestampInSeconds)+1;
 
   // Configure the request
   xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData, true);

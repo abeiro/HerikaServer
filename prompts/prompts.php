@@ -90,7 +90,7 @@ $PROMPTS=array(
 
     "inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} SHORTLY replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG "
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG "
         ]
             // Prompt is implicit
 
@@ -129,6 +129,11 @@ $PROMPTS=array(
         "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
         "extra"=>["force_tokens_max"=>0]
     ],
+    "vision"=>[ 
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} describes what is seeing. She pays attention to the small details of the scene. $TEMPLATE_DIALOG."],
+        "player_request"=>["The Narrator: {$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
+        "extra"=>["force_tokens_max"=>128]
+    ]
 );
 
 

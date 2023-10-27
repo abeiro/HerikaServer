@@ -100,7 +100,10 @@
       "ssml_pitch":{"type":"string","description":"Pitch"}
     }
   },
-  "STTFUNCTION": {"type":"select","values":["whisper","localwhisper","azure"],"description":"Speech-to-Text service options. Translates your voice to text.", "_title":"Speech-to-Text Service"},
+  "STTFUNCTION": {
+    "type":"select","values":["whisper","localwhisper","azure"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "_title":"Speech-to-Text Service"
+    },
   "STT": {
   "_title":"Speech-to-Text Service",
     "WHISPER": {
@@ -119,6 +122,22 @@
       "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"}
     }
   },
+  "ITTFUNCTION": {
+    "type":"select","values":["llamacpp","azure"],"description":"Image recognition feature. Soulgaze spell.", 
+    "_title":"Image Recognition service (*Experimental)"
+   },
+  "ITT": {
+    "_title":"Image Recognition service (*Experimental)",
+    "AZURE": {
+      "_title":"Azure Text-To-Speech (not working)",
+      "region": {"type":"string","description":"Region location of your API key"},
+      "API_KEY": {"type":"apikey","description":"Azure Computer Vision API KEY","code":"AZURE_API_KEY"}
+    },
+    "LLAMACPP": {
+      "_title":"Bare llama.cpp server.",
+      "URL": {"type":"url","description":"URL of llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md"}
+    }
+  },
   "FEATURES": {
     "_title":"Other Features",
     "MEMORY_EMBEDDING": {
@@ -129,7 +148,11 @@
       "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs your OpenAI API key. Local is the one provided by DwemerDistro"},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing recent dialogues as memories. As that is covered by context history."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many of the most relevant memory records will be injected in prompt."},
-      "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will summarize individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens."}
+      "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will summarize individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens."},
+      "AUTO_CREATE_SUMMARY_INTERVAL": {"type":"integer","description":"Time frame used to pack summary data. 10 = 13 in-game hours, 5 = 7,5 in-game hours"},
+      "MEMORY_BIAS_A": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer memory."},
+      "MEMORY_BIAS_B": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer and endorse memory."}
+      
     },
     "COST_MONITOR": {
       "_title":"Cost Monitoring (DwemerDistro Only!)",
@@ -139,6 +162,10 @@
     "MISC": {
       "_title":"Misc features/options",
       "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context longs. Helps with memory recollection."}
+    },
+    "EXPERIMENTAL": {
+      "_title":"Experimental features",
+      "KOBOLDCPP_ACTIONS":{"type":"boolean","description":"Enable experimental and limited actions for koboldcpp."}
     }
   }
   

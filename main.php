@@ -422,6 +422,69 @@ if (sizeof($talkedSoFar) == 0) {
         }
     }
 }
+
+
+// EXPERIMENTAL FEATURE
+if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && (DMgetCurrentModel()=="koboldcpp") && (in_array($gameRequest[0],["inputtext","inputtext_s"])) ) {
+    
+    $herikaCondensedResponse=implode(" ",$talkedSoFar);
+
+    array_pop($contextData);
+    $lastElementByUser=end($contextData);
+    $lastUserSentence=str_replace("-$DIALOGUE_TARGET", "", $lastElementByUser["content"]);
+            
+    $contextData[]=array('role' => 'user', 'content' =>  "{$GLOBALS["HERIKA_NAME"]}: $herikaCondensedResponse");
+    $contextData[]=array('role' => 'user', 'content' =>  
+        "Analyze this sentence: '$lastUserSentence'. ".
+        "If sentence is a question, then answer is DoNothing().".
+        "If sentence is a trade request, then answer is AcceptTradeRequest().".
+        "If sentence explicitly describes a new plan, then answer is SetCurrentPlan(plan description)".
+        "Else, if nothing is true, then answer is DoNothing().".
+        "Correct answer is:"
+    );
+
+    //$GLOBALS["PROMPT_HEAD"]="Follow the logical steps and write the final answer in first place. Then explain reasoning.".
+    //$GLOBALS["HERIKA_PERS"]="";
+    //$GLOBALS["COMMAND_PROMPT"]="";
+    
+    //$GLOBALS["PLAYER_NAME"]="no name";
+    
+    $connectionHandler=new connector();
+    $overrideParameters["MAX_TOKENS"]=25;
+    $overrideParameters["GRAMMAR_ACTIONS"]=true;
+    
+    $connectionHandler->open($contextData,$overrideParameters);
+      
+    $buffer="";
+    $totalBuffer="";
+    $breakFlag=false;
+    
+    $connectionHandler->_functionMode=true;
+     while (true) {
+
+        if ($breakFlag) {
+            break;
+        }
+
+        $buffer.=$connectionHandler->process();
+        $totalBuffer.=$buffer;
+
+        if ($connectionHandler->isDone()) {
+            $breakFlag=true;
+        }
+        
+     }
+   
+   
+    $actions=$connectionHandler->processActions();
+    if (sizeof($actions)>0) {
+
+        $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
+        echo implode("\r\n", $actions);
+    }
+
+}
+
 echo 'X-CUSTOM-CLOSE';
 
 if (php_sapi_name()=="cli") {
@@ -431,6 +494,9 @@ if (php_sapi_name()=="cli") {
     $db->delete("eventlog", "sess='cli'");
 
 }
+
+
+// POST PROCESS TASKS
 
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 

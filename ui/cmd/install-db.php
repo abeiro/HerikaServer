@@ -191,6 +191,20 @@ $db->execQuery("CREATE TABLE IF NOT EXISTS memory_summary (
 );");
 
 
+$db->execQuery("DROP VIEW memory_v;");
+$db->execQuery("CREATE VIEW memory_v
+as
+SELECT * FROM (
+select message,uid,gamets,'-' as speaker,'-' as listener,999999999999999999 as ts from memory where message not like 'Dear Diary%' and message <>''
+union
+select '(Context Location:'||location||') '||speaker||': '||speech,0,gamets,speaker,listener,ts as ts  from speech where speech<>'' 
+union
+select data,0,gamets,'-','-' as listener,ts as ts from eventlog where type in ('death','location')
+) ORDER BY gamets asc,ts asc
+;");
+
+
+
 
 if (isset($GLOBALS["MEMORY_EMBEDDING"]) && $GLOBALS["MEMORY_EMBEDDING"]) {
   deleteCollection();

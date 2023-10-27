@@ -7,7 +7,7 @@ class connector
     public $primary_handler;
     public $name;
 
-    private $_functionMode;
+    public $_functionMode;
     private $_ignoreRest;
     private $_functionRawName;
     private $_functionName;
@@ -28,9 +28,13 @@ class connector
         $context="";
 
 
-        foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+        foreach ($contextData as $n=>$s_msg) {	// Have to mangle context format
 
+            if (!isset($s_msg["content"]))
+                return "";
+            
             if (empty(trim($s_msg["content"]))) {
+                unset($contextData[$n]);
                 continue;
             } else {
                 // This should be customizable per model
@@ -175,7 +179,7 @@ class connector
                 $n++;
             }
 
-            $context.="$contextHistory  $instruction <|im_start|>assistant";
+            $context.="$contextHistory  $instruction <|im_start|>assistant\n";
             $GLOBALS["DEBUG_DATA"][]="$instruction";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
@@ -355,6 +359,9 @@ class connector
                 $stop_sequence[]=$stopseq;
         }
 
+        ///
+        $stop_sequence[]=$GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"];
+        ///
         $postData = array(
 
             "prompt"=>$context,
@@ -385,14 +392,17 @@ class connector
 
             $postData["stop_sequence"]=["Author's notes","###","```"];
 
+
+            
             $postData["grammar"]='
 root ::= fullanswer
-fullanswer ::= "[Note: last '.$GLOBALS["PLAYER_NAME"].'\'s order is: " keywords "]" "\nDear Diary, " text
+fullanswer ::= "\nDear Diary, " text
 text ::= char text | char | '.$eos_token_allow_grammar.'
 char ::= ANYTEXT
 keywords ::= char keywords | char
 ANYTEXT ::= [a-zA-Z0-9.,?!\' \n]
 ';
+//fullanswer ::= "[ Note: New destination and goal is: " keywords " ]" "\nDear Diary, " text
             //unset($postData["grammar"]);
         } else if ($GLOBALS["gameRequest"][0]=="summary") {
             $eos_token_allow_grammar='';
@@ -422,7 +432,18 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
         }
 
 
-        //unset($postData["grammar"]);
+        if (isset($customParms["GRAMMAR_ACTIONS"])) {
+            $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "AcceptTradeRequest()" | "SetCurrentPlan(" sentence ")" | "DoNothing()" 
+answer ::= sentence "." answer | sentence
+sentence ::= words
+words ::= word words | word '.$eos_token_allow_grammar.'
+word ::= ANYTEXT
+ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
+';
+        //unset($postData["grammar"]);    
+        }
 
 
         if (isset($customParms["MAX_TOKENS"])) {
@@ -467,6 +488,7 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
         // Data to send in JSON format
         $dataJson = json_encode($postData);
 
+        
         //print_r($postData);
         $request = "POST $path HTTP/1.1\r\n";
         $request .= "Host: $host\r\n";
@@ -487,6 +509,7 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
             return false;
         }
 
+        
         // Initialize variables for response
         $responseHeaders = '';
         $responseBody = '';
@@ -514,13 +537,17 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
         $data=json_decode(substr($line, 6), true);
 
 
+        if (!$data)
+            return "";
+        
         if (strpos($line, 'data: {"token": "{"}') !== false) {
             $this->_ignoreRest=true;
             return "";
 
         }
 
-         if (strpos($line, 'data: {"token": "["}') === 0) {
+
+         if (strpos($line, 'data: {"token": "[') === 0) {
 
             $this->_functionMode=true;
             //$this->_functionRawName.=$data["token"];
@@ -534,13 +561,6 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
             return "";
         }
 
-        if ((isset($this->_functionMode))&&($this->_functionMode)) {
-
-            $this->_functionRawName.=$data["token"];
-            return "";
-
-
-        }
 
         /*
          if (strpos($line, 'data: {"token": "#"}') === 0) {
@@ -591,17 +611,44 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
     {
         global $alreadysent;
 
-        // Hack. To be revised. Primitive function handling for koboldcpp.
-        if (isset($this->_functionRawName) && strlen($this->_functionRawName)) {
-            $primitivefunction=explode(":",$this->_functionRawName);
-            $this->_functionRawName="SetCurrentTask@".$primitivefunction[2];
-            $this->_functionMode=true;
-        }
+
+        
         //print_r($this->_functionRawName);
 
 
         if ((isset($this->_functionMode))&&($this->_functionMode)) {
-            $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+            
+            $kobname=$this->_functionRawName;
+            $kobname=strtr($kobname,["("=>"@",")"=>"@"]);
+            $kobParsed=explode("@",$kobname);
+            
+            $this->_functionRawName=$kobname;
+            if ($kobParsed[0]=="DoNothing")
+                ;// nothing to do
+                
+            else if ($kobParsed[0]=="SetCurrentPlan") {
+                // bypass reponse.
+                $this->_functionRawName="SetCurrentTask@{$kobParsed[1]}";
+                $GLOBALS["db"]->insert(
+                    'currentmission',
+                    array(
+                        'ts' => $GLOBALS["gameRequest"][1],
+                        'gamets' => $GLOBALS["gameRequest"][2],
+                        'description' => $kobParsed[1],
+                        'sess' => 'pending',
+                        'localts' => time()
+                    )
+                );
+                //$alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+            }    
+            else if ($kobParsed[0]=="AcceptTradeRequest") {
+                // bypass reponse.
+                $this->_functionRawName="OpenInventory@";
+                
+                $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+            }  
+                
+            
             return $alreadysent;
         } else {
             return [];

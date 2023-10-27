@@ -22,7 +22,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	*/
 	
 	if ($functionCodeName == "ReadQuestJournal") {
-		$returnFunction[3] = $db->questJournal($returnFunction[2]); // Overwrite funrect content with info from database
+		$returnFunction[3] = DataQuestJournal($returnFunction[2]); // Overwrite funrect content with info from database
 		$gameRequest[3] .= $returnFunction[3];						// Add also to $gameRequest 
 	
 		// Store info.

@@ -186,7 +186,7 @@ function DataPosibleLocationsToGo()
     return array_values($retData);
 }
 
-function DataPosibleInspectTargets()
+function DataPosibleInspectTargets($pack=true)
 {
     global $db;
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
@@ -207,27 +207,40 @@ function DataPosibleInspectTargets()
         break;
     }
 
+    
+    
     if (!isset($retData)||!is_array($retData)) {
         $retData = [];
     }
-    
+
     $compData=[];
-    
-    foreach ($retData as $k => $v) {
-        if (strlen($v) < 2) {
-            unset($retData[$k]);
-        } else {
-            $retData[$k] = preg_replace("/\([^)]+\)/", '', $v);
-            $compData[preg_replace("/\([^)]+\)/", '', $v)]=preg_replace("/\([^)]+\)/", '', $v); // Reduce same names (Chicken, Chicken -> Chicken)
-            //$retData[$k]=$v;
+
+    if ($pack) {
+        foreach ($retData as $k => $v) {
+            if (strlen($v) < 2) {
+                unset($retData[$k]);
+            } else {
+                $retData[$k] = preg_replace("/\([^)]+\)/", '', $v);
+                $retData[$k] = $v;
+                if (!isset($compData[$v]))
+                    $compData[$v]=0;
+                $compData[$v]++; // Reduce same names (Chicken, Chicken -> Chicken)
+                //$retData[$k]=$v;
+
+            }
 
         }
+        $retData=[];
+        foreach ($compData as $l=>$n) {
+            if ($n==1)
+                $retData[]="$l";
+            else
+                $retData[]="$n $l";
+        }
 
+        
     }
-    
-    if (sizeof($retData)>10)    // If too much entries, reduce.
-        $retData=$compData;
-  
+
     return array_values($retData);
 }
 
@@ -265,7 +278,7 @@ function DataQuestJournal($quest)
             $data = array_values($finalRow);
         }
 
-        $extraData = $db->get_current_task();
+        $extraData = DataGetCurrentTask();
 
         $data[] = ["side note" => "$extraData"];
 
@@ -306,7 +319,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
     global $db;
 
     $currentGameTs=$GLOBALS["gameRequest"][2];
-    
+
     $lastDialogFull = array();
     $results = $db->fetchAll("select  
     case 
@@ -334,7 +347,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
     $currentSpeaker = "user";
     $buffer = [];
     $timeStampBuffer = [];
-    
+
     foreach ($orderedData as $row) {
         $rowData = $row["data"];
         // Extract location
@@ -380,9 +393,9 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
             $buffer[] = $rowData;
             $currentSpeaker = $speaker;
         }
-        
+
         if ($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"]) {
-            $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60*60 * 20 ) ,0);
+            $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60*60 * 20), 0);
             if ($hoursAgo>12) {
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
@@ -392,14 +405,14 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
                 }
             }
         }
-        
+
     }
 
-   // if (($currentGameTs-$row["gamets"])>600) {
-       
-        
+    // if (($currentGameTs-$row["gamets"])>600) {
+
+
     //}
-    
+
     $lastDialogFull[] = array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
     // Compact Herika's lines
@@ -435,7 +448,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
 
 
     $orderedData = array_slice($lastDialogFull, $lastNelements);
-    
+
     return $orderedData;
 
 }
@@ -653,12 +666,48 @@ function DataLastKnownLocation()
 
     global $db;
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc')  order by gamets desc,ts desc LIMIT 0,1");
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 0,1");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         return "";
     }
-    $re = '/Context location: ([\w\ ]*)/';
+    $re = '/Context location: ([\w\ \']*)/';
     preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
     return $matches[1][0];
 
+}
+
+function PackIntoSummary()
+{
+
+    global $db;
+
+    $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
+
+    $maxRow=$results[0]["gamets_truncated"]+0;
+
+    $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
+    
+    $results = $db->query("insert into memory_summary select * from ( 
+								select max(gamets) as gamets_truncated,count(*) as n,
+								GROUP_CONCAT(message,char(13) || char(10)|| char(13) || char(10)) as packed_message ,'','dialogue',max(uid) as uid
+								from memory_v
+								where 
+								message not like 'Dear Diary%'
+                                and NOT ( speaker like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%'
+                                    OR (listener like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%' and speaker like '%".SQLite3::escapeString($GLOBALS["PLAYER_NAME"])."%' )
+                                )
+								group by round(gamets/$pfi ,0) HAVING uid>0 order by round(gamets/$pfi ,0) ASC
+							  ) where gamets_truncated>$maxRow
+							");
+
+    $results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
+    
+    $results = $db->query("insert into memory_summary 
+								select gamets,1,message,message,'diary',uid
+								from memory
+								where message like 'Dear Diary%'
+								and gamets>$maxRow
+							");
+
+    return $maxRow;
 }

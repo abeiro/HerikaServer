@@ -35,3 +35,5 @@ php debug/simple_text2vec_request.php "Let's try and make some progress before n
 # Test memory subsystem 
 php debug/util_memory_subsystem.php 
 
+# Delete thigs from command line
+sqlite3 data/mysqlitedb.db  "delete from memory_summary;" ".exit"

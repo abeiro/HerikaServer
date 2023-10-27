@@ -295,12 +295,14 @@ function queryMemory($embeddings,$category='past dialogues')
 	$dbResults = [];
 	
 	foreach ($responseData["ids"][0] as $n => $id) {
-		$results = $db->query("select summary as content,uid,gamets_truncated from memory_summary where uid=$id order by uid asc");
+		$results = $db->query("select summary as content,uid,gamets_truncated,classifier from memory_summary where uid=$id order by uid asc");
 		while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
 
+			/*
 			if ($responseData["metadatas"][0][$n]["category"]=="diary") {
 				$responseData["distances"][0][$n]=$responseData["distances"][0][$n]/1.1;
 			}
+			*/
 			
 			if ($row["gamets_truncated"] > (time() - (60 * 20  * $VECTORDB_TIME_DELAY))) // Ten minutes to get things as memories
 				continue;
@@ -308,6 +310,7 @@ function queryMemory($embeddings,$category='past dialogues')
 				"memory_id" => $row["uid"],
 				"briefing" => $row["content"],
 				"timestamp" => $row["gamets_truncated"],
+				"classifier" => $row["classifier"],
 				"distance" => $responseData["distances"][0][$n]
 			];
 
@@ -317,12 +320,14 @@ function queryMemory($embeddings,$category='past dialogues')
 
 	// Lets sort by distance
 	if (sizeof($dbResults) > 0) {
-		function cmp($a, $b)
-		{
-			if ($a["distance"] == $b["distance"]) {
-				return 0;
+		if (!function_exists("cmp")) {
+			function cmp($a, $b)
+			{
+				if ($a["distance"] == $b["distance"]) {
+					return 0;
+				}
+				return ($a["distance"] < $b["distance"]) ? -1 : 1;
 			}
-			return ($a["distance"] < $b["distance"]) ? -1 : 1;
 		}
 		uasort($dbResults, 'cmp');
 		// Use $VECTORDB_QUERY_SIZE here
