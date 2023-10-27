@@ -74,8 +74,10 @@ if ($FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) {
 
                 }
 
+                $db = new sql(); // Reopen db. Needed open if using tokenizer.
                 $connectionHandler->close();
-
+                unset($db); // Close db
+                
                 $toUpdate[]=["uid"=>$row["uid"],"summary"=>$buffer];
                 $TEST_TEXT=$buffer;
             }
