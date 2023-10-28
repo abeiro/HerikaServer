@@ -109,7 +109,7 @@
     "WHISPER": {
       "_title":"OpenAI's Whisper Speech-to-Text",
       "LANG": {"type":"string","description":"Language to detect for STT."},
-      "TRANSLATE": {"type":"boolean","description":"Will try to translate to english. Specifi the language YOU talk in LANG param."},
+      "TRANSLATE": {"type":"boolean","description":"Will try to translate to english. "},
       "API_KEY": {"type":"apikey","description":"OpenAI API key. Same used for OpenAI/ChatGPT AI service.","code":"OPENAI_API_KEY"}
     },
     "AZURE": {
