@@ -16,8 +16,11 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
 
 
-		
+
 $db = new sql();
+
+echo lastNames(10,['inputtext','inputtext_s','chat','chatme']);
+die();
 
 
 $res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");

@@ -411,6 +411,46 @@ function logMemory($speaker, $listener, $message, $momentum, $gamets)
 
 }
 
+function lastNames($n, $eventypes)
+{
+
+    global $db;
+    
+    $m=$n+1;
+    
+    $lastRecords = $db->fetchAll("SELECT data from eventlog where type in ('".implode("','",$eventypes)."') order by gamets desc limit 0,$m");
+    
+    $uppercaseWords=[];
+    
+    foreach ($lastRecords as $record) {
+        $pattern = '/\([^)]+\)/';
+        $string = preg_replace($pattern, '', $record["data"]);
+
+        $pattern = '/ ([A-Z][a-z\-]{4,}){1,}/';
+        preg_match_all($pattern, $string, $matches);
+
+        $uppercaseWords = array_merge($uppercaseWords, $matches[0]);
+    }
+    
+    
+    $repeatedWords = array();
+    $wordCount = array_count_values($uppercaseWords);
+
+    foreach ($wordCount as $word => $count) {
+        if ($count > 1) {
+            $repeatedWords[] = $word;
+        }
+    }
+   
+
+    //die(print_r($uppercaseWords,true));
+    if (sizeof($repeatedWords)>0) {
+        return " ".implode(" ", $repeatedWords);
+    } else {
+        return "";
+    }
+}
+
 function lastKeyWords($n, $eventypes)
 {
 

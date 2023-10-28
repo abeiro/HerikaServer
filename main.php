@@ -437,7 +437,7 @@ if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && (DMgetCurrentModel()=="kob
     $contextData[]=array('role' => 'user', 'content' =>  
         "Analyze this sentence: '$lastUserSentence'. ".
         "If sentence is a question, then answer is DoNothing().".
-        "If sentence is a trade request, then answer is AcceptTradeRequest().".
+        "If sentence is a trade/exchange request then answer is ExchangeItems().".
         "If sentence explicitly describes a new plan, then answer is SetCurrentPlan(plan description)".
         "Else, if nothing is true, then answer is DoNothing().".
         "Write correct answer:"

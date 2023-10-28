@@ -54,6 +54,7 @@ $STT["AZURE"]["profanity"]="masked";
 
 $STT["WHISPER"]["LANG"]="en";
 $STT["WHISPER"]["API_KEY"]="";
+$STT["WHISPER"]["TRANSLATE"]=false;
 
 
 $ITT["AZURE"]["ENDPOINT"]="";			

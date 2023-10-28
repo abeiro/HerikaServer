@@ -487,7 +487,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         if (isset($customParms["GRAMMAR_ACTIONS"])) {
             $postData["grammar"]='
 root ::= fullanswer
-fullanswer ::= "AcceptTradeRequest()" | "SetCurrentPlan(" sentence ")" | "DoNothing()" 
+fullanswer ::= "ExchangeItems()" | "SetCurrentPlan(" sentence ")" | "DoNothing()" 
 sentence ::= [a-zA-Z0-9.,?!\' ]*
 
 ';
@@ -690,7 +690,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
                 );
                 //$alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
             }    
-            else if ($kobParsed[0]=="AcceptTradeRequest") {
+            else if ($kobParsed[0]=="ExchangeItems") {
                 // bypass reponse.
                 $this->_functionRawName="OpenInventory@";
                 

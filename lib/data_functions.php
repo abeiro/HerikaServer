@@ -585,7 +585,7 @@ function DataDiaryLogIndex($topic)
 function DataGetCurrentTask()
 {
     global $db;
-    $results = $db->fetchAll("SElECT  description  FROM currentmission order by gamets desc");
+    $results = $db->fetchAll("SElECT  distinct description as description FROM currentmission order by gamets desc");
     if (!$results) {
         return "";
     }
