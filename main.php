@@ -440,7 +440,7 @@ if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && (DMgetCurrentModel()=="kob
         "If sentence is a trade request, then answer is AcceptTradeRequest().".
         "If sentence explicitly describes a new plan, then answer is SetCurrentPlan(plan description)".
         "Else, if nothing is true, then answer is DoNothing().".
-        "Correct answer is:"
+        "Write correct answer:"
     );
 
     //$GLOBALS["PROMPT_HEAD"]="Follow the logical steps and write the final answer in first place. Then explain reasoning.".

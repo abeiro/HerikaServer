@@ -341,6 +341,46 @@ class connector
 
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="zephyr") {
+
+            //$GLOBALS["more_stopseq"][]="USER:";
+            $context="<|system|>{$GLOBALS["PROMPT_HEAD"]}\n";
+            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+            //$context.="{$GLOBALS["HERIKA_NAME"]} IS THE ASSISTANT, {$GLOBALS["PLAYER_NAME"]} IS THE USER\n";
+
+
+            $GLOBALS["DEBUG_DATA"][]=$context;
+
+            $contextHistory="";
+            $n=0;
+            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+
+                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $instruction="</s>\n<|user|>".$s_msg["content"]."\n";
+                    $GLOBALS["DEBUG_DATA"][]=$instruction;
+                } else {
+                    if ($s_msg["role"]=="user") {
+                        $contextHistory.="".$s_msg["content"]."\n";
+                          $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
+                    } elseif ($s_msg["role"]=="assistant") {
+                         $contextHistory.="".$s_msg["content"]."\n";
+                         $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
+                        
+                    } elseif ($s_msg["role"]=="system") {
+                    }  // Must rebuild this
+
+
+                }
+
+                $n++;
+            }
+
+            $context.="$contextHistory  $instruction </s>\n<|assistant|>";
+            $GLOBALS["DEBUG_DATA"][]="</s>\n<|assistant|>";
+            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
         }
 
         $TEMPERATURE=((isset($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? $GLOBALS["CONNECTOR"][$this->name]["temperature"] : 0.9)+0);
@@ -391,8 +431,6 @@ class connector
         if ($GLOBALS["gameRequest"][0]=="diary"){
 
             $postData["stop_sequence"]=["Author's notes","###","```"];
-
-
             
             $postData["grammar"]='
 root ::= fullanswer
@@ -402,8 +440,7 @@ char ::= ANYTEXT
 keywords ::= char keywords | char
 ANYTEXT ::= [a-zA-Z0-9.,?!\' \n]
 ';
-//fullanswer ::= "[ Note: New destination and goal is: " keywords " ]" "\nDear Diary, " text
-            //unset($postData["grammar"]);
+
         } else if ($GLOBALS["gameRequest"][0]=="summary") {
             $eos_token_allow_grammar='';
             $postData["grammar"]='
@@ -413,22 +450,37 @@ answer ::= sentence "." answer | sentence
 sentence ::= words
 words ::= word words | word '.$eos_token_allow_grammar.'
 word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
+ANYTEXT ::= [a-zA-Z0-9.,?!\'\\" ]
 ';
-            //unset($postData["grammar"]);
+            $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "Location: " answer "\nPeople: " answer "\nMission: " answer "\nSummary: " answer
+answer ::= sentence | '.$eos_token_allow_grammar.' | "\n"
+sentence ::= [a-zA-Z0-9.,?!\' \\"]*
+';
+      
+      //unset($postData["grammar"]);
 
         } else {
 
             $postData["grammar"]='
 root ::= fullanswer
-fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].': '.$moodsText.' answer "\n"
+fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].': '.$moodsText.' answer 
 answer ::= sentence "." answer | sentence
 sentence ::= words
 words ::= word words | word '.$eos_token_allow_grammar.'
 word ::= ANYTEXT
 ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 ';
+            $postData["grammar"]='
+root ::= fullanswer
+fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].': '.$moodsText.' answer 
+answer ::= sentence | '.$eos_token_allow_grammar.' | "\n"
+sentence ::= [a-zA-Z0-9.,?!\' ]*
+';
 //ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
+
+        
         }
 
 
@@ -436,11 +488,8 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
             $postData["grammar"]='
 root ::= fullanswer
 fullanswer ::= "AcceptTradeRequest()" | "SetCurrentPlan(" sentence ")" | "DoNothing()" 
-answer ::= sentence "." answer | sentence
-sentence ::= words
-words ::= word words | word '.$eos_token_allow_grammar.'
-word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
+sentence ::= [a-zA-Z0-9.,?!\' ]*
+
 ';
         //unset($postData["grammar"]);    
         }
@@ -463,7 +512,7 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
 
         }
 
-
+        
         $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;
 
         $headers = array(
