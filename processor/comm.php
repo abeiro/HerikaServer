@@ -41,7 +41,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     // Delete TTS(STT cache
     $directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache";
 
-    touch(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache".DIRECTORY_SEPARATOR.".placeholder";
+    touch(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache".DIRECTORY_SEPARATOR.".placeholder");
     $sixHoursAgo = time() - (6 * 60 * 60);
 
     $handle = opendir($directory);
