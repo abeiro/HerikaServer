@@ -49,8 +49,10 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} comments about foes defeated) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} comments about life and death) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} admires  {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} curses the defeated enemies.) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} insults the defeated enemies with anger) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} notes something peculiar) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} admires {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
         ],
         "extra"=>["force_tokens_max"=>"50","dontuse"=>(time()%5!=0)]   //20% chance
     ],
@@ -130,8 +132,8 @@ $PROMPTS=array(
         "extra"=>["force_tokens_max"=>0]
     ],
     "vision"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} describes what is seeing. She pays attention to the small details of the scene. $TEMPLATE_DIALOG."],
-        "player_request"=>["The Narrator: {$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} describes what is seeing to {$GLOBALS["PLAYER_NAME"]}. She pays attention to the small details of the scene. $TEMPLATE_DIALOG."],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} : Look at this, {$GLOBALS["HERIKA_NAME"]}.( {$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
         "extra"=>["force_tokens_max"=>128]
     ]
 );

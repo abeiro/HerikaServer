@@ -475,7 +475,7 @@ ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
             $postData["grammar"]='
 root ::= fullanswer
 fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].': '.$moodsText.' answer 
-answer ::= sentence | '.$eos_token_allow_grammar.' | "\n"
+answer ::= sentence | sentence '.$eos_token_allow_grammar.' | sentence "\n"
 sentence ::= [a-zA-Z0-9.,?!\' ]*
 ';
 //ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
@@ -487,7 +487,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         if (isset($customParms["GRAMMAR_ACTIONS"])) {
             $postData["grammar"]='
 root ::= fullanswer
-fullanswer ::= "ExchangeItems()" | "SetCurrentPlan(" sentence ")" | "DoNothing()" 
+fullanswer ::= "ExchangeItems()" | "SetCurrentPlan(" sentence ")" | "NoOp()" 
 sentence ::= [a-zA-Z0-9.,?!\' ]*
 
 ';
@@ -672,7 +672,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
             $kobParsed=explode("@",$kobname);
             
             $this->_functionRawName=$kobname;
-            if ($kobParsed[0]=="DoNothing")
+            if ($kobParsed[0]=="NoOp")
                 ;// nothing to do
                 
             else if ($kobParsed[0]=="SetCurrentPlan") {

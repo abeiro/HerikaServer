@@ -240,10 +240,11 @@ if ($connectionHandler->primary_handler === false) {
         )
     );
     returnLines([$GLOBALS["ERROR_OPENAI"]]);
+    
     $ERROR_TRIGGERED=true;
     @ob_end_flush();
 
-    print_r(error_get_last(), true);
+    error_log(print_r(error_get_last(), true));
 
 } else {
 
@@ -436,10 +437,10 @@ if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && (DMgetCurrentModel()=="kob
     $contextData[]=array('role' => 'user', 'content' =>  "{$GLOBALS["HERIKA_NAME"]}: $herikaCondensedResponse");
     $contextData[]=array('role' => 'user', 'content' =>  
         "Analyze this sentence: '$lastUserSentence'. ".
-        "If sentence is a question, then answer is DoNothing().".
+        "If sentence is a question, then answer is NoOp().".
         "If sentence is a trade/exchange request then answer is ExchangeItems().".
-        "If sentence explicitly describes a new plan, then answer is SetCurrentPlan(plan description)".
-        "Else, if nothing is true, then answer is DoNothing().".
+        "If sentence explicitly describes a new plan, then answer is SetCurrentPlan(plan description).".
+        "Else, if nothing is true, then answer is NoOp().".
         "Write correct answer:"
     );
 
