@@ -59,11 +59,24 @@ convertImage($finalName,$finalNameJpeg,90);
  
 $db=new sql();
 $location=DataLastKnownLocation();
-$charactersArray=implode(",",DataPosibleInspectTargets(true));
+$hints="";
+//$charactersArray=implode(",",DataPosibleInspectTargets(true));
 
-$hints="{$_GET["hints"]}. Location: $location. Posible characters: {$GLOBALS["HERIKA_NAME"]},{$GLOBALS["PLAYER_NAME"]}. Other Posible characters: $charactersArray.";
-$hints="{$_GET["hints"]}. Location: $location. Posible characters: {$GLOBALS["HERIKA_NAME"]},{$GLOBALS["PLAYER_NAME"]}. ";
+if ($_GET["vc"]) {
+    $sanitize=explode(",",$_GET["vc"]);
+    $vc=[];
+    foreach ($sanitize as $name) {
+        if (!empty(trim($name)))
+           $vc[]=ucfirst($name); 
+    }
+    
+    $hints.="Visible characters: ".implode(",",$vc)."\n";
+}
+if ($_GET["fg"]) {
+    $hints.="Foreground characters:{$_GET["fg"]}.\n";
+}
 
+$hints.="Location: $location";
 
 require_once($path."itt/itt-llamacpp.php");
 
