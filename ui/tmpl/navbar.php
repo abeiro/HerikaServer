@@ -88,7 +88,7 @@
                     <li><a class="dropdown-item" href="tests/tts-test-11labs.php" target="_blank">Test ElevenLabs TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test GCP TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-coqui-ai.php" target="_blank">Test Coqui.AI TTS Connection</a></li>
-                    <li><a class="dropdown-item" href="tests/vector-test-chromadb.php.php" target="_blank">Test ChromaDB Memories</a></li>
+                    <li><a class="dropdown-item" href="tests/vector-test-chromadb.php" target="_blank">Test ChromaDB Memories</a></li>
                 </ul>
             </li>
 
