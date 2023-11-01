@@ -145,6 +145,7 @@ $TTS["XVASYNTH"]["model"]='sk_femaleyoungeager';	//Model
 $TTS["XVASYNTH"]["pace"]=1.0;	//Pace
 $TTS["XVASYNTH"]["waveglowPath"]='resources/app/models/waveglow_256channels_universal_v4.pt';	//waveglowPath (relative)
 $TTS["XVASYNTH"]["vocoder"]='n/a';	//vocoder
+$TTS["XVASYNTH"]["distroname"]='DwemerAI4Skyrim2';	
 
 
 ?>

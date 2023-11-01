@@ -118,7 +118,8 @@
       "model":{"type":"string","description":"Model"},
       "pace":{"type":"number","description":"Pace"},
       "waveglowPath":{"type":"string","description":"waveglowPath (relative)"},
-      "vocoder":{"type":"string","description":"vocoder"}
+      "vocoder":{"type":"string","description":"vocoder"},
+      "distroname":{"type":"string","description":"Change only if you changed DDistro name. Leave default if you don't know what are you doing"}
     }
   },
   "STTFUNCTION": {
