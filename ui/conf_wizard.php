@@ -105,7 +105,7 @@ foreach ($currentConf as $pname=>$parms) {
         $fieldValue=stripslashes($parms["currentValue"]);
     
     if ($parms["type"]=="string") {
-        echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input type='text' value='$fieldValue' name='$fieldName'><span> {$parms["description"]}</span></p>".PHP_EOL;
+        echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input type='text' value=\"$fieldValue\" name='$fieldName'><span> {$parms["description"]}</span></p>".PHP_EOL;
 
     } else if ($parms["type"]=="longstring") {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><textarea width='200px' name='$fieldName'>$fieldValue</textarea><span>{$parms["description"]}</span></p> ".PHP_EOL;

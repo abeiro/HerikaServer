@@ -7,7 +7,7 @@
   "CONTEXT_HISTORY": {"type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. More context => more tokens used, and slower processing speed in local LLMs."},
   "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for LLM/AI requests. "},
   "CORE_LANG": {"type":"select","description":"Custom Language. A lang folder is in the Herika Server. Leave it blank for default english."},
-  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
   "CONNECTOR": {
     "_title":"AI/LLM Service",
     "openai": {
@@ -33,6 +33,17 @@
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     },
+    "llamacpp": {
+      "_title":"Llama.cpp server API",
+      "url": {"type":"url","description":"Llama.cpp server API","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate (n_predict)"},
+      "temperature": {"type":"number","description":"LLM parameter temperature"},
+      "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
+      "top_p": {"type":"number","description":"LLM parameter top_p"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "eos_token": {"type":"string","description":"EOS token LLM uses."},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr"],"description":"Prompt Format. Specified in the HuggingFace model card"}
+    },
     "openrouter": {
       "_title":"OpenRouter API",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
@@ -54,7 +65,7 @@
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "AZURE": {
@@ -98,6 +109,16 @@
       "voice_languageCode":{"type":"string","description":"Language code","helpurl":"https://developers.google.com/admin-sdk/directory/v1/languages"},
       "ssml_rate":{"type":"number","description":"Rate"},
       "ssml_pitch":{"type":"string","description":"Pitch"}
+    },
+     "XVASYNTH": {
+      "_title":"xVASynth. (defaults to sk_femaleyoungeager)",
+      "url":{"type":"url","description":"xVASynth must be run in same machine as DwemerDistro, so this must be http://your-local-ip:8008"},
+      "base_lang":{"type":"string","description":"Base language"},
+      "modelType":{"type":"string","description":"modelType"},
+      "model":{"type":"string","description":"Model"},
+      "pace":{"type":"number","description":"Pace"},
+      "waveglowPath":{"type":"string","description":"waveglowPath (relative)"},
+      "vocoder":{"type":"string","description":"vocoder"}
     }
   },
   "STTFUNCTION": {

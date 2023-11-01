@@ -136,19 +136,21 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     $speech = json_decode($gameRequest[3], true);
     //print_r($questParsedData);
 
-    $db->insert(
-        'speech',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'listener' => $speech["listener"],
-            'speaker' => $speech["speaker"],
-            'speech' => $speech["speech"],
-            'location' => $speech["location"],
-            'sess' => 'pending',
-            'localts' => time()
-        )
-    );
+    if (is_array($speech)) {
+        $db->insert(
+            'speech',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'listener' => $speech["listener"],
+                'speaker' => $speech["speaker"],
+                'speech' => $speech["speech"],
+                'location' => $speech["location"],
+                'sess' => 'pending',
+                'localts' => time()
+            )
+        );
+    }
     $MUST_END=true;
 
 } elseif ($gameRequest[0] == "book") {

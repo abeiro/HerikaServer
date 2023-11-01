@@ -11,8 +11,10 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.ph
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 
-
-$finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".bmp";
+if ($_GET["format"]=="png")
+    $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".png";
+else
+    $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".bmp";
 
 
 if (!$_FILES["file"]["tmp_name"]) {
@@ -40,7 +42,8 @@ function convertImage($originalImage, $outputImage, $quality)
     else
         return 0;
 
-    imageflip($imageTmp, IMG_FLIP_VERTICAL);
+    if (!$_GET["format"]=="png")
+        imageflip($imageTmp, IMG_FLIP_VERTICAL);
 
     // quality is a value from 0 (worst) to 100 (best)
     imagejpeg($imageTmp, $outputImage, $quality);
@@ -50,7 +53,10 @@ function convertImage($originalImage, $outputImage, $quality)
     return 1;
 }
 
-$finalNameJpeg=strtr($finalName,[".bmp"=>".jpg"]);
+if ($_GET["format"]=="png")
+    $finalNameJpeg=strtr($finalName,[".png"=>".jpg"]);
+else
+    $finalNameJpeg=strtr($finalName,[".bmp"=>".jpg"]);
 
 convertImage($finalName,$finalNameJpeg,90);
 @unlink($finalName);

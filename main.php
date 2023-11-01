@@ -61,7 +61,11 @@ if (php_sapi_name()=="cli") {
 
 
 } else {
-    $receivedData = base64_decode(stripslashes($_GET["DATA"]));
+
+    //$receivedData = base64_decode($_GET["DATA"]);
+    //base64 string has '+' chars. THis conflicts with urldecode, so $_GET["DATA"] will get bullshit.
+    $receivedData = base64_decode(substr($_SERVER["QUERY_STRING"],5));
+
 }
 
 
@@ -69,6 +73,7 @@ $gameRequest = explode("|", $receivedData);
 foreach ($gameRequest as $i => $ele) {
     $gameRequest[$i] = trim(preg_replace('/\s\s+/', ' ', preg_replace('/\'/m', "''", $ele)));
 }
+
 
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 
@@ -426,7 +431,7 @@ if (sizeof($talkedSoFar) == 0) {
 
 
 // EXPERIMENTAL FEATURE
-if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && (DMgetCurrentModel()=="koboldcpp") && (in_array($gameRequest[0],["inputtext","inputtext_s"])) ) {
+if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && ((DMgetCurrentModel()=="koboldcpp")||(DMgetCurrentModel()=="llamacpp")) && (in_array($gameRequest[0],["inputtext","inputtext_s"])) ) {
     
     $herikaCondensedResponse=implode(" ",$talkedSoFar);
 

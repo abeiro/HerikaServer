@@ -349,6 +349,13 @@ function returnLines($lines)
             }
 
 
+            if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
+
+                require_once(__DIR__."/../tts/tts-xvasynth.php");
+                tts($responseTextUnmooded, $mood, $responseText);
+
+            }
+            
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
             }

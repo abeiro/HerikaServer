@@ -122,11 +122,29 @@ $CONNECTOR["oobabooga"]["max_tokens"]=100;
 $CONNECTOR["oobabooga"]["temperature"]=0.7;
 $CONNECTOR["oobabooga"]["rep_pen"]=1.18;
 
+$CONNECTOR["llamacpp"]["url"]='http://127.0.0.1:8007';	//Llama.cpp server API
+$CONNECTOR["llamacpp"]["max_tokens"]="75";	//Maximum tokens to generate (n_predict)
+$CONNECTOR["llamacpp"]["temperature"]=0.7;	//LLM parameter temperature
+$CONNECTOR["llamacpp"]["rep_pen"]=1.12;	//LLM parameter rep_pen
+$CONNECTOR["llamacpp"]["top_p"]=0.9;	//LLM parameter top_p
+$CONNECTOR["llamacpp"]["MAX_TOKENS_MEMORY"]='256';	//Maximum tokens to generate when summarizing, such as writing to diary.
+$CONNECTOR["llamacpp"]["eos_token"]='</s>';	//EOS token LLM uses.
+$CONNECTOR["llamacpp"]["template"]='alpaca';	//Prompt Format. Specified in the HuggingFace model card
+
+
 $FEATURES["COST_MONITOR"]["ENABLED"]=true;	//Enable cost/token counter monitoring. Currently only supports OpenAI.
 $FEATURES["COST_MONITOR"]["URL"]="http://127.0.0.1:8090";	//We can use 127.0.0.1 because server is on same machine by default.
 
 $FEATURES["MISC"]["ADD_TIME_MARKS"]=true;
 $FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false;	
+
+$TTS["XVASYNTH"]["url"]='http://172.16.1.128:8008';	//xVASynth must be run in same machine as DwemerDistro, so this must be http://your-local-ip:8008
+$TTS["XVASYNTH"]["base_lang"]='en';	//Base language
+$TTS["XVASYNTH"]["modelType"]='xVAPitch';	//modelType
+$TTS["XVASYNTH"]["model"]='sk_femaleyoungeager';	//Model
+$TTS["XVASYNTH"]["pace"]=1.0;	//Pace
+$TTS["XVASYNTH"]["waveglowPath"]='resources/app/models/waveglow_256channels_universal_v4.pt';	//waveglowPath (relative)
+$TTS["XVASYNTH"]["vocoder"]='n/a';	//vocoder
 
 
 ?>
