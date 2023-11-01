@@ -231,7 +231,7 @@ include("tmpl/navbar.php");
     if ($_GET["table"] == "openai_token_count") {
         $results = $db->fetchAll("select  A.*,ROWID FROM openai_token_count A order by rowid desc limit 0,150");
         echo "<h3 class='my-2'>OpenAI Token Pricing</h3>";
-        print_array_as_table($results);
+        echo ($results);
     }
 
     
@@ -246,8 +246,7 @@ include("tmpl/navbar.php");
         echo "<h3 class='my-2'>Summarized Memories Log</h3>";
         print_array_as_table($results);
     }
-    
-        
+      
     if ($_GET["notes"]) {
         echo file_get_contents(__DIR__."/notes.html");
     }

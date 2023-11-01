@@ -60,6 +60,11 @@
                         </a>
                     </li>
                     <li>
+                        <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync ChomaDB Memories if you have changed Memory Embeddings Provider" target="_blank">
+                            Sync Memories
+                        </a>
+                    </li>
+                    <li>
                         <a class="dropdown-item" href="import_db.php" title="Import Database" >
                             Import SQLITE3 Database
                         </a>
