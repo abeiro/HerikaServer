@@ -30,12 +30,12 @@ function tts($textString, $mood = "default", $stringforhash) {
 			],
 		]);
 		
-		$GLOBALS["DEBUG_DATA"]["request"]=json_encode($jsonData);
+		$GLOBALS["DEBUG_DATA"]["XVASYNTH"]["request"]=json_encode($jsonData);
 
 		// Send the POST request with the specified headers
 		$response = file_get_contents("$apiEndpoint/synthesize", false, $context);
 		
-		$GLOBALS["DEBUG_DATA"]["response"]=$response;
+		$GLOBALS["DEBUG_DATA"]["XVASYNTH"]["response"]=$response;
 		
 		// Handle the response
 		if ($response !== false ) {
@@ -45,7 +45,7 @@ function tts($textString, $mood = "default", $stringforhash) {
 			
 		} else {
 			$textString.=print_r($http_response_header,true);
-			$GLOBALS["DEBUG_DATA"]["error"]="$textString";
+			$GLOBALS["DEBUG_DATA"]["XVASYNTH"]["error"]="$textString";
 			file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".err", trim($textString));
             return false;
 			
