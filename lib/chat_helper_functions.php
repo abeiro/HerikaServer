@@ -111,6 +111,10 @@ function split_sentences($paragraph)
 {
     $paragraph=strtr($paragraph, array('\n'=>".","\n"=>"."));
 
+    if (strlen($paragraph)<=MAXIMUM_SENTENCE_SIZE) {
+        return [$paragraph];
+    }
+    
     $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
     // Split the paragraph into an array of sentences using a regular expression
     preg_match_all('/[^\n?.!]+[?.!]/', $paragraphNcr, $matches);

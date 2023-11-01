@@ -21,9 +21,16 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.cl
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 
 
+echo "cleanResponse".PHP_EOL;
+$cr=cleanResponse(trim($argv[1]));
+print_r($cr);
+
+echo PHP_EOL."Split".PHP_EOL;
+$st=split_sentences_stream($cr);
+print_r($st);
 
 
-$sentences=split_sentences_stream(cleanResponse(trim($argv[1])));
+$sentences=$st;
 print_r($sentences);
   
   
