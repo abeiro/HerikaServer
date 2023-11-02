@@ -30,6 +30,16 @@ function tts($textString, $mood , $stringforhash)
     if ($validMood=="dazed")
         $OverWriteRate=0.7;
     
+    if ($validMood=="angry") {
+        if (!isset($GLOBALS["TEMP"]["VOLHACK"])) {
+            $GLOBALS["TEMP"]["VOLHACK"]=$GLOBALS["TTS"]["AZURE"]["volume"];
+        }
+        $GLOBALS["TTS"]["AZURE"]["volume"]=$GLOBALS["TEMP"]["VOLHACK"]+20;
+        
+    } else {
+        if (isset($GLOBALS["TEMP"]["VOLHACK"])) 
+            $GLOBALS["TTS"]["AZURE"]["volume"]=$GLOBALS["TEMP"]["VOLHACK"];
+    }
     
     $starTime = microtime(true);
 
@@ -94,7 +104,7 @@ function tts($textString, $mood , $stringforhash)
         $prosody->appendChild($text);
 
         $style = $doc->createElement("mstts:express-as");
-        if ($GLOBALS["TTS"]["AZURE"]["fixedMood"])
+        if (isset($GLOBALS["TTS"]["AZURE"]["fixedMood"])&& (!empty($GLOBALS["TTS"]["AZURE"]["fixedMood"])))
             $style->setAttribute("style", $GLOBALS["TTS"]["fixedMood"]); // not supported for all voices
         else
             $style->setAttribute("style", $validMood); // not supported for all voices
