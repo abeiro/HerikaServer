@@ -84,7 +84,7 @@ if ($_GET["fg"]) {
 
 $hints.="Location: $location";
 
-require_once($path."itt/itt-llamacpp.php");
+require_once($path."itt/itt-{$GLOBALS["ITTFUNCTION"]}.php");
 
 echo itt($finalNameJpeg,$hints);
 

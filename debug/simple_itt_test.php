@@ -9,7 +9,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.cl
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
     
-require_once($enginePath."itt/itt-llamacpp.php");
+require_once($enginePath."itt/itt-{$GLOBALS["ITTFUNCTION"]}.php");
     
 $db=new sql();
 

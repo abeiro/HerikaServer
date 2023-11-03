@@ -153,7 +153,7 @@
     "_title":"Image Recognition service (*Experimental)",
     "AZURE": {
       "_title":"Azure Text-To-Speech (not working)",
-      "region": {"type":"string","description":"Region location of your API key"},
+      "ENDPOINT": {"type":"url","endpoint":"Endpoint URL"},
       "API_KEY": {"type":"apikey","description":"Azure Computer Vision API KEY","code":"AZURE_API_KEY"}
     },
     "LLAMACPP": {
