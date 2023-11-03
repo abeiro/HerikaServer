@@ -4,45 +4,6 @@ $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARA
 require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // Caching token
 
-function ittOrig($file)
-{
-
-
-
-    $AccessTokenUri = $GLOBALS["ITT"]["AZURE"]["ENDPOINT"];
-    $apiKey = $GLOBALS["ITT"]["AZURE"]["API_KEY"];
-
-
-    $headers = array(
-           'Content-Type: image/jpeg',
-           "Ocp-Apim-Subscription-Key: $apiKey"
-       );
-
-    $testurl=[ "url"=>"https://cdn.britannica.com/96/1296-050-4A65097D/gelding-bay-coat.jpg" ];
-    
-    
-    
-    
-    $contextOptions = array(
-        'http' => array(
-            'method' => 'POST',
-            'header' => implode("\r\n", $headers),
-            'content' => file_get_contents($file)
-        )     
-    );
-    
-    
-    $context = stream_context_create($contextOptions);
-
-    //get the Access Token
-    $data = file_get_contents($AccessTokenUri."computervision/imageanalysis:analyze?api-version=2023-04-01-preview&features=Tags,Read", false, $context);
-
-    print_r(json_decode($data));
-
-
-}
-
-
 function itt($file)
 {
 
@@ -58,38 +19,36 @@ function itt($file)
            "Ocp-Apim-Subscription-Key: $apiKey"
        );
 
-    
-    
+
+
     $contextOptions = array(
         'http' => array(
             'method' => 'POST',
             'header' => implode("\r\n", $headers),
             'content' => $fileContent
-        )     
+        )
     );
-    
-    
+
+
     $context = stream_context_create($contextOptions);
 
     //get the Access Token
     $data = file_get_contents($AccessTokenUri."computervision/imageanalysis:analyze?api-version=2023-04-01-preview&features=caption&language=en&gender-neutral-caption=False", false, $context);
 
-    //print_r(json_decode($data));
+
     // needs to be parsed to grab captionResult /text
-    $response = json_decode($data,true);
-    print_r($response);
-      $db->insert(
-            'log',
-            array(
-                'localts' => time(),
-                'prompt' => print_r("USER:Context, roleplay In Skyrim universe, {$GLOBALS["HERIKA_NAME"]} watches this scene:",true),
-                'response' => strtr($response["captionResult"]["text"],["."=>"\n"]),
-                'url' => print_r($_GET,true)
+    $response = json_decode($data, true);
+
+    $db->insert(
+        'log',
+        array(
+              'localts' => time(),
+              'prompt' => print_r("USER:Context, roleplay In Skyrim universe, {$GLOBALS["HERIKA_NAME"]} watches this scene:", true),
+              'response' => strtr($response["captionResult"]["text"], ["."=>"\n"]),
+              'url' => print_r($_GET, true)
 
 
-            )
-        );
+          )
+    );
     return $response["captionResult"]["text"];
 }
-
-?>
