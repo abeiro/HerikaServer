@@ -114,7 +114,7 @@
 	$returnFunctionArray[] = array('role' => 'function', 'name' => $functionLocaleName, 'content' => "{$returnFunction[3]}");
 
 	if ($forceAttackingText)
-		$returnFunctionArray[] = array('role' => $LAST_ROLE, 'content' => "{$PROMPTS["afterattack"][0]} {$GLOBALS["HERIKA_NAME"]}: ");
+		$returnFunctionArray[] = array('role' => $LAST_ROLE, 'content' => selectRandomInArray($GLOBALS["PROMPTS"]["afterattack"]["cue"])." {$GLOBALS["HERIKA_NAME"]}: ");
 	else
 		$returnFunctionArray[] = array('role' => $LAST_ROLE, 'content' => $request);
 
