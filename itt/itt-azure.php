@@ -7,6 +7,8 @@ require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // C
 function itt($file)
 {
 
+    // Credits to teddybear082
+    
     global $db;
 
     $AccessTokenUri = $GLOBALS["ITT"]["AZURE"]["ENDPOINT"];
