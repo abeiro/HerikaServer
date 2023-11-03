@@ -64,7 +64,7 @@ if (php_sapi_name()=="cli") {
 
     //$receivedData = base64_decode($_GET["DATA"]);
     //base64 string has '+' chars. THis conflicts with urldecode, so $_GET["DATA"] will get bullshit.
-    $receivedData = base64_decode(substr($_SERVER["QUERY_STRING"],5));
+    $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5)));
 
 }
 
