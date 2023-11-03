@@ -66,6 +66,10 @@ function itt($file)
           )
     );
    
-    return $response["captionResult"]["text"] . " with these details: " . $tagString;
+    $badWords = array("video game", "game", "screenshot", "screen shot");
+	$uneditedResponse = $response["captionResult"]["text"] . " with these details: " . $tagString;
+    $finalResponse = str_replace($badWords, "view", $uneditedResponse);
+    
+    return $finalResponse;
     
 }
