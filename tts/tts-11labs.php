@@ -7,6 +7,10 @@ function tts($textString, $mood = "default", $stringforhash) {
 
 		$apiKey=$GLOBALS["TTS"]["ELEVEN_LABS"]["API_KEY"];
 
+		// Cache 
+		if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
+			return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
+	
 	    $starTime = microtime(true);
 
 		$url = "https://api.elevenlabs.io/v1/text-to-speech/{$GLOBALS["TTS"]["ELEVEN_LABS"]["voice_id"]}?{$GLOBALS["TTS"]["ELEVEN_LABS"]["optimize_streaming_latency"]}=1";

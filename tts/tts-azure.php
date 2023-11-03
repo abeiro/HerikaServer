@@ -6,6 +6,9 @@ require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // C
 function tts($textString, $mood , $stringforhash)
 {
 
+    if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
+        return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
+    
     if (empty($mood))
         $mood="default";
     
