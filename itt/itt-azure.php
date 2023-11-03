@@ -35,12 +35,25 @@ function itt($file)
     $context = stream_context_create($contextOptions);
 
     //get the Access Token
-    $data = file_get_contents($AccessTokenUri."computervision/imageanalysis:analyze?api-version=2023-10-01&features=caption&language=en&gender-neutral-caption=False", false, $context);
+    $data = file_get_contents($AccessTokenUri."computervision/imageanalysis:analyze?api-version=2023-04-01-preview&features=caption,tags&language=en&gender-neutral-caption=False", false, $context);
 
 
     // needs to be parsed to grab captionResult /text
     $response = json_decode($data, true);
+    
+    // Check if "tagsResult" key exists in the response
+    if (isset($response["tagsResult"]["values"])) {
+        foreach($response["tagsResult"]["values"] as $tagArray)
+            $tagNames[]=$tagArray["name"];
+        
+        $tagString = implode(",",$tagNames);
+    } else {
+        // Handle the case where "tagsResult" key is not present in the response
+        $tagString = "none";
+    }
 
+ 
+    
     $db->insert(
         'log',
         array(
@@ -52,5 +65,7 @@ function itt($file)
 
           )
     );
-    return $response["captionResult"]["text"];
+   
+    return $response["captionResult"]["text"] . " with these details: " . $tagString;
+    
 }
