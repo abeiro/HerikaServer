@@ -35,7 +35,7 @@ function itt($file)
     $context = stream_context_create($contextOptions);
 
     //get the Access Token
-    $data = file_get_contents($AccessTokenUri."computervision/imageanalysis:analyze?api-version=2023-04-01-preview&features=caption&language=en&gender-neutral-caption=False", false, $context);
+    $data = file_get_contents($AccessTokenUri."computervision/imageanalysis:analyze?api-version=2023-10-01-preview&features=caption&language=en&gender-neutral-caption=False", false, $context);
 
 
     // needs to be parsed to grab captionResult /text
