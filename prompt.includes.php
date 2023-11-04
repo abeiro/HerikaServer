@@ -53,8 +53,9 @@ if (isset($PROMPTS[$gameRequest[0]]["extra"])) {
 	if (isset($PROMPTS[$gameRequest[0]]["extra"]["transformer"]))
 		$GLOBALS["TRANSFORMER_FUNCTION"] = $PROMPTS[$gameRequest[0]]["extra"]["transformer"];
 	if (isset($PROMPTS[$gameRequest[0]]["extra"]["dontuse"]))
-		if (($PROMPTS[$gameRequest[0]]["extra"]["dontuse"]))
-			return "";
+		if (($PROMPTS[$gameRequest[0]]["extra"]["dontuse"])) {
+			die("");
+        }
 
 
 }
