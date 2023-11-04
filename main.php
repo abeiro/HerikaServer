@@ -138,6 +138,11 @@ if ($gameRequest[0] != "diary") {
 
 }
 
+if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
+    if ($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])
+        die();
+}
+
 $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 
 // Historic context (last dialogues, events,...)
