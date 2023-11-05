@@ -13,7 +13,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php
 
 
 if ((!$argv[2])||(!$argv[1] )) {
- die("\nUse. ".basename(__FILE__)." time_multiplier scriptdata.json\n".PHP_EOL);
+ die("\nUse. ".basename(__FILE__)." time_multiplier script.json\n".PHP_EOL);
 }
 
 $db=new sql();

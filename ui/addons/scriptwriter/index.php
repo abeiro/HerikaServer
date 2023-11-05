@@ -80,7 +80,7 @@ function executeScriptInBackground() {
         <textarea name="script" rows="10" cols="100">
             <?php
             include('scriptconf.php');
-            echo trim($SCRIPTRULES);
+            echo ($SCRIPTRULES);
             ?>
         </textarea><br>
     </form>
@@ -106,10 +106,12 @@ function executeScriptInBackground() {
             include('scriptconf.php');
             echo trim($SCRIPTLENGTH);
             ?>
-        </textarea><br>
-    </form>
+        </textarea>
+</form>
 
-<h2>Script Animations</h2>
+<br>
+
+<h2>Script Animations to Use</h2>
     <textarea rows="10" cols="50" readonly>
         <?php
         // Assuming $SCRIPTANIMATIONS is an array
@@ -118,7 +120,17 @@ function executeScriptInBackground() {
         }
         ?>
     </textarea>
+    
+<br>
+<br>
+<div id="generateButtonContainer">
+    <button type="button" class="play-button" onclick="executeScriptInBackground();">Generate Script</button>
+</div>
 
+<br>
 
+<h2>Script Output</h2>
+
+<textarea name="script" rows="10" cols="100"></textarea>
 
 
