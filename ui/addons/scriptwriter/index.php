@@ -15,6 +15,21 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." 
 
 echo file_get_contents('template.html');
 
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+  $script = $_POST["script"];
+  // You can optionally trim the script content here.
+  // $script = trim($script);
+
+  // Specify the file you want to save the script to
+  $scriptFileName = 'script.json';
+
+  // Write the script content to the file
+  if (file_put_contents($scriptFileName, $script) !== false) {
+      echo "Script saved successfully!";
+  } else {
+      echo "Error saving the script.";
+  }
+}
 
 ?>
 
