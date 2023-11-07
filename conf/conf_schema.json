@@ -7,6 +7,7 @@
   "CONTEXT_HISTORY": {"type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. More context => more tokens used, and slower processing speed in local LLMs."},
   "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for LLM/AI requests. "},
   "CORE_LANG": {"type":"select","description":"Custom Language. A lang folder is in the Herika Server. Leave it blank for default english."},
+  "NEWQUEUE": {"type":"boolean","description":"Will use new control queue. Needs SKSE HerikaAI plugin version 2.1"},
   "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
   "CONNECTOR": {
     "_title":"AI/LLM Service",
@@ -146,7 +147,7 @@
     }
   },
   "ITTFUNCTION": {
-    "type":"select","values":["llamacpp","azure"],"description":"Image recognition feature. Soulgaze spell.", 
+    "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition feature. Soulgaze spell.", 
     "_title":"Image Recognition service (*Experimental)"
    },
   "ITT": {
@@ -159,6 +160,14 @@
     "LLAMACPP": {
       "_title":"Bare llama.cpp server.",
       "URL": {"type":"url","description":"URL of llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md"}
+    },
+    "openai": {
+      "_title":"OpenAI GTP-4V",
+      "url": {"type":"url","description":"OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","helpurl":"https://platform.openai.com/docs/guides/vision?lang=curl"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"}
     }
   },
   "FEATURES": {

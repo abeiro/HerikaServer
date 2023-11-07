@@ -10,6 +10,7 @@ $HERIKA_PERS="You are Herika, a Breton female who likes jokes and sarcastic comm
 
 
 $CORE_LANG="";
+$NEWQUEUE=false;
 
 $TTS["AZURE"]["fixedMood"]="";
 $TTS["AZURE"]["region"]="westeurope";			
@@ -63,6 +64,12 @@ $ITT["AZURE"]["API_KEY"]="";
 
 $ITT["LLAMACPP"]["URL"]="http://127.0.0.1:8007";			
 
+
+$ITT["openai"]["url"]='https://api.openai.com/v1/chat/completions';	//OpenAI API endpoint
+$ITT["openai"]["model"]='gpt-4-vision-preview';	//Model to use
+$ITT["openai"]["max_tokens"]=256;	//Maximum tokens to generate
+$ITT["openai"]["detail"]='low';	//Low or high fidelity image understanding
+$ITT["openai"]["API_KEY"]='';	//OpenAI API key
 
 
 $STTFUNCTION="whisper";								// Valid options are azure or whisper so far
