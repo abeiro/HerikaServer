@@ -207,8 +207,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     //13333334
     if (($gameRequest[2]>13333334)||($gameRequest[2]<13333332)) {  // ?? How this works.
         logEvent($gameRequest);
-    }
-    //$MUST_END=true;
+    } else
+        $MUST_END=true;
 
 } elseif ($gameRequest[0] == "location") {
     logEvent($gameRequest);
