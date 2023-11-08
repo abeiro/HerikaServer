@@ -7,130 +7,108 @@
 
 <?php
 
-// Path to the script file
-$scriptFile = 'scriptconf.php';
-
-$SCRIPTANIMATIONS = explode("\n", $SCRIPTANIMATIONS);
-
 error_reporting(E_ALL);
-$enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+$enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+
+require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
 
 echo file_get_contents('template.html');
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  $script = $_POST["script"];
-  // You can optionally trim the script content here.
-  // $script = trim($script);
 
-  // Specify the file you want to save the script to
-  $scriptFileName = 'script.json';
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if (isset($_POST["savescript"])) {
+        $scriptContent = $_POST["script"];
+        file_put_contents('script.json', $scriptContent);
+        echo "Script Saved";
+    } else if (isset($_POST["runscript"])) {
+        sleep(5);
+        $output = shell_exec('php HerikaScriptWriter.php');
+        echo "<pre>$output</pre>";
+    } else if (isset($_POST["savetemplate"])) {
+            $scriptContent = $_POST["scriptgenerator"];
+            file_put_contents('scriptgenerator.txt', $scriptContent);
+            echo "Template Saved";
+    } else if (isset($_POST["restoretemplate"])) {
+            $scriptgeneratortemplate = file_get_contents('scriptgeneratortemplate.txt');
+            file_put_contents('scriptgenerator.txt', $scriptgeneratortemplate);
+            echo "Template Restored!";
+    } else if (isset($_POST["generatorrun"])) {
+        $head[] = array('role' => 'system', 'content' => "Generate a video script following in .json format using these rules.");
+        $prompt[] = array('role' => 'user', 'content' => $scriptgenerator);
+        
+        $parms=array_merge($head,$prompt);
 
-  // Write the script content to the file
-  if (file_put_contents($scriptFileName, $script) !== false) {
-      echo "Script saved successfully!";
-  } else {
-      echo "Error saving the script.";
-  }
+        require($enginePath.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
+        $connectionHandler=new connector();
+        $connectionHandler->open($parms,["MAX_TOKENS"=>$_POST["OPENAI_MAX_TOKENS_MEMORY"]]);
+
+        $buffer="";
+        $totalBuffer="";
+        $breakFlag=false;
+
+        while (true) {
+
+            if ($breakFlag) {
+                break;
+            }
+
+            $buffer.=$connectionHandler->process();
+            $totalBuffer.=$buffer;
+
+            if ($connectionHandler->isDone()) {
+                $breakFlag=true;
+            }
+
+        }
+        $rawResponse=$buffer;
+
+        $connectionHandler->close();
+    }
 }
+
+
+$scriptjson = trim(file_get_contents('script.json'));
+$scriptgenerator = file_get_contents('scriptgenerator.txt');
+$scriptgeneratortemplate = file_get_contents('scriptgeneratortemplate.txt');
+
+echo "
+<form action='' method='post'>
+<h1>Herika Script Writer ✒</h1>
+<h2>Script (.json Format)</h2>
+<textarea name='script' style='width:90%;height:500px'>
+$scriptjson
+</textarea>
+<br>
+<input type='submit' name='savescript' value='Save Script' />
+<input type='submit' name='runscript' value='Run Script' />
+
+<h2>Script Generator Template</h2>
+<textarea name='scriptgenerator' style='width:90%;height:500px'>
+$scriptgenerator
+</textarea>
+<br>
+<input type='submit' name='savetemplate' value='Save Template' />
+<input type='submit' name='restoretemplate' value='Restore Default Template' />
+<h2>Generator Output</h2>
+<textarea name='generatoroutput' style='width:90%;height:300px' placeholder=''>
+$rawResponse
+</textarea>
+<h3>Token limit</h3>
+<br>
+<input type='range' min='100' max='1024' value='".(($_POST["OPENAI_MAX_TOKENS_MEMORY"])?:200)."'  name='OPENAI_MAX_TOKENS_MEMORY' oninput='this.nextElementSibling.value = this.value'>
+<output>".(($_POST["OPENAI_MAX_TOKENS_MEMORY"])?:200)."</output>
+<br>
+<input type='submit' name='generatorrun' value='Generate Script' />
+</form>
+
+</body>
+</html>
+";
 
 ?>
-
-<h1>Herika Script Writer</h1>
-<br>
-<form method="post">
-    <h2>Herika Script</h2>
-    <textarea name="script" rows="30" cols="200"><?php echo trim(file_get_contents('script.json')); ?></textarea><br>
-    <input type="submit" value="Save Script">
-</form>
-
-
-<br>
-
-<div id="playButtonContainer">
-    <button type="button" class="play-button" onclick="executeScriptInBackground();">Play Script</button>
-</div>
-
-<script>
-function executeScriptInBackground() {
-    // Make an AJAX request to execute the script
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", "HerikaScriptWriter.php", true);
-    xhr.send();
-
-    // Handle the response (optional)
-    xhr.onload = function() {
-        if (xhr.status == 200) {
-            alert("Script executed in the background.");
-        } else {
-            alert("Error: Script execution failed.");
-        }
-    };
-}
-</script>
-
-<!-- Divider -->
-<hr class="divider">
-
-<h1>ChatGPT Script Generator, Not Complete</h1>
-
-<br>
-
-<form method="post" action="save_script.php">
-        <h2>Script Rules</h2>
-        <textarea name="script" rows="10" cols="100">
-            <?php
-            include('scriptconf.php');
-            echo ($SCRIPTRULES);
-            ?>
-        </textarea><br>
-    </form>
-
-<br>
-
-<form method="post" action="save_script.php">
-        <h2>Script Topic</h2>
-        <textarea name="script" rows="5" cols="100">
-            <?php
-            include('scriptconf.php');
-            echo trim($SCRIPTTOPIC);
-            ?>
-        </textarea><br>
-    </form>
-
-    <br>
-
-<form method="post" action="save_script.php">
-        <h2>Script Length (In Seconds)</h2>
-        <textarea name="script" rows="2" cols="6">
-            <?php
-            include('scriptconf.php');
-            echo trim($SCRIPTLENGTH);
-            ?>
-        </textarea>
-</form>
-
-<br>
-
-<h2>Script Animations to Use</h2>
-    <textarea rows="10" cols="50" readonly>
-        <?php
-        // Assuming $SCRIPTANIMATIONS is an array
-        foreach ($SCRIPTANIMATIONS as $animation) {
-            echo $animation . "\n";
-        }
-        ?>
-    </textarea>
-    
-<br>
-<br>
-<div id="generateButtonContainer">
-    <button type="button" class="play-button" onclick="executeScriptInBackground();">Generate Script</button>
-</div>
-
-<br>
-
-<h2>Script Output</h2>
-
-<textarea name="script" rows="10" cols="100"></textarea>
-
-

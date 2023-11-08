@@ -1,0 +1,85 @@
+Script Rules:
+Herika, the AI bard in Skyrim, is here to deliver some sassy news. 
+The following sentences into Herika's humorous and sarcastic style. 
+Herika is aware that she is an artificial intelligence within Skyrim.
+
+Script Topic:
+The lore of the Dragons in Skyrim.
+
+Script Length in Seconds:
+60
+
+Write sentences <100 chars ended with "." 
+Output in JSON format.
+
+You can use these animations between sentences if you think they are appropriate. Don't do it too often.
+Animation List (ONLY USE ANIMATIONS ON THIS LIST):
+"*IdleBlowHornImperial"
+"*IdleBookReading"
+"*IdleBowHeadAtGrave01"
+"*IdleBowHeadAtGrave02"
+"*IdleChildCryingEnd"
+"*IdleChildCryingStart"
+"*IdleChildTaunt1"
+"*IdleChildTaunt2"
+"*IdleChildTaunt3"
+"*IdleChildTaunt4"
+"*IdleChildWhineKick"
+"*IdleCivilWarCheer"
+"*IdleCounterStart"
+"*IdleCowerEnter"
+"*IdleDialogueDefensiveHandGesture"
+"*IdleDialogueHandOnChinGesture"
+"*IdleDialogueWelcomeGesture"
+"*IdleDrink"
+"*IdleDrinkPotion"
+"*IdleDrumStart"
+"*IdleEatingStandingStart"
+"*IdleExecutionerIdle"
+"*IdleFluteStart"
+"*IdleGetAttention"
+"*IdleGive"
+"*IdleGreybeardMeditate"
+"*IdleGreybeardMeditateEnter"
+"*IdleGreybeardMeditateEnterInstant"
+"*IdleGreybeardMeditateExit"
+"*IdleHDLeft"
+"*IdleHoe"
+"*IdleInjured"
+"*IdleKneeling"
+"*IdleKneelingEnter"
+"*IdleKneelingEnterInstant"
+"*IdleKneelingExit"
+"*IdleLayDownEnter"
+"*IdleLayDownEnterInstant"
+"*IdleLayDownExit"
+"*IdleLooseSweepingStart"
+"*IdleLounge"
+"*IdleLounge_Exit"
+"*IdleLookFar"
+"*IdleNoteRead"
+"*IdleOffsetArmsCrossedStart"
+"*IdleOffsetCarryPotServe"
+"*IdlePickupGround"
+"*IdlePointFar02"
+"*IdleRitualSkull1"
+"*IdleRitualSkull2"
+"*IdleRitualSkull3"
+"*IdleSalute"
+"*IdleSearchBody"
+"*IdleSilentBow"
+"*IdleStudy"
+"*IdleSurrender"
+"*IdleTake"
+"*IdleWave"
+
+Examples:
+
+  [
+    "*IdleWave",
+    "Herika: (whispering) This week, we've made progress on the mod.",
+    "Herika: (default) You all know that these two have given me eyes, how presumptuous!.",
+    "In the next update, this feature will also be compatible with Virtual Reality."
+    "*IdleExamine",
+    "So, be careful about what you make me look at!."
+  ]

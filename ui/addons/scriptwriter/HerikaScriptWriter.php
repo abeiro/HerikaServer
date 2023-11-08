@@ -5,15 +5,15 @@ error_reporting(E_ALL);
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf/conf.php");
 require_once($enginePath . "lib/$DBDRIVER.class.php");
-require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");    // OpenAI complains
 
 
 if ((!$argv[2])||(!$argv[1] )) {
- die("\nUse. ".basename(__FILE__)." time_multiplier script.json\n".PHP_EOL);
+ die("\nUse. ".basename(__FILE__)." time_multiplier scriptdata.json\n".PHP_EOL);
 }
 
 $db=new sql();
@@ -30,83 +30,75 @@ $timelineCorrector=(isset($argv[1])?$argv[1]:1);
 echo "\nUsing time corrector: $timelineCorrector.\n".PHP_EOL;
 
 
-$cuelines=json_decode(file_get_contents($argv[2])) or die("Error opening {$argv[2]}".PHP_EOL);
+$cuelines=json_decode(file_get_contents($argv[2]),true) or die("Error opening {$argv[2]}".PHP_EOL);
+$GLOBALS["TTS"]["XVASYNTH"]["DEVENV"]=true;
+$GLOBALS["OPENAI_FILTER_DISABLED"]=true;    // To avoid get content filtered by ourselves.
+
+/*    
+ {
+    "type": "line", // line or ctrl
+    "data": ["", "", "", "IdleDialogueWelcomeHandGesture"] // Subtitle, Expression (*pending),Action,Animation
+  },
+  
+  {
+    "type": "line",
+    "data": ["Herika: (angry) Lydia! that is my sweetroll!", "anger","Attack@Lydia",""]
+  }
+*/
 
 
-foreach ($cuelines as $line) {
-     $size=0;
+
+
+
+foreach ($cuelines as $sline) {
      
-    unset($GLOBALS["staticMood"]);  // Because returnLines will cache first mood.
-    if (strpos($line, "*")===0) {
-        // Issue animation
-        // Now will wait 
-      
-        $GLOBALS["DEBUG"]["BUFFER"][]="Herika|animation|".strtr($line, ["*"=>""]);
-        echo "Herika|animation|".strtr($line, ["*"=>""]).PHP_EOL;
-       
-        if (isset($GLOBALS["TRACK"]["FILES_GENERATED"])) {
-            foreach ($GLOBALS["TRACK"]["FILES_GENERATED"] as $file) {
-                    $size+=filesize($file);
+    if ($sline["type"]=="line") { 
+        $line=$sline["data"];
+        unset($GLOBALS["staticMood"]);  // Because returnLines will cache first mood.
+        
+        if (isset($line[0])) {
+            returnLines([$line[0]],false);
+        }
+        
+        
+        if (@isset($GLOBALS["DEBUG"]["BUFFER"])) {
+            foreach ($GLOBALS["DEBUG"]["BUFFER"] as $lineb) {
+                $newformat=explode("|",$lineb);
+                $output[]=["Herika","ScriptQueue",trim($newformat[2]),$line[1],$line[2],$line[3]];
             }
-            unset($GLOBALS["TRACK"]["FILES_GENERATED"]);
+        } else {
+            
+            $output[]=["Herika","ScriptQueue","",$line[1],$line[2],$line[3]];
         }
         
-         if ($size>0) {
-            $wait=$size/(5512.5*9)*$timelineCorrector; // Microsoft PCM, 16 bit, mono 22050 Hz
-            usleep(round($wait * 1000000,0));
-            //die("Size: $size");
+        
+        foreach ($output as $lineDB) {
+                $lastFourElements = array_slice($lineDB, -4);
+                
+                $db->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => $lineDB[0],
+                        'text' => implode("/",$lastFourElements),
+                        'action' => $lineDB[1],
+                        'tag' => ''
+                    )
+                );
+                
+                echo implode("|",$lineDB).PHP_EOL;
         }
         
-
-    } else if (strpos($line, "!")===0) {
-        // Issue animation
-        // Now will wait 
-      
-        $GLOBALS["DEBUG"]["BUFFER"][]="Herika|command|".strtr($line, ["!"=>""]);
-        echo "Herika|command|".strtr($line, ["!"=>""]);
-       
-        if (isset($GLOBALS["TRACK"]["FILES_GENERATED"])) {
-            foreach ($GLOBALS["TRACK"]["FILES_GENERATED"] as $file) {
-                    $size+=filesize($file);
-            }
-            unset($GLOBALS["TRACK"]["FILES_GENERATED"]);
-        }
         
-         if ($size>0) {
-            $wait=$size/(5512.5*9)*$timelineCorrector; // Microsoft PCM, 16 bit, mono 22050 Hz
-            usleep(round($wait * 1000000,0));
-            //die("Size: $size");
-        }
+        unset($GLOBALS["DEBUG"]["BUFFER"]);
+        unset($output);
+    
         
-
-    } elseif (strpos($line, "#Pause")===0) {
-        // Issue animation
-        sleep(strtr($line, ["#Pause "=>""])+0);
-        unset($GLOBALS["TRACK"]["FILES_GENERATED"]);
-        continue;
-
-    } else {
-        returnLines([$line]);
+    } else if ($sline["type"]=="ctrl") { 
+        $cmd=$sline["data"];
+        if ($cmd[0]=="pause") {
+                sleep($cmd[1]);
+        }
     }
-    
-    $lineb=$GLOBALS["DEBUG"]["BUFFER"];
-    
-    foreach ($lineb as $lineDB) {
-        $cline=explode("|", $lineDB);
-        $db->insert(
-            'responselog',
-            array(
-                'localts' => time(),
-                'sent' => 0,
-                'actor' => $cline[0],
-                'text' => $cline[2],
-                'action' => $cline[1],
-                'tag' => ''
-            )
-        );
-    }
-    //print_r($lineb);
-    unset($GLOBALS["DEBUG"]["BUFFER"]);
-     
-    
 }
