@@ -22,9 +22,7 @@ function itt($file,$hints)
     }
 
     
-    $prompt = "Let's roleplay in the world of Skyrim.  Describe this image as if it is real life.  Vividly describe the details of what you see.  
-    Ignore video game HUD and UI elements in your description.  If you see yourself (a strong Breton woman with tan skin, shoulder length brown hair, 
-    and brown clothing / armor), say that you see yourself, and note how odd that is. $hints";
+    $prompt = "Let's roleplay in the world of Skyrim.  Describe this Skyrim image as if it is real life.  Describe the objects and people you see in a fifth grade reading level.  Ignore video game HUD and UI elements in your description.  If you see a Breton woman with tan skin, shoulder length brown hair, and brown clothing / armor, ignore her in the description. $hints";
 
     $fileContent = base64_encode(file_get_contents($file));
 
@@ -35,6 +33,7 @@ function itt($file,$hints)
 
     $payload = array(
         "model" => $GLOBALS["ITT"]["openai"]["model"],
+        "temperature" => 0.2,
         "messages" => array(
             array(
                 "role" => "user",
