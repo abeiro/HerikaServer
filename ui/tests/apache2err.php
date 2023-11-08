@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-$distroLogPath = './error.log'; 
+$distroLogPath = '../../log/error.log'; 
 $uwampLogPath = '..\..\..\..\bin\apache\logs\error.log'; 
 
 // Function to read and filter the error log from a given path
