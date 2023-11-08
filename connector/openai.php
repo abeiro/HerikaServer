@@ -14,6 +14,7 @@ class connector
     private $_commandBuffer;
     private $_numOutputTokens;
     private $_dataSent;
+    private $_fid;
 
 
     public function __construct()
@@ -123,27 +124,38 @@ class connector
 
         }
 
-        if (isset($data["choices"][0]["delta"]["function_call"])) {
+       
+        if (isset($data["choices"][0]["delta"]["tool_calls"])) {
 
-            if (isset($data["choices"][0]["delta"]["function_call"]["name"])) {
-                $this->_functionName = $data["choices"][0]["delta"]["function_call"]["name"];
+        
+            if (isset($data["choices"][0]["delta"]["tool_calls"][0]["function"]["name"])) {
+                $this->_functionName = $data["choices"][0]["delta"]["tool_calls"][0]["function"]["name"];
             }
 
-            if (isset($data["choices"][0]["delta"]["function_call"]["arguments"])) {
+            if (isset($data["choices"][0]["delta"]["tool_calls"][0]["function"]["arguments"])) {
 
-                $this->_parameterBuff .= $data["choices"][0]["delta"]["function_call"]["arguments"];
+                $this->_parameterBuff .= $data["choices"][0]["delta"]["tool_calls"][0]["function"]["arguments"];
 
             }
+            
+            if (isset($data["choices"][0]["delta"]["tool_calls"][0]["id"])) {
+
+                $this->_fid = $data["choices"][0]["delta"]["tool_calls"][0]["id"];
+
+            }
+            
         }
 
-        if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] == "function_call") {
+        if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] == "tool_calls") {
 
-            $parameterArr = json_decode($this->_parameterBuff, true);
+            $parameterArr = json_decode($this->_parameterBuff, true) ;
+
             $parameter = current($parameterArr); // Only support for one parameter
 
             if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
                 $functionCodeName=getFunctionCodeName($this->_functionName);
                 $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
+                file_put_contents(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".last_tool_call_openai.id.txt",$this->_fid);
                 //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
             }

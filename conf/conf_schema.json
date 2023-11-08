@@ -66,7 +66,7 @@
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "AZURE": {
@@ -121,6 +121,12 @@
       "waveglowPath":{"type":"string","description":"waveglowPath (relative)"},
       "vocoder":{"type":"string","description":"vocoder"},
       "distroname":{"type":"string","description":"Change only if you changed DDistro name. Leave default if you don't know what are you doing"}
+    },"openai": {
+      "_title":"OpenAI TTS",
+      "endpoint":{"type":"url","description":"End point","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "API_KEY":{"type":"apikey","description":"API KEY"},
+      "voice":{"type":"select","values":["alloy", "echo", "fable", "onyx", "nova", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "model_id":{"type":"select","values":["tts-1", "tts-1-hd"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
     }
   },
   "STTFUNCTION": {

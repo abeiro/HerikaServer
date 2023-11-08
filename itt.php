@@ -11,7 +11,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.ph
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 
-if ($_GET["format"]=="png")
+if (isset($_GET["format"]) && $_GET["format"]=="png")
     $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".png";
 else
     $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".bmp";
@@ -42,7 +42,7 @@ function convertImage($originalImage, $outputImage, $quality)
     else
         return 0;
 
-    if (!$_GET["format"]=="png")
+    if (!isset($_GET["format"]) || (!$_GET["format"]=="png"))
         imageflip($imageTmp, IMG_FLIP_VERTICAL);
 
     // quality is a value from 0 (worst) to 100 (best)
@@ -53,7 +53,7 @@ function convertImage($originalImage, $outputImage, $quality)
     return 1;
 }
 
-if ($_GET["format"]=="png")
+if (isset($_GET["format"]) && $_GET["format"]=="png")
     $finalNameJpeg=strtr($finalName,[".png"=>".jpg"]);
 else
     $finalNameJpeg=strtr($finalName,[".bmp"=>".jpg"]);
@@ -68,7 +68,7 @@ $location=DataLastKnownLocation();
 $hints="";
 //$charactersArray=implode(",",DataPosibleInspectTargets(true));
 
-if ($_GET["vc"]) {
+if (isset($_GET["vc"])) {
     $sanitize=explode(",",$_GET["vc"]);
     $vc=[];
     foreach ($sanitize as $name) {
@@ -78,7 +78,7 @@ if ($_GET["vc"]) {
     
     $hints.="Visible characters: ".implode(",",$vc)."\n";
 }
-if ($_GET["fg"]) {
+if (isset($_GET["fg"])) {
     $hints.="Foreground characters:{$_GET["fg"]}.\n";
 }
 

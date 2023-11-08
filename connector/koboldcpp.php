@@ -695,7 +695,12 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
                 $this->_functionRawName="OpenInventory@";
                 
                 $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-            }  
+            } else if ($kobParsed[0]=="TakeASeat") {
+                // bypass reponse.
+                $this->_functionRawName="TakeASeat@";
+                
+                $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+            }   
                 
             
             return $alreadysent;

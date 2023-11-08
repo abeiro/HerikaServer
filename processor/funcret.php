@@ -1,5 +1,7 @@
 <?php
 
+	$lastCallId=file_get_contents(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".last_tool_call_openai.id.txt");
+
 	$returnFunction = explode("@", $gameRequest[3]); // Function returns here
 
 	$functionLocaleName=getFunctionTrlName($functionCodeName);
@@ -106,12 +108,13 @@
 				$argName = "target";
 
 		}
-		$functionCalled[] = array('role' => 'assistant', 'content' => null, 'function_call' => array("name" => $functionLocaleName, "arguments" => "{\"$argName\":\"{$returnFunction[2]}\"}"));
+		$functionCalled[] = array('role' => 'assistant', 'content' => null, 'tool_calls' => [array("id" => $lastCallId, "type"=>"function",
+																								  "function"=>["name"=>$functionLocaleName,"arguments" => "{\"$argName\":\"{$returnFunction[2]}\"}"])]);
 
 	} else
-		$functionCalled[] = array('role' => 'assistant', 'content' => null, 'function_call' => ["name" => $functionLocaleName, "arguments" => "\"{}\""]);
+		$functionCalled[] = array('role' => 'assistant', 'content' => null, 'tool_calls' => [array("id" => $lastCallId, "function"=>["name"=>$functionLocaleName,"arguments" => "{\"$argName\":\"{$returnFunction[2]}\"}"])]);
 
-	$returnFunctionArray[] = array('role' => 'function', 'name' => $functionLocaleName, 'content' => "{$returnFunction[3]}");
+	$returnFunctionArray[] = array('role' => 'tool', 'content' => "{$returnFunction[3]}",'tool_call_id'=>"$lastCallId");
 
 	if ($forceAttackingText)
 		$returnFunctionArray[] = array('role' => $LAST_ROLE, 'content' => selectRandomInArray($GLOBALS["PROMPTS"]["afterattack"]["cue"])." {$GLOBALS["HERIKA_NAME"]}: ");

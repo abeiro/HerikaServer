@@ -46,6 +46,11 @@ $TTS["COQUI_AI"]["speed"]=1;	//Speed
 $TTS["COQUI_AI"]["language"]='en';	//Language to speak
 $TTS["COQUI_AI"]["API_KEY"]='';	//Coqui.ai API key.
 
+$TTS["openai"]["endpoint"]='https://api.openai.com/v1/audio/speech';	//End point
+$TTS["openai"]["API_KEY"]='';	//API KEY
+$TTS["openai"]["voice"]='nova';	//Voice ID
+$TTS["openai"]["model_id"]='tts-1';	//Model
+
 
 $STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:3000/transcribe";
 

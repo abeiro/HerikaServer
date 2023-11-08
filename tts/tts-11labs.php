@@ -55,15 +55,23 @@ function tts($textString, $mood = "default", $stringforhash) {
 		// Handle the response
 		if ($response !== false ) {
 			// Handle the successful response
-			require_once(__DIR__.DIRECTORY_SEPARATOR."../lib/misc_utils_mp3riffer.php");
-			$finalData=MP3toWav($response,strlen($response));
-			$size=strlen($finalData);
-			file_put_contents(
-				dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"
-				, $finalData); // Save the audio response to a file
-
+			//require_once(__DIR__.DIRECTORY_SEPARATOR."../lib/misc_utils_mp3riffer.php");
+			$mp3Name=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".mp3";
+			$wavName=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
+			file_put_contents($mp3Name, trim($response));
+			$startTimeTrans = microtime(true);
+			shell_exec("ffmpeg -i $mp3Name $wavName 2>/dev/null >/dev/null");
+			$endTimeTrans = microtime(true)-$startTimeTrans;
+            //file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".mp3", trim($response));
+			//$finalData=MP3toWav($response,strlen($response));
+			//$size=strlen($finalData);
+			//file_put_contents(
+			//	dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"
+			//	, $finalData); // Save the audio response to a file
+			//
+			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
-			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in 11labs call and mp3riffer";
+			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in 11labs call and $endTimeTrans microseconds in ffmpeg transcoding";
 			return "soundcache/" . md5(trim($stringforhash)) . ".wav";
 			
 		} else {

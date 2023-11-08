@@ -54,21 +54,23 @@ function itt($file)
 
  
     
+    
+   
+    $badWords = array("video game", "game", "screenshot", "screen shot");
+	$uneditedResponse = $response["captionResult"]["text"] . " with these details: " . $tagString;
+    $finalResponse = str_replace($badWords, "view", $uneditedResponse);
+    
     $db->insert(
         'log',
         array(
               'localts' => time(),
               'prompt' => print_r("USER:Context, roleplay In Skyrim universe, {$GLOBALS["HERIKA_NAME"]} watches this scene:", true),
-              'response' => strtr($response["captionResult"]["text"], ["."=>"\n"]),
-              'url' => print_r($_GET, true)
+              'response' => $finalResponse,
+              'url' => $data
 
 
           )
     );
-   
-    $badWords = array("video game", "game", "screenshot", "screen shot");
-	$uneditedResponse = $response["captionResult"]["text"] . " with these details: " . $tagString;
-    $finalResponse = str_replace($badWords, "view", $uneditedResponse);
     
     return $finalResponse;
     

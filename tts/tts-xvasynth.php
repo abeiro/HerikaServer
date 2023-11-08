@@ -77,6 +77,10 @@ function tts($textString, $mood = "default", $stringforhash)
     if ($response !== false) {
         // Handle the successful response
 
+        if (isset($GLOBALS["TTS"]["XVASYNTH"]["DEVENV"])) {
+            file_put_contents("soundcache/" . md5(trim($stringforhash)) . ".wav",file_get_contents("http://172.16.1.128:8081/HerikaServer/soundcache/".md5(trim($stringforhash)) . ".wav"));
+        }
+        
         return "soundcache/" . md5(trim($stringforhash)) . ".wav";
 
     } else {

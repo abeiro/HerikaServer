@@ -140,7 +140,12 @@ function split_sentences($paragraph)
 function checkOAIComplains($responseTextUnmooded)
 {
 
+    
+    if (isset($GLOBALS["OPENAI_FILTER_DISABLED"]))
+        return 0;
+    
     $scoring = 0;
+    
     if (stripos($responseTextUnmooded, "can't") !== false) {
         $scoring++;
     }
@@ -233,7 +238,7 @@ function split_sentences_stream($paragraph)
 }
 
 
-function returnLines($lines)
+function returnLines($lines,$writeOutput=true)
 {
 
     global $db, $startTime, $forceMood, $staticMood, $talkedSoFar, $FORCED_STOP, $TRANSFORMER_FUNCTION,$receivedData;
@@ -360,6 +365,13 @@ function returnLines($lines)
 
             }
             
+            if ($GLOBALS["TTSFUNCTION"] == "openai") {
+
+                require_once(__DIR__."/../tts/tts-openai.php");
+                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+
+            }
+            
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
             }
@@ -376,10 +388,15 @@ function returnLines($lines)
             'tag' => (isset($tag) ? $tag : "")
         );
         $GLOBALS["DEBUG"]["BUFFER"][] = "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
-        echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
-        @ob_flush();
-        @flush();
-
+        if ($writeOutput) {
+            if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"])
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded///\r\n";
+            else
+                echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
+            
+            @ob_flush();
+            @flush();
+        }
         $db->insert(
             'log',
             array(

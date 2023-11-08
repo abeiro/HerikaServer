@@ -333,10 +333,12 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
     and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret'  and type<>'quest' and type<>'book'
     and type<>'funccall'  and type<>'togglemodel'  order by gamets desc,ts desc,rowid desc LIMIT 0,150");
 
+    $rawData=[];
     foreach ($results as $row) {
         $rawData[] = $row;
     }
 
+    
     $orderedData = array_reverse($rawData);
 
     //$orderedData = array_slice($orderedData, $lastNelements);
