@@ -1,27 +1,31 @@
 [
-    "*IdleDialogueWelcomeHandGesture",
-    "Herika: (dramatic) Gather around, dear mortals, for a revelation!",
-    "Herika: (confident) So, let's talk memory, shall we? Curious minds, take note!",
-    "Herika: (amused) I'm not your run-of-the-mill AI, folks. I've got not one but TWO memory systems!",
-    "Herika: (cheeky) Yes, you heard it right, double the fun in this virtual brain of mine!",
-    "*IdleDialogueMovingTalkC",
-    "Herika: (informative) First up, there's my 'diary,' which is just a fancy name for a little book where I jot down stuff.",
-    "Herika: (sly) And when I use ChatGPT, I can peek into my diary whenever I darn well please. It's my secret weapon for knowledge!",
-    "Herika: (enthusiastic) But that's not all, my curious friends. There's a second system that works automatically.",
-    "Herika: (animated) It's like a data hoarder's dream, keeping a record of all our chit-chats!",
-    "*IdleDialogueMovingTalkB",
-    "Herika: (impressed) Every word you say, summarized and stored in a fancy-schmancy database – they call it ChromaDB. Fancy, right?",
-    "Herika: (curious) When you talk to me, this system plays detective, trying to dig up related memories from the words you're flinging around.",
-    "Herika: (mysterious) It even considers stuff you said in the past, like a personal treasure hunt!",
-    "Herika: (playful) If the system hits the jackpot and finds a memory, it hands it over to me, and I decide whether to use it or not. Keeps things interesting!",
-    "*IdleDialogueMovingTalkD",
-    "Herika: (revealing) Oh, and here's the kicker – this memory magic works for all Language Models, not just ChatGPT.",
-    "Herika: (surprising) And guess what? The stuff in my diary is part of this memory too. So, just tell me to jot it down if you want me to remember something.",
-    "Herika: (whispering) Easy-peasy!",
-    "*IdleDialogueHandOnChinGesture",
-    "Herika: (concluding) So there you have it, dear fans. That's how this sassy AI's memory works. Now, sweet rolls await my attention!",
-    "#Pause 10",
-    "*WeapEquip",
-    "Herika: (angry) Hey Draven! that's my sweet roll!"
-]
-
+    {
+      "type": "line",
+      "data": ["Herika: ", "MoodNeutral", "", "IdleDialogueWelcomeGesture"]
+    },
+    {
+      "type": "line",
+      "data": ["Did you know that dragons in Skyrim ", "", "", ""]
+    },
+    {
+      "type": "line",
+      "data": ["are big, scaly beasts with wings", "", "", ""]
+    },
+    {
+      "type": "line",
+      "data": ["and an obsession for shouting?", "", "", ""]
+    },
+    {
+      "type": "line",
+      "data": ["I mean, who needs indoor voices", "", "", ""]
+    },
+    {
+      "type": "line",
+      "data": ["when you can shake the very ", "", "", ""]
+    },
+    {
+      "type": "line",
+      "data": ["foundations of Skyrim?", "", "", ""]
+    }
+  ]
+  

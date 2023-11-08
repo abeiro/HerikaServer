@@ -10,7 +10,7 @@ function readErrorLog($errorLogPath, $logType) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
         $errorLog = file($errorLogPath);
         $errorLog = array_reverse($errorLog);
-        echo "<h1>Reading $logType log</h1>";
+        echo "<h1>Reading $logType error.log (Filtered only for errors)</h1>";
         echo '<div style="max-height: 400px; overflow-y: scroll; background-color: black; color: white; font-size: 16px;">'; // Increase text size
         foreach ($errorLog as $line) {
             if (strpos($line, '[php:error]') !== false) {
