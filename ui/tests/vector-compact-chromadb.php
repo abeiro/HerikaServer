@@ -7,14 +7,12 @@ $embedding = $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"];
 $commandcompact = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php compact';
 $commandcompact = shell_exec($commandcompact);
 
-
+echo "<h1>Compact Memories</h1>";
+echo"<pre>$commandcompact</pre>";
 
 // Run sync command
 $commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php sync';
 $outputsync = shell_exec($commandsync);
-
-"<h1>Compact Memories</h1>";
-echo"<pre>$commandcompact</pre>";
 
 // Output sync command
 if ($embedding == 'local') {
