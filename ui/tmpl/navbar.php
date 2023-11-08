@@ -65,12 +65,12 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Sync ChomaDB Memories if you have changed Memory Embeddings Provider" onclick="return confirm('Will cost Tokens to use if using OpenAI. Are you sure?')>
+                        <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync ChomaDB Memories if you have changed Memory Embeddings Provider" onclick="return confirm('Will cost Tokens to use if using OpenAI. Are you sure?')">
                             Compact & Sync Memories
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="import_db.php" title="Import Database" >
+                        <a class="dropdown-item" href="import_db.php" title="Import Database">
                             Import SQLITE3 Database
                         </a>
                     </li>
