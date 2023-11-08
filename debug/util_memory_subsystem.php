@@ -28,7 +28,7 @@ commands:
 	sync 		Sync ChromaDB database. 
 	get 		Get memory. Example: get 56
 	recreate	Recreate collection.
-	compact	    Recreate memories_summary database from memories nad other sources. Must resync later. Needs LLM.
+	compact	    Recreate memories_summary database from memories and other sources. Must resync later. Needs LLM.
 	
 Note: Memories are stored in memory_summary table. ChromaDB should be a vector representation of this table.
 

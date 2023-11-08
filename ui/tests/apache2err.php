@@ -1,6 +1,9 @@
 <?php
-$distroLogPath = '/var/log/apache2/error.log'; 
-$uwampLogPath = '..\..\..\..\\bin\apache\logs\error.log'; 
+error_reporting(E_ALL);
+ini_set('display_errors', 'On');
+
+$distroLogPath = './error.log'; 
+$uwampLogPath = '..\..\..\..\bin\apache\logs\error.log'; 
 
 // Function to read and filter the error log from a given path
 function readErrorLog($errorLogPath, $logType) {

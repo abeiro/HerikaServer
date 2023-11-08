@@ -168,7 +168,7 @@
       "URL": {"type":"url","description":"URL of llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md"}
     },
     "openai": {
-      "_title":"OpenAI GTP-4V",
+      "_title":"OpenAI GPT-4V",
       "url": {"type":"url","description":"OpenAI API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
