@@ -88,6 +88,8 @@ $scriptjson
 <input type='submit' name='savescript' value='Save Script' />
 <input type='submit' name='runscript' value='Run Script' />
 
+<div class='divider'></div>
+
 <h2>Script Generator Template</h2>
 <textarea name='scriptgenerator' style='width:90%;height:500px'>
 $scriptgenerator
