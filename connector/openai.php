@@ -32,6 +32,22 @@ class connector
 
 
 
+        /***
+            In the realm of perfection, the demand to tailor context for every language model would be nonexistent.
+
+                                                                                                Tyler, 2023/11/09
+        ****/
+        
+        if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
+            foreach ($contextData as $n=>$contextline)  {
+                if (strpos($contextline["content"],"#MEMORY")===0) {
+                    $contextData[$n]["content"]=str_replace("#MEMORY","##\nMEMORY\n",$contextline["content"]."\n##\n");
+                } else if (strpos($contextline["content"],$GLOBALS["MEMORY_STATEMENT"])!==false) {
+                    $contextData[$n]["content"]=str_replace($GLOBALS["MEMORY_STATEMENT"],"(USE MEMORY reference)",$contextline["content"]);
+                }
+            }
+        }
+        
         $data = array(
             'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-3.5-turbo-0613',
             'messages' =>
@@ -43,9 +59,8 @@ class connector
             'presence_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 1,
         );
 
-        // Override
-
-
+  
+        
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
