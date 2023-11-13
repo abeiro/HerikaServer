@@ -149,16 +149,19 @@ Note: Memories are stored in memory_summary table. ChromaDB should be a vector r
 
             $counter++;
             echo "\nMemory created $counter\n";
+            
+            foreach ($toUpdate as $uq) {
+			 //echo "update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where uid={$uq["uid"]}";
+			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where uid={$uq["uid"]}");
+			
+            }
+            $toUpdate=[];
 			sleep(1);
             //break;
 			
         }
 
-		foreach ($toUpdate as $uq) {
-			 //echo "update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where uid={$uq["uid"]}";
-			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where uid={$uq["uid"]}");
-			
-		}
+		
 
 
         /*
