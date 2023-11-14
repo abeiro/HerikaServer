@@ -330,7 +330,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
     end||a.data  as data , gamets 
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret'  and type<>'quest' and type<>'book'
+    and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book'
     and type<>'funccall'  and type<>'togglemodel'  order by gamets desc,ts desc,rowid desc LIMIT 0,150");
 
     $rawData=[];
@@ -522,7 +522,7 @@ function DataDiaryLog($topic)
 
     } else { // Return best matching memory
 
-        file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "logquery.txt", SQLite3::escapeString("\nSElECT  topic,content,tags,people  FROM diarylogv2
+        file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data". DIRECTORY_SEPARATOR ."logquery.txt", SQLite3::escapeString("\nSElECT  topic,content,tags,people  FROM diarylogv2
         where (tags MATCH \"$topicFmt\" or topic MATCH \"$topicFmt\" or content MATCH \"$topicFmt\" or people MATCH \"$topicFmt\") ORDER BY rank"), FILE_APPEND);
 
         $data = [];

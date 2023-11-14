@@ -3,7 +3,6 @@
 
 function tts($textString, $mood , $stringforhash) {
 
-	    global $ELEVEN_LABS,$ELEVENLABS_API_KEY;
 
 		$apiKey=$GLOBALS["TTS"]["openai"]["API_KEY"];
 

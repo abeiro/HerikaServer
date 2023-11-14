@@ -159,5 +159,9 @@ $TTS["XVASYNTH"]["waveglowPath"]='resources/app/models/waveglow_256channels_univ
 $TTS["XVASYNTH"]["vocoder"]='n/a';	//vocoder
 $TTS["XVASYNTH"]["distroname"]='DwemerAI4Skyrim2';	
 
+$TTS["CONVAI"]["endpoint"]='https://api.convai.com/tts';	//End point
+$TTS["CONVAI"]["API_KEY"]='';	//API KEY
+$TTS["CONVAI"]["language"]='en-US';	//Language
+$TTS["CONVAI"]["voiceid"]='WUFemale3';	//VoiceId
 
 ?>

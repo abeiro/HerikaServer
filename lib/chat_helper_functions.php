@@ -372,6 +372,13 @@ function returnLines($lines,$writeOutput=true)
 
             }
             
+            if ($GLOBALS["TTSFUNCTION"] == "convai") {
+
+                require_once(__DIR__."/../tts/tts-convai.php");
+                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+
+            }
+            
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
             }

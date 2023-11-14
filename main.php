@@ -443,15 +443,16 @@ if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && ((DMgetCurrentModel()=="ko
     array_pop($contextData);
     $lastElementByUser=end($contextData);
     $lastUserSentence=str_replace("-$DIALOGUE_TARGET", "", $lastElementByUser["content"]);
-            
-    $contextData[]=array('role' => 'user', 'content' =>  "{$GLOBALS["HERIKA_NAME"]}: $herikaCondensedResponse");
+    //$contextData=[];       
+    //$GLOBALS["PROMPT_HEAD"]="";
+    //$GLOBALS["HERIKA_PERS"]="";
+    //$GLOBALS["COMMAND_PROMPT"]="";
+    //$contextData[]=array('role' => 'user', 'content' =>  "{$GLOBALS["HERIKA_NAME"]}: $herikaCondensedResponse");
     $contextData[]=array('role' => 'user', 'content' =>  
-        "Analyze this sentence: '$lastUserSentence'. ".
-        "If sentence is a question, then answer is NoOp().".
-        "If sentence is a trade/exchange request then answer is ExchangeItems().".
-        "If sentence explicitly describes a new plan, then answer is SetCurrentPlan(plan description).".
-        "Else, if nothing is true, then answer is NoOp().".
-        "Write correct answer:"
+        "Analyze this sentence: '$lastUserSentence.\n".
+        "\nChoose the command from this list:
+        WalkTo,GatherInfo,NoCommand,OpenBackPack,Sleep,ContinueDialogue,OpenInventory,UpdatePersonalDiary (provide topic), UpdateQuestJournal (provide quest topic)\n
+        Write command in this JSON object {\"command\":\"\",\"topic\":,\"priority\":\"now|future\",\"keyword\":\"\"}:"
     );
 
     //$GLOBALS["PROMPT_HEAD"]="Follow the logical steps and write the final answer in first place. Then explain reasoning.".
@@ -461,7 +462,7 @@ if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && ((DMgetCurrentModel()=="ko
     //$GLOBALS["PLAYER_NAME"]="no name";
     
     $connectionHandler=new connector();
-    $overrideParameters["MAX_TOKENS"]=25;
+    $overrideParameters["MAX_TOKENS"]=50;
     $overrideParameters["GRAMMAR_ACTIONS"]=true;
     
     $connectionHandler->open($contextData,$overrideParameters);

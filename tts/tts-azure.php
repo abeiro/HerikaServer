@@ -5,9 +5,9 @@ require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // C
 
 function tts($textString, $mood , $stringforhash)
 {
-
-    if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
-        return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
+    if (!isset($GLOBALS["AVOID_TTS_CACHE"]))
+        if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
+            return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
     
     if (empty($mood))
         $mood="default";
@@ -108,7 +108,7 @@ function tts($textString, $mood , $stringforhash)
 
         $style = $doc->createElement("mstts:express-as");
         if (isset($GLOBALS["TTS"]["AZURE"]["fixedMood"])&& (!empty($GLOBALS["TTS"]["AZURE"]["fixedMood"])))
-            $style->setAttribute("style", $GLOBALS["TTS"]["fixedMood"]); // not supported for all voices
+            $style->setAttribute("style", $GLOBALS["TTS"]["AZURE"]["fixedMood"]); // not supported for all voices
         else
             $style->setAttribute("style", $validMood); // not supported for all voices
 
@@ -140,6 +140,8 @@ function tts($textString, $mood , $stringforhash)
 
         $context = stream_context_create($options);
 
+        $starTime = microtime(true);
+
         // get the wave data
         $result = file_get_contents($ttsServiceUri, false, $context);
         if (!$result) {
@@ -152,7 +154,7 @@ function tts($textString, $mood , $stringforhash)
         //fwrite(STDOUT, $result);
 
         
-        
+
         // Trying to avoid sync problems.
         $stream = fopen(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav", 'w');
         
@@ -163,7 +165,8 @@ function tts($textString, $mood , $stringforhash)
 
         //file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR."soundcache/" . md5(trim($stringforhash)) . ".wav", $result);
         file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($data) . "\n\rCache:$cacheUsed\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rsize of wav ($size)\n\rfunction tts($textString,$mood / $validMood ,$stringforhash)");
-        
+        $GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in azure call ";
+
         return "soundcache/" . md5(trim($stringforhash)) . ".wav";
     }
     

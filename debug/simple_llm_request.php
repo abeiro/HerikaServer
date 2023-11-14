@@ -14,11 +14,12 @@ require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
 
 
 
-$FUNCTIONS_ARE_ENABLED=false;
-$gameRequest=[];
+$FUNCTIONS_ARE_ENABLED=true;
+$gameRequest=["inputtext"];
 
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
     die("Choose a LLM model and connector.".PHP_EOL);

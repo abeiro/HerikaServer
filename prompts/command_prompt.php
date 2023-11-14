@@ -1,6 +1,5 @@
 <?php
 
-
 $COMMAND_PROMPT = "
 Don't write narrations.
 ";

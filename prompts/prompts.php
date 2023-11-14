@@ -8,6 +8,8 @@
 // Full Prompt then is $PROMPT_HEAD + $HERIKA_PERS + $COMMAND_PROMPT + CONTEXT + requirement + cue
 
 // Common patterns to use in most functions
+$MAXIMUM_WORDS=(isset($GLOBALS["MAX_WORDS_LIMIT"]))?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"(Maximum 30 words)";
+
 $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
@@ -60,7 +62,7 @@ $PROMPTS=array(
     "quest"=>[
         "cue"=>["$TEMPLATE_DIALOG"],
         //"player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest '{$questName}'?"
-        "player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest?"
+        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"]
     ],
 
     "bleedout"=>[
@@ -92,13 +94,13 @@ $PROMPTS=array(
 
     "inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG "
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG $MAXIMUM_WORDS"
         ]
             // Prompt is implicit
 
     ],
     "inputtext_s"=>[
-        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG"], // Prompt is implicit
+        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG $MAXIMUM_WORDS"], // Prompt is implicit
         "extra"=>["mood"=>"whispering"]
     ],
     "afterfunc"=>[

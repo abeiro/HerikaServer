@@ -13,6 +13,8 @@ class connector
     private $_functionName;
     private $_parameterBuff;
     private $_commandBuffer;
+    private $_jsonMode;
+    private $_jsonBuffer;
 
     public function __construct()
     {
@@ -54,334 +56,64 @@ class connector
 
 
         if ($GLOBALS["CONNECTOR"][$this->name]["template"]=="alpaca") {
-            foreach ($normalizedContext as $n=>$s_msg) {
-                if ($n==(sizeof($normalizedContext)-1)) {   // Last prompt line
-                    $context.="### Instruction: ".$s_msg.". Write a single reply only.\n";
-                    $GLOBALS["DEBUG_DATA"][]="### Instruction: ".$s_msg."";
-
-                } else {
-                    $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
-                    $context.="$s_msg_p\n";
-                    $GLOBALS["DEBUG_DATA"][]=$s_msg_p;
-                }
-
-            }
-
-            $context.="### Response:";
-            $GLOBALS["DEBUG_DATA"][]="### Response:";
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+           
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="vicuna-1") {
 
-
-            $context="{$GLOBALS["PROMPT_HEAD"]}\n";
-            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
-            $context.="Dialogue history:\n";
-
-            $contextHistory="";
-            $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
-
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
-
-                    $instruction="USER: ".$s_msg["content"]."\n";
-
-                } else {
-                    if ($s_msg["role"]=="user") {
-                        $contextHistory.="".$s_msg["content"]."\n";
-                        $GLOBALS["DEBUG_DATA"][]=$s_msg["content"]."\n";
-
-                    } elseif ($s_msg["role"]=="assistant") {
-                        $contextHistory.="".$s_msg["content"]."\n";
-                        $GLOBALS["DEBUG_DATA"][]=$s_msg["content"]."\n";
-                    } elseif ($s_msg["role"]=="system") {
-                    }  // Must rebuild this
-                }
-
-                $n++;
-            }
-
-            $context.="$contextHistory $instruction ASSISTANT: ";
-            $GLOBALS["DEBUG_DATA"][]=" $instruction ASSISTANT:";
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
+           
 
         }  elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="vicuna-1.1") {
 
-            $GLOBALS["more_stopseq"][]="USER:";
-            $context="{$GLOBALS["PROMPT_HEAD"]}\n";
-            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
-            $context.="{$GLOBALS["HERIKA_NAME"]} IS THE ASSISTANT, {$GLOBALS["PLAYER_NAME"]} IS THE USER\n";
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
-
-            $GLOBALS["DEBUG_DATA"][]=$context;
-
-            $contextHistory="";
-            $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
-
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
-
-                    $instruction="USER: ".$s_msg["content"]."\n";
-                    $GLOBALS["DEBUG_DATA"][]=$instruction;
-                } else {
-                    if ($s_msg["role"]=="user") {
-                        $contextHistory.="USER:".$s_msg["content"]."\n";
-                          $GLOBALS["DEBUG_DATA"][]="USER:".$s_msg["content"]."\n";
-                    } elseif ($s_msg["role"]=="assistant") {
-                         $GLOBALS["DEBUG_DATA"][]="ASSISTANT:".$s_msg["content"]."\n";
-                        $contextHistory.="ASSISTANT:".$s_msg["content"]."\n";
-                    } elseif ($s_msg["role"]=="system") {
-                    }  // Must rebuild this
-
-
-                }
-
-                $n++;
-            }
-
-            $context.="$contextHistory  $instruction ASSISTANT:{$GLOBALS["HERIKA_NAME"]}:";
-            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="chatml") {
 
-            $GLOBALS["more_stopseq"][]="<|im_start|>";
-            $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
-            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
-            $GLOBALS["DEBUG_DATA"][]=$context;
-
-            $contextHistory="";
-            $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
-
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
-
-                    $instruction="<|im_end|>\n<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
-
-                } else {
-                    if ($s_msg["role"]=="user") {
-                        $contextHistory.=$s_msg["content"]."\n";
-                          $GLOBALS["DEBUG_DATA"][]=$s_msg["content"];
-                    } elseif ($s_msg["role"]=="assistant") {
-                         $GLOBALS["DEBUG_DATA"][]=$s_msg["content"];
-                        $contextHistory.=$s_msg["content"]."\n";
-                    } elseif ($s_msg["role"]=="system") {
-                    }  // Must rebuild this
-
-
-                }
-
-                $n++;
-            }
-
-            $context.="$contextHistory  $instruction <|im_start|>assistant\n";
-            $GLOBALS["DEBUG_DATA"][]="$instruction";
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="chatml-c") {
 
-            $GLOBALS["more_stopseq"][]="<|im_start|>";
-            $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
-            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}<|im_end|>\n";
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
-            $GLOBALS["DEBUG_DATA"][]=$context;
-
-            $contextHistory="";
-            $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
-
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
-
-                    $instruction="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
-
-                } else {
-                    if ($s_msg["role"]=="user") {
-                        $contextHistory.="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
-                          $GLOBALS["DEBUG_DATA"][]="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
-                    } elseif ($s_msg["role"]=="assistant") {
-                         $GLOBALS["DEBUG_DATA"][]="<|im_start|>assistant\n".$s_msg["content"]."<|im_end|>\n";
-                        $contextHistory."<|im_start|>assistant\n".$s_msg["content"]."<|im_end|>\n";
-                    } elseif ($s_msg["role"]=="system") {
-                    }  // Must rebuild this
-
-
-                }
-
-                $n++;
-            }
-
-            $context.="$contextHistory  $instruction <|im_start|>assistant";
-            $GLOBALS["DEBUG_DATA"][]="$instruction";
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="synthia") {
 
 
-            $context="SYSTEM: {$GLOBALS["PROMPT_HEAD"]}.";
-            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\nUSER={$GLOBALS["PLAYER_NAME"]}";
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
-            //$context = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $context);
-
-
-            $GLOBALS["DEBUG_DATA"][]=$context;
-
-            $contextHistory="\nSCENARIO:\n";
-            $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
-
-                $s_msg_p=$s_msg["content"];
-
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
-
-                    $instruction="USER: ".$s_msg["content"]."\n";
-
-                } else {
-                    if ($s_msg["role"]=="user") {
-
-                       // $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg["content"]);
-
-                        $s_msg_p=$s_msg["content"]; // Overwrite
-
-                        $contextHistory.="$s_msg_p\n";
-                        $GLOBALS["DEBUG_DATA"][]="$s_msg_p\n";
-
-                    } elseif ($s_msg["role"]=="assistant") {
-
-                        $contextHistory.="".$s_msg["content"]."\n";
-                        $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
-
-                    } elseif ($s_msg["role"]=="system") {
-                    }  // Must rebuild this
-
-
-                }
-
-                $n++;
-            }
-
-            $context.="{$contextHistory}{$instruction}ASSISTANT:";
-            $GLOBALS["DEBUG_DATA"][]="$instruction";
-            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
-
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="extended-alpaca") {
 
-            $context="{$GLOBALS["HERIKA_NAME"]}'s Persona: {$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["PLAYER_NAME"]}'s Persona: {$GLOBALS["PLAYER_NAME"]}\n";
-            $context.="Scenario: {$GLOBALS["PROMPT_HEAD"]} \n";
-            $context.="Play the role of {$GLOBALS["HERIKA_NAME"]}. You must engage in a roleplaying chat with {$GLOBALS["PLAYER_NAME"]} below this line.Do not write dialogues for {$GLOBALS["PLAYER_NAME"]} and don't write narration.\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
-            $contextHistory="";
-            $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
-
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
-                    $instruction="### Input:\n".$s_msg["content"]."\n";
-                    $GLOBALS["DEBUG_DATA"][]=$instruction;
-
-                } else {
-                    if ($s_msg["role"]=="user") {
-                        $contextHistory.="### Input:\n".$s_msg["content"];
-                        $GLOBALS["DEBUG_DATA"][]="### Input:\n".$s_msg["content"];
-                    } elseif ($s_msg["role"]=="assistant") {
-                        $contextHistory.="### Response:\n".$s_msg["content"];
-                        $GLOBALS["DEBUG_DATA"][]="### Response:\n".$s_msg["content"];
-
-                    } elseif ($s_msg["role"]=="system") {
-                    }  // Must rebuild this
-                }
-
-                $n++;
-            }
-
-            $context.="$contextHistory $instruction ### Response\n{$GLOBALS["HERIKA_NAME"]}:";
-            $GLOBALS["DEBUG_DATA"][]="ASSISTANT:";
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="superHOT") {
 
-            $context="---\nstyle: roleplay\n";
-            $context.="characters:\n   {$GLOBALS["HERIKA_NAME"]}:{$GLOBALS["HERIKA_PERS"]}\n   {$GLOBALS["PLAYER_NAME"]}:Human\n";
-            $context.="summary: {$GLOBALS["PROMPT_HEAD"]} \n---\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
-            $contextHistory="";
-            $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
-
-                    $instruction=$s_msg["content"];
-
-
-                } else {
-                    if ($s_msg["role"]=="user") {
-                        $contextHistory.=$s_msg["content"]."\n";
-                    } elseif ($s_msg["role"]=="assistant") {
-                        $contextHistory.=$s_msg["content"]."\n";
-                    } elseif ($s_msg["role"]=="system") {
-                    }  // Must rebuild this
-                }
-
-                $GLOBALS["DEBUG_DATA"][]=$s_msg["content"];
-
-                $n++;
-            }
-
-            $context.="$contextHistory Human: $instruction\n{$GLOBALS["HERIKA_NAME"]}:";
-
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
 
         } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="zephyr") {
 
-            //$GLOBALS["more_stopseq"][]="USER:";
-            $context="<|system|>{$GLOBALS["PROMPT_HEAD"]}\n";
-            $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
-            //$context.="{$GLOBALS["HERIKA_NAME"]} IS THE ASSISTANT, {$GLOBALS["PLAYER_NAME"]} IS THE USER\n";
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
 
-            $GLOBALS["DEBUG_DATA"][]=$context;
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="openchat") {
 
-            $contextHistory="";
-            $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+           
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+        } elseif ($GLOBALS["CONNECTOR"][$this->name]["template"]=="dreamgen") {
 
-                    $instruction="</s>\n<|user|>".$s_msg["content"]."\n";
-                    $GLOBALS["DEBUG_DATA"][]=$instruction;
-                } else {
-                    if ($s_msg["role"]=="user") {
-                        $contextHistory.="".$s_msg["content"]."\n";
-                          $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
-                    } elseif ($s_msg["role"]=="assistant") {
-                         $contextHistory.="".$s_msg["content"]."\n";
-                         $GLOBALS["DEBUG_DATA"][]="".$s_msg["content"]."\n";
-                        
-                    } elseif ($s_msg["role"]=="system") {
-                    }  // Must rebuild this
-
-
-                }
-
-                $n++;
-            }
-
-            $context.="$contextHistory  $instruction </s>\n<|assistant|>";
-            $GLOBALS["DEBUG_DATA"][]="</s>\n<|assistant|>";
-            $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+           
+            include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
         }
+
 
         $TEMPERATURE=((isset($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? $GLOBALS["CONNECTOR"][$this->name]["temperature"] : 0.9)+0);
         $REP_PEN=((isset($GLOBALS["CONNECTOR"][$this->name]["rep_pen"]) ? $GLOBALS["CONNECTOR"][$this->name]["rep_pen"] : 1.12)+0);
@@ -491,7 +223,8 @@ fullanswer ::= "ExchangeItems()" | "SetCurrentPlan(" sentence ")" | "NoOp()"
 sentence ::= [a-zA-Z0-9.,?!\' ]*
 
 ';
-        //unset($postData["grammar"]);    
+        unset($postData["grammar"]);
+        $postData["grammar"]=file_get_contents(__DIR__.DIRECTORY_SEPARATOR."grammar".DIRECTORY_SEPARATOR."json.bnf");
         }
 
 
@@ -562,7 +295,9 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         // Initialize variables for response
         $responseHeaders = '';
         $responseBody = '';
-
+        
+        $this->_jsonBuffer="";
+        
         return true;
 
     }
@@ -574,13 +309,18 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         $buffer="";
         $totalBuffer="";
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
-
-        if ($this->_ignoreRest)
-            return "";
-
+       
+        
         if (strpos($line, 'data: {') !== 0) {
             return "";
         }
+        
+        if ($this->_jsonMode) {
+            $data=json_decode(substr($line, 6), true);
+            $this->_jsonBuffer.=$data["token"];
+            return "";
+        }
+        
         //$_ignoreRest
 
         $data=json_decode(substr($line, 6), true);
@@ -589,13 +329,14 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         if (!$data)
             return "";
         
-        if (strpos($line, 'data: {"token": "{"}') !== false) {
-            $this->_ignoreRest=true;
+        if (strpos($line, 'data: {"token": "{') !== false) {
+            $this->_jsonBuffer.=$data["token"];
+            $this->_jsonMode=true;
             return "";
 
         }
 
-
+         /*
          if (strpos($line, 'data: {"token": "[') === 0) {
 
             $this->_functionMode=true;
@@ -609,6 +350,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
             //$this->_functionRawName.=$data["token"];
             return "";
         }
+        */
 
 
         /*
@@ -660,53 +402,114 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
     {
         global $alreadysent;
 
-
+        $jsonData=json_decode($this->_jsonBuffer,true);
         
-        //print_r($this->_functionRawName);
+        //print_r($jsonData);
+        
+        if ($this->_jsonMode) {
+            
+            if (isset($jsonData["command"])) {
+                
+                if (isset($jsonData["priority"])) 
+                    $prob=$jsonData["priority"];
+                else
+                    $prob="";
+                
+                if (($prob!="urgent" && $prob!="high" && $prob!="now") && false)
+                    ;
+                else {
+                    $intent=$jsonData["command"];
+                    if ($intent=="DoNothing")
+                        ;// nothing to do
+                        
+                    else if ($intent=="WriteIntoQuestJournal"||$intent=="UpdateQuestJournal") {
+                        // bypass reponse.
+                        if (isset($jsonData["topic"])) {
+                            $this->_functionRawName="SetCurrentTask@{$jsonData["topic"]}";
+                            $GLOBALS["db"]->insert(
+                                'currentmission',
+                                array(
+                                    'ts' => $GLOBALS["gameRequest"][1],
+                                    'gamets' => $GLOBALS["gameRequest"][2],
+                                    'description' => $jsonData["topic"],
+                                    'sess' => 'pending',
+                                    'localts' => time()
+                                )
+                            );
+                        }
+                        //$alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+                    }    
+                    else if ($intent=="OpenBackPack"||$intent=="OpenInventory"||$intent=="ExchangeItems") {
 
-
-        if ((isset($this->_functionMode))&&($this->_functionMode)) {
+                        $this->_functionRawName="OpenInventory@";
+                        $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+                        
+                    } else if ($intent=="TakeASeat") {
+                        // bypass reponse.
+                        $this->_functionRawName="TakeASeat@";
+                        
+                        $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+                    } else if ($intent=="GatherInfo") {
+                        // bypass reponse.
+                        $this->_functionRawName="GatherInfo@{$jsonData["topic"]}";
+                        
+                        //$alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+                    }
+                }
+                    
+                
+                return $alreadysent;
+                
+                
+            }
             
-            $kobname=$this->_functionRawName;
-            $kobname=strtr($kobname,["("=>"@",")"=>"@"]);
-            $kobParsed=explode("@",$kobname);
             
-            $this->_functionRawName=$kobname;
-            if ($kobParsed[0]=="NoOp")
-                ;// nothing to do
-                
-            else if ($kobParsed[0]=="SetCurrentPlan") {
-                // bypass reponse.
-                $this->_functionRawName="SetCurrentTask@{$kobParsed[1]}";
-                $GLOBALS["db"]->insert(
-                    'currentmission',
-                    array(
-                        'ts' => $GLOBALS["gameRequest"][1],
-                        'gamets' => $GLOBALS["gameRequest"][2],
-                        'description' => $kobParsed[1],
-                        'sess' => 'pending',
-                        'localts' => time()
-                    )
-                );
-                //$alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-            }    
-            else if ($kobParsed[0]=="ExchangeItems") {
-                // bypass reponse.
-                $this->_functionRawName="OpenInventory@";
-                
-                $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-            } else if ($kobParsed[0]=="TakeASeat") {
-                // bypass reponse.
-                $this->_functionRawName="TakeASeat@";
-                
-                $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-            }   
-                
-            
-            return $alreadysent;
         } else {
-            return [];
+
+            if ((isset($this->_functionMode))&&($this->_functionMode)) {
+                
+                $kobname=$this->_functionRawName;
+                $kobname=strtr($kobname,["("=>"@",")"=>"@"]);
+                $kobParsed=explode("@",$kobname);
+                
+                $this->_functionRawName=$kobname;
+                if ($kobParsed[0]=="NoOp")
+                    ;// nothing to do
+                    
+                else if ($kobParsed[0]=="SetCurrentPlan") {
+                    // bypass reponse.
+                    $this->_functionRawName="SetCurrentTask@{$kobParsed[1]}";
+                    $GLOBALS["db"]->insert(
+                        'currentmission',
+                        array(
+                            'ts' => $GLOBALS["gameRequest"][1],
+                            'gamets' => $GLOBALS["gameRequest"][2],
+                            'description' => $kobParsed[1],
+                            'sess' => 'pending',
+                            'localts' => time()
+                        )
+                    );
+                    $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+                }    
+                else if ($kobParsed[0]=="ExchangeItems") {
+                    // bypass reponse.
+                    $this->_functionRawName="OpenInventory@";
+                    
+                    $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+                } else if ($kobParsed[0]=="TakeASeat") {
+                    // bypass reponse.
+                    $this->_functionRawName="TakeASeat@";
+                    
+                    $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
+                }   
+                    
+                
+                return $alreadysent;
+            }
         }
+        
+        return [];
+        
     }
 
 

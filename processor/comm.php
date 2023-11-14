@@ -206,9 +206,16 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "quest") {
     //13333334
     if (($gameRequest[2]>13333334)||($gameRequest[2]<13333332)) {  // ?? How this works.
-        logEvent($gameRequest);
+        
+        if (strpos($gameRequest[3],'New quest ""')) {
+          // plugin couldn't get quest name  
+            $MUST_END=true;
+        } else {
+            logEvent($gameRequest);
+        }
     } else
         $MUST_END=true;
+    $MUST_END=true;
 
 } elseif ($gameRequest[0] == "location") {
     logEvent($gameRequest);

@@ -22,4 +22,7 @@ $ERROR_OPENAI = "No te escuché, ¿puedes repetir?";  // Di algo lógico, ya que
 $ERROR_OPENAI_REQLIMIT = "Cálmate, estoy teniendo un flashback, dame un minuto";  // Di algo lógico, ya que esta respuesta se enviará en la próxima llamada.
 $ERROR_OPENAI_POLICY = "No puedo pensar con claridad en este momento...";  // Di algo lógico, ya que esta respuesta se enviará en la próxima llamada.
 
+
+
+
 ?>

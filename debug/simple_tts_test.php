@@ -10,12 +10,14 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
     
 
-    
+error_reporting(E_ALL);
 $db=new sql();
+
+$GLOBALS["AVOID_TTS_CACHE"]=true;
 
 $DEBUG_DATA=[];
 
-print_r(returnLines(["Hello world"]));
+print_r(returnLines(["I heard there's a powerful mage in Winterhold. We should pay them a visit"]));
 
 print_r($DEBUG_DATA);
 
