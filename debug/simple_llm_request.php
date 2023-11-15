@@ -18,7 +18,7 @@ require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
 
 
 
-$FUNCTIONS_ARE_ENABLED=true;
+$FUNCTIONS_ARE_ENABLED=false;
 $gameRequest=["inputtext"];
 
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
@@ -36,6 +36,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
     $connectionHandler=new connector();
     $connectionHandler->open($prompt,["MAX_TOKENS"=>32]);
 
+    print_r($GLOBALS["DEBUG_DATA"]["full"]);
+     
     $buffer="";
     $totalBuffer="";
     $breakFlag=false;
@@ -54,6 +56,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         }
         
      }
+     
+    
      
      echo PHP_EOL."$buffer".PHP_EOL;
    

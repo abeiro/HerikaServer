@@ -206,7 +206,8 @@
     },
     "MISC": {
       "_title":"Misc features/options",
-      "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context longs. Helps with memory recollection."}
+      "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context longs. Helps with memory recollection."},
+      "QUEST_COMMENT":{"type":"boolean","description":"If enabled, it will trigger a chat event when new quest is acquired."}
     },
     "EXPERIMENTAL": {
       "_title":"Experimental features",

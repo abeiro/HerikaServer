@@ -509,7 +509,7 @@ if (php_sapi_name()=="cli") {
 
 
 // POST PROCESS TASKS
-
+while(@ob_end_clean());
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 
 
