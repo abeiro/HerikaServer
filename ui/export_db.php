@@ -7,7 +7,7 @@
 
 <?php
 
-// Specify the path to the original SQLite database file
+// Specify the path to the SQLite database file
 $originalDbFile = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "mysqlitedb.db";
 
 // Download the existing SQLite database file
