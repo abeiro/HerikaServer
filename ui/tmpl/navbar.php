@@ -70,6 +70,11 @@
                         </a>
                     </li>
                     <li>
+                        <a class="dropdown-item" href="export_db.php" title="Export Database">
+                            Export SQLITE3 Database
+                        </a>
+                    </li>
+                    <li>
                         <a class="dropdown-item" href="import_db.php" title="Import Database">
                             Import SQLITE3 Database
                         </a>
@@ -90,8 +95,8 @@
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="../soundcache/" target="_blank">Text-to-Speech Cache</a></li>
-                    <li><a class="dropdown-item" href="updater.php">Update Server</a></li>
+                    <li><a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a></li>
+                    <li><a class="dropdown-item" href="updater.php">Update Herika Server</a></li>
                     <li><a class="dropdown-item" href="tests.php" target="_blank">Test ChatGPT/KoboldCPP Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a></li>
