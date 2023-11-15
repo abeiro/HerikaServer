@@ -10,7 +10,11 @@ $HERIKA_PERS="You are Herika, a Breton female who likes jokes and sarcastic comm
 
 
 $CORE_LANG="";
+
 $NEWQUEUE=false;
+
+$MAX_WORDS_LIMIT=0;
+
 
 $TTS["AZURE"]["fixedMood"]="";
 $TTS["AZURE"]["region"]="westeurope";			
@@ -118,6 +122,9 @@ $CONNECTOR["koboldcpp"]["newline_as_stopseq"]=true;
 $CONNECTOR["koboldcpp"]["use_default_badwordsids"]=true;
 $CONNECTOR["koboldcpp"]["template"]="alpaca";
 $CONNECTOR["koboldcpp"]["eos_token"]='</s>';
+$CONNECTOR["koboldcpp"]["top_k"]=0;
+$CONNECTOR["koboldcpp"]["min_p"]=0;
+
 
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions";
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-2-70b-chat";

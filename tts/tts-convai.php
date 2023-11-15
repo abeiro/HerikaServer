@@ -51,9 +51,14 @@ function tts($textString, $mood, $stringforhash) {
 		if ($response !== false ) {
 			// Handle the successful response
 			
+			$wavNameO=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".orig.wav";
 			$wavName=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
-			file_put_contents($wavName, trim($response));
-						
+
+			file_put_contents($wavNameO, trim($response));
+
+			$startTimeTrans = microtime(true);
+			shell_exec("ffmpeg -y -i $wavNameO -filter:a \"speechnorm=e=6:r=0.0001:l=1\" $wavName 2>/dev/null >/dev/null");
+
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
 			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in convai call ";
 			return "soundcache/" . md5(trim($stringforhash)) . ".wav";

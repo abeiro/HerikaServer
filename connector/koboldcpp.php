@@ -141,6 +141,8 @@ class connector
             "top_p"=>$TOP_P,
             //"max_context_length"=>2048,
             "max_length"=>$MAX_TOKENS,
+            "min_p"=>$GLOBALS["CONNECTOR"][$this->name]["min_p"]+0,
+            "top_k"=>$GLOBALS["CONNECTOR"][$this->name]["top_k"]+0,
             "rep_pen"=>$REP_PEN,
             "stop_sequence"=>$stop_sequence,
             "use_default_badwordsids"=>$GLOBALS["CONNECTOR"][$this->name]["use_default_badwordsids"]
@@ -469,7 +471,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
             if ((isset($this->_functionMode))&&($this->_functionMode)) {
                 
                 $kobname=$this->_functionRawName;
-                $kobname=strtr($kobname,["("=>"@",")"=>"@"]);
+                $kobname=strtr("$kobname",["("=>"@",")"=>"@"]);
                 $kobParsed=explode("@",$kobname);
                 
                 $this->_functionRawName=$kobname;

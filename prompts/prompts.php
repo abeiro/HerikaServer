@@ -8,7 +8,7 @@
 // Full Prompt then is $PROMPT_HEAD + $HERIKA_PERS + $COMMAND_PROMPT + CONTEXT + requirement + cue
 
 // Common patterns to use in most functions
-$MAXIMUM_WORDS=(isset($GLOBALS["MAX_WORDS_LIMIT"]))?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"(Maximum 30 words)";
+$MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
 $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
