@@ -17,7 +17,7 @@ function stt($file)
     $fileContent = file_get_contents($filePath);
     $filename = basename($filePath);
     $multipartBody = "--{$boundary}\r\n"
-        . "Content-Disposition: form-data; name=\"wav_file\"; filename=\"{$filename}\"\r\n"
+        . "Content-Disposition: form-data; name=\"file\"; filename=\"{$filename}\"\r\n"
         . "Content-Type: audio/wav\r\n\r\n"
         . $fileContent . "\r\n"
         . "--{$boundary}--\r\n";
