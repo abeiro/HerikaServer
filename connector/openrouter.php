@@ -72,10 +72,11 @@ class connector
             }
         }
 
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            $data["functions"]=$GLOBALS["FUNCTIONS"];
+        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            foreach ($GLOBALS["FUNCTIONS"] as $function)
+                $data["tools"][]=["type"=>"function","function"=>$function];
             if (isset($GLOBALS["FUNCTIONS_FORCE_CALL"])) {
-                $data["function_call"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
+                $data["tool_choice"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
             }
 
         }
