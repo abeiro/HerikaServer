@@ -61,11 +61,11 @@ function tts($textString, $mood = "default", $stringforhash) {
 			$wavName=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
 			file_put_contents($mp3Name, trim($response));
 			$startTimeTrans = microtime(true);
-			shell_exec("ffmpeg -i $mp3Name $wavName 2>/dev/null >/dev/null");
+			shell_exec("ffmpeg -y -i $mp3Name $wavName 2>/dev/null >/dev/null");
 			$endTimeTrans = microtime(true)-$startTimeTrans;
             //file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".mp3", trim($response));
 			//$finalData=MP3toWav($response,strlen($response));
-			//$size=strlen($finalData);
+			$size=filesize($wavName);
 			//file_put_contents(
 			//	dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"
 			//	, $finalData); // Save the audio response to a file

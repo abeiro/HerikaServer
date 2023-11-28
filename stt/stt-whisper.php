@@ -68,7 +68,7 @@ function stt($file)
         ],
     ];
 
-    file_put_contents("/tmp/text.log",$additionalKeywords);
+    //file_put_contents("/tmp/text.log",$additionalKeywords);
     $context = stream_context_create($contextOptions);
     $response = file_get_contents($url, false, $context);
 

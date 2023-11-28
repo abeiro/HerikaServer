@@ -36,6 +36,7 @@ $TTS["ELEVEN_LABS"]["optimize_streaming_latency"]="0";
 $TTS["ELEVEN_LABS"]["model_id"]="eleven_monolingual_v1";
 $TTS["ELEVEN_LABS"]["stability"]="0.75";
 $TTS["ELEVEN_LABS"]["similarity_boost"]="0.75";
+$TTS["ELEVEN_LABS"]["style"]=0.0;
 $TTS["ELEVEN_LABS"]["API_KEY"]="";
 
 
@@ -170,5 +171,10 @@ $TTS["CONVAI"]["endpoint"]='https://api.convai.com/tts';	//End point
 $TTS["CONVAI"]["API_KEY"]='';	//API KEY
 $TTS["CONVAI"]["language"]='en-US';	//Language
 $TTS["CONVAI"]["voiceid"]='WUFemale3';	//VoiceId
+
+$TTS["XTTS"]["endpoint"]='';	//End point
+$TTS["XTTS"]["language"]='en';	//
+$TTS["XTTS"]["voiceid"]='11labs_diane';	//Voice json file
+
 
 ?>

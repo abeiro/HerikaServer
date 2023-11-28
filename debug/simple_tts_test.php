@@ -17,7 +17,7 @@ $GLOBALS["AVOID_TTS_CACHE"]=true;
 
 $DEBUG_DATA=[];
 
-print_r(returnLines(["I heard there's a powerful mage in Winterhold. We should pay them a visit"]));
+print_r(returnLines(["I heard there's a powerful mage in Winterhold. We should pay them a visit","Today, as we gather in this virtual hall, I can't help but draw inspiration from the vast and enchanting universe of Skyrim"]));
 
 print_r($DEBUG_DATA);
 

@@ -27,6 +27,7 @@ function tts($textString, $mood , $stringforhash) {
 			'input' => "$textString",
 			'model' => $GLOBALS["TTS"]["openai"]["model_id"],
 			'voice' => $GLOBALS["TTS"]["openai"]["voice"],
+			'style' => $GLOBALS["TTS"]["openai"]["style"]+0
 			);
 
 
@@ -54,7 +55,7 @@ function tts($textString, $mood , $stringforhash) {
 			$wavName=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
 			file_put_contents($mp3Name, trim($response));
 			$startTimeTrans = microtime(true);
-			shell_exec("ffmpeg -i $mp3Name -filter:a \"speechnorm=e=6:r=0.0001:l=1\" $wavName 2>/dev/null >/dev/null");
+			shell_exec("ffmpeg -y -i $mp3Name -filter:a \"speechnorm=e=6:r=0.0001:l=1\" $wavName 2>/dev/null >/dev/null");
 			$endTimeTrans = microtime(true)-$startTimeTrans;
             //file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".mp3", trim($response));
 			//$finalData=MP3toWav($response,strlen($response));

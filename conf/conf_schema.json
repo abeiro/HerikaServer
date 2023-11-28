@@ -69,7 +69,7 @@
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai","xtts"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "AZURE": {
@@ -97,6 +97,7 @@
       "model_id": {"type":"string","description":"Model ID","helpurl":"https://beta.elevenlabs.io/speech-synthesis"},
       "stability":{"type":"number","description":"Stability"},
       "similarity_boost": {"type":"number","description":"Similarity_Boost"},
+      "style": {"type":"number","description":"Style"},
       "API_KEY": {"type":"apikey","description":"Eleven Labs API key.","code":"11LABS_API_KEY"}
     },
     "COQUI_AI": {
@@ -124,19 +125,27 @@
       "waveglowPath":{"type":"string","description":"waveglowPath (relative)"},
       "vocoder":{"type":"string","description":"vocoder"},
       "distroname":{"type":"string","description":"Change only if you changed DDistro name. Leave default if you don't know what are you doing"}
-    },"openai": {
+    },
+    "openai": {
       "_title":"OpenAI TTS",
       "endpoint":{"type":"url","description":"End point","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
       "API_KEY":{"type":"apikey","description":"API KEY"},
       "voice":{"type":"select","values":["alloy", "echo", "fable", "onyx", "nova", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
       "model_id":{"type":"select","values":["tts-1", "tts-1-hd"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
-    },"CONVAI": {
+    },
+    "CONVAI": {
       "_title":"CONVAI TTS",
       "endpoint":{"type":"url","description":"End point","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"},
       "API_KEY":{"type":"apikey","description":"API KEY"},
       "language":{"type":"select","values":["ar", "cmn-CN", "de-DE", "en-US", "es-ES", "es-MX", "es-US", "fr-FR", "hi-IN", "it-IT", "js-JP", "kk-KZ", "ko-KR", "nl-BE", "nl-NL", "pl-PL", "pt-BR", "pt-PT", "ru-RU", "sv-SE", "tr-TR", "vi-VN", "yue-HK", "zh-HK"],"description":"Language","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
-      "voiceid":{"type":"select","values":[ "MALE", "FEMALE", "WUKMale 1", "WUKMale 2", "WUKFemale 1", "WUKFemale 2", "WUKFemale 3", "WAMale 1", "WAMale 2", "WAFemale 1", "WAFemale 2", "WIMale 1", "WIMale 2", "WIFemale 1", "WIFemale 2", "WUMale 1", "WUMale 2", "WUMale 3", "WUMale 4", "WUMale 5", "WUFemale 1", "WUFemale 2", "WUFemale 3", "WUFemale 4", "WUFemale 5", "Trixie", "Twilight Sparkle", "Celestia", "Spike", "Applejack" ]
-,"description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"}
+      "voiceid":{"type":"select","values":[ "MALE", "FEMALE", "WUKMale 1", "WUKMale 2", "WUKFemale 1", "WUKFemale 2", "WUKFemale 3", "WAMale 1", "WAMale 2", "WAFemale 1", "WAFemale 2", "WIMale 1", "WIMale 2", "WIFemale 1", "WIFemale 2", "WUMale 1", "WUMale 2", "WUMale 3", "WUMale 4", "WUMale 5", "WUFemale 1", "WUFemale 2", "WUFemale 3", "WUFemale 4", "WUFemale 5", "Trixie", "Twilight Sparkle", "Celestia", "Spike", "Applejack" ]},
+      "description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"
+      },
+    "XTTS": {
+      "_title":"COQUI.AI xtts",
+      "endpoint":{"type":"url","description":"End point","helpurl":""},
+      "language":{"type":"select","values":["en", "es"],"description":""},
+      "voiceid":{"type":"string","description":"Voice json file","helpurl":""}
     }
   },
   "STTFUNCTION": {
