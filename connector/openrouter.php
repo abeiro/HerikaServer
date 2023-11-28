@@ -48,7 +48,11 @@ class connector
                 $contextData
             ,
             'stream' => true,
-            'max_tokens'=>$MAX_TOKENS
+            'max_tokens'=>$MAX_TOKENS,
+            'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
+            'presence_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0,
+            'frequency_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0,
+            'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
         );
 
         // Override
@@ -72,10 +76,11 @@ class connector
             }
         }
 
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            $data["functions"]=$GLOBALS["FUNCTIONS"];
+        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            foreach ($GLOBALS["FUNCTIONS"] as $function)
+                $data["tools"][]=["type"=>"function","function"=>$function];
             if (isset($GLOBALS["FUNCTIONS_FORCE_CALL"])) {
-                $data["function_call"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
+                $data["tool_choice"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
             }
 
         }

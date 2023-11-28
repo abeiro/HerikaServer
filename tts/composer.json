@@ -1,5 +1,11 @@
 {
     "require": {
-        "google/cloud-text-to-speech": "^1.7"
+        "google/cloud-text-to-speech": "^1.7",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-sqlite3": "*",
+        "ext-gd": "*",
+        "ext-dom": "*",
+        "ext-ctype": "*"
     }
 }
