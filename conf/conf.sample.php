@@ -112,6 +112,8 @@ $CONNECTOR["openai"]["temperature"]=1;
 $CONNECTOR["openai"]["presence_penalty"]=1;
 $CONNECTOR["openai"]["API_KEY"]="";
 $CONNECTOR["openai"]["MAX_TOKENS_MEMORY"]="512";
+$CONNECTOR["openai"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
+$CONNECTOR["openai"]["top_p"]=1;        			//LLM parameter top_p
 
 $CONNECTOR["koboldcpp"]["url"]="http://127.0.0.1:5001";
 $CONNECTOR["koboldcpp"]["max_tokens"]=100;
@@ -134,6 +136,11 @@ $CONNECTOR["openrouter"]["xreferer"]="http://localhost:8081/saig-gwserver/";
 $CONNECTOR["openrouter"]["xtitle"]="Herika";
 $CONNECTOR["openrouter"]["API_KEY"]="";
 $CONNECTOR["openrouter"]["MAX_TOKENS_MEMORY"]="512";
+$CONNECTOR["openrouter"]["temperature"]=0.7;    		//LLM parameter temperature
+$CONNECTOR["openrouter"]["presence_penalty"]=0; 		//LLM parameter presence_penalty
+$CONNECTOR["openrouter"]["frequency_penalty"]=0;        	//LLM parameter frequency_penalty
+$CONNECTOR["openrouter"]["top_p"]=1;    			//LLM parameter top_p
+
 
 $CONNECTOR["oobabooga"]["HOST"]="127.0.0.1";
 $CONNECTOR["oobabooga"]["PORT"]="5005";
