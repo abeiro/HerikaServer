@@ -169,14 +169,17 @@ echo str_repeat("</fieldset>", $lvl2);
 
 echo '</form>';
 
-echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'><span><strong>Quick access</strong></span><ul>";
+echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'><span><strong>Quick Access</strong></span><ul>";
 echo "<li><a href='#top'>Character Configuration</a></li>";
+
 foreach ($summary as $item) {
-    if (strpos($item,"::")!==false)
+    if (strpos($item, "::") !== false)
         continue;
-    echo "<li><a href='#".md5($item)."'>$item</a></li>";
+    echo "<li><a href='#" . md5($item) . "'>$item</a></li>";
 }
-   echo "<li><a href='#end'>Check & Save</a></li>";
+
+echo "<li><a href='#end'>Check & Save</a></li>";
+echo '<input class="btn btn-info" type="button" name="save" value="Save" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php?save=true";document.forms[0].submit();\' /></p>';
 echo "</ul></div>";
 
 
