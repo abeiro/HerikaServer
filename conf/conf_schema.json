@@ -121,7 +121,7 @@
       "ssml_rate":{"type":"number","description":"Rate"},
       "ssml_pitch":{"type":"string","description":"Pitch"}
     },
-     "XVASYNTH": {
+    "XVASYNTH": {
       "_title":"xVASynth. (defaults to sk_femaleyoungeager)",
       "url":{"type":"url","description":"xVASynth must be running in same machine as DwemerDistro. Example: http://your-local-ip:8008"},
       "base_lang":{"type":"string","description":"Base language"},
