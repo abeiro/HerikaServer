@@ -123,7 +123,7 @@
     },
      "XVASYNTH": {
       "_title":"xVASynth. (defaults to sk_femaleyoungeager)",
-      "url":{"type":"url","description":"xVASynth must be run in same machine as DwemerDistro, so this must be http://your-local-ip:8008"},
+      "url":{"type":"url","description":"xVASynth must be running in same machine as DwemerDistro. Example: http://your-local-ip:8008"},
       "base_lang":{"type":"string","description":"Base language"},
       "modelType":{"type":"string","description":"modelType"},
       "model":{"type":"string","description":"Model"},
@@ -134,7 +134,7 @@
     },
     "openai": {
       "_title":"OpenAI TTS",
-      "endpoint":{"type":"url","description":"End point","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "endpoint":{"type":"url","description":"Endpoint URL","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
       "API_KEY":{"type":"apikey","description":"API KEY"},
       "voice":{"type":"select","values":["alloy", "echo", "fable", "onyx", "nova", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
       "model_id":{"type":"select","values":["tts-1", "tts-1-hd"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
@@ -151,7 +151,7 @@
       "_title":"COQUI.AI xtts",
       "endpoint":{"type":"url","description":"End point","helpurl":""},
       "language":{"type":"select","values":["en", "es"],"description":""},
-      "voiceid":{"type":"string","description":"Voice json file","helpurl":""}
+      "voiceid":{"type":"string","description":"Json voice file","helpurl":""}
     }
   },
   "STTFUNCTION": {
@@ -163,7 +163,7 @@
     "WHISPER": {
       "_title":"OpenAI's Whisper Speech-to-Text",
       "LANG": {"type":"string","description":"Language to detect for STT."},
-      "TRANSLATE": {"type":"boolean","description":"Will try to translate to english. "},
+      "TRANSLATE": {"type":"boolean","description":"Will try to translate to english."},
       "API_KEY": {"type":"apikey","description":"OpenAI API key. Same used for OpenAI/ChatGPT AI service.","code":"OPENAI_API_KEY"}
     },
     "AZURE": {
@@ -179,17 +179,17 @@
   },
   "ITTFUNCTION": {
     "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition feature. Soulgaze spell.", 
-    "_title":"Image Recognition service (*Experimental)"
+    "_title":"Image Recognition Service"
    },
   "ITT": {
-    "_title":"Image Recognition service (*Experimental)",
+    "_title":"Image Recognition Service",
     "AZURE": {
-      "_title":"Azure Text-To-Speech (not working)",
+      "_title":"Azure Image-to-Text (DOES NOT WORK!)",
       "ENDPOINT": {"type":"url","endpoint":"Endpoint URL"},
       "API_KEY": {"type":"apikey","description":"Azure Computer Vision API KEY","code":"AZURE_API_KEY"}
     },
     "LLAMACPP": {
-      "_title":"Bare llama.cpp server.",
+      "_title":"LLama.cpp Server",
       "URL": {"type":"url","description":"URL of llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md"}
     },
     "openai": {
@@ -229,7 +229,7 @@
     },
     "EXPERIMENTAL": {
       "_title":"Experimental features",
-      "KOBOLDCPP_ACTIONS":{"type":"boolean","description":"Enable experimental and limited actions for koboldcpp."}
+      "KOBOLDCPP_ACTIONS":{"type":"boolean","description":"Enable experimental and limited actions for KoboldCPP."}
     }
   }
   
