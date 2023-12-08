@@ -144,7 +144,7 @@
       "endpoint":{"type":"url","description":"End point","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"},
       "API_KEY":{"type":"apikey","description":"API KEY"},
       "language":{"type":"select","values":["ar", "cmn-CN", "de-DE", "en-US", "es-ES", "es-MX", "es-US", "fr-FR", "hi-IN", "it-IT", "js-JP", "kk-KZ", "ko-KR", "nl-BE", "nl-NL", "pl-PL", "pt-BR", "pt-PT", "ru-RU", "sv-SE", "tr-TR", "vi-VN", "yue-HK", "zh-HK"],"description":"Language","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
-      "voiceid":{"type":"select","values":[ "MALE", "FEMALE", "WUKMale 1", "WUKMale 2", "WUKFemale 1", "WUKFemale 2", "WUKFemale 3", "WAMale 1", "WAMale 2", "WAFemale 1", "WAFemale 2", "WIMale 1", "WIMale 2", "WIFemale 1", "WIFemale 2", "WUMale 1", "WUMale 2", "WUMale 3", "WUMale 4", "WUMale 5", "WUFemale 1", "WUFemale 2", "WUFemale 3", "WUFemale 4", "WUFemale 5", "Trixie", "Twilight Sparkle", "Celestia", "Spike", "Applejack" ]},
+      "voiceid":{"type":"string","description":"Voice id (check compatability with language)","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"},
       "description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"
       },
     "XTTS": {

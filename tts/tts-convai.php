@@ -7,10 +7,13 @@ function tts($textString, $mood, $stringforhash) {
 		$apiKey=$GLOBALS["TTS"]["CONVAI"]["API_KEY"];
 
 		// Cache 
-		if (!isset($GLOBALS["AVOID_TTS_CACHE"]))
+		if (!isset($GLOBALS["AVOID_TTS_CACHE"])) {
 			if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
 				return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
 	
+		} else {
+				error_log("Downloading voice");
+		}
 	    $starTime = microtime(true);
 
 		$url = $GLOBALS["TTS"]["CONVAI"]["endpoint"];
@@ -25,7 +28,7 @@ function tts($textString, $mood, $stringforhash) {
 		// Request data
 		$data = array(
 			'transcript' => $textString,
-			'voice' => $GLOBALS["TTS"]["CONVAI"]["voiceid"],
+			'voice' => $GLOBALS["TTS"]["FORCED_VOICE_DEV"]?:$GLOBALS["TTS"]["CONVAI"]["voiceid"],
 			'filename' => uniqid().".wav",
 			'encoding' => "wav",
 			'language'=>$GLOBALS["TTS"]["CONVAI"]["language"]
