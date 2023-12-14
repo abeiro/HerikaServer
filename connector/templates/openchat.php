@@ -2,7 +2,7 @@
  //$GLOBALS["more_stopseq"][]="USER:";
             $context="GPT4 User: {$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
+            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n#CONTEXT\n";
             //$context.="{$GLOBALS["HERIKA_NAME"]} IS THE ASSISTANT, {$GLOBALS["PLAYER_NAME"]} IS THE USER\n";
 
 
@@ -14,7 +14,7 @@
 
                 if ($n==(sizeof($contextData)-1)) {   // Last prompt line
 
-                    $instruction="".$s_msg["content"]."<|end_of_turn|>\n";
+                    $instruction="#INSTRUCTION ".$s_msg["content"]."<|end_of_turn|>\n";
                     $GLOBALS["DEBUG_DATA"][]=$instruction;
                 } else {
                     if ($s_msg["role"]=="user") {

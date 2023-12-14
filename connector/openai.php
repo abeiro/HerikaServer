@@ -15,12 +15,15 @@ class connector
     private $_numOutputTokens;
     private $_dataSent;
     private $_fid;
+    private $_stopProc;
 
 
     public function __construct()
     {
         $this->name="openai";
         $this->_commandBuffer=[];
+        $this->_stopProc=false;
+
     }
 
 
@@ -108,6 +111,10 @@ class connector
 
         $context = stream_context_create($options);
         $this->primary_handler = fopen($url, 'r', false, $context);
+        if (!$this->primary_handler) {
+                error_log(print_r(error_get_last(),true));
+                return null;
+        }
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
 
@@ -146,12 +153,15 @@ class connector
 
         
             if (isset($data["choices"][0]["delta"]["tool_calls"][0]["function"]["name"])) {
-                $this->_functionName = $data["choices"][0]["delta"]["tool_calls"][0]["function"]["name"];
+                if (!isset($this->_functionName))
+                    $this->_functionName = $data["choices"][0]["delta"]["tool_calls"][0]["function"]["name"];
+                else
+                    $this->_stopProc=true;
             }
 
             if (isset($data["choices"][0]["delta"]["tool_calls"][0]["function"]["arguments"])) {
-
-                $this->_parameterBuff .= $data["choices"][0]["delta"]["tool_calls"][0]["function"]["arguments"];
+                if (!$this->_stopProc)
+                    $this->_parameterBuff .= $data["choices"][0]["delta"]["tool_calls"][0]["function"]["arguments"];
 
             }
             
@@ -161,24 +171,29 @@ class connector
 
             }
             
+            
+            
         }
 
         if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] == "tool_calls") {
 
             $parameterArr = json_decode($this->_parameterBuff, true) ;
+            file_put_contents(__DIR__."/../log/debugStreamParsed.log",print_r($this->_parameterBuff,true));
 
-            $parameter = current($parameterArr); // Only support for one parameter
+            if (is_array($parameterArr)) {
+                $parameter = current($parameterArr); // Only support for one parameter
 
-            if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
-                $functionCodeName=getFunctionCodeName($this->_functionName);
-                $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
-                file_put_contents(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".last_tool_call_openai.id.txt",$this->_fid);
-                //echo "Herika|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
+                    $functionCodeName=getFunctionCodeName($this->_functionName);
+                    $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
+                    file_put_contents(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".last_tool_call_openai.id.txt",$this->_fid);
+                    //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
+                }
+
+                $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
+                @ob_flush();
             }
-
-            $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-            @ob_flush();
 
         }
 
@@ -207,17 +222,20 @@ class connector
 
         if ($this->_functionName) {
             $parameterArr = json_decode($this->_parameterBuff, true);
-            $parameter = current($parameterArr); // Only support for one parameter
+            if (is_array($parameterArr)) {
+                $parameter = current($parameterArr); // Only support for one parameter
 
-            if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
-                $functionCodeName=getFunctionCodeName($this->_functionName);
-                $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
-                //echo "Herika|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
+                    $functionCodeName=getFunctionCodeName($this->_functionName);
+                    $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
+                    //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
-            }
+                }
 
-            $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-            @ob_flush();
+                $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
+                @ob_flush();
+            } else 
+                return null;
         }
 
         return $this->_commandBuffer;

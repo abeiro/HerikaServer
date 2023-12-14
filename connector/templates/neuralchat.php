@@ -1,10 +1,9 @@
 <?php
 
- $GLOBALS["more_stopseq"][]="<|im_start|>";
-            $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
+            $context="### System:\n{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
             $context.="{$GLOBALS["COMMAND_PROMPT"]}\n";
-            $context.="{$GLOBALS["COMMAND_PROMPT"]}\n#CONTEXT\n";
+
             $GLOBALS["DEBUG_DATA"][]=$context;
 
             $contextHistory="";
@@ -13,7 +12,7 @@
 
                 if ($n==(sizeof($contextData)-1)) {   // Last prompt line
 
-                    $instruction="<|im_end|>\n<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
+                    $instruction="### User:\n".$s_msg["content"]."\n";
 
                 } else {
                     if ($s_msg["role"]=="user") {
@@ -31,7 +30,7 @@
                 $n++;
             }
 
-            $context.="$contextHistory  $instruction <|im_start|>assistant\n";
+            $context.="$contextHistory  $instruction ### Assistant:\n";
             $GLOBALS["DEBUG_DATA"][]="$instruction";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
             

@@ -328,7 +328,7 @@ if ($connectionHandler->primary_handler === false) {
 
 
     $actions=$connectionHandler->processActions();
-    if (sizeof($actions)>0) {
+    if (is_array($actions) && (sizeof($actions)>0)) {
 
         $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
         echo implode("\r\n", $actions);
