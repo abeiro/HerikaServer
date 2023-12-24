@@ -29,7 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } else if (isset($_POST["runscript"])) {
         sleep(5);
-        $output = shell_exec('php HerikaScriptWriter.php');
+        $output = shell_exec('php HerikaScriptWriterv2.php 1 script.json');
         echo "<pre>$output</pre>";
 
     } else if (isset($_POST["savetemplate"])) {

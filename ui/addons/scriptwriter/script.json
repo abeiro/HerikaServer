@@ -1,31 +1,26 @@
 [
     {
-      "type": "line",
-      "data": ["Herika: ", "MoodNeutral", "", "IdleDialogueWelcomeGesture"]
+        "type": "line",
+        "data": ["So, you've heard about the majestic dragons?", "MoodNeutral", "", "IdleDialogueWelcomeGesture"]
     },
     {
-      "type": "line",
-      "data": ["Did you know that dragons in Skyrim ", "", "", ""]
+        "type": "line",
+        "data": ["Let me enlighten you with some legendary lore.", "MoodNeutral", "", "IdleBookReading"]
     },
     {
-      "type": "line",
-      "data": ["are big, scaly beasts with wings", "", "", ""]
+        "type": "line",
+        "data": ["Dragons are basically oversized lizards with wings, right?", "MoodNeutral", "", "IdleLookFar"]
     },
     {
-      "type": "line",
-      "data": ["and an obsession for shouting?", "", "", ""]
+        "type": "line",
+        "data": ["But don't be fooled by their fiery breath and scaly exterior.", "MoodNeutral", "", "IdleBowHeadAtGrave02"]
     },
     {
-      "type": "line",
-      "data": ["I mean, who needs indoor voices", "", "", ""]
+        "type": "line",
+        "data": ["Because these bad boys are smarter than your average bandit.", "MoodNeutral", "", "IdleNoteRead"]
     },
     {
-      "type": "line",
-      "data": ["when you can shake the very ", "", "", ""]
-    },
-    {
-      "type": "line",
-      "data": ["foundations of Skyrim?", "", "", ""]
+        "type": "line",
+        "data": ["Just watch your back and keep an eye on the skies, adventurer.", "MoodNeutral", "", "IdleEatingStandingStart"]
     }
-  ]
-  
+]

@@ -34,7 +34,7 @@ echo "\nUsing time corrector: $timelineCorrector.\n".PHP_EOL;
 $cuelines=json_decode(file_get_contents($argv[2]),true) or die("Error opening {$argv[2]}".PHP_EOL);
 $GLOBALS["TTS"]["XVASYNTH"]["DEVENV"]=true;
 $GLOBALS["OPENAI_FILTER_DISABLED"]=true;    // To avoid get content filtered by ourselves.
-
+//$GLOBALS["AVOID_TTS_CACHE"]="false";
 /*    
  {
     "type": "line", // line or ctrl
@@ -47,9 +47,17 @@ $GLOBALS["OPENAI_FILTER_DISABLED"]=true;    // To avoid get content filtered by 
   }
 */
 
+/*
+$cuelines=[
+        [
+        "type"=>"line",
+        "data"=> ["Herika: What a fucking nasty weather", "", "", ""]
+        ]
+];
 
+*/
 
-
+$startTime=time();
 
 foreach ($cuelines as $sline) {
      
@@ -58,6 +66,12 @@ foreach ($cuelines as $sline) {
         unset($GLOBALS["staticMood"]);  // Because returnLines will cache first mood.
         
         if (isset($line[0])) {
+            if (isset($line[4])) {
+                $GLOBALS["TTS"]["FORCED_LANG_DEV"]=$line[4];
+            }
+            if (isset($line[5])) {
+                $GLOBALS["TTS"]["FORCED_VOICE_DEV"]=$line[5];
+            }
             returnLines([$line[0]],false);
         }
         
@@ -87,8 +101,18 @@ foreach ($cuelines as $sline) {
                         'tag' => ''
                     )
                 );
-                
-                echo implode("|",$lineDB).PHP_EOL;
+
+                $difference = time()-$startTime;
+
+                // Calculate hours, minutes, and seconds
+                $hours = floor($difference / 3600);
+                $minutes = floor(($difference % 3600) / 60);
+                $seconds = $difference % 60;
+
+                // Format the difference in HH:MM:SS
+                $timeDifference = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+
+                echo $timeDifference." ".implode("|",$lineDB).PHP_EOL;
         }
         
         
