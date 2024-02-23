@@ -50,9 +50,13 @@ class connector
             'stream' => true,
             'max_tokens'=>$MAX_TOKENS,
             'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
+            'top_k' => ($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ?: 0,
+            'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
             'presence_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0,
             'frequency_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0,
-            'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
+            'repetition_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ?: 1,
+            'min_p' => ($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ?: 0,
+            'top_a' => ($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ?: 0,     
         );
 
         // Override
