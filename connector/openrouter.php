@@ -54,8 +54,8 @@ class connector
             'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
             'presence_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0,
             'frequency_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0,
-            'repetition_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ?: 1,
-            'min_p' => ($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ?: 0,
+            'repetition_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ?: 1.15,
+            'min_p' => ($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ?: 0.1,
             'top_a' => ($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ?: 0,     
         );
 
