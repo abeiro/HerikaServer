@@ -136,10 +136,14 @@ $CONNECTOR["openrouter"]["xreferer"]="http://localhost:8081/saig-gwserver/";
 $CONNECTOR["openrouter"]["xtitle"]="Herika";
 $CONNECTOR["openrouter"]["API_KEY"]="";
 $CONNECTOR["openrouter"]["MAX_TOKENS_MEMORY"]="512";
-$CONNECTOR["openrouter"]["temperature"]=0.7;    		//LLM parameter temperature
-$CONNECTOR["openrouter"]["presence_penalty"]=0; 		//LLM parameter presence_penalty
-$CONNECTOR["openrouter"]["frequency_penalty"]=0;        	//LLM parameter frequency_penalty
-$CONNECTOR["openrouter"]["top_p"]=1;    			//LLM parameter top_p
+$CONNECTOR["openrouter"]["temperature"]=0.9;	//LLM parameter temperature
+$CONNECTOR["openrouter"]["top_k"]=0;	//LLM parameter top_k
+$CONNECTOR["openrouter"]["top_p"]=1;	//LLM parameter top_p
+$CONNECTOR["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty
+$CONNECTOR["openrouter"]["frequency_penalty"]=0;	//LLM parameter frequency_penalty
+$CONNECTOR["openrouter"]["repetition_penalty"]=1;	//LLM parameter repetition_penalty
+$CONNECTOR["openrouter"]["min_p"]=0;	//LLM parameter min_p
+$CONNECTOR["openrouter"]["top_a"]=0;	//LLM parameter top_a
 
 
 $CONNECTOR["oobabooga"]["HOST"]="127.0.0.1";
