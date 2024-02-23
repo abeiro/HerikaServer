@@ -141,8 +141,8 @@ $CONNECTOR["openrouter"]["top_k"]=0;	//LLM parameter top_k
 $CONNECTOR["openrouter"]["top_p"]=1;	//LLM parameter top_p
 $CONNECTOR["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty
 $CONNECTOR["openrouter"]["frequency_penalty"]=0;	//LLM parameter frequency_penalty
-$CONNECTOR["openrouter"]["repetition_penalty"]=1;	//LLM parameter repetition_penalty
-$CONNECTOR["openrouter"]["min_p"]=0;	//LLM parameter min_p
+$CONNECTOR["openrouter"]["repetition_penalty"]=1.1;	//LLM parameter repetition_penalty
+$CONNECTOR["openrouter"]["min_p"]=0.15;	//LLM parameter min_p
 $CONNECTOR["openrouter"]["top_a"]=0;	//LLM parameter top_a
 
 
