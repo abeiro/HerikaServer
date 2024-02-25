@@ -1,19 +1,5 @@
 <?php
 
-/*
-curl -X POST -H "Content-Type: application/json" -H "Accept: audio/wav" -d '{
-  "text": "What we got here is a failure to communicate. But we made it! HOORAY!",
-  "style": "candy_mix_voice",
-  "alpha": 0.4,
-  "beta": 0.8,
-  "diffusion_steps": 20,
-  "embedding_scale": 1.5,
-  "session": "my-session"
-}' "http://localhost:5050/tts" |aplay
-
-*/
-  
-// r8_bpG8evTqAQ7ik2aPgGMjaMQekoLHYCq0vQ9JT
 
 function tts($textString, $mood , $stringforhash) {
 
