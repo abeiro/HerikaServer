@@ -46,6 +46,18 @@ $primarySubGroups=[
 $lvl1=0;
 $lvl2=0;
 
+function getFilesByExtension($directory, $extension) {
+    // Get all files in the directory
+    $files = scandir($directory);
+
+    // Filter files by extension
+    $filteredFiles = array_filter($files, function($file) use ($extension) {
+        return pathinfo($file, PATHINFO_EXTENSION) == $extension;
+    });
+
+    return $filteredFiles;
+}
+
 foreach ($currentConf as $pname=>$parms) {
 
     /* Groupping stuff */
@@ -161,6 +173,12 @@ foreach ($currentConf as $pname=>$parms) {
     } else if ($parms["type"]=="apikey") {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input  class='apikey' type='string'  value='{$parms["currentValue"]}' name='$fieldName'><span>{$parms["description"]}</span></p>".PHP_EOL;
 
+    } else if ($parms["type"]=="file") {
+        $availableFiles=getFilesByExtension($parms["path"],$parms["filter"]);
+        echo "<p class='conf-item'><label for='$fieldName'>$pname</label><select  class='files' type='string' name='$fieldName'>".PHP_EOL;
+        foreach ($availableFiles as $file)
+            echo "<option ".(($file==$parms["currentValue"])?"selected":"")." value='$file'>$file</option>";
+        echo "</select><span>{$parms["description"]}</span></p>";
     }
 
 }

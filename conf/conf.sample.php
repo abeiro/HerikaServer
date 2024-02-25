@@ -183,5 +183,13 @@ $TTS["XTTS"]["endpoint"]='';	//End point
 $TTS["XTTS"]["language"]='en';	//
 $TTS["XTTS"]["voiceid"]='11labs_diane';	//Voice json file
 
+$TTS["STYLETTSV2"]["endpoint"]='http://127.0.0.1:5050/';	//End point
+$TTS["STYLETTSV2"]["voice"]='';	//WAV file with source voice to clone. Should be localte at /var/www/html/HerikaServer/data/voices/
+$TTS["STYLETTSV2"]["alpha"]=0.3;	//From 0.0 to 1.0 - The higher the value of `alpha`, the more suitable the style it is to the text but less similar to the reference. `alpha` determines the timbre of the speaker
+$TTS["STYLETTSV2"]["beta"]=0.7;	//From 0.0 to 1.0 - The higher the value of `beta` the more suitable the style it is to the text but less similar to the reference. Using higher beta makes the synthesized speech more emotional, at the cost of lower similarity to the reference. `beta` determines the prosody of the speaker.
+$TTS["STYLETTSV2"]["diffusion_steps"]=15;	//From 5 - Since the sampler is ancestral, the higher the steps, the more diverse the samples are, with the cost of slower synthesis speed
+$TTS["STYLETTSV2"]["embedding_scale"]=1.5;	//From 0.0 to 1.0 - This is the classifier-free guidance scale. The higher the scale, the more conditional the style is to the input text and hence more emotional.
+
+
 
 ?>

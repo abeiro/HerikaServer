@@ -75,7 +75,7 @@
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai","xtts"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai","xtts","stylettsv2"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "AZURE": {
@@ -152,6 +152,15 @@
       "endpoint":{"type":"url","description":"End point","helpurl":""},
       "language":{"type":"select","values":["en", "es"],"description":""},
       "voiceid":{"type":"string","description":"Json voice file","helpurl":""}
+    },
+    "STYLETTSV2": {
+      "_title":"STYLETTSV2 via styletts2-api",
+      "endpoint":{"type":"url","description":"End point. Root URL, must end with /","helpurl":"https://github.com/lxe/tts-server"},
+      "voice":{"type":"file","description":"WAV file with source voice to clone. Should be localte at /var/www/html/HerikaServer/data/voices/","helpurl":"","path":"/var/www/html/HerikaServer/data/voices/","filter":"wav"},
+      "alpha":{"type":"number","description":"From 0.0 to 1.0 - The higher the value of `alpha`, the more suitable the style it is to the text but less similar to the reference. `alpha` determines the timbre of the speaker","helpurl":""},
+      "beta":{"type":"number","description":"From 0.0 to 1.0 - The higher the value of `beta` the more suitable the style it is to the text but less similar to the reference. Using higher beta makes the synthesized speech more emotional, at the cost of lower similarity to the reference. `beta` determines the prosody of the speaker.","helpurl":""},
+      "diffusion_steps":{"type":"number","description":"From 5 - Since the sampler is ancestral, the higher the steps, the more diverse the samples are, with the cost of slower synthesis speed","helpurl":""},
+      "embedding_scale":{"type":"number","description":"From 0.0 to 1.0 - This is the classifier-free guidance scale. The higher the scale, the more conditional the style is to the input text and hence more emotional.","helpurl":""}
     }
   },
   "STTFUNCTION": {

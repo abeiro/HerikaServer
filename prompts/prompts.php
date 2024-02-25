@@ -28,7 +28,7 @@ if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEAT
       
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $TEMPLATE_ACTION="call a function to control {$GLOBALS["HERIKA_NAME"]} or";
-    $TEMPLATE_ACTION=".YOU CAN USE FUNCTIONS.";    // WIP
+    $TEMPLATE_ACTION=".USE TOOL CALLING.";    // WIP
 } else {
     $TEMPLATE_ACTION="";
 }

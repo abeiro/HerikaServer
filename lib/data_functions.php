@@ -505,7 +505,7 @@ function DataDiaryLog($topic)
 
 
     if (!$results) { // No match, will return a list of current memories
-        $results = $db->fetchAll(SQLite3::escapeString("SElECT  topic as page,tags  FROM diarylogv2 order by gamets asc"));
+        $results = $db->fetchAll(SQLite3::escapeString("SElECT  topic as page,tags  FROM diarylogv2 order by rowid asc"));
 
         if (!$results) {
             return json_encode([]);

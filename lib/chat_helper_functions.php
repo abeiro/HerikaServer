@@ -386,6 +386,13 @@ function returnLines($lines,$writeOutput=true)
 
             }
             
+            if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
+
+                require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
+                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+
+            }
+            
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
             }
