@@ -72,6 +72,7 @@ if (php_sapi_name()=="cli") {
 $gameRequest = explode("|", $receivedData);
 foreach ($gameRequest as $i => $ele) {
     $gameRequest[$i] = trim(preg_replace('/\s\s+/', ' ', preg_replace('/\'/m', "''", $ele)));
+    $gameRequest[$i]=strtr($gameRequest[$i],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
 }
 
 
