@@ -22,7 +22,7 @@ function itt($file,$hints)
     }
 
     
-    $prompt = "Let's roleplay in the world of Skyrim.  Describe this Skyrim image as if it is real life.  Describe the objects and people you see in a fifth grade reading level.  Ignore video game HUD and UI elements in your description.  If you see a Breton woman with tan skin, shoulder length brown hair, and brown clothing / armor, ignore her in the description. $hints";
+    $prompt = $GLOBALS["ITT"]["openai"]["AI_VISION_PROMPT"].". $hints";
 
     $fileContent = base64_encode(file_get_contents($file));
 
@@ -73,7 +73,7 @@ function itt($file,$hints)
         'log',
         array(
             'localts' => time(),
-            'prompt' => print_r("USER:Context, roleplay In Skyrim universe, {$GLOBALS["HERIKA_NAME"]} watches this scene:", true),
+            'prompt' => print_r(strtr($GLOBALS["ITT"]["openai"]["AI_PROMPT"],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]), true),
             'response' => strtr($response["choices"][0]["message"]["content"], ["." => "\n"]),
             'url' => print_r($_GET, true)
         )

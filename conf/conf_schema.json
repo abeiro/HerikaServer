@@ -199,7 +199,9 @@
     },
     "LLAMACPP": {
       "_title":"LLama.cpp Server",
-      "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md"}
+      "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md"},
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the Vision AI"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt to return to AI Character"}
     },
     "openai": {
       "_title":"OpenAI GPT-4V",
@@ -207,7 +209,9 @@
       "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","helpurl":"https://platform.openai.com/docs/guides/vision?lang=curl"},
-      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"}
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the Vision AI"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt to return to AI Character"}
     }
   },
   "FEATURES": {

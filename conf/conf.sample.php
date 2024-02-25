@@ -73,6 +73,9 @@ $ITT["AZURE"]["API_KEY"]="";
 
 
 $ITT["LLAMACPP"]["URL"]="http://127.0.0.1:8007";			
+$ITT["LLAMACPP"]["AI_VISION_PROMPT"]='USER:Context, roleplay In Skyrim universe, #HERIKA_NPC1# watchs this scene:[img-1]. Describe the vision while keeping roleplay.Describe COLORS and SHAPES';	
+$ITT["LLAMACPP"]["AI_PROMPT"]='';
+
 
 
 $ITT["openai"]["url"]='https://api.openai.com/v1/chat/completions';	//OpenAI API endpoint
@@ -80,6 +83,9 @@ $ITT["openai"]["model"]='gpt-4-vision-preview';	//Model to use
 $ITT["openai"]["max_tokens"]=256;	//Maximum tokens to generate
 $ITT["openai"]["detail"]='low';	//Low or high fidelity image understanding
 $ITT["openai"]["API_KEY"]='';	//OpenAI API key
+$ITT["openai"]["AI_VISION_PROMPT"]='';	//OpenAI API key
+$ITT["openai"]["AI_VISION_PROMPT"]='Let\'s roleplay in the world of Skyrim.  Describe this Skyrim image as if it is real life.  Describe the objects and people you see in a fifth grade reading level.  Ignore video game HUD and UI elements in your description.  If you see a Breton woman with tan skin, shoulder length brown hair, and brown clothing / armor, ignore her in the description';
+$ITT["openai"]["AI_PROMPT"]='USER:Context, roleplay In Skyrim universe, #HERIKA_NPC1# watches this scene:';
 
 
 $STTFUNCTION="whisper";								// Valid options are azure or whisper so far
