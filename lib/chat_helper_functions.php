@@ -841,10 +841,12 @@ function selectRandomInArray($arraySource)
     
     $n=sizeof($arraySource);
     if ($n==1) {
-        return $arraySource[0];
+        return strtr($arraySource[0],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
+        //return $arraySource[0];
     }
-
-    return $arraySource[rand(0, $n-1)];
+    
+    return strtr($arraySource[rand(0, $n-1)],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
+    //return $arraySource[rand(0, $n-1)];
 
 
 

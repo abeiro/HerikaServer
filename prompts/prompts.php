@@ -134,8 +134,8 @@ $PROMPTS=array(
         "extra"=>["force_tokens_max"=>0]
     ],
     "vision"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} describes what is seeing to {$GLOBALS["PLAYER_NAME"]}. She pays attention to the small details of the scene. $TEMPLATE_DIALOG."],
-        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} : Look at this, {$GLOBALS["HERIKA_NAME"]}.( {$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
+        "cue"=>["{$GLOBALS["ITT"][$GLOBALS["ITTFUNCTION"]]["AI_PROMPT"]}. $TEMPLATE_DIALOG."],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} : Look at this, {$GLOBALS["HERIKA_NAME"]}.{$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
         "extra"=>["force_tokens_max"=>128]
     ]
 );
