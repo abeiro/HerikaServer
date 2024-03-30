@@ -24,6 +24,16 @@
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
     },
+    "anthropic": {
+      "_title":"Anthropic/Claude API",
+      "url": {"type":"url","description":"Anthropic API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://docs.anthropic.com/claude/docs/models-overview"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "top_p": {"type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "API_KEY":  {"type":"apikey","description":"Anthropic API key","code":"ANTHROPIC_API_KEY","helpurl":"https://console.anthropic.com/settings/keys"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
+    },
     "koboldcpp": {
       "_title":"KoboldCPP API",
       "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
