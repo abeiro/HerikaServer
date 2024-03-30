@@ -9,7 +9,7 @@
   "CORE_LANG": {"type":"select","description":"Custom Language. A lang folder is in the Herika Server. Leave it blank for default english."},
   "NEWQUEUE": {"type":"boolean","description":"Enable for 360° audio. Is still a bit buggy."},
   "MAX_WORDS_LIMIT": {"type":"integer","description":"Enforce a word limit for Herika's responses. Leave as 0 to disable."},
-  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
   "CONNECTOR": {
     "_title":"AI/LLM Service",
     "openai": {
