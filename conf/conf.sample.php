@@ -122,6 +122,14 @@ $CONNECTOR["openai"]["MAX_TOKENS_MEMORY"]="512";
 $CONNECTOR["openai"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
 $CONNECTOR["openai"]["top_p"]=1;        			//LLM parameter top_p
 
+$CONNECTOR["anthropic"]["url"]="https://api.anthropic.com/v1/messages";
+$CONNECTOR["anthropic"]["model"]="claude-3-haiku-20240307";
+$CONNECTOR["anthropic"]["max_tokens"]=100;
+$CONNECTOR["anthropic"]["temperature"]=1;
+$CONNECTOR["anthropic"]["API_KEY"]="";
+$CONNECTOR["anthropic"]["MAX_TOKENS_MEMORY"]="512";
+$CONNECTOR["anthropic"]["top_p"]=1;        			//LLM parameter top_p
+
 $CONNECTOR["koboldcpp"]["url"]="http://127.0.0.1:5001";
 $CONNECTOR["koboldcpp"]["max_tokens"]=100;
 $CONNECTOR["koboldcpp"]["temperature"]=0.9;
