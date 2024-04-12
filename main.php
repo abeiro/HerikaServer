@@ -9,6 +9,8 @@ define("MINIMUM_SENTENCE_SIZE", 15);
 
 date_default_timezone_set('Europe/Madrid');
 
+$GLOBALS["AVOID_TTS_CACHE"]=true;
+
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
@@ -17,6 +19,17 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
+
+
+// Profile selection
+if (isset($_GET["profile"])) {
+    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
+       // error_log("PROFILE: {$_GET["profile"]}");
+        require($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
+
+    }
+}
+// End of profile selection
 
 $db = new sql();
 
@@ -51,6 +64,14 @@ MAIN FLOW
 
 $startTime = microtime(true);
 
+
+// Lock to avoid TTS hangs
+$semaphoreKey =abs(crc32(__FILE__));
+$semaphore = sem_get($semaphoreKey);
+while (sem_acquire($semaphore,true)!=true)  {
+    sleep(1);
+}
+
 // PARSE GET RESPONSE into $gameRequest
 
 if (php_sapi_name()=="cli") {
@@ -64,7 +85,12 @@ if (php_sapi_name()=="cli") {
 
     //$receivedData = base64_decode($_GET["DATA"]);
     //base64 string has '+' chars. THis conflicts with urldecode, so $_GET["DATA"] will get bullshit.
-    $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5)));
+    if (strpos($_SERVER["QUERY_STRING"],"&")===false)
+        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5)));
+    else
+        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5,strpos($_SERVER["QUERY_STRING"],"&")-4)));
+
+    //error_log($receivedData." ".$_GET["profile"]);
 
 }
 
@@ -86,9 +112,29 @@ if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoac
     die();
 }
 
+
+// Only allow functions when explicit request
 if (!in_array($gameRequest[0],["inputtext","inputtext_s"])) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
+
+// RECHAT
+if (in_array($gameRequest[0],["rechat"])) {
+    //RECHAT. Must choose if we continue conversation or no.
+    $rechatHistory=DataRechatHistory();
+    
+    if (sizeof($rechatHistory)>3)       // TOO MUCH RECHAT
+        die();
+    
+    if (rand(0,10)%2==0) {              // 50 % rechat prob. Should do it per character (GLOBAL CONF)
+        die();
+    }
+    
+    $sqlfilter=" and type='prechat' ";  // Use prechat
+    $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny
+
+} else
+    $sqlfilter=" and type<>'prechat' "; // Will dismiss prechat entries by default. prechat are LLM responses still not displayed in-game
 
 
 // Non-LLM request handling.
@@ -117,9 +163,9 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
 */
 
 if (stripos($gameRequest[3], "stop") !== false) {
-    echo "Herika|command|StopAll@\r\n";
+    echo "{$GLOBALS["HERIKA_NAME"]}|command|StopAll@\r\n";
     @ob_flush();
-    $alreadysent[md5("Herika|command|StopAll@\r\n")] = "Herika|command|StopAll@\r\n";
+    $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|StopAll@\r\n")] = "Herika|command|StopAll@\r\n";
 }
 
 
@@ -147,7 +193,7 @@ if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
 $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 
 // Historic context (last dialogues, events,...)
-$contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1);
+$contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1,$sqlfilter);
 
 // Info about location and npcs in first position
 $contextDataWorld = DataLastInfoFor("", -2);

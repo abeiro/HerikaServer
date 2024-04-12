@@ -7,6 +7,8 @@
     
 <?php
 error_reporting(E_ERROR);
+session_start();
+
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
 $rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
@@ -21,6 +23,29 @@ if (!file_exists($configFilepath."conf.php")) {
 
 
 require_once($rootEnginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
+
+// Profile selection
+$GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
+foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
+    if (file_exists($mconf)) {
+        $filename=basename($mconf);
+        $pattern = '/conf_([a-f0-9]+)\.php/';
+        preg_match($pattern, $filename, $matches);
+        $hash = $matches[1];
+        $GLOBALS["PROFILES"][$hash]=$mconf;
+    }
+}
+
+if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
+    require_once($_SESSION["PROFILE"]);
+
+} else
+    $_SESSION["PROFILE"]="$configFilepath/conf.php";
+// End of profile selection
+
+
+
+
 require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."misc_ui_functions.php");
 require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
@@ -284,7 +309,7 @@ include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "Herika Server";
+$title = "Skyrim AI-Agent Server";
 $title .= (($_GET["autorefresh"]) ? " (autorefreshes every 5 secs)" : "");
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
