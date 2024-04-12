@@ -5,6 +5,17 @@ Post tasks.
 
 */
 
+$configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
+$GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
+foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
+    if (file_exists($mconf)) {
+        $filename=basename($mconf);
+        $pattern = '/conf_([a-f0-9]+)\.php/';
+        preg_match($pattern, $filename, $matches);
+        $hash = $matches[1];
+        $GLOBALS["PROFILES"][$hash]=$mconf;
+    }
+}
 
 if ($FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) {
     $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");

@@ -1,5 +1,7 @@
 <?php
 
+session_start();
+
 $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 $enginePath = $localPath;
@@ -12,6 +14,11 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.cl
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 
+if (isset($_SESSION["PROFILE"])) {
+    require_once($_SESSION["PROFILE"]);
+
+} else
+    $_SESSION["PROFILE"]="$configFilepath/conf.php";
 
 error_reporting(E_ALL);
 

@@ -241,4 +241,24 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     logEvent($gameRequest);
 
     $MUST_END=true;
+
+    
+} elseif (strpos($gameRequest[0], "addnpc")===0) {    // info_whatever commands
+
+    logEvent($gameRequest);
+    
+    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+    $newConfFile=md5($gameRequest[3]);
+    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php"))
+        copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
+
+    // Character Map file
+    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json"))
+        $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
+    
+    $characterMap[md5($gameRequest[3])]=$gameRequest[3];
+    file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
+    
+    
+    $MUST_END=true;
 }

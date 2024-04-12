@@ -313,7 +313,7 @@ function DataQuestJournal($quest)
     }
 }
 
-function DataLastDataExpandedFor($actor, $lastNelements = -10)
+function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 {
 
     global $db;
@@ -330,8 +330,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10)
     end||a.data  as data , gamets 
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book'
-    and type<>'funccall'  and type<>'togglemodel'  order by gamets desc,ts desc,rowid desc LIMIT 0,150");
+    and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'rechat'
+    and type<>'funccall'  and type<>'togglemodel' $sqlfilter  order by gamets desc,ts desc,rowid desc LIMIT 0,150");
 
     $rawData=[];
     foreach ($results as $row) {
@@ -712,4 +712,15 @@ function PackIntoSummary()
 							");
 
     return $maxRow;
+}
+
+function DataRechatHistory()
+{
+
+    global $db;
+
+    $lastRechat=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('rechat') and localts>".(time()-300)." order by gamets desc,ts desc LIMIT 0,10");
+    
+    return $lastRechat;
+
 }

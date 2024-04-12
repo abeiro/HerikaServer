@@ -41,7 +41,7 @@
                     </li>
                     <li>
                         <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('Sure?')">
-                            Reset Events
+                            Delete Events
                         </a>
                     </li>
                     <li>
@@ -148,3 +148,26 @@
         </ul>
     </div>
 </nav>
+
+<form action='set_profile.php' method="POST" enctype="multipart/form-data">
+<select name='profileSelector' style="min-width:250px">
+
+<?php
+ // Character Map file
+if (file_exists(__DIR__ . "/../../conf/character_map.json"))
+    $characterMap=json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"),true);
+
+foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
+    $isSelected=($_SESSION["PROFILE"]==$lProfile)?"selected":"";
+    $pattern = "/conf_([a-fA-F0-9]+)\.php/";
+    if (preg_match($pattern, $lProfile, $matches)) {
+        $hash = $matches[1];
+        echo "<option value='$lProfile' $isSelected >{$characterMap["$hash"]}</option>";
+    } else {
+        echo "<option value='$lProfile' $isSelected >$lProfkey</option>";
+    }
+}
+
+?>
+</select>
+<input type='submit' value="change profile">

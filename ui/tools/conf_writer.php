@@ -1,5 +1,6 @@
 <?php
 
+session_start();
 
 $enginePath=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;;
 require($enginePath.DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
@@ -10,6 +11,11 @@ $buffer="<?php".PHP_EOL;
 
 $oldGroup="";
 $oldSubGroup="";
+
+if (isset($_POST["profileSelector"])) {
+    $_SESSION["PROFILE"]=$_POST["profileSelector"];
+    unset($_POST["profileSelector"]);
+}
 
 foreach ($_POST as $k=>$v) {
     
@@ -68,7 +74,10 @@ foreach ($_POST as $k=>$v) {
 $buffer.="?>".PHP_EOL;
 
 if (isset($_GET["save"])) {
-    $result=file_put_contents($enginePath."conf".DIRECTORY_SEPARATOR."conf.php",$buffer);
+    if (isset($_SESSION["PROFILE"]))
+        $result=file_put_contents($_SESSION["PROFILE"],$buffer);
+    else
+        $result=file_put_contents($enginePath."conf".DIRECTORY_SEPARATOR."conf.php",$buffer);
     echo '<!DOCTYPE html>
         <html lang="en" >
         <head>
@@ -89,7 +98,7 @@ if (isset($_GET["save"])) {
     
     if ($result!==false) {
         echo "Writing config file.....";
-        echo '<script>alert("Config file has been written");parent.location.reload(true)</script>';
+        echo '<script>alert("Config file '.basename($_SESSION["PROFILE"]).' has been written");parent.location.href="../conf_wizard.php?ts='.time().'"</script>';
     } else {
         echo "Writing config file.....";
         echo "Some error ocurred.".PHP_EOL;

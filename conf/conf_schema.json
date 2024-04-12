@@ -9,11 +9,23 @@
   "CORE_LANG": {"type":"select","description":"Custom Language. A lang folder is in the Herika Server. Leave it blank for default english."},
   "NEWQUEUE": {"type":"boolean","description":"Enable for 360° audio. Is still a bit buggy."},
   "MAX_WORDS_LIMIT": {"type":"integer","description":"Enforce a word limit for Herika's responses. Leave as 0 to disable."},
-  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic","openaijson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
   "CONNECTOR": {
     "_title":"AI/LLM Service",
     "openai": {
       "_title":"OpenAI/ChatGPT API",
+      "url": {"type":"url","description":"OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "presence_penalty": {"type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "frequency_penalty": {"type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "top_p": {"type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
+    },
+    "openaijson": {
+      "_title":"OpenAI/ChatGPT API (JSON mode)",
       "url": {"type":"url","description":"OpenAI API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
@@ -88,7 +100,7 @@
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai","xtts","stylettsv2"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai","xtts","stylettsv2","xtts-fastapi"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "AZURE": {
@@ -165,6 +177,12 @@
       "endpoint":{"type":"url","description":"End point URL","helpurl":""},
       "language":{"type":"select","values":["en", "es"],"description":""},
       "voiceid":{"type":"string","description":"Json voice file","helpurl":""}
+    },
+    "XTTSFASTAPI": {
+      "_title":"FASTAPI xtts",
+      "endpoint":{"type":"url","description":"End point URL","helpurl":""},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
+      "voiceid":{"type":"string","description":"WAV refernce (must be into server's voice folder)","helpurl":""}
     },
     "STYLETTSV2": {
       "_title":"STYLETTSV2 via styletts2-api",

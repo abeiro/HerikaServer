@@ -327,70 +327,61 @@ function returnLines($lines,$writeOutput=true)
                 require_once(__DIR__."/../tts/tts-azure.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
-            }
-
-            if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
 
                 require_once(__DIR__."/../tts/tts-mimic3.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=ttsMimic($responseTextUnmooded, $mood, $responseText);
 
-            }
-
-            if ($GLOBALS["TTSFUNCTION"] == "11labs") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
 
                 require_once(__DIR__."/../tts/tts-11labs.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
-            }
-
-            if ($GLOBALS["TTSFUNCTION"] == "gcp") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
 
                 require_once(__DIR__."/../tts/tts-gcp.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
-            }
-
-            if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
 
                 require_once(__DIR__."/../tts/tts-coqui-ai.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
-            }
-
-
-            if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
 
                 require_once(__DIR__."/../tts/tts-xvasynth.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
-            }
-            
-            if ($GLOBALS["TTSFUNCTION"] == "openai") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
 
                 require_once(__DIR__."/../tts/tts-openai.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
-            }
-            
-            if ($GLOBALS["TTSFUNCTION"] == "convai") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
 
                 require_once(__DIR__."/../tts/tts-convai.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
-            }
-            
-            if ($GLOBALS["TTSFUNCTION"] == "xtts") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
 
                 require_once(__DIR__."/../tts/tts-xtts.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
-            }
-            
-            if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
+            } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
 
                 require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
                 $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
 
+            } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
+
+                require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
+                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+
+            } else {
+                if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
+                    require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
+                    $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                }
             }
             
             if (trim($responseText)) {
@@ -404,14 +395,14 @@ function returnLines($lines,$writeOutput=true)
             'localts' => time(),
             'sent' => 1,
             'text' => trim(preg_replace('/\s\s+/', ' ', $responseTextUnmooded)),
-            'actor' => "Herika",
+            'actor' => $GLOBALS["HERIKA_NAME"],
             'action' => "AASPGQuestDialogue2Topic1B1Topic",
             'tag' => (isset($tag) ? $tag : "")
         );
         $GLOBALS["DEBUG"]["BUFFER"][] = "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
         if ($writeOutput) {
             if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"])
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded///\r\n";
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded//{$GLOBALS["LISTENER"]}/\r\n";
             else
                 echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
             
@@ -429,6 +420,16 @@ function returnLines($lines,$writeOutput=true)
 
             )
         );
+        
+        // RECHAT
+        $originalRequest=$GLOBALS["gameRequest"];
+        $originalRequest[0]="prechat";
+        $originalRequest[1]++;
+        $originalRequest[2]++;
+        $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded";
+        logEvent($originalRequest);
+        
+        
     }
 
 }

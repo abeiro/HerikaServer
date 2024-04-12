@@ -4,14 +4,14 @@ $COMMAND_PROMPT = "
 Don't write narrations.
 ";
 
-
+$COMMAND_PROMPT_FUNCTIONS="";
+/*
 $COMMAND_PROMPT_FUNCTIONS = "
 Use tool calling to control {$GLOBALS["HERIKA_NAME"]}'s actions.
 Use tool calling if {$GLOBALS["PLAYER_NAME"]} commands an order.
 Only perform actions and tool calling if your character would find it necessary or must have to, even if it contradicts {$GLOBALS["PLAYER_NAME"]}'s requests.
-
 ";
-
+*/
 
 
 $DIALOGUE_TARGET="(Talking to {$GLOBALS["HERIKA_NAME"]})";

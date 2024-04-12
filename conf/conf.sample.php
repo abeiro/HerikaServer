@@ -122,6 +122,18 @@ $CONNECTOR["openai"]["MAX_TOKENS_MEMORY"]="512";
 $CONNECTOR["openai"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
 $CONNECTOR["openai"]["top_p"]=1;        			//LLM parameter top_p
 
+
+$CONNECTOR["openaijson"]["url"]="https://api.openai.com/v1/chat/completions";
+$CONNECTOR["openaijson"]["model"]="gpt-3.5-turbo-1106";
+$CONNECTOR["openaijson"]["max_tokens"]=100;
+$CONNECTOR["openaijson"]["temperature"]=1;
+$CONNECTOR["openaijson"]["presence_penalty"]=1;
+$CONNECTOR["openai"]["API_KEY"]="";
+$CONNECTOR["openaijson"]["MAX_TOKENS_MEMORY"]="512";
+$CONNECTOR["openaijson"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
+$CONNECTOR["openaijson"]["top_p"]=1;        			//LLM parameter top_p
+
+
 $CONNECTOR["anthropic"]["url"]="https://api.anthropic.com/v1/messages";
 $CONNECTOR["anthropic"]["model"]="claude-3-haiku-20240307";
 $CONNECTOR["anthropic"]["max_tokens"]=100;
@@ -201,6 +213,10 @@ $TTS["CONVAI"]["voiceid"]='WUFemale3';	//VoiceId
 $TTS["XTTS"]["endpoint"]='';	//End point
 $TTS["XTTS"]["language"]='en';	//
 $TTS["XTTS"]["voiceid"]='11labs_diane';	//Voice json file
+
+$TTS["XTTSFASTAPI"]["endpoint"]='';	//End point
+$TTS["XTTSFASTAPI"]["language"]='en';	//
+$TTS["XTTSFASTAPI"]["voiceid"]='11labs_diane';	//Voice json file
 
 $TTS["STYLETTSV2"]["endpoint"]='http://127.0.0.1:5050/';	//End point
 $TTS["STYLETTSV2"]["voice"]='';	//WAV file with source voice to clone. Should be localte at /var/www/html/HerikaServer/data/voices/

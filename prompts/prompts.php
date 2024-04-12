@@ -19,6 +19,7 @@ if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]
 $TEMPLATE_DIALOG.=" \"";
 
 
+
 if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
     $GLOBALS["MEMORY_STATEMENT"]=".USE #MEMORY.";
 } else
@@ -30,6 +31,11 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $TEMPLATE_ACTION="call a function to control {$GLOBALS["HERIKA_NAME"]} or";
     $TEMPLATE_ACTION=".USE TOOL CALLING.";    // WIP
 } else {
+    $TEMPLATE_ACTION="";
+}
+
+if (DMgetCurrentModel()=="openaijson") {
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
     $TEMPLATE_ACTION="";
 }
 
@@ -127,6 +133,10 @@ $PROMPTS=array(
     // Like inputtext, but without the functions calls part. It's likely to be used in papyrus scripts
     "chatnf"=>[ 
         "cue"=>["$TEMPLATE_DIALOG"] // Prompt is implicit
+        
+    ],
+    "rechat"=>[ 
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG"]
         
     ],
     "diary"=>[ 
