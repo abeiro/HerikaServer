@@ -209,6 +209,9 @@ $TTS["STYLETTSV2"]["beta"]=0.7;	//From 0.0 to 1.0 - The higher the value of `bet
 $TTS["STYLETTSV2"]["diffusion_steps"]=15;	//From 5 - Since the sampler is ancestral, the higher the steps, the more diverse the samples are, with the cost of slower synthesis speed
 $TTS["STYLETTSV2"]["embedding_scale"]=1.5;	//From 0.0 to 1.0 - This is the classifier-free guidance scale. The higher the scale, the more conditional the style is to the input text and hence more emotional.
 
+$TTS["XTTSFASTAPI"]["endpoint"]='';	//End point
+$TTS["XTTSFASTAPI"]["language"]='en';	//
+$TTS["XTTSFASTAPI"]["voiceid"]='';	//Voice json file
 
 
 ?>
