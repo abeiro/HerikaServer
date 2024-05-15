@@ -49,7 +49,7 @@
 
 		} else if ($functionCodeName == "ReadQuestJournal") {
 			//$useFunctionsAgain=true;
-			$request="(use function call '".getFunctionTrlName("SetCurrentTask")."' to update current quest if needed) $request";
+			$request="(use action '".getFunctionTrlName("SetCurrentTask")."' to update current task) $request";
 			$argName = "id_quest";
 			$useFunctionsAgain=true;
 

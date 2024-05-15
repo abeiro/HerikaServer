@@ -8,6 +8,7 @@ class connector
     public $name;
 
     public $_functionMode;
+    public $_extractedbuffer;
     private $_ignoreRest;
     private $_functionRawName;
     private $_functionName;
@@ -18,22 +19,29 @@ class connector
 
     public function __construct()
     {
-        $this->name="koboldcpp";
-         $this->_ignoreRest=false;
+        $this->name="koboldcppjson";
+        $this->_ignoreRest=false;
+        $this->_jsonMode=true; 
+        $this->_extractedbuffer="";
+        require_once(__DIR__."/__jpd.php");
+         
     }
 
 
-    public function open($contextData, $customParms)
+    public function open(&$contextData, $customParms)
     {
         $path='/api/extra/generate/stream/';
         $url=$GLOBALS["CONNECTOR"][$this->name]["url"].$path;
         $context="";
 
-
+        
+        
         foreach ($contextData as $n=>$s_msg) {	// Have to mangle context format
 
-            if (!isset($s_msg["content"]))
-                return "";
+            if (!isset($s_msg["content"])) {
+                error_log("Entry $n without content");
+                continue;
+            }
             
             if (empty(trim($s_msg["content"]))) {
                 unset($contextData[$n]);
@@ -52,9 +60,35 @@ class connector
             }
         }
 
-        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###","```"];
+        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###"];
 
 
+        $contextData[]= [
+            'role' => 'user', 
+            'content' => "Use this JSON object to give your answer: ".json_encode([
+                "character"=>$GLOBALS["HERIKA_NAME"],
+                "listener"=>"who is talking to",
+                "message"=>'message',
+                "mood"=>'',
+                "action"=>'a valid action, (refer to available actions list)',
+                "target"=>"action's target",
+            ])
+        ];
+        
+        
+        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+            foreach ($GLOBALS["FUNCTIONS"] as $function) {
+                //$data["tools"][]=["type"=>"function","function"=>$function];
+                $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                $contextData[0]["content"]."\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+            }
+            $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk";
+             
+
+        }
+        
+        
         if ($GLOBALS["CONNECTOR"][$this->name]["template"]=="alpaca") {
            
             include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
@@ -119,7 +153,8 @@ class connector
 
         }
 
-
+       
+        
         $TEMPERATURE=((isset($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? $GLOBALS["CONNECTOR"][$this->name]["temperature"] : 0.9)+0);
         $REP_PEN=((isset($GLOBALS["CONNECTOR"][$this->name]["rep_pen"]) ? $GLOBALS["CONNECTOR"][$this->name]["rep_pen"] : 1.12)+0);
         $TOP_P=((isset($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? $GLOBALS["CONNECTOR"][$this->name]["top_p"] : 0.9)+0);
@@ -136,8 +171,9 @@ class connector
                 $stop_sequence[]=$stopseq;
         }
 
+        
         ///
-        $stop_sequence[]=$GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"];
+        $stop_sequence[]=$GLOBALS["CONNECTOR"][$this->name]["eos_token"];
         ///
         $postData = array(
 
@@ -155,8 +191,8 @@ class connector
 
         );
 
-        if ((isset($GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"]))&&!empty($GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"])) {
-                $eos_token_allow_grammar='| "'.$GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"].'"';
+        if ((isset($GLOBALS["CONNECTOR"][$this->name]["eos_token"]))&&!empty($GLOBALS["CONNECTOR"][$this->name]["eos_token"])) {
+                $eos_token_allow_grammar='| "'.$GLOBALS["CONNECTOR"][$this->name]["eos_token"].'"';
         } else
             $eos_token_allow_grammar='';
 
@@ -167,73 +203,10 @@ class connector
                 $moodsText='("["' . implode('","', $GLOBALS["TTS"]["AZURE"]["validMoods"]) . '"]*")"';
 
 
-        // Grammar Sampling.
-        if ($GLOBALS["gameRequest"][0]=="diary"){
-
-            $postData["stop_sequence"]=["Author's notes","###","```"];
-            
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "\nDear Diary, " text
-text ::= char text | char | '.$eos_token_allow_grammar.'
-char ::= ANYTEXT
-keywords ::= char keywords | char
-ANYTEXT ::= [a-zA-Z0-9.,?!\' \n]
-';
-
-        } else if ($GLOBALS["gameRequest"][0]=="summary") {
-            /*$eos_token_allow_grammar='';
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "Location: " answer "\nPeople: " answer "\nMission: " answer "\nSummary: " answer
-answer ::= sentence "." answer | sentence
-sentence ::= words
-words ::= word words | word '.$eos_token_allow_grammar.'
-word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?!\'\\" ]
-';
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "Location: " answer "\nPeople: " answer "\nMission: " answer "\nSummary: " answer
-answer ::= sentence | '.$eos_token_allow_grammar.' | "\n"
-sentence ::= [a-zA-Z0-9.,?!\' \\"]*
-';
-      */
-        unset($postData["grammar"]);
-
-        } else {
-
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].': '.$moodsText.' answer 
-answer ::= sentence "." answer | sentence
-sentence ::= words
-words ::= word words | word '.$eos_token_allow_grammar.'
-word ::= ANYTEXT
-ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
-';
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "'.$GLOBALS["HERIKA_NAME"].': '.$moodsText.' answer 
-answer ::= sentence | sentence '.$eos_token_allow_grammar.' | sentence "\n"
-sentence ::= [a-zA-Z0-9.,?!\' ]*
-';
-//ANYTEXT ::= [a-zA-Z0-9.,?!\' ]
-
-        
-        }
-
-
-        if (isset($customParms["GRAMMAR_ACTIONS"])) {
-            $postData["grammar"]='
-root ::= fullanswer
-fullanswer ::= "ExchangeItems()" | "SetCurrentPlan(" sentence ")" | "NoOp()" 
-sentence ::= [a-zA-Z0-9.,?!\' ]*
-
-';
-        unset($postData["grammar"]);
         $postData["grammar"]=file_get_contents(__DIR__.DIRECTORY_SEPARATOR."grammar".DIRECTORY_SEPARATOR."json.bnf");
-        }
+
+        if (!$GLOBALS["CONNECTOR"][$this->name]["grammar"])
+            unset($postData["grammar"]);
 
 
         if (isset($customParms["MAX_TOKENS"])) {
@@ -288,18 +261,21 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         $request .= $dataJson;
 
         // Open a TCP connection
+        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".print_r($postData,true)."=\n", FILE_APPEND);
+
+                
         $this->primary_handler = fsockopen('tcp://' . $host, $port, $errno, $errstr, 30);
 
         // Send the HTTP request
         if ($this->primary_handler !== false) {
             fwrite($this->primary_handler, $request);
             fflush($this->primary_handler);
-        } else {
+        } else if (($this->primary_handler == null) || (!$this->primary_handler)){
              error_log("Unable to connect to koboldcpp backend!");
             return false;
         }
 
-        
+
         // Initialize variables for response
         $responseHeaders = '';
         $responseBody = '';
@@ -316,6 +292,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         $line = fgets($this->primary_handler);
         $buffer="";
         $totalBuffer="";
+        $mangledBuffer="";
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
        
         
@@ -323,13 +300,6 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
             return "";
         }
         
-        if ($this->_jsonMode) {
-            $data=json_decode(substr($line, 6), true);
-            $this->_jsonBuffer.=$data["token"];
-            return "";
-        }
-        
-        //$_ignoreRest
 
         $data=json_decode(substr($line, 6), true);
 
@@ -337,55 +307,30 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         if (!$data)
             return "";
         
-        if (strpos($line, 'data: {"token": "{') !== false) {
-            $this->_jsonBuffer.=$data["token"];
-            $this->_jsonMode=true;
-            return "";
-
-        }
-
-         /*
-         if (strpos($line, 'data: {"token": "[') === 0) {
-
-            $this->_functionMode=true;
-            //$this->_functionRawName.=$data["token"];
-            return "";
-        }
-
-         if (strpos($line, 'data: {"token": "]"}') === 0 || strpos($data["token"], ']')!==false) {
-
-            $this->_functionMode=false;
-            //$this->_functionRawName.=$data["token"];
-            return "";
-        }
-        */
-
-
-        /*
-         if (strpos($line, 'data: {"token": "#"}') === 0) {
-
-            $this->_functionMode=true;
-            return "";
-        }
-        */
-
-
-        if ((isset($this->_functionMode))&&($this->_functionMode)) {
-
-            $this->_functionRawName.=$data["token"];
-            return "";
-
-
-        }
-
+        
+ 
         if (isset($data["token"])) {
-            if (strlen(trim($data["token"],"\t\0\x0B"))>0) {
-                $buffer.=$data["token"];
+            $this->_jsonBuffer.=$data["token"];                
+            $partialResult=__jpd_decode_lazy($this->_jsonBuffer);
+            
+            if (is_array($partialResult)&&isset($partialResult[0]["message"])) {
+                $mangledBuffer = str_replace($this->_extractedbuffer, "", $partialResult[0]["message"]);
+                $this->_extractedbuffer=$partialResult[0]["message"];
+                if (isset($partialResult[0]["listener"])) {
+                     $GLOBALS["SCRIPTLINE_LISTENER"]=$partialResult[0]["listener"];
+                }
+                
+                if (isset($partialResult[0]["mood"])) {
+                    $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($partialResult[0]["mood"]);
+                }
+                
             }
+            
             $totalBuffer.=$data["token"];
         }
 
-        return $buffer;
+        
+        return $mangledBuffer;
     }
 
 
@@ -396,6 +341,11 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
             fgets($this->primary_handler);
 
         fclose($this->primary_handler);
+        
+        //file_put_contents(__DIR__."/../log/output_from_llm.log",$this->_jsonBuffer, FILE_APPEND | LOCK_EX);
+        file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_jsonBuffer."\n=\n", FILE_APPEND);
+
+
     }
 
     public function isDone()
@@ -410,113 +360,57 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
     {
         global $alreadysent;
 
-        $jsonData=json_decode($this->_jsonBuffer,true);
+        unset($GLOBALS["_JSON_BUFFER"]);    // __jpd_decode_lazy has a cache
         
+        $jsonData=__jpd_decode_lazy($this->_jsonBuffer);
+        
+        //error_log($this->_jsonBuffer);
         //print_r($jsonData);
         
-        if ($this->_jsonMode) {
+        if (is_array($jsonData)) {  // ??
+            if (isset($jsonData[0])&& is_array($jsonData[0]))
+                $jsonData=$jsonData[0];
+        }
             
-            if (isset($jsonData["command"])) {
-                
-                if (isset($jsonData["priority"])) 
-                    $prob=$jsonData["priority"];
-                else
-                    $prob="";
-                
-                if (($prob!="urgent" && $prob!="high" && $prob!="now") && false)
-                    ;
-                else {
-                    $intent=$jsonData["command"];
-                    if ($intent=="DoNothing")
-                        ;// nothing to do
+        $GLOBALS["DEBUG_DATA"]["RAW"]=$this->_jsonBuffer;
+        
+        if (is_array($jsonData)&&isset($jsonData["action"])) { // !!!
+            $parsedResponse=$jsonData;
+            
+              if (!empty($parsedResponse["action"])) {
+                    if (!isset($parsedResponse["target"]))
+                        $parsedResponse["target"]="";
+                    
+                    $functionDef=findFunctionByName($parsedResponse["action"]);
+                    if ($functionDef)
+                        error_log("Function : {$functionDef["name"]}");
+                    
+                    if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
+                        //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
                         
-                    else if ($intent=="WriteIntoQuestJournal"||$intent=="UpdateQuestJournal") {
-                        // bypass reponse.
-                        if (isset($jsonData["topic"])) {
-                            $this->_functionRawName="SetCurrentTask@{$jsonData["topic"]}";
-                            $GLOBALS["db"]->insert(
-                                'currentmission',
-                                array(
-                                    'ts' => $GLOBALS["gameRequest"][1],
-                                    'gamets' => $GLOBALS["gameRequest"][2],
-                                    'description' => $jsonData["topic"],
-                                    'sess' => 'pending',
-                                    'localts' => time()
-                                )
-                            );
+                        if ($functionDef) {
+                            $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
+                           if (@strlen($functionDef["parameters"]["required"][0])>0) {
+                                if (!empty($parsedResponse["target"])) {
+                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
+                                }
+                                else {
+                                    error_log("Missing required parameter");
+                                }
+                                    
+                            } else {
+                                $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
+                            }
                         }
-                        //$alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-                    }    
-                    else if ($intent=="OpenBackPack"||$intent=="OpenInventory"||$intent=="ExchangeItems") {
-
-                        $this->_functionRawName="OpenInventory@";
-                        $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-                        
-                    } else if ($intent=="TakeASeat") {
-                        // bypass reponse.
-                        $this->_functionRawName="TakeASeat@";
-                        
-                        $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-                    } else if ($intent=="GatherInfo") {
-                        // bypass reponse.
-                        $this->_functionRawName="GatherInfo@{$jsonData["topic"]}";
-                        
-                        //$alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-                    }
-                }
-                    
-                
-                return $alreadysent;
-                
-                
-            }
-            
-            
-        } else {
-
-            if ((isset($this->_functionMode))&&($this->_functionMode)) {
-                
-                $kobname=$this->_functionRawName;
-                $kobname=strtr("$kobname",["("=>"@",")"=>"@"]);
-                $kobParsed=explode("@",$kobname);
-                
-                $this->_functionRawName=$kobname;
-                if ($kobParsed[0]=="NoOp")
-                    ;// nothing to do
-                    
-                else if ($kobParsed[0]=="SetCurrentPlan") {
-                    // bypass reponse.
-                    $this->_functionRawName="SetCurrentTask@{$kobParsed[1]}";
-                    $GLOBALS["db"]->insert(
-                        'currentmission',
-                        array(
-                            'ts' => $GLOBALS["gameRequest"][1],
-                            'gamets' => $GLOBALS["gameRequest"][2],
-                            'description' => $kobParsed[1],
-                            'sess' => 'pending',
-                            'localts' => time()
-                        )
-                    );
-                    $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-                }    
-                else if ($kobParsed[0]=="ExchangeItems") {
-                    // bypass reponse.
-                    $this->_functionRawName="OpenInventory@";
-                    
-                    $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-                } else if ($kobParsed[0]=="TakeASeat") {
-                    // bypass reponse.
-                    $this->_functionRawName="TakeASeat@";
-                    
-                    $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
-                }   
-                    
-                
-                return $alreadysent;
-            }
+                        //echo "Herika|command|$functionCodeName@$parameter\r\n";
+                    } else
+                        $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=
+                    "{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
+              }
         }
         
-        return [];
+        //print_r($this->_jsonBuffer);
+        return is_array($this->_commandBuffer)?$this->_commandBuffer:[];
         
     }
 

@@ -60,6 +60,38 @@
                 .then(json => checkRetVal(json))
 
             }
+            
+            function getAnchor() {
+                var urlString = window.location.href;
+                var url = new URL(urlString);
+                var anchor = url.hash;
+                return anchor
+            }
+            
+            function getAnchorNH() {
+                var urlString = window.location.href;
+                var url = new URL(urlString);
+                var anchor = url.hash;
+                return anchor.substring(1);
+            }
+            
+            function scrollToHash() {
+                // Get the hash from the URL
+                var hash = getAnchorNH()
+
+                // Check if there's a hash
+                if (hash) {
+                    // Find the element with the corresponding id
+                    var element = document.getElementById(hash);
+
+                    // Check if the element exists
+                    if (element) {
+                        // Scroll to the element
+                        element.scrollIntoView();
+                    }
+                }
+            }
+            
         </script>
     </head>
     <body>

@@ -1,3 +1,11 @@
+<?php 
+
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
+header("Pragma: no-cache"); // HTTP 1.0
+header("Expires: 0"); // Proxies
+
+?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -48,7 +56,9 @@ include("tmpl/head.html");
 $debugPaneLink = false;
 include("tmpl/navbar.php");
 
-echo ' <form action="" method="post" name="mainC" class="confwizard" id="top">';
+echo ' <form action="" method="post" name="mainC" class="confwizard" id="top">
+<input type="hidden" name="profile" value="'.$_SESSION["PROFILE"].'" />
+';
 
 
 $currentConf=conf_loader_load();
@@ -100,8 +110,11 @@ foreach ($currentConf as $pname=>$parms) {
             $legend=$primaryGroups[$pnameA[0]];
             
         }
-        if (trim($legend))
-            $summary[md5($legend)]=$legend;
+        if (trim($legend)) {
+            $summary[md5($legend)]["main"]=$legend;
+            $lastLegend=$legend;
+        }
+        
         echo "<fieldset><legend id='".md5($legend)."'>$legend</legend>";
         $lvl1=1;
         $lvl2=0;
@@ -122,7 +135,10 @@ foreach ($currentConf as $pname=>$parms) {
         }
         
        
-        echo "<fieldset><legend>$legend</legend>";
+        echo "<fieldset><legend id='".md5($legend)."'>$legend</legend>";
+        
+         if (trim($legend))
+            $summary[md5($lastLegend)]["childs"][]=$legend;
         
         if (!isset($pSeparator["{$pnameA[0]}"])) {
             $lvl2=1;
@@ -209,24 +225,28 @@ echo str_repeat("</fieldset>", $lvl2);
 
 echo '</form>';
 
-echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'><span><strong>Quick Access</strong></span><ul>";
+echo "<div style='position:fixed;top:0px;right:5px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'><span><strong>Quick Access for {$GLOBALS["CURRENT_PROFILE_CHAR"]}</strong></span><ul>";
 echo "<li><a href='#top'>Character Configuration</a></li>";
 
-foreach ($summary as $item) {
-    if (strpos($item, "::") !== false)
-        continue;
-    echo "<li><a href='#" . md5($item) . "'>$item</a></li>";
+
+foreach ($summary as $k=>$item) {
+    echo "<li>&nbsp;<a href='#$k'>{$item["main"]}</a></li>";
+    
+    foreach ($item["childs"] as $localhash=>$subtitle) {
+        echo "<li class='subchild'>&nbsp;<a href='#" . md5($subtitle) . "'>$subtitle</a></li>";
+    }
+    
 }
 
-echo "<li><a href='#end'>Check & Save</a></li>";
-echo '<input class="btn btn-info" type="button" name="save" value="Save" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php?save=true";document.forms[0].submit();\' /></p>';
+//echo "<li><a href='#end'>Check & Save</a></li>";
+echo '<input class="btn btn-info" type="button" name="save" value="Save" onclick=\'document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' /></p>';
 echo "</ul></div>";
 
 
 echo '<p id="end"><input class="btn btn-info" type="button" name="check" value="Check" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php";document.forms[0].submit()\' />';
 echo ' :: <input class="btn btn-info" type="button" name="save" value="Save" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php?save=true";document.forms[0].submit();\' /></p>';
 echo '<iframe class="w-75" name="checker" border="1" style="min-height:200px;" scrolling="no" src="tmpl/black.html"></iframe>';
-
+echo '<script>window.onload = scrollToHash;</script>';
 
 
 

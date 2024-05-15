@@ -201,7 +201,7 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "eventlog") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 0,50");
+        $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a where type not in ('prechat','rechat') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 0,50");
         echo "<h3 class='my-2'>Event Log</h3>";
         print_array_as_table($results);
         if ($_GET["autorefresh"]) {
@@ -267,7 +267,7 @@ include("tmpl/navbar.php");
     }
     
     if ($_GET["table"] == "memory_summary") {
-        $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 0,100");
+        $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 0,150");
         echo "<h3 class='my-2'>Summarized Memories Log</h3>";
         print_array_as_table($results);
     }

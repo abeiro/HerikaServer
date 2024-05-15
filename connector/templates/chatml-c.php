@@ -11,11 +11,15 @@ $GLOBALS["more_stopseq"][]="<|im_start|>";
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
 
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+                if ($n==(sizeof($contextData)-2)) {   // Last prompt line
 
-                    $instruction="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
+                    $instruction="<|im_start|>user\n".$s_msg["content"];
 
-                } else {
+                }else if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+
+                    $instruction.=$s_msg["content"]."<|im_end|>\n";
+
+                }  else {
                     if ($s_msg["role"]=="user") {
                         $contextHistory.="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";
                           $GLOBALS["DEBUG_DATA"][]="<|im_start|>user\n".$s_msg["content"]."<|im_end|>\n";

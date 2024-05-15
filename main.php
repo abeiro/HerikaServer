@@ -25,9 +25,11 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
 if (isset($_GET["profile"])) {
     if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
        // error_log("PROFILE: {$_GET["profile"]}");
-        require($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
+        require_once($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
 
     }
+    $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
+
 }
 // End of profile selection
 
@@ -57,6 +59,10 @@ $ERROR_TRIGGERED=false;
 
 $LAST_ROLE="user";
 
+// SCRIPT LINE QUEUE
+$GLOBALS["SCRIPTLINE_EXPRESSION"]="";
+$GLOBALS["SCRIPTLINE_LISTENER"]="";
+$GLOBALS["SCRIPTLINE_ANIMATION"]="";
 
 /**********************
 MAIN FLOW
@@ -64,12 +70,13 @@ MAIN FLOW
 
 $startTime = microtime(true);
 
+//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 // Lock to avoid TTS hangs
 $semaphoreKey =abs(crc32(__FILE__));
 $semaphore = sem_get($semaphoreKey);
 while (sem_acquire($semaphore,true)!=true)  {
-    sleep(1);
+    usleep(1000);
 }
 
 // PARSE GET RESPONSE into $gameRequest
@@ -95,6 +102,8 @@ if (php_sapi_name()=="cli") {
 }
 
 
+//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+
 $gameRequest = explode("|", $receivedData);
 foreach ($gameRequest as $i => $ele) {
     $gameRequest[$i] = trim(preg_replace('/\s\s+/', ' ', preg_replace('/\'/m', "''", $ele)));
@@ -107,7 +116,7 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 // $gameRequest = type of message|localts|gamets|data
 
 // Exit if only a event info log.
-if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight"])) {
+if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound"])) {
     logEvent($gameRequest);
     die();
 }
@@ -123,14 +132,16 @@ if (in_array($gameRequest[0],["rechat"])) {
     //RECHAT. Must choose if we continue conversation or no.
     $rechatHistory=DataRechatHistory();
     
-    if (sizeof($rechatHistory)>3)       // TOO MUCH RECHAT
-        die();
-    
-    if (rand(0,10)%2==0) {              // 50 % rechat prob. Should do it per character (GLOBAL CONF)
+    if (sizeof($rechatHistory)>4)    {   // TOO MUCH RECHAT
+        error_log("Rechat discarded");
         die();
     }
     
-    $sqlfilter=" and type='prechat' ";  // Use prechat
+    /*if (rand(0,10)%2==0) {              // 50 % rechat prob. Should do it per character (GLOBAL CONF)
+        die();
+    }*/
+    
+    $sqlfilter=" and type in ('prechat','inputtext','inputtext_s') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny
 
 } else
@@ -146,6 +157,7 @@ if ($MUST_END) {  // Shorthand for non LLM processing
 }
 
 
+//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 /**********************
  CONTEXT DATA BUILDING
@@ -184,7 +196,6 @@ if ($gameRequest[0] != "diary") {
     );
 
 }
-
 if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
     if ($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])
         die();
@@ -231,8 +242,11 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
+//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
+
+//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 $head[] = array('role' => 'system', 'content' =>  $GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] . $GLOBALS["COMMAND_PROMPT"]);
 
@@ -262,11 +276,18 @@ if ($gameRequest[0] == "funcret") {
 
 }  else {
 
-    $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
+    if (!empty($request)) {
+        $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
+    } else
+        $prompt=[];
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);
     
 }
+
+//error_log("*TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+//returnLines(["Mmm..let me think"]);
+
 
 /**********************
 CALL INITIALIZATION
@@ -281,6 +302,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEP
 
     $connectionHandler=new connector();
     $connectionHandler->open($contextData,$overrideParameters);
+    
+
 }
 
 if ($connectionHandler->primary_handler === false) {
@@ -291,7 +314,7 @@ if ($connectionHandler->primary_handler === false) {
             'localts' => time(),
             'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
             'response' => ((print_r(error_get_last(), true))),
-            'url' => nl2br(("$receivedData in " . (time() - $startTime) . " secs "))
+            'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
 
 
         )
@@ -379,6 +402,8 @@ if ($connectionHandler->primary_handler === false) {
 
         $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
         echo implode("\r\n", $actions);
+        file_put_contents(__DIR__."/log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
+
     }
     $connectionHandler->close();
     //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE
@@ -395,7 +420,7 @@ if (sizeof($talkedSoFar) == 0) {
                 'localts' => time(),
                 'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
                 'response' => (print_r($alreadysent, true)),
-                'url' => nl2br(("$receivedData in " . (time() - $startTime) . " secs "))
+                'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
 
 
             )
@@ -412,7 +437,7 @@ if (sizeof($talkedSoFar) == 0) {
                 'localts' => time(),
                 'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
                 'response' => (print_r($alreadysent, true)),
-                'url' => nl2br(("$receivedData in " . (time() - $startTime) . " secs "))
+                'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
 
 
             )
@@ -428,7 +453,7 @@ if (sizeof($talkedSoFar) == 0) {
                 'localts' => time(),
                 'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
                 'response' => (print_r($alreadysent, true)),
-                'url' => nl2br(("$receivedData in " . (time() - $startTime) . " secs "))
+                'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
             )
         );
     }

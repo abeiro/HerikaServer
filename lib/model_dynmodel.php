@@ -19,13 +19,17 @@ function removeAndReturnNext(&$array, $value) {
 }
 
 function DMgetCurrentModel() {
+    if (true)
+        return $GLOBALS["CONNECTORS"][0];
+    
     $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel.json";
     if (!file_exists($file)) {
         DMsetCurrentModel("openai");
     }
 
     $cmj=file_get_contents($file);
-    return json_decode($cmj,true);
+    
+    //return json_decode($cmj,true);
 
 }
 

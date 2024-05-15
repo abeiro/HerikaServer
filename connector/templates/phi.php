@@ -1,7 +1,7 @@
 <?php
 
-            $GLOBALS["more_stopseq"][]="<|im_start|>";
-            $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
+ $GLOBALS["more_stopseq"][]="<|end|>";
+            $context="<|system|>\n{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
             $context.="{$GLOBALS["COMMAND_PROMPT"]}\n#CONTEXT\n";
             $GLOBALS["DEBUG_DATA"][]=$context;
@@ -10,15 +10,15 @@
             $n=0;
             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
 
-                if ($n==(sizeof($contextData)-1)) {   // Last prompt line
+                if ($n==(sizeof($contextData)-2)) {   // Last prompt line
 
-                    $instruction.=$s_msg["content"]."<|im_end|>\n";
+                    $instruction="<|end|>\n<|user|>".$s_msg["content"];
 
-                } else if ($n==(sizeof($contextData)-2)) {   // Last prompt line
+                } else if ($n==(sizeof($contextData)-1)) {   // Last prompt line
 
-                    $instruction="<|im_end|>\n<|im_start|>user\n".$s_msg["content"];
+                    $instruction.=$s_msg["content"]."<|end|>\n";
 
-                }  else {
+                } else {
                     if ($s_msg["role"]=="user") {
                         $contextHistory.=$s_msg["content"]."\n";
                           $GLOBALS["DEBUG_DATA"][]=$s_msg["content"];
@@ -34,7 +34,7 @@
                 $n++;
             }
 
-            $context.="$contextHistory  $instruction <|im_start|>assistant\n";
+            $context.="$contextHistory  $instruction <|assistant|>";
             $GLOBALS["DEBUG_DATA"][]="$instruction";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
             

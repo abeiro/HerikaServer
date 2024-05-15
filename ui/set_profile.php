@@ -3,5 +3,5 @@
 session_start();
 $_SESSION["PROFILE"]=$_POST["profileSelector"];
 session_write_close();
-header("Location: conf_wizard.php");
+header("Location: conf_wizard.php{$_POST["shortcut"]}");
 ?>
