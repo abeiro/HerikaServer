@@ -128,7 +128,7 @@ $CONNECTOR["openaijson"]["model"]="gpt-3.5-turbo-1106";
 $CONNECTOR["openaijson"]["max_tokens"]=100;
 $CONNECTOR["openaijson"]["temperature"]=1;
 $CONNECTOR["openaijson"]["presence_penalty"]=1;
-$CONNECTOR["openai"]["API_KEY"]="";
+$CONNECTOR["openaijson"]["API_KEY"]="";
 $CONNECTOR["openaijson"]["MAX_TOKENS_MEMORY"]="512";
 $CONNECTOR["openaijson"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
 $CONNECTOR["openaijson"]["top_p"]=1;        			//LLM parameter top_p
@@ -155,6 +155,20 @@ $CONNECTOR["koboldcpp"]["eos_token"]='</s>';
 $CONNECTOR["koboldcpp"]["top_k"]=0;
 $CONNECTOR["koboldcpp"]["min_p"]=0;
 
+$CONNECTOR["koboldcppjson"]["url"]="http://127.0.0.1:5001";
+$CONNECTOR["koboldcppjson"]["max_tokens"]=100;
+$CONNECTOR["koboldcppjson"]["temperature"]=0.9;
+$CONNECTOR["koboldcppjson"]["rep_pen"]=1.12;
+$CONNECTOR["koboldcppjson"]["top_p"]=0.9;
+$CONNECTOR["koboldcppjson"]["MAX_TOKENS_MEMORY"]=256;
+$CONNECTOR["koboldcppjson"]["newline_as_stopseq"]=true;
+$CONNECTOR["koboldcppjson"]["use_default_badwordsids"]=true;
+$CONNECTOR["koboldcppjson"]["template"]="alpaca";
+$CONNECTOR["koboldcppjson"]["eos_token"]='</s>';
+$CONNECTOR["koboldcppjson"]["top_k"]=0;
+$CONNECTOR["koboldcppjson"]["min_p"]=0;
+$CONNECTOR["koboldcppjson"]["grammar"]=true;
+
 
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions";
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-2-70b-chat";
@@ -171,6 +185,23 @@ $CONNECTOR["openrouter"]["frequency_penalty"]=0;	//LLM parameter frequency_penal
 $CONNECTOR["openrouter"]["repetition_penalty"]=1.15;	//LLM parameter repetition_penalty
 $CONNECTOR["openrouter"]["min_p"]=0.1;	//LLM parameter min_p
 $CONNECTOR["openrouter"]["top_a"]=0;	//LLM parameter top_a
+
+
+$CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions";
+$CONNECTOR["openrouterjson"]["model"]="lizpreciatior/lzlv-70b-fp16-hf";
+$CONNECTOR["openrouterjson"]["max_tokens"]=100;
+$CONNECTOR["openrouterjson"]["xreferer"]="http://localhost:8081/saig-gwserver/";
+$CONNECTOR["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework";
+$CONNECTOR["openrouterjson"]["API_KEY"]="";
+$CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]="512";
+$CONNECTOR["openrouterjson"]["temperature"]=1.01;	//LLM parameter temperature
+$CONNECTOR["openrouterjson"]["top_k"]=30;	//LLM parameter top_k
+$CONNECTOR["openrouterjson"]["top_p"]=1;	//LLM parameter top_p
+$CONNECTOR["openrouterjson"]["presence_penalty"]=0.0;	//LLM parameter presence_penalty
+$CONNECTOR["openrouterjson"]["frequency_penalty"]=1.01;	//LLM parameter frequency_penalty
+$CONNECTOR["openrouterjson"]["repetition_penalty"]=1.01;	//LLM parameter repetition_penalty
+$CONNECTOR["openrouterjson"]["min_p"]=0.0;	//LLM parameter min_p
+$CONNECTOR["openrouterjson"]["top_a"]=1.0;	//LLM parameter top_a
 
 
 $CONNECTOR["oobabooga"]["HOST"]="127.0.0.1";

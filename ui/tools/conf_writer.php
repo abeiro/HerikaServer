@@ -12,8 +12,9 @@ $buffer="<?php".PHP_EOL;
 $oldGroup="";
 $oldSubGroup="";
 
-if (isset($_POST["profileSelector"])) {
-    $_SESSION["PROFILE"]=$_POST["profileSelector"];
+if (isset($_POST["profile"])) {
+    $_SESSION["PROFILE"]=$_POST["profile"];
+    unset($_POST["profile"]);
     unset($_POST["profileSelector"]);
 }
 
@@ -98,7 +99,7 @@ if (isset($_GET["save"])) {
     
     if ($result!==false) {
         echo "Writing config file.....";
-        echo '<script>alert("Config file '.basename($_SESSION["PROFILE"]).' has been written");parent.location.href="../conf_wizard.php?ts='.time().'"</script>';
+        echo '<script>alert("Config file '.basename($_SESSION["PROFILE"]).' has been written");parent.location.href="../conf_wizard.php?ts='.(time()."#".$_GET["sc"]).'"</script>';
     } else {
         echo "Writing config file.....";
         echo "Some error ocurred.".PHP_EOL;

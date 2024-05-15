@@ -196,7 +196,7 @@ function DataPosibleInspectTargets($pack=true)
     foreach ($results as $row) {
         //$row = $results->fetchArray();
 
-        $pattern = "/Herika can see this beings in range:(.*)/";
+        $pattern = "/beings in range:(.*)/";
         preg_match_all($pattern, $row["data"], $matches);
 
         if (!empty($matches) && !empty($matches[1]) && isset($matches[1][0])) {
@@ -247,21 +247,8 @@ function DataPosibleInspectTargets($pack=true)
 function DataQuestJournal($quest)
 {
     global $db;
-    if (empty($quest)) {
-        /*$lastDialogFull = array();
-        $results = $db->query("SElECT  distinct name,id_quest,briefing,giver_actor_id
-              FROM quests where coalesce(status,'pending')<>'completed' and stage<200 order by id_quest");
-        if (!$results)
-          return "no result";
-        $data=[];
-        while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-          $data[] = $row;
-        }
-        if (sizeof($data)==0)
-          $data[] = "no active quests";
-
-        return json_encode($data);
-        */
+    if (empty($quest)||($quest=="None")||true) {
+        
         $results = $db->fetchAll("SElECT name,id_quest,briefing,'pending' as status FROM quests");
         $finalRow = [];
         foreach ($results as $row) {
@@ -318,7 +305,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     global $db;
 
-    $currentGameTs=$GLOBALS["gameRequest"][2];
+    $currentGameTs=$GLOBALS["gameRequest"][2]+0;
 
     $lastDialogFull = array();
     $results = $db->fetchAll("select  
@@ -331,7 +318,9 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'rechat'
-    and type<>'funccall'  and type<>'togglemodel' $sqlfilter  order by gamets desc,ts desc,rowid desc LIMIT 0,150");
+    and type<>'funccall'  and type<>'togglemodel' $sqlfilter  
+    and gamets>".($currentGameTs-(60*60*60*60))."
+    order by gamets desc,ts desc,rowid desc LIMIT 0,150");
 
     $rawData=[];
     foreach ($results as $row) {
@@ -598,7 +587,7 @@ function DataGetCurrentTask()
     foreach ($results as $row) {
 
         if ($n == 0) {
-            $data = "Current task/quest/plan: {$row["description"]}.";
+            $data = "Last task/quest/plan: {$row["description"]}.";
         } elseif ($n == 1) {
             $data .= "Previous task/quest/plan: {$row["description"]}.";
         } else {
@@ -719,8 +708,119 @@ function DataRechatHistory()
 
     global $db;
 
-    $lastRechat=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('rechat') and localts>".(time()-300)." order by gamets desc,ts desc LIMIT 0,10");
+    $lastRechat=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('rechat','inputtext','inputtext_s') 
+    and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 0,10");
     
     return $lastRechat;
 
 }
+
+function GetAnimationHex($mood)
+{
+
+    //error_log("MOOD:".$mood);
+    $ANIMATIONS=[
+        "ArmsCrossed"=>"IdleExamine",        // Arms crossed
+        "PointClose"=>"IdlePointClose",
+        "HandsBehindBack"=>"IdleHandsBehindBack",    // 000B240A ? // Arms behind back
+        //"DrawAttention"=>"0x0006FF15",     // Continous
+        //"Cheer"=>"0x00066374",             // Continous
+        "ApplauseSarcastic"=>"IdleApplaudSarcastic",  // Continous
+        "WaveHand"=>"IdleWave",
+        "Nervous"=>"IdleNervous",
+        "ArmsRaised"=>"IdleSurrender",
+        "NervousDialogue"=>"IdleDialogueMovingTalkA",
+        "NervousDialogue1"=>"IdleDialogueMovingTalkB",
+        "NervousDialogue2"=>"IdleDialogueMovingTalkC",
+        "NervousDialogue3"=>"IdleDialogueMovingTalkD",
+        "Cheer"=>"SpectatorCheer",
+        "ComeThisWay"=>"IdleComeThisWay",
+        "SarcasticMove"=>"IdleDialogueExpressiveStart",
+        "Applause1"=>"IdleApplaud2",
+        "Applause2"=>"IdleApplaud3",
+        "Applause3"=>"IdleApplaud4",
+        "Applause4"=>"IdleApplaud5",
+        "DrinkPotion"=>"IdleDrinkPotion",        // Don't use while talking
+        "PointFar"=>"IdlePointFar_01",
+        "PointFar2"=>"IdlePointFar_02",
+        "GiveSomething"=>"IdleGive",
+        "TakeSomething"=>"IdleTake",
+        "Salute"=>"IdleSalute",
+        "CleanSweat"=>"IdleWipeBrow",
+        "NoteRead"=>"IdleNoteRead",
+        "LookFar"=>"IdleLookFar",
+        "Laugh"=>"IdleLaugh",
+        "CleanSword"=>"IdleCleanSword",
+        "WarmArms"=>"IdleWarmArms",
+        "Positive"=>"LooseDialogueResponsePositive",
+        "Negative"=>"LooseDialogueResponseNegative",
+        "HappyDialogue"=>"IdleDialogueHappyStart",
+        "AngryDialogue"=>"IdleDialogueAngryStart",
+        "Agitated"=>"IdleCiceroAgitated",
+        "HandOnChinGesture"=>"IdleDialogueHandOnChinGesture",
+        
+        
+        
+        
+    ];
+    
+    if ($mood=="sarcastic") {
+        return array_rand(array_flip([$ANIMATIONS["SarcasticMove"],$ANIMATIONS["CleanSweat"],$ANIMATIONS["Agitated"],$ANIMATIONS["ApplauseSarcastic"]]), 1);
+        
+        
+    } else if ($mood=="sassy") {
+        return array_rand(array_flip([$ANIMATIONS["SarcasticMove"],$ANIMATIONS["CleanSweat"],$ANIMATIONS["Agitated"],$ANIMATIONS["ApplauseSarcastic"]]), 1);
+        
+        
+    } else if ($mood=="sardonic") {
+        return array_rand(array_flip([$ANIMATIONS["SarcasticMove"],$ANIMATIONS["CleanSweat"],$ANIMATIONS["Agitated"],$ANIMATIONS["ApplauseSarcastic"]]), 1);
+        
+        
+    } else if ($mood=="irritated") {
+        return array_rand(array_flip([$ANIMATIONS["PointClose"],$ANIMATIONS["Negative"],$ANIMATIONS["AngryDialogue"]]), 1);
+       
+        
+    } else if ($mood=="mocking") {
+        return array_rand(array_flip([$ANIMATIONS["Applause1"],$ANIMATIONS["Applause2"],$ANIMATIONS["Applause3"],$ANIMATIONS["Applause4"]]), 1);
+        
+        
+    } else if ($mood=="playful") {
+        return array_rand(array_flip([$ANIMATIONS["Cheer"],$ANIMATIONS["HappyDialogue"]]), 1);
+            
+    } else if ($mood=="teasing") {
+        return array_rand(array_flip([$ANIMATIONS["NervousDialogue"],$ANIMATIONS["NervousDialogue1"],$ANIMATIONS["NervousDialogue2"],$ANIMATIONS["NervousDialogue3"]]), 1);
+        
+        
+    } else if ($mood=="smug") {
+        return $ANIMATIONS["Nervous"];
+        
+        
+    } else if ($mood=="amused") {
+        return $ANIMATIONS["ArmsRaised"];
+        
+    } else if ($mood=="smirking") {
+        return $ANIMATIONS["Nervous"];
+    
+        
+    } else if ($mood=="serious") {
+        return array_rand(array_flip([$ANIMATIONS["CleanSweat"],$ANIMATIONS["PointClose"],$ANIMATIONS["HandOnChinGesture"]]), 1);
+    
+        
+    } else if ($mood=="firm") {
+        return array_rand(array_flip([$ANIMATIONS["CleanSweat"],$ANIMATIONS["PointClose"],$ANIMATIONS["HandOnChinGesture"]]), 1);
+    
+        
+    } if ($mood=="neutral") {
+        return array_rand(array_flip([$ANIMATIONS["HappyDialogue"]]), 1);
+        
+        
+    }
+                            
+    
+    
+    return "";
+
+}
+
+
+

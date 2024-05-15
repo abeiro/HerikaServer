@@ -20,7 +20,8 @@ $ENABLED_FUNCTIONS=[
     'GetDateTime',
     'SearchDiary',
     'SetCurrentTask',
-    'StopWalk'
+    'StopWalk',
+    'TravelTo'
 ];
 
 
@@ -29,10 +30,10 @@ $F_TRANSLATIONS["Inspect"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and 
 $F_TRANSLATIONS["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
 $F_TRANSLATIONS["InspectSurroundings"]="Looks for beings nearby";
 $F_TRANSLATIONS["MoveTo"]= "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
-$F_TRANSLATIONS["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}. Opens backpack.";
+$F_TRANSLATIONS["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS["Attack"]="Attacks actor, npc or being. but always avoid the deaths of innocent actors.";
 $F_TRANSLATIONS["Follow"]="Moves to and follow a NPC, an actor or being";
-$F_TRANSLATIONS["CheckInventory"]="Search in {$GLOBALS["HERIKA_NAME"]}\'s inventory, backpack or pocket";
+$F_TRANSLATIONS["CheckInventory"]="Search in {$GLOBALS["HERIKA_NAME"]}\'s inventory, backpack or pocket. Opens backpack";
 $F_TRANSLATIONS["SheatheWeapon"]="Sheates current weapon";
 $F_TRANSLATIONS["Relax"]="Makes {$GLOBALS["HERIKA_NAME"]} to stop current action and relax herself";
 $F_TRANSLATIONS["LeadTheWayTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
@@ -44,6 +45,7 @@ $F_TRANSLATIONS["SearchDiary"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to make h
 $F_TRANSLATIONS["SetCurrentTask"]="Set the current plan of action or task or quest";
 $F_TRANSLATIONS["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_TRANSLATIONS["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
+$F_TRANSLATIONS["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} travels to a city/location";
 
 // What is this?. We can translate functions or give them a custom name. 
 // This array will handle translations. Plugin must receive the codename always.
@@ -52,10 +54,10 @@ $F_NAMES["Inspect"]="Inspect";
 $F_NAMES["LookAt"]="LookAt";
 $F_NAMES["InspectSurroundings"]="InspectSurroundings";
 $F_NAMES["MoveTo"]= "MoveTo";
-$F_NAMES["OpenInventory"]="OpenInventory";
+$F_NAMES["OpenInventory"]="ExchangeItems";
 $F_NAMES["Attack"]="Attack";
 $F_NAMES["Follow"]="Follow";
-$F_NAMES["CheckInventory"]="CheckInventory";
+$F_NAMES["CheckInventory"]="CheckBackPack";
 $F_NAMES["SheatheWeapon"]="SheatheWeapon";
 $F_NAMES["Relax"]="Relax";
 $F_NAMES["LeadTheWayTo"]="LeadTheWayTo";
@@ -67,6 +69,7 @@ $F_NAMES["SearchDiary"]="SearchDiary";
 $F_NAMES["SetCurrentTask"]="SetCurrentTask";
 $F_NAMES["ReadDiaryPage"]="ReadDiaryPage";
 $F_NAMES["StopWalk"]="StopWalk";
+$F_NAMES["TravelTo"]="TravelTo";
 
 if (isset($GLOBALS["CORE_LANG"]))
 	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
@@ -236,6 +239,21 @@ $FUNCTIONS = [
         ]
     ],
     [
+        "name" => $F_NAMES["TravelTo"],
+        "description" => $F_TRANSLATIONS["TravelTo"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "location" => [
+                    "type" => "string",
+                    "description" => "Town or City to travel to, only if {$GLOBALS["PLAYER_NAME"]} explicitly orders it"
+                    
+                ]
+            ],
+            "required" => ["location"]
+        ]
+    ],
+    [
         "name" => $F_NAMES["TakeASeat"],
         "description" => $F_TRANSLATIONS["TakeASeat"],
         "parameters" => [
@@ -369,6 +387,16 @@ function getFunctionTrlName($key) {
     
 }
 
+function findFunctionByName($name) {
+    foreach ($GLOBALS["FUNCTIONS"] as $function) {
+        if ($function['name'] === $name) {
+            return $function;
+        }
+    }
+    return null; // Return null if function not found
+}
+
+
 function requireFunctionFilesRecursively($dir) {
     $files = scandir($dir);
     foreach ($files as $file) {
@@ -394,8 +422,8 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS[
     require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
 }
 
-if (file_exists(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php")) {
-    require(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php");
+if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
+    require(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php");
 }
 
 

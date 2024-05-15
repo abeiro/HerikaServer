@@ -39,7 +39,7 @@ function stt($file)
             ."whisper-1\r\n"
             ."--{$boundary}\r\n"
             ."Content-Disposition: form-data; name=\"prompt\"\r\n\r\n"
-            ."{$GLOBALS["HERIKA_NAME"]},Dragonborn,Whiterun,$additionalKeywords\r\n"
+            ."{$GLOBALS["HERIKA_NAME"]},Dragonborn,Whiterun,Herika,$additionalKeywords\r\n"
             ."--{$boundary}\r\n"
             ."Content-Disposition: form-data; name=\"language\"\r\n\r\n"
             ."$lang\r\n"
@@ -55,7 +55,7 @@ function stt($file)
             ."whisper-1\r\n"
             ."--{$boundary}\r\n"
             ."Content-Disposition: form-data; name=\"prompt\"\r\n\r\n"
-            ."{$GLOBALS["HERIKA_NAME"]},Dragonborn,Whiterun\r\n"
+            ."{$GLOBALS["HERIKA_NAME"]},Dragonborn,Whiterun,Herika\r\n"
             ."--{$boundary}\r\n";
     }
          

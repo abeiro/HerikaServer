@@ -25,6 +25,8 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 		$returnFunction[3] = DataQuestJournal($returnFunction[2]); // Overwrite funrect content with info from database
 		$gameRequest[3] .= $returnFunction[3];						// Add also to $gameRequest 
 	
+		
+		
 		// Store info.
 		$db->insert(
 			'eventlog',
@@ -32,7 +34,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 				'ts' => $gameRequest[1],
 				'gamets' => $gameRequest[2],
 				'type' => 'chat',
-				'data' => "The Narrator. Herika reads in diary:".$returnFunction[3],
+				'data' => "The Narrator. {$GLOBALS["HERIKA_NAME"]} reads in quest journal:".prettyPrintJson($returnFunction[3]),
 				'sess' => 'pending',
 				'localts' => time()
 			)
@@ -65,7 +67,15 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 				'localts' => time()
 			)
 		);
-	} else {
+		die();
+	} else if ($functionCodeName == "Attack") {
+		if (strpos($returnFunction[3],"Error")!==false) {
+			$GLOBALS["FUNCTIONS_ARE_ENABLED"]=true;	// RE-Enable functions
+			$request="Specify a valid target:(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";	
+			error_log("Request function again {$returnFunction[3]}");
+		}
+		
+	}  else {
 		if (isset($GLOBALS["FUNCSERV"][$functionCodeName])) {
 			call_user_func_array($GLOBALS["FUNCSERV"][$functionCodeName],[]);
 		}

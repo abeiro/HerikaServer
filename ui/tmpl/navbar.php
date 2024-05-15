@@ -149,8 +149,8 @@
     </div>
 </nav>
 
-<form action='set_profile.php' method="POST" enctype="multipart/form-data">
-<select name='profileSelector' style="min-width:250px">
+<form action='set_profile.php' method="POST" enctype="multipart/form-data" id="formprofile" onsubmit='document.getElementById("shorcutholder").value=getAnchor()'>
+<select name='profileSelector' style="min-width:250px" onchange='document.getElementById("shorcutholder").value=getAnchor();document.getElementById("formprofile").submit();'>
 
 <?php
  // Character Map file
@@ -159,6 +159,7 @@ if (file_exists(__DIR__ . "/../../conf/character_map.json"))
 
 foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
     $isSelected=($_SESSION["PROFILE"]==$lProfile)?"selected":"";
+    
     $pattern = "/conf_([a-fA-F0-9]+)\.php/";
     if (preg_match($pattern, $lProfile, $matches)) {
         $hash = $matches[1];
@@ -166,8 +167,15 @@ foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
     } else {
         echo "<option value='$lProfile' $isSelected >$lProfkey</option>";
     }
+    if ($isSelected=="selected") {
+        $GLOBALS["CURRENT_PROFILE_CHAR"]=$characterMap["$hash"];
+    }
+    
 }
 
 ?>
 </select>
+<input type='hidden' value="" name="shortcut" id="shorcutholder">
 <input type='submit' value="change profile">
+</form>
+<main style="max-height:800px;overflow-y:scroll">

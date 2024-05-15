@@ -21,7 +21,7 @@ class connector
 
     public function __construct()
     {
-        $this->name="openaijson";
+        $this->name="openrouterjson";
         $this->_commandBuffer=[];
         $this->_stopProc=false;
         $this->_extractedbuffer="";
@@ -59,7 +59,7 @@ class connector
                 "character"=>$GLOBALS["HERIKA_NAME"],
                 "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                 "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
-                "action"=>'a valid action, (refer to available actions list) or None',
+                "action"=>'a valid action, (refer to available actions list) or \"None\"',
                 "target"=>"action's target",
                 "message"=>'message',
                 
@@ -138,7 +138,8 @@ class connector
             'max_tokens'=>$MAX_TOKENS,
             'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
             'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
-            'response_format'=>["type"=>"json_object"]
+            //'response_format'=>["type"=>"json_object"],
+            
         );
         // Mistral AI API does not support penalty params
         if (strpos($url, "mistral") === false) {
@@ -173,7 +174,9 @@ class connector
 
         $headers = array(
             'Content-Type: application/json',
-            "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}"
+            "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
+            "HTTP-Referer:  {$GLOBALS["CONNECTOR"][$this->name]["xreferer"]}",
+            "X-Title: {$GLOBALS["CONNECTOR"][$this->name]["xtitle"]}"
         );
 
         $options = array(
@@ -305,7 +308,7 @@ class connector
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
                         
-                        $functionDef=findFunctionByName($parsedResponse["action"]);
+                        $functionDef=findFunctionByName(trim($parsedResponse["action"]));
                         if ($functionDef) {
                             $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
                             if (@strlen($functionDef["parameters"]["required"][0])>0) {
@@ -335,7 +338,7 @@ class connector
                 @ob_flush();    
             } else {
                 error_log("No actions");
-                return null;
+                return [];
             }
         }
 

@@ -247,8 +247,13 @@ function returnLines($lines,$writeOutput=true)
         if ($FORCED_STOP) {
             return;
         }
+        
+        if (is_array($sentence))
+            return;
+        
         // Remove actions
-        $elapsedTimeAI=time() - $startTime;
+        $elapsedTimeAI= microtime(true) - $startTime;
+        //error_log("PRE LLM STATUS DONE 2: ". (microtime(true) - $startTime));
 
         $pattern = '/<[^>]+>/';
         $output = str_replace("#CHAT#", "", preg_replace($pattern, '', $sentence));
@@ -389,7 +394,7 @@ function returnLines($lines,$writeOutput=true)
             }
         }
 
-        $elapsedTimeTTS=time() - $startTime;
+        $elapsedTimeTTS=microtime(true) - $startTime;
 
         $outBuffer = array(
             'localts' => time(),
@@ -399,10 +404,24 @@ function returnLines($lines,$writeOutput=true)
             'action' => "AASPGQuestDialogue2Topic1B1Topic",
             'tag' => (isset($tag) ? $tag : "")
         );
+        
         $GLOBALS["DEBUG"]["BUFFER"][] = "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
+        
         if ($writeOutput) {
-            if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"])
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded//{$GLOBALS["LISTENER"]}/\r\n";
+            if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"]) {
+                 if (isset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) && $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) 
+                     $GLOBALS["SCRIPTLINE_ANIMATION"]="";
+                else {
+                    if ((rand(0,5)!==0) ){ // Will disable animations, 20% chance to trigger
+                        $GLOBALS["SCRIPTLINE_ANIMATION"]="IdleDialogueExpressiveStart";
+                    }
+                    $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
+                }
+                     
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
+                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
+                file_put_contents(__DIR__."/../log/ouput_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
+            }
             else
                 echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
             
@@ -429,6 +448,16 @@ function returnLines($lines,$writeOutput=true)
         $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded";
         logEvent($originalRequest);
         
+        // Log chat here, because  function return comes back out of sync.
+        $originalRequest[0]="chat";
+        $originalRequest[1]++;
+        $originalRequest[2]++;
+        if ($GLOBALS["SCRIPTLINE_LISTENER"])
+            $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
+        else
+            $addonlistener="";
+        $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
+        logEvent($originalRequest);
         
     }
 
@@ -558,7 +587,7 @@ function lastKeyWords($n, $eventypes)
     }
 }
 
-function offerMemory($gameRequest, $DIALOGUE_TARGET)
+function offerMemoryOld($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
@@ -695,6 +724,143 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
 
 }
 
+
+function offerMemory($gameRequest, $DIALOGUE_TARGET)
+{
+    global $db;
+    if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
+
+        if (($gameRequest[0] == "inputtext") || ($gameRequest[0] == "inputtext_s")) {
+            $memory=array();
+
+            $textToEmbed=str_replace($DIALOGUE_TARGET, "", $gameRequest[3]);
+            $pattern = '/\([^)]+\)/';
+            $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
+            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:", "", $textToEmbedFinal);
+            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]} :", "", $textToEmbedFinal);
+
+            
+            // Give more weight to player's input and add last keywords to generate embedding.
+            $weightedTextToEmbedFinal = str_repeat(" $textToEmbedFinal ", 3).lastKeyWords(2,['inputtext','inputtext_s']);
+
+
+            
+            $GLOBALS["DEBUG_DATA"]["textToEmbedFinal"]=$weightedTextToEmbedFinal;
+            
+            $memories=queryMemory($embeddings);
+
+
+            if (isset($memories["content"])) {
+                $ncn=0;
+
+                // Analize
+                $tooManyMsg=false;
+
+                $outputMemory = array_slice($memories["content"], 0, $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]);
+                $outLocalBuffer="";
+                $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=true;
+                if (isset($outputMemory)&&(sizeof($outputMemory)>0)) {
+                    foreach ($outputMemory as $singleMemory) {
+
+                        // Memory fuzz
+                        $fuzzMemoryElement="".randomReplaceShortWordsWithPoints($singleMemory["briefing"], $singleMemory["distance"])."";
+
+                        $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["timestamp"])/ (60*60*24*20), 0)." days ago. {$fuzzMemoryElement}";
+
+                    }
+                    $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
+                    $GLOBALS["DEBUG_DATA"]["memories"][]=$outLocalBuffer;
+
+
+                    if ($singleMemory["distance"]<($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]/100)) {
+                        $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
+                        $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=false;
+                        return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
+
+                    } elseif ($singleMemory["distance"]<($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]/100)) {
+                        $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
+                        return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
+
+                    } else {
+                        return "";
+                    }
+
+                    //$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$ncn;
+
+
+                } else {
+                    return "";
+                }
+            }
+        } elseif (($gameRequest[0] == "funcret")) {	//$gameRequest[3] will not contain last user chat, we must query database
+
+            $memory=array();
+            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
+
+            $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine[0]["data"]);
+            $pattern = '/\([^)]+\)/';
+            $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
+            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:", "", $textToEmbedFinal);
+            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]} :", "", $textToEmbedFinal);
+
+            $textToEmbedFinal.=lastKeyWords(2,['inputtext','inputtext_s']);
+
+            $GLOBALS["DEBUG_DATA"]["textToEmbedFinal"]=$textToEmbedFinal;
+            $embeddings=getEmbedding($textToEmbedFinal);
+            $memories=queryMemory($embeddings);
+
+
+            if (isset($memories["content"])) {
+                $ncn=0;
+
+                // Analize
+                $tooManyMsg=false;
+
+                $outputMemory = array_slice($memories["content"], 0, $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]);
+                $outLocalBuffer="";
+                $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=true;
+                if (isset($outputMemory)&&(sizeof($outputMemory)>0)) {
+                    foreach ($outputMemory as $singleMemory) {
+
+                        // Memory fuzz
+                        $fuzzMemoryElement="".randomReplaceShortWordsWithPoints($singleMemory["briefing"], $singleMemory["distance"])."";
+
+                        $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["timestamp"])/ (60*60*24*20), 0)." days ago. {$fuzzMemoryElement}";
+
+                    }
+                    $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
+                    $GLOBALS["DEBUG_DATA"]["memories"][]=$outLocalBuffer;
+                    $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
+                   
+                    
+                    if ($singleMemory["distance"]<($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]/100)) {
+                        $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
+                        $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=false;
+                        return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
+
+                    } elseif ($singleMemory["distance"]<($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]/100)) {
+                        $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
+                        return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
+
+                    } else {
+                        return "";
+                    }
+                    
+
+                    //$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$ncn;
+
+
+                } else {
+                    return "";
+                }
+            }
+        }
+
+        return "";
+    }
+
+
+}
 
 function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
 {
@@ -851,4 +1017,19 @@ function selectRandomInArray($arraySource)
 
 
 
+}
+
+function prettyPrintJson($json )
+{
+    $data=json_decode($json,true);
+    $result="";
+    foreach ($data as $p=>$v) {
+        if (is_array($v)) {
+            foreach ($v as $pp=>$vv) 
+                $result.="$pp: $vv\n";
+        } else
+            $result.="$p: $v\n";
+    }
+
+    return $result;
 }

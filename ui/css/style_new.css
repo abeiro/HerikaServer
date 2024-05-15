@@ -130,8 +130,8 @@ form.confwizard > fieldset > legend {
 	color:lightblue;
 }
 
-form.confwizard > fieldset > fieldset > legend {
-	color:goldenrod;
+form.confwizard > fieldset > fieldset  legend {
+	color:#da20d6;
 }
 
 
@@ -139,4 +139,14 @@ body > form > fieldset legend {
 		color: orange;
 		font-weight: bold;
 		text-shadow: 1px 1px 1px black;
+}
+body > form > fieldset > fieldset legend {
+		color: #ff00c1;
+		font-weight: bold;
+		text-shadow: 1px 1px 1px black;
+}
+li.subchild {
+	font-size: 10px;
+	margin-left: 50px;
+	text-wrap: wrap;
 }

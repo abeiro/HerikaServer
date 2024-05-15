@@ -39,6 +39,16 @@ if (DMgetCurrentModel()=="openaijson") {
     $TEMPLATE_ACTION="";
 }
 
+if (DMgetCurrentModel()=="koboldcppjson") {
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+    $TEMPLATE_ACTION="";
+}
+
+if (DMgetCurrentModel()=="openrouterjson") {
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+    $TEMPLATE_ACTION="";
+}
+
 $PROMPTS=array(
     "location"=>[
             "cue"=>["(Chat as {$GLOBALS["HERIKA_NAME"]})"], // give way to
@@ -62,9 +72,20 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} notes something peculiar) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} admires {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
         ],
-        "extra"=>["force_tokens_max"=>"50","dontuse"=>(time()%5!=0)]   //20% chance
+        "extra"=>["force_tokens_max"=>"50","dontuse"=>(time()%10!=0)]   //10% chance
     ],
-    
+    "combatendmighty"=>[
+        "cue"=>[
+            "({$GLOBALS["HERIKA_NAME"]} comments about the last combat encounter) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} comments about foes defeated) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} curses the defeated enemies.) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} insults the defeated enemies with anger) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} notes something peculiar about last enemy defeated) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} admires {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
+        ]
+    ],
     "quest"=>[
         "cue"=>["$TEMPLATE_DIALOG"],
         //"player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest '{$questName}'?"
@@ -128,7 +149,7 @@ $PROMPTS=array(
         "extra"=>["mood"=>"whispering"]
     ],
      "afterattack"=>[
-        "cue"=>["(roleplay as {$GLOBALS["HERIKA_NAME"]}, she shouts a catchphrase for combat) $TEMPLATE_DIALOG"]
+        "cue"=>["(roleplay as {$GLOBALS["HERIKA_NAME"]}, shout a catchphrase for combat UPPERCASE) $TEMPLATE_DIALOG"]
     ],
     // Like inputtext, but without the functions calls part. It's likely to be used in papyrus scripts
     "chatnf"=>[ 
@@ -147,6 +168,9 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["ITT"][$GLOBALS["ITTFUNCTION"]]["AI_PROMPT"]}. $TEMPLATE_DIALOG."],
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]} : Look at this, {$GLOBALS["HERIKA_NAME"]}.{$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
         "extra"=>["force_tokens_max"=>128]
+    ],
+    "chatsimfollow"=>[ 
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG"]
     ]
 );
 
@@ -162,9 +186,10 @@ if (isset($GLOBALS["CORE_LANG"]))
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prompts.php");
 
 // You can override prompts here
+/*
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php"))
     require_once(__DIR__.DIRECTORY_SEPARATOR."prompts_custom.php");
-
+*/
 if (php_sapi_name()=="cli") {
     //print_r($PROMPTS);
 }

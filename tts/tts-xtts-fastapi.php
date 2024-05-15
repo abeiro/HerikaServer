@@ -54,7 +54,7 @@ function xtts_fastapi_settings($settings) {
 
 function tts($textString, $mood , $stringforhash) {
 
-		//xtts_fastapi_settings([]); Check this
+		//xtts_fastapi_settings([]); //Check this
 		
 		if (!isset($GLOBALS["AVOID_TTS_CACHE"]))
 			if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
@@ -85,7 +85,7 @@ function tts($textString, $mood , $stringforhash) {
 		if (empty($voice))
 			$voice=$GLOBALS["TTS"]["XTTSFASTAPI"]["voiceid"];
 	
-		$data_voice=json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."{$voice}.json"),true);
+		
 
 		$data = array(
 			'text' => $textString,
@@ -122,7 +122,7 @@ function tts($textString, $mood , $stringforhash) {
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
-			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in coaqui-ai call";
+			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in xtts-fast-api call";
 			return "soundcache/" . md5(trim($stringforhash)) . ".wav";
 			
 		} else {

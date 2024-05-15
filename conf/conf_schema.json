@@ -9,7 +9,7 @@
   "CORE_LANG": {"type":"select","description":"Custom Language. A lang folder is in the Herika Server. Leave it blank for default english."},
   "NEWQUEUE": {"type":"boolean","description":"Enable for 360° audio. Is still a bit buggy."},
   "MAX_WORDS_LIMIT": {"type":"integer","description":"Enforce a word limit for Herika's responses. Leave as 0 to disable."},
-  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic","openaijson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic","openaijson","koboldcppjson","openrouterjson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
   "CONNECTOR": {
     "_title":"AI/LLM Service",
     "openai": {
@@ -59,7 +59,23 @@
       "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat"],"description":"Prompt Format. Specified in the HuggingFace model card"}
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3"],"description":"Prompt Format. Specified in the HuggingFace model card"}
+    },
+    "koboldcppjson": {
+      "_title":"KoboldCPP API JSON",
+      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature"},
+      "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
+      "top_p": {"type":"number","description":"LLM parameter top_p"},
+      "min_p": {"type":"number","description":"LLM parameter min_p"},
+      "top_k": {"type":"number","description":"LLM parameter top_k"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
+      "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3"],"description":"Prompt Format. Specified in the HuggingFace model card"},
+      "grammar": {"type":"boolean","description":"Enforces use of JSON grammar. True to enforce (generation speed loss, but json format guaranteed). if false, the generation speed will be better but will depend on the model to produce valid JSON output." }
     },
     "llamacpp": {
       "_title":"Llama.cpp server API",
@@ -74,6 +90,24 @@
     },
     "openrouter": {
       "_title":"OpenRouter API",
+      "url": {"type":"url","description":"OpenRouter API endpoint"},
+      "model": {"type":"string","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
+      "presence_penalty": {"type":"number","description":"LLM parameter presence_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "frequency_penalty": {"type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "repetition_penalty": {"type":"number","description":"LLM parameter repetition_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "top_p": {"type":"number","description":"LLM parameter top_p","helpurl":"https://openrouter.ai/docs#format"},
+      "top_k": {"type":"number","description":"LLM parameter top_k","helpurl":"https://openrouter.ai/docs#format"},
+      "min_p": {"type":"number","description":"LLM parameter min_p","helpurl":"https://openrouter.ai/docs#format"},
+      "top_a": {"type":"number","description":"LLM parameter top_a","helpurl":"https://openrouter.ai/docs#format"},
+      "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "xreferer": {"type":"string","description":"Stub needed header. Keep default."},
+      "xtitle": {"type":"string","description":"Stub needed header. Keep default."}      
+    },
+    "openrouterjson": {
+      "_title":"OpenRouter API (JSON MODE)",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
       "model": {"type":"string","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
@@ -131,13 +165,6 @@
       "style": {"type":"number","description":"Style"},
       "API_KEY": {"type":"apikey","description":"Eleven Labs API key.","code":"11LABS_API_KEY"}
     },
-    "COQUI_AI": {
-      "_title":"Coqui.ai Text-To-Speech",
-      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://docs.coqui.ai/reference/speakers_retrieve"},
-      "speed": {"type":"number","description":"Speed","helpurl":"https://docs.coqui.ai/reference/samples_xtts_stream_create"},
-      "language": {"type":"select","values":["en","de","fr","es","it","pt","pl"],"description":"Language to speak"},
-      "API_KEY": {"type":"apikey","description":"Coqui.ai API key.","code":"COQUI_AI_API_KEY"}
-    },
     "GCP": {
       "_title":"Google Cloud Platform Text-To-Speech",
       "GCP_SA_FILEPATH": {"type":"string","description":"Google Cloud Platform auth file. Should be placed in the data folder.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5581"},
@@ -173,13 +200,13 @@
       "description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"
       },
     "XTTS": {
-      "_title":"COQUI.AI xtts",
+      "_title":"XTTSv2",
       "endpoint":{"type":"url","description":"End point URL","helpurl":""},
       "language":{"type":"select","values":["en", "es"],"description":""},
       "voiceid":{"type":"string","description":"Json voice file","helpurl":""}
     },
     "XTTSFASTAPI": {
-      "_title":"FASTAPI xtts",
+      "_title":"XTTSv2 via fast-api",
       "endpoint":{"type":"url","description":"End point URL","helpurl":""},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
       "voiceid":{"type":"string","description":"WAV refernce (must be into server's voice folder)","helpurl":""}
