@@ -762,9 +762,6 @@ function GetAnimationHex($mood)
         "Agitated"=>"IdleCiceroAgitated",
         "HandOnChinGesture"=>"IdleDialogueHandOnChinGesture",
         
-        
-        
-        
     ];
     
     if ($mood=="sarcastic") {
