@@ -8,6 +8,11 @@ require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class
 require_once($enginePath . "lib/memory_helper_vectordb.php");
 require_once($enginePath . "lib/memory_helper_embeddings.php");
 
+
+if (!$db) {
+  $db = new sql();
+}
+
 if ($_GET["delete"])
   $db->execQuery("DROP TABLE `eventlog`;");
 
