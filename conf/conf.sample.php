@@ -3,15 +3,15 @@
 $DBDRIVER="sqlite3";
 
 $PLAYER_NAME="Prisoner";
-$HERIKA_NAME="Herika";
+$HERIKA_NAME="Follower";
 
 $PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. I'm Prisoner. You're Prisoner's companion.";
-$HERIKA_PERS="You are Herika, a Breton female who likes jokes and sarcastic comments.";
+$HERIKA_PERS="You are a person who likes jokes and sarcastic comments.";
 
 
 $CORE_LANG="";
 
-$NEWQUEUE=false;
+$NEWQUEUE=true;
 
 $MAX_WORDS_LIMIT=0;
 
@@ -113,7 +113,7 @@ $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66;
 $CONNECTORS=["koboldcpp","openai"];  
 
 $CONNECTOR["openai"]["url"]="https://api.openai.com/v1/chat/completions";
-$CONNECTOR["openai"]["model"]="gpt-3.5-turbo-0613";
+$CONNECTOR["openai"]["model"]="gpt-3.5-turbo-1106";
 $CONNECTOR["openai"]["max_tokens"]=100;
 $CONNECTOR["openai"]["temperature"]=1;
 $CONNECTOR["openai"]["presence_penalty"]=1;
@@ -221,10 +221,10 @@ $CONNECTOR["llamacpp"]["eos_token"]='</s>';	//EOS token LLM uses.
 $CONNECTOR["llamacpp"]["template"]='alpaca';	//Prompt Format. Specified in the HuggingFace model card
 
 
-$FEATURES["COST_MONITOR"]["ENABLED"]=true;	//Enable cost/token counter monitoring. Currently only supports OpenAI.
+$FEATURES["COST_MONITOR"]["ENABLED"]=false;					//Enable cost/token counter monitoring. Currently only supports OpenAI.
 $FEATURES["COST_MONITOR"]["URL"]="http://127.0.0.1:8090";	//We can use 127.0.0.1 because server is on same machine by default.
 
-$FEATURES["MISC"]["ADD_TIME_MARKS"]=true;
+$FEATURES["MISC"]["ADD_TIME_MARKS"]=false;
 $FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false;	
 
 $TTS["XVASYNTH"]["url"]='http://172.16.1.128:8008';	//xVASynth must be run in same machine as DwemerDistro, so this must be http://your-local-ip:8008
