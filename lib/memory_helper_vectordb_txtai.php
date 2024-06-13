@@ -16,8 +16,8 @@ curl -X 'POST' \
 
 // Should move this to conf.
 
-$VECTORDB_URL = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["CHROMADB_URL"];
-$VECTORDB_URL_COLLECTION_NAME = "herika_memories";
+$VECTORDB_URL = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"];
+$VECTORDB_URL_COLLECTION_NAME = md5($GLOBALS["HERIKA_NAME"]);
 $VECTORDB_URL_COLLECTION = "";
 $VECTORDB_TIME_DELAY = isset($GLOBALS["FEATURES"]["MEMORY_TIME_DELAY"])? $GLOBALS["FEATURES"]["MEMORY_TIME_DELAY"]:10;
 $VECTORDB_QUERY_SIZE = isset($GLOBALS["FEATURES"]["MEMORY_CONTEXT_SIZE"])? $GLOBALS["FEATURES"]["MEMORY_CONTEXT_SIZE"]:1;
@@ -30,46 +30,34 @@ function getCollectionUID()
 
 function getElement($id)
 {
+	global $db;
+	$results = $db->fetchAll("select summary as content,uid,gamets_truncated,classifier from memory_summary where rowid=$id order by uid asc");
+	if (is_array($results)) {
+		$row = $results[0];
+		if (is_array($row))
+			$dbResult = [
+					"memory_id" => $row["uid"],
+					"briefing" => $row["content"],
+					"timestamp" => $row["gamets_truncated"],
+					"classifier" => $row["classifier"],
+					"score" => $row["score"]
+			];
 
-	
+		return $dbResult;
+	}
+	return null;
 
 }
 
 
-function deleteElement($id)
+function deleteElement($id,$onlyembedding=false)
 {
 
-	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION_NAME, $VECTORDB_URL_COLLECTION;
+	global $db;
 
-		// URL to send the request to
-	$url = 'http://127.0.0.1:8000/delete';
+	$results = $db->query("delete from memory_summary where rowid=$id");
 
-	// Headers for the request
-	$headers = [
-		'Accept: application/json',
-		'Content-Type: application/json'
-	];
-
-	// Data to send in the request
-	$data = json_encode([
-		$id
-	]);
-
-	// Create a stream context with the headers and data
-	$options = [
-		'http' => [
-			'method' => 'POST',
-			'header' => implode("\r\n", $headers),
-			'content' => $data
-		]
-	];
-	$context = stream_context_create($options);
-
-	// Send the request and get the response
-	$response = file_get_contents($url, false, $context);
-
-	// Output the response
-	return  $response;
+	
 
 }
 
@@ -85,69 +73,78 @@ function deleteCollection()
 function countMemories()
 {
 
-	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION_NAME, $VECTORDB_URL_COLLECTION;
+	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION_NAME, $VECTORDB_URL_COLLECTION,$db;
 
+	$dbResults = $db->fetchAll("SELECT COUNT(*) AS total_records, COUNT(embedding)  AS embedded_vectors,COUNT(summary) AS summarized FROM memory_summary");
 	
-	$response = file_get_contents("http://127.0.0.1:8000/count");
 	
-	return json_decode($response,true);
+	$response = $dbResults;
+	
+	return json_encode($response);
 
 }
 
 
-function storeMemory($embeddings, $text, $id, $category='past dialogues' ,$autosync=false)
+function storeMemory($embeddings, $text, $id, $category='past dialogues' ,$forceCompanions="")
 {
 
-	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION;
+	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION,$db;
 
 
-	$url = 'http://127.0.0.1:8000/add';
-
-	// Headers for the request
-	$headers = [
-		'Accept: application/json',
-		'Content-Type: application/json'
-	];
-
-	// Data to send in the request
-	$data = json_encode([
-		[
-			"id" => $id,
-			"text" => $text,
-			"tags" => $category
-		]
-	]);
-
-	// Create a stream context with the headers and data
-	$options = [
-		'http' => [
-			'method' => 'POST',
-			'header' => implode("\r\n", $headers),
-			'content' => $data
-		]
-	];
-	$context = stream_context_create($options);
+	$url =  $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"]."/embeddings?input=".urlencode($embeddings);
 	
-	$response = file_get_contents($url, false, $context);
-	if ($autosync)
-		file_get_contents("http://127.0.0.1:8000/index");
 	
-	$GLOBALS["DEBUG_DATA"]["chromadb_element"]=$response;
+
+	$response = file_get_contents($url);
+	
+	$pattern = '/People:\s*(.*)$/m';
+	$filteredArray=[];
+	if (preg_match($pattern, strtr($text,["and"=>",","AND"=>","]), $matches)) {
+		$people = $matches[1];  // The captured names
+		$peopleArray = array_map('trim', explode(',', $people));  // Split and trim names into an array
+
+		$filteredArray = array_filter($peopleArray, function($value) {
+			return trim($value) !== '';
+		});
+		
+		//print_r($filteredArray);  // Print the array of names
+		
+	}
+	
+	if ($category=="diary") {
+		$filteredArray=[$forceCompanions];
+		
+	}
+	
+	if (is_array($filteredArray))
+		$peopleS=implode(",",$filteredArray);
+	else
+		$peopleS="-";
+	
+	$vector=json_decode($response,true);
+	
+	if (sizeof($vector)=="384") {
+		$db->update("memory_summary","embedding='$response',companions='$peopleS'","rowid=$id");
+		error_log("Using 384 dim vectors".PHP_EOL);
+	}
+	else if (sizeof($vector)=="768") {
+		$db->update("memory_summary","embedding768='$response',companions='$peopleS'","rowid=$id");
+		error_log("Using 768 dim vectors".PHP_EOL);
+	}
+	
+	
 }
 
-function flushVectorDB() {
-	file_get_contents("http://127.0.0.1:8000/index");
-}
-
-
-
-function queryMemory($embeddings,$category='past dialogues')
+function queryMemory($embeddings,$category='past dialogues',$limitNpc="")
 {
 	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION, $VECTORDB_TIME_DELAY,$db;
 
-	$url = 'http://127.0.0.1:8000/search?query='.urlencode($embeddings);
-	$response = file_get_contents($url, false);
+	$url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"]."/embeddings?input=".urlencode($embeddings);
 	
+	error_log(microtime(true));
+	error_log("Get embedding from service");
+	$response = file_get_contents($url, false);
+	error_log(microtime(true));
 
 	// Check if the response is successful
 	if ($response === false) {
@@ -155,45 +152,61 @@ function queryMemory($embeddings,$category='past dialogues')
 		die("Error: Unable to fetch response.".__LINE__);
 	}
 
+	if ($limitNpc)
+		$limitNpcFilter=" where companions like '%$limitNpc%'";
+	
+	error_log("Similarity Search");
 	// Decode the JSON response
 	$responseData = json_decode($response, true);
-
-	$dbResults = [];
 	
-	foreach ($responseData as $n => $element) {
-		$results = $db->query("select summary as content,uid,gamets_truncated,classifier from memory_summary where uid={$element["id"]} order by uid asc");
-		while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
+	if (sizeof($responseData)==384) {
+		error_log("Using 384 dim vectors".PHP_EOL);
+		$dbResults = $db->fetchAll("select rowid, embedding <-> '$response' as score, summary as content,uid,gamets_truncated,classifier,companions 
+			from memory_summary $limitNpcFilter ORDER BY embedding <-> '$response' LIMIT 5 ");
+	}
+	else if (sizeof($responseData)==768) {
+		error_log("Using 768 dim vectors".PHP_EOL);
+		$dbResults = $db->fetchAll("select rowid, embedding768 <-> '$response' as score, summary as content,uid,gamets_truncated,classifier,companions 
+			from memory_summary $limitNpcFilter ORDER BY embedding768 <-> '$response' LIMIT 5 ");
+	}
+	
+	error_log(microtime(true));
 
-			if ($row["gamets_truncated"] > (time() - (60 * 20  * $VECTORDB_TIME_DELAY))) // Ten minutes to get things as memories
-				continue;
+	foreach ($dbResults as $n => $row) {
 
-			$dbResults[] = [
-				"memory_id" => $row["uid"],
-				"briefing" => $row["content"],
-				"timestamp" => $row["gamets_truncated"],
-				"classifier" => $row["classifier"],
-				"score" => $element["score"]
-			];
+		if ($row["gamets_truncated"] > (time() - (60 * 20  * $VECTORDB_TIME_DELAY))) // Ten minutes to get things as memories
+			continue;
+		
+		
+		$dbResultsFinal[] = [
+			"memory_id" => $row["rowid"],
+			"briefing" => $row["content"],
+			"timestamp" => $row["gamets_truncated"],
+			"classifier" => $row["classifier"],
+			"score" => $row["score"],
+			"companions" => $row["companions"]
+		];
 
-		}
+	
 
 	}
+	error_log(microtime(true));
 
 	// Lets sort by distance
-	if (sizeof($dbResults) > 0) {
+	if (sizeof($dbResultsFinal) > 0) {
 		if (!function_exists("cmp")) {
 			function cmp($a, $b)
 			{
 				if ($a["score"] == $b["score"]) {
 					return 0;
 				}
-				return ($a["score"] > $b["score"]) ? -1 : 1;
+				return ($a["score"] > $b["score"]) ? 1 : -1;
 			}
 		}
-		uasort($dbResults, 'cmp');
+		uasort($dbResultsFinal, 'cmp');
 		// Use $VECTORDB_QUERY_SIZE here
-		$GLOBALS["DEBUG_DATA"]["memory_system"][]=$responseData;
-		return ["item" => "{$GLOBALS["HERIKA_NAME"]}'s memories", "content" => $dbResults];
+		//$GLOBALS["DEBUG_DATA"]["memory_system"][]=$responseData;
+		return ["item" => "{$GLOBALS["HERIKA_NAME"]}'s memories", "content" => $dbResultsFinal];
 
 	} else {
 		return null;

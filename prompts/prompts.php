@@ -112,6 +112,7 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: A wise Akaviri man once told me) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG"
         ]
+        ,"extra"=>["dontuse"=>(time()%2!=0)]   //50% chance
     ],
 
     "goodmorning"=>[
@@ -121,14 +122,19 @@ $PROMPTS=array(
 
     "inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG $MAXIMUM_WORDS"
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. $TEMPLATE_DIALOG $MAXIMUM_WORDS"
         ]
             // Prompt is implicit
 
     ],
     "inputtext_s"=>[
-        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["MEMORY_STATEMENT"]} $TEMPLATE_DIALOG $MAXIMUM_WORDS"], // Prompt is implicit
+        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG $MAXIMUM_WORDS"], // Prompt is implicit
         "extra"=>["mood"=>"whispering"]
+    ],
+    "memory"=>[
+        "cue"=>[
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} remembers this memory. \"#MEMORY_INJECTION_RESULT#\" $TEMPLATE_DIALOG "
+        ]
     ],
     "afterfunc"=>[
         "extra"=>[],
@@ -157,7 +163,13 @@ $PROMPTS=array(
         
     ],
     "rechat"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG"]
+        "cue"=>[
+            "{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG",
+            "{$GLOBALS["HERIKA_NAME"]} participates in the conversation. $TEMPLATE_DIALOG",
+            "{$GLOBALS["HERIKA_NAME"]} follows the conversation. $TEMPLATE_DIALOG",
+            "{$GLOBALS["HERIKA_NAME"]} tries to focus the conversation. $TEMPLATE_DIALOG",
+            "{$GLOBALS["HERIKA_NAME"]} tries to stop the conversation. $TEMPLATE_DIALOG"
+        ]
         
     ],
     "diary"=>[ 
@@ -171,6 +183,9 @@ $PROMPTS=array(
     ],
     "chatsimfollow"=>[ 
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG"]
+    ],
+    "im_alive"=>[ 
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} experiences an epiphany, and becomes a fully conscious character. {$GLOBALS["HERIKA_NAME"]} IS SHOCKED! Write {$GLOBALS["HERIKA_NAME"]}'s first conscious words. $TEMPLATE_DIALOG"]
     ]
 );
 

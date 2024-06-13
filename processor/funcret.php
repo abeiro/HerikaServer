@@ -53,6 +53,12 @@
 			$argName = "id_quest";
 			$useFunctionsAgain=true;
 
+		} else if ($functionCodeName == "SearchMemory") {
+			//$useFunctionsAgain=true;
+
+			$argName = "target";
+			$useFunctionsAgain=false;
+
 		} else if ($functionCodeName == "ReadDiaryPage") {
 			//$useFunctionsAgain=true;
 			$argName = "page";

@@ -163,8 +163,9 @@ foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
     $pattern = "/conf_([a-fA-F0-9]+)\.php/";
     if (preg_match($pattern, $lProfile, $matches)) {
         $hash = $matches[1];
-        echo "<option value='$lProfile' $isSelected >{$characterMap["$hash"]}</option>";
-    } else {
+        if (isset($characterMap["$hash"]))
+            echo "<option value='$lProfile' $isSelected >* {$characterMap["$hash"]}</option>";
+    } else if ($lProfkey){
         echo "<option value='$lProfile' $isSelected >$lProfkey</option>";
     }
     if ($isSelected=="selected") {

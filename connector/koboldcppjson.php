@@ -80,8 +80,17 @@ class connector
             $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
-                $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                $contextData[0]["content"]."\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
+                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $GLOBALS["COMMAND_PROMPT"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
+                } else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
+                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $GLOBALS["COMMAND_PROMPT"].="(run|fastwalk|jog|walk)";
+                }  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
+                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
+                    
+                } else
+                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
             }
             $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk";
              

@@ -9,6 +9,8 @@ class connector
     private $_functionName;
     private $_parameterBuff;
     private $_commandBuffer;
+    public $_extractedbuffer;
+    private $_buffer;
 
 
     public function __construct()
@@ -56,7 +58,8 @@ class connector
             'frequency_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0,
             'repetition_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ?: 1.15,
             'min_p' => ($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ?: 0.1,
-            'top_a' => ($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ?: 0,     
+            'top_a' => ($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ?: 0,   
+            'transform'=>[]
         );
 
         // Override
@@ -110,6 +113,9 @@ class connector
         );
 
         $context = stream_context_create($options);
+        
+        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".print_r($data,true)."=\n", FILE_APPEND);
+
         $this->primary_handler = fopen($url, 'r', false, $context);
 
         //tokenizePrompt(json_encode($data));
@@ -138,6 +144,7 @@ class connector
 
             }
             $totalBuffer.=$data["choices"][0]["delta"]["content"];
+            $this->_buffer.=$data["choices"][0]["delta"]["content"];
 
         }
 
@@ -178,6 +185,8 @@ class connector
     public function close()
     {
         fclose($this->primary_handler);
+        file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
+
     }
 
     // Method to close the data processing operation

@@ -90,6 +90,15 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	$request.=$gameRequest[3];
 	
 	
+} else if ($gameRequest[0] == "memory") {
+	
+	$memoriesFound=queryMemory($gameRequest[3],null,$GLOBALS["HERIKA_NAME"]);
+	$GLOBALS["DEBUG_DATA"]["memories"]["selected"]=current($memoriesFound["content"]);
+	$GLOBALS["MEMORY_INJECTION_RESULT"]=$GLOBALS["DEBUG_DATA"]["memories"]["selected"]["briefing"];
+	
+	$request=strtr(selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]),["#MEMORY_INJECTION_RESULT#"=>$GLOBALS["MEMORY_INJECTION_RESULT"]]);
+	
+	
 } else if ($gameRequest[0] == "diary") {
 	$request = selectRandomInArray($PROMPTS["diary"]["cue"]);
 	$GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];

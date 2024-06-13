@@ -9,10 +9,13 @@ $enginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
+
+$GLOBALS["DBDRIVER"]="postgresql";
+
+
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-#require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 
@@ -24,18 +27,19 @@ if (!isset($argv[1])) {
 commands: 
 	
 	query		Query for a memory. Example: query 'What do you know about Saadia?'
-	count		Count ChromaDB memories.
-	sync 		Sync ChromaDB database. 
+	count		Count Memories, memories summarized and memories vectorized.
+	sync 		Sync Summaries <> Vector embeddings. Needs TEXT2VEC active
 	get 		Get memory. Example: get 56
-	recreate	Recreate collection.
-	compact	    Recreate memories_summary database from memories and other sources. Must resync later. Needs LLM.
+	recreate	Recreate memory_summary table, 
+	compact	    Recreate memory_summary table, and uses AI (LLM) to summarize data. Use 'compact noresync' to avoid TEXT2VEC sync.
 	
-Note: Memories are stored in memory_summary table. ChromaDB should be a vector representation of this table.
+Note: Memories are stored in memory_summary table, which holds info from events/dialogues... in a time packed format.
 
 ");
 } else {
 
     if ($argv[1]=="get") {
+        $db=new sql();
         echo "Get memory {$argv[2]}".PHP_EOL;
         $data=getElement($argv[2]);
         print_r($data);
@@ -43,33 +47,32 @@ Note: Memories are stored in memory_summary table. ChromaDB should be a vector r
 
     } elseif ($argv[1]=="query") {
         echo "Query memory for '{$argv[2]}'".PHP_EOL;
-        //$embeddings=getEmbedding("{$argv[2]}");
-        //print_r($embeddings);
+
         $db=new sql();
-        $res=queryMemory($argv[2]);
-        print_r($res["content"][0]);
-        //print_r($GLOBALS["DEBUG_DATA"]);
+        $res=queryMemory($argv[2],'',$argv[3]);
+
+        print_r($res["content"]);
+        
+        print_r($GLOBALS["DEBUG_DATA"]);
 
     } elseif ($argv[1]=="sync") {
         
         echo "Creating memories".PHP_EOL;
         ;
-        $link = new sql();
-        $results = $link->query("select summary as content,uid,classifier from memory_summary");
+        $db = new sql();
+        $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null");
         $counter=0;
-        while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-            deleteElement($row["uid"]);
+        foreach ($results as $row) {
+            
             $TEST_TEXT=$row["content"];
-            //$embeddings=getEmbedding($TEST_TEXT);
-            //print_r($embeddings);
-            storeMemory($TEST_TEXT, $TEST_TEXT, $row["uid"], $row["classifier"]);
-            print_r($GLOBALS["DEBUG_DATA"]["chromadb_element"]);
+            storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE vecotr in memory_summary
 
             $counter++;
-            echo "Memory created in VectorDB {$row["uid"]} $counter\n";
+            
+            echo "Updated vector for  {$row["rowid"]} $counter\n";
         }
-        flushVectorDB();
-        //print_r($GLOBALS["DEBUG_DATA"]);
+        
+
 
     } elseif ($argv[1]=="compact") {
 
@@ -81,15 +84,15 @@ Note: Memories are stored in memory_summary table. ChromaDB should be a vector r
 
 
         echo "Creating memories".PHP_EOL;
-        
+        $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
 		require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 		
 		
-        $results = $db->query("select packed_message,uid,classifier from memory_summary where gamets_truncated>$maxRow or summary=''");
+        $results = $db->query("select packed_message,uid,classifier,rowid,companions from memory_summary where gamets_truncated>$maxRow or summary is null  order by uid asc ");
         $counter=0;
 		$toUpdate=[];
 		
-        while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
+        while ($row = $db->fetchArray($results)) {
 
 
             if ($row["classifier"]=="diary") {
@@ -101,14 +104,20 @@ Note: Memories are stored in memory_summary table. ChromaDB should be a vector r
 				$gameRequest=["summary"];	// Fake a diary call.
 				
 				$CLFORMAT="
- Location: {} 
- People: {} 
- Mission: {}
- Summary: {}
+Location: {} 
+People: {}
+Mission: {}
+Summary: {}
  ";
 				$prompt=[];
+                
+                $prompt[] = array('role' => 'system', 
+								  'content' => "Summarize chat information . Write a summary of this chat: \n#CHAT HISTORY#\n{$row["packed_message"]} \n#END OF CHAT HISTORY#\n");
+
+				
+                 
                 $prompt[] = array('role' => 'user', 
-								  'content' => "write into {$GLOBALS["HERIKA_NAME"]}'s diary a summary of this: \n[... {$row["packed_message"]} ...]. \nUse this format:\n $CLFORMAT");
+								  'content' => "Summarize using this format:\n $CLFORMAT");
 
 				
                 $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"];
@@ -137,17 +146,16 @@ Note: Memories are stored in memory_summary table. ChromaDB should be a vector r
 
                 $connectionHandler->close();
 
-                $toUpdate[]=["uid"=>$row["uid"],"summary"=>$buffer];
+                $toUpdate[]=["rowid"=>$row["rowid"],"summary"=>$buffer];
                 $TEST_TEXT=$buffer;
             }
 
-            if ($argv[2]!="nochroma") 
-                $embeddings=getEmbedding($TEST_TEXT);
-            //print_r($GLOBALS["DEBUG_DATA"]);
-			echo PHP_EOL.$TEST_TEXT.PHP_EOL;
-            
-            if ($argv[2]!="nochroma") 
-                storeMemory($embeddings, $TEST_TEXT, $row["uid"], $row["classifier"]);
+			
+            error_log("$TEST_TEXT");
+            if ($argv[2]!="noembed") {
+                error_log("Getting embedding");
+                storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]);
+            }
             
 
             $counter++;
@@ -155,52 +163,39 @@ Note: Memories are stored in memory_summary table. ChromaDB should be a vector r
             
             foreach ($toUpdate as $uq) {
 			 //echo "update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where uid={$uq["uid"]}";
-			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where uid={$uq["uid"]}");
+			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where rowid={$uq["rowid"]}");
 			
             }
             $toUpdate=[];
-			sleep(1);
+			
+            
+            if ($argv[3])
+                if ( ($argv[3]+0)>=$counter)
+                    break;
+            
+            sleep(1);
             //break;
 			
         }
 
-		
 
-
-        /*
-         while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-            $db->insert(
-                'memory',
-            array(
-                'localts' => time(),
-                'speaker' => (SQLite3::escapeString($GLOBALS["HERIKA_NAME"])),
-                'listener' => (SQLite3::escapeString($GLOBALS["HERIKA_NAME"])),
-                'message' => (SQLite3::escapeString($row["packed_message"])),
-                'gamets' => $row["gamets_truncated"],
-                'session' => "pending",
-                'momentum'=>time()
-                )
-            );
-        }
-        */
-
-        //$db->delete("memory", "speaker<>listener and message not like '%Dear Diary%' ");
 
     } elseif ($argv[1]=="recreate") {
-        echo "Creating memories".PHP_EOL;
-        ;
-        $link = new sql();
-        $results = $link->query("select summary as content,uid,classifier from memory_summary");
-        $counter=0;
-        while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-            deleteElement($row["uid"]);
-            $counter++;
-            echo "Memory deleted in VectorDB {$row["uid"]} $counter\n";
-        }
-        flushVectorDB();
+        echo "Deleting memory_summary".PHP_EOL;
+        
+        $db = new sql();
+        $results = $db->query("delete from memory_summary");
+        
+
+
+        $maxRow=PackIntoSummary();
+        
+        echo "memory_summary created".PHP_EOL;
+        
 
 
     } elseif ($argv[1]=="count") {
+        $db=new sql();
         echo countMemories().PHP_EOL;
 
     } else {

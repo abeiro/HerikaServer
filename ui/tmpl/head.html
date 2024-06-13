@@ -92,6 +92,48 @@
                 }
             }
             
+             function callHelper(helper) {
+                form=document.querySelector(".confwizard")
+                var inputs = form.querySelectorAll('input');
+                const formData = {};
+
+      
+      
+                inputs.forEach(input => {
+                    formData[input.name] = input.value;
+                });
+
+                fetch("cmd/"+helper, {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Success:', data);
+                    for (let key in data) {
+                        if (data.hasOwnProperty(key)) {
+                            //console.log(`${key}: ${data[key]}`);
+                            t=document.querySelector("input[name='"+key+"']")
+                            t.value=data[key]
+                        }
+                    }
+                    
+                })
+                .catch(error => {
+                    console.error('There has been a problem with your fetch operation:', error);
+                });
+      
+                
+            }
+            
         </script>
     </head>
     <body>

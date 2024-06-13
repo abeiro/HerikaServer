@@ -1,10 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-</head>
-<body>
-    
 <?php
 error_reporting(E_ERROR);
 session_start();
@@ -14,15 +7,17 @@ $rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 if (!file_exists($configFilepath."conf.php")) {
     @copy($configFilepath."conf.sample.php", $configFilepath."conf.php");   // Defaults
-    if (!file_exists($rootEnginePath."data".DIRECTORY_SEPARATOR."mysqlitedb.db")) {
+    /*if (!file_exists($rootEnginePath."data".DIRECTORY_SEPARATOR."mysqlitedb.db")) {
         require($rootEnginePath."ui".DIRECTORY_SEPARATOR."cmd".DIRECTORY_SEPARATOR."install-db.php");
         
-    }
+    }*/
     die(header("Location: conf_wizard.php"));
 }
 
 
 require_once($rootEnginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
+
+$configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
 
 // Profile selection
 $GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
@@ -201,7 +196,7 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "eventlog") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a where type not in ('prechat','rechat') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 0,50");
+        $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a where type not in ('prechat','rechat') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 50");
         echo "<h3 class='my-2'>Event Log</h3>";
         print_array_as_table($results);
         if ($_GET["autorefresh"]) {
@@ -234,40 +229,40 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "currentmission") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM currentmission A order by gamets desc,localts desc,rowid desc limit 0,150");
+        $results = $db->fetchAll("select  A.*,ROWID FROM currentmission A order by gamets desc,localts desc,rowid desc limit 150 offset 0");
         echo "<h3 class='my-2'>Current AI Task/Goal</h3>";
         print_array_as_table($results);
     }
 
     if ($_GET["table"] == "diarylog") {
 
-        $results = $db->fetchAll("select  A.*,ROWID FROM diarylog A order by gamets desc,rowid desc limit 0,150");
+        $results = $db->fetchAll("select  A.*,ROWID FROM diarylog A order by gamets desc,rowid desc limit 150 offset 0");
         echo "<h3 class='my-2'>Diary Entries</h3>";
         print_array_as_table($results);
     }
 
     if ($_GET["table"] == "books") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM books A order by gamets desc,rowid desc limit 0,150");
+        $results = $db->fetchAll("select  A.*,ROWID FROM books A order by gamets desc,rowid desc limit 150 offset 0");
         echo "<h3 class='my-2'>Book Log</h3>";
         print_array_as_table($results);
     } 
 
 
     if ($_GET["table"] == "openai_token_count") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM openai_token_count A order by rowid desc limit 0,150");
+        $results = $db->fetchAll("select  A.*,ROWID FROM openai_token_count A order by rowid desc limit 150 offset 0");
         echo "<h3 class='my-2'>OpenAI Token Pricing</h3>";
         echo ($results);
     }
 
     
     if ($_GET["table"] == "memory") {
-        $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory A order by gamets desc,rowid desc limit 0,150");
+        $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory A order by gamets desc,rowid desc limit 150 offset 0");
         echo "<h3 class='my-2'>Memories Log</h3>";
         print_array_as_table($results);
     }
     
     if ($_GET["table"] == "memory_summary") {
-        $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 0,150");
+        $results = $db->fetchAll("select  gamets_truncated,n,packed_message,summary,companions,classifier,uid,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 150 offset 0");
         echo "<h3 class='my-2'>Summarized Memories Log</h3>";
         print_array_as_table($results);
     }
