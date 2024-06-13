@@ -1,6 +1,6 @@
 <?php
 
-$DBDRIVER="sqlite3";
+$DBDRIVER="postgresql";
 
 $PLAYER_NAME="Prisoner";
 $HERIKA_NAME="Follower";
@@ -8,6 +8,8 @@ $HERIKA_NAME="Follower";
 $PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. I'm Prisoner. You're Prisoner's companion.";
 $HERIKA_PERS="You are a person who likes jokes and sarcastic comments.";
 
+$RECHAT_H=4;
+$RECHAT_P=0;
 
 $CORE_LANG="";
 
@@ -100,17 +102,16 @@ $HTTP_TIMEOUT=15;                       // How long we will wait for openai resp
 //$CORE_LANG="es";
 
 $FEATURES["MEMORY_EMBEDDING"]["ENABLED"]=false;
-$FEATURES["MEMORY_EMBEDDING"]["CHROMADB_URL"]='http://127.0.0.1:8000';
+$FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8000';
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=10;
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1;
-$FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_URL"]="http://127.0.0.1:7860";
-$FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"]="local";
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=false;
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10;
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]=33;
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66;
 
-$CONNECTORS=["koboldcpp","openai"];  
+$CONNECTORS=["koboldcppjson","openaijson","openrouterjson"];  
+$CONNECTORS_DIARY=["koboldcpp","openai","openrouter"];  
 
 $CONNECTOR["openai"]["url"]="https://api.openai.com/v1/chat/completions";
 $CONNECTOR["openai"]["model"]="gpt-3.5-turbo-1106";
@@ -220,9 +221,6 @@ $CONNECTOR["llamacpp"]["MAX_TOKENS_MEMORY"]='256';	//Maximum tokens to generate 
 $CONNECTOR["llamacpp"]["eos_token"]='</s>';	//EOS token LLM uses.
 $CONNECTOR["llamacpp"]["template"]='alpaca';	//Prompt Format. Specified in the HuggingFace model card
 
-
-$FEATURES["COST_MONITOR"]["ENABLED"]=false;					//Enable cost/token counter monitoring. Currently only supports OpenAI.
-$FEATURES["COST_MONITOR"]["URL"]="http://127.0.0.1:8090";	//We can use 127.0.0.1 because server is on same machine by default.
 
 $FEATURES["MISC"]["ADD_TIME_MARKS"]=false;
 $FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false;	

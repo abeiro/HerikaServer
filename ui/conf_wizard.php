@@ -32,6 +32,7 @@ $TITLE = "Config Wizard";
 
 require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
 
+$configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
 
 // Profile selection
 $GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
@@ -217,6 +218,11 @@ foreach ($currentConf as $pname=>$parms) {
         foreach ($availableFiles as $file)
             echo "<option ".(($file==$parms["currentValue"])?"selected":"")." value='$file'>$file</option>";
         echo "</select><span>{$parms["description"]}</span></p>";
+        
+    }  else if ($parms["type"]=="util") {
+        $checkButton="<button class='' type='button' onclick=\"callHelper('{$parms["action"]}')\">{$parms["name"]}</button>";
+        echo "<p class='conf-item'>$checkButton<span>{$parms["description"]}</span></p>".PHP_EOL;
+        
     }
 
 }

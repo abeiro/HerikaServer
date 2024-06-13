@@ -15,15 +15,15 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
         $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");
-        while ($memoryRow = $results->fetchArray(SQLITE3_ASSOC)) {
+        while ($memoryRow = $db->fetchArray($results)) {
             deleteElement($memoryRow["uid"]);
         }
     }
     $db->delete("memory_summary", "gamets_truncated>{$gameRequest[2]}  ");
     $db->delete("memory", "gamets>{$gameRequest[2]}  ");
 
-    $db->delete("diarylogv2", "true");
-    $db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
+    //$db->delete("diarylogv2", "true");
+    //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
     //die(print_r($gameRequest,true));
     $db->update("responselog", "sent=0", "sent=1 and (action='AASPGDialogueHerika2Branch1Topic')");
     $db->insert(
@@ -61,27 +61,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         }
         closedir($handle);
     }
-    // Resync ChromeDB collection if TEXT2VEC_PROVIDER is local.
-
-    if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
-        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"]=="local") {
-            deleteCollection();
-
-
-            $results = $db->query("select summary as content,uid,classifier from memory_summary");
-            $counter=0;
-            while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-                $TEST_TEXT=$row["content"];
-                $embeddings=getEmbedding($TEST_TEXT);
-                //print_r($embeddings);
-                storeMemory($embeddings, $TEST_TEXT, $row["uid"], $row["classifier"]);
-
-
-                $counter++;
-
-            }
-        }
-    }
+    
 
     $MUST_END=true;
 
@@ -134,8 +114,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "_speech") {
     error_reporting(E_ALL);
     $speech = json_decode($gameRequest[3], true);
-    //print_r($questParsedData);
-
+   
+    // error_log(print_r($speech,true));
     if (is_array($speech)) {
         $db->insert(
             'speech',
@@ -146,7 +126,10 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
                 'speaker' => $speech["speaker"],
                 'speech' => $speech["speech"],
                 'location' => $speech["location"],
+                'companions'=>(is_array($speech["companions"]))?implode(",",$speech["companions"]):"",
                 'sess' => 'pending',
+                'audios' => $speech["audios"],
+                'topic' => "{$speech["debug"]}",
                 'localts' => time()
             )
         );
@@ -182,7 +165,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "togglemodel") {
 
     $newModel=DMtoggleModel();
-    echo "Herika|command|ToggleModel@$newModel\r\n";
+    echo "#HERIKA_NPC1#|command|ToggleModel@$newModel\r\n";
     while(@ob_end_flush());
 
     $db->insert(
@@ -249,12 +232,46 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($gameRequest[3]);
-    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php"))
-        copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
+    
+    $codename=strtr(strtolower(trim($gameRequest[3])),[" "=>"_"]);
+
+    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || true) {
+        
+        // Do customizations here
+        $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
+        copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
+        
+        $file_lines = file($newFile);
+
+        for ($i = count($file_lines) - 1; $i >= 0; $i--) {
+            // If the line is not empty, break the loop
+            if (trim($file_lines[$i]) !== '') {
+                unset($file_lines[$i]);
+                break;
+            }
+            unset($file_lines[$i]);
+        }
+        
+        $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates where npc_name='$codename'");
+        
+
+        file_put_contents($newFile, implode('', $file_lines));
+        file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\''.$codename.'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        file_put_contents($newFile, '$HERIKA_NAME=\''.trim($gameRequest[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        
+        if (is_array($npcTemlate))
+            file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        
+        file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
+
+        
+        
+    }
 
     // Character Map file
     if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json"))
         $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
+    
     
     $characterMap[md5($gameRequest[3])]=$gameRequest[3];
     file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));

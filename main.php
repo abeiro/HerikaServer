@@ -17,8 +17,37 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
+
+
+$db = new sql();
+
+// PARSE GET RESPONSE into $gameRequest
+
+if (php_sapi_name()=="cli") {
+    // You can run this script directly with php: main.php "Player text"
+
+    $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog");
+    
+    $receivedData = "inputtext|{$res[0]["ts"]}|{$res[0]["gamets"]}|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
+    //$receivedData = "{$argv[1]}";
+    $_GET["profile"]=$argv[2];
+    error_reporting(E_ALL);
+    $FUNCTIONS_ARE_ENABLED=true;
+
+
+} else {
+
+    //$receivedData = base64_decode($_GET["DATA"]);
+    //base64 string has '+' chars. THis conflicts with urldecode, so $_GET["DATA"] will get bullshit.
+    if (strpos($_SERVER["QUERY_STRING"],"&")===false)
+        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5)));
+    else
+        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5,strpos($_SERVER["QUERY_STRING"],"&")-4)));
+
+    //error_log($receivedData." ".$_GET["profile"]);
+
+}
 
 
 // Profile selection
@@ -31,9 +60,9 @@ if (isset($_GET["profile"])) {
     $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 
 }
+
 // End of profile selection
 
-$db = new sql();
 
 if (!isset($FUNCTIONS_ARE_ENABLED)) {
     $FUNCTIONS_ARE_ENABLED=false;
@@ -73,40 +102,22 @@ $startTime = microtime(true);
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 // Lock to avoid TTS hangs
+/*
 $semaphoreKey =abs(crc32(__FILE__));
 $semaphore = sem_get($semaphoreKey);
 while (sem_acquire($semaphore,true)!=true)  {
     usleep(1000);
 }
+*/
 
-// PARSE GET RESPONSE into $gameRequest
-
-if (php_sapi_name()=="cli") {
-    // You can run this script directly with php: main.php "Player text"
-    $receivedData = "inputtext|108826400925500|770416256|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
-    $receivedData = "{$argv[1]}";
-    error_reporting(E_ALL);
-
-
-} else {
-
-    //$receivedData = base64_decode($_GET["DATA"]);
-    //base64 string has '+' chars. THis conflicts with urldecode, so $_GET["DATA"] will get bullshit.
-    if (strpos($_SERVER["QUERY_STRING"],"&")===false)
-        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5)));
-    else
-        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5,strpos($_SERVER["QUERY_STRING"],"&")-4)));
-
-    //error_log($receivedData." ".$_GET["profile"]);
-
-}
 
 
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 $gameRequest = explode("|", $receivedData);
 foreach ($gameRequest as $i => $ele) {
-    $gameRequest[$i] = trim(preg_replace('/\s\s+/', ' ', preg_replace('/\'/m', "''", $ele)));
+    $gameRequest[$i] = trim(preg_replace('/\s\s+/', ' ', preg_replace('/\'/m', "'", $ele)));
+    //$gameRequest[$i] = trim(preg_replace('/\s\s+/', ' ', preg_replace('/\'/m', "''", $ele)));
     $gameRequest[$i]=strtr($gameRequest[$i],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
 }
 
@@ -114,6 +125,11 @@ foreach ($gameRequest as $i => $ele) {
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 
 // $gameRequest = type of message|localts|gamets|data
+
+if ($gameRequest[0]=="diary") {
+    $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
+}
+
 
 // Exit if only a event info log.
 if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound"])) {
@@ -132,14 +148,16 @@ if (in_array($gameRequest[0],["rechat"])) {
     //RECHAT. Must choose if we continue conversation or no.
     $rechatHistory=DataRechatHistory();
     
-    if (sizeof($rechatHistory)>4)    {   // TOO MUCH RECHAT
+    if (sizeof($rechatHistory)>($GLOBALS["RECHAT_H"]))    {   // TOO MUCH RECHAT
         error_log("Rechat discarded");
         die();
     }
     
-    /*if (rand(0,10)%2==0) {              // 50 % rechat prob. Should do it per character (GLOBAL CONF)
+    $rndNumber=rand(1,100);
+    if ($rndNumber>($GLOBALS["RECHAT_P"]+0)) {              
+        //die();
+    } else
         die();
-    }*/
     
     $sqlfilter=" and type in ('prechat','inputtext','inputtext_s') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny
@@ -198,7 +216,7 @@ if ($gameRequest[0] != "diary") {
 }
 if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
     if ($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])
-        die();
+        die("\r\n");
 }
 
 $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
@@ -214,6 +232,11 @@ if ($gameRequest[0] != "diary")
     $GLOBALS["COMMAND_PROMPT"].=DataGetCurrentTask();
 
 // Offer memory in CONTEXT 
+/*
+if (!(isset($GLOBALS["MEMORY_INJECTION_ON"]) || (!$GLOBALS["MEMORY_INJECTION_ON"]))) {
+    $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]=false;
+}
+
 $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
 if ($memoryInjection) {
     
@@ -231,7 +254,7 @@ if ($memoryInjection) {
     $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
         
 }
-   
+*/   
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
@@ -470,32 +493,32 @@ if (sizeof($talkedSoFar) == 0) {
                     'topic' => "$topic",
                     'content' => (implode(" ", $talkedSoFar)),
                     'tags' => "Pending",
-                    'people' => "Pending",
+                    'people' => $GLOBALS["HERIKA_NAME"],
                     'location' => "$location",
                     'sess' => 'pending',
                     'localts' => time()
                 )
             );
-            
+            /*
             $db->insert(
 			'diarylogv2',
-			array(
-				'topic' => ($topic),
-				'content' => (implode(" ", $talkedSoFar)),
-				'tags' => "Pending",
-                'people' => "Pending",
-                'location' => "$location"
-			)
-		);
-            
+                array(
+                    'topic' => ($topic),
+                    'content' => (implode(" ", $talkedSoFar)),
+                    'tags' => "Pending",
+                    'people' => "Pending",
+                    'location' => "$location"
+                )
+            );
+            */
             // Log Memory also.
             if ((php_sapi_name()!="cli"))	
-	            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
+	            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0]);
             returnLines([$RESPONSE_OK_NOTED]);
 
         } else {
             
-            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
+            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 1 offset 0");
             if (php_sapi_name()!="cli")	{
                 if (in_array($gameRequest[0],["inputtext","inputtext_s"]))
                     logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"], "{$lastPlayerLine[0]["data"]} \n\r {$GLOBALS["HERIKA_NAME"]}:".implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);

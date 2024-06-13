@@ -118,10 +118,10 @@ function tts($textString, $mood , $stringforhash) {
 			
 			file_put_contents($oname, $response); // Save the audio response to a file
 			$startTimeTrans = microtime(true);
-			shell_exec("ffmpeg -y -i $oname -filter:a \"speechnorm=e=6:r=0.0001:l=1\" $fname 2>/dev/null >/dev/null");
+			shell_exec("ffmpeg -y -i $oname  -af \"silenceremove=start_periods=1:start_silence=0.1:start_threshold=-25dB,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-40dB,areverse,speechnorm=e=3:r=0.0001:l=1:p=0.75\" $fname 2>/dev/null >/dev/null");
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			
-            file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
+            file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
 			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in xtts-fast-api call";
 			return "soundcache/" . md5(trim($stringforhash)) . ".wav";
 			

@@ -1,15 +1,18 @@
 {
-  "DBDRIVER": {"type":"select","values":["sqlite3"],"description":"Primary database handler. Currently only sqlite3."},
+  "DBDRIVER": {"type":"select","values":["postgresql"],"description":"Primary database handler. Currently only postgresql."},
   "PLAYER_NAME": {"type":"string","description":"Your current character name."},
   "HERIKA_NAME": {"type":"string","description":"Custom name for Herika. Make sure it matches her NPC name in Skyrim."},
   "PROMPT_HEAD": {"type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "HERIKA_PERS": {"type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
+  "RECHAT_H": {"type":"integer","description":"Rechat lines. Higher values will make followers keep talking more between them."},
+  "RECHAT_P": {"type":"integer","description":"Rechat probability. 0 = always , 100 never"},
   "CONTEXT_HISTORY": {"type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. Improves short term memory. More context => more tokens used, and slower processing speed in local LLMs."},
   "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for LLM/AI requests. "},
   "CORE_LANG": {"type":"select","description":"Custom Language. A lang folder is in the Herika Server. Leave it blank for default english."},
   "NEWQUEUE": {"type":"boolean","description":"Enable for 360° audio. Is still a bit buggy."},
   "MAX_WORDS_LIMIT": {"type":"integer","description":"Enforce a word limit for Herika's responses. Leave as 0 to disable."},
-  "CONNECTORS": {"type":"selectmultiple","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic","openaijson","koboldcppjson","openrouterjson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic"],"description":"AI Service to use. Are used to connect with an AI service or program. Will use this connector to generate content for diary/memories","_title":"AI/LLM Service"},
   "CONNECTOR": {
     "_title":"AI/LLM Service",
     "openai": {
@@ -104,7 +107,11 @@
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
       "xreferer": {"type":"string","description":"Stub needed header. Keep default."},
-      "xtitle": {"type":"string","description":"Stub needed header. Keep default."}      
+      "xtitle": {"type":"string","description":"Stub needed header. Keep default."},
+      "get_parms1": {"type":"util","description":"Get parameters from openrouter directly (P10)","action":"action_openrouter_get_parm_p1.php?P=10","name":"Get parms P10","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","description":"Get parameters from openrouter directly (P50)","action":"action_openrouter_get_parm_p1.php?P=50","name":"Get parms P50","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","description":"Get parameters from openrouter directly (P90)","action":"action_openrouter_get_parm_p1.php?P=90","name":"Get parms P90","helpurl":"https://openrouter.ai/docs/parameters"}
+      
     },
     "openrouterjson": {
       "_title":"OpenRouter API (JSON MODE)",
@@ -122,7 +129,10 @@
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
       "xreferer": {"type":"string","description":"Stub needed header. Keep default."},
-      "xtitle": {"type":"string","description":"Stub needed header. Keep default."}      
+      "xtitle": {"type":"string","description":"Stub needed header. Keep default."},
+      "get_parms1": {"type":"util","description":"Get parameters from openrouter directly (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Get parms P10","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","description":"Get parameters from openrouter directly (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Get parms P50","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","description":"Get parameters from openrouter directly (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Get parms P90","helpurl":"https://openrouter.ai/docs/parameters"}
     },
     "oobabooga": {
       "_title":"Oobabooga text-generation-webui API",
@@ -276,10 +286,8 @@
     "_title":"Other Features",
     "MEMORY_EMBEDDING": {
       "_title":"Long Term Memory (DwemerDistro Only!)",
-      "ENABLED": {"type":"boolean","description":"Enable long term memory.  It uses ChromaDB and a text embedding provider to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
-      "CHROMADB_URL": {"type":"url","description":"ChromaDB Endpoint. Copy and paste the [CHROMADB REST-API] URL from the console window."},
-      "TEXT2VEC_URL": {"type":"url","description":"hugging-face-text-embedding API endpoint. Copy and paste the [TEXT2VEC REST-API] URL from the console window.","helpurl":"https://github.com/jgquiroga/hugging-face-text-embedding"},
-      "TEXT2VEC_PROVIDER":{"type":"select","values":["remote","local"],"description":"Remote will use OpenAI text-embedding-ada and needs your OpenAI API key. Local is the one provided by DwemerDistro"},
+      "ENABLED": {"type":"boolean","description":"Enable long term memory.  It uses TXTAI to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
+      "TXTAI_URL": {"type":"url","description":"TXTAI REST-API Endpoint. Copy and paste the [TXTAI REST-API] URL from the console window."},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing recent dialogues as memories. As that is covered by context history."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many of the most relevant memory records will be injected in prompt."},
       "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will summarize individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},
@@ -287,11 +295,6 @@
       "MEMORY_BIAS_A": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer memory."},
       "MEMORY_BIAS_B": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer and endorse memory."}
       
-    },
-    "COST_MONITOR": {
-      "_title":"Cost Monitoring (DwemerDistro Only!)",
-      "ENABLED":{"type":"boolean","description":"Enable Cost Monitoring. Currently only tracks OpenAI cost."},
-      "URL":{"type":"url","description":"URL of API. Should be displayed in DwemerDistro console window."}
     },
     "MISC": {
       "_title":"Misc features/options",

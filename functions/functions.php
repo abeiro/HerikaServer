@@ -21,7 +21,8 @@ $ENABLED_FUNCTIONS=[
     'SearchDiary',
     'SetCurrentTask',
     'StopWalk',
-    'TravelTo'
+    'TravelTo',
+    'SearchMemory'
 ];
 
 
@@ -46,6 +47,7 @@ $F_TRANSLATIONS["SetCurrentTask"]="Set the current plan of action or task or que
 $F_TRANSLATIONS["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_TRANSLATIONS["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
 $F_TRANSLATIONS["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} travels to a city/location";
+$F_TRANSLATIONS["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
 
 // What is this?. We can translate functions or give them a custom name. 
 // This array will handle translations. Plugin must receive the codename always.
@@ -70,6 +72,7 @@ $F_NAMES["SetCurrentTask"]="SetCurrentTask";
 $F_NAMES["ReadDiaryPage"]="ReadDiaryPage";
 $F_NAMES["StopWalk"]="StopWalk";
 $F_NAMES["TravelTo"]="TravelTo";
+$F_NAMES["SearchMemory"]="TryToRemember";
 
 if (isset($GLOBALS["CORE_LANG"]))
 	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
@@ -349,6 +352,20 @@ $FUNCTIONS = [
                 "target" => [
                     "type" => "string",
                     "description" => "action",
+                ]
+            ],
+            "required" =>[""]
+        ]
+    ],
+     [
+        "name" => $F_NAMES["SearchMemory"],
+        "description" => $F_TRANSLATIONS["SearchMemory"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "target keywords to search in memory database",
                 ]
             ],
             "required" =>[""]

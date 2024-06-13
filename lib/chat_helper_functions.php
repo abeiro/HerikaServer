@@ -412,7 +412,7 @@ function returnLines($lines,$writeOutput=true)
                  if (isset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) && $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) 
                      $GLOBALS["SCRIPTLINE_ANIMATION"]="";
                 else {
-                    if ((rand(0,5)!==0) ){ // Will disable animations, 20% chance to trigger
+                    if ((rand(0,4)!==0) ){ // Will disable animations, 20% chance to trigger
                         $GLOBALS["SCRIPTLINE_ANIMATION"]="IdleDialogueExpressiveStart";
                     }
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
@@ -463,7 +463,7 @@ function returnLines($lines,$writeOutput=true)
 
 }
 
-function logMemory($speaker, $listener, $message, $momentum, $gamets)
+function logMemory($speaker, $listener, $message, $momentum, $gamets,$event='')
 {
     global $db;
 
@@ -476,7 +476,8 @@ function logMemory($speaker, $listener, $message, $momentum, $gamets)
                 'message' => $message,
                 'gamets' => $gamets,
                 'session' => "pending",
-                'momentum'=>$momentum
+                'momentum'=>$momentum,
+                'event'=>$event
         )
     );
     /*
@@ -497,7 +498,7 @@ function lastNames($n, $eventypes)
     
     $m=$n+1;
     
-    $lastRecords = $db->fetchAll("SELECT data from eventlog where type in ('".implode("','",$eventypes)."') order by gamets desc limit 0,$m");
+    $lastRecords = $db->fetchAll("SELECT data from eventlog where type in ('".implode("','",$eventypes)."') order by gamets desc limit $m offset 0");
     
     $uppercaseWords=[];
     
@@ -537,7 +538,7 @@ function lastKeyWords($n, $eventypes)
     
     $m=$n+1;
     
-    $lastRecords = $db->fetchAll("SELECT message from memory order by gamets desc limit 0,$m");
+    $lastRecords = $db->fetchAll("SELECT message from memory order by gamets desc limit $m offset 0");
     $words=[];
     $uniqueArray=[];
     $uppercaseWords = [];
@@ -657,7 +658,7 @@ function offerMemoryOld($gameRequest, $DIALOGUE_TARGET)
         } elseif (($gameRequest[0] == "funcret")) {	//$gameRequest[3] will not contain last user chat, we must query database
 
             $memory=array();
-            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
+            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 1 offset 0");
 
             $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine[0]["data"]);
             $pattern = '/\([^)]+\)/';
@@ -729,7 +730,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
-
+        error_log("Searching memory ".implode("|",$gameRequest));
         if (($gameRequest[0] == "inputtext") || ($gameRequest[0] == "inputtext_s")) {
             $memory=array();
 
@@ -747,8 +748,9 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             
             $GLOBALS["DEBUG_DATA"]["textToEmbedFinal"]=$weightedTextToEmbedFinal;
             
-            $memories=queryMemory($embeddings);
+            $memories=queryMemory($weightedTextToEmbedFinal);
 
+            $GLOBALS["DEBUG_DATA"]["memories"][]=print_r($memories,true);
 
             if (isset($memories["content"])) {
                 $ncn=0;
@@ -795,7 +797,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
         } elseif (($gameRequest[0] == "funcret")) {	//$gameRequest[3] will not contain last user chat, we must query database
 
             $memory=array();
-            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
+            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 1 offset 0");
 
             $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine[0]["data"]);
             $pattern = '/\([^)]+\)/';
@@ -806,7 +808,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             $textToEmbedFinal.=lastKeyWords(2,['inputtext','inputtext_s']);
 
             $GLOBALS["DEBUG_DATA"]["textToEmbedFinal"]=$textToEmbedFinal;
-            $embeddings=getEmbedding($textToEmbedFinal);
+            //$embeddings=getEmbedding($textToEmbedFinal);
             $memories=queryMemory($embeddings);
 
 
@@ -879,7 +881,7 @@ function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
         } elseif (($gameRequest[0] == "funcret")) {	//$gameRequest[3] will not contain last user chat, we must query database
 
             $memory=array();
-            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 0,1");
+            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 1 offset 0");
 
             $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine[0]["data"]);
             $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);

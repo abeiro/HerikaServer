@@ -70,12 +70,17 @@ class connector
          if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
-                $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
+                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 } else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
+                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $contextData[0]["content"].="(run|fastwalk|jog|walk)";
-                }
+                }  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
+                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search) ({$function["description"]})";
+                 
+                } else
+                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
             }
             $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
              
@@ -267,14 +272,7 @@ class connector
     {
 
         fclose($this->primary_handler);
-        if ($GLOBALS["FEATURES"]["COST_MONITOR"]["ENABLED"]) {
-            // Call rest of tokenizer functions now, relevant data was sent
-
-            TkTokenizePrompt($this->_dataSent, $GLOBALS["CONNECTOR"][$this->name]["model"]);
-            TkTokenizeResponse($this->_numOutputTokens, $GLOBALS["CONNECTOR"][$this->name]["model"]);
-        }
         
-        //file_put_contents(__DIR__."/../log/ouput_from_llm.log",$this->_buffer, FILE_APPEND | LOCK_EX);
         file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
 
 

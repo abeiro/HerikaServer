@@ -37,7 +37,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'lockpicked' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret'  and type<>'quest'
-    and type<>'funccall'  and type<>'togglemodel' order by gamets desc,ts desc,localts desc,rowid desc LIMIT 0,150");
+    and type<>'funccall'  and type<>'togglemodel' order by gamets desc,ts desc,localts desc,rowid desc LIMIT 150 OFFSET 0");
     $lastData = "";
 
 
@@ -93,7 +93,7 @@ function DataLastInfoFor($actor, $lastNelements = -2)
     global $db;
     $lastDialogFull = array();
     $results = $db->fetchAll("select  case when type like 'info%' then 'The Narrator:' else '' end||a.data  as data  FROM  eventlog a 
-    WHERE data like '%$actor%' and type in ('infoloc','infonpc')  order by gamets desc,ts desc LIMIT 0,50");
+    WHERE data like '%$actor%' and type in ('infoloc','infonpc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
     $lastData = "";
     foreach ($results as $row) {
         if ($lastData != md5($row["data"])) {
@@ -136,7 +136,7 @@ function DataPosibleLocationsToGo()
     global $db;
     $lastDialogFull = array();
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
-    WHERE type in ('infoloc')  order by gamets desc,ts desc LIMIT 0,50");
+    WHERE type in ('infoloc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
     $lastData = "";
     $retData = [];
     foreach ($results as $row) {
@@ -155,7 +155,7 @@ function DataPosibleLocationsToGo()
     //print_r($matches);
 
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
-    WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 0,50");
+    WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
     $lastData = "";
     $matches = [];
     foreach ($results as $row) {
@@ -190,7 +190,7 @@ function DataPosibleInspectTargets($pack=true)
 {
     global $db;
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
-    WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 0,50");
+    WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
     $lastData = "";
     $matches = [];
     foreach ($results as $row) {
@@ -300,6 +300,33 @@ function DataQuestJournal($quest)
     }
 }
 
+function removeTalkingToOccurrences($input) {
+    $pattern = '/\(talking to [^()]+\)/';
+    preg_match_all($pattern, $input, $matches, PREG_OFFSET_CAPTURE);
+
+    // Get all positions of the matches
+    $positions = $matches[0];
+
+    // If there are no matches or only one match, return the input string as it is
+    if (count($positions) <= 1) {
+        return $input;
+    }
+
+    // Remove all but the last occurrence
+    for ($i = 0; $i < count($positions) - 1; $i++) {
+        $pos = $positions[$i][1];
+        $input = substr_replace($input, '', $pos, strlen($positions[$i][0]));
+        
+        // After each removal, adjust the positions of subsequent matches
+        for ($j = $i + 1; $j < count($positions); $j++) {
+            $positions[$j][1] -= strlen($positions[$i][0]);
+        }
+    }
+
+    return $input;
+}
+
+
 function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 {
 
@@ -320,7 +347,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'rechat'
     and type<>'funccall'  and type<>'togglemodel' $sqlfilter  
     and gamets>".($currentGameTs-(60*60*60*60))."
-    order by gamets desc,ts desc,rowid desc LIMIT 0,150");
+    order by gamets desc,ts desc,rowid desc LIMIT 150 OFFSET 0");
 
     $rawData=[];
     foreach ($results as $row) {
@@ -411,10 +438,14 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         if ($line["role"] == "assistant") {
             $pattern = "/\([^)]*Context location[^)]*\)/";
             $cleanedText = trim(preg_replace($pattern, "", $line["content"])); // Remove context location always for assistant
-
-            $re = '/[^(' . $GLOBALS["HERIKA_NAME"] . ':)].*(' . $GLOBALS["HERIKA_NAME"] . ':)/m';
+            // This breaks with spaces?
+            $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
             $subst = "";
             $cleanedText = preg_replace($re, $subst, $cleanedText);
+            
+            
+            $cleanedText = removeTalkingToOccurrences($cleanedText);
+            
             $lastDialogFull[$n]["content"] = $cleanedText;
         }
 
@@ -576,7 +607,7 @@ function DataDiaryLogIndex($topic)
 function DataGetCurrentTask()
 {
     global $db;
-    $results = $db->fetchAll("SElECT  distinct description as description FROM currentmission order by gamets desc");
+    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission order by gamets desc");
     if (!$results) {
         return "";
     }
@@ -606,7 +637,7 @@ function DataLastRetFunc($actor, $lastNelements = -2)
     global $db;
     $lastDialogFull = array();
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
-    WHERE data like '%$actor%' and type in ('funcret')  order by gamets desc,ts desc LIMIT 0,1");
+    WHERE data like '%$actor%' and type in ('funcret')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     $lastData = "";
     foreach ($results as $row) {
         $pattern = "/\{(.*?)\(/";
@@ -642,7 +673,7 @@ function DataLastKnowDate()
 
     global $db;
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc')  order by gamets desc,ts desc LIMIT 0,1");
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         return "";
     }
@@ -657,7 +688,7 @@ function DataLastKnownLocation()
 
     global $db;
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 0,1");
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         return "";
     }
@@ -677,26 +708,28 @@ function PackIntoSummary()
     $maxRow=$results[0]["gamets_truncated"]+0;
 
     $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
-    
+
     $results = $db->query("insert into memory_summary select * from ( 
 								select max(gamets) as gamets_truncated,count(*) as n,
-								GROUP_CONCAT(message,char(13) || char(10)|| char(13) || char(10)) as packed_message ,'','dialogue',max(uid) as uid
+                                STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
+                                NULL,'dialogue',max(uid) as uid
 								from memory_v
 								where 
 								message not like 'Dear Diary%'
                                 and NOT ( speaker like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%'
                                     OR (listener like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%' and speaker like '%".SQLite3::escapeString($GLOBALS["PLAYER_NAME"])."%' )
                                 )
-								group by round(gamets/$pfi ,0) HAVING uid>0 order by round(gamets/$pfi ,0) ASC
+								group by round(gamets/$pfi ,0) HAVING max(uid)>0 order by round(gamets/$pfi ,0) ASC
 							  ) where gamets_truncated>$maxRow
 							");
-
-    $results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
     
-    $results = $db->query("insert into memory_summary 
-								select gamets,1,message,message,'diary',uid
+ 
+    //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
+    
+    $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
+								select gamets,1,message,message,'diary',uid,speaker
 								from memory
-								where message like 'Dear Diary%'
+								where event='diary'
 								and gamets>$maxRow
 							");
 
@@ -709,7 +742,7 @@ function DataRechatHistory()
     global $db;
 
     $lastRechat=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('rechat','inputtext','inputtext_s') 
-    and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 0,10");
+    and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 10 OFFSET 0");
     
     return $lastRechat;
 

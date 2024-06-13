@@ -209,12 +209,7 @@ class connector
     {
 
         fclose($this->primary_handler);
-        if ($GLOBALS["FEATURES"]["COST_MONITOR"]["ENABLED"]) {
-            // Call rest of tokenizer functions now, relevant data was sent
 
-            TkTokenizePrompt($this->_dataSent, $GLOBALS["CONNECTOR"][$this->name]["model"]);
-            TkTokenizeResponse($this->_numOutputTokens, $GLOBALS["CONNECTOR"][$this->name]["model"]);
-        }
     }
 
     // Method to close the data processing operation

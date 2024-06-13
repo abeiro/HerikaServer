@@ -1,28 +1,57 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-</head>
-<body>
-
-<?php
+<?php 
 
 error_reporting(E_ALL);
+session_start();
+
+
 
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+
+$configFilepath=realpath($enginePath."conf".DIRECTORY_SEPARATOR);
 
 require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 
+$GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
+foreach (glob($configFilepath . '/conf_????????????????????????????????.php') as $mconf ) {
+    if (file_exists($mconf)) {
+        $filename=basename($mconf);
+        $pattern = '/conf_([a-f0-9]+)\.php/';
+        preg_match($pattern, $filename, $matches);
+        $hash = $matches[1];
+        $GLOBALS["PROFILES"][$hash]=$mconf;
+    }
+}
 
+if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
+    require_once($_SESSION["PROFILE"]);
+
+} else {
+  print_r($_SESSION["PROFILE"]);
+  print_r($GLOBALS["PROFILES"]);
+  die();
+}
+  
+
+//print_r($GLOBALS);
 $db = new sql();
 
 $data=[];
 $n=3; // Starting at page 3
 $pageElements="";
 
-$results = $db->query("SElECT  topic,content,tags,people  FROM diarylog order by gamets asc");
-while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
+echo <<<HEAD
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+</head>
+<body>
+HEAD;
+
+
+$results = $db->query("SElECT  topic,content,tags,people  FROM diarylog where people='{$GLOBALS["HERIKA_NAME"]}' order by gamets asc");
+while ($row = $db->fetchArray($results)) {
   $data[] = $row;
   $pageElements.="
     <div class=\"page text-page\" onclick=\"movePage(this, $n)\"><h3>{$row["topic"]}</h3>{$row["content"]}
