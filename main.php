@@ -102,13 +102,13 @@ $startTime = microtime(true);
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 // Lock to avoid TTS hangs
-/*
+
 $semaphoreKey =abs(crc32(__FILE__));
 $semaphore = sem_get($semaphoreKey);
 while (sem_acquire($semaphore,true)!=true)  {
     usleep(1000);
 }
-*/
+
 
 
 
