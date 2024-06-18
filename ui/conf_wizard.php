@@ -249,7 +249,7 @@ echo '<input class="btn btn-info" type="button" name="save" value="Save" onclick
 echo "</ul></div>";
 
 
-echo '<p id="end"><input class="btn btn-info" type="button" name="check" value="Check" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php";document.forms[0].submit()\' />';
+echo '<p id="end"><input class="btn btn-info" type="button" name="check" value="Check [DOES NOT WORK]" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php";document.forms[0].submit()\' />';
 echo ' :: <input class="btn btn-info" type="button" name="save" value="Save" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php?save=true";document.forms[0].submit();\' /></p>';
 echo '<iframe class="w-75" name="checker" border="1" style="min-height:200px;" scrolling="no" src="tmpl/black.html"></iframe>';
 echo '<script>window.onload = scrollToHash;</script>';

@@ -285,7 +285,7 @@
   "FEATURES": {
     "_title":"Other Features",
     "MEMORY_EMBEDDING": {
-      "_title":"Long Term Memory (DwemerDistro Only!)",
+      "_title":"Long Term Memory",
       "ENABLED": {"type":"boolean","description":"Enable long term memory.  It uses TXTAI to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
       "TXTAI_URL": {"type":"url","description":"TXTAI REST-API Endpoint. Copy and paste the [TXTAI REST-API] URL from the console window."},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing recent dialogues as memories. As that is covered by context history."},
