@@ -2,8 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-$distroLogPath = '../../log/error.log'; 
-$uwampLogPath = '..\..\..\..\bin\apache\logs\error.log'; 
+$distroLogPath = __DIR__ . '/../../log/error.log'; 
 
 // Function to read and filter the error log from a given path
 function readErrorLog($errorLogPath, $logType) {
@@ -11,22 +10,21 @@ function readErrorLog($errorLogPath, $logType) {
         $errorLog = file($errorLogPath);
         $errorLog = array_reverse($errorLog);
         echo "<h1>Reading $logType error.log (Filtered only for errors)</h1>";
-        echo '<div style="max-height: 400px; overflow-y: scroll; background-color: black; color: white; font-size: 16px;">'; // Increase text size
+        echo '<div style="max-height: 800px; overflow-y: scroll; background-color: black; color: white; font-size: 14px;">'; // Increase text size
         foreach ($errorLog as $line) {
             if (strpos($line, '[php:error]') !== false) {
                 echo htmlspecialchars($line) . "<br>";
             }
         }
         echo '</div>';
+        echo '<button onclick="window.location.href=\'downloadLog.php\'">Download Log</button>'; // Add download button
     } else {
         echo "Error log file not found or not readable at: " . $errorLogPath;
     }
 }
 
-// Try to read the Distro log, and if it's not available, read the UWAMP log
+// Read the Distro log
 if (file_exists($distroLogPath) && is_readable($distroLogPath)) {
     readErrorLog($distroLogPath, "DwemerDistro");
-} elseif (file_exists($uwampLogPath) && is_readable($uwampLogPath)) {
-    readErrorLog($uwampLogPath, "UWAMP");
 }
 ?>

@@ -104,7 +104,7 @@
                     <li><a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test GCP TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-coqui-ai.php" target="_blank">Test Coqui.AI TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a></li>
-                    <li><a class="dropdown-item" href="tests/vector-test-chromadb.php" target="_blank">Test ChromaDB Memories</a></li>
+                    <li><a class="dropdown-item" href="tests/vector-test-chromadb.php" target="_blank">Test ChromaDB Memories [DOES NOT WORK]</a></li>
                     <li><a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a></li>
                 </ul>
             </li>
