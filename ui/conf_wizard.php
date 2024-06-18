@@ -188,7 +188,7 @@ foreach ($currentConf as $pname=>$parms) {
         }
     
         echo "<p class='conf-item'><label>$pname</label><div>$buffer</div><span>{$parms["description"]}</span></p>".PHP_EOL;
-        
+
     } else if ($parms["type"]=="boolean") {
         
         $buffer="";$rtrue="";$rfalse="";
@@ -264,7 +264,7 @@ include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "Herika Server";
+$title = "AI Follower Framework";
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 
