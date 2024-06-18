@@ -1,7 +1,7 @@
 {
   "DBDRIVER": {"type":"select","values":["postgresql"],"description":"Primary database handler. Currently only postgresql."},
   "PLAYER_NAME": {"type":"string","description":"Your current character name."},
-  "HERIKA_NAME": {"type":"string","description":"NPC N"},
+  "HERIKA_NAME": {"type":"string","description":"NPC Name"},
   "PROMPT_HEAD": {"type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "HERIKA_PERS": {"type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "RECHAT_H": {"type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves."},
