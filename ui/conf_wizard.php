@@ -106,7 +106,7 @@ foreach ($currentConf as $pname=>$parms) {
         
         if (isset($currentConfTitles["{$pnameA[0]}"])) {
             $legend=$currentConfTitles["{$pnameA[0]}"];
-        }
+        }   
         else {
             $legend=$primaryGroups[$pnameA[0]];
             
@@ -177,15 +177,18 @@ foreach ($currentConf as $pname=>$parms) {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><select name='$fieldName'>$buffer</select><span> {$parms["description"]}</span></p>".PHP_EOL;
 
     } else if ($parms["type"]=="selectmultiple") {
-        $buffer="";
-        if (!isset($parms["currentValue"]))
-            $parms["currentValue"]=[];
+        $buffer = "";
+        if (!isset($parms["currentValue"])) {
+            $parms["currentValue"] = [];
+        }
+    
+        foreach ($parms["values"] as $item) {
+            $checked = in_array($item, $parms["currentValue"]) ? "checked" : "";
+            $buffer .= "<label><input type='checkbox' name='{$fieldName}[]' value='$item' $checked> $item</label><br>";
+        }
+    
+        echo "<p class='conf-item'><label>$pname</label><div>$buffer</div><span>{$parms["description"]}</span></p>".PHP_EOL;
         
-        foreach ($parms["values"] as $item)
-            $buffer.="<option value='$item' ".((in_array($item,$parms["currentValue"]))?"selected":"").">$item</option>";
-        
-        echo "<p class='conf-item'><label for='$fieldName'>$pname</label><select multiple='true' name='{$fieldName}[]'>$buffer</select><span> {$parms["description"]}</span></p>".PHP_EOL;
-
     } else if ($parms["type"]=="boolean") {
         
         $buffer="";$rtrue="";$rfalse="";

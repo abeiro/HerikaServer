@@ -177,6 +177,6 @@ foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
 ?>
 </select>
 <input type='hidden' value="" name="shortcut" id="shorcutholder">
-<input type='submit' value="change profile">
+<input type='submit' value="Change Profile">
 </form>
 <main style="max-height:800px;overflow-y:scroll">
