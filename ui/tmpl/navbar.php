@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
-        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework" style="vertical-align:bottom;"/> AIFF
+        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AIFF
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector">
         Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
         </a>
@@ -85,8 +85,8 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the Herika Server." onclick="return confirm('This will wipe the entire server!!! Ignore this message if this is your initial installation. Are you really sure?')">
-                            Reinitialize Herika Server
+                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Server." onclick="return confirm('This will wipe the entire server!!! Ignore this message if this is your initial installation. Are you really sure?')">
+                            Reinitialize AI Follower Framework Server
                         </a>
                     </li>
                 </ul>
@@ -96,7 +96,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a></li>
-                    <li><a class="dropdown-item" href="updater.php">Update Herika Server</a></li>
+                    <li><a class="dropdown-item" href="updater.php">Update AI Follower Framework Server</a></li>
                     <li><a class="dropdown-item" href="tests.php" target="_blank">Test ChatGPT/KoboldCPP Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a></li>

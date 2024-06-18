@@ -16,7 +16,7 @@ if (isset($_POST["submit"])) {
 
     // Try to move the uploaded file to the specified directory
     if (move_uploaded_file($_FILES["file"]["tmp_name"], $targetFile)) {
-        echo "Database successfully imported. PLEASE RESTART THE HERIKA SERVER!";
+        echo "Database successfully imported. PLEASE RESTART THE AI Follower Framework SERVER!";
     } else {
         echo "Error uploading file.";
     }

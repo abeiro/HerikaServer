@@ -8,7 +8,7 @@
   "RECHAT_P": {"type":"integer","description":"Rechat probability. 0 = Always | 100 = Never"},
   "CONTEXT_HISTORY": {"type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. Improves short term memory. More context = more tokens used, and slower response time."},
   "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for AI requests. "},
-  "CORE_LANG": {"type":"select","description":"Custom Language. The lang folder is in the Herika Server. Leave it blank for English."},
+  "CORE_LANG": {"type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
   "NEWQUEUE": {"type":"boolean","description":"Enable for 360° audio."},
   "MAX_WORDS_LIMIT": {"type":"integer","description":"Enforce a word limit for Herika's responses. Leave as 0 to disable."},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service"},
