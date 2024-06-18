@@ -2,7 +2,7 @@
     <div class="container-fluid mx-1">
         <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AIFF
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector">
-        Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
+        [IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
         </a>
 
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
