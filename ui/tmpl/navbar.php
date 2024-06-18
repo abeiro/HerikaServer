@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
-        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt=" Herika Server" style="vertical-align:bottom;"/> Herika Server
+        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework" style="vertical-align:bottom;"/> AIFF
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector">
         Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
         </a>
@@ -71,12 +71,12 @@
                     </li>
                     <li>
                         <a class="dropdown-item" href="export_db.php" title="Export Database">
-                            Export SQLITE3 Database
+                            Export SQLITE3 Database [DOES NOT WORK]
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="import_db.php" title="Import Database">
-                            Import SQLITE3 Database
+                            Import SQLITE3 Database [DOES NOT WORK]
                         </a>
                     </li>
                     <li>
@@ -114,8 +114,8 @@
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="conf_editor.php" target="_blank">Configuration Editor</a></li>
                     <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
-                    <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration" target="_blank">Export Configuration</a></li>
-                    <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration" target="_blank">Import Configuration</a></li>
+                    <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration WIP" target="_blank">Export Configuration</a></li>
+                    <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration WIP" target="_blank">Import Configuration</a></li>
                     <li><a class="dropdown-item" href="index.php?table=openai_token_count">OpenAI Token Pricing</a></li>
                 </ul>
             </li>
