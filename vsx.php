@@ -35,6 +35,10 @@ if (strpos($_GET["oname"],".fuz")) {
     $finalFile=xwmToWav($finalName);
 }
 
+if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) ) {
+  die("Error");
+}
+
 $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
 
 $codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);

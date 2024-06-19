@@ -252,7 +252,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
             unset($file_lines[$i]);
         }
         
-        $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates where npc_name='$codename'");
+        $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
         
 
         file_put_contents($newFile, implode('', $file_lines));

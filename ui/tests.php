@@ -26,12 +26,6 @@ if (!file_exists($enginePath."conf".DIRECTORY_SEPARATOR."conf.php")) {
     echo "ok<br/>";
 }
 
-echo "Checking for database...";
-if (!file_exists($enginePath."data".DIRECTORY_SEPARATOR."mysqlitedb.db")) {
-    echo "not found<br/>";
-} else {
-    echo "ok<br>";
-}
 
 echo "Trying to instantiate...";
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
