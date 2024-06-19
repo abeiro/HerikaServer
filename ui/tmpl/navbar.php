@@ -1,9 +1,11 @@
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
-        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AIFF
-        <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector">
-        [IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
+        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="AI Follower Framework Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AIFF
+        
+        <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector" style="display:none">
+        <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>-->
         </a>
+        
 
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item dropdown mx-2">
@@ -70,22 +72,13 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="export_db.php" title="Export Database">
-                            Export SQLITE3 Database [DOES NOT WORK]
+                        <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
+                            Database Manager
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="import_db.php" title="Import Database">
-                            Import SQLITE3 Database [DOES NOT WORK]
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true" title="Create new tables if needed." onclick="return confirm('Will reinstall all database tables. Are you Sure?')">
-                            Install Server Tables
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Server." onclick="return confirm('This will wipe the entire server!!! Ignore this message if this is your initial installation. Are you really sure?')">
+                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Database." 
+                        onclick="return confirm('This will wipe the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder')">
                             Reinitialize AI Follower Framework Server
                         </a>
                     </li>
