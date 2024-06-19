@@ -106,7 +106,7 @@ foreach ($currentConf as $pname=>$parms) {
         
         if (isset($currentConfTitles["{$pnameA[0]}"])) {
             $legend=$currentConfTitles["{$pnameA[0]}"];
-        }
+        }   
         else {
             $legend=$primaryGroups[$pnameA[0]];
             
@@ -177,14 +177,17 @@ foreach ($currentConf as $pname=>$parms) {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><select name='$fieldName'>$buffer</select><span> {$parms["description"]}</span></p>".PHP_EOL;
 
     } else if ($parms["type"]=="selectmultiple") {
-        $buffer="";
-        if (!isset($parms["currentValue"]))
-            $parms["currentValue"]=[];
-        
-        foreach ($parms["values"] as $item)
-            $buffer.="<option value='$item' ".((in_array($item,$parms["currentValue"]))?"selected":"").">$item</option>";
-        
-        echo "<p class='conf-item'><label for='$fieldName'>$pname</label><select multiple='true' name='{$fieldName}[]'>$buffer</select><span> {$parms["description"]}</span></p>".PHP_EOL;
+        $buffer = "";
+        if (!isset($parms["currentValue"])) {
+            $parms["currentValue"] = [];
+        }
+    
+        foreach ($parms["values"] as $item) {
+            $checked = in_array($item, $parms["currentValue"]) ? "checked" : "";
+            $buffer .= "<label><input type='checkbox' name='{$fieldName}[]' value='$item' $checked> $item</label><br>";
+        }
+    
+        echo "<p class='conf-item'><label>$pname</label><div>$buffer</div><span>{$parms["description"]}</span></p>".PHP_EOL;
 
     } else if ($parms["type"]=="boolean") {
         
@@ -249,7 +252,7 @@ echo '<input class="btn btn-info" type="button" name="save" value="Save" onclick
 echo "</ul></div>";
 
 
-echo '<p id="end"><input class="btn btn-info" type="button" name="check" value="Check" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php";document.forms[0].submit()\' />';
+echo '<p id="end"><input class="btn btn-info" type="button" name="check" value="Check [DOES NOT WORK]" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php";document.forms[0].submit()\' />';
 echo ' :: <input class="btn btn-info" type="button" name="save" value="Save" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php?save=true";document.forms[0].submit();\' /></p>';
 echo '<iframe class="w-75" name="checker" border="1" style="min-height:200px;" scrolling="no" src="tmpl/black.html"></iframe>';
 echo '<script>window.onload = scrollToHash;</script>';
@@ -261,7 +264,7 @@ include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "Herika Server";
+$title = "AI Follower Framework Server";
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 

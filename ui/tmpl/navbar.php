@@ -1,8 +1,8 @@
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
-        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt=" Herika Server" style="vertical-align:bottom;"/> Herika Server
+        <a class="navbar-brand mr-2 Title" href="./index.php?notes=true" title="Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AIFF
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector">
-        Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
+        [IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>
         </a>
 
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -71,12 +71,12 @@
                     </li>
                     <li>
                         <a class="dropdown-item" href="export_db.php" title="Export Database">
-                            Export SQLITE3 Database
+                            Export SQLITE3 Database [DOES NOT WORK]
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="import_db.php" title="Import Database">
-                            Import SQLITE3 Database
+                            Import SQLITE3 Database [DOES NOT WORK]
                         </a>
                     </li>
                     <li>
@@ -85,8 +85,8 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the Herika Server." onclick="return confirm('This will wipe the entire server!!! Ignore this message if this is your initial installation. Are you really sure?')">
-                            Reinitialize Herika Server
+                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Server." onclick="return confirm('This will wipe the entire server!!! Ignore this message if this is your initial installation. Are you really sure?')">
+                            Reinitialize AI Follower Framework Server
                         </a>
                     </li>
                 </ul>
@@ -96,7 +96,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a></li>
-                    <li><a class="dropdown-item" href="updater.php">Update Herika Server</a></li>
+                    <li><a class="dropdown-item" href="updater.php">Update AI Follower Framework Server</a></li>
                     <li><a class="dropdown-item" href="tests.php" target="_blank">Test ChatGPT/KoboldCPP Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a></li>
@@ -104,7 +104,7 @@
                     <li><a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test GCP TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-coqui-ai.php" target="_blank">Test Coqui.AI TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a></li>
-                    <li><a class="dropdown-item" href="tests/vector-test-chromadb.php" target="_blank">Test ChromaDB Memories</a></li>
+                    <li><a class="dropdown-item" href="tests/vector-test-chromadb.php" target="_blank">Test ChromaDB Memories [DOES NOT WORK]</a></li>
                     <li><a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a></li>
                 </ul>
             </li>
@@ -114,8 +114,8 @@
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="conf_editor.php" target="_blank">Configuration Editor</a></li>
                     <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
-                    <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration" target="_blank">Export Configuration</a></li>
-                    <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration" target="_blank">Import Configuration</a></li>
+                    <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration WIP" target="_blank">Export Configuration</a></li>
+                    <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration WIP" target="_blank">Import Configuration</a></li>
                     <li><a class="dropdown-item" href="index.php?table=openai_token_count">OpenAI Token Pricing</a></li>
                 </ul>
             </li>
@@ -177,6 +177,6 @@ foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
 ?>
 </select>
 <input type='hidden' value="" name="shortcut" id="shorcutholder">
-<input type='submit' value="change profile">
+<input type='submit' value="Change Profile">
 </form>
 <main style="max-height:800px;overflow-y:scroll">
