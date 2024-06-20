@@ -235,7 +235,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     
     $codename=strtr(strtolower(trim($gameRequest[3])),[" "=>"_"]);
 
-    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || true) {
+    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") ) {
         
         // Do customizations here
         $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
