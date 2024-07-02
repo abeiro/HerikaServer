@@ -29,6 +29,8 @@ class connector
     }
 
 
+   
+    
     public function open($contextData, $customParms)
     {
         $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
@@ -53,18 +55,7 @@ class connector
             }
         }
         
-        $contextData[]= [
-            'role' => 'user', 
-            'content' => "Use this JSON object to give your answer: ".json_encode([
-                "character"=>$GLOBALS["HERIKA_NAME"],
-                "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
-                "action"=>'a valid action, (refer to available actions list) or \"None\"',
-                "target"=>"action's target",
-                "message"=>'message',
-                
-        ])
-        ];
+        
         
         
          if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -81,18 +72,38 @@ class connector
                  
                 } else
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                
+                $FUNC_LIST[]=$function["name"];
             }
             $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
-             
+            
 
         }
+        $FUNC_LIST[]="Talk";
+        //$FUNC_LIST[]="None";
+
+        $contextData[]= [
+            'role' => 'user', 
+            'content' => "Use this JSON object to give your answer: ".json_encode([
+                "character"=>$GLOBALS["HERIKA_NAME"],
+                "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
+                "action"=>implode("|",$FUNC_LIST),
+                "target"=>"action's target|destination name",
+                "message"=>'message',
+                
+        ])
+        ];
         
         $pb=[];
         $pb["user"]="";
-        foreach ($contextData as $n=>$element) {
+      
+        $contextDataOrig=array_values($contextData);
+        
+        foreach ($contextDataOrig as $n=>$element) {
             
             
-            if ($n>=(sizeof($contextData)-2)) {
+            if ($n>=(sizeof($contextDataOrig)-2)) {
                 // Last element
                 $pb["user"].=$element["content"];
                 
@@ -110,15 +121,44 @@ class connector
                     
                 } else if ($element["role"]=="assistant") {
                     
-                    if (isset($element["role"]["tool_calls"]))
-                        $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"]["function"]["name"]}";
-                    else
+                    if (isset($element["tool_calls"])) {
+                        $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
+                        $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
+                        
+                        $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
+                        $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
+                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
+                                        "#TARGET#"=>current($localArguments),
+                                        ]);
+                        
+                        unset($contextData[$n]);
+                    } else {
                         $pb["system"].=$element["content"]."\n";
+                        $dialogueTarget=extractDialogueTarget($element["content"]);
+                        // Trying to provide examples
+                        $contextData[$n]=[
+                                "role"=>"assistant",
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"\", 
+                                \"target\": \"\", \"message\": \"".trim($dialogueTarget["cleanedString"])."\"}
+"
+                                
+                            ];
+                    }
                     
                 } else if ($element["role"]=="tool") {
                     
-                        $pb["system"].=$element["content"]."\n";
-                        
+                        if (!empty($element["content"])) {
+                            $pb["system"].=$element["content"]."\n";
+                            $contextData[$n]=[
+                                    "role"=>"user",
+                                    "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
+                                    
+                                ];
+                                
+                            $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                        } else
+                            unset($contextData[$n]);
+                            
                 }
             }
         }
@@ -126,7 +166,6 @@ class connector
         $contextData2=[];
         $contextData2[]= ["role"=>"system","content"=>$pb["system"]];
         $contextData2[]= ["role"=>"user","content"=>$pb["user"]];
-        
         
         // Compacting */
         $contextDataCopy=[];
@@ -141,11 +180,23 @@ class connector
             ,
             'stream' => true,
             'max_tokens'=>$MAX_TOKENS,
-            'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
-            'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
+            'stop'=>[
+                    'USER',
+                ]
             //'response_format'=>["type"=>"json_object"],
             
         );
+        
+        
+         $data["temperature"]=$GLOBALS["CONNECTOR"][$this->name]["temperature"];
+         $data["frequency_penalty"]=$GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"];
+         $data["presence_penalty"]=$GLOBALS["CONNECTOR"][$this->name]["presence_penalty"];
+         $data["repetition_penalty"]=$GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"];
+         $data["min_p"]=$GLOBALS["CONNECTOR"][$this->name]["min_p"];
+         $data["top_a"]=$GLOBALS["CONNECTOR"][$this->name]["top_a"];
+         $data["top_k"]=$GLOBALS["CONNECTOR"][$this->name]["top_k"];
+            
+            
         // Mistral AI API does not support penalty params
         if (strpos($url, "mistral") === false) {
             $data["presence_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0;
@@ -209,6 +260,7 @@ class connector
 
     }
 
+    
 
     public function process()
     {
@@ -245,8 +297,16 @@ class connector
                 if (isset($finalData[0])&& is_array($finalData[0]))
                     $finalData=$finalData[0];
                 
-                
                 if (isset($finalData["message"])) {
+                    // Check first if action was issued
+                    if (is_array($finalData)&&isset($finalData["action"])) {
+                        if ($finalData["action"]=="Inspect") {
+                            return "";
+                            
+                        }
+                        
+                    } 
+                    
                     if (is_array($finalData)&&isset($finalData["message"])) {
                         $mangledBuffer = str_replace($this->_extractedbuffer, "", $finalData["message"]);
                         $this->_extractedbuffer=$finalData["message"];
@@ -278,12 +338,15 @@ class connector
 
     }
 
+   
+
     // Method to close the data processing operation
     public function processActions()
     {
         global $alreadysent;
 
         if ($this->_functionName) {
+            error_log("Old function scheme");
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
                 $parameter = current($parameterArr); // Only support for one parameter
@@ -301,8 +364,16 @@ class connector
                 return null;
         } else {
             $GLOBALS["DEBUG_DATA"]["RAW"]=$this->_buffer;
+            unset($GLOBALS["_JSON_BUFFER"]);
             $parsedResponse=__jpd_decode_lazy($this->_buffer);   // USE JPD_LAZY?
+            error_log("New function scheme");
             if (is_array($parsedResponse)) {
+                error_log("New function scheme: ".print_r($this->_buffer,true));
+
+                if (isset($parsedResponse[0]["action"])) {
+                    $parsedResponse=$parsedResponse[0];
+                }
+                
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
                         
@@ -329,7 +400,9 @@ class connector
                         //echo "Herika|command|$functionCodeName@$parameter\r\n";
                         $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
                     
-                    } 
+                    } else {
+                          error_log("Function not found for {$parsedResponse["action"]} already sent");
+                    }
                         
                 }
                 
@@ -340,6 +413,7 @@ class connector
             }
         }
 
+        //print_r($parsedResponse);
         return $this->_commandBuffer;
     }
 

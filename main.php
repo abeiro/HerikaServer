@@ -29,7 +29,8 @@ if (php_sapi_name()=="cli") {
 
     $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog");
     
-    $receivedData = "inputtext|{$res[0]["ts"]}|{$res[0]["gamets"]}|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
+    //$receivedData = "inputtext|{$res[0]["ts"]}|{$res[0]["gamets"]}|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
+    $receivedData = "funcret|{$res[0]["ts"]}|{$res[0]["gamets"]}|command@Inspect@Serana@Serana is wearing: Serana Hood,Elven Dagger,Elder Scroll,Vampire Boots,Vampire Royal Armor,";
     //$receivedData = "{$argv[1]}";
     $_GET["profile"]=$argv[2];
     error_reporting(E_ALL);
@@ -137,6 +138,15 @@ if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoac
     die();
 }
 
+// Fake entry to mark time passing 
+if (in_array($gameRequest[0],["bored"])) {
+    $localGameRequest=$gameRequest;
+    $localGameRequest[0]="infoaction";
+    $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
+    logEvent($localGameRequest);
+    
+}
+
 
 // Only allow functions when explicit request
 if (!in_array($gameRequest[0],["inputtext","inputtext_s"])) {
@@ -224,6 +234,8 @@ $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT
 // Historic context (last dialogues, events,...)
 $contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1,$sqlfilter);
 
+
+
 // Info about location and npcs in first position
 $contextDataWorld = DataLastInfoFor("", -2);
 
@@ -271,7 +283,9 @@ requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"c
 
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
-$head[] = array('role' => 'system', 'content' =>  $GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] . $GLOBALS["COMMAND_PROMPT"]);
+$head[] = array('role' => 'system', 'content' =>  
+    strtr($GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] . $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
+);
 
 
 /**********************
@@ -312,6 +326,8 @@ if ($gameRequest[0] == "funcret") {
 //returnLines(["Mmm..let me think"]);
 
 
+
+
 /**********************
 CALL INITIALIZATION
 ***********************/
@@ -328,6 +344,17 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEP
     
 
 }
+
+///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
+
+if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
+    $gameRequestCopy=$gameRequest;
+    $gameRequestCopy[0]="infoaction";
+    $gameRequestCopy[3]=$GLOBALS["PATCH_STORE_FUNC_RES"];
+    logEvent($gameRequestCopy);
+}
+
+///// PATCH
 
 if ($connectionHandler->primary_handler === false) {
 
@@ -530,67 +557,6 @@ if (sizeof($talkedSoFar) == 0) {
 }
 
 
-// EXPERIMENTAL FEATURE
-if ($FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"] && ((DMgetCurrentModel()=="koboldcpp")||(DMgetCurrentModel()=="llamacpp")) && (in_array($gameRequest[0],["inputtext","inputtext_s"])) ) {
-    
-    $herikaCondensedResponse=implode(" ",$talkedSoFar);
-
-    array_pop($contextData);
-    $lastElementByUser=end($contextData);
-    $lastUserSentence=str_replace("-$DIALOGUE_TARGET", "", $lastElementByUser["content"]);
-    //$contextData=[];       
-    //$GLOBALS["PROMPT_HEAD"]="";
-    //$GLOBALS["HERIKA_PERS"]="";
-    //$GLOBALS["COMMAND_PROMPT"]="";
-    //$contextData[]=array('role' => 'user', 'content' =>  "{$GLOBALS["HERIKA_NAME"]}: $herikaCondensedResponse");
-    $contextData[]=array('role' => 'user', 'content' =>  
-        "Analyze this sentence: '$lastUserSentence.\n".
-        "\nChoose the command from this list:
-        WalkTo,GatherInfo,NoCommand,OpenBackPack,Sleep,ContinueDialogue,OpenInventory,UpdatePersonalDiary (provide topic), UpdateQuestJournal (provide quest topic)\n
-        Write command in this JSON object {\"command\":\"\",\"topic\":,\"priority\":\"now|future\",\"keyword\":\"\"}:"
-    );
-
-    //$GLOBALS["PROMPT_HEAD"]="Follow the logical steps and write the final answer in first place. Then explain reasoning.".
-    //$GLOBALS["HERIKA_PERS"]="";
-    //$GLOBALS["COMMAND_PROMPT"]="";
-    
-    //$GLOBALS["PLAYER_NAME"]="no name";
-    
-    $connectionHandler=new connector();
-    $overrideParameters["MAX_TOKENS"]=50;
-    $overrideParameters["GRAMMAR_ACTIONS"]=true;
-    
-    $connectionHandler->open($contextData,$overrideParameters);
-      
-    $buffer="";
-    $totalBuffer="";
-    $breakFlag=false;
-    
-    $connectionHandler->_functionMode=true;
-     while (true) {
-
-        if ($breakFlag) {
-            break;
-        }
-
-        $buffer.=$connectionHandler->process();
-        $totalBuffer.=$buffer;
-
-        if ($connectionHandler->isDone()) {
-            $breakFlag=true;
-        }
-        
-     }
-   
-   
-    $actions=$connectionHandler->processActions();
-    if (sizeof($actions)>0) {
-
-        $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
-        echo implode("\r\n", $actions);
-    }
-
-}
 
 echo 'X-CUSTOM-CLOSE';
 

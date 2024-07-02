@@ -66,12 +66,12 @@ class connector
         $contextData[]= [
             'role' => 'user', 
             'content' => "Use this JSON object to give your answer: ".json_encode([
-                "character"=>$GLOBALS["HERIKA_NAME"],
-                "listener"=>"who is talking to",
-                "message"=>'message',
-                "mood"=>'',
-                "action"=>'a valid action, (refer to available actions list)',
-                "target"=>"action's target",
+            "character"=>$GLOBALS["HERIKA_NAME"],
+            "action"=>'a valid action, (refer to available actions list)',
+            "target"=>"action's target",
+            "listener"=>"who is talking to",
+            "mood"=>'',
+            "message"=>'message',
             ])
         ];
         
@@ -323,6 +323,12 @@ class connector
             $partialResult=__jpd_decode_lazy($this->_jsonBuffer);
             
             if (is_array($partialResult)&&isset($partialResult[0]["message"])) {
+                if (isset($partialResult[0]["action"])) {
+                    if (($partialResult[0]["action"]=="Inspect")) {
+                        return "";
+                    }
+                }
+                
                 $mangledBuffer = str_replace($this->_extractedbuffer, "", $partialResult[0]["message"]);
                 $this->_extractedbuffer=$partialResult[0]["message"];
                 if (isset($partialResult[0]["listener"])) {

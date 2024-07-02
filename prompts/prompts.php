@@ -98,21 +98,24 @@ $PROMPTS=array(
 
     "bored"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} makes a joke about current location) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the current weather) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the time and date) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the last event) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about a Skyrim Meme) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about any of the Gods in Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the politics of Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about a historical event from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about a book from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: I once had to ) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: Did you hear about what happened in) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment starting with: A wise Akaviri man once told me) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a joke about current location) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the current weather) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the time and date) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the last event) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a Skyrim Meme) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about any of the Gods in Skyrim) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the politics of Skyrim) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a historical event from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a book from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment starting with: I once had to ) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment starting with: Did you hear about what happened in) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment starting with: A wise Akaviri man once told me) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a random NPC) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a companion) $TEMPLATE_DIALOG"
         ]
-        ,"extra"=>["dontuse"=>(time()%2!=0)]   //50% chance
+        //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
+        ,"extra"=>["dontuse"=>(time()%($GLOBALS["BORED_EVENT"]+1)==0)]   //50% chance
     ],
 
     "goodmorning"=>[
@@ -142,7 +145,11 @@ $PROMPTS=array(
             "default"=>"{$GLOBALS["HERIKA_NAME"]} talks to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG",
             "TakeASeat"=>"({$GLOBALS["HERIKA_NAME"]} talks about sitting location)$TEMPLATE_DIALOG",
             "GetDateTime"=>"({$GLOBALS["HERIKA_NAME"]} answers with the current date and time in short sentence)$TEMPLATE_DIALOG",
-            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} makes a comment about movement destination)$TEMPLATE_DIALOG"
+            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} makes a comment about movement destination)$TEMPLATE_DIALOG",
+            "CheckInventory"=>"({$GLOBALS["HERIKA_NAME"]} talks about inventory and backpack items)$TEMPLATE_DIALOG",
+            "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected)$TEMPLATE_DIALOG",
+            "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests readed)$TEMPLATE_DIALOG",
+            "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about destination)$TEMPLATE_DIALOG"
             ]
     ],
     "lockpicked"=>[
@@ -167,7 +174,7 @@ $PROMPTS=array(
             "{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG",
             "{$GLOBALS["HERIKA_NAME"]} participates in the conversation. $TEMPLATE_DIALOG",
             "{$GLOBALS["HERIKA_NAME"]} follows the conversation. $TEMPLATE_DIALOG",
-            "{$GLOBALS["HERIKA_NAME"]} tries to focus the conversation. $TEMPLATE_DIALOG",
+            "{$GLOBALS["HERIKA_NAME"]} makes a statement about the conversation. $TEMPLATE_DIALOG",
             "{$GLOBALS["HERIKA_NAME"]} tries to stop the conversation. $TEMPLATE_DIALOG"
         ]
         

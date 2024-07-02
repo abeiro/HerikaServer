@@ -3,7 +3,46 @@
 $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); 
 
-function ttsMimic($textString, $mood = "cheerful", $stringforhash='')
+
+function ttsMimic($textString, $mood = "cheerful", $stringforhash='') {
+    
+    $start = microtime(true);
+
+    $ttsServiceUri = $GLOBALS["TTS"]["MIMIC3"]["URL"] . "/api/tts";
+    
+    $testP="?text=".urlencode($textString);
+    $voiceP="&voice=".urlencode($GLOBALS["TTS"]["MIMIC3"]["voice"]);
+    $noiseScaleP="&noiseScale=0.667";
+    $noiseW="&noiseW=0.8";
+    $lengthScaleP="&lengthScale=".urlencode($GLOBALS["TTS"]["MIMIC3"]["rate"]);
+    $restP="&ssml=false&audioTarget=client";
+    $result = file_get_contents($ttsServiceUri.$testP.$voiceP.$noiseScaleP.$noiseW.$lengthScaleP.$restP, false, $context);
+     
+    if (!$result) {
+        file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".err", trim($data));
+        return false;
+    } else {
+    }
+   
+
+    // Trying to avoid sync problems.
+    $stream = fopen(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav", 'w');
+    $size = fwrite($stream, $result);
+    fsync($stream);
+    fclose($stream);
+
+    $end = microtime(true);
+
+    $executionTime = ($end - $start);
+
+    file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($data) . "\n\rsize of wav ($size)\n\rexecution time: $executionTime secs  function tts($textString,$mood=\"cheerful\",$stringforhash)");
+
+    return "soundcache/" . md5(trim($stringforhash)) . ".wav";
+    
+    
+}
+
+function ttsMimicOld($textString, $mood = "cheerful", $stringforhash='')
 {
 
     $start = microtime(true);
