@@ -10,7 +10,7 @@ $HERIKA_PERS="You are a person who likes jokes and sarcastic comments.";
 
 $RECHAT_H=4;
 $RECHAT_P=0;
-
+$BORED_EVENT=0;
 $CORE_LANG="";
 
 $NEWQUEUE=true;

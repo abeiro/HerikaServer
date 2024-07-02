@@ -627,6 +627,30 @@ function DataGetCurrentTask()
         $n++;
     }
 
+    $results = $db->fetchAll("SElECT  distinct name,briefing as description,gamets FROM quests order by gamets desc");
+    if (!$results) {
+        return $data;
+    }
+    
+    if (sizeof($results)>2) {
+        return $data;
+    }
+
+    $data = "";
+
+    $n = 0;
+    foreach ($results as $row) {
+
+        if ($n == 0) {
+            $data = "Current task/quest/plan: {$row["name"]}/{$row["description"]}.";
+        } elseif ($n == 1) {
+            $data .= "Previous task/quest/plan: {$row["name"]}/{$row["description"]}.";
+        } else {
+            break;
+        }
+        $n++;
+    }
+    
     return $data;
 
 }
@@ -852,5 +876,26 @@ function GetAnimationHex($mood)
 
 }
 
+ function extractDialogueTarget($string) {
+        // Check if the string contains "(talking to"
+        if (strpos($string, '(talking to') !== false) {
+            // Extract the target's name using regular expression
+            preg_match('/\(talking to ([^\)]+)\)/', $string, $matches);
+            
+            // Check if a match is found and extract the target's name
+            if (isset($matches[1])) {
+                $target = $matches[1];
 
+                // Remove the "(talking to ...)" part from the original string
+                $cleanedString = preg_replace('/\(talking to [^\)]+\)/', '', $string);
+                
+                return ['target' => $target, 'cleanedString' => trim($cleanedString)];
+            }
+        }
+
+        // Return the original string if no target is found
+        return ['target' => null, 'cleanedString' => $string];
+}
+    
+?>
 

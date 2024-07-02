@@ -6,6 +6,7 @@
   "HERIKA_PERS": {"type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "RECHAT_H": {"type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves."},
   "RECHAT_P": {"type":"integer","description":"Rechat probability. 0 = Always | 100 = Never"},
+  "BORED_EVENT": {"type":"integer","description":"BORED EVENT PROBABILITY. 0 = NEVER | 1 = 50% | 2 = 75% ..."},
   "CONTEXT_HISTORY": {"type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. Improves short term memory. More context = more tokens used, and slower response time."},
   "HTTP_TIMEOUT": {"type":"integer","description":"Timeout for AI requests. "},
   "CORE_LANG": {"type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
@@ -62,7 +63,7 @@
       "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3"],"description":"Prompt Format. Specified in the HuggingFace model card"}
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     },
     "koboldcppjson": {
       "_title":"KoboldCPP API JSON",
@@ -77,7 +78,7 @@
       "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3"],"description":"Prompt Format. Specified in the HuggingFace model card"},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer"],"description":"Prompt Format. Specified in the HuggingFace model card"},
       "grammar": {"type":"boolean","description":"Enforces use of JSON grammar. True to enforce (generation speed loss, but json format guaranteed). if false, the generation speed will be better but will depend on the model to produce valid JSON output." }
     },
     "llamacpp": {

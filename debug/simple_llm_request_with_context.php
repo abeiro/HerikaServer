@@ -166,6 +166,7 @@ else {
     
      error_log("End:" .(microtime(true) - $startTime));
 
+     $GLOBALS["_JSON_BUFFER"]=[];   // reset json buffer. we need to full parse again.
      $actions=$connectionHandler->processActions();
      //echo PHP_EOL."<$buffer>".PHP_EOL;
      echo "\033[0;32m";

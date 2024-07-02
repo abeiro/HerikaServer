@@ -1,22 +1,24 @@
 <?php
 
-            $GLOBALS["more_stopseq"][]="<|im_start|>";
-            $context="<|im_start|>system\n{$GLOBALS["PROMPT_HEAD"]}\n";
+ 
+            $context="<|system|>\n{$GLOBALS["PROMPT_HEAD"]}\n";
             $context.="{$GLOBALS["HERIKA_PERS"]}\n";
             $context.="{$GLOBALS["COMMAND_PROMPT"]}\n#CONTEXT\n";
             $GLOBALS["DEBUG_DATA"][]=$context;
 
             $contextHistory="";
             $n=0;
-            foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
+            
+            
+             foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
 
                 if ($n==(sizeof($contextData)-1)) {   // Last prompt line
 
-                    $instruction.=$s_msg["content"]."<|im_end|>\n";
+                    $instruction.=$s_msg["content"]."</s>\n";
 
                 } else if ($n==(sizeof($contextData)-2)) {   // Last prompt line
 
-                    $instruction="<|im_end|>\n<|im_start|>user\n".$s_msg["content"];
+                    $instruction="</s>\n<|user|>\n".$s_msg["content"];
 
                 }  else {
                         if ($s_msg["role"]=="user") {
@@ -43,8 +45,8 @@
                                     
                                     $dialogueTarget=extractDialogueTarget($s_msg["content"]);
                                     // Trying to provide examples
-                                    $contextHistory.="<|im_end|>\n <|im_start|>assistant{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"\", 
-                                                        \"target\": \"\", \"message\": \"".trim($dialogueTarget["cleanedString"])."\"}<|im_end|>\n <|im_start|>user\n";
+                                    $contextHistory.="</s>\n <|assistant|>{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"\", 
+                                                        \"target\": \"\", \"message\": \"".trim($dialogueTarget["cleanedString"])."\"}</s>\n <|user|>\n";
                                 }
                     
                     } else if ($s_msg["role"]=="tool") {
@@ -60,9 +62,12 @@
 
                 $n++;
             }
+            
 
-            $context.="$contextHistory  $instruction <|im_start|>assistant\n";
+            $context.="$contextHistory  $instruction <|assistant|>";
             $GLOBALS["DEBUG_DATA"][]="$instruction";
             $GLOBALS["DEBUG_DATA"]["prompt"]=$context;
+
+ 
             
             ?>

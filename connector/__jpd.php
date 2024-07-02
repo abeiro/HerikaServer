@@ -84,6 +84,7 @@ function __jpd_decode_lazy($inputString) {
     $pattern = '/``json(.+?)```/s';
     // Extract the JSON code using the regular expression
     preg_match($pattern, $inputString, $matches);
+    $result=[];
     if (isset($matches[1])) {
         $jsonCode = json_decode($matches[1],true);
         if (!isset($GLOBALS["_JSON_BUFFER"][__jpd_hash($jsonCode)])) {
@@ -275,7 +276,7 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{ "character": "Jenassa", "listener": "Agabur", "message": "Sure, let me check it out for you, my friend!", "mood": "humble and helpful", "action": "CheckBackPack", "target": null } 
+```json\n{"character":"Roxie","listener":"Agabur","mood":"playful","action":"ExchangeItems","target":"Agabur","message":"Roxie: Alright, Agabur, let's see what you've got.  Don't disappoint a goblin's expectations!"}\n```
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);

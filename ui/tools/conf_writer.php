@@ -25,8 +25,12 @@ foreach ($_POST as $k=>$v) {
     
     if (is_array($v))
         $value=json_encode($v,true);
-    else if ($confSchema[$plainNameHierch]["type"]=="number")
-        $value="".addcslashes($v,"'")."";
+    else if ($confSchema[$plainNameHierch]["type"]=="number") {
+        if ($v==="")
+            continue;
+        else
+            $value="".addcslashes($v,"'")."";
+    }
     else if ($confSchema[$plainNameHierch]["type"]=="boolean")
         $value=($v=="true")?"true":"false";
     else

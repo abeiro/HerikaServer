@@ -116,20 +116,31 @@ class connector
                     
                     if (isset($element["tool_calls"])) {
                         $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
-                        $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}"; 
+                        $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
+                        
+                        $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
+                        $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
+                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
+                                        "#TARGET#"=>current($localArguments),
+                                        ]);
+                        
                         unset($contextData[$n]);
                     } else
                         $pb["system"].=$element["content"]."\n";
                     
                 } else if ($element["role"]=="tool") {
                     
-                        $pb["system"].=$element["content"]."\n";
-                        $contextData[$n]=[
-                                "role"=>"user",
-                                "content"=>"The Narrator: $lastAction , result: {$element["content"]}",
-                            ];
-                            
-                        
+                     if (!empty($element["content"])) {
+                            $pb["system"].=$element["content"]."\n";
+                            $contextData[$n]=[
+                                    "role"=>"user",
+                                    "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
+                                    
+                                ];
+                                
+                            $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                        } else
+                            unset($contextData[$n]);
                 }
             }
         }

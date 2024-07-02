@@ -46,6 +46,8 @@
 			//$useFunctionsAgain=true;
 			$forceAttackingText = true;
 			$argName = "target";
+			$useFunctionsAgain=false;
+
 
 		} else if ($functionCodeName == "ReadQuestJournal") {
 			//$useFunctionsAgain=true;

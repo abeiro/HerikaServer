@@ -56,6 +56,7 @@ if ($_GET["clean"]) {
 }
 if ($_GET["reset"]) {
     $db->delete("eventlog", "true");
+    header("Location: index.php");
 }
 
 if ($_GET["sendclean"]) {

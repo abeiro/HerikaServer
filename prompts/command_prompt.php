@@ -4,7 +4,7 @@ $COMMAND_PROMPT = "
 Don't write narrations.
 ";
 
-$COMMAND_PROMPT_FUNCTIONS="Use ACTIONS if your character needs to perfom an action.";
+$COMMAND_PROMPT_FUNCTIONS="Use # ACTIONS if your character needs to perfom an action.";
 /*
 $COMMAND_PROMPT_FUNCTIONS = "
 Use tool calling to control {$GLOBALS["HERIKA_NAME"]}'s actions.
