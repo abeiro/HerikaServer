@@ -7,7 +7,7 @@ body > div.container-fluid > div.datatable > table > tbody > tr > td > pre {
 
 body
         {
-            font-family: 'Times New Roman', Times, serif;
+            font-family: 'Arial', Times, serif;
         }
 
         .Title {
@@ -50,14 +50,14 @@ p.conf-item {
 	min-width:45%;
     font-size: 16px;
 	font-weight: bold;
-	font-family: 'Times New Roman', Times, serif;
+	font-family: 'Arial', Times, serif;
 }
 
 p.conf-item label{
 	display: block;
 	font-size: 16px;
 	font-weight: bold;
-	font-family: 'Times New Roman', Times, serif;
+	font-family: 'Arial', Times, serif;
 }
 
 p.conf-item textarea{
@@ -107,7 +107,7 @@ p.conf-item span {
 	padding: 3px;
 	font-size: 14px;
     font-weight: normal;
-	font-family: 'Times New Roman', Times, serif;
+	font-family: 'Arial', Times, serif;
 }
 
 form.confwizard > fieldset  {
