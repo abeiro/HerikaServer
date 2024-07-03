@@ -94,8 +94,7 @@
                     <li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-11labs.php" target="_blank">Test ElevenLabs TTS Connection</a></li>
-                    <li><a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test GCP TTS Connection</a></li>
-                    <li><a class="dropdown-item" href="tests/tts-test-coqui-ai.php" target="_blank">Test Coqui.AI TTS Connection</a></li>
+                    <li><a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test Google Cloud TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a></li>
                     <li><a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a></li>
                 </ul>
