@@ -252,7 +252,9 @@
     },
     "LOCALWHISPER": {
       "_title":"Local Whisper Speech-to-Text (Installed with DwemerDistro)",
-      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"}
+      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
+      "FORMFIELD": {"type":"select","values":["audio_file","file"],"description":"Form field name for audio file. Sometimes needed to change to file to use another shiper implementations"}
+
     }
   },
   "ITTFUNCTION": {

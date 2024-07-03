@@ -63,17 +63,7 @@ class connector
         $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###"];
 
 
-        $contextData[]= [
-            'role' => 'user', 
-            'content' => "Use this JSON object to give your answer: ".json_encode([
-            "character"=>$GLOBALS["HERIKA_NAME"],
-            "action"=>'a valid action, (refer to available actions list)',
-            "target"=>"action's target",
-            "listener"=>"who is talking to",
-            "mood"=>'',
-            "message"=>'message',
-            ])
-        ];
+       
         
         
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -91,11 +81,27 @@ class connector
                     
                 } else
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                
+                $FUNC_LIST[]=$function["name"];
+
             }
             $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk";
              
 
         }
+        $FUNC_LIST[]="Talk";
+
+        $contextData[]= [
+            'role' => 'user', 
+            'content' => "Use this JSON object to give your answer: ".json_encode([
+               "character"=>$GLOBALS["HERIKA_NAME"],
+                "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
+                "action"=>implode("|",$FUNC_LIST),
+                "target"=>"action's target|destination name",
+                "message"=>'message',
+            ])
+        ];
         
         
         if ($GLOBALS["CONNECTOR"][$this->name]["template"]=="alpaca") {
