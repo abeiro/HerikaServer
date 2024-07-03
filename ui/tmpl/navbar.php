@@ -116,7 +116,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>
-                    <li><a class="dropdown-item" href="addons/diary" target="_blank">Herika's Diary</a></li>
+                    <li><a class="dropdown-item" href="addons/diary" target="_blank">AI Diary</a></li>
                     <li><a class="dropdown-item" href="addons/chatsim" target="_blank">Chat Simulation</a></li>
                     <li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>
                 </ul>
