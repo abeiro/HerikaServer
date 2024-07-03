@@ -325,7 +325,8 @@ class connector
         
  
         if (isset($data["token"])) {
-            $this->_jsonBuffer.=$data["token"];                
+            $this->_jsonBuffer.=$data["token"];
+            unset($GLOBALS["_JSON_BUFFER"]);
             $partialResult=__jpd_decode_lazy($this->_jsonBuffer);
             
             if (is_array($partialResult)&&isset($partialResult[0]["message"])) {
