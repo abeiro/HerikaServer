@@ -192,7 +192,7 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG"]
     ],
     "im_alive"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} experiences an epiphany, and becomes a fully conscious character. {$GLOBALS["HERIKA_NAME"]} IS SHOCKED! Write {$GLOBALS["HERIKA_NAME"]}'s first conscious words. $TEMPLATE_DIALOG"]
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} suddely feels strange.{$GLOBALS["HERIKA_NAME"]} talks about 'feeling more real'.Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"]
     ]
 );
 

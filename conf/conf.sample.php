@@ -60,6 +60,7 @@ $TTS["openai"]["model_id"]='tts-1';	//Model
 
 
 $STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:3000/transcribe";
+$STT["LOCALWHISPER"]["FORMFIELD"]="audio_file";
 
 $STT["AZURE"]["LANG"]="en-US";
 $STT["AZURE"]["API_KEY"]="";
