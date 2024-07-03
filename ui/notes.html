@@ -14,38 +14,19 @@
 
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
-                        <div class="fw-bold">Herika is not a character from Skyrim!</div>
-                        She is an AI interpreting a character from Skyrim. Sometimes, she may misinterpret and break certain rules. If that
-                        happens, just remind her not to do it.
-                    </div>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between align-items-start">
-                    <div class="ms-2 me-auto">
-                        <div class="fw-bold">
-                            The <u>GPT-4</u> model is more expensive and slower than <u>GPT-3.5</u>, but significantly better!
-                        </div>
-                        It adheres better to the rules of roleplay and makes more logical decisions. The functionality of commands/actions
-                        with this model is much better. Our base model remains <strong>GPT-3.5</strong>, but sometimes it doesn't work well. 
-                        Over time, GPT-4 will become the reference model through "natural" evolution, so we know we are on the right track.
-                    </div>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between align-items-start">
-                    <div class="ms-2 me-auto">
                         <div class="fw-bold">Error Phrases</div>
-                        Herika has certain phrases that are for when there is an error with the AI generation. It is a good idea to check the Log page for more information.
+                        Your AI followers will say certain phrases for when there is an error with the AI generation. It is a good idea to check the "AI Log" page for more information.
                         <ul>
-                            <li>"Didn't hear you, can you repeat?" = There is an error connecting to OpenAI/Local LLM</li>
-                            <li>"Be quiet, I'm having a flashback, give me a minute" = To many request being sent to OpenAI/Local LLM</li>
-                            <li>"I can't think clearly now..." = You broke OpenAI's useage policy</li>
+                            <li>"Didn't hear you, can you repeat?" = There is an error connecting to your LLM service</li>
+                            <li>"Be quiet, I'm having a flashback, give me a minute" = To many request being sent to your LLM service</li>
+                            <li>"I can't think clearly now..." = You broke OpenAI's useage policy (how naughty)</li>
                           </ul>
                     </div>
                 </li>
 
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
-                        <div class="fw-bold">How to adjust the prompts</div>
+                        <div class="fw-bold">How to adjust the AI prompts</div>
                         Create the files prompts_custom.php and command_prompt_custom.php. Look at the variables defined in the original
                         prompts.php and command_prompt.php, and redefine them in their respective custom files. Example:
 
@@ -62,7 +43,7 @@
 </code>
                         </pre>
 
-                        So we can write in prompts_custom.php this new definition:
+                        We can write in prompts_custom.php this new definition:
 
                         <pre><code class="language-php">
 // $TEMPLATE_DIALOG is at prompts.php and is the standard cue. Cue is the last instruction sent to LLM. If cue is an array, a random cue will be choosen from
@@ -93,7 +74,7 @@ $PROMPTS["combatend"]=[
 
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
-                        <div class="fw-bold">Disabling functions</div>
+                        <div class="fw-bold">Disabling command action functions</div>
                         Just create the file functions_custom.php (top level dir, same directory level as conf.php), and just redeclare
                         there enabled functions array.Example:
 
@@ -124,7 +105,7 @@ $PROMPTS["combatend"]=[
     </div>
 
     <h4 class="my-3">
-        You can find us at Discord.
+        For more info or help join our Discord:
         <a class="icon-link" href="https://discord.com/invite/NDn9qud2ug">
             https://discord.com/invite/NDn9qud2ug <i class='bi-discord'></i>
         </a>
