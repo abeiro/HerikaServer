@@ -32,13 +32,13 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Actions</a>
                 <ul class="dropdown-menu">
                     <li>
-                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent responses." onclick="return confirm('Sure?')">
-                            Clean Sent
+                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent events." onclick="return confirm('Sure?')">
+                            Clean Sent Events
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Marks unsent responses from queue." onclick="return confirm('Sure?')">
-                            Reset Sent
+                        <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Marks unsent events from queue." onclick="return confirm('Sure?')">
+                            Reset Sent Events
                         </a>
                     </li>
                     <li>
@@ -47,39 +47,39 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean log table" onclick="return confirm('Sure?')">
+                        <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('Sure?')">
                             Clean AI Log
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?export=log" title="Export Log (debugging purposes)" target="_blank">
+                        <a class="dropdown-item" href="index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
                             Export AI Log
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?export=diary" title="Diary Log" target="_blank">
+                        <a class="dropdown-item" href="index.php?export=diary" title="Exports Diary Log to a csv file" target="_blank">
                             Export Diary
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync ChomaDB Memories if you have changed Memory Embeddings Provider" target="_blank">
+                        <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync VectorDB Memories. Use this if you have changed Memory Embeddings service." target="_blank">
                             Sync Memories
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync ChomaDB Memories if you have changed Memory Embeddings Provider" onclick="return confirm('Will cost Tokens to use if using OpenAI. MAY TAKE A FEW MINUTES TO PROCESS, DO NOT REFRESH THE WEBPAGE! Are you sure?')">
+                        <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync VectorDB Memories if you have changed Memory Embeddings service" onclick="return confirm('Will cost Tokens to use if using OpenAI. MAY TAKE A FEW MINUTES TO PROCESS, DO NOT REFRESH THE WEBPAGE! Are you sure?')">
                             Compact & Sync Memories
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
-                            Database Manager
+                            Database Manager (user&pass: dwemer)
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Database." 
-                        onclick="return confirm('This will wipe the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder')">
-                            Reinitialize AI Follower Framework Server
+                        onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
+                            Factory Reset AI Follower Framework Server
                         </a>
                     </li>
                 </ul>
