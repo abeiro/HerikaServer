@@ -169,5 +169,16 @@ foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
 </select>
 <input type='hidden' value="" name="shortcut" id="shorcutholder">
 <input type='submit' value="Change Profile">
+<?php 
+// Convert arrays to strings or use print_r for debugging
+echo "AI/LLM Service: ";
+echo is_array($CONNECTORS) ? '<strong>' . print_r($CONNECTORS, true) . '</strong>' : $CONNECTORS; 
+echo " |   TTS Service: ";
+echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong>' . $TTSFUNCTION . '</strong>'; 
+echo " |   STT Service: ";
+echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true) : '<strong>' . $STTFUNCTION . '</strong>' ; 
+echo " |   ITT Service: ";
+echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true) : '<strong>' .$ITTFUNCTION . '</strong>' ; 
+?>
 </form>
 <main style="max-height:800px;overflow-y:scroll">
