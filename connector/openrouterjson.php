@@ -90,7 +90,7 @@ class connector
                 "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
                 "action"=>implode("|",$FUNC_LIST),
                 "target"=>"action's target|destination name",
-                "message"=>'message',
+                "message"=>'lines of dialogue',
                 
         ])
         ];
@@ -182,8 +182,8 @@ class connector
             'max_tokens'=>$MAX_TOKENS,
             'stop'=>[
                     'USER',
-                ]
-            //'response_format'=>["type"=>"json_object"],
+                ],
+            //'response_format'=>["type"=>"json_object"]
             
         );
         
