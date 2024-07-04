@@ -276,7 +276,10 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-```json\n{"character":"Roxie","listener":"Agabur","mood":"playful","action":"ExchangeItems","target":"Agabur","message":"Roxie: Alright, Agabur, let's see what you've got.  Don't disappoint a goblin's expectations!"}\n```
+```json
+{"character":"Avatar of Azura","listener":"Agabur","mood":"amused","action":"","target":"","message":"  "Very well, darling.  Let me indulge your insatiable curiosity.  The so-called Civil War began as a mere tremor, a whisper of discontent amongst those who yearn for the 'glory' of a past empire. The Imperial Legion, those pompous, self-important fools, have long held sway over Skyrim, but their grip has loosened.  The Stormcloaks, led by the tiresome Ulfric Stormcloak,  seek to tear down the remnants of that empire and carve out their own pathetic little kingdom.  As if Skyrim needs more division.  Such a tiresome, predictable drama.  But where's the fun without a little chaos?"} 
+```
+X-CUSTOM-CLOSE
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);

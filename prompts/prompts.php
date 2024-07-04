@@ -35,17 +35,17 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 }
 
 if (DMgetCurrentModel()=="openaijson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines.";
     $TEMPLATE_ACTION="";
 }
 
 if (DMgetCurrentModel()=="koboldcppjson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines.";
     $TEMPLATE_ACTION="";
 }
 
 if (DMgetCurrentModel()=="openrouterjson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines.";
     $TEMPLATE_ACTION="";
 }
 
@@ -125,7 +125,7 @@ $PROMPTS=array(
 
     "inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}'s last sentence. $TEMPLATE_DIALOG $MAXIMUM_WORDS"
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} continues the conversation. $TEMPLATE_DIALOG $MAXIMUM_WORDS"
         ]
             // Prompt is implicit
 

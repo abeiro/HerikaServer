@@ -99,7 +99,7 @@ class connector
                 "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
                 "action"=>implode("|",$FUNC_LIST),
                 "target"=>"action's target|destination name",
-                "message"=>'message',
+                "message"=>'lines of dialogue',
             ])
         ];
         
@@ -329,6 +329,10 @@ class connector
             unset($GLOBALS["_JSON_BUFFER"]);
             $partialResult=__jpd_decode_lazy($this->_jsonBuffer);
             
+            if (isset($partialResult["message"]))
+                $partialResult[0]=$partialResult;   // __jpd_decode_lazy changes struct when JSON is completed
+            
+            
             if (is_array($partialResult)&&isset($partialResult[0]["message"])) {
                 if (isset($partialResult[0]["action"])) {
                     if (($partialResult[0]["action"]=="Inspect")) {
@@ -337,6 +341,7 @@ class connector
                 }
                 
                 $mangledBuffer = str_replace($this->_extractedbuffer, "", $partialResult[0]["message"]);
+                // echo "*{$this->_jsonBuffer}".PHP_EOL;
                 $this->_extractedbuffer=$partialResult[0]["message"];
                 if (isset($partialResult[0]["listener"])) {
                      $GLOBALS["SCRIPTLINE_LISTENER"]=$partialResult[0]["listener"];

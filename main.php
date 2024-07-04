@@ -29,11 +29,18 @@ if (php_sapi_name()=="cli") {
 
     $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog");
     
-    //$receivedData = "inputtext|{$res[0]["ts"]}|{$res[0]["gamets"]}|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
-    $receivedData = "funcret|{$res[0]["ts"]}|{$res[0]["gamets"]}|command@Inspect@Serana@Serana is wearing: Serana Hood,Elven Dagger,Elder Scroll,Vampire Boots,Vampire Royal Armor,";
+    
+    
+    $res[0]["ts"]=$res[0]["ts"]+0;
+    $res[0]["gamets"]=$res[0]["ts"]+0;
+        
+    
+        
+    $receivedData = "inputtext|{$res[0]["ts"]}|{$res[0]["gamets"]}|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
+    //$receivedData = "funcret|{$res[0]["ts"]}|{$res[0]["gamets"]}|command@Inspect@Serana@Serana is wearing: Serana Hood,Elven Dagger,Elder Scroll,Vampire Boots,Vampire Royal Armor,";
     //$receivedData = "{$argv[1]}";
     $_GET["profile"]=$argv[2];
-    error_reporting(E_ALL);
+    //error_reporting(E_ERROR);
     $FUNCTIONS_ARE_ENABLED=true;
 
 
@@ -410,6 +417,7 @@ if ($connectionHandler->primary_handler === false) {
 
         $position = findDotPosition($buffer);
 
+        //echo "<$buffer>".PHP_EOL;
         if ($position !== false) {
             $extractedData = substr($buffer, 0, $position + 1);
             $remainingData = substr($buffer, $position + 1);
@@ -434,6 +442,7 @@ if ($connectionHandler->primary_handler === false) {
     
     
     if (trim($buffer)) {
+        // echo "REMAINING DATA <$buffer>".PHP_EOL;
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
         $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
         $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
@@ -564,7 +573,7 @@ if (php_sapi_name()=="cli") {
     echo PHP_EOL;
     file_put_contents("log/debug_comm_".basename(__FILE__).".log", print_r($GLOBALS["DEBUG_DATA"], true));
 
-    $db->delete("eventlog", "sess='cli'");
+    //$db->delete("eventlog", "sess='cli'");
 
 }
 

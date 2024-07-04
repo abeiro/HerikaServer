@@ -61,7 +61,7 @@ class connector
                 "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
                 "action"=>'a valid action, (refer to available actions list) or None',
                 "target"=>"action's target",
-                "message"=>'message',
+                "message"=>'lines of dialogue',
                 
             ])
         ];
