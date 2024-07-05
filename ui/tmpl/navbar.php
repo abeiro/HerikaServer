@@ -108,6 +108,7 @@
                     <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration WIP" target="_blank">Export Configuration</a></li>
                     <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration WIP" target="_blank">Import Configuration</a></li>
                     <li><a class="dropdown-item" href="index.php?table=openai_token_count">OpenAI Token Pricing</a></li>
+                    <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0'>AI/LLM Supported Models List</a></li>
                 </ul>
             </li>
 
@@ -132,7 +133,6 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Please Read!</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href='index.php?notes=true'>Developer's Note</a></li>
-                    <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0'>AI/LLM Supported Models List</a></li>
                 </ul>
             </li>
             
