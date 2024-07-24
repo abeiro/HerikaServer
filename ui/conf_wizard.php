@@ -193,6 +193,10 @@ foreach ($currentConf as $pname=>$parms) {
         $FORCE_DISABLED=" readonly='true' disabled='true' title='This is a global parameter. Set it on default profile' ";
     }
     
+    if ($parms["scope"]=="constant") {
+        $FORCE_DISABLED=" readonly='true' disabled='true' title='This is a readonly parameter'";
+    }
+    
     
     if (true) {
         echo "<div $MAKE_NO_VISIBLE_MARK class='softdiv'>";
