@@ -22,7 +22,7 @@
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations also to NPC"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger animations if passing animations are enabled"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service (JSON MODE)"},
-  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic"],"description":"AI Service to use. Are used to connect with an AI service or program. Will use this connector to generate content for diary/memories","_title":"AI/LLM Service "},
+  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"AI Service to use. Are used to connect with an AI service or program. Will use this connector to generate content for diary/memories","_title":"AI/LLM Service "},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openai": {

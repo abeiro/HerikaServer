@@ -102,7 +102,7 @@ $ITT["openai"]["AI_PROMPT"]='#HERIKA_NPC1# describes what is seeing';
 
 
 $STTFUNCTION="whisper";								// Valid options are azure or whisper so far
-$TTSFUNCTION="none";								// Valid options are azure or mimic3, or 11labs so far
+$TTSFUNCTION="mimic3";								// Valid options are azure or mimic3, or 11labs so far
 $ITTFUNCTION="none";								// Valid options are azure or mimic3, or 11labs so far
 
 
