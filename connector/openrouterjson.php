@@ -165,24 +165,36 @@ class connector
                         
                         $contextData[$n]=[
                                 "role"=>"assistant",
-                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"$lastActionName\", 
-                                \"target\": \"\", \"message\": \"\"}"
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", 
+                                \"action\": \"$lastActionName\", 
+                                \"target\": \"".current($localArguments)."\", \"message\": \"\"}"
                             ];
+                            
                         $gameRequestCopy=$GLOBALS["gameRequest"];    
-                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"$lastActionName\", 
-                                \"target\": \"\", \"message\": \"\"}";
+                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", 
+                        \"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
+                        $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
                         
                         unset($contextData[$n]);
                     } else {
-                        $pb["system"].=$element["content"]."\n";
-                        $dialogueTarget=extractDialogueTarget($element["content"]);
-                        // Trying to provide examples
-                        $contextData[$n]=[
-                                "role"=>"assistant",
-                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
-                                
-                            ];
+                        $alreadyJs=json_decode($element["content"],true);
+                        if (is_array($alreadyJs)) {
+                            $contextData[$n]=[
+                                    "role"=>"assistant",
+                                    "content"=>json_encode($alreadyJs)
+                                ];
+                            
+                        } else {
+                            $pb["system"].=$element["content"]."\n";
+                            $dialogueTarget=extractDialogueTarget($element["content"]);
+                            // Trying to provide examples
+                            $contextData[$n]=[
+                                    "role"=>"assistant",
+                                    "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
+                                    
+                                ];
+                        }
                     }
                     
                 } else if ($element["role"]=="tool") {
