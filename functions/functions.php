@@ -69,7 +69,7 @@ $F_RETURNMESSAGES["SearchDiary"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to make
 $F_RETURNMESSAGES["SetCurrentTask"]="Set the current plan of action or task or quest";
 $F_RETURNMESSAGES["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_RETURNMESSAGES["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
-$F_RETURNMESSAGES["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} begind travelling to #TARGET#";
+$F_RETURNMESSAGES["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
 $F_RETURNMESSAGES["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
 
 
