@@ -383,7 +383,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
 
 
-        if (($currentSpeaker == $speaker) && ($speaker == "assistant")) {
+        if (($currentSpeaker == $speaker) && ($speaker == "assistant") && $row["type"]!="logaction") {
             $buffer[] = $rowData;
         } else {
             if (sizeof($buffer) > 0) {
