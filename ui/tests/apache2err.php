@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-$distroLogPath = __DIR__ . '/../../log/error.log'; 
+$distroLogPath = __DIR__ . '/../../log/apache_error.log'; 
 
 // Function to read and filter the error log from a given path
 function readErrorLog($errorLogPath, $logType) {
