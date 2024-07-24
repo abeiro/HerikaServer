@@ -258,7 +258,11 @@ foreach ($currentConf as $pname=>$parms) {
             echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input type='number' inputmode='numeric' step='0.01' value='{$parms["currentValue"]}' name='$fieldName'><span>Decimal: {$parms["description"]}</span></p>".PHP_EOL;
 
         } else if ($parms["type"]=="apikey") {
-            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input  class='apikey' type='string'  value='{$parms["currentValue"]}' name='$fieldName'><span>{$parms["description"]}</span></p>".PHP_EOL;
+            $jsid=strtr($fieldName,["@"=>"_"]);
+            $checkButton="<button class='url' type='button' onclick=\"document.getElementById('$jsid').style.filter=''\">Unhide</button>";
+            echo "<p class='conf-item'><label for='$fieldName'>$pname</label>
+            <input  style='filter: blur(3px);' class='apikey' type='string'  id='$jsid' value='{$parms["currentValue"]}' name='$fieldName'>$checkButton<span>{$parms["description"]}</span>
+            </p>".PHP_EOL;
 
         } else if ($parms["type"]=="file") {
             $availableFiles=getFilesByExtension($parms["path"],$parms["filter"]);
