@@ -27,7 +27,8 @@ $db = new sql();
 if (php_sapi_name()=="cli") {
     // You can run this script directly with php: main.php "Player text"
 
-    $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog");
+    $latsRid=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0");
+    $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$latsRid[0]["rowid"]}");
     
     
     
@@ -58,23 +59,13 @@ if (php_sapi_name()=="cli") {
 }
 
 
-// Profile selection
-if (isset($_GET["profile"])) {
-    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
-       // error_log("PROFILE: {$_GET["profile"]}");
-        require_once($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
-
-    }
-    $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
-
-}
-
-// End of profile selection
 
 
 if (!isset($FUNCTIONS_ARE_ENABLED)) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
+
+
 
 while (@ob_end_clean())	;
 ignore_user_abort(true);
@@ -109,13 +100,6 @@ $startTime = microtime(true);
 
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
-// Lock to avoid TTS hangs
-
-$semaphoreKey =abs(crc32(__FILE__));
-$semaphore = sem_get($semaphoreKey);
-while (sem_acquire($semaphore,true)!=true)  {
-    usleep(1000);
-}
 
 
 
@@ -123,6 +107,54 @@ while (sem_acquire($semaphore,true)!=true)  {
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 $gameRequest = explode("|", $receivedData);
+
+
+// Lock to avoid TTS hangs
+if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")) {
+    $semaphoreKey =abs(crc32(__FILE__));
+    $semaphore = sem_get($semaphoreKey);
+    while (sem_acquire($semaphore,true)!=true)  {
+        usleep(1000);
+    }
+}
+
+
+
+// Profile selection
+if (isset($_GET["profile"])) {
+    
+    $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
+    
+    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
+       // error_log("PROFILE: {$_GET["profile"]}");
+        require_once($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
+
+    } else {
+        // error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
+    }
+    
+    $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
+    $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
+    
+} else {
+    //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
+    $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+}
+
+
+
+
+// End of profile selection
+
+// This is the correct place, after arse $gameRequest and before starting to do substituions
+
+if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
+    // When chatnf_book (make the AI to read a book), will override profile and will select default one
+    error_log("Override conf with default");
+    require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
+    $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
+}
+
 foreach ($gameRequest as $i => $ele) {
     $gameRequest[$i] = trim(preg_replace('/\s\s+/', ' ', preg_replace('/\'/m', "'", $ele)));
     //$gameRequest[$i] = trim(preg_replace('/\s\s+/', ' ', preg_replace('/\'/m', "''", $ele)));
@@ -139,13 +171,27 @@ if ($gameRequest[0]=="diary") {
 }
 
 
+
+
+
+
 // Exit if only a event info log.
 if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound"])) {
     logEvent($gameRequest);
     die();
 }
 
-// Fake entry to mark time passing 
+if (in_array($gameRequest[0],["playerinfo"])) {
+    if (!$GLOBALS["NARRATOR_WELCOME"]) {
+        logEvent($gameRequest);
+        die();
+    } else {
+        $FUNCTIONS_ARE_ENABLED=false;
+    }
+} 
+
+
+// Fake entry to mark time passing when borded event
 if (in_array($gameRequest[0],["bored"])) {
     $localGameRequest=$gameRequest;
     $localGameRequest[0]="infoaction";
@@ -156,12 +202,17 @@ if (in_array($gameRequest[0],["bored"])) {
 
 
 // Only allow functions when explicit request
-if (!in_array($gameRequest[0],["inputtext","inputtext_s"])) {
+if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
-// RECHAT
-if (in_array($gameRequest[0],["rechat"])) {
+if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
+    $FUNCTIONS_ARE_ENABLED=false;
+}
+
+// RECHAT PRE MANAGMENT
+if (in_array($gameRequest[0],["rechat"]) ) {
+    //die();
     //RECHAT. Must choose if we continue conversation or no.
     $rechatHistory=DataRechatHistory();
     
@@ -176,8 +227,19 @@ if (in_array($gameRequest[0],["rechat"])) {
     } else
         die();
     
-    $sqlfilter=" and type in ('prechat','inputtext','inputtext_s') ";  // Use prechat
-    $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny
+    
+    if (sizeof($rechatHistory)>1) {
+        // Lets make rechat wait a bit
+        sem_release($semaphore);
+        error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
+        sleep(1);
+        while (sem_acquire($semaphore,true)!=true)  {
+            usleep(1000);
+        }
+    }
+
+    $sqlfilter=" and type in ('prechat','inputtext','inputtext_s','ginputtext') ";  // Use prechat
+    $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
 
 } else
     $sqlfilter=" and type<>'prechat' "; // Will dismiss prechat entries by default. prechat are LLM responses still not displayed in-game
@@ -231,6 +293,8 @@ if ($gameRequest[0] != "diary") {
     );
 
 }
+
+// Check if this event  has been disabled 
 if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
     if ($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])
         die("\r\n");
@@ -284,11 +348,16 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
-//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
+    // When chatnf_book (make the AI to read a book), context will only be the book data.
+    $contextDataFull = DataGetLastReadedBook();
+}
 
+
+// Check for context overrides on ext dir (plugins)
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
-//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+
 
 $head[] = array('role' => 'system', 'content' =>  
     strtr($GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] . $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
@@ -418,7 +487,7 @@ if ($connectionHandler->primary_handler === false) {
         $position = findDotPosition($buffer);
 
         //echo "<$buffer>".PHP_EOL;
-        if ($position !== false) {
+        if ($position !== false && $position>MINIMUM_SENTENCE_SIZE ) {
             $extractedData = substr($buffer, 0, $position + 1);
             $remainingData = substr($buffer, $position + 1);
             $sentences=split_sentences_stream(cleanResponse($extractedData));
@@ -442,7 +511,7 @@ if ($connectionHandler->primary_handler === false) {
     
     
     if (trim($buffer)) {
-        // echo "REMAINING DATA <$buffer>".PHP_EOL;
+        error_log("REMAINING DATA <$buffer>");
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
         $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
         $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
@@ -458,9 +527,31 @@ if ($connectionHandler->primary_handler === false) {
 
     $actions=$connectionHandler->processActions();
     if (is_array($actions) && (sizeof($actions)>0)) {
+        
+        // ACTION POST-FILTER
+        
+        if (true) {
+            
+            foreach ($actions as $n=>$action) {
+                $actionParts=explode("|",$action);
+                $actionParts2=explode("@",$actionParts[2]);
+                
+                if (isset($actionParts2[1])) {
+                    // Parameter part 
+                    if ($actionParts2[0]=="Attack") {
+                        // Lets polish the parammeters
+                        $localtarget=$actionParts2[1];
+                        $mang1=explode(",",$localtarget);
+                        $mang2=explode(" and ",$mang1[0]);
+                        $mang3=explode("(",$mang2[0]);
+                        $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
+                    }
+                }
+            }
+        }
 
         $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
-        echo implode("\r\n", $actions);
+        echo implode("\r\n", $actions).PHP_EOL;
         file_put_contents(__DIR__."/log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
 
     }

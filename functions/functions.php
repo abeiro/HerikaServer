@@ -27,9 +27,9 @@ $ENABLED_FUNCTIONS=[
 
 
 
-$F_TRANSLATIONS["Inspect"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR.JUST REPLY something like 'Let me see' and wait";
+$F_TRANSLATIONS["Inspect"]="Inspects another character's OUTFIT and GEAR. JUST REPLY something like 'Let me see' and wait";
 $F_TRANSLATIONS["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
-$F_TRANSLATIONS["InspectSurroundings"]="Looks for beings nearby";
+$F_TRANSLATIONS["InspectSurroundings"]="Looks for beings or enemies nearby";
 $F_TRANSLATIONS["MoveTo"]= "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
 $F_TRANSLATIONS["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS["Attack"]="Attacks actor, npc or being.";
@@ -46,16 +46,16 @@ $F_TRANSLATIONS["SearchDiary"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to make h
 $F_TRANSLATIONS["SetCurrentTask"]="Set the current plan of action or task or quest";
 $F_TRANSLATIONS["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_TRANSLATIONS["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
-$F_TRANSLATIONS["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} travels to a city/location";
+$F_TRANSLATIONS["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_TRANSLATIONS["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
 
 
 $F_RETURNMESSAGES["Inspect"]="{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
 $F_RETURNMESSAGES["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
-$F_RETURNMESSAGES["InspectSurroundings"]="Looks for beings nearby";
+$F_RETURNMESSAGES["InspectSurroundings"]="{$GLOBALS["HERIKA_NAME"]} takes a look around and see this: #RESULT#";
 $F_RETURNMESSAGES["MoveTo"]= "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
 $F_RETURNMESSAGES["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}. Accept gift.";
-$F_RETURNMESSAGES["Attack"]="Attacks actor, npc or being. but always avoid the deaths of innocent actors.";
+$F_RETURNMESSAGES["Attack"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES["Follow"]="Moves to and follow a NPC, an actor or being";
 $F_RETURNMESSAGES["CheckInventory"]="{$GLOBALS["HERIKA_NAME"]}'s INVENTORY:#RESULT#";
 $F_RETURNMESSAGES["SheatheWeapon"]="Sheates current weapon";
@@ -236,7 +236,7 @@ $FUNCTIONS = [
             "required" => []
         ]
     ],
-    [
+    /*[
         "name" => $F_NAMES["Relax"],
         "description" => $F_TRANSLATIONS["Relax"],
         "parameters" => [
@@ -249,8 +249,8 @@ $FUNCTIONS = [
             ],
             "required" => []
         ]
-    ],
-    [
+    ],*/
+    /*[
         "name" => $F_NAMES["LeadTheWayTo"],
         "description" => $F_TRANSLATIONS["LeadTheWayTo"],
         "parameters" => [
@@ -264,7 +264,7 @@ $FUNCTIONS = [
             ],
             "required" => ["location"]
         ]
-    ],
+    ],*/
     [
         "name" => $F_NAMES["TravelTo"],
         "description" => $F_TRANSLATIONS["TravelTo"],
@@ -471,7 +471,7 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
 $GLOBALS["ENABLED_FUNCTIONS"]=[
     'Inspect',
     //'LookAt',
-    //'InspectSurroundings',
+    'InspectSurroundings',
     //'MoveTo',
     'OpenInventory',
     'Attack',

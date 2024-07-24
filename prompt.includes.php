@@ -18,6 +18,17 @@ function requireFilesRecursively($dir,$name) {
     }
 }
 
+// IF GLOBAL INPUTCHAT (NO TARGET)
+$GLOBALS["OVERRIDE_DIALOGUE_TARGET"]=false;
+if (in_array($gameRequest[0],["ginputtext"])) {
+    $gameRequest[0]="inputtext";
+    $GLOBALS["OVERRIDE_DIALOGUE_TARGET"]=true;
+}
+if (in_array($gameRequest[0],["ginputtext_s"])) {
+    $gameRequest[0]="inputtext_s";
+    $GLOBALS["OVERRIDE_DIALOGUE_TARGET"]=true;
+}
+
 require_once(__DIR__ . DIRECTORY_SEPARATOR . "prompts/prompts.php");
 $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s roleplay in the Universe of Skyrim. I\'m {$GLOBALS["PLAYER_NAME"]} ";
 
@@ -38,6 +49,13 @@ $FUNCTION_PARM_INSPECT[]=$GLOBALS["PLAYER_NAME"];
 
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."prompts".DIRECTORY_SEPARATOR."command_prompt.php");
+
+if ($GLOBALS["OVERRIDE_DIALOGUE_TARGET"]) {
+    if ($GLOBALS["USING_DEFAULT_PROFILE"])
+        $DIALOGUE_TARGET="(Talking to Narrator)";
+    else
+        $DIALOGUE_TARGET="(Talking to everyone)";
+}
 require_once(__DIR__.DIRECTORY_SEPARATOR . "functions" . DIRECTORY_SEPARATOR . "functions.php");
 
 

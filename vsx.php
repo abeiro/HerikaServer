@@ -22,6 +22,11 @@ $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["t
 if (!$_FILES["file"]["tmp_name"])
     die("VSX error, no data given");
 
+if (filesize($_FILES["file"]["tmp_name"])==0) {
+    error_log("Empty file {$_FILES["file"]["tmp_name"]}");
+    die();
+}
+
 @copy($_FILES["file"]["tmp_name"] ,$finalName);
 
 
@@ -29,7 +34,6 @@ error_log("Received sample: {$_GET["oname"]}");
 
 if (strpos($_GET["oname"],".fuz")) {
     $finalFile=fuzToWav($finalName);
-
     
 } else if (strpos($_GET["oname"],".xwm")) {
     $finalFile=xwmToWav($finalName);
@@ -40,6 +44,13 @@ if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTT
 }
 
 $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
+
+$already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
+if ($already) {
+  error_log("Empty file {$_FILES["file"]["tmp_name"]} already exists at {$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
+  die();
+}
+
 
 $codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
 

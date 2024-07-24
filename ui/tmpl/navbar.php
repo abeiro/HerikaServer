@@ -139,11 +139,23 @@
         </ul>
     </div>
 </nav>
-
+<div style="width: 50%; display: inline-block;">
 <form action='set_profile.php' method="POST" enctype="multipart/form-data" id="formprofile" onsubmit='document.getElementById("shorcutholder").value=getAnchor()'>
 <select name='profileSelector' style="min-width:250px" onchange='document.getElementById("shorcutholder").value=getAnchor();document.getElementById("formprofile").submit();'>
 
 <?php
+
+if (!isset($_SESSION["OPTION_TO_SHOW"])) {
+    if (!isset($_COOKIE["OPTION_TO_SHOW"]))
+        $_SESSION["OPTION_TO_SHOW"]="basic";
+    else
+        if (isset($_COOKIE["OPTION_TO_SHOW"]))
+            $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
+} else {
+    if (isset($_COOKIE["OPTION_TO_SHOW"]))
+            $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
+}
+
  // Character Map file
 if (file_exists(__DIR__ . "/../../conf/character_map.json"))
     $characterMap=json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"),true);
@@ -154,13 +166,16 @@ foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
     $pattern = "/conf_([a-fA-F0-9]+)\.php/";
     if (preg_match($pattern, $lProfile, $matches)) {
         $hash = $matches[1];
-        if (isset($characterMap["$hash"]))
+        if (isset($characterMap["$hash"])) {
             echo "<option value='$lProfile' $isSelected >* {$characterMap["$hash"]}</option>";
+            $LOCAL_CHAR_NAME=$characterMap["$hash"];
+        }
     } else if ($lProfkey){
         echo "<option value='$lProfile' $isSelected >$lProfkey</option>";
+        $LOCAL_CHAR_NAME=$lProfkey;
     }
     if ($isSelected=="selected") {
-        $GLOBALS["CURRENT_PROFILE_CHAR"]=$characterMap["$hash"];
+        $GLOBALS["CURRENT_PROFILE_CHAR"]=$LOCAL_CHAR_NAME;
     }
     
 }
@@ -170,4 +185,13 @@ foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
 <input type='hidden' value="" name="shortcut" id="shorcutholder">
 <input type='submit' value="Change Profile">
 </form>
+</div>
+<div style="display:inline-block;font-size:10px">
+    <span>Options/features to show</span>
+    <select onchange="location.href='set_option_conf.php?c='+this.value">
+    <option type="radio" value="basic" label="BASIC" title="Show only basic options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="basic")?'selected':''; ?> />
+    <option type="radio" value="pro" label="ADVANCED" title="Show advanced options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="pro")?'selected':''; ?> />
+    <option type="radio" value="wip" label="WIP" title="Show WIP options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="wip")?'selected':''; ?> />
+    </select>
+</div>
 <main style="max-height:800px;overflow-y:scroll">

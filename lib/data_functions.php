@@ -306,7 +306,12 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     global $db;
 
     $currentGameTs=$GLOBALS["gameRequest"][2]+0;
-
+    if ($GLOBALS["gameRequest"][0]=="chatnf_book") {
+        $removeBooks="";
+    } else {
+        $removeBooks ="and type<>'contentbook' " ;
+    }
+    
     $lastDialogFull = array();
     $results = $db->fetchAll("select  
     case 
@@ -314,17 +319,18 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
       when a.data like '%background chat%' then 'The Narrator: background dialogue: '
       when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
       else '' 
-    end||a.data  as data , gamets 
+    end||a.data  as data , gamets,localts
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'rechat'
-    and type<>'funccall'  and type<>'togglemodel' $sqlfilter  
+    and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' 
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf'
+    and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  
     and gamets>".($currentGameTs-(60*60*60*60))."
     order by gamets desc,ts desc,rowid desc LIMIT 0,150");
 
     $rawData=[];
     foreach ($results as $row) {
-        $rawData[] = $row;
+        $rawData[md5($row["data"].$row["localts"])] = $row;
     }
 
     
@@ -444,14 +450,14 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
 }
 
-function DataSpeechJournal($topic)
+function DataSpeechJournal($topic,$limit=25)
 {
 
     global $db;
 
     $lastDialogFull = [];
     $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest FROM speech
-      where (speaker like '%$topic%' or  listener like '%$topic%' or location like '%$topic%' or  topic like '%$topic%') order by rowid desc");
+      where (speaker like '%$topic%' or  listener like '%$topic%' or location like '%$topic%' or  companions like '%$topic%') order by rowid desc");
     if (!$results) {
         return json_encode([]);
     }
@@ -464,10 +470,10 @@ function DataSpeechJournal($topic)
 
     if (sizeof($data) == 0) {
         return json_encode([]);
-    } elseif (sizeof($data) < 25) {
+    } elseif (sizeof($data) < $limit) {
         $dataReversed = array_reverse($data);
     } else {
-        $smalldata = array_slice($data, 25);
+        $smalldata = array_slice($data, 0,$limit);
         $dataReversed = array_reverse($smalldata);
     }
 
@@ -742,6 +748,46 @@ function DataRechatHistory()
 
 }
 
+
+
+ function extractDialogueTarget($string) {
+        // Check if the string contains "(talking to"
+        if (strpos($string, '(talking to') !== false) {
+            // Extract the target's name using regular expression
+            preg_match('/\(talking to ([^\)]+)\)/', $string, $matches);
+            
+            // Check if a match is found and extract the target's name
+            if (isset($matches[1])) {
+                $target = $matches[1];
+
+                // Remove the "(talking to ...)" part from the original string
+                $cleanedString = preg_replace('/\(talking to [^\)]+\)/', '', $string);
+                if (strpos($cleanedString,"{$GLOBALS["HERIKA_NAME"]}:")===0) {
+                    $cleanedString=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$cleanedString);
+                }
+                
+                return ['target' => $target, 'cleanedString' => trim($cleanedString)];
+            }
+        }
+
+        // Return the original string if no target is found
+        return ['target' => null, 'cleanedString' => $string];
+}
+
+function DataGetLastReadedBook() {
+    global $db;
+
+    $results = $db->fetchAll("select content from books where content is not null
+    order by gamets desc,ts desc,localts desc,rowid desc LIMIT 1 OFFSET 0");
+    $lastData = "";
+    
+    $bookOnlyContext[] = array('role' => "user", 'content' => $results[0]["content"]);
+
+    return $bookOnlyContext;
+    
+}
+
+
 function GetAnimationHex($mood)
 {
 
@@ -845,27 +891,5 @@ function GetAnimationHex($mood)
     return "";
 
 }
-
- function extractDialogueTarget($string) {
-        // Check if the string contains "(talking to"
-        if (strpos($string, '(talking to') !== false) {
-            // Extract the target's name using regular expression
-            preg_match('/\(talking to ([^\)]+)\)/', $string, $matches);
-            
-            // Check if a match is found and extract the target's name
-            if (isset($matches[1])) {
-                $target = $matches[1];
-
-                // Remove the "(talking to ...)" part from the original string
-                $cleanedString = preg_replace('/\(talking to [^\)]+\)/', '', $string);
-                
-                return ['target' => $target, 'cleanedString' => trim($cleanedString)];
-            }
-        }
-
-        // Return the original string if no target is found
-        return ['target' => null, 'cleanedString' => $string];
-}
-    
 ?>
 

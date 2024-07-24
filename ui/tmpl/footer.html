@@ -2,3 +2,97 @@
     </body>
 
 </html>
+
+<script>
+var formSubmitting = false;
+var setFormSubmitting = function() { formSubmitting = true; };
+
+window.onload = function() {
+    window.addEventListener("beforeunload", function (e) {
+        return undefined;
+        if (formSubmitting) {
+            return undefined;
+        }
+
+        var confirmationMessage = 'It looks like you have been editing something. '
+                                + 'If you leave before saving, your changes will be lost.';
+        
+        (e || window.event).returnValue = confirmationMessage; //Gecko + IE
+        return confirmationMessage; //Gecko + Webkit, Safari, Chrome etc.
+    });
+};
+
+
+function cToogle(a) {
+    console.log(a);
+    n=a.target.nextSibling
+    if (n.classList.contains("unvisible-fieldset")) {
+        n.classList.add("visible-fieldset")
+        n.classList.remove("unvisible-fieldset")
+    } else {
+        n.classList.add("unvisible-fieldset")
+        n.classList.remove("visible-fieldset")
+    }
+    a.target.scrollIntoView()
+    saveClassList();
+    
+
+}
+
+// Chat GPT created code
+function saveClassList() {
+    const fieldsets = document.querySelectorAll("fieldset");
+    const classListData = [];
+
+    
+    fieldsets.forEach(fieldset => {
+        classListData.push({
+            id: fieldset.id,
+            className: fieldset.className
+        });
+        
+        try {
+            if (fieldset.className=="visible-fieldset")
+                document.getElementById("mini_"+fieldset.id).style.opacity=1;
+            else
+                document.getElementById("mini_"+fieldset.id).style.opacity=0.5;
+            
+        } catch (idontcare) {}
+    });
+
+    localStorage.setItem('fieldsetClassList', JSON.stringify(classListData));
+}
+
+// Función para restaurar el estado de las clases de una lista de elementos
+function restoreClassList() {
+    
+    document.querySelectorAll("li.subchild").forEach(element => {element.style.opacity=1})
+    
+    const classListData = JSON.parse(localStorage.getItem('fieldsetClassList'));
+    
+    if (classListData) {
+        classListData.forEach(item => {
+            const fieldset = document.getElementById(item.id);
+            if (fieldset) {
+                fieldset.className = item.className;
+                
+                 try {
+                    if (item.className=="visible-fieldset")
+                        document.getElementById("mini_"+item.id).style.opacity=1;
+                    else
+                        document.getElementById("mini_"+item.id).style.opacity=0.5;
+            
+                } catch (idontcare) {}
+                
+
+            }
+        });
+    }
+}
+
+document.querySelectorAll("form.confwizard fieldset > fieldset + legend").forEach(function(b) { b.addEventListener("click",cToogle)})
+document.querySelectorAll("form.confwizard fieldset > legend + legend").forEach(function(b) { b.addEventListener("click",cToogle)})
+
+restoreClassList();
+
+</script>

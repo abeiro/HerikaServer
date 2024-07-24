@@ -35,17 +35,17 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 }
 
 if (DMgetCurrentModel()=="openaijson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines.";
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
     $TEMPLATE_ACTION="";
 }
 
 if (DMgetCurrentModel()=="koboldcppjson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines.";
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
     $TEMPLATE_ACTION="";
 }
 
 if (DMgetCurrentModel()=="openrouterjson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines.";
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
     $TEMPLATE_ACTION="";
 }
 
@@ -111,11 +111,12 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment starting with: Did you hear about what happened in) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment starting with: A wise Akaviri man once told me) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a random NPC) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a random NPC in the area) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a companion) $TEMPLATE_DIALOG"
         ]
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
         ,"extra"=>["dontuse"=>(time()%($GLOBALS["BORED_EVENT"]+1)==0)]   //50% chance
+        //,"extra"=>["dontuse"=>true]   //50% chance
     ],
 
     "goodmorning"=>[
@@ -125,7 +126,7 @@ $PROMPTS=array(
 
     "inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} continues the conversation. $TEMPLATE_DIALOG $MAXIMUM_WORDS"
+            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG $MAXIMUM_WORDS"
         ]
             // Prompt is implicit
 
@@ -149,7 +150,8 @@ $PROMPTS=array(
             "CheckInventory"=>"({$GLOBALS["HERIKA_NAME"]} talks about inventory and backpack items)$TEMPLATE_DIALOG",
             "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected)$TEMPLATE_DIALOG",
             "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests readed)$TEMPLATE_DIALOG",
-            "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about destination)$TEMPLATE_DIALOG"
+            "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about destination)$TEMPLATE_DIALOG",
+            "InspectSurroundings"=>"({$GLOBALS["HERIKA_NAME"]} talks about beings or enemies detected)$TEMPLATE_DIALOG"
             ]
     ],
     "lockpicked"=>[
@@ -171,8 +173,8 @@ $PROMPTS=array(
     ],
     "rechat"=>[ 
         "cue"=>[
-            "{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG",
-            "{$GLOBALS["HERIKA_NAME"]} participates in the conversation. $TEMPLATE_DIALOG",
+            "{$GLOBALS["HERIKA_NAME"]} interjects in the conversation, talking to last speaker. $TEMPLATE_DIALOG",
+            "{$GLOBALS["HERIKA_NAME"]} participates in the conversation, talking to last speaker. $TEMPLATE_DIALOG",
             "{$GLOBALS["HERIKA_NAME"]} follows the conversation. $TEMPLATE_DIALOG",
             "{$GLOBALS["HERIKA_NAME"]} makes a statement about the conversation. $TEMPLATE_DIALOG",
             "{$GLOBALS["HERIKA_NAME"]} tries to stop the conversation. $TEMPLATE_DIALOG"
@@ -185,14 +187,19 @@ $PROMPTS=array(
     ],
     "vision"=>[ 
         "cue"=>["{$GLOBALS["ITT"][$GLOBALS["ITTFUNCTION"]]["AI_PROMPT"]}. $TEMPLATE_DIALOG."],
-        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} : Look at this, {$GLOBALS["HERIKA_NAME"]}.{$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
+        //"player_request"=>["{$GLOBALS["PLAYER_NAME"]} : Look at this, {$GLOBALS["HERIKA_NAME"]}.{$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
+        "player_request"=>["The Narrator: {$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
         "extra"=>["force_tokens_max"=>128]
     ],
     "chatsimfollow"=>[ 
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG"]
     ],
     "im_alive"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} suddely feels strange.{$GLOBALS["HERIKA_NAME"]} talks about 'feeling more real'.Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"]
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} talks about 'feeling more real'.Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"],
+        "player_request"=>["The Narrator:  {$GLOBALS["HERIKA_NAME"]} feels a sudden shock...and feels 'more real'"],
+    ],
+    "playerinfo"=>[ 
+        "cue"=>["(Out of roleplay, new game has been loaded) Tell {$GLOBALS["PLAYER_NAME"]} a short summary about last events, and then remind {$GLOBALS["PLAYER_NAME"]} the current task/quest/plan . $TEMPLATE_DIALOG"]
     ]
 );
 

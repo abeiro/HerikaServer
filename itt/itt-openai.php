@@ -33,7 +33,7 @@ function itt($file,$hints)
 
     $payload = array(
         "model" => $GLOBALS["ITT"]["openai"]["model"],
-        "temperature" => 0.2,
+        "temperature" => 0.0,
         "messages" => array(
             array(
                 "role" => "user",
@@ -63,11 +63,11 @@ function itt($file,$hints)
     );
 
     $context  = stream_context_create($options);
-
+    file_put_contents(__DIR__."/../log/vision.log",print_r($payload,true));
     $rawResponse = file_get_contents($GLOBALS["ITT"]["openai"]["url"], false, $context);
 
     $response = json_decode($rawResponse, true);
-
+    file_put_contents(__DIR__."/../log/vision.log",print_r($rawResponse,true),FILE_APPEND);
     // Example: Inserting response into database
     $db->insert(
         'log',
