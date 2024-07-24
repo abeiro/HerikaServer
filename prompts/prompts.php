@@ -202,7 +202,7 @@ $PROMPTS=array(
         "cue"=>["(Out of roleplay, game has been loaded) Tell {$GLOBALS["PLAYER_NAME"]} a short summary about last events, and then remind {$GLOBALS["PLAYER_NAME"]} the current task/quest/plan . $TEMPLATE_DIALOG"]
     ],
     "newgame"=>[ 
-        "cue"=>["(Out of roleplay, new game ) Ask {$GLOBALS["PLAYER_NAME"]} about his current roleplay, who will roleplay. Remember also player can change voices in AIFF backend . $TEMPLATE_DIALOG"]
+        "cue"=>["(Out of roleplay, new game ) Give welcome to {$GLOBALS["PLAYER_NAME"]}, a new game has started . $TEMPLATE_DIALOG"]
     ]
 );
 
