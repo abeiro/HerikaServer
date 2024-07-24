@@ -181,7 +181,7 @@ if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoac
     die();
 }
 
-if (in_array($gameRequest[0],["playerinfo"])) {
+if (in_array($gameRequest[0],["playerinfo","newgame"])) {
     if (!$GLOBALS["NARRATOR_WELCOME"]) {
         logEvent($gameRequest);
         die();
