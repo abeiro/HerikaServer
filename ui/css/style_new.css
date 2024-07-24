@@ -82,6 +82,7 @@ p.conf-item input.url {
 
 p.conf-item input.apikey {
 	min-width:400px;
+	display: inline-block;
 }
 
 p.conf-item button.url {

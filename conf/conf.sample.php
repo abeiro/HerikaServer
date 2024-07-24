@@ -3,10 +3,10 @@
 $DBDRIVER="postgresql";
 
 $PLAYER_NAME="Prisoner";
-$HERIKA_NAME="Follower";
+$HERIKA_NAME="The Narrator";
 
-$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. I'm Prisoner. You're Prisoner's companion.";
-$HERIKA_PERS="You are a person who likes jokes and sarcastic comments.";
+$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. I'm Prisoner.";
+$HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. You refer to yourself as 'The Narrator'. Only #PLAYER_NAME# can hear you.";
 
 $BOOK_EVENT_ALWAYS_NARRATOR=false;
 $BOOK_EVENT_FULL=false;
@@ -17,9 +17,9 @@ $NARRATOR_WELCOME=true;
 $LANG_LLM_XTTS=false;
 $EMOTEMOODS="sassy,assertive,sexy,smug,kindly,lovely,seductive,sarcastic,sardonic,smirking,amused,default,assisting,irritated,playful,neutral,teasing,mocking";
 
-$RECHAT_H=4;
+$RECHAT_H=3;
 $RECHAT_P=0;
-$BORED_EVENT=0;
+$BORED_EVENT=5;
 $CORE_LANG="";
 
 $NEWQUEUE=true;
@@ -39,7 +39,7 @@ $TTS["AZURE"]["API_KEY"]="";
 
 $TTS["MIMIC3"]["URL"]="http://127.0.0.1:59125";   
 $TTS["MIMIC3"]["voice"]="en_US/hifi-tts_low#92";
-$TTS["MIMIC3"]["rate"]="1.3";
+$TTS["MIMIC3"]["rate"]="1";
 $TTS["MIMIC3"]["volume"]="60";
 
 $TTS["ELEVEN_LABS"]["voice_id"]="EXAVITQu4vr4xnSDxMaL";	//https://api.elevenlabs.io/v1/voices
@@ -68,7 +68,7 @@ $TTS["openai"]["voice"]='nova';	//Voice ID
 $TTS["openai"]["model_id"]='tts-1';	//Model
 
 
-$STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:3000/transcribe";
+$STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:9876/api/v0/transcribe";
 $STT["LOCALWHISPER"]["FORMFIELD"]="audio_file";
 
 $STT["AZURE"]["LANG"]="en-US";
@@ -96,9 +96,9 @@ $ITT["openai"]["max_tokens"]=256;	//Maximum tokens to generate
 $ITT["openai"]["detail"]='low';	//Low or high fidelity image understanding
 $ITT["openai"]["API_KEY"]='';	//OpenAI API key
 // Prompt send to GTP-V
-$ITT["openai"]["AI_VISION_PROMPT"]='Let\'s roleplay in the world of Skyrim.  Describe this Skyrim image as if it is real life.  Describe the objects and people you see in a fifth grade reading level.  Ignore video game HUD and UI elements in your description.  If you see a Breton woman with tan skin, shoulder length brown hair, and brown clothing / armor, ignore her in the description';
+$ITT["openai"]["AI_VISION_PROMPT"]='Let\'s roleplay in the world of Skyrim.  Describe this Skyrim image as if it is real life.  Describe the objects and people you see in a fifth grade reading level.  Ignore video game HUD and UI elements in your description.  ';	//Prompt to send to the Vision AI
 // Prompt send to LLM
-$ITT["openai"]["AI_PROMPT"]='#HERIKA_NPC1# describes what is seeing using rhymes';
+$ITT["openai"]["AI_PROMPT"]='#HERIKA_NPC1# describes what is seeing';
 
 
 $STTFUNCTION="whisper";								// Valid options are azure or whisper so far
@@ -112,7 +112,7 @@ $HTTP_TIMEOUT=15;                       // How long we will wait for openai resp
 //$CORE_LANG="es";
 
 $FEATURES["MEMORY_EMBEDDING"]["ENABLED"]=false;
-$FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8000';
+$FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8083';
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=10;
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1;
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=false;
@@ -124,8 +124,8 @@ $CONNECTORS=["koboldcppjson","openaijson","openrouterjson"];
 $CONNECTORS_DIARY=["koboldcpp","openai","openrouter"];  
 
 $CONNECTOR["openai"]["url"]="https://api.openai.com/v1/chat/completions";
-$CONNECTOR["openai"]["model"]="gpt-3.5-turbo-1106";
-$CONNECTOR["openai"]["max_tokens"]=100;
+$CONNECTOR["openai"]["model"]='gpt-4o-mini';	//Model to use
+$CONNECTOR["openai"]["max_tokens"]='500';
 $CONNECTOR["openai"]["temperature"]=1;
 $CONNECTOR["openai"]["presence_penalty"]=1;
 $CONNECTOR["openai"]["API_KEY"]="";
@@ -133,10 +133,9 @@ $CONNECTOR["openai"]["MAX_TOKENS_MEMORY"]="512";
 $CONNECTOR["openai"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
 $CONNECTOR["openai"]["top_p"]=1;        			//LLM parameter top_p
 
-
 $CONNECTOR["openaijson"]["url"]="https://api.openai.com/v1/chat/completions";
-$CONNECTOR["openaijson"]["model"]="gpt-3.5-turbo-1106";
-$CONNECTOR["openaijson"]["max_tokens"]=100;
+$CONNECTOR["openaijson"]["model"]='gpt-4o-mini';	//Model to use
+$CONNECTOR["openaijson"]["max_tokens"]='250';
 $CONNECTOR["openaijson"]["temperature"]=1;
 $CONNECTOR["openaijson"]["presence_penalty"]=1;
 $CONNECTOR["openaijson"]["API_KEY"]="";
@@ -144,48 +143,40 @@ $CONNECTOR["openaijson"]["MAX_TOKENS_MEMORY"]="512";
 $CONNECTOR["openaijson"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
 $CONNECTOR["openaijson"]["top_p"]=1;        			//LLM parameter top_p
 
+$CONNECTOR["koboldcpp"]["url"]='http://127.0.0.1:5001';	//KoboldCPP API Endpoint
+$CONNECTOR["koboldcpp"]["max_tokens"]='500';	//Maximum tokens to generate
+$CONNECTOR["koboldcpp"]["temperature"]=1;	//LLM parameter temperature
+$CONNECTOR["koboldcpp"]["rep_pen"]=1;	//LLM parameter rep_pen
+$CONNECTOR["koboldcpp"]["top_p"]=1;	//LLM parameter top_p
+$CONNECTOR["koboldcpp"]["min_p"]=0.01;	//LLM parameter min_p
+$CONNECTOR["koboldcpp"]["top_k"]=0;	//LLM parameter top_k
+$CONNECTOR["koboldcpp"]["MAX_TOKENS_MEMORY"]='512';	//Maximum tokens to generate when summarizing, such as writing to diary.
+$CONNECTOR["koboldcpp"]["newline_as_stopseq"]=false;	//A newline in the output that will be considered a stop sequence. Recommended to leave it as default.
+$CONNECTOR["koboldcpp"]["use_default_badwordsids"]=false;	//Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token.
+$CONNECTOR["koboldcpp"]["eos_token"]='<|im_end|>';	//EOS token LLM uses. Only works if use_default_badwordsids is enabled.
+$CONNECTOR["koboldcpp"]["template"]='chatml';	//Prompt Format. Specified in the HuggingFace model card
 
-$CONNECTOR["anthropic"]["url"]="https://api.anthropic.com/v1/messages";
-$CONNECTOR["anthropic"]["model"]="claude-3-haiku-20240307";
-$CONNECTOR["anthropic"]["max_tokens"]=100;
-$CONNECTOR["anthropic"]["temperature"]=1;
-$CONNECTOR["anthropic"]["API_KEY"]="";
-$CONNECTOR["anthropic"]["MAX_TOKENS_MEMORY"]="512";
-$CONNECTOR["anthropic"]["top_p"]=1;        			//LLM parameter top_p
 
-$CONNECTOR["koboldcpp"]["url"]="http://127.0.0.1:5001";
-$CONNECTOR["koboldcpp"]["max_tokens"]=100;
-$CONNECTOR["koboldcpp"]["temperature"]=0.9;
-$CONNECTOR["koboldcpp"]["rep_pen"]=1.12;
-$CONNECTOR["koboldcpp"]["top_p"]=0.9;
-$CONNECTOR["koboldcpp"]["MAX_TOKENS_MEMORY"]=256;
-$CONNECTOR["koboldcpp"]["newline_as_stopseq"]=true;
-$CONNECTOR["koboldcpp"]["use_default_badwordsids"]=true;
-$CONNECTOR["koboldcpp"]["template"]="alpaca";
-$CONNECTOR["koboldcpp"]["eos_token"]='</s>';
-$CONNECTOR["koboldcpp"]["top_k"]=0;
-$CONNECTOR["koboldcpp"]["min_p"]=0;
-
-$CONNECTOR["koboldcppjson"]["url"]="http://127.0.0.1:5001";
-$CONNECTOR["koboldcppjson"]["max_tokens"]=100;
-$CONNECTOR["koboldcppjson"]["temperature"]=0.9;
-$CONNECTOR["koboldcppjson"]["rep_pen"]=1.12;
-$CONNECTOR["koboldcppjson"]["top_p"]=0.9;
-$CONNECTOR["koboldcppjson"]["grammar"]=true;
+$CONNECTOR["koboldcppjson"]["url"]='http://127.0.0.1:5001';	//KoboldCPP API Endpoint
+$CONNECTOR["koboldcppjson"]["max_tokens"]='250';	//Maximum tokens to generate
+$CONNECTOR["koboldcppjson"]["temperature"]=0.9;	//LLM parameter temperature
+$CONNECTOR["koboldcppjson"]["rep_pen"]=1.12;	//LLM parameter rep_pen
+$CONNECTOR["koboldcppjson"]["top_p"]=0.9;	//LLM parameter top_p
+$CONNECTOR["koboldcppjson"]["min_p"]=0;	//LLM parameter min_p
+$CONNECTOR["koboldcppjson"]["top_k"]=0;	//LLM parameter top_k
 $CONNECTOR["koboldcppjson"]["PREFILL_JSON"]=false;	//Will prefill JSON, which is usefull for some models, and destroy others (WIP)
-$CONNECTOR["koboldcppjson"]["MAX_TOKENS_MEMORY"]=256;
-$CONNECTOR["koboldcppjson"]["newline_as_stopseq"]=true;
-$CONNECTOR["koboldcppjson"]["use_default_badwordsids"]=true;
-$CONNECTOR["koboldcppjson"]["template"]="alpaca";
-$CONNECTOR["koboldcppjson"]["eos_token"]='</s>';
-$CONNECTOR["koboldcppjson"]["top_k"]=0;
-$CONNECTOR["koboldcppjson"]["min_p"]=0;
-$CONNECTOR["koboldcppjson"]["grammar"]=true;
+$CONNECTOR["koboldcppjson"]["MAX_TOKENS_MEMORY"]='256';	//Maximum tokens to generate when summarizing, such as writing to diary.
+$CONNECTOR["koboldcppjson"]["newline_as_stopseq"]=false;	//A newline in the output that will be considered a stop sequence. Recommended to leave it as default.
+$CONNECTOR["koboldcppjson"]["use_default_badwordsids"]=true;	//Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token.
+$CONNECTOR["koboldcppjson"]["eos_token"]='<|eot_id|>';	//EOS token LLM uses. Only works if use_default_badwordsids is enabled.
+$CONNECTOR["koboldcppjson"]["template"]='chatml';	//Prompt Format. Specified in the HuggingFace model card
+$CONNECTOR["koboldcppjson"]["grammar"]=false;	//Enforces use of JSON grammar. True to enforce (generation speed loss, but json format guaranteed). if false, the generation speed will be better but will depend on the model to produce valid JSON output.
+
 
 
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions";
-$CONNECTOR["openrouter"]["model"]="meta-llama/llama-2-70b-chat";
-$CONNECTOR["openrouter"]["max_tokens"]=100;
+$CONNECTOR["openrouter"]["model"]="meta-llama/llama-3-8b-instruct";
+$CONNECTOR["openrouter"]["max_tokens"]=500;
 $CONNECTOR["openrouter"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931";
 $CONNECTOR["openrouter"]["xtitle"]="Skyrim AI Follower Framework";
 $CONNECTOR["openrouter"]["API_KEY"]="";
@@ -201,22 +192,22 @@ $CONNECTOR["openrouter"]["top_a"]=0;	//LLM parameter top_a
 
 
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions";
-$CONNECTOR["openrouterjson"]["model"]="lizpreciatior/lzlv-70b-fp16-hf";
-$CONNECTOR["openrouterjson"]["max_tokens"]=100;
+$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3-8b-instruct";
+$CONNECTOR["openrouterjson"]["max_tokens"]='250';	//Maximum tokens to generate.
+$CONNECTOR["openrouterjson"]["temperature"]=1;	//LLM parameter temperature
+$CONNECTOR["openrouterjson"]["presence_penalty"]=0;	//LLM parameter presence_penalty
+$CONNECTOR["openrouterjson"]["frequency_penalty"]=0;	//LLM parameter frequency_penalty
+$CONNECTOR["openrouterjson"]["repetition_penalty"]=1;	//LLM parameter repetition_penalty
+$CONNECTOR["openrouterjson"]["top_p"]=1;	//LLM parameter top_p
+$CONNECTOR["openrouterjson"]["top_k"]=0;	//LLM parameter top_k
+$CONNECTOR["openrouterjson"]["min_p"]=0;	//LLM parameter min_p
+$CONNECTOR["openrouterjson"]["top_a"]=0;	//LLM parameter top_a
+$CONNECTOR["openrouterjson"]["ENFORCE_JSON"]=true;	//Will try to force JSON. Some models acept this. Other's dont.
+$CONNECTOR["openrouterjson"]["PREFILL_JSON"]=true;	//Will prefill JSON, which is usefull for some models, and destroy others
+$CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]='512';	//Maximum tokens to generate when summarizing, such as writing to diary.
 $CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931";
 $CONNECTOR["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework";
 $CONNECTOR["openrouterjson"]["API_KEY"]="";
-$CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]="512";
-$CONNECTOR["openrouterjson"]["temperature"]=1.01;	//LLM parameter temperature
-$CONNECTOR["openrouterjson"]["top_k"]=30;	//LLM parameter top_k
-$CONNECTOR["openrouterjson"]["top_p"]=1;	//LLM parameter top_p
-$CONNECTOR["openrouterjson"]["presence_penalty"]=0.0;	//LLM parameter presence_penalty
-$CONNECTOR["openrouterjson"]["frequency_penalty"]=1.01;	//LLM parameter frequency_penalty
-$CONNECTOR["openrouterjson"]["repetition_penalty"]=1.01;	//LLM parameter repetition_penalty
-$CONNECTOR["openrouterjson"]["min_p"]=0.0;	//LLM parameter min_p
-$CONNECTOR["openrouterjson"]["top_a"]=1.0;	//LLM parameter top_a
-$CONNECTOR["openrouterjson"]["ENFORCE_JSON"]=false;	//Will try to force JSON. Some models acept this. Other's dont.
-$CONNECTOR["openrouterjson"]["PREFILL_JSON"]=false;	//Will prefill JSON, which is usefull for some models, and destroy others
 
 
 $CONNECTOR["oobabooga"]["HOST"]="127.0.0.1";
@@ -257,9 +248,9 @@ $TTS["XTTS"]["endpoint"]='';	//End point
 $TTS["XTTS"]["language"]='en';	//
 $TTS["XTTS"]["voiceid"]='11labs_diane';	//Voice json file
 
-$TTS["XTTSFASTAPI"]["endpoint"]='';	//End point
+$TTS["XTTSFASTAPI"]["endpoint"]='http://127.0.0.1:8020';	//End point
 $TTS["XTTSFASTAPI"]["language"]='en';	//
-$TTS["XTTSFASTAPI"]["voiceid"]='11labs_diane';	//Voice json file
+$TTS["XTTSFASTAPI"]["voiceid"]='';	//Voice json file
 
 $TTS["STYLETTSV2"]["endpoint"]='http://127.0.0.1:5050/';	//End point
 $TTS["STYLETTSV2"]["voice"]='';	//WAV file with source voice to clone. Should be localte at /var/www/html/HerikaServer/data/voices/
