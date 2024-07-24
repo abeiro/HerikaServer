@@ -16,6 +16,7 @@ class connector
     private $_dataSent;
     private $_fid;
     private $_stopProc;
+    private $_buffer;
 
 
     public function __construct()
@@ -112,6 +113,10 @@ class connector
         );
 
         $context = stream_context_create($options);
+
+        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".print_r($data,true)."=\n", FILE_APPEND);
+
+                
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
                 error_log(print_r(error_get_last(),true));
@@ -144,6 +149,7 @@ class connector
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
                 $buffer.=$data["choices"][0]["delta"]["content"];
                 $this->_numOutputTokens += 1;
+                $this->_buffer.=$buffer;
 
             }
             $totalBuffer.=$data["choices"][0]["delta"]["content"];
@@ -207,6 +213,7 @@ class connector
     // Method to close the data processing operation
     public function close()
     {
+        file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
 
         fclose($this->primary_handler);
 

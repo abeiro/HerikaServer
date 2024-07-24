@@ -57,16 +57,17 @@ class connector
         
         
         
-        
+         $FUNC_LIST[]="Talk";
          if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 } else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
-                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                    $contextData[0]["content"].="(run|fastwalk|jog|walk)";
+                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]}(available speeds: run|fastwalk|jog|walk) ";
+                    $contextData[0]["content"].="({$function["description"]})";
                 }  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search) ({$function["description"]})";
                  
@@ -75,31 +76,62 @@ class connector
                 
                 $FUNC_LIST[]=$function["name"];
             }
-            $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
+            
             
 
         }
-        $FUNC_LIST[]="Talk";
+        
+        if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
+            $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+        }
+        $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         //$FUNC_LIST[]="None";
-
-        $contextData[]= [
+        shuffle($FUNC_LIST);
+        
+        $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
+        shuffle($moods);
+        
+        
+        if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
+            $formatJsonTemplate= [
             'role' => 'user', 
-            'content' => "Use this JSON object to give your answer: ".json_encode([
+            'content' => "{$prefix}Use this JSON object to give your answer: ".json_encode([
                 "character"=>$GLOBALS["HERIKA_NAME"],
                 "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
+                "mood"=>implode("|",$moods),
                 "action"=>implode("|",$FUNC_LIST),
                 "target"=>"action's target|destination name",
-                "message"=>'lines of dialogue',
+                "lang"=>"en|es",
+                "message"=>'dialogues lines',
                 
-        ])
-        ];
+            ])
+            ];
+            
+        } else {
         
+            $formatJsonTemplate= [
+                'role' => 'user', 
+                'content' => "{$prefix}Use this JSON object to give your answer: ".json_encode([
+                    "character"=>$GLOBALS["HERIKA_NAME"],
+                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                    "mood"=>implode("|",$moods),
+                    "action"=>implode("|",$FUNC_LIST),
+                    "target"=>"action's target|destination name",
+                    "message"=>'dialogues lines',
+                    
+            ])
+            ];
+        }
+       
+        
+        $contextData[]=$formatJsonTemplate;
         $pb=[];
         $pb["user"]="";
       
+        
         $contextDataOrig=array_values($contextData);
         
+        $assistantAppearedInhistory=false;
         foreach ($contextDataOrig as $n=>$element) {
             
             
@@ -120,17 +152,23 @@ class connector
                     $pb["system"].=trim($element["content"])."\n";
                     
                 } else if ($element["role"]=="assistant") {
-                    
+                    $assistantAppearedInhistory=true;
                     if (isset($element["tool_calls"])) {
                         $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
                         $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
-                        
+                        $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
                         $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
                                         "#TARGET#"=>current($localArguments),
                                         ]);
                         
+                        $contextData[$n]=[
+                                "role"=>"assistant",
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"$lastActionName\", 
+                                \"target\": \"\", \"message\": \"\"}"
+                            ];
+                            
                         unset($contextData[$n]);
                     } else {
                         $pb["system"].=$element["content"]."\n";
@@ -138,9 +176,7 @@ class connector
                         // Trying to provide examples
                         $contextData[$n]=[
                                 "role"=>"assistant",
-                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"\", 
-                                \"target\": \"\", \"message\": \"".trim($dialogueTarget["cleanedString"])."\"}
-"
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
                                 
                             ];
                     }
@@ -151,7 +187,7 @@ class connector
                             $pb["system"].=$element["content"]."\n";
                             $contextData[$n]=[
                                     "role"=>"user",
-                                    "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
+                                    "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName)".strtr($lastAction,["#RESULT#"=>$element["content"]]),
                                     
                                 ];
                                 
@@ -171,7 +207,43 @@ class connector
         $contextDataCopy=[];
         foreach ($contextData as $n=>$element) 
             $contextDataCopy[]=$element;
+        
+        if ($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"]) {
+            $GLOBALS["PATCH"]["PREAPPEND"]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",";
+            $contextDataCopy[]= ["role"=>"assistant","content"=>$GLOBALS["PATCH"]["PREAPPEND"]];
+        }
+        
+        
         $contextData=$contextDataCopy;
+        
+        if (!$assistantAppearedInhistory) {
+            // EXAMPLES
+            $contextExamples[]= [
+                'role' => 'user', 
+                'content' => "The Narrator: {$GLOBALS["PLAYER_NAME"]} looks at {$GLOBALS["HERIKA_NAME"]}"
+            ];
+            
+            $contextExamples[]= [
+                "role"=>"assistant",
+                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",\"listener\": \"{$GLOBALS["PLAYER_NAME"]}\", \"mood\": \"default\", \"action\": \"Talk\",\"target\": \"\", \"message\": \"What are you looking at?\"}"
+                    
+            ];
+            
+            $finalContextDataWithExamples=[];
+            foreach ($contextData as $n=>$final) {
+                if ($final["role"]=="system") {
+                    $finalContextDataWithExamples[]=$final;
+                    foreach ($contextExamples as $example)
+                        $finalContextDataWithExamples[]=$example;
+                    }
+                else
+                    $finalContextDataWithExamples[]=$final;
+            }
+            
+            $contextData=$finalContextDataWithExamples;
+        }
+
+        
         
         $data = array(
             'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-3.5-turbo-1106',
@@ -195,7 +267,11 @@ class connector
          $data["min_p"]=$GLOBALS["CONNECTOR"][$this->name]["min_p"];
          $data["top_a"]=$GLOBALS["CONNECTOR"][$this->name]["top_a"];
          $data["top_k"]=$GLOBALS["CONNECTOR"][$this->name]["top_k"];
-            
+         
+         if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
+            $data["response_format"]=["type"=>"json_object"];
+         }
+        
             
         // Mistral AI API does not support penalty params
         if (strpos($url, "mistral") === false) {
@@ -288,6 +364,11 @@ class connector
 
         }
         
+        if (isset($GLOBALS["PATCH"]["PREAPPEND"])) {
+            $this->_buffer=$GLOBALS["PATCH"]["PREAPPEND"];
+            unset($GLOBALS["PATCH"]["PREAPPEND"]);
+        }
+        
         $buffer="";
         if (!empty($this->_buffer))
             $finalData=__jpd_decode_lazy($this->_buffer, true);
@@ -308,10 +389,17 @@ class connector
                     } 
                     
                     if (is_array($finalData)&&isset($finalData["message"])) {
+                        if (is_array($finalData["message"]))
+                            $finalData["message"]=current($finalData["message"]);
+                        
                         $mangledBuffer = str_replace($this->_extractedbuffer, "", $finalData["message"]);
                         $this->_extractedbuffer=$finalData["message"];
                         if (isset($finalData["listener"])) {
                             $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];
+                        }
+                        
+                        if (isset($finalData["lang"])) {
+                            $GLOBALS["LLM_LANG"]=$finalData["lang"];
                         }
                         
                         if (isset($finalData["mood"])) {
@@ -366,9 +454,9 @@ class connector
             $GLOBALS["DEBUG_DATA"]["RAW"]=$this->_buffer;
             unset($GLOBALS["_JSON_BUFFER"]);
             $parsedResponse=__jpd_decode_lazy($this->_buffer);   // USE JPD_LAZY?
-            error_log("New function scheme");
+            //error_log("New function scheme");
             if (is_array($parsedResponse)) {
-                error_log("New function scheme: ".print_r($this->_buffer,true));
+                //error_log("New function scheme: ".print_r($this->_buffer,true));
 
                 if (isset($parsedResponse[0]["action"])) {
                     $parsedResponse=$parsedResponse[0];

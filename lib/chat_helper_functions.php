@@ -93,6 +93,12 @@ function cleanResponse($rawResponse)
 
 function findDotPosition($string)
 {
+    
+    $lastChar = substr($string, -1);
+
+    if ($lastChar === '.')  // Dont eval on .. wait till next tokens
+        return false;
+    
     $dotPosition = strrpos($string, ".");
 
     if ($dotPosition !== false && strpos($string, ".", $dotPosition + 1) === false && substr($string, $dotPosition - 3, 3) !== "...") {
@@ -234,6 +240,7 @@ function split_sentences_stream($paragraph)
         $splitSentences[] = trim($currentSentence);
     }
 
+    error_log("<$paragraph> => ".implode("|", $splitSentences));
     return $splitSentences;
 }
 
@@ -417,7 +424,12 @@ function returnLines($lines,$writeOutput=true)
                     }
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
                 }
-                     
+
+                if (!$GLOBALS["HERIKA_ANIMATIONS"]) {
+                    $GLOBALS["SCRIPTLINE_ANIMATION"]="";
+                    $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
+                }
+                
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
                 $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
                 file_put_contents(__DIR__."/../log/ouput_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
@@ -445,7 +457,11 @@ function returnLines($lines,$writeOutput=true)
         $originalRequest[0]="prechat";
         $originalRequest[1]++;
         $originalRequest[2]++;
-        $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded";
+        if ($GLOBALS["SCRIPTLINE_LISTENER"])
+            $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
+        else
+            $addonlistener="";
+        $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
         logEvent($originalRequest);
         
         // Log chat here, because  function return comes back out of sync.

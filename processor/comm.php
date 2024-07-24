@@ -126,10 +126,10 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
                 'speaker' => $speech["speaker"],
                 'speech' => $speech["speech"],
                 'location' => $speech["location"],
-                'companions'=>(is_array($speech["companions"]))?implode(",",$speech["companions"]):"",
+                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):"",
                 'sess' => 'pending',
-                'audios' => $speech["audios"],
-                'topic' => "{$speech["debug"]}",
+                'audios' => isset($speech["audios"])?$speech["audios"]:null,
+                'topic' => isset($speech["debug"])?$speech["debug"]:null,
                 'localts' => time()
             )
         );
@@ -143,6 +143,32 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
             'ts' => $gameRequest[1],
             'gamets' => $gameRequest[2],
             'title' => $gameRequest[3],
+            'sess' => 'pending',
+            'localts' => time()
+        )
+    );
+
+    $db->insert(
+        'eventlog',
+        array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'type' => $gameRequest[0],
+            'data' => $gameRequest[3],
+            'sess' => 'pending',
+            'localts' => time()
+        )
+    );
+
+    $MUST_END=true;
+
+} elseif ($gameRequest[0] == "contentbook") {
+    $db->insert(
+        'books',
+        array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'content' => $gameRequest[3],
             'sess' => 'pending',
             'localts' => time()
         )
@@ -219,6 +245,36 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
             )
     );
     $MUST_END=true;
+
+    
+} elseif ($gameRequest[0] == "recover_last_task") {
+
+    $db->delete("currentmission", "rowid=(select max(rowid) from currentmission)");
+
+    $MUST_END=true;
+
+    
+} elseif ($gameRequest[0] == "just_say") {
+    
+    returnLines([trim($gameRequest[3])]);
+    
+    $MUST_END=true;
+    
+} elseif ($gameRequest[0] == "setconf") {
+    
+    $vars=explode("@",$gameRequest[3]);
+    $db->delete("conf_opts", "id='{$vars[0]}'");
+    $db->insert(
+        'conf_opts',
+        array(
+                'id' => $vars[0],
+                'value' => $vars[1]
+            )
+    );
+    
+    
+    $MUST_END=true;
+    
 } elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever commands
 
     logEvent($gameRequest);
@@ -244,7 +300,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         $file_lines = file($newFile);
 
         for ($i = count($file_lines) - 1; $i >= 0; $i--) {
-            // If the line is not empty, break the loop
+            // If the line is not empty, break the loop // Will remove first entry 
             if (trim($file_lines[$i]) !== '') {
                 unset($file_lines[$i]);
                 break;
@@ -259,9 +315,10 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\''.$codename.'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         file_put_contents($newFile, '$HERIKA_NAME=\''.trim($gameRequest[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         
-        if (is_array($npcTemlate))
+        if (is_array($npcTemlate[0]))
             file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        
+        else
+            file_put_contents($newFile, '$HERIKA_PERS=\'Roleplay as '.trim($gameRequest[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
         
@@ -278,4 +335,124 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     
     
     $MUST_END=true;
+    
+    
+} elseif (strpos($gameRequest[0], "updateprofile")===0) {    
+    
+    if (!$GLOBALS["DYNAMIC_PROFILE"]) {
+        $gameRequest[3]="Dynamic profile updating disabled for {$GLOBALS["HERIKA_NAME"]}";
+        logEvent($gameRequest);
+        die();
+    }
+    
+    
+    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists($enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+            ;
+	}
+	 else {
+		require_once $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
+        
+        $historyData="";
+        $lastPlace="";
+        $lastListener="";
+        foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"],50),true) as $element) {
+          if ($lastListener!=$element["listener"]) {
+            $listener=" (talking to {$element["listener"]})";
+            $lastListener=$element["listener"];
+          }
+          else
+            $listener="";
+      
+          if ($lastPlace!=$element["location"]){
+            $place=" (at  to {$element["location"]})";
+            $lastPlace=$element["location"];
+          }
+          else
+            $place="";
+      
+          $historyData.=trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place").PHP_EOL;
+          
+        }
+        
+		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
+		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
+		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n" . $GLOBALS["HERIKA_PERS"], ];
+		$prompt[] = ["role"=> "user", "content"	=> "Use Dialogue history to update character profile.  Dialogue history is more important that reference profile.
+Mandatory Format:
+
+* Personality,(concise description, 100 words).
+* Speech style (use keywords, short description).
+* Relation with {$GLOBALS["PLAYER_NAME"]} (use keywords, short description).
+* Likes (use keywords, short description).
+* Fears( use keywords, short description).
+* Dislikes (use keywords, short description).
+* Current mood (use last events to determine). 
+
+Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.", ];
+		$contextData       = array_merge($head, $prompt);
+		$connectionHandler = new connector();
+        
+		$connectionHandler->open($contextData, ["max_tokens"=>350]);
+		$buffer      = "";
+		$totalBuffer = "";
+		$breakFlag   = false;
+		while (true) {
+			
+			if ($breakFlag) {
+				break;
+			}
+			
+			if ($connectionHandler->isDone()) {
+				$breakFlag = true;
+			}
+			
+			$buffer.= $connectionHandler->process();
+			$totalBuffer.= $buffer;
+			//$bugBuffer[]=$buffer;
+			
+			
+		}
+		$connectionHandler->close();
+		
+		$actions = $connectionHandler->processActions();
+		
+		
+		$responseParsed["HERIKA_PERS"]=$buffer;
+        
+    
+        logEvent($gameRequest);
+
+        $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+        $newConfFile=$_GET["profile"];
+        
+        if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") ) { 
+            
+            
+        } else {
+            
+            // Do customizations here
+            $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
+            copy($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php",$path . "conf".DIRECTORY_SEPARATOR.".conf_{$newConfFile}_".time().".php");
+            
+            $file_lines = file($newFile);
+
+            for ($i = count($file_lines) - 1; $i >= 0; $i--) {
+                // If the line is not empty, break the loop // Will remove first entry 
+                if (trim($file_lines[$i]) !== '') {
+                    unset($file_lines[$i]);
+                    break;
+                }
+                unset($file_lines[$i]);
+            }
+        
+            file_put_contents($newFile, implode('', $file_lines));
+            file_put_contents($newFile, PHP_EOL.'$HERIKA_PERS=\''.addslashes($responseParsed["HERIKA_PERS"]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+            file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
+            
+        }
+    
+        $MUST_END=true;
+    
+    }
 }
+?>

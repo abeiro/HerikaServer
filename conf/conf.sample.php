@@ -8,6 +8,15 @@ $HERIKA_NAME="Follower";
 $PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. I'm Prisoner. You're Prisoner's companion.";
 $HERIKA_PERS="You are a person who likes jokes and sarcastic comments.";
 
+$BOOK_EVENT_ALWAYS_NARRATOR=false;
+$BOOK_EVENT_FULL=false;
+
+$HERIKA_ANIMATIONS=true;
+$DYNAMIC_PROFILE=false;
+$NARRATOR_WELCOME=true;
+$LANG_LLM_XTTS=false;
+$EMOTEMOODS="sassy,assertive,sexy,smug,kindly,lovely,seductive,sarcastic,sardonic,smirking,amused,default,assisting,irritated,playful,neutral,teasing,mocking";
+
 $RECHAT_H=4;
 $RECHAT_P=0;
 $BORED_EVENT=0;
@@ -162,6 +171,8 @@ $CONNECTOR["koboldcppjson"]["max_tokens"]=100;
 $CONNECTOR["koboldcppjson"]["temperature"]=0.9;
 $CONNECTOR["koboldcppjson"]["rep_pen"]=1.12;
 $CONNECTOR["koboldcppjson"]["top_p"]=0.9;
+$CONNECTOR["koboldcppjson"]["grammar"]=true;
+$CONNECTOR["koboldcppjson"]["PREFILL_JSON"]=false;	//Will prefill JSON, which is usefull for some models, and destroy others (WIP)
 $CONNECTOR["koboldcppjson"]["MAX_TOKENS_MEMORY"]=256;
 $CONNECTOR["koboldcppjson"]["newline_as_stopseq"]=true;
 $CONNECTOR["koboldcppjson"]["use_default_badwordsids"]=true;
@@ -175,8 +186,8 @@ $CONNECTOR["koboldcppjson"]["grammar"]=true;
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions";
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-2-70b-chat";
 $CONNECTOR["openrouter"]["max_tokens"]=100;
-$CONNECTOR["openrouter"]["xreferer"]="http://localhost:8081/saig-gwserver/";
-$CONNECTOR["openrouter"]["xtitle"]="Herika";
+$CONNECTOR["openrouter"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931";
+$CONNECTOR["openrouter"]["xtitle"]="Skyrim AI Follower Framework";
 $CONNECTOR["openrouter"]["API_KEY"]="";
 $CONNECTOR["openrouter"]["MAX_TOKENS_MEMORY"]="512";
 $CONNECTOR["openrouter"]["temperature"]=0.9;	//LLM parameter temperature
@@ -192,7 +203,7 @@ $CONNECTOR["openrouter"]["top_a"]=0;	//LLM parameter top_a
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions";
 $CONNECTOR["openrouterjson"]["model"]="lizpreciatior/lzlv-70b-fp16-hf";
 $CONNECTOR["openrouterjson"]["max_tokens"]=100;
-$CONNECTOR["openrouterjson"]["xreferer"]="http://localhost:8081/saig-gwserver/";
+$CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931";
 $CONNECTOR["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework";
 $CONNECTOR["openrouterjson"]["API_KEY"]="";
 $CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]="512";
@@ -204,6 +215,8 @@ $CONNECTOR["openrouterjson"]["frequency_penalty"]=1.01;	//LLM parameter frequenc
 $CONNECTOR["openrouterjson"]["repetition_penalty"]=1.01;	//LLM parameter repetition_penalty
 $CONNECTOR["openrouterjson"]["min_p"]=0.0;	//LLM parameter min_p
 $CONNECTOR["openrouterjson"]["top_a"]=1.0;	//LLM parameter top_a
+$CONNECTOR["openrouterjson"]["ENFORCE_JSON"]=false;	//Will try to force JSON. Some models acept this. Other's dont.
+$CONNECTOR["openrouterjson"]["PREFILL_JSON"]=false;	//Will prefill JSON, which is usefull for some models, and destroy others
 
 
 $CONNECTOR["oobabooga"]["HOST"]="127.0.0.1";

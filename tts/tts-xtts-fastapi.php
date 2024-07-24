@@ -18,20 +18,55 @@ curl -X 'POST' \
  
  */
 
+function insertNoise($inputString, $noiseArray) {
+    // Split the string into words
+    $words = explode(' ', $inputString);
+
+    // Shuffle the noise array to ensure randomness
+    shuffle($noiseArray);
+
+    // Calculate the number of insert positions (between words)
+    $numInsertPositions = count($words) - 1;
+
+    // Ensure we don't have more noises than insert positions
+    $numNoises = min(count($noiseArray), $numInsertPositions);
+
+    // Get a random subset of the insert positions
+    $insertPositions = array_rand(array_fill(0, $numInsertPositions, 1), $numNoises);
+
+    // Ensure $insertPositions is an array even if there's only one position
+    if (!is_array($insertPositions)) {
+        $insertPositions = array($insertPositions);
+    }
+
+    // Sort insert positions in descending order to avoid shifting positions
+    rsort($insertPositions);
+
+    // Insert the noise elements at the chosen positions
+    foreach ($insertPositions as $index => $pos) {
+        array_splice($words, $pos + 1, 0, $noiseArray[$index]);
+		break; //Comment  to more noise
+    }
+
+    // Join the words back into a string
+    return implode(' ', $words);
+}
+
+
 function xtts_fastapi_settings($settings) {
 	$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/set_tts_settings';
 	$data = json_decode('{
 		"stream_chunk_size": 20,
-		"temperature": 1,
+		"temperature": 0.9,
 		"speed": 1,
-		"length_penalty": 0,
+		"length_penalty": 1,
 		"repetition_penalty": 5,
-		"top_p": 0.5,
+		"top_p": 0.85,
 		"top_k": 50,
 		"enable_text_splitting": true
 		}',true);
 	
-	$finalData=array_merge($settings,$data);
+	$finalData=array_merge($data,$settings);
 	
 	$options = array(
 		'http' => array(
@@ -52,14 +87,34 @@ function xtts_fastapi_settings($settings) {
 	}
 }
 
+
+
+
 function tts($textString, $mood , $stringforhash) {
 
 		//xtts_fastapi_settings([]); //Check this
 		
-		if (!isset($GLOBALS["AVOID_TTS_CACHE"]))
+		/*if (!isset($GLOBALS["AVOID_TTS_CACHE"]))
 			if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
 				return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
-	
+		*/
+		
+		$randomBreathS="";
+		$isSexScene=$GLOBALS["db"]->fetchAll("select 1 from conf_opts where id='sexscene' and value='on'");
+		
+		if ((is_array($isSexScene) && sizeof($isSexScene)==1)) {
+			
+			$breaths=["*Ooh*","*AhH!*","*MmM!*",""];	
+			array_rand($breaths);
+			$newString=insertNoise($textString,$breaths);
+			xtts_fastapi_settings(["speed"=>0.9]);
+			error_log("XTTS adding breaths <$newString> ".__FILE__);
+		} else {
+			xtts_fastapi_settings(["speed"=>1]);
+			$newString=$textString;
+		}
+		
+		
 	    $starTime = microtime(true);
 
 		$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]."/tts_to_audio";
@@ -71,15 +126,19 @@ function tts($textString, $mood , $stringforhash) {
 		);
 		
 		$lang=isset($GLOBALS["TTS"]["FORCED_LANG_DEV"])?$GLOBALS["TTS"]["FORCED_LANG_DEV"]:$GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
+		
+		
+		if ((isset($GLOBALS["LLM_LANG"]))&&(isset($GLOBALS["LANG_LLM_XTTS"]))&&$GLOBALS["LANG_LLM_XTTS"]) {
+			$lang=$GLOBALS["LLM_LANG"];
+
+		}
+		
+		
+
 		if (empty($lang))
 			$lang=$GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
 	
-		// Request data
-		$data = array(
-			'text' => $textString,
-			'language' => $lang
-		);
-		
+	
 		$voice=isset($GLOBALS["TTS"]["FORCED_VOICE_DEV"])?$GLOBALS["TTS"]["FORCED_VOICE_DEV"]:$GLOBALS["TTS"]["XTTSFASTAPI"]["voiceid"];
 		
 		if (empty($voice))
@@ -88,7 +147,7 @@ function tts($textString, $mood , $stringforhash) {
 		
 
 		$data = array(
-			'text' => $textString,
+			'text' => $newString,
 			'speaker_wav' => $voice,
 			'language' => $lang
 		);
@@ -118,7 +177,8 @@ function tts($textString, $mood , $stringforhash) {
 			
 			file_put_contents($oname, $response); // Save the audio response to a file
 			$startTimeTrans = microtime(true);
-			shell_exec("ffmpeg -y -i $oname  -af \"silenceremove=start_periods=1:start_silence=0.1:start_threshold=-25dB,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-40dB,areverse,speechnorm=e=3:r=0.0001:l=1:p=0.75\" $fname 2>/dev/null >/dev/null");
+			//shell_exec("ffmpeg -y -i $oname  -af \"adelay=150|150,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-25dB,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-40dB,areverse,speechnorm=e=3:r=0.0001:l=1:p=0.75\" $fname 2>/dev/null >/dev/null");
+			shell_exec("ffmpeg -y -i $oname  -af \"adelay=150|150\" $fname 2>/dev/null >/dev/null");
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
@@ -136,12 +196,12 @@ function tts($textString, $mood , $stringforhash) {
 
 /*
 $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]='http://localhost:8020';
-$GLOBALS["TTS"]["XTTSFASTAPI"]["voiceid"]='jenassa';
+$GLOBALS["TTS"]["XTTSFASTAPI"]["voiceid"]='svenja';
 $GLOBALS["TTS"]["XTTSFASTAPI"]["language"]='en';
 
 $textTosay="Hello fellows...this is a new text to speech connector";
 
-echo tts($textTosay,'',$textTosay);
+echo tts($textTosay,'',$textTosay).PHP_EOL;
 */
 
 

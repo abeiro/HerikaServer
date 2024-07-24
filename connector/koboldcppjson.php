@@ -67,7 +67,7 @@ class connector
         
         
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+            //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
@@ -91,12 +91,16 @@ class connector
         }
         $FUNC_LIST[]="Talk";
 
+        $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
+        shuffle($moods);
+
+        
         $contextData[]= [
             'role' => 'user', 
             'content' => "Use this JSON object to give your answer: ".json_encode([
                "character"=>$GLOBALS["HERIKA_NAME"],
                 "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
+                "mood"=>implode("|",$moods),
                 "action"=>implode("|",$FUNC_LIST),
                 "target"=>"action's target|destination name",
                 "message"=>'lines of dialogue',
@@ -311,6 +315,11 @@ class connector
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
        
         
+        if (!empty($GLOBALS["PATCH"]["PREAPPEND"])) {
+            $this->_jsonBuffer=$GLOBALS["PATCH"]["PREAPPEND"];
+            $GLOBALS["PATCH"]["PREAPPEND"]="";
+        }
+        
         if (strpos($line, 'data: {') !== 0) {
             return "";
         }
@@ -368,7 +377,8 @@ class connector
             fgets($this->primary_handler);
 
         fclose($this->primary_handler);
-        
+        $GLOBALS["DEBUG_DATA"]["RAW"]=$this->_jsonBuffer;
+
         //file_put_contents(__DIR__."/../log/output_from_llm.log",$this->_jsonBuffer, FILE_APPEND | LOCK_EX);
         file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_jsonBuffer."\n=\n", FILE_APPEND);
 

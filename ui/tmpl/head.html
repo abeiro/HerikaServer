@@ -93,12 +93,18 @@
             }
             
              function callHelper(helper) {
+                document.body.style.cursor="wait";
                 form=document.querySelector(".confwizard")
                 var inputs = form.querySelectorAll('input');
                 const formData = {};
 
       
       
+                inputs.forEach(input => {
+                    formData[input.name] = input.value;
+                });
+                
+                inputs = form.querySelectorAll('textarea');
                 inputs.forEach(input => {
                     formData[input.name] = input.value;
                 });
@@ -122,13 +128,45 @@
                         if (data.hasOwnProperty(key)) {
                             //console.log(`${key}: ${data[key]}`);
                             t=document.querySelector("input[name='"+key+"']")
-                            t.value=data[key]
+                            if (t) {
+                                t.value=data[key]
+                                t.animate(
+                                    [
+                                        // fotogramas clave
+                                        { color: "white" },
+                                        { color: "red" }
+                                    ],
+                                    {
+                                        // opciones de sincronización
+                                        duration: 1000,
+                                        iterations: 3
+                                    }
+                                );
+                            } else {
+                                t=document.querySelector("textarea[name='"+key+"']")
+                                t.value=data[key]
+                                t.animate(
+                                    [
+                                        // fotogramas clave
+                                        { color: "white" },
+                                        { color: "red" }
+                                    ],
+                                    {
+                                        // opciones de sincronización
+                                        duration: 1000,
+                                        iterations: 3
+                                    }
+                                );
+                            
+                            }
                         }
                     }
-                    
+                    document.body.style.cursor="";
+
                 })
                 .catch(error => {
                     console.error('There has been a problem with your fetch operation:', error);
+                    document.body.style.cursor="";
                 });
       
                 

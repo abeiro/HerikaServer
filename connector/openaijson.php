@@ -53,14 +53,19 @@ class connector
             }
         }
         
+        $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
+        shuffle($moods);
+        
+        
         $contextData[]= [
             'role' => 'user', 
             'content' => "Use this JSON object to give your answer: ".json_encode([
                 "character"=>$GLOBALS["HERIKA_NAME"],
                 "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                "mood"=>'sarcastic|sassy|sardonic|irritated|mocking|playful|teasing|smug|amused|smirking|default',
+                "mood"=>implode("|",$moods),
                 "action"=>'a valid action, (refer to available actions list) or None',
                 "target"=>"action's target",
+                "lang"=>"en|es",
                 "message"=>'lines of dialogue',
                 
             ])
@@ -132,13 +137,21 @@ class connector
                     
                      if (!empty($element["content"])) {
                             $pb["system"].=$element["content"]."\n";
-                            $contextData[$n]=[
-                                    "role"=>"user",
-                                    "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
+                            if (strpos($element["content"],"Error")===false) {
+                                $contextData[$n]=[
+                                        "role"=>"user",
+                                        "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
+                                        
+                                    ];
                                     
+                                $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                            } else {
+                                $contextData[$n]=[
+                                        "role"=>"user",
+                                        "content"=>"The Narrator: NOTE, cannot go to that place:".current($localArguments),
+                                        
                                 ];
-                                
-                            $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                            }
                         } else
                             unset($contextData[$n]);
                 }
@@ -155,6 +168,13 @@ class connector
         foreach ($contextData as $n=>$element) 
             $contextDataCopy[]=$element;
         $contextData=$contextDataCopy;
+        
+
+        // Forcing JSON output
+      
+        
+        
+        
         
         $data = array(
             'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-3.5-turbo-1106',
@@ -271,6 +291,10 @@ class connector
                         $this->_extractedbuffer=$finalData["message"];
                         if (isset($finalData["listener"])) {
                             $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];
+                        }
+                        
+                        if (isset($finalData["lang"])) {
+                            $GLOBALS["LLM_LANG"]=$finalData["lang"];
                         }
                         
                         if (isset($finalData["mood"])) {

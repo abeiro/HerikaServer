@@ -17,6 +17,19 @@ function __jpd__extractContentBetweenBraces($inputString) {
     }
 }
 
+function returnObject($arr) {
+ 
+    
+    if (!is_array($arr))
+        return [];
+    
+    if(sizeof($arr)==1) {
+        if (is_array(current($arr)))
+            return returnObject(current($arr));
+    }
+    
+    return $arr;
+}
 function __jpd_close_left_open($cadena) {
     $pilaComillas = [];
     $pilaLlaves = [];
@@ -86,7 +99,7 @@ function __jpd_decode_lazy($inputString) {
     preg_match($pattern, $inputString, $matches);
     $result=[];
     if (isset($matches[1])) {
-        $jsonCode = json_decode($matches[1],true);
+        $jsonCode = __jpd_decode_lazy($matches[1]);
         if (!isset($GLOBALS["_JSON_BUFFER"][__jpd_hash($jsonCode)])) {
                 $GLOBALS["_JSON_BUFFER"][
                     __jpd_hash($jsonCode)
@@ -99,7 +112,25 @@ function __jpd_decode_lazy($inputString) {
         return $result;
     }
 
+    $pattern = '/``json(.+?)```/s';
+    // Extract the JSON code using the regular expression
+    preg_match($pattern, $inputString.'"}```', $matches);   // ** Match uncompleted objects
+    $result=[];
+    if (isset($matches[1])) {
+        $jsonCode = json_decode($matches[1],true);
+        if (!isset($GLOBALS["_JSON_BUFFER"][__jpd_hash($jsonCode)])) {
+                $GLOBALS["_JSON_BUFFER"][
+                    __jpd_hash($jsonCode)
+                ] = $jsonCode;
+                //echo "Found: " . md5($unit["message"]) . PHP_EOL;
+                $result[]=$jsonCode;
+            } else
+                ;
+                
+        return $result;
+    }
     
+   
     $jsonCode = json_decode($inputString,true);
     if (is_array($jsonCode)) {
         if (!isset($GLOBALS["_JSON_BUFFER"][__jpd_hash($jsonCode)])) {
@@ -129,6 +160,26 @@ function __jpd_decode_lazy($inputString) {
         return $result;
     }
     
+    $realData = json_decode( strtr($inputString,['message":" "'=>'message":" ']), true);    // COMMON GEMMA2 ERRORS
+    if (is_array($realData)) {
+        $result=returnObject($realData);
+        return $result;
+    }
+    
+    $realData = json_decode( strtr($inputString,['message":""'=>'message":"']), true);    // COMMON GEMMA2 ERRORS
+    if (is_array($realData)) {
+        $result=returnObject($realData);
+        return $result;
+    }
+    
+    $realData = json_decode( strtr($inputString,[',listener"'=>',"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
+    if (is_array($realData)) {
+        $result=returnObject($realData);
+        return $result;
+    }
+
+    
+        
     $re = '/\{.*\}$/m';
 
     $inputStringMangled=trim(preg_replace('/\}(?!.*\})/', '}$1'."\n", $inputString));
@@ -276,10 +327,7 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-```json
-{"character":"Avatar of Azura","listener":"Agabur","mood":"amused","action":"","target":"","message":"  "Very well, darling.  Let me indulge your insatiable curiosity.  The so-called Civil War began as a mere tremor, a whisper of discontent amongst those who yearn for the 'glory' of a past empire. The Imperial Legion, those pompous, self-important fools, have long held sway over Skyrim, but their grip has loosened.  The Stormcloaks, led by the tiresome Ulfric Stormcloak,  seek to tear down the remnants of that empire and carve out their own pathetic little kingdom.  As if Skyrim needs more division.  Such a tiresome, predictable drama.  But where's the fun without a little chaos?"} 
-```
-X-CUSTOM-CLOSE
+{"character": "Lydia",{"listener": "Agabur", "mood": "playful", "action": "Talk", "target": null, "message": "Well, hello there, darling.  Just getting comfortable after a long day of...saving the world.  How about you?  Anything interesting happen while I was busy being heroic?"} 
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);

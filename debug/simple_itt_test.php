@@ -17,7 +17,7 @@ $location=DataLastKnownLocation();
 $charactersArray=implode(",",DataPosibleInspectTargets(true));
 
 
-$hints="Location: $location. Posible characters: {$GLOBALS["HERIKA_NAME"]},{$GLOBALS["PLAYER_NAME"]}, Other characters: $charactersArray";
+$hints="Posible characters: {$GLOBALS["PLAYER_NAME"]} : $charactersArray";
 
 echo itt($argv[1],$hints);
 

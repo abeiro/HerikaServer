@@ -47,10 +47,11 @@ display:none
 
 p.conf-item {
 	display: inline-block;
-	min-width:45%;
-    font-size: 16px;
+	min-width: 480px;
+	font-size: 16px;
 	font-weight: bold;
 	font-family: 'Arial', Times, serif;
+	max-width: 100%;
 }
 
 p.conf-item label{
@@ -64,6 +65,9 @@ p.conf-item textarea{
 	display:block;
 	min-width:640px;
 	min-height:240px;
+	width: auto;
+	font-size: medium;
+	font-family: monospace;
 }
 
 p.conf-item input {
@@ -127,7 +131,8 @@ form.confwizard > fieldset > fieldset {
 
 
 form.confwizard > fieldset > legend {
-	color:lightblue;
+	color: #627074;
+	background: white;
 }
 
 form.confwizard > fieldset > fieldset  legend {
@@ -150,3 +155,40 @@ li.subchild {
 	margin-left: 50px;
 	text-wrap: wrap;
 }
+
+
+div.softdiv {
+	display:inline-block;
+	min-width:300px;
+	padding-left:20px;
+}
+
+#top > fieldset > fieldset {
+	max-width:60%
+
+}
+
+form.confwizard fieldset > legend + legend  {
+	color:#FE0FE0;
+	cursor:pointer;
+	font-size: 18px;
+	background: none;
+}
+
+form.confwizard fieldset > fieldset + legend  {
+	color:#FE0FE0;
+	cursor:pointer;
+	font-size: 18px;
+	background: none;
+}
+
+
+fieldset.unvisible-fieldset {
+	display:none;
+}
+
+fieldset.visible-fieldset {
+	display:block;
+}
+
+
