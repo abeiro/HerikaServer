@@ -1,4 +1,4 @@
-<?php
+DataEx<?php
 
 
 
@@ -346,7 +346,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
       when a.data like '%background chat%' then 'The Narrator: background dialogue: '
       when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
       else '' 
-    end||a.data  as data , gamets,localts
+    end||a.data  as data , gamets,localts,type
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' 
@@ -397,9 +397,12 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         }
 
 
-        if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false)) {
+        if ($row["type"]=="logaction") {
             $speaker = "assistant";
-        } elseif ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") !== false)) {
+        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false)) {
+            $speaker = "assistant";
+        } 
+         elseif ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") !== false)) {
             $speaker = "player";
         } else {
             $speaker = "user";
