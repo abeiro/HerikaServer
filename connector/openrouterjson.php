@@ -168,7 +168,7 @@ class connector
                                 "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"$lastActionName\", 
                                 \"target\": \"\", \"message\": \"\"}"
                             ];
-                        $gameRequestCopy=$gameRequest;    
+                        $gameRequestCopy=$GLOBALS["gameRequest"];    
                         $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"$lastActionName\", 
                                 \"target\": \"\", \"message\": \"\"}";
                         logEvent($gameRequestCopy);   
