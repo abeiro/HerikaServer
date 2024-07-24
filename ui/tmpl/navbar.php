@@ -107,6 +107,7 @@
                     <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
                     <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration WIP" target="_blank">Export Configuration</a></li>
                     <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration WIP" target="_blank">Import Configuration</a></li>
+                    <li><a class="dropdown-item" href="xtts_clone.php" title="Export Configuration WIP" target="_blank">XTTS FastAPI Voice Management</a></li>
                     <li><a class="dropdown-item" href="index.php?table=openai_token_count">OpenAI Token Pricing</a></li>
                     <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0' target="_blank">AI/LLM Supported Models List</a></li>
                 </ul>
