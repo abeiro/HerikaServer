@@ -17,7 +17,7 @@
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to disable."},
   "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send book contents instead of book titles. This will consume more tokens, but AI could summarize any book."},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator model/tts will take care of reading books. SET THIS ON default profile to apply to all followers.","scope":"global"},
-  "NARRATOR_WELCOME": {"userlvl":"wip","type":"boolean","description":"The Narrator will remind you the  game status when loading a game.","scope":"global"},
+  "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will remind you the  game status when loading a game.","scope":"global"},
   "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"Will offer a lang field to LLM, and will try match to XTTSv2 language. "},
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations also to NPC"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger animations if passing animations are enabled"},
