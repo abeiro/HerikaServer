@@ -52,7 +52,8 @@ function compareFileModificationDate($a, $b) {
 }
 
 // Sort the profiles by modification date descending
-usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
+if (is_array($GLOBALS["PROFILES"]))
+    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
 
 $GLOBALS["PROFILES"]=array_merge(["default"=>"$configFilepath/conf.php"],$GLOBALS["PROFILES"]);
 
