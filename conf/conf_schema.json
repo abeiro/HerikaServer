@@ -13,7 +13,7 @@
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. Improves short term memory. More context = more tokens used, and slower response time."},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
-  "NEWQUEUE": {"userlvl":"basic","scope":"global","type":"boolean","description":"Enable for 360° audio."},
+  "NEWQUEUE": {"userlvl":"basic","scope":"constant","type":"boolean","description":"Enable for 360° audio."},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to disable."},
   "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send book contents instead of book titles. This will consume more tokens, but AI could summarize any book."},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator model/tts will take care of reading books. SET THIS ON default profile to apply to all followers.","scope":"global"},
