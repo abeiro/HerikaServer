@@ -38,7 +38,7 @@ $TTS["AZURE"]["API_KEY"]="";
 
 
 $TTS["MIMIC3"]["URL"]="http://127.0.0.1:59125";   
-$TTS["MIMIC3"]["voice"]="en_US/hifi-tts_low#92";
+$TTS["MIMIC3"]["voice"]="en_UK/apope_low#default";
 $TTS["MIMIC3"]["rate"]="1";
 $TTS["MIMIC3"]["volume"]="60";
 
