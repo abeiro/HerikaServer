@@ -415,7 +415,8 @@ function returnLines($lines,$writeOutput=true)
         $GLOBALS["DEBUG"]["BUFFER"][] = "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
         
         if ($writeOutput) {
-            if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"]) {
+            //if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"]) {
+            if (true) {
                  if (isset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) && $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) 
                      $GLOBALS["SCRIPTLINE_ANIMATION"]="";
                 else {
