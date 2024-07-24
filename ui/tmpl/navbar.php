@@ -32,13 +32,13 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Actions</a>
                 <ul class="dropdown-menu">
                     <li>
-                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent responses." onclick="return confirm('Sure?')">
-                            Clean Sent
+                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent events." onclick="return confirm('Sure?')">
+                            Clean Sent Events
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Marks unsent responses from queue." onclick="return confirm('Sure?')">
-                            Reset Sent
+                        <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Marks unsent events from queue." onclick="return confirm('Sure?')">
+                            Reset Sent Events
                         </a>
                     </li>
                     <li>
@@ -47,39 +47,39 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean log table" onclick="return confirm('Sure?')">
+                        <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('Sure?')">
                             Clean AI Log
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?export=log" title="Export Log (debugging purposes)" target="_blank">
+                        <a class="dropdown-item" href="index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
                             Export AI Log
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?export=diary" title="Diary Log" target="_blank">
+                        <a class="dropdown-item" href="index.php?export=diary" title="Exports Diary Log to a csv file" target="_blank">
                             Export Diary
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync ChomaDB Memories if you have changed Memory Embeddings Provider" target="_blank">
+                        <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync VectorDB Memories. Use this if you have changed Memory Embeddings service." target="_blank">
                             Sync Memories
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync ChomaDB Memories if you have changed Memory Embeddings Provider" onclick="return confirm('Will cost Tokens to use if using OpenAI. MAY TAKE A FEW MINUTES TO PROCESS, DO NOT REFRESH THE WEBPAGE! Are you sure?')">
+                        <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync VectorDB Memories if you have changed Memory Embeddings service" onclick="return confirm('Will cost Tokens to use if using OpenAI. MAY TAKE A FEW MINUTES TO PROCESS, DO NOT REFRESH THE WEBPAGE! Are you sure?')">
                             Compact & Sync Memories
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
-                            Database Manager
+                            Database Manager (user&pass: dwemer)
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Database." 
-                        onclick="return confirm('This will wipe the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder')">
-                            Reinitialize AI Follower Framework Server
+                        onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
+                            Factory Reset AI Follower Framework Server
                         </a>
                     </li>
                 </ul>
@@ -108,6 +108,7 @@
                     <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration WIP" target="_blank">Export Configuration</a></li>
                     <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration WIP" target="_blank">Import Configuration</a></li>
                     <li><a class="dropdown-item" href="index.php?table=openai_token_count">OpenAI Token Pricing</a></li>
+                    <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0' target="_blank">AI/LLM Supported Models List</a></li>
                 </ul>
             </li>
 
@@ -139,59 +140,77 @@
         </ul>
     </div>
 </nav>
-<div style="width: 50%; display: inline-block;">
-<form action='set_profile.php' method="POST" enctype="multipart/form-data" id="formprofile" onsubmit='document.getElementById("shorcutholder").value=getAnchor()'>
-<select name='profileSelector' style="min-width:250px" onchange='document.getElementById("shorcutholder").value=getAnchor();document.getElementById("formprofile").submit();'>
 
-<?php
+<div style="display: flex;    flex-direction: row;    flex-wrap: nowrap;    align-content: center;    justify-content: flex-start;    align-items: stretch;">
+    <div style="max-width: 30%; display: inline-block;border:1px solid black;height:40px;padding-right:10px">
+    <form action='set_profile.php' method="POST" enctype="multipart/form-data" id="formprofile" onsubmit='document.getElementById("shorcutholder").value=getAnchor()'>
+    <select name='profileSelector' style="min-width:250px" onchange='document.getElementById("shorcutholder").value=getAnchor();document.getElementById("formprofile").submit();'>
 
-if (!isset($_SESSION["OPTION_TO_SHOW"])) {
-    if (!isset($_COOKIE["OPTION_TO_SHOW"]))
-        $_SESSION["OPTION_TO_SHOW"]="basic";
-    else
+    <?php
+
+    if (!isset($_SESSION["OPTION_TO_SHOW"])) {
+        if (!isset($_COOKIE["OPTION_TO_SHOW"]))
+            $_SESSION["OPTION_TO_SHOW"]="basic";
+        else
+            if (isset($_COOKIE["OPTION_TO_SHOW"]))
+                $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
+    } else {
         if (isset($_COOKIE["OPTION_TO_SHOW"]))
-            $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
-} else {
-    if (isset($_COOKIE["OPTION_TO_SHOW"]))
-            $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
-}
+                $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
+    }
 
- // Character Map file
-if (file_exists(__DIR__ . "/../../conf/character_map.json"))
-    $characterMap=json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"),true);
+    // Character Map file
+    if (file_exists(__DIR__ . "/../../conf/character_map.json"))
+        $characterMap=json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"),true);
 
-foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
-    $isSelected=($_SESSION["PROFILE"]==$lProfile)?"selected":"";
-    
-    $pattern = "/conf_([a-fA-F0-9]+)\.php/";
-    if (preg_match($pattern, $lProfile, $matches)) {
-        $hash = $matches[1];
-        if (isset($characterMap["$hash"])) {
-            echo "<option value='$lProfile' $isSelected >* {$characterMap["$hash"]}</option>";
-            $LOCAL_CHAR_NAME=$characterMap["$hash"];
+    foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
+        $isSelected=($_SESSION["PROFILE"]==$lProfile)?"selected":"";
+        
+        $pattern = "/conf_([a-fA-F0-9]+)\.php/";
+        if (preg_match($pattern, $lProfile, $matches)) {
+            $hash = $matches[1];
+            if (isset($characterMap["$hash"])) {
+                echo "<option value='$lProfile' $isSelected >* {$characterMap["$hash"]}</option>";
+                $LOCAL_CHAR_NAME=$characterMap["$hash"];
+            }
+        } else if ($lProfkey){
+            echo "<option value='$lProfile' $isSelected >$lProfkey</option>";
+            $LOCAL_CHAR_NAME=$lProfkey;
         }
-    } else if ($lProfkey){
-        echo "<option value='$lProfile' $isSelected >$lProfkey</option>";
-        $LOCAL_CHAR_NAME=$lProfkey;
+        if ($isSelected=="selected") {
+            $GLOBALS["CURRENT_PROFILE_CHAR"]=$LOCAL_CHAR_NAME;
+        }
+        
     }
-    if ($isSelected=="selected") {
-        $GLOBALS["CURRENT_PROFILE_CHAR"]=$LOCAL_CHAR_NAME;
-    }
-    
-}
 
-?>
-</select>
-<input type='hidden' value="" name="shortcut" id="shorcutholder">
-<input type='submit' value="Change Profile">
-</form>
-</div>
-<div style="display:inline-block;font-size:10px">
-    <span>Options/features to show</span>
-    <select onchange="location.href='set_option_conf.php?c='+this.value">
-    <option type="radio" value="basic" label="BASIC" title="Show only basic options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="basic")?'selected':''; ?> />
-    <option type="radio" value="pro" label="ADVANCED" title="Show advanced options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="pro")?'selected':''; ?> />
-    <option type="radio" value="wip" label="WIP" title="Show WIP options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="wip")?'selected':''; ?> />
+    ?>
     </select>
+    <input type='hidden' value="" name="shortcut" id="shorcutholder">
+    <input type='submit' value="Change Profile">
+    </form>
+    </div>
+    <div style="display:inline-block;font-size:10px;border:1px solid black;height:40px;padding-right:10px">
+        <span>Options/features to show</span>
+        <select onchange="location.href='set_option_conf.php?c='+this.value">
+        <option type="radio" value="basic" label="BASIC" title="Show only basic options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="basic")?'selected':''; ?> />
+        <option type="radio" value="pro" label="ADVANCED" title="Show advanced options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="pro")?'selected':''; ?> />
+        <option type="radio" value="wip" label="WIP" title="Show WIP options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="wip")?'selected':''; ?> />
+        </select>
+    </div>
+
+    <div style='display:inline-block;max-widh:350px;font-size:small;border:1px solid black;height:40px;padding-right:10px'>
+    <?php 
+    // Convert arrays to strings or use print_r for debugging
+    echo "AI/LLM Service: ";
+    echo is_array($CONNECTORS) ? '<strong>' . print_r($CONNECTORS, true) . '</strong>' : $CONNECTORS; 
+    echo " |   TTS Service: ";
+    echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong>' . $TTSFUNCTION . '</strong>'; 
+    echo " |   STT Service: ";
+    echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true) : '<strong>' . $STTFUNCTION . '</strong>' ; 
+    echo " |   ITT Service: ";
+    echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true) : '<strong>' .$ITTFUNCTION . '</strong>' ; 
+    ?>
 </div>
-<main style="max-height:800px;overflow-y:scroll">
+</div>
+
+<main style="max-height:760px;overflow-y:scroll">

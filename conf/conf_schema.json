@@ -1,5 +1,5 @@
 {
-  "DBDRIVER": {"userlvl":"basic","type":"select","values":["postgresql"],"description":"Primary database handler. Currently only postgresql."},
+  "DBDRIVER": {"userlvl":"basic","type":"select","values":["postgresql"],"description":"Primary database handler. Currently only postgresql.","_title":"Main Configuration"},
   "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"Your current character name."},
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH Skyrim in-game NPC name!."},
   "PROMPT_HEAD": {"userlvl":"basic","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
@@ -7,14 +7,14 @@
   "dynamic_profile_b1": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to fill personality data, <strong>based on last events</strong>. Make sure your connector has max_tokens to a value about 400/500","action":"action_dynamic_profile_b1.php","name":"Auto Fill","helpurl":""},
   "dynamic_profile_b2": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to fill personality data, <strong>based on last events</strong>. This is a shorter version for NPCs.  Make sure your connector has max_tokens to a value about 200/300","action":"action_dynamic_profile_b1.php?short=yes","name":"Auto Fill","helpurl":""},
   "DYNAMIC_PROFILE":{"userlvl":"wip","type":"boolean","description":"Will trigger above button from time to time, so personality will be updated by AI WIP!!!"},
-  "RECHAT_H": {"userlvl":"pro","type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves."},
+  "RECHAT_H": {"userlvl":"pro","type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves.","_title":"Advanced Configuration"},
   "RECHAT_P": {"userlvl":"pro","type":"integer","description":"Rechat probability. 0 = Always | 100 = Never"},
-  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"BORED EVENT PROBABILITY. 0 = NEVER | 1 = 50% | 2 = 75% ..."},
+  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an NPC starting a random conversation. 0 = NEVER | 1 = 50% | 2 = 75% ..."},
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. Improves short term memory. More context = more tokens used, and slower response time."},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
   "NEWQUEUE": {"userlvl":"basic","scope":"global","type":"boolean","description":"Enable for 360° audio."},
-  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for Herika's responses. Leave as 0 to disable."},
+  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to disable."},
   "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send book contents instead of book titles. This will consume more tokens, but AI could summarize any book."},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator model/tts will take care of reading books. SET THIS ON default profile to apply to all followers.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"wip","type":"boolean","description":"The Narrator will remind you the  game status when loading a game.","scope":"global"},
@@ -24,7 +24,7 @@
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service (JSON MODE)"},
   "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter","oobabooga","llamacpp","anthropic"],"description":"AI Service to use. Are used to connect with an AI service or program. Will use this connector to generate content for diary/memories","_title":"AI/LLM Service "},
   "CONNECTOR": {
-    "_title":"AI/LLM Services",
+    "_title":"AI/LLM Connectors",
     "openai": {
       "_title":"OpenAI/ChatGPT API",
       "url": {"type":"url","description":"OpenAI API endpoint"},
