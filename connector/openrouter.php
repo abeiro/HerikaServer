@@ -94,6 +94,8 @@ class connector
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
         
+        
+        
         $data["max_tokens"]+=0;
         
         $headers = array(

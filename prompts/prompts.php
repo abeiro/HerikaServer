@@ -203,6 +203,10 @@ $PROMPTS=array(
     ],
     "newgame"=>[ 
         "cue"=>["(Out of roleplay, new game ) Give welcome to {$GLOBALS["PLAYER_NAME"]}, a new game has started . $TEMPLATE_DIALOG"]
+    ],
+    "traveldone"=>[ 
+        "cue"=>["Comment about the destination reached. $TEMPLATE_DIALOG"],
+        "player_request"=>["The Narrator:  The party reaches destination"]
     ]
 );
 

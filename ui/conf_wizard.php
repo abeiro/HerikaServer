@@ -275,7 +275,14 @@ foreach ($currentConf as $pname=>$parms) {
             $checkButton="<button class='' type='button' onclick=\"callHelper('{$parms["action"]}')\">{$parms["name"]}</button>";
             echo "<p class='conf-item'>$checkButton<span>{$parms["description"]}</span></p>".PHP_EOL;
             
-        }
+        } else if ($parms["type"]=="ormodellist") {
+            $jsid=strtr($fieldName,["@"=>"_"]);
+            $checkButton="<button class='url' type='button' onclick=\"callHelperModel('choices$jsid','$jsid')\">Get Model List</button>";
+            echo "<p class='conf-item'><label for='$fieldName'>$pname</label>";
+            echo "<input list='choices$jsid' id='$jsid' name='$fieldName' value='{$parms["currentValue"]}' />$checkButton";
+            echo "<datalist id='choices$jsid'><option label=\"{$parms["currentValue"]}\" value=\"{$parms["currentValue"]}\"></datalist>";
+
+        } 
         echo "</div>";
     }
 

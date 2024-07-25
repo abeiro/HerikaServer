@@ -16,7 +16,8 @@ $ENABLED_FUNCTIONS=[
     'LeadTheWayTo',
     'TakeASeat',
     'ReadQuestJournal',
-    'SetSpeed',
+    'IncreaseWalkSpeed',
+    'DecreaseWalkSpeed',
     'GetDateTime',
     'SearchDiary',
     'SetCurrentTask',
@@ -40,7 +41,8 @@ $F_TRANSLATIONS["Relax"]="Makes {$GLOBALS["HERIKA_NAME"]} to stop current action
 $F_TRANSLATIONS["LeadTheWayTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_TRANSLATIONS["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
 $F_TRANSLATIONS["ReadQuestJournal"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly ask for a quest. Get info about current quests";
-$F_TRANSLATIONS["SetSpeed"]="Set {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
+$F_TRANSLATIONS["IncreaseWalkSpeed"]="Increase {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
+$F_TRANSLATIONS["DecreaseWalkSpeed"]="Decrease {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
 $F_TRANSLATIONS["GetDateTime"]="Get Current Date and Time";
 $F_TRANSLATIONS["SearchDiary"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to make her remember something. Search in diary index";
 $F_TRANSLATIONS["SetCurrentTask"]="Set the current plan of action or task or quest";
@@ -63,7 +65,8 @@ $F_RETURNMESSAGES["Relax"]="{$GLOBALS["HERIKA_NAME"]} takes a little rest";
 $F_RETURNMESSAGES["LeadTheWayTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_RETURNMESSAGES["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
 $F_RETURNMESSAGES["ReadQuestJournal"]="";
-$F_RETURNMESSAGES["SetSpeed"]="Set {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
+$F_RETURNMESSAGES["IncreaseWalkSpeed"]="Increase {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
+$F_RETURNMESSAGES["DecreaseWalkSpeed"]="Decrease {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
 $F_RETURNMESSAGES["GetDateTime"]="Get Current Date and Time";
 $F_RETURNMESSAGES["SearchDiary"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to make her remember something. Search in diary index";
 $F_RETURNMESSAGES["SetCurrentTask"]="Set the current plan of action or task or quest";
@@ -89,7 +92,8 @@ $F_NAMES["SheatheWeapon"]="SheatheWeapon";
 //$F_NAMES["LeadTheWayTo"]="LeadTheWayTo";
 $F_NAMES["TakeASeat"]="TakeASeat";
 $F_NAMES["ReadQuestJournal"]="ReadQuestJournal";
-$F_NAMES["SetSpeed"]="SetPace";
+$F_NAMES["IncreaseWalkSpeed"]="IncreaseWalkSpeed";
+$F_NAMES["DecreaseWalkSpeed"]="DecreaseWalkSpeed";
 $F_NAMES["GetDateTime"]="GetDateTime";
 $F_NAMES["SearchDiary"]="SearchDiary";
 $F_NAMES["SetCurrentTask"]="SetCurrentTask";
@@ -309,19 +313,35 @@ $FUNCTIONS = [
         ]
     ],
     [
-        "name" => $F_NAMES["SetSpeed"],
-        "description" => $F_TRANSLATIONS["SetSpeed"],
+        "name" => $F_NAMES["IncreaseWalkSpeed"],
+        "description" => $F_TRANSLATIONS["IncreaseWalkSpeed"],
         "parameters" => [
             "type" => "object",
             "properties" => [
                 "speed" => [
                     "type" => "string",
                     "description" => "Speed",
-                    "enum" => ["run", "fastwalk", "jog", "walk"]
+                    "enum" => ["run",  "jog"]
                 ]
 
             ],
-            "required" => ["speed"]
+            "required" => []
+        ]
+    ],
+     [
+        "name" => $F_NAMES["DecreaseWalkSpeed"],
+        "description" => $F_TRANSLATIONS["DecreaseWalkSpeed"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "speed" => [
+                    "type" => "string",
+                    "description" => "Speed",
+                    "enum" => [ "jog", "walk"]
+                ]
+
+            ],
+            "required" => []
         ]
     ],
     [
@@ -483,7 +503,8 @@ $GLOBALS["ENABLED_FUNCTIONS"]=[
     //'LeadTheWayTo',
     'TakeASeat',
     'ReadQuestJournal',
-    'SetSpeed',
+    'IncreaseWalkSpeed',
+    'DecreaseWalkSpeed',
     //'GetDateTime',
     //'SearchDiary',
     'SetCurrentTask',
