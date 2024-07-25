@@ -169,6 +169,7 @@
     if (file_exists(__DIR__ . "/../../conf/character_map.json"))
         $characterMap=json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"),true);
 
+    $OPTIONS=[];
     foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
         $isSelected=($_SESSION["PROFILE"]==$lProfile)?"selected":"";
         
@@ -176,17 +177,33 @@
         if (preg_match($pattern, $lProfile, $matches)) {
             $hash = $matches[1];
             if (isset($characterMap["$hash"])) {
-                echo "<option value='$lProfile' $isSelected >* {$characterMap["$hash"]}</option>";
+                echo 
+                $OPTIONS[]=["html"=>"<option value='$lProfile' $isSelected >{$characterMap["$hash"]}</option>","name"=>$characterMap["$hash"]];
                 $LOCAL_CHAR_NAME=$characterMap["$hash"];
             }
         } else if ($lProfkey){
-            echo "<option value='$lProfile' $isSelected >$lProfkey</option>";
+            
+            $OPTIONS[]=["html"=>"<option value='$lProfile' $isSelected >* $lProfkey</option>","name"=>$lProfkey];
             $LOCAL_CHAR_NAME=$lProfkey;
         }
         if ($isSelected=="selected") {
             $GLOBALS["CURRENT_PROFILE_CHAR"]=$LOCAL_CHAR_NAME;
         }
         
+    }
+    
+    usort($OPTIONS, function($a, $b) {
+        if ($a['name'] == 'default') {
+            return -1;
+        }
+        if ($b['name'] == 'default') {
+            return 1;
+        }
+        return strcmp($a['name'], $b['name']);
+    });
+        
+    foreach ($OPTIONS as $op) {
+        echo $op["html"];
     }
 
     ?>

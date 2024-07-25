@@ -178,7 +178,11 @@ function __jpd_decode_lazy($inputString) {
         return $result;
     }
 
-    
+    $realData = json_decode(strtr($inputString,[',listener"'=>',"listener"'])."}", true);    // COMMON meta-llama/llama-3-8b-instruct erros
+    if (is_array($realData)) {
+        $result=returnObject($realData);
+        return $result;
+    }
         
     $re = '/\{.*\}$/m';
 
@@ -327,7 +331,7 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{"character": "Lydia",{"listener": "Agabur", "mood": "playful", "action": "Talk", "target": null, "message": "Well, hello there, darling.  Just getting comfortable after a long day of...saving the world.  How about you?  Anything interesting happen while I was busy being heroic?"} 
+{"character": "Svenja",listener": "Volkur", "mood": "playful", "action": "LeadTheWayTo", "target": "Whiterun", "message": "Ah, darling, I'd love to! Follow me, and I'll show you the way to Whiterun's gates. Mmm, just think of the gossip we'll gather along the way."
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);
