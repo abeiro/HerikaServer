@@ -44,6 +44,7 @@
                 console.log(json);
                 return true;
             }
+            
             function checkUrlFromServer(formFieldName) {
                 document.body.style.cursor="wait";
                 document.body.style.opacity=0.5;
@@ -90,6 +91,62 @@
                         element.scrollIntoView();
                     }
                 }
+            }
+            function callHelperModel(choicesId,valueElement) {
+               document.body.style.cursor="wait";
+               let elementValue = document.getElementById(valueElement);
+               elementValue.className="";
+               fetch("cmd/action_openrouterjson_get_models.php", {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json'
+                    },
+                    body: null
+                })
+                .then(response => {
+                    if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    //console.log('Success:', data);
+                   
+                    const dataList = document.getElementById(choicesId);
+
+                    // Clear existing options (optional)
+                    dataList.innerHTML = '';
+
+                    // Add new options to the datalist
+                    data.forEach(optionValue => {
+                        const option = document.createElement('option');
+                        option.value = optionValue.value;
+                        option.label = optionValue.label;
+                        dataList.appendChild(option);
+                    });
+                    
+                    document.body.style.cursor="";
+                    let elementValue = document.getElementById(valueElement);
+
+                    elementValue.value="";
+                    elementValue.focus();
+                    const event = new Event('input', {
+                        'bubbles': true,
+                        'cancelable': true
+                    });
+
+                    elementValue.dispatchEvent(event);
+                    elementValue.className="model-updated";
+                    const uniqueUrl = 'css/clickme.gif?t=' + new Date().getTime();
+                    elementValue.style.backgroundImage = 'url(' + uniqueUrl + ')';
+
+                })   
+                .catch(error => {
+                    console.error('There has been a problem with your fetch operation:', error);
+                    document.body.style.cursor="";
+                });
+      
+            
             }
             
              function callHelper(helper) {

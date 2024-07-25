@@ -13,7 +13,7 @@ Only perform actions and tool calling if your character would find it necessary 
 ";
 */
 
-$COMMAND_PROMPT_ENFORCE_ACTIONS="Use action to obbey {$GLOBALS["PLAYER_NAME"]}.";
+$COMMAND_PROMPT_ENFORCE_ACTIONS="Choose coherent ACTION to obbey {$GLOBALS["PLAYER_NAME"]}.";
 
 $DIALOGUE_TARGET="(Talking to {$GLOBALS["HERIKA_NAME"]})";
 $MEMORY_OFFERING="";

@@ -314,7 +314,14 @@ class connector
         }
 
        
+        if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
+            $providers=explode(",",$GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"]);
+            
+            $data["provider"]=["order"=>$providers];
 
+        }
+            
+            
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 

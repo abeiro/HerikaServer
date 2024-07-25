@@ -192,4 +192,7 @@ fieldset.visible-fieldset {
 	display:block;
 }
 
-
+input.model-updated {
+	background-image:url("clickme.gif");
+	color: black;
+}
