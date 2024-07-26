@@ -172,17 +172,40 @@ function __jpd_decode_lazy($inputString) {
         return $result;
     }
     
-    $realData = json_decode( strtr($inputString,[',listener"'=>',"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
-    if (is_array($realData)) {
-        $result=returnObject($realData);
-        return $result;
+    if (strpos($inputString,',listener"')!==false) {
+        $realData = __jpd_decode_lazy( strtr($inputString,[',listener"'=>',"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
+        if (is_array($realData)) {
+            $result=returnObject($realData);
+            return $result;
+        }
+    }
+    
+    if (strpos($inputString,',{"listener"')!==false) {
+        $realData = __jpd_decode_lazy( strtr($inputString,[',{"listener"'=>',"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
+        if (is_array($realData)) {
+            $result=returnObject($realData);
+            return $result;
+        }
+    }
+    
+    if (strpos($inputString,', {"listener"')!==false) {
+        $realData = __jpd_decode_lazy( strtr($inputString,[', {"listener"'=>',"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
+        if (is_array($realData)) {
+            $result=returnObject($realData);
+            return $result;
+        }
     }
 
-    $realData = json_decode(strtr($inputString,[',listener"'=>',"listener"'])."}", true);    // COMMON meta-llama/llama-3-8b-instruct erros
-    if (is_array($realData)) {
-        $result=returnObject($realData);
-        return $result;
+    if (strpos($inputString,',listener"')!==false) {
+
+        $realData = __jpd_decode_lazy(strtr($inputString,[',listener"'=>',"listener"'])."}", true);    // COMMON meta-llama/llama-3-8b-instruct erros
+        if (is_array($realData)) {
+            $result=returnObject($realData);
+            return $result;
+        }
     }
+    
+    
         
     $re = '/\{.*\}$/m';
 
@@ -331,7 +354,7 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{"character": "Svenja",listener": "Volkur", "mood": "playful", "action": "LeadTheWayTo", "target": "Whiterun", "message": "Ah, darling, I'd love to! Follow me, and I'll show you the way to Whiterun's gates. Mmm, just think of the gossip we'll gather along the way."
+{"character": "Jenassa", {"listener": "Volkur", "mood": "sassy", "action": "Talk", "target": "Volkur", "message": "Oh, look who's finally arrived.  I was starting to think the scenery was more interesting than the company."}
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);

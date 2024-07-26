@@ -84,7 +84,7 @@
     "openrouter": {
       "_title":"OpenRouter API",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
-      "model": {"type":"string","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
+      "model": {"type":"ormodellist","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Comma separated string of providers. Depends on model. You can check models/providers in OR marketplace","helpurl":"https://openrouter.ai/docs/provider-routing"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},

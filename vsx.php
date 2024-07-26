@@ -43,6 +43,9 @@ if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTT
   die("Error");
 }
 
+$codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
+
+
 $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
 
 $already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
@@ -52,7 +55,6 @@ if ($already) {
 }
 
 
-$codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
 
 $curl = curl_init();
 

@@ -280,7 +280,8 @@ foreach ($currentConf as $pname=>$parms) {
             $checkButton="<button class='url' type='button' onclick=\"callHelperModel('choices$jsid','$jsid')\">Get Model List</button>";
             echo "<p class='conf-item'><label for='$fieldName'>$pname</label>";
             echo "<input list='choices$jsid' id='$jsid' name='$fieldName' value='{$parms["currentValue"]}' />$checkButton";
-            echo "<datalist id='choices$jsid'><option label=\"{$parms["currentValue"]}\" value=\"{$parms["currentValue"]}\"></datalist>";
+            echo "<datalist id='choices$jsid'><option label=\"{$parms["currentValue"]}\" value=\"{$parms["currentValue"]}\"></datalist><span>{$parms["description"]}</span>
+            </p>".PHP_EOL;
 
         } 
         echo "</div>";
