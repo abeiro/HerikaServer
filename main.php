@@ -1,6 +1,6 @@
 <?php
 
-
+//die("Volkur|command|TravelTo@Ivarstead");
 /* Definitions and main includes */
 error_reporting(E_ALL);
 
@@ -110,12 +110,16 @@ $gameRequest = explode("|", $receivedData);
 
 
 // Lock to avoid TTS hangs
-if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")) {
+if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     while (sem_acquire($semaphore,true)!=true)  {
         usleep(1000);
     }
+} 
+
+if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
+    sleep(1);   // Give time to populate data
 }
 
 
@@ -176,7 +180,7 @@ if ($gameRequest[0]=="diary") {
 
 
 // Exit if only a event info log.
-if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel"])) {
+if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer"])) {
     logEvent($gameRequest);
     die();
 }
@@ -206,6 +210,7 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
+
 if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
     $FUNCTIONS_ARE_ENABLED=false;
 }
@@ -229,7 +234,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     
     
     if (sizeof($rechatHistory)>1) {
-        // Lets make rechat wait a bit
+        // Lets make rechat wait a bit, so events while NPCs are speaking get into context
         sem_release($semaphore);
         error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         sleep(1);

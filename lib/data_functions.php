@@ -93,7 +93,7 @@ function DataLastInfoFor($actor, $lastNelements = -2)
     global $db;
     $lastDialogFull = array();
     $results = $db->fetchAll("select  case when type like 'info%' then 'The Narrator:' else '' end||a.data  as data  FROM  eventlog a 
-    WHERE data like '%$actor%' and type in ('infoloc','infonpc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
+    WHERE data like '%$actor%' and type in ('infoloc','infonpc','location')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
     $lastData = "";
     foreach ($results as $row) {
         if ($lastData != md5($row["data"])) {
@@ -396,16 +396,24 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
         }
 
-
-        if ($row["type"]=="logaction") {
+        // This is used for compacting.
+        
+        if (($row["type"]=="logaction") && (strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}") !== false))  {
             $speaker = "assistant";
+            
+        } else if ($row["type"]=="vision") {
+            $speaker = "user";
+            
         } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false)) {
             $speaker = "assistant";
+            
         } 
          elseif ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") !== false)) {
             $speaker = "player";
+            
         } else {
             $speaker = "user";
+            
         }
 
 
@@ -618,7 +626,7 @@ function DataGetCurrentTask()
     global $db;
     $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission order by gamets desc");
     if (!$results) {
-        return "";
+        $results=[];
     }
 
     $data = "";
@@ -638,10 +646,12 @@ function DataGetCurrentTask()
 
     $results = $db->fetchAll("SElECT  distinct name,briefing as description,gamets FROM quests order by gamets desc");
     if (!$results) {
+        error_log("No quests ".__FILE__);
         return $data;
     }
     
     if (sizeof($results)>2) {
+        error_log("Too much quests ".__FILE__);
         return $data;
     }
 

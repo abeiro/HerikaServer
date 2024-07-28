@@ -5,13 +5,18 @@ $MUST_END=false;
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
 if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about this)
-
+    $now=time();
     $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
-    $db->delete("quests", "1=1");
+    $db->delete("eventlog", "localts>$now ");
+    //$db->delete("quests", "1=1");
     $db->delete("speech", "gamets>{$gameRequest[2]}  ");
+    $db->delete("speech", "localts>$now ");
     $db->delete("currentmission", "gamets>{$gameRequest[2]}  ");
+    $db->delete("currentmission", "localts>$now   ");
     $db->delete("diarylog", "gamets>{$gameRequest[2]}  ");
+    $db->delete("diarylog", "localts>$now ");
     $db->delete("books", "gamets>{$gameRequest[2]}  ");
+    $db->delete("books", "localts>$now ");
 
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
         $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");
@@ -21,6 +26,68 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     }
     $db->delete("memory_summary", "gamets_truncated>{$gameRequest[2]}  ");
     $db->delete("memory", "gamets>{$gameRequest[2]}  ");
+
+    //$db->delete("diarylogv2", "true");
+    //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
+    //die(print_r($gameRequest,true));
+    $db->update("responselog", "sent=0", "sent=1 and (action='AASPGDialogueHerika2Branch1Topic')");
+    $db->insert(
+        'eventlog',
+        array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'type' => $gameRequest[0],
+            'data' => $gameRequest[3],
+            'sess' => 'pending',
+            'localts' => time()
+        )
+    );
+
+    // Delete TTS(STT cache
+    $directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache";
+
+    touch(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache".DIRECTORY_SEPARATOR.".placeholder");
+    $sixHoursAgo = time() - (6 * 60 * 60);
+
+    $handle = opendir($directory);
+    if ($handle) {
+        while (false !== ($file = readdir($handle))) {
+            $filePath = $directory . DIRECTORY_SEPARATOR . $file;
+
+            if (is_file($filePath)) {
+                if (strpos($filePath, ".placeholder")!==false) {
+                    continue;
+                }
+                $fileMTime = filemtime($filePath);
+                if ($fileMTime < $sixHoursAgo) {
+                    @unlink($filePath);
+                }
+            }
+        }
+        closedir($handle);
+    }
+    
+
+    $MUST_END=true;
+
+
+} if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about this)
+    $now=time();
+    $db->delete("eventlog", " 1=1");
+    $db->delete("quests", " 1=1");
+    $db->delete("speech", " 1=1 ");
+    $db->delete("currentmission", " 1=1 ");
+    $db->delete("diarylog", " 1=1 ");
+    $db->delete("books", " 1=1 ");
+
+    if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
+        $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");
+        while ($memoryRow = $db->fetchArray($results)) {
+            deleteElement($memoryRow["uid"]);
+        }
+    }
+    $db->delete("memory_summary", " 1=1 ");
+    $db->delete("memory", " 1=1 ");
 
     //$db->delete("diarylogv2", "true");
     //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
@@ -105,7 +172,24 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 
 
 
-} elseif ($gameRequest[0] == "_questreset") {
+} elseif ($gameRequest[0] == "_uquest") {
+    error_reporting(E_ALL);
+
+    $questParsedData = explode("@",$gameRequest[3]);
+    print_r($questParsedData);
+    if (!empty($questParsedData[0])) {
+        $data=array(
+                'briefing' => $questParsedData[2]
+        );
+        
+        $db->updateRow('quests',$data," id_quest='{$questParsedData[0]}' ");
+
+    }
+    $MUST_END=true;
+
+
+
+}  elseif ($gameRequest[0] == "_questreset") {
     error_reporting(E_ALL);
     $db->delete("quests", "1=1");
     $MUST_END=true;
@@ -168,7 +252,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         array(
             'ts' => $gameRequest[1],
             'gamets' => $gameRequest[2],
-            'content' => $gameRequest[3],
+            'content' => strip_tags($gameRequest[3]),
             'sess' => 'pending',
             'localts' => time()
         )
@@ -356,7 +440,11 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         $lastPlace="";
         $lastListener="";
         foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"],50),true) as $element) {
+          if ($element["listener"]=="The Narrator") {
+                continue;
+          }
           if ($lastListener!=$element["listener"]) {
+            
             $listener=" (talking to {$element["listener"]})";
             $lastListener=$element["listener"];
           }
@@ -364,7 +452,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
             $listener="";
       
           if ($lastPlace!=$element["location"]){
-            $place=" (at  to {$element["location"]})";
+            $place=" (at {$element["location"]})";
             $lastPlace=$element["location"];
           }
           else
@@ -381,6 +469,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 Mandatory Format:
 
 * Personality,(concise description, 100 words).
+* Bio: (birthplace, gender, race $SHORTER).
 * Speech style (use keywords, short description).
 * Relation with {$GLOBALS["PLAYER_NAME"]} (use keywords, short description).
 * Likes (use keywords, short description).
@@ -445,12 +534,15 @@ Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.", ];
                 unset($file_lines[$i]);
             }
         
+            
             file_put_contents($newFile, implode('', $file_lines));
             file_put_contents($newFile, PHP_EOL.'$HERIKA_PERS=\''.addslashes($responseParsed["HERIKA_PERS"]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
             
         }
     
+        //print_r($contextData);
+        //print_r($responseParsed["HERIKA_PERS"]);
         $MUST_END=true;
     
     }

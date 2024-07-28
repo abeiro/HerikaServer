@@ -172,6 +172,15 @@ function __jpd_decode_lazy($inputString) {
         return $result;
     }
     
+    if (strpos($inputString,'"msg"')!==false) {
+        $realData = __jpd_decode_lazy( strtr($inputString,['"msg"'=>'"message"']), true);    // COMMON GEMMA2 ERRORS
+        if (is_array($realData)) {
+            $result=returnObject($realData);
+            return $result;
+        }
+    }
+    
+    
     if (strpos($inputString,',listener"')!==false) {
         $realData = __jpd_decode_lazy( strtr($inputString,[',listener"'=>',"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
         if (is_array($realData)) {
@@ -182,6 +191,14 @@ function __jpd_decode_lazy($inputString) {
     
     if (strpos($inputString,',{"listener"')!==false) {
         $realData = __jpd_decode_lazy( strtr($inputString,[',{"listener"'=>',"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
+        if (is_array($realData)) {
+            $result=returnObject($realData);
+            return $result;
+        }
+    }
+    
+    if (strpos($inputString,'{"listener"')!==false) {
+        $realData = __jpd_decode_lazy( strtr($inputString,['{"listener"'=>'"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
         if (is_array($realData)) {
             $result=returnObject($realData);
             return $result;
@@ -354,7 +371,8 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{"character": "Jenassa", {"listener": "Volkur", "mood": "sassy", "action": "Talk", "target": "Volkur", "message": "Oh, look who's finally arrived.  I was starting to think the scenery was more interesting than the company."}
+{"character": "Svenja",         {"listener": "Volkur",  "mood": "amused",       "action": "Talk",       "target": "",   "message": "Buenos Dias, indeed. I didn't know you spoke such... refined languages."}
+
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);
