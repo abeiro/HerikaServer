@@ -830,6 +830,22 @@ function DataGetLastReadedBook() {
     
 }
 
+function DataGetCurrentPartyConf() {
+    global $db;
+
+    $results = $db->fetchAll("select value from conf_opts where id='CurrentParty'");
+    
+    $guys=explode(",",$results[0]["value"]);
+    $finalParty=[];
+    foreach ($guys as $guy) {
+        if (!empty($guy))
+            $finalParty[$guy]=$guy;
+        
+    }
+    
+    return $finalParty;
+    
+}
 
 function GetAnimationHex($mood)
 {

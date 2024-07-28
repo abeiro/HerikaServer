@@ -431,6 +431,11 @@ function returnLines($lines,$writeOutput=true)
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
                 }
                 
+                $listenerFix=explode("and",$GLOBALS["SCRIPTLINE_LISTENER"]);
+                if (is_array($listenerFix) && (sizeof($listenerFix)>1)) {
+                    $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix;
+                }
+                
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
                 $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
                 file_put_contents(__DIR__."/../log/ouput_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
