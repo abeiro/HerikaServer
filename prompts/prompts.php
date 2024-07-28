@@ -195,14 +195,15 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG"]
     ],
     "im_alive"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} talks about 'feeling more real'.Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"],
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} talks about she/he is 'feeling more real'.Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"],
         "player_request"=>["The Narrator:  {$GLOBALS["HERIKA_NAME"]} feels a sudden shock...and feels 'more real'"],
     ],
     "playerinfo"=>[ 
         "cue"=>["(Out of roleplay, game has been loaded) Tell {$GLOBALS["PLAYER_NAME"]} a short summary about last events, and then remind {$GLOBALS["PLAYER_NAME"]} the current task/quest/plan . $TEMPLATE_DIALOG"]
     ],
     "newgame"=>[ 
-        "cue"=>["(Out of roleplay, new game ) Give welcome to {$GLOBALS["PLAYER_NAME"]}, a new game has started . $TEMPLATE_DIALOG"]
+        "cue"=>["(Out of roleplay, new game ) Give welcome to {$GLOBALS["PLAYER_NAME"]}, a new game has started. Remind quests. $TEMPLATE_DIALOG"],
+        "extra"=>["dontuse"=>true] 
     ],
     "traveldone"=>[ 
         "cue"=>["Comment about the destination reached. $TEMPLATE_DIALOG"],

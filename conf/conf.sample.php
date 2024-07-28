@@ -5,8 +5,8 @@ $DBDRIVER="postgresql";
 $PLAYER_NAME="Prisoner";
 $HERIKA_NAME="The Narrator";
 
-$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. I'm Prisoner.";
-$HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. You refer to yourself as 'The Narrator'. Only #PLAYER_NAME# can hear you.";
+$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. I'm #PLAYER_NAME#.";
+$HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. You refer to yourself as 'The Narrator'. Only #PLAYER_NAME# can hear you. Your goal is to comment on #PLAYER_NAME#'s playthrough, and occasionally, give some hints. NO SPOILERS. Talk about quests and last events.";
 
 $BOOK_EVENT_ALWAYS_NARRATOR=false;
 $BOOK_EVENT_FULL=false;

@@ -91,7 +91,27 @@ class sql
     {
         return pg_fetch_array($res);
     }
-    
+ 
+    public function updateRow($table, $data, $where)
+    {
+        $setClauses = [];
+        $params = [];
+        $i = 0;
+
+        foreach ($data as $column => $value) {
+            $setClauses[] = "$column = $" . (++$i);
+            $params[] = $value;
+        }
+
+        $set = implode(', ', $setClauses);
+
+        $query = "UPDATE $table SET $set WHERE $where";
+        
+        $result = pg_query_params(self::$link, $query, $params);
+        if (!$result) {
+            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+        }
+    }
 }
 
 ?>

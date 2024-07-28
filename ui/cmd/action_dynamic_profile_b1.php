@@ -60,7 +60,7 @@ if ($method === "POST") {
             $listener="";
       
           if ($lastPlace!=$element["location"]){
-            $place=" (at  to {$element["location"]})";
+            $place=" (at {$element["location"]})";
             $lastPlace=$element["location"];
           }
           else
@@ -88,6 +88,7 @@ if ($method === "POST") {
 Mandatory Format:
 
 * Personality,($REMINDER description, $SHORT).
+* Bio: (birthplace, gender, race $SHORTER).
 * Speech style ($SHORTER).
 * Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORTER).
 * Likes ($SHORTER).
