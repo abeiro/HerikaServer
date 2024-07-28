@@ -179,7 +179,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     print_r($questParsedData);
     if (!empty($questParsedData[0])) {
         $data=array(
-                'briefing' => $questParsedData[2]
+                'briefing' => $questParsedData[2],
+                'data' => $questParsedData[2]
         );
         
         $db->updateRow('quests',$data," id_quest='{$questParsedData[0]}' ");

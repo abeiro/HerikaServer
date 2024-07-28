@@ -110,7 +110,7 @@ $gameRequest = explode("|", $receivedData);
 
 
 // Lock to avoid TTS hangs
-if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")) {
+if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setconf")) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     while (sem_acquire($semaphore,true)!=true)  {
@@ -215,6 +215,11 @@ if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
+if (in_array($GLOBALS["HERIKA_NAME"],DataGetCurrentPartyConf())) {
+    $GLOBALS["IS_NPC"]=false;
+} else
+    $GLOBALS["IS_NPC"]=true;
+
 // RECHAT PRE MANAGMENT
 if (in_array($gameRequest[0],["rechat"]) ) {
     //die();
@@ -308,7 +313,10 @@ if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
 $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 
 // Historic context (last dialogues, events,...)
-$contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1,$sqlfilter);
+if (!$GLOBALS["IS_NPC"])
+    $contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1,$sqlfilter);
+else
+    $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
 
 
 
@@ -317,7 +325,8 @@ $contextDataWorld = DataLastInfoFor("", -2);
 
 // Add current motto to COMMAND_PROMPT
 if ($gameRequest[0] != "diary")
-    $GLOBALS["COMMAND_PROMPT"].=DataGetCurrentTask();
+    if ($GLOBALS["IS_NPC"])
+        $GLOBALS["COMMAND_PROMPT"].=DataGetCurrentTask();
 
 // Offer memory in CONTEXT 
 /*
