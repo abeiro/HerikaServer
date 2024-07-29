@@ -223,9 +223,22 @@
 
     <div style='display:inline-block;max-widh:350px;font-size:small;border:1px solid black;height:40px;padding-right:10px'>
     <?php 
+
+    $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."../";
+    require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
+    require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+
+    if (isset($_SESSION["PROFILE"])) {
+        require_once($_SESSION["PROFILE"]);
+    }
+
+    $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
+
+    $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
     echo "AI/LLM Service: ";
-    echo is_array($CONNECTORS) ? '<strong>' . print_r($CONNECTORS, true) . '</strong>' : $CONNECTORS; 
+    echo is_array($CONNECTORS) ? '<strong>' . implode(",",$CONNECTORS) . "/ current ($currentModel)</strong>" : $CONNECTORS; 
+    echo "<a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'>toogle</a><br/>";
     echo " |   TTS Service: ";
     echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong>' . $TTSFUNCTION . '</strong>'; 
     echo " |   STT Service: ";

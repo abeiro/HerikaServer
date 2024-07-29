@@ -276,7 +276,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "togglemodel") {
 
     $newModel=DMtoggleModel();
-    echo "#HERIKA_NPC1#|command|ToggleModel@$newModel\r\n";
+    echo "{$GLOBALS["HERIKA_NAME"]}|command|ToggleModel@$newModel\r\n";
     while(@ob_end_flush());
 
     $db->insert(
@@ -472,7 +472,7 @@ Mandatory Format:
 * Personality,(concise description, 100 words).
 * Bio: (birthplace, gender, race $SHORTER).
 * Speech style (use keywords, short description).
-* Relation with {$GLOBALS["PLAYER_NAME"]} (use keywords, short description).
+* Relation with {$GLOBALS["PLAYER_NAME"]} (100 words).
 * Likes (use keywords, short description).
 * Fears( use keywords, short description).
 * Dislikes (use keywords, short description).

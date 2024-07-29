@@ -137,7 +137,6 @@ if (isset($_GET["profile"])) {
         // error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
     }
     
-    $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
     $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
     
 } else {
@@ -145,7 +144,8 @@ if (isset($_GET["profile"])) {
     $GLOBALS["USING_DEFAULT_PROFILE"]=true;
 }
 
-
+$GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
+$GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 
 
 // End of profile selection
@@ -313,7 +313,7 @@ if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
 $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 
 // Historic context (last dialogues, events,...)
-if (!$GLOBALS["IS_NPC"])
+if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator"))
     $contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1,$sqlfilter);
 else
     $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
@@ -325,8 +325,13 @@ $contextDataWorld = DataLastInfoFor("", -2);
 
 // Add current motto to COMMAND_PROMPT
 if ($gameRequest[0] != "diary")
-    if ($GLOBALS["IS_NPC"])
-        $GLOBALS["COMMAND_PROMPT"].=DataGetCurrentTask();
+    if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator")) {
+        $task=DataGetCurrentTask();
+        if (empty($task)) {
+            $task="No active quests right now.";
+        }
+        $GLOBALS["COMMAND_PROMPT"].=$task;
+    }
 
 // Offer memory in CONTEXT 
 /*
