@@ -189,11 +189,15 @@ class connector
                             $pb["system"].=$element["content"]."\n";
                             $dialogueTarget=extractDialogueTarget($element["content"]);
                             // Trying to provide examples
-                            $contextData[$n]=[
-                                    "role"=>"assistant",
-                                    "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
-                                    
-                                ];
+                            if (false) {
+                                                                
+                            } else {
+                                $contextData[$n]=[
+                                        "role"=>"assistant",
+                                        "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
+                                        
+                                    ];
+                            }
                         }
                     }
                     
@@ -418,7 +422,10 @@ class connector
                         $mangledBuffer = str_replace($this->_extractedbuffer, "", $finalData["message"]);
                         $this->_extractedbuffer=$finalData["message"];
                         if (isset($finalData["listener"])) {
-                            $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];
+                            if (($finalData["action"]=="Talk")&&(!empty($finalData["target"])))
+                                $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["target"];
+                            else
+                                $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];
                         }
                         
                         if (isset($finalData["lang"])) {

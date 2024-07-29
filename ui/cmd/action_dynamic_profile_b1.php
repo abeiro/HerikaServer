@@ -90,7 +90,7 @@ Mandatory Format:
 * Personality,($REMINDER description, $SHORT).
 * Bio: (birthplace, gender, race $SHORTER).
 * Speech style ($SHORTER).
-* Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORTER).
+* Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORT).
 * Likes ($SHORTER).
 * Fears ($SHORTER).
 * Dislikes ($SHORTER).

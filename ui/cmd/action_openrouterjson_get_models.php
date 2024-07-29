@@ -38,16 +38,19 @@ if ($method === 'POST') {
       // Extract the required properties
       $id = $model['id'];
       foreach ($model['pricing'] as $k=>$v) {
-        $model['pricing'][$k]=number_format($v*1000000,2).'$';
+        if ($v<0) {
+          $model['pricing'][$k]='free';
+        } else 
+          $model['pricing'][$k]=number_format($v*1000000,2).'$';
       }
       
       unset($model['pricing']['image']);
       unset($model['pricing']['request']);
       $pricing = json_encode($model['pricing']);
-      $context_length = $model['context_length']/1024;
+      $context_length = number_format($model['context_length']/1024,0);
     
       // Create the value string
-      $value = "$pricing, context_length: {$context_length}K";
+      $value = "$pricing, ctx_lgth:{$context_length}K / ".($model['top_provider']['is_moderated']?"moderated":"");
 
       // Add the key-value pair to the result array
       $result[] = ["value"=>"$id","label"=>$value];

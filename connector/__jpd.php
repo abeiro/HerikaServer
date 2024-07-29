@@ -371,7 +371,7 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{"character": "Svenja",         {"listener": "Volkur",  "mood": "amused",       "action": "Talk",       "target": "",   "message": "Buenos Dias, indeed. I didn't know you spoke such... refined languages."}
+{"character": "Svenja", "listener": "Volkur", "mood": 'down-to-earth', "action": "InspectSurroundings", "target": "", "message": "Looks like we're in the midst of final preparations. I'm checking our surroundings for any potential threats - just in case."}
 
 EOIN;
 

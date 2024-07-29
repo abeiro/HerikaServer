@@ -24,6 +24,8 @@ $url = 'conf_editor.php';
 $rootPath=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 $configFilepath =$rootPath."conf".DIRECTORY_SEPARATOR;
 
+require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
+
 require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.sample.php");	// Should contain defaults
 if (file_exists($rootPath."conf".DIRECTORY_SEPARATOR."conf.php"))
     require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.php");	// Should contain current ones
@@ -279,7 +281,7 @@ foreach ($currentConf as $pname=>$parms) {
             $jsid=strtr($fieldName,["@"=>"_"]);
             $checkButton="<button class='url' type='button' onclick=\"callHelperModel('choices$jsid','$jsid')\">Get Model List</button>";
             echo "<p class='conf-item'><label for='$fieldName'>$pname</label>";
-            echo "<input list='choices$jsid' id='$jsid' name='$fieldName' value='{$parms["currentValue"]}' />$checkButton";
+            echo "<input list='choices$jsid' style='width:300px' id='$jsid' name='$fieldName' value='{$parms["currentValue"]}' />$checkButton";
             echo "<datalist id='choices$jsid'><option label=\"{$parms["currentValue"]}\" value=\"{$parms["currentValue"]}\"></datalist><span>{$parms["description"]}</span>
             </p>".PHP_EOL;
 
