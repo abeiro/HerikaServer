@@ -92,6 +92,8 @@ class connector
 
         }
 
+        $data["transforms"]=[];
+
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
         
         

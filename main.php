@@ -549,7 +549,7 @@ if ($connectionHandler->primary_handler === false) {
         
         // ACTION POST-FILTER
         
-        if (true) {
+        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             
             foreach ($actions as $n=>$action) {
                 $actionParts=explode("|",$action);

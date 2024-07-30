@@ -37,7 +37,7 @@ $F_TRANSLATIONS["Attack"]="Attacks actor, npc or being.";
 $F_TRANSLATIONS["Follow"]="Moves to and follow a NPC, an actor or being";
 $F_TRANSLATIONS["CheckInventory"]="Search in {$GLOBALS["HERIKA_NAME"]}\'s inventory, backpack or pocket. List inventory";
 $F_TRANSLATIONS["SheatheWeapon"]="Sheates current weapon";
-$F_TRANSLATIONS["Relax"]="Makes {$GLOBALS["HERIKA_NAME"]} to stop current action and relax herself";
+$F_TRANSLATIONS["Relax"]="Stop questing. Relax and rest.";
 $F_TRANSLATIONS["LeadTheWayTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_TRANSLATIONS["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
 $F_TRANSLATIONS["ReadQuestJournal"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly ask for a quest. Get info about current quests";
@@ -61,7 +61,7 @@ $F_RETURNMESSAGES["Attack"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES["Follow"]="Moves to and follow a NPC, an actor or being";
 $F_RETURNMESSAGES["CheckInventory"]="{$GLOBALS["HERIKA_NAME"]}'s INVENTORY:#RESULT#";
 $F_RETURNMESSAGES["SheatheWeapon"]="Sheates current weapon";
-$F_RETURNMESSAGES["Relax"]="{$GLOBALS["HERIKA_NAME"]} takes a little rest";
+$F_RETURNMESSAGES["Relax"]="{$GLOBALS["HERIKA_NAME"]} is relaxed. Time to enjoy live.";
 $F_RETURNMESSAGES["LeadTheWayTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_RETURNMESSAGES["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
 $F_RETURNMESSAGES["ReadQuestJournal"]="";
@@ -240,7 +240,7 @@ $FUNCTIONS = [
             "required" => []
         ]
     ],
-    /*[
+    [
         "name" => $F_NAMES["Relax"],
         "description" => $F_TRANSLATIONS["Relax"],
         "parameters" => [
@@ -253,7 +253,7 @@ $FUNCTIONS = [
             ],
             "required" => []
         ]
-    ],*/
+    ],
     /*[
         "name" => $F_NAMES["LeadTheWayTo"],
         "description" => $F_TRANSLATIONS["LeadTheWayTo"],
@@ -499,7 +499,7 @@ $GLOBALS["ENABLED_FUNCTIONS"]=[
     //'Follow',
     'CheckInventory',
     //'SheatheWeapon',
-    //'Relax',
+    'Relax',
     //'LeadTheWayTo',
     'TakeASeat',
     'ReadQuestJournal',

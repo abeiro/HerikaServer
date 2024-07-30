@@ -56,21 +56,37 @@ class connector
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
         
+        if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
+            $contextData[]= [
+                'role' => 'user', 
+                'content' => "Use this JSON object to give your answer: ".json_encode([
+                    "character"=>$GLOBALS["HERIKA_NAME"],
+                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                    "mood"=>implode("|",$moods),
+                    "action"=>'a valid action, (refer to available actions list) or None',
+                    "target"=>"action's target",
+                    "lang"=>"en|es",
+                    "message"=>'lines of dialogue',
+                    
+                ])
+            ];
+        } else {
+            $contextData[]= [
+                'role' => 'user', 
+                'content' => "Use this JSON object to give your answer: ".json_encode([
+                    "character"=>$GLOBALS["HERIKA_NAME"],
+                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                    "mood"=>implode("|",$moods),
+                    "action"=>'a valid action, (refer to available actions list) or None',
+                    "target"=>"action's target",
+                    "message"=>'lines of dialogue',
+                    
+                ])
+            ];
+        }
         
-        $contextData[]= [
-            'role' => 'user', 
-            'content' => "Use this JSON object to give your answer: ".json_encode([
-                "character"=>$GLOBALS["HERIKA_NAME"],
-                "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                "mood"=>implode("|",$moods),
-                "action"=>'a valid action, (refer to available actions list) or None',
-                "target"=>"action's target",
-                "lang"=>"en|es",
-                "message"=>'lines of dialogue',
-                
-            ])
-        ];
-        
+
+
         
          if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
