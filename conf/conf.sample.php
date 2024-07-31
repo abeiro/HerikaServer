@@ -139,7 +139,7 @@ $CONNECTOR["openaijson"]["max_tokens"]='250';
 $CONNECTOR["openaijson"]["temperature"]=1;
 $CONNECTOR["openaijson"]["presence_penalty"]=1;
 $CONNECTOR["openaijson"]["API_KEY"]="";
-$CONNECTOR["openaijson"]["MAX_TOKENS_MEMORY"]="512";
+$CONNECTOR["openaijson"]["MAX_TOKENS_MEMORY"]="800";
 $CONNECTOR["openaijson"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
 $CONNECTOR["openaijson"]["top_p"]=1;        			//LLM parameter top_p
 
@@ -158,7 +158,7 @@ $CONNECTOR["koboldcpp"]["template"]='chatml';	//Prompt Format. Specified in the 
 
 
 $CONNECTOR["koboldcppjson"]["url"]='http://127.0.0.1:5001';	//KoboldCPP API Endpoint
-$CONNECTOR["koboldcppjson"]["max_tokens"]='250';	//Maximum tokens to generate
+$CONNECTOR["koboldcppjson"]["max_tokens"]='500';	//Maximum tokens to generate
 $CONNECTOR["koboldcppjson"]["temperature"]=0.9;	//LLM parameter temperature
 $CONNECTOR["koboldcppjson"]["rep_pen"]=1.12;	//LLM parameter rep_pen
 $CONNECTOR["koboldcppjson"]["top_p"]=0.9;	//LLM parameter top_p
@@ -175,7 +175,7 @@ $CONNECTOR["koboldcppjson"]["grammar"]=false;	//Enforces use of JSON grammar. Tr
 
 
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions";
-$CONNECTOR["openrouter"]["model"]="meta-llama/llama-3-8b-instruct";
+$CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct";
 $CONNECTOR["openrouter"]["max_tokens"]=500;
 $CONNECTOR["openrouter"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931";
 $CONNECTOR["openrouter"]["xtitle"]="Skyrim AI Follower Framework";
@@ -186,7 +186,7 @@ $CONNECTOR["openrouter"]["top_k"]=0;	//LLM parameter top_k
 $CONNECTOR["openrouter"]["top_p"]=1;	//LLM parameter top_p
 $CONNECTOR["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty
 $CONNECTOR["openrouter"]["frequency_penalty"]=0;	//LLM parameter frequency_penalty
-$CONNECTOR["openrouter"]["repetition_penalty"]=1.15;	//LLM parameter repetition_penalty
+$CONNECTOR["openrouter"]["repetition_penalty"]=0.9;	//LLM parameter repetition_penalty
 $CONNECTOR["openrouter"]["min_p"]=0.1;	//LLM parameter min_p
 $CONNECTOR["openrouter"]["top_a"]=0;	//LLM parameter top_a
 

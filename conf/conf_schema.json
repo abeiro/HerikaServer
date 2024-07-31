@@ -13,7 +13,7 @@
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. Improves short term memory. More context = more tokens used, and slower response time."},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
-  "NEWQUEUE": {"userlvl":"basic","scope":"constant","type":"boolean","description":"Enable for 360° audio."},
+  "NEWQUEUE": {"userlvl":"basic","scope":"constant","type":"boolean","description":"Leave as is. Can not be changed!"},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to disable."},
   "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send book contents instead of book titles. This will consume more tokens, but AI could summarize any book."},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator model/tts will take care of reading books. SET THIS ON default profile to apply to all followers.","scope":"global"},
@@ -62,7 +62,7 @@
       "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2"],"description":"Prompt Format. Specified in the HuggingFace model card"}
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     },
     "koboldcppjson": {
       "_title":"KoboldCPP API JSON",
@@ -78,7 +78,7 @@
       "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","alpacajson"],"description":"Prompt Format. Specified in the HuggingFace model card"},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","alpacajson","mistral"],"description":"Prompt Format. Specified in the HuggingFace model card"},
       "grammar": {"type":"boolean","description":"Enforces use of JSON grammar. True to enforce (generation speed loss, but json format guaranteed). if false, the generation speed will be better but will depend on the model to produce valid JSON output." }
     },
     "openrouter": {
@@ -211,13 +211,13 @@
     },
     "LOCALWHISPER": {
       "_title":"Local Whisper Speech-to-Text (Installed with DwemerDistro)",
-      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
+      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default!","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
       "FORMFIELD": {"type":"select","values":["audio_file","file"],"description":"Form field name for audio file. Sometimes needed to change to file to use another shiper implementations"}
 
     }
   },
   "ITTFUNCTION": {
-    "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition feature. The Soulgaze spell.", 
+    "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition aka Soulgaze spell. Use OpenAI for OpenRouter!", 
     "_title":"Image Recognition Service"
   },
   "ITT": {
