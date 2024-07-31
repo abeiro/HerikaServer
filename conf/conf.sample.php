@@ -63,6 +63,8 @@ $STT["AZURE"]["LANG"]="en-US";
 $STT["AZURE"]["API_KEY"]="";
 $STT["AZURE"]["profanity"]="masked";
 
+$STT["DEEPGRAM"]["API_KEY"]="";
+
 $STT["WHISPER"]["LANG"]="en";
 $STT["WHISPER"]["API_KEY"]="";
 $STT["WHISPER"]["TRANSLATE"]=false;
@@ -89,7 +91,7 @@ $ITT["openai"]["AI_VISION_PROMPT"]='Let\'s roleplay in the world of Skyrim.  Des
 $ITT["openai"]["AI_PROMPT"]='#HERIKA_NPC1# describes what is seeing using rhymes';
 
 
-$STTFUNCTION="whisper";								// Valid options are azure or whisper so far
+$STTFUNCTION="whisper";								// Valid options are azure or whisper or localwhisper or deepgram
 $TTSFUNCTION="none";								// Valid options are azure or mimic3, or 11labs so far
 $ITTFUNCTION="none";								// Valid options are azure or mimic3, or 11labs so far
 
