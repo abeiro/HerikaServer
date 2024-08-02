@@ -183,7 +183,7 @@
     }
   },
   "STTFUNCTION": {
-    "type":"select","values":["whisper","localwhisper","azure"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["whisper","localwhisper","azure", "deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service"
     },
   "STT": {
@@ -193,6 +193,10 @@
       "LANG": {"type":"string","description":"Language to detect for STT."},
       "TRANSLATE": {"type":"boolean","description":"Will try to translate to english."},
       "API_KEY": {"type":"apikey","description":"OpenAI API key. Same used for OpenAI/ChatGPT AI service.","code":"OPENAI_API_KEY"}
+    },
+    "DEEPGRAM": {
+      "_title":"Deepgram's Whisper Speech-to-Text",
+      "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"}
     },
     "AZURE": {
       "_title":"Azure Speech-to-Text",
