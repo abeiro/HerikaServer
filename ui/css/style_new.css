@@ -185,14 +185,37 @@ form.confwizard fieldset > fieldset + legend  {
 
 
 fieldset.unvisible-fieldset {
-	display:none;
+	/* display:none; */
+	/* visibility: hidden; */
+	/* opacity: 1; */
+	height: 0px;
+	overflow-y: hidden;
 }
 
 fieldset.visible-fieldset {
-	display:block;
+	/* display:block; */
+	transition: height 1s cubic-bezier(0.4, 0, 1, 1);
+	/* opacity: 1; */
+	height: 100%;
 }
 
 input.model-updated {
 	background-image:url("clickme.gif");
 	color: black;
+}
+
+form.confwizard fieldset > legend.arrow {
+	background-image: url('expand.gif');
+	background-repeat: no-repeat;
+	background-position: left;
+	padding-left: 25px;
+	background-position-y: top;
+}
+
+form.confwizard fieldset > legend.unarrow {
+	background-image: url('collapse.gif');
+	background-repeat: no-repeat;
+	background-position: left;
+	padding-left: 25px;
+	background-position-y: bottom;
 }

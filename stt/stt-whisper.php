@@ -12,7 +12,7 @@ function stt($file)
     
     $GLOBALS["db"] = new sql();
     
-    $additionalKeywords=lastKeyWords(30,["chat","chatme"]);
+    $additionalKeywords=lastKeyWords(30,["chat","chatme","DRO-VAH!"]);
     
     if ($GLOBALS["STT"]["WHISPER"]["TRANSLATE"])
         $url = "https://api.openai.com/v1/audio/translations";
@@ -39,7 +39,7 @@ function stt($file)
             ."whisper-1\r\n"
             ."--{$boundary}\r\n"
             ."Content-Disposition: form-data; name=\"prompt\"\r\n\r\n"
-            ."{$GLOBALS["HERIKA_NAME"]},Dragonborn,Whiterun,Herika,$additionalKeywords\r\n"
+            ."{$GLOBALS["HERIKA_NAME"]},Dragonborn,Whiterun,$additionalKeywords\r\n"
             ."--{$boundary}\r\n"
             ."Content-Disposition: form-data; name=\"language\"\r\n\r\n"
             ."$lang\r\n"

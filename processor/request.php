@@ -25,7 +25,13 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 		$returnFunction[3] = DataQuestJournal($returnFunction[2]); // Overwrite funrect content with info from database
 		$gameRequest[3] .= $returnFunction[3];						// Add also to $gameRequest 
 	
-		
+		if (!isset($GLOBALS["CACHE_PEOPLE"])) {
+			$GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+		} 
+    
+		if (!isset($GLOBALS["CACHE_LOCATION"])) {
+			$GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
+		}  
 		
 		// Store info.
 		$db->insert(
@@ -36,7 +42,9 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 				'type' => 'chat',
 				'data' => "The Narrator. {$GLOBALS["HERIKA_NAME"]} reads in quest journal:".prettyPrintJson($returnFunction[3]),
 				'sess' => 'pending',
-				'localts' => time()
+				'localts' => time(),
+				'people'=> $GLOBALS["CACHE_PEOPLE"],
+				'location'=>$GLOBALS["CACHE_LOCATION"]
 			)
 		);
 		
