@@ -434,6 +434,7 @@ class connector
                         
                         if (isset($finalData["mood"])) {
                             $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($finalData["mood"]);
+                            $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }
                         
                     }

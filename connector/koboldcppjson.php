@@ -358,6 +358,7 @@ class connector
                 
                 if (isset($partialResult[0]["mood"])) {
                     $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($partialResult[0]["mood"]);
+                    $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($partialResult[0]["mood"]);
                 }
                 
             }

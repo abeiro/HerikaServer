@@ -19,7 +19,11 @@ if ($STTFUNCTION=="azure") {
     require_once($enginePath."stt/stt-localwhisper.php");
     
     
+} else if ($STTFUNCTION=="deepgram") { 
+    require_once($enginePath."stt/stt-deepgram.php");
+    
 }
+
 
 if (!$argv[1]) {
 	echo "Expected result: 'Welcome to the jungle. We've got fun and games'".PHP_EOL;

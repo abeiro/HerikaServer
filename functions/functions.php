@@ -509,6 +509,8 @@ $GLOBALS["ENABLED_FUNCTIONS"]=[
     //'SearchDiary',
     'SetCurrentTask',
     'SearchMemory',
+    'ExtCmdRemoveClothes',
+    
     //'StopWalk'
 ];
 

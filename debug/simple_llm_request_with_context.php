@@ -69,7 +69,9 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 // Historic context (last dialogues, events,...)
 $sqlfilter=" and type in ('prechat','inputtext','inputtext_s','ginputtext','infonpc') ";
 
-$contextDataHistoric = DataLastDataExpandedFor("Roxie", -50,$sqlfilter);
+$sqlfilter="";
+
+$contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", -50,$sqlfilter);
 $contextDataWorld = DataLastInfoFor("", -2);
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
