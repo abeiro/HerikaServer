@@ -4,9 +4,9 @@
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH Skyrim in-game NPC name!."},
   "PROMPT_HEAD": {"userlvl":"basic","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
-  "dynamic_profile_b1": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to fill personality data, <strong>based on last events</strong>. Make sure your connector has max_tokens to a value about 400/500","action":"action_dynamic_profile_b1.php","name":"Auto Fill","helpurl":""},
-  "dynamic_profile_b2": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to fill personality data, <strong>based on last events</strong>. This is a shorter version for NPCs.  Make sure your connector has max_tokens to a value about 200/300","action":"action_dynamic_profile_b1.php?short=yes","name":"Auto Fill","helpurl":""},
-  "DYNAMIC_PROFILE":{"userlvl":"wip","type":"boolean","description":"Will trigger above button from time to time, so personality will be updated by AI WIP!!!"},
+  "dynamic_profile_b1": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to fill personality data, <strong>based on last events</strong>. Make sure your AI Service has max_tokens set to a value at 500 or higher.","action":"action_dynamic_profile_b1.php","name":"Auto Fill","helpurl":""},
+  "dynamic_profile_b2": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to fill personality data, <strong>based on last events</strong>. This is a shorter version for NPCs. Make sure your AI Service has max_tokens to a value of 300 or higher.","action":"action_dynamic_profile_b1.php?short=yes","name":"Auto Fill","helpurl":""},
+  "DYNAMIC_PROFILE":{"userlvl":"wip","type":"boolean","description":"Will trigger above button from time to time, so personality will be automatically updated by AI during gameplay."},
   "RECHAT_H": {"userlvl":"pro","type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves.","_title":"Advanced Configuration"},
   "RECHAT_P": {"userlvl":"pro","type":"integer","description":"Rechat probability. 0 = Always | 100 = Never"},
   "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an NPC starting a random conversation. 0 = NEVER | 1 = 50% | 2 = 75% ..."},
@@ -15,10 +15,10 @@
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
   "NEWQUEUE": {"userlvl":"basic","scope":"constant","type":"boolean","description":"Leave as is. Can not be changed!"},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to disable."},
-  "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send book contents instead of book titles. This will consume more tokens, but AI could summarize any book."},
+  "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send contents of book instead of only the book title to AI service. This will consume more tokens, but AI will accurately summarize any book."},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator model/tts will take care of reading books. SET THIS ON default profile to apply to all followers.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will remind you the  game status when loading a game.","scope":"global"},
-  "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"Will offer a lang field to LLM, and will try match to XTTSv2 language. "},
+  "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"Will offer a language field to LLM, and will try match to XTTSv2 language. "},
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations also to NPC"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger animations if passing animations are enabled"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service (JSON MODE)"},
@@ -73,7 +73,7 @@
       "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p"},
       "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p"},
       "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
-      "PREFILL_JSON": {"type":"boolean","description":"Will prefill JSON, which is usefull for some models, and destroy others (WIP)"},
+      "PREFILL_JSON": {"type":"boolean","description":"Will prefill JSON, which is useful for some AI models, and destroy others."},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
       "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
@@ -261,7 +261,7 @@
     "MISC": {
       "_title":"Misc features/options",
       "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
-      "QUEST_COMMENT":{"type":"boolean","description":"If enabled, it will trigger a chat event when new quest is acquired."}
+      "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest."}
     }
   }
   

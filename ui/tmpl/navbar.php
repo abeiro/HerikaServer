@@ -212,11 +212,11 @@
     </form>
     </div>
     <div style="display:inline-block;font-size:10px;border:1px solid black;height:40px;padding-right:10px">
-        <span>Options/features to show</span>
+        <span>Config Wizard Depth</span>
         <select onchange="location.href='set_option_conf.php?c='+this.value">
-        <option type="radio" value="basic" label="BASIC" title="Show only basic options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="basic")?'selected':''; ?> />
-        <option type="radio" value="pro" label="ADVANCED" title="Show advanced options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="pro")?'selected':''; ?> />
-        <option type="radio" value="wip" label="WIP" title="Show WIP options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="wip")?'selected':''; ?> />
+        <option type="radio" value="basic" label="Basic" title="Show only basic options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="basic")?'selected':''; ?> />
+        <option type="radio" value="pro" label="Advanced" title="Show advanced options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="pro")?'selected':''; ?> />
+        <option type="radio" value="wip" label="Experimental" title="Show experimental options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="wip")?'selected':''; ?> />
         </select>
     </div>
 
