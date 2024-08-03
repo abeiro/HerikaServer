@@ -1010,6 +1010,14 @@ function logEvent($dataArray)
 {
     global $db;
 
+    if (!isset($GLOBALS["CACHE_PEOPLE"])) {
+        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+    } 
+    
+    if (!isset($GLOBALS["CACHE_LOCATION"])) {
+        $GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
+    }   
+
     $db->insert(
         'eventlog',
         array(
@@ -1018,7 +1026,9 @@ function logEvent($dataArray)
             'type' => $dataArray[0],
             'data' => $dataArray[3],
             'sess' => 'pending',
-            'localts' => time()
+            'localts' => time(),
+            'people'=> $GLOBALS["CACHE_PEOPLE"],
+            'location'=>$GLOBALS["CACHE_LOCATION"]
         )
     );
 }

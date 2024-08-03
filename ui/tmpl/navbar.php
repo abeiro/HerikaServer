@@ -150,7 +150,7 @@
 <div style="display: flex;    flex-direction: row;    flex-wrap: nowrap;    align-content: center;    justify-content: flex-start;    align-items: stretch;">
     <div style="max-width: 30%; display: inline-block;border:1px solid black;height:40px;padding-right:10px">
     <form action='set_profile.php' method="POST" enctype="multipart/form-data" id="formprofile" onsubmit='document.getElementById("shorcutholder").value=getAnchor()'>
-    <select name='profileSelector' style="min-width:250px" onchange='document.getElementById("shorcutholder").value=getAnchor();document.getElementById("formprofile").submit();'>
+    <select name='profileSelector' ms-code-custom-select="select-with-search" style="min-width:250px" onchange='document.getElementById("shorcutholder").value=getAnchor();document.getElementById("formprofile").submit();'>
 
     <?php
 
@@ -177,7 +177,6 @@
         if (preg_match($pattern, $lProfile, $matches)) {
             $hash = $matches[1];
             if (isset($characterMap["$hash"])) {
-                echo 
                 $OPTIONS[]=["html"=>"<option value='$lProfile' $isSelected >{$characterMap["$hash"]}</option>","name"=>$characterMap["$hash"]];
                 $LOCAL_CHAR_NAME=$characterMap["$hash"];
             }
@@ -237,14 +236,14 @@
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
     echo "AI/LLM Service: ";
-    echo is_array($CONNECTORS) ? '<strong>' . implode(",",$CONNECTORS) . "/ current ($currentModel)</strong>" : $CONNECTORS; 
-    echo "<a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'>toogle</a><br/>";
-    echo " |   TTS Service: ";
-    echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong>' . $TTSFUNCTION . '</strong>'; 
-    echo " |   STT Service: ";
-    echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true) : '<strong>' . $STTFUNCTION . '</strong>' ; 
-    echo " |   ITT Service: ";
-    echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true) : '<strong>' .$ITTFUNCTION . '</strong>' ; 
+    echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong>/ current <strong style='color:green'>($currentModel)</strong>" : $CONNECTORS; 
+    echo " <a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'>toogle</a><br/>";
+    echo " TTS Service: ";
+    echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:green">' . $TTSFUNCTION . '</strong>'; 
+    echo " STT Service: ";
+    echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true)  : '<strong style="color:green">' . $STTFUNCTION . '</strong>' ; 
+    echo " ITT Service: ";
+    echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true)  : '<strong style="color:green">'  .$ITTFUNCTION . '</strong>' ; 
     ?>
 </div>
 </div>

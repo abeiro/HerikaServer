@@ -65,10 +65,10 @@ class connector
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
-                } else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
+                } /*else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]}(available speeds: run|fastwalk|jog|walk) ";
                     $contextData[0]["content"].="({$function["description"]})";
-                }  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
+                }*/  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search) ({$function["description"]})";
                  
                 } else
@@ -417,12 +417,12 @@ class connector
                     
                     if (is_array($finalData)&&isset($finalData["message"])) {
                         if (is_array($finalData["message"]))
-                            $finalData["message"]=current($finalData["message"]);
+                            $finalData["message"]=implode(",",$finalData["message"]);
                         
                         $mangledBuffer = str_replace($this->_extractedbuffer, "", $finalData["message"]);
                         $this->_extractedbuffer=$finalData["message"];
                         if (isset($finalData["listener"])) {
-                            if (($finalData["action"]=="Talk")&&(!empty($finalData["target"])))
+                            if (isset($finalData["action"])&&($finalData["action"]=="Talk")&&isset($finalData["target"])&&(!empty(trim($finalData["target"]))))
                                 $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["target"];
                             else
                                 $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];

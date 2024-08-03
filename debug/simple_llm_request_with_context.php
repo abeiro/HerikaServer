@@ -63,11 +63,13 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
     $request=$argv[1];
     require($enginePath.DIRECTORY_SEPARATOR."prompt.includes.php");
 
-    
+    error_log($GLOBALS["HERIKA_NAME"]);
     $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 
 // Historic context (last dialogues, events,...)
-$contextDataHistoric = DataLastDataExpandedFor("", -50);
+$sqlfilter=" and type in ('prechat','inputtext','inputtext_s','ginputtext','infonpc') ";
+
+$contextDataHistoric = DataLastDataExpandedFor("Roxie", -50,$sqlfilter);
 $contextDataWorld = DataLastInfoFor("", -2);
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);

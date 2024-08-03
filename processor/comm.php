@@ -42,7 +42,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
             'localts' => time()
         )
     );
-
+    
+    error_log("INIT PROCESSING ".(time()-$now).PHP_EOL);
     // Delete TTS(STT cache
     $directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache";
 
@@ -67,7 +68,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         closedir($handle);
     }
     
-
+    error_log("POST INIT PROCESSING ".(time()-$now).PHP_EOL);
     $MUST_END=true;
 
 
@@ -345,6 +346,48 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     
     $MUST_END=true;
     
+} elseif ($gameRequest[0] == "playerdied") {
+    
+    
+    $lastSaveHistory=$db->fetchAll("select gamets from eventlog where type='infosaved' order by ts desc limit 1 offset 0");
+    if (isset($lastSaveHistory[0]["ts"])) {
+        $lastSave=$lastSaveHistory[0]["ts"];
+        
+        $db->delete("eventlog", "gamets>$lastSave ");
+        $db->delete("speech", "gamets>$lastSave  ");
+        $db->delete("currentmission", "gamets>$lastSave  ");
+        $db->delete("diarylog", "gamets>$lastSave  ");
+        $db->delete("books", "gamets>$lastSave");
+
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
+            $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>$lastSave");
+            while ($memoryRow = $db->fetchArray($results)) {
+                deleteElement($memoryRow["uid"]);
+            }
+        }
+        $db->delete("memory_summary", "gamets_truncated>$lastSave  ");
+        $db->delete("memory", "gamets>$lastSave  ");
+
+        //$db->delete("diarylogv2", "true");
+        //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
+        //die(print_r($gameRequest,true));
+        $db->update("responselog", "sent=0", "sent=1 and (action='AASPGDialogueHerika2Branch1Topic')");
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => $gameRequest[0],
+                'data' => $gameRequest[3],
+                'sess' => 'pending',
+                'localts' => time()
+            )
+        );
+    }
+    
+    
+    $MUST_END=true;
+    
 } elseif ($gameRequest[0] == "setconf") {
     
     $vars=explode("@",$gameRequest[3]);
@@ -374,7 +417,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($gameRequest[3]);
     
-    $codename=strtr(strtolower(trim($gameRequest[3])),[" "=>"_"]);
+    $codename=strtr(strtolower(trim($gameRequest[3])),[" "=>"_","'"=>"+"]);
 
     if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") ) {
         
@@ -398,7 +441,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 
         file_put_contents($newFile, implode('', $file_lines));
         file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\''.$codename.'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        file_put_contents($newFile, '$HERIKA_NAME=\''.trim($gameRequest[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        file_put_contents($newFile, '$HERIKA_NAME=\''.addslashes(trim($gameRequest[3])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         
         if (is_array($npcTemlate[0]))
             file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
