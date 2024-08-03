@@ -95,10 +95,10 @@ class connector
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
-                } else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
+                }/* else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $contextData[0]["content"].="(run|fastwalk|jog|walk)";
-                }  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
+                }*/  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]}(target keywords to search) ({$function["description"]})";
                  
                 } else
@@ -315,6 +315,7 @@ class connector
                         
                         if (isset($finalData["mood"])) {
                             $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($finalData["mood"]);
+                            $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }
                         
                     }

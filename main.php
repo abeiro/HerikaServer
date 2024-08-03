@@ -1,6 +1,5 @@
 <?php
 
-//die("Volkur|command|TravelTo@Ivarstead");
 /* Definitions and main includes */
 error_reporting(E_ALL);
 
@@ -13,6 +12,7 @@ $GLOBALS["AVOID_TTS_CACHE"]=true;
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");

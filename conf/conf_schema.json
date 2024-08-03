@@ -192,7 +192,7 @@
     }
   },
   "STTFUNCTION": {
-    "type":"select","values":["whisper","localwhisper","azure"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service"
     },
   "STT": {
@@ -214,6 +214,11 @@
       "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default!","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
       "FORMFIELD": {"type":"select","values":["audio_file","file"],"description":"Form field name for audio file. Sometimes needed to change to file to use another shiper implementations"}
 
+    },"DEEPGRAM": {
+      "_title":"Deepgram's Whisper Speech-to-Text",
+      "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"},
+      "LANG":{"type":"select","values":["en","es"],"description":"Language"},
+      "MODEL":{"type":"select","values":["nova-2","whisper-medium","enhanced","nova","base"],"description":"Model to use"}
     }
   },
   "ITTFUNCTION": {

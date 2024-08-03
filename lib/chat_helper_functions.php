@@ -553,7 +553,82 @@ function lastNames($n, $eventypes)
     }
 }
 
-function lastKeyWords($n, $eventypes)
+function lastKeyWordsNew($n, $eventypes='')
+{
+
+    global $db;
+    
+    $m=$n+1;
+    
+    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech from speech order by gamets desc limit $m offset 0");
+    $words=[];
+    $uniqueArray=[];
+    $uppercaseWords = [];
+    foreach ($lastRecords as $record) {
+        $pattern = '/[A-Za-z\-]{4,}/';
+        $matches=[];
+        preg_match_all($pattern,  $record["speaker"]." ".$record["location"]." ".$record["companions"],$matches);
+        $uppercaseWords1 = array_merge($uppercaseWords, $matches[0]);
+
+        // Get words>4 chars starting with upercase, not in the beginning of string and not after .?
+        $pattern = '/(?<!^|[.?]\s)(\b[A-Z][a-zA-Z\-]{4,}\b)/';
+        $matches=[];
+        preg_match_all($pattern,  $record["speech"],$matches);
+        $uppercaseWords = array_merge($uppercaseWords1, $matches[0]);
+
+    }
+    foreach ($uppercaseWords as $n=>$e) {
+        if (stripos($e, $GLOBALS["PLAYER_NAME"])!==false) {
+          
+        } else if (stripos($e, $GLOBALS["HERIKA_NAME"])!==false) {
+            
+        } else {
+            if (!isset($words[$e]))
+                $words[$e]=0;
+            $words[$e]++;
+            if ( preg_match('~^\p{Lu}~u', $e) ) {
+                $words[$e]++;
+                
+            }
+
+            
+        }
+        
+    }
+
+    function startsWithUppercase($string) {
+        return preg_match('/^[A-Z]/', $string);
+    }
+
+    unset($words["Yeah"]);
+    unset($words["Wouldn"]);
+    unset($words["What"]);
+    unset($words["Well"]);
+    unset($words["Those"]);
+    unset($words["This"]);
+    unset($words["These"]);
+    unset($words["There"]);
+    unset($words["That"]);
+    unset($words["Seems"]);
+    unset($words["Shall"]);
+    unset($words["Maybe"]);
+    unset($words["Looks"]);
+    unset($words["Just"]);
+    
+    
+    foreach ($words as $n=>$e) {
+        if ($e>1)
+           if (startsWithUppercase($n))
+                $uniqueArray[]=$n;
+    }
+    $GLOBALS["DEBUG_DATA"]["textToEmbedFinalKwywords"]=implode(" ",$uniqueArray);
+    
+    rsort($uniqueArray);
+    return $uniqueArray;
+    
+}
+
+function lastKeyWords($n, $eventypes='')
 {
 
     global $db;

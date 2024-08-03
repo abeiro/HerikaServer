@@ -462,7 +462,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     $currentLocation = "";
     $writeLocation = true;
 
-    $currentSpeaker = "user";
+    $lastSpeaker = "user";
     $buffer = [];
     $timeStampBuffer = [];
 
@@ -496,17 +496,32 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
         // Always remove location. Is a mess.
         //$pattern = "/\([^)]*Context location[^)]*\)/";
-        $pattern = "/\(Context location: (.*?),(.*?)\)/";
-        $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
         
+         
+        
+        if ($rowData==="The Narrator:") // Hunt empty rows
+            continue;
+        
+        $pattern = "/\(Context location: (.*?),(.*?)\)/";
+        if ($rowData)
+            $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
+        
+        $printLocation=false;
         if ($lastlocation!=$row["location"]) {
             $lastlocation=$row["location"];
             if ($row["type"]!="location")
-                $rowData="({$row["location"]}) $rowData";
+                $printLocation=true;
             $currentLocation=$lastlocation;
         }
             
-            
+        if ($row["type"]=="logaction") {
+            $logactionData=json_decode($rowData,true);
+            if (is_array($logactionData)) {
+                if ($logactionData["character"]!=$GLOBALS["HERIKA_NAME"])
+                    continue;
+            }
+        }
+        
         // This is used for compacting.
         
         if (($row["type"]=="logaction") && (strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}") !== false))  {
@@ -515,7 +530,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         } else if ($row["type"]=="vision") {
             $speaker = "user";
             
-        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false)) {
+        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") !== false)) {
             $speaker = "assistant";
             
         } 
@@ -546,26 +561,30 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         }
         */
 
-        /*
-        if (($currentSpeaker == $speaker) && ($speaker == "assistant") && $row["type"]!="logaction") {
+     
+        
+        if (($lastSpeaker == $speaker) && ($speaker == "assistant") && $row["type"]!="logaction") {
+            $buffer[] = $rowData;
+        } if (($lastSpeaker == $speaker) && $row["type"]=="itemfound") {
             $buffer[] = $rowData;
         } else {
             if (sizeof($buffer) > 0) {
-                $lastDialogFull[] = array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
+                $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $buffer));
             }
             $buffer = [];
             $buffer[] = $rowData;
-            $currentSpeaker = $speaker;
-        }*/
+            $lastSpeaker = $speaker;
+        }
 
-        $lastDialogFull[] = array('role' => $speaker, 'content' => $rowData);
+        //$lastDialogFull[] = array('role' => $speaker, 'content' => $rowData);
         
         if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])||(true)) {
-            $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60 * 60 * 13), 0);
-            if ($hoursAgo>12) {
+            $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60 * 60 * 40), 0);
+            //if ($hoursAgo>12) {
+            if ($printLocation) {
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
-                        $timeStampBuffer[$hoursAgo]="set";
+                        //$timeStampBuffer[$hoursAgo]="set";// Disabled
                         $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: SCENARIO CHANGE, $currentLocation, timeline mark: $hoursAgo hours ago  ");
                     }
                 }
@@ -579,7 +598,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     //}
 
-    //$lastDialogFull[] = array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
+    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $buffer));
     
     // Compact Herika's lines
     foreach ($lastDialogFull as $n => $line) {
@@ -587,9 +606,9 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $pattern = "/\([^)]*Context location[^)]*\)/";
             $cleanedText = trim(preg_replace($pattern, "", $line["content"])); // Remove context location always for assistant
             // This breaks with spaces?
-            $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
-            $subst = "";
-            $cleanedText = preg_replace($re, $subst, $cleanedText);
+            //$re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
+            //$subst = "";
+            //$cleanedText = preg_replace($re, $subst, $cleanedText);
             
             
             $cleanedText = removeTalkingToOccurrences($cleanedText);
@@ -1059,13 +1078,15 @@ function DataLastKnownLocation()
 
     global $db;
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         return "";
     }
+    /*
     $re = '/Context location: ([\w\ \']*)/';
     preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
-    return $matches[1][0];
+    */
+    return $lastLoc[0]["data"];
 
 }
 
@@ -1211,6 +1232,72 @@ function DataBeingsInRange()
     return "|".$beingsFormatted."|";
 }
 
+function GetExpression($mood) {
+   $EXPRESSIONS=[
+    "DialogueAnger",    "DialogueFear",    "DialogueHappy",     "DialogueSad",
+    "DialogueSurprise", "DialoguePuzzled", "DialogueDisgusted", "MoodNeutral",
+    "MoodAnger",        "MoodFear",        "MoodHappy",        "MoodSad",
+    "MoodSurprise",    "MoodPuzzled",    "MoodDisgusted",    "CombatAnger",
+    "CombatShout"
+    ];
+    
+    if ($mood=="sarcastic") {
+        return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        
+        
+    } else if ($mood=="sassy") {
+        return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        
+        
+    } else if ($mood=="sardonic") {
+        return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        
+        
+    } else if ($mood=="irritated") {
+        return array_rand(array_flip(["DialogueAnger"]), 1);
+       
+        
+    } else if ($mood=="mocking") {
+        return array_rand(array_flip(["DialogueHappy"]), 1);
+        
+        
+    } else if ($mood=="playful") {
+        return array_rand(array_flip(["DialogueHappy"]), 1);
+            
+    } else if ($mood=="teasing") {
+        return array_rand(array_flip(["DialogueSurprise"]), 1);
+        
+        
+    } else if ($mood=="smug") {
+        return array_rand(array_flip(["DialogueAnger"]), 1);
+        
+        
+    } else if ($mood=="amused") {
+        return array_rand(array_flip(["DialogueSurprise"]), 1);
+        
+    } else if ($mood=="smirking") {
+        return array_rand(array_flip(["DialogueHappy"]), 1);
+    
+        
+    } else if ($mood=="serious") {
+        return array_rand(array_flip(["MoodNeutral"]), 1);
+    
+        
+    } else if ($mood=="firm") {
+        return array_rand(array_flip(["MoodNeutral"]), 1);
+    
+        
+    } if ($mood=="neutral") {
+        return array_rand(array_flip(["MoodNeutral"]), 1);
+        
+        
+    }
+                            
+    
+    
+    return "";
+    
+}
 
 function GetAnimationHex($mood)
 {

@@ -53,9 +53,6 @@ function stt($file)
             ."--{$boundary}\r\n"
             ."Content-Disposition: form-data; name=\"model\"\r\n\r\n"
             ."whisper-1\r\n"
-            ."--{$boundary}\r\n"
-            ."Content-Disposition: form-data; name=\"prompt\"\r\n\r\n"
-            ."{$GLOBALS["HERIKA_NAME"]},Dragonborn,Whiterun,Herika\r\n"
             ."--{$boundary}\r\n";
     }
          
