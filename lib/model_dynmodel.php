@@ -18,8 +18,9 @@ function removeAndReturnNext(&$array, $value) {
 
 function DMgetCurrentModel() {
     
+    $lprof=isset($GLOBALS["active_profile"])?$GLOBALS["active_profile"]:"";
     
-    $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$GLOBALS["active_profile"]}.json";
+    $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
     if (!file_exists($file)) {
         DMsetCurrentModel($GLOBALS["CONNECTORS"][0]);
     }
@@ -31,7 +32,11 @@ function DMgetCurrentModel() {
 }
 
 function DMsetCurrentModel($model) {
-    $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$GLOBALS["active_profile"]}.json";
+
+    $lprof=isset($GLOBALS["active_profile"])?$GLOBALS["active_profile"]:"";
+
+        
+    $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
 
     $cmj=file_put_contents($file,json_encode($model));
 

@@ -164,7 +164,8 @@ foreach ($currentConf as $pname=>$parms) {
         }
         
        
-        echo "<legend id='".md5($legend)."'>$legend</legend><fieldset title='$legend'  id='f_".md5($legend)."' class='visible-fieldset' $MAKE_NO_VISIBLE_MARK>";
+        //echo "<legend id='".md5($legend)."'>$legend</legend><fieldset title='$legend'  id='f_".md5($legend)."' class='visible-fieldset' $MAKE_NO_VISIBLE_MARK>";
+        echo "<legend id='".md5($legend)."'>$legend</legend><fieldset title='$legend'  id='f_".md5($legend)."' class='unvisible-fieldset' $MAKE_NO_VISIBLE_MARK>";
         
          if (trim($legend))
             $summary[md5($lastLegend)]["childs"][]=$legend;
@@ -210,7 +211,7 @@ foreach ($currentConf as $pname=>$parms) {
 
         } else if ($parms["type"]=="url") {
             $checkButton="<button class='url' type='button' onclick=\"checkUrlFromServer('$fieldName')\">Check</button>";
-            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input class='url' type='url' value='{$parms["currentValue"]}' name='$fieldName'/>$checkButton<span> {$parms["description"]}</span></p>".PHP_EOL;
+            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input  $FORCE_DISABLED class='url' type='url' value='{$parms["currentValue"]}' name='$fieldName'/>$checkButton<span> {$parms["description"]}</span></p>".PHP_EOL;
 
         } else if ($parms["type"]=="select") {
             $buffer="";
@@ -254,21 +255,21 @@ foreach ($currentConf as $pname=>$parms) {
     
             
         } else if ($parms["type"]=="integer") {
-            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input type='number' inputmode='numeric' step='1' value='{$parms["currentValue"]}' name='$fieldName'><span>Integer: {$parms["description"]}</span></p>".PHP_EOL;
+            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input type='number' $FORCE_DISABLED inputmode='numeric' step='1' value='{$parms["currentValue"]}' name='$fieldName'><span>Integer: {$parms["description"]}</span></p>".PHP_EOL;
 
         } else if ($parms["type"]=="number") {
-            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input type='number' inputmode='numeric' step='0.01' value='{$parms["currentValue"]}' name='$fieldName'><span>Decimal: {$parms["description"]}</span></p>".PHP_EOL;
+            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input type='number' $FORCE_DISABLED inputmode='numeric' step='0.01' value='{$parms["currentValue"]}' name='$fieldName'><span>Decimal: {$parms["description"]}</span></p>".PHP_EOL;
 
         } else if ($parms["type"]=="apikey") {
             $jsid=strtr($fieldName,["@"=>"_"]);
             $checkButton="<button class='url' type='button' onclick=\"document.getElementById('$jsid').style.filter=''\">Unhide</button>";
             echo "<p class='conf-item'><label for='$fieldName'>$pname</label>
-            <input  style='filter: blur(3px);' class='apikey' type='string'  id='$jsid' value='{$parms["currentValue"]}' name='$fieldName'>$checkButton<span>{$parms["description"]}</span>
+            <input  style='filter: blur(3px);' $FORCE_DISABLED class='apikey' type='string'  id='$jsid' value='{$parms["currentValue"]}' name='$fieldName'>$checkButton<span>{$parms["description"]}</span>
             </p>".PHP_EOL;
 
         } else if ($parms["type"]=="file") {
             $availableFiles=getFilesByExtension($parms["path"],$parms["filter"]);
-            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><select  class='files' type='string' name='$fieldName'>".PHP_EOL;
+            echo "<p class='conf-item'><label for='$fieldName'>$pname</label><select  $FORCE_DISABLED class='files' type='string' name='$fieldName'>".PHP_EOL;
             foreach ($availableFiles as $file)
                 echo "<option ".(($file==$parms["currentValue"])?"selected":"")." value='$file'>$file</option>";
             echo "</select><span>{$parms["description"]}</span></p>";

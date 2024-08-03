@@ -5,7 +5,7 @@
 error_reporting(E_ALL);
 
 define("MAXIMUM_SENTENCE_SIZE", 125);
-define("MINIMUM_SENTENCE_SIZE", 15);
+define("MINIMUM_SENTENCE_SIZE", 50);
 
 date_default_timezone_set('Europe/Madrid');
 
@@ -180,7 +180,7 @@ if ($gameRequest[0]=="diary") {
 
 
 // Exit if only a event info log.
-if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer"])) {
+if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer","infosave"])) {
     logEvent($gameRequest);
     die();
 }
@@ -248,7 +248,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','inputtext_s','ginputtext') ";  // Use prechat
+    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
 
 } else
@@ -258,6 +258,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
 // Non-LLM request handling.
 
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
+
 if ($MUST_END) {  // Shorthand for non LLM processing
     die('X-CUSTOM-CLOSE');
     
@@ -288,6 +289,13 @@ if (stripos($gameRequest[3], "stop") !== false) {
 }
 
 
+if (!isset($GLOBALS["CACHE_PEOPLE"])) {
+    $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+} 
+if (!isset($GLOBALS["CACHE_LOCATION"])) {
+    $GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
+}     
+
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary") {
     $db->insert(
@@ -298,7 +306,9 @@ if ($gameRequest[0] != "diary") {
             'type' => $gameRequest[0],
             'data' => ($gameRequest[3]),
             'sess' => (php_sapi_name()=="cli")?'cli':'web',
-            'localts' => time()
+            'localts' => time(),
+            'people'=> $GLOBALS["CACHE_PEOPLE"],
+            'location'=>$GLOBALS["CACHE_LOCATION"]
         )
     );
 
@@ -313,11 +323,15 @@ if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
 $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 
 // Historic context (last dialogues, events,...)
-if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator"))
+//if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator"))
+if (($GLOBALS["HERIKA_NAME"]=="The Narrator"))
     $contextDataHistoric = DataLastDataExpandedFor("", $lastNDataForContext * -1,$sqlfilter);
-else
+else if (!$GLOBALS["IS_NPC"])
     $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
-
+else if ($GLOBALS["IS_NPC"]) {
+    $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
+    
+}
 
 
 // Info about location and npcs in first position

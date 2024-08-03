@@ -45,10 +45,39 @@ require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]
 require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."misc_ui_functions.php");
 require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 
+
 ob_start();
 include("tmpl/head.html");
 $db = new sql();
 
+
+/* Check for database updates */
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'eventlog' AND column_name = 'people'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE "eventlog" ADD COLUMN "people" text');
+    echo '<script>alert("A patch (0.1.2) has been applied to Database")</script>';
+}
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'eventlog' AND column_name = 'location'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE "eventlog" ADD COLUMN "location" text');
+    echo '<script>alert("A patch (0.1.3) has been applied to Database")</script>';
+}
+
+/* END of check database for updates */
 
 /* Actions */
 if ($_GET["clean"]) {
@@ -197,7 +226,7 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "eventlog") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a where type not in ('prechat','rechat') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 50");
+        $results = $db->fetchAll("select type,data,gamets,localts,ts,ROWID FROM eventlog a where type not in ('prechat','rechat') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 50");
         echo "<h3 class='my-2'>Event Log</h3>";
         print_array_as_table($results);
         if ($_GET["autorefresh"]) {

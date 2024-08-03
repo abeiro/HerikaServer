@@ -33,12 +33,19 @@ function cToogle(a) {
         n.classList.add("unvisible-fieldset")
         n.classList.remove("visible-fieldset")
     }
-    a.target.scrollIntoView()
+    //a.target.scrollIntoViewIfNeeded()
     saveClassList();
-    
+    redrawTitles();
 
 }
 
+function redrawTitles() {
+    document.querySelectorAll("legend + fieldset.visible-fieldset").forEach(function(b) { b.previousSibling.classList.remove("arrow")})
+    document.querySelectorAll("legend + fieldset.visible-fieldset").forEach(function(b) { b.previousSibling.classList.add("unarrow")})
+    document.querySelectorAll("legend + fieldset.unvisible-fieldset").forEach(function(b) { b.previousSibling.classList.remove("unarrow")})
+    document.querySelectorAll("legend + fieldset.unvisible-fieldset").forEach(function(b) { b.previousSibling.classList.add("arrow")})
+
+}
 // Chat GPT created code
 function saveClassList() {
     const fieldsets = document.querySelectorAll("fieldset");
@@ -94,5 +101,5 @@ document.querySelectorAll("form.confwizard fieldset > fieldset + legend").forEac
 document.querySelectorAll("form.confwizard fieldset > legend + legend").forEach(function(b) { b.addEventListener("click",cToogle)})
 
 restoreClassList();
-
+redrawTitles()
 </script>
