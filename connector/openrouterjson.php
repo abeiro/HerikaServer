@@ -408,7 +408,7 @@ class connector
                 if (isset($finalData["message"])) {
                     // Check first if action was issued
                     if (is_array($finalData)&&isset($finalData["action"])) {
-                        if ($finalData["action"]=="Inspect") {
+                        if (($finalData["action"]=="Inspect")&&(!empty($finalData["target"]))) {
                             return "";
                             
                         }
@@ -422,7 +422,7 @@ class connector
                         $mangledBuffer = str_replace($this->_extractedbuffer, "", $finalData["message"]);
                         $this->_extractedbuffer=$finalData["message"];
                         if (isset($finalData["listener"])) {
-                            if (isset($finalData["action"])&&($finalData["action"]=="Talk")&&isset($finalData["target"])&&(!empty(trim($finalData["target"]))))
+                            if (isset($finalData["action"])&&($finalData["action"]=="Talk")&&isset($finalData["target"])&&(!empty(trim($finalData["target"]))) &&(trim($finalData["target"])!="None"))
                                 $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["target"];
                             else
                                 $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];

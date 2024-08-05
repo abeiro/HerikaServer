@@ -1,5 +1,6 @@
 <?php
 
+
 /* Definitions and main includes */
 error_reporting(E_ALL);
 
@@ -317,6 +318,14 @@ if ($gameRequest[0] != "diary") {
 // Check if this event  has been disabled 
 if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
     if ($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])
+        die("\r\n");
+}
+
+
+// Narrator stop
+
+if (isset($GLOBALS["NARRATOR_TALKS"])&&($GLOBALS["NARRATOR_TALKS"]==false)) {
+    if ($GLOBALS["HERIKA_NAME"]=="The Narrator")
         die("\r\n");
 }
 

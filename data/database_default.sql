@@ -314,7 +314,9 @@ CREATE TABLE public.eventlog (
     gamets bigint NOT NULL,
     localts bigint NOT NULL,
     ts bigint,
-    rowid bigint NOT NULL
+    rowid bigint NOT NULL,
+    people text,
+    location text
 );
 
 
@@ -784,7 +786,7 @@ COPY public.diarylog (ts, sess, topic, content, tags, people, localts, location,
 -- Data for Name: eventlog; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
 
-COPY public.eventlog (type, data, sess, gamets, localts, ts, rowid) FROM stdin;
+COPY public.eventlog (type, data, sess, gamets, localts, ts, rowid, people, location) FROM stdin;
 \.
 
 

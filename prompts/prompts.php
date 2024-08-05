@@ -208,6 +208,19 @@ $PROMPTS=array(
     "traveldone"=>[ 
         "cue"=>["Comment about the destination reached. $TEMPLATE_DIALOG"],
         "player_request"=>["The Narrator:  The party reaches destination"]
+    ],
+    "rpg_lvlup"=>[ 
+        "cue"=>["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
+    ],
+    "rpg_shout"=>[ 
+        "cue"=>["Comment/ask about the the new shout learned by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
+    ],
+    "rpg_soul"=>[ 
+        "cue"=>["Comment/ask  about the soul absorbed by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
+    ],
+    "rpg_word"=>[ 
+        "cue"=>["Comment/ask  about the new word learned by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
+
     ]
 );
 

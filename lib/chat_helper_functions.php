@@ -433,7 +433,12 @@ function returnLines($lines,$writeOutput=true)
                 
                 $listenerFix=explode("and",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix) && (sizeof($listenerFix)>1)) {
-                    $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix;
+                    $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix[0];
+                }
+                
+                $listenerFix2=explode(",",$GLOBALS["SCRIPTLINE_LISTENER"]);
+                if (is_array($listenerFix2) && (sizeof($listenerFix2)>1)) {
+                    $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix[0];
                 }
                 
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";

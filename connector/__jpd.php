@@ -371,8 +371,7 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{"character": "Svenja", "listener": "Volkur", "mood": 'down-to-earth', "action": "InspectSurroundings", "target": "", "message": "Looks like we're in the midst of final preparations. I'm checking our surroundings for any potential threats - just in case."}
-
+{"character":"Ahadi","listener":"Volkur","mood":"teasing","action":"Inspect","target":"","message":"Oh, darling, 'sufficient' is such a dreadfully dull word. Let's see what you've got, shall we? I'm sure with a little... adjustment, we can turn 'sufficient' into 'sensational'. Come now, give us a twirl!"}
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);

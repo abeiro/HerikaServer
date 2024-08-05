@@ -475,18 +475,6 @@ function requireFunctionFilesRecursively($dir) {
     }
 }
 
-$folderPath = __DIR__.DIRECTORY_SEPARATOR."../ext/";
-requireFunctionFilesRecursively($folderPath);
-
-
-if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) {
-    require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
-}
-
-if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
-    require(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php");
-}
-
 
 $GLOBALS["ENABLED_FUNCTIONS"]=[
     'Inspect',
@@ -509,10 +497,23 @@ $GLOBALS["ENABLED_FUNCTIONS"]=[
     //'SearchDiary',
     'SetCurrentTask',
     'SearchMemory',
-    'ExtCmdRemoveClothes',
-    
     //'StopWalk'
 ];
+
+
+$folderPath = __DIR__.DIRECTORY_SEPARATOR."../ext/";
+requireFunctionFilesRecursively($folderPath);
+
+
+if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) {
+    require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
+}
+
+if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
+    require(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php");
+}
+
+
 
 // Delete non wanted functions    
 
