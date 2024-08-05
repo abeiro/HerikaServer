@@ -101,18 +101,18 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a joke about current location) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the current weather) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the time and date) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the last event) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about what you are currently thinking about $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a Skyrim Meme) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about any of the Gods in Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the politics of Skyrim) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about any of the Gods) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the current political situation) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a historical event from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a book from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment starting with: I once had to ) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment starting with: Did you hear about what happened in) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment starting with: A wise Akaviri man once told me) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the last task we have completed ) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a recent rumor) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about something you had to do in your past) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a random NPC in the area) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a companion) $TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a random entity in the area) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about our last combat encounter) $TEMPLATE_DIALOG"
         ]
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
         ,"extra"=>["dontuse"=>(time()%($GLOBALS["BORED_EVENT"]+1)==0)]   //50% chance
