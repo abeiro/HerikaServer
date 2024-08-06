@@ -1,7 +1,7 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col">
-            <h4 class="my-2"><strong>Now, the server update is performed through the Update.bat script</strong></h4>
+            <h4 class="my-2"><strong>You can update this servering using the Update.bat script in the Tools folder</strong></h4>
 
              <p>This is your current version</p> 
 <pre>

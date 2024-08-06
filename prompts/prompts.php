@@ -93,7 +93,7 @@ $PROMPTS=array(
     ],
 
     "bleedout"=>[
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} complains about almost being defeated, $TEMPLATE_DIALOG"]
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} complain about almost being defeated, $TEMPLATE_DIALOG"]
     ],
 
     "bored"=>[
@@ -120,7 +120,7 @@ $PROMPTS=array(
     ],
 
     "goodmorning"=>[
-        "cue"=>["({$GLOBALS["HERIKA_NAME"]} commens about {$GLOBALS["PLAYER_NAME"]}'s nap. $TEMPLATE_DIALOG"],
+        "cue"=>["({$GLOBALS["HERIKA_NAME"]} comment about {$GLOBALS["PLAYER_NAME"]}'s nap. $TEMPLATE_DIALOG"],
         "player_request"=>["(waking up after sleep). ahhhh  "]
     ],
 
@@ -156,11 +156,11 @@ $PROMPTS=array(
     ],
     "lockpicked"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} comments about lockpicked item) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} what does she/he found) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} remember {$GLOBALS["PLAYER_NAME"]} to share loot) $TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} comments about lockpicked item $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} what they found) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} to share what they found) $TEMPLATE_DIALOG"
         ],
-        "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked {$gameRequest[3]})"],
+        "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked) {$gameRequest[3]})"],
         "extra"=>["mood"=>"whispering"]
     ],
      "afterattack"=>[
@@ -192,7 +192,7 @@ $PROMPTS=array(
         "extra"=>["force_tokens_max"=>128]
     ],
     "chatsimfollow"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation. $TEMPLATE_DIALOG"]
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation.) $TEMPLATE_DIALOG"]
     ],
     "im_alive"=>[ 
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} talks about she/he is 'feeling more real'.Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"],
@@ -202,12 +202,12 @@ $PROMPTS=array(
         "cue"=>["(Out of roleplay, game has been loaded) Tell {$GLOBALS["PLAYER_NAME"]} a short summary about last events, and then remind {$GLOBALS["PLAYER_NAME"]} the current task/quest/plan . $TEMPLATE_DIALOG"]
     ],
     "newgame"=>[ 
-        "cue"=>["(Out of roleplay, new game ) Give welcome to {$GLOBALS["PLAYER_NAME"]}, a new game has started. Remind quests. $TEMPLATE_DIALOG"],
+        "cue"=>["(Out of roleplay, new game ) Give welcome to {$GLOBALS["PLAYER_NAME"]}, a new game has started. Remind them of their quests. $TEMPLATE_DIALOG"],
         "extra"=>["dontuse"=>true] 
     ],
     "traveldone"=>[ 
         "cue"=>["Comment about the destination reached. $TEMPLATE_DIALOG"],
-        "player_request"=>["The Narrator:  The party reaches destination"]
+        "player_request"=>["The Narrator: The party reaches destination)"]
     ],
     "rpg_lvlup"=>[ 
         "cue"=>["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
@@ -216,10 +216,10 @@ $PROMPTS=array(
         "cue"=>["Comment/ask about the the new shout learned by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
     ],
     "rpg_soul"=>[ 
-        "cue"=>["Comment/ask  about the soul absorbed by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
+        "cue"=>["Comment/ask about the soul absorbed by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
     ],
     "rpg_word"=>[ 
-        "cue"=>["Comment/ask  about the new word learned by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
+        "cue"=>["Comment/ask about the new word learned by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
 
     ]
 );
