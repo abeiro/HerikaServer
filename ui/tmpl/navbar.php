@@ -15,7 +15,7 @@
                     <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
                     <li><a class="dropdown-item" href="index.php?table=log">AI Log</a></li>
                     <li><a class="dropdown-item" href="index.php?table=quests">Current Active Quests</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor events</a></li>
+                    <li><a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor Events</a></li>
                 </ul>
             </li>
             <li class="nav-item dropdown mx-2">
@@ -235,14 +235,14 @@
 
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
-    echo "AI/LLM Service: ";
+    echo " <strong>AI/LLM Service:</strong> ";
     echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong>/ current <strong style='color:green'>($currentModel)</strong>" : $CONNECTORS; 
     echo " <a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'>toogle</a><br/>";
-    echo " TTS Service: ";
+    echo " <strong>TTS Service:</strong> ";
     echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:green">' . $TTSFUNCTION . '</strong>'; 
-    echo " STT Service: ";
+    echo " <strong>STT Service:</strong> ";
     echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true)  : '<strong style="color:green">' . $STTFUNCTION . '</strong>' ; 
-    echo " ITT Service: ";
+    echo " <strong>ITT Service:</strong> ";
     echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true)  : '<strong style="color:green">'  .$ITTFUNCTION . '</strong>' ; 
     ?>
 </div>
