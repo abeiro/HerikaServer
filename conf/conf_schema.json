@@ -22,7 +22,7 @@
   "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"Will offer a language field to LLM, and will try match to XTTSv2 language. "},
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations also to NPC"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger animations if passing animations are enabled"},
-  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson"],"description":"AI Service to use. Are used to connect with an AI service or program.","_title":"AI/LLM Service (JSON MODE)"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service to use. Are used to connect with an AI service or program. Choose a json connector. * Non JSON connectors can work with older models, but are not recommended (don't bug us if they don't work.)","_title":"AI/LLM Service (JSON MODE)"},
   "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"AI Service to use. Are used to connect with an AI service or program. Will use this connector to generate content for diary/memories","_title":"AI/LLM Service "},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",

@@ -231,11 +231,21 @@ foreach ($currentConf as $pname=>$parms) {
             }
         
             foreach ($parms["values"] as $item) {
+                $addnote="";
+                if ($fieldName=="CONNECTORS") 
+                    if (in_array($item,["openrouter","openai","koboldcpp"])) {
+                        if ($access[$_SESSION["OPTION_TO_SHOW"]]<2)
+                            continue;
+                        else
+                            $addnote="*";
+                        
+                    }
+                
                 $checked = in_array($item, $parms["currentValue"]) ? "checked" : "";
-                $buffer .= "<label><input type='checkbox' name='{$fieldName}[]' value='$item' $checked> $item</label><br>";
+                $buffer .= "<input type='checkbox' name='{$fieldName}[]' value='$item' $checked> $item $addnote<br>";
             }
         
-            echo "<p class='conf-item'><label>$pname</label><div>$buffer</div><span>{$parms["description"]}</span></p>".PHP_EOL;
+            echo "<p class='conf-item'><label>$pname</label>$buffer<span>{$parms["description"]}</span></p>".PHP_EOL;
 
         } else if ($parms["type"]=="boolean") {
             

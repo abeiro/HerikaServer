@@ -43,6 +43,8 @@ function cleanResponse($rawResponse)
     $replacement = '';
     $rawResponse = preg_replace($pattern, $replacement, $rawResponse);
 
+    $rawResponse = strtr($rawResponse,["The Narrator: background dialogue:"=>""]);
+    
     // Remove [*]]
     $pattern = '/\[.*?\]/';
     $replacement = '';
@@ -271,8 +273,10 @@ function returnLines($lines,$writeOutput=true)
 
         $sentence=$output;
 
-        $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
-
+        //$output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
+        
+        $output = strtr($sentence,["*smirks*"=>"","*winks*"=>"","*wink*"=>""]); // Manual cases
+        
         $sentence = preg_replace('/"/', '', $output); // Remove "
 
         preg_match_all('/\((.*?)\)/', $sentence, $matches);
@@ -690,6 +694,30 @@ function lastKeyWords($n, $eventypes='')
     }
 }
 
+function hashtagify($input) {
+    // Remove all punctuation
+    $input = preg_replace('/[^\w\s]/u', ' ', $input);
+
+    // Split the string into words
+    $words = explode(' ', $input);
+
+    // Filter out words shorter than 2 characters
+    $words = array_filter($words, function($word) {
+        return mb_strlen(trim($word)) >= 2;
+    });
+
+    // Convert words to camel case
+    $words = array_map(function($word, $index) {
+        $word = '#' .ucfirst(strtolower(trim($word)));
+        return $word;
+    }, $words, array_keys($words));
+
+    // Combine the words into a single string and add the hashtag
+    $hashtag = $words;
+
+    return $hashtag;
+}
+
 function offerMemoryOld($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
@@ -825,8 +853,74 @@ function offerMemoryOld($gameRequest, $DIALOGUE_TARGET)
     }
 
 
+    
+    
 }
 
+function ExtractKeywords($sourceText) {
+    
+    $uppercaseWords=[];
+    
+    $pattern = '/[A-Za-z\-]{4,}/';
+    $matches=[];
+    preg_match_all($pattern,  $sourceText,$matches);
+    $uppercaseWords1 = array_merge($uppercaseWords, $matches[0]);
+        
+    $pattern = '/(?<!^|[.?]\s)(\b[A-Z][a-zA-Z\-]{4,}\b)/';
+    $matches=[];
+    preg_match_all($pattern,  $sourceText,$matches);
+    $uppercaseWords = array_merge($uppercaseWords1, $matches[0]);
+    foreach ($uppercaseWords as $n=>$e) {
+        if (stripos($e, $GLOBALS["PLAYER_NAME"])!==false) {
+          
+        } else if (stripos($e, $GLOBALS["HERIKA_NAME"])!==false) {
+            
+        } else {
+            if (!isset($words[$e]))
+                $words[$e]=0;
+            $words[$e]++;
+            if ( preg_match('~^\p{Lu}~u', $e) ) {
+                $words[$e]++;
+                
+            }
+
+            
+        }
+        
+    }
+
+    function startsWithUppercase($string) {
+        return preg_match('/^[A-Z]/', $string);
+    }
+
+    unset($words["Yeah"]);
+    unset($words["Wouldn"]);
+    unset($words["What"]);
+    unset($words["Well"]);
+    unset($words["Those"]);
+    unset($words["This"]);
+    unset($words["These"]);
+    unset($words["There"]);
+    unset($words["That"]);
+    unset($words["Seems"]);
+    unset($words["Shall"]);
+    unset($words["Maybe"]);
+    unset($words["Looks"]);
+    unset($words["Just"]);
+    
+    
+    foreach ($words as $n=>$e) {
+        if ($e>1)
+           if (startsWithUppercase($n))
+                $uniqueArray[]=$n;
+    }
+    if (is_array($uniqueArray)) {
+        rsort($uniqueArray);
+    } else
+        return [];
+    
+    return $uniqueArray;  
+}
 
 function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
@@ -963,7 +1057,42 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
         return "";
     }
 
-
+    // PostgreSQL full text Searching
+   
+  
+    
+    $npc=$GLOBALS["HERIKA_NAME"];
+    if ($npc=="The Narrator") { // Narrator knows all
+       $npc=""; 
+    }
+    $memories=DataSearchMemory($gameRequest[3],$npc);
+   
+    error_log(print_r($memories[0],true));
+    
+    if (isset($memories[0])) {
+        
+        if (($memories[0]["rank_any"]==$memories[0]["rank_all"])&&($memories[0]["rank_any"]>0.25)) {
+            
+            $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
+            
+        } else if ($memories[0]["rank_any"]>0.25) {
+            
+            $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
+            
+        }  else
+            return "";
+    } else
+        return "";
+    
+    if (!empty($memory)) {
+        $hoursAgo=round(($gameRequest[2]-$memories[0]["gamets_truncated"])/ (60 * 60 * 40 * 24), 0);
+        $pattern = '/#Tags:.*/';
+        $replacement = '';
+        $output = preg_replace($pattern, $replacement, $memory);
+        $memory="$hoursAgo days ago ....  $output";
+    }
+    // print_r($memories);
+    return ($memory);
 }
 
 function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
@@ -1096,6 +1225,10 @@ function logEvent($dataArray)
     
     if (!isset($GLOBALS["CACHE_LOCATION"])) {
         $GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
+    }
+    
+    if (!isset($GLOBALS["CACHE_PARTY"])) {
+        $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
     }   
 
     $db->insert(
@@ -1108,7 +1241,8 @@ function logEvent($dataArray)
             'sess' => 'pending',
             'localts' => time(),
             'people'=> $GLOBALS["CACHE_PEOPLE"],
-            'location'=>$GLOBALS["CACHE_LOCATION"]
+            'location'=>$GLOBALS["CACHE_LOCATION"],
+            'party'=>$GLOBALS["CACHE_PARTY"]
         )
     );
 }
@@ -1147,3 +1281,4 @@ function prettyPrintJson($json )
 
     return $result;
 }
+

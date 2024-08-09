@@ -127,6 +127,8 @@ function DataLastInfoFor($actor, $lastNelements = -2)
         $lastDialogFull[$n]["content"] = $result;
     }
 
+    $lastDialog[] = array('role' => 'user', 'content' => "Current followers:". prettyPrintJson(DataGetCurrentPartyConf()));
+     
     return $lastDialog;
 
 }
@@ -249,13 +251,13 @@ function DataQuestJournal($quest)
     global $db;
     if (empty($quest)||($quest=="None")||true) {
         
-        $results = $db->fetchAll("SElECT name,id_quest,briefing,'pending' as status FROM quests");
+        $results = $db->fetchAll("SElECT name,id_quest,briefing,briefing2 as notes, 'pending' as status FROM quests");
         $finalRow = [];
         foreach ($results as $row) {
             if (isset($finalRow[$row["id_quest"]])) {
                 continue;
             } else {
-                $finalRow[$row["id_quest"]] = $row;
+                $finalRow[$row["id_quest"]] = ["name"=>$row["name"],"briefing"=>$row["briefing"],"personal notes"=>$row["notes"]];
             }
         }
 
@@ -448,7 +450,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     
     $results = $db->fetchAll($query);
 
-    error_log($query);
+    //error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;
@@ -523,6 +525,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         }
         
         // This is used for compacting.
+        if (!$rowData)
+            $rowData="";
         
         if (($row["type"]=="logaction") && (strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}") !== false))  {
             $speaker = "assistant";
@@ -530,7 +534,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         } else if ($row["type"]=="vision") {
             $speaker = "user";
             
-        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") !== false)) {
+        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
             $speaker = "assistant";
             
         } 
@@ -638,7 +642,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     $orderedData = array_slice($lastDialogFull, $lastNelements);
 
-    //file_put_contents(__DIR__."/../log/context_for_$actor.txt",print_r($orderedData,true));
+    file_put_contents(__DIR__."/../log/context_for_$actor.txt",print_r($orderedData,true));
     return $orderedData;
 
 }
@@ -1125,6 +1129,10 @@ function PackIntoSummary()
 								and gamets>$maxRow
 							");
 
+    foreach ( $db->fetchAll("select * from memory_summary") as $row) {
+        $people=$db->fetchAll("SELECT COALESCE(party,people) as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
+        $db->query("update memory_summary set companions='{$people[0]["people"]}' where rowid={$row["rowid"]}");
+    }
     return $maxRow;
 }
 
@@ -1169,6 +1177,17 @@ function DataRechatHistory()
 function DataGetLastReadedBook() {
     global $db;
 
+    
+    // To push where the book was taken from.
+    $results = $db->fetchAll("select data from eventlog where data is not null and type='itemfound' and data like '%book%' 
+    order by gamets desc,ts desc,localts desc,rowid desc LIMIT 1 OFFSET 0");
+    
+    if ($results) {
+        $bookOnlyContext[] = array('role' => "user", 'content' => $results[0]["data"]);
+    }
+    
+    
+    $lastData = "";
     $results = $db->fetchAll("select content from books where content is not null
     order by gamets desc,ts desc,localts desc,rowid desc LIMIT 1 OFFSET 0");
     $lastData = "";
@@ -1194,15 +1213,14 @@ function DataGetCurrentPartyConf() {
 
     $results = $db->fetchAll("select value from conf_opts where id='CurrentParty'");
     
-    $guys=explode(",",$results[0]["value"]);
-    $finalParty=[];
+    $guys=json_decode("[{$results[0]["value"]}\"\"]",true);
+    $finalparty=[];
     foreach ($guys as $guy) {
-        if (!empty($guy))
-            $finalParty[$guy]=$guy;
-        
+        if (isset($guy["name"]))
+            $finalparty[$guy["name"]]=$guy;
     }
     
-    return $finalParty;
+    return json_encode($finalparty);
     
 }
 
@@ -1296,6 +1314,73 @@ function GetExpression($mood) {
     
     
     return "";
+    
+}
+
+function DataSearchMemory($rawstring,$npcfilter) {
+    
+    
+    
+    //$kw=explode(" ",($rawstring));
+    $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+    $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+
+    //$res=FastCallOAI("Analyze the following sentence and extract only relevant words (names,items) for a search, strip common short words,convert words to singular,generate only words separated by commas:\n$rawstring");
+    
+    $kw=hashtagify($res);
+    
+    
+    ksort($kw);
+    error_log(print_r($kw,true));
+    
+    $kwStringAny=implode(" | ",$kw);
+    $kwStringAll=implode(" & ",$kw);
+    
+    
+    return $GLOBALS["db"]->fetchAll("
+        SELECT summary,gamets_truncated,
+        ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any,
+        ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all
+        FROM memory_summary A
+        where native_vec @@to_tsquery('$kwStringAny')
+        and companions like '%$npcfilter%'
+
+        ORDER BY rank_all DESC, rank_any DESC;
+        ");
+            
+}
+
+function FastCallOAI($question) {
+    
+    $call["messages"]=[
+        [
+            "role"=>"user",
+            "content"=>"$question"
+        ]
+    ];
+
+
+    $call["stream"]=false;
+    $call["stop"]=["\n"];
+
+    $headers = ['Content-Type: application/json'];
+
+    $options = array(
+        'http' => array(
+            'method' => 'POST',
+                'header' => implode("\r\n", $headers),
+                'content' => json_encode($call),
+            )
+    );
+
+    $netContext = stream_context_create($options);
+    $response=file_get_contents('http://localhost:5001/v1/chat/completions', false,$netContext);
+    $rawResponse=json_decode($response,true);
+    
+    if (isset($rawResponse["choices"][0]["message"]["content"]))
+        return $rawResponse["choices"][0]["message"]["content"];
+    else
+        return null;
     
 }
 

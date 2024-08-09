@@ -68,7 +68,7 @@ function stt($file)
     file_put_contents(__DIR__."/../log/stt.log",date("dMy").PHP_EOL.$additionalKeywords,FILE_APPEND);
     $context = stream_context_create($contextOptions);
     $response = file_get_contents($url, false, $context);
-    file_put_contents(__DIR__."../log/stt.log",print_r($response,true),FILE_APPEND);
+    file_put_contents(__DIR__."/../log/stt.log",print_r($response,true),FILE_APPEND);
 
     if ($response === false) {
 

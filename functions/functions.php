@@ -49,7 +49,7 @@ $F_TRANSLATIONS["SetCurrentTask"]="Set the current plan of action or task or que
 $F_TRANSLATIONS["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_TRANSLATIONS["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
 $F_TRANSLATIONS["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
-$F_TRANSLATIONS["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
+$F_TRANSLATIONS["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
 
 
 $F_RETURNMESSAGES["Inspect"]="{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
@@ -409,7 +409,7 @@ $FUNCTIONS = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "target keywords to search in memory database",
+                    "description" => "",
                 ]
             ],
             "required" =>[""]
@@ -496,7 +496,7 @@ $GLOBALS["ENABLED_FUNCTIONS"]=[
     //'GetDateTime',
     //'SearchDiary',
     'SetCurrentTask',
-    'SearchMemory',
+    //'SearchMemory',
     //'StopWalk'
 ];
 

@@ -93,16 +93,16 @@ class connector
                 //$data["tools"][]=["type"=>"function","function"=>$function];
                 
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
-                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]} ";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 }/* else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $contextData[0]["content"].="(run|fastwalk|jog|walk)";
                 }*/  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
-                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]}(target keywords to search) ({$function["description"]})";
+                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]}";
                  
                 } else
-                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]}";
             }
             $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
              

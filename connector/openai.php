@@ -52,6 +52,82 @@ class connector
             }
         }
         
+        $contextDataOrig=array_values($contextData);
+        
+        foreach ($contextDataOrig as $n=>$element) {
+            
+            
+            if ($n>=(sizeof($contextDataOrig)-2)) {
+                // Last element
+                $pb["user"].=$element["content"];
+                
+            } else {
+                if ($element["role"]=="system") {
+                    
+                    $pb["system"]=$element["content"]."\nThis is the script history for this story\n#CONTEXT_HISTORY\n";
+                    
+                } else if ($element["role"]=="user") {
+                    if (empty($element["content"])) {
+                        unset($contextData[$n]);
+                    }
+                    
+                    $pb["system"].=trim($element["content"])."\n";
+                    
+                } else if ($element["role"]=="assistant") {
+                    
+                    if (isset($element["tool_calls"])) {
+                        $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
+                        $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
+                        
+                        $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
+                        $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
+                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
+                                        "#TARGET#"=>current($localArguments),
+                                        ]);
+                        
+                        unset($contextData[$n]);
+                    } else
+                        $pb["system"].=$element["content"]."\n";
+                    
+                } else if ($element["role"]=="tool") {
+                    
+                     if (!empty($element["content"])) {
+                            $pb["system"].=$element["content"]."\n";
+                            if (strpos($element["content"],"Error")===false) {
+                                $contextData[$n]=[
+                                        "role"=>"user",
+                                        "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
+                                        
+                                    ];
+                                    
+                                $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                            } else {
+                                $contextData[$n]=[
+                                        "role"=>"user",
+                                        "content"=>"The Narrator: NOTE, cannot go to that place:".current($localArguments),
+                                        
+                                ];
+                            }
+                        } else
+                            unset($contextData[$n]);
+                }
+            }
+        }
+        
+        $contextData2=[];
+        $contextData2[]= ["role"=>"system","content"=>$pb["system"]];
+        $contextData2[]= ["role"=>"user","content"=>$pb["user"]];
+        
+        
+        // Compacting */
+        $contextDataCopy=[];
+        foreach ($contextData as $n=>$element) 
+            if (!empty($element["content"]))
+                $contextDataCopy[]=$element;
+        
+        $contextData=$contextDataCopy;
+        
+        
         $data = array(
             'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-3.5-turbo-0613',
             'messages' =>

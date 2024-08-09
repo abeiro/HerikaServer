@@ -77,6 +77,43 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (0.1.3) has been applied to Database")</script>';
 }
 
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'eventlog' AND column_name = 'party'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE "eventlog" ADD COLUMN "party" text');
+    echo '<script>alert("A patch (0.1.4p1) has been applied to Database")</script>';
+}
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'memory_summary' AND column_name = 'tags'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE "memory_summary" ADD COLUMN "tags" text');
+    echo '<script>alert("A patch (0.1.4p2) has been applied to Database")</script>';
+}
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'memory_summary' AND column_name = 'native_vec'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE "memory_summary" ADD COLUMN "native_vec" TSVECTOR');
+    $db->execQuery('CREATE INDEX memory_summary_tsv_idx ON articles USING GIN(native_vec);');
+    echo '<script>alert("A patch (0.1.4p3) has been applied to Database")</script>';
+}
+
 /* END of check database for updates */
 
 /* Actions */
@@ -245,7 +282,7 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "quests") {
-        $results = $db->fetchAll("SElECT  name,id_quest,briefing,data from quests");
+        $results = $db->fetchAll("SElECT  name,id_quest,briefing,briefing2,data from quests");
         $finalRow = [];
         foreach ($results as $row) {
             if (isset($finalRow[$row["id_quest"]]))
@@ -292,7 +329,7 @@ include("tmpl/navbar.php");
     }
     
     if ($_GET["table"] == "memory_summary") {
-        $results = $db->fetchAll("select  gamets_truncated,n,packed_message,summary,companions,classifier,uid,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 150 offset 0");
+        $results = $db->fetchAll("select  gamets_truncated,n,packed_message,summary,companions,classifier,tags,uid,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 150 offset 0");
         echo "<h3 class='my-2'>Summarized Memories Log</h3>";
         print_array_as_table($results);
     }

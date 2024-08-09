@@ -216,7 +216,9 @@ if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
-if (in_array($GLOBALS["HERIKA_NAME"],DataGetCurrentPartyConf())) {
+$GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
+$currentParty=json_decode($GLOBALS["CACHE_PARTY"],true);
+if (in_array($GLOBALS["HERIKA_NAME"],array_keys($currentParty))) {
     $GLOBALS["IS_NPC"]=false;
 } else
     $GLOBALS["IS_NPC"]=true;
@@ -297,6 +299,9 @@ if (!isset($GLOBALS["CACHE_LOCATION"])) {
     $GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
 }     
 
+if (!isset($GLOBALS["CACHE_PARTY"])) {
+        $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
+} 
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary") {
     $db->insert(
@@ -309,7 +314,9 @@ if ($gameRequest[0] != "diary") {
             'sess' => (php_sapi_name()=="cli")?'cli':'web',
             'localts' => time(),
             'people'=> $GLOBALS["CACHE_PEOPLE"],
-            'location'=>$GLOBALS["CACHE_LOCATION"]
+            'location'=>$GLOBALS["CACHE_LOCATION"],
+            'party'=>$GLOBALS["CACHE_PARTY"],
+            
         )
     );
 
@@ -381,6 +388,21 @@ if ($memoryInjection) {
 }
 */   
 
+
+$memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+if (!empty($memoryInjection)) {
+    
+    //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
+    $memoryInjectionCtx= array('role' => 'user', 'content' => "#MEMORY: {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection]");
+    //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
+    
+} else {
+    $memoryInjectionCtx=[];
+    $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+        
+}
+
+
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
 
@@ -430,11 +452,33 @@ if ($gameRequest[0] == "funcret") {
 
 
 }  else {
+    if (in_array($GLOBALS["CURRENT_CONNECTOR"],["koboldcpp","openai","openrouter"])) {  // OLD SCHEMA
+        if (!empty($request)) {
+            if (sizeof($memoryInjectionCtx)>0) {
+                $prompt[] = $memoryInjectionCtx;
+                error_log("Injected memory");
+            }
+            $FUNCTIONS_ARE_ENABLED=false;
+            $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
 
-    if (!empty($request)) {
-        $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
-    } else
-        $prompt=[];
+            
+        } else
+            $prompt=[];
+        
+        $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["stop"]=["\n"];
+        
+        
+    } else {
+        if (!empty($request)) {
+            $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
+            if (sizeof($memoryInjectionCtx)>0) {
+                $prompt[] = $memoryInjectionCtx;
+                error_log("Injected memory");
+            }
+            
+        } else
+            $prompt=[];
+    }
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);
     
