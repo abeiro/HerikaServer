@@ -33,6 +33,10 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 			$GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
 		}  
 		
+		if (!isset($GLOBALS["CACHE_PARTY"])) {
+			$GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
+		} 
+
 		// Store info.
 		$db->insert(
 			'eventlog',
@@ -44,7 +48,8 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 				'sess' => 'pending',
 				'localts' => time(),
 				'people'=> $GLOBALS["CACHE_PEOPLE"],
-				'location'=>$GLOBALS["CACHE_LOCATION"]
+				'location'=>$GLOBALS["CACHE_LOCATION"],
+				'party'=>$GLOBALS["CACHE_PARTY"]
 			)
 		);
 		

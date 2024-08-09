@@ -31,7 +31,7 @@ commands:
 	sync 		Sync Summaries <> Vector embeddings. Needs TEXT2VEC active
 	get 		Get memory. Example: get 56
 	recreate	Recreate memory_summary table, 
-	compact	    Recreate memory_summary table, and uses AI (LLM) to summarize data. Use 'compact noresync' to avoid TEXT2VEC sync.
+	compact	    Recreate memory_summary table, and uses AI (LLM) to summarize data. Use 'compact noembed' to avoid TEXT2VEC sync.
 	
 Note: Memories are stored in memory_summary table, which holds info from events/dialogues... in a time packed format.
 
@@ -49,11 +49,12 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         echo "Query memory for '{$argv[2]}'".PHP_EOL;
 
         $db=new sql();
-        $res=queryMemory($argv[2],'',$argv[3]);
+   
+        $res=DataSearchMemory($argv[2],'',$argv[3]);
 
-        print_r($res["content"]);
+        print_r($res[0]);
         
-        print_r($GLOBALS["DEBUG_DATA"]);
+        
 
     } elseif ($argv[1]=="sync") {
         
@@ -87,13 +88,16 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
 		require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 		
-		
-        $results = $db->query("select packed_message,uid,classifier,rowid,companions from memory_summary where gamets_truncated>$maxRow or summary is null  order by uid asc ");
+		error_log("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
+        $results = $db->query("select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where gamets_truncated>$maxRow or summary is null 
+        order by uid desc ");
         $counter=0;
 		$toUpdate=[];
 		
         while ($row = $db->fetchArray($results)) {
 
+            $people=$db->fetchAll("SELECT COALESCE(party,people) as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
+                
 
             if ($row["classifier"]=="diary") {
                 $TEST_TEXT=$row["packed_message"];
@@ -103,21 +107,27 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 				
 				$gameRequest=["summary"];	// Fake a diary call.
 				
-				$CLFORMAT="
-Location: {} 
-People: {}
-Mission: {}
-Summary: {}
- ";
+				$CLFORMAT="#Summary: {summary of events and dialogues}\r\n#Tags: {list of relevant hashtags}";
 				$prompt=[];
                 
                 $prompt[] = array('role' => 'system', 
-								  'content' => "Summarize chat information . Write a summary of this chat: \n#CHAT HISTORY#\n{$row["packed_message"]} \n#END OF CHAT HISTORY#\n");
+								  'content' => "This is a playthrough in Skyrim universe. 
+{$GLOBALS["PLAYER_NAME"]} is the player.
+{$people[0]["people"]} are {$GLOBALS["PLAYER_NAME"]}'s followers/companions.
+You must write {$GLOBALS["PLAYER_NAME"]} memories by analyzing chat history.
+Pay attention to details that can change character's behaviour, feelings,....
+");
+                
+                $prompt[] = array('role' => 'user', 'content' =>"
+
+#CHAT HISTORY#\n
+{$row["packed_message"]}
+\n#END OF CHAT HISTORY#\n");
 
 				
                  
                 $prompt[] = array('role' => 'user', 
-								  'content' => "Summarize using this format:\n $CLFORMAT");
+								  'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. using this format:\n$CLFORMAT");
 
 				
                 $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"];
@@ -145,7 +155,7 @@ Summary: {}
                 }
 
                 $connectionHandler->close();
-
+                $buffer=strtr($buffer,["**"=>""]);
                 $toUpdate[]=["rowid"=>$row["rowid"],"summary"=>$buffer];
                 $TEST_TEXT=$buffer;
             }
@@ -161,15 +171,31 @@ Summary: {}
             $counter++;
             echo "\nMemory created $counter\n";
             
+            $pattern = '/#Tags:(.+)/';
+            preg_match($pattern, $TEST_TEXT, $matches);
+
+            if (isset($matches[1])) {
+                $tagsString = strtr($matches[1],["*"=>""]);
+                $tagsArray = array_map('trim', explode(',', $tagsString));
+                $tagsCol=implode(" ",$tagsArray);
+            } else {
+                $tagsCol='';
+                error_log("No tags...discarding");
+                continue;
+            }
+
             foreach ($toUpdate as $uq) {
 			 //echo "update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where uid={$uq["uid"]}";
-			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."' where rowid={$uq["rowid"]}");
-			
+			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."',tags='".SQLite3::escapeString($tagsCol)."' where rowid={$uq["rowid"]}");
+             $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$uq["rowid"]}");
+			 // UPDATE memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(tags, '')),'B')
+    
+    
             }
             $toUpdate=[];
 			
             
-            if ($argv[3])
+            if (isset($argv[3]))
                 if ( ($argv[3]+0)>=$counter)
                     break;
             

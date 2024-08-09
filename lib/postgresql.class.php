@@ -38,7 +38,7 @@ class sql
         $query = "INSERT INTO $table ($columns) VALUES ($values)";
 		//error_log($query);
         $params = array_values($data);
-
+        //error_log(print_r($params,true));
         $result = pg_query_params(self::$link, $query, $params);
         if (!$result) {
             error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));

@@ -16,9 +16,7 @@ ini_set('display_errors', 1);
 $file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel.json';
 $enginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-$modelContents = file_get_contents($file);
 
-echo "Current AI Model is set to $modelContents.".PHP_EOL;
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
@@ -30,6 +28,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 if (isset($argv[2])) {
     if (file_exists($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$argv[2]}.php")) {
         error_log("PROFILE: {$argv[2]}");
+        $GLOBALS["active_profile"]=$argv[2];
         require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$argv[2]}.php");
 
     } else 
@@ -39,9 +38,11 @@ if (isset($argv[2])) {
 
 }
 
+$GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
 
+echo "Current AI Model is set to {$GLOBALS["CURRENT_CONNECTOR"]}.".PHP_EOL;
 
-$FUNCTIONS_ARE_ENABLED=true;
+$FUNCTIONS_ARE_ENABLED=false;
 
 
 $gameRequest=[];
@@ -66,6 +67,19 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
     error_log($GLOBALS["HERIKA_NAME"]);
     $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 
+    $GLOBALS["gameRequest"]=$gameRequest;
+
+    $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
+    $currentParty=json_decode($GLOBALS["CACHE_PARTY"],true);
+    if (in_array($GLOBALS["HERIKA_NAME"],array_keys($currentParty))) {
+        $GLOBALS["IS_NPC"]=false;
+    } else
+        $GLOBALS["IS_NPC"]=true;
+    
+    error_log($GLOBALS["CACHE_PARTY"]);
+
+    
+
 // Historic context (last dialogues, events,...)
 $sqlfilter=" and type in ('prechat','inputtext','inputtext_s','ginputtext','infonpc') ";
 
@@ -73,13 +87,38 @@ $sqlfilter="";
 
 $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", -50,$sqlfilter);
 $contextDataWorld = DataLastInfoFor("", -2);
-
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 
+
+$memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+if (!empty($memoryInjection)) {
+    
+    //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
+    $memoryInjectionCtx= array('role' => 'user', 'content' => "#MEMORY: {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection]");
+    
+
+    if (isset($GLOBALS["USE_MEMORY_STATEMENT_DELETE"]) && $GLOBALS["USE_MEMORY_STATEMENT_DELETE"] ) {
+        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+    }
+    //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
+    
+} else {
+    
+    $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+    $memoryInjectionCtx =[];
+}
+
+
+
+ 
 $head[] = array('role' => 'system', 'content' =>  $GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] . $GLOBALS["COMMAND_PROMPT"]);
 //$prompt[] = array('role' => 'user', 'content' => $argv[1]);
 $prompt[] = array('role' => 'user', 'content' => $request);
+
+if (sizeof($memoryInjectionCtx)>0) {
+    $prompt[] = $memoryInjectionCtx;
+}
 
 if (isset($PROMPTS[$gameRequest[0]]["player_request"])) {
 		$request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]); // Add support for arrays here	

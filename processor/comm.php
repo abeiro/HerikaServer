@@ -191,6 +191,22 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 
 
 
+} elseif ($gameRequest[0] == "_questdata") {
+    
+
+    $questParsedData = explode("@",$gameRequest[3]);
+    
+    if (!empty($questParsedData[0])) {
+        $data=array(
+                'briefing2' => $questParsedData[1],
+        );
+        
+        $db->updateRow('quests',$data," id_quest='{$questParsedData[0]}' ");
+
+    }
+    $MUST_END=true;
+
+
 }  elseif ($gameRequest[0] == "_questreset") {
     error_reporting(E_ALL);
     $db->delete("quests", "1=1");
@@ -469,6 +485,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     
     if (!$GLOBALS["DYNAMIC_PROFILE"]) {
         $gameRequest[3]="Dynamic profile updating disabled for {$GLOBALS["HERIKA_NAME"]}";
+        
         logEvent($gameRequest);
         die();
     }
@@ -552,11 +569,13 @@ Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.", ];
 		
 		$responseParsed["HERIKA_PERS"]=$buffer;
         
-    
+        $newConfFile=$_GET["profile"];
+
+                
+        $gameRequest[3]="{$GLOBALS["HERIKA_NAME"]} / conf_$newConfFile ";
         logEvent($gameRequest);
 
         $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-        $newConfFile=$_GET["profile"];
         
         if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") ) { 
             

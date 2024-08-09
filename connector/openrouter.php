@@ -59,9 +59,13 @@ class connector
             'repetition_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ?: 1.15,
             'min_p' => ($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ?: 0.1,
             'top_a' => ($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ?: 0,   
-            'transform'=>[]
+            'transforms'=>[],
+            
         );
 
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["stop"])&&sizeof($GLOBALS["CONNECTOR"][$this->name]["stop"])>0) {
+            $data["stop"]=$GLOBALS["CONNECTOR"][$this->name]["stop"];
+        }
         // Override
 
 
@@ -82,6 +86,8 @@ class connector
 
             }
         }
+        
+        $GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;
 
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             foreach ($GLOBALS["FUNCTIONS"] as $function)

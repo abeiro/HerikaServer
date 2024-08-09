@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
-        <a class="navbar-brand mr-2 Title" href="conf_wizard.php" title="AI Follower Framework Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AI Follower Framework
+        <a class="navbar-brand mr-2 Title" href="index.php" title="AI Follower Framework Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AI Follower Framework
         
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector" style="display:none">
         <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>-->
