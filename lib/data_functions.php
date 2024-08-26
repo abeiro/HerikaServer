@@ -1146,7 +1146,7 @@ function PackIntoSummary()
 							");
 
     error_log("Diary insert done");
-    foreach ( $db->fetchAll("select * from memory_summary where gamets_truncated>$maxRow ") as $row) {
+    foreach ( $db->fetchAll("select * from memory_summary where companions is null ") as $row) {
         $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(party,people) end  as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
         $peopleFmt=$db->escape($people[0]["people"]);
         $db->query("update memory_summary set companions='$peopleFmt' where rowid={$row["rowid"]}");
