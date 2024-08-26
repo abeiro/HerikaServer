@@ -1130,7 +1130,7 @@ function PackIntoSummary()
 								message not like 'Dear Diary%'
                                 and NOT ( speaker like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%'
                                     OR (listener like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%' and speaker like '%".SQLite3::escapeString($GLOBALS["PLAYER_NAME"])."%' )
-                                )
+                                ) as AA 
 								group by round(gamets/$pfi ,0) HAVING max(uid)>0 order by round(gamets/$pfi ,0) ASC
 							  ) where gamets_truncated>$maxRow
 							");
@@ -1344,6 +1344,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         
     } else if ($GLOBALS["MINIME_T5"]) {
         // MiniMe keyword extraction
+        error_log("Using minime-t5 context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
@@ -1354,6 +1355,8 @@ function DataSearchMemory($rawstring,$npcfilter) {
         
         $keywords=file_get_contents("http://127.0.0.1:8082/extract?text=".urlencode($TEST_TEXT));
         $reponse=json_decode($keywords,true);
+        
+        print_r($reponse);
         
         if ($reponse["is_memory_recall"]=="No") {
              $GLOBALS["db"]->insert(
@@ -1371,12 +1374,23 @@ function DataSearchMemory($rawstring,$npcfilter) {
         } else {
         
             $altKeywords=explode(" ",lastNames(15,["inputtext"]));
-            
-            $keywords=explode("|",$reponse["generated_tags"]);
+            $altKeywords=[];
+            $keywords=explode("|",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
             array_merge($keywords,$altKeywords);
             $kw=[];
+           
             foreach ($keywords as $tag) {
-                $lkw=hashtagify($tag);    
+                if (strlen($tag)<4)
+                    continue;
+
+                $lkwPre="";
+                foreach (explode(" ",$tag) as $stag) {
+                    $lkwPre.=ucfirst($stag);
+                }
+                
+                //$lkw=hashtagify($tag);    
+                $lkw="#$lkwPre";
+                
                 if ($lkw) {
                     $kw=array_merge($kw,explode(" ",$lkw));
                 }
@@ -1388,30 +1402,35 @@ function DataSearchMemory($rawstring,$npcfilter) {
             error_log("CONTEXT SEARCH KEYWORDS ".print_r($result,true));
         }
         
-    }  else  {
-        $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+    } 
+    error_log("Using dumb context");
+    $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+    $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
-        $replacement = "";
-        $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
-                    
-        
-        $keywords=hashtagifySentences($TEST_TEXT);
-        $kw=[];
-        foreach (explode(" ",$keywords) as $tag) {
-            $lkw=hashtagify($tag);    
-            if ($lkw) {
-                $kw=array_merge($kw,explode(" ",$lkw));
-            }
+    $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+    $replacement = "";
+    $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
+                
+    
+    $keywords=hashtagifySentences($TEST_TEXT);
+    $kw=[];
+    
+    //print_r($keywords);
+
+    foreach (explode(" ",$keywords) as $tag) {
+        if (strlen($tag)<4)
+            continue;
+        $lkw=hashtagify(strtr($tag,["remember"=>"","Remember"=>""]));    
+        if ($lkw) {
+            $kw=array_merge($kw,explode(" ",$lkw));
         }
-        $result = array_unique($kw);
-
-        $kwStringAny=implode(" | ",$result);
-        $kwStringAll=implode(" & ",$result);
-        
-        $memory[]=["rank_any"=>-1,"rank_any"=>-1,"rank_any"=>-1];
     }
+    $result = array_unique($kw);
+
+    $kwStringAny=implode(" | ",$result);
+    $kwStringAll=implode(" & ",$result);
+    error_log("CONTEXT SEARCH KEYWORDS ".print_r($result,true));
+        
     
     
     
@@ -1427,7 +1446,9 @@ function DataSearchMemory($rawstring,$npcfilter) {
         ORDER BY rank_all DESC, rank_any DESC;
         ");
             
-    
+        if (!isset($memory[0]))
+            $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
+
         $GLOBALS["db"]->insert(
                 'audit_memory',
                 array(

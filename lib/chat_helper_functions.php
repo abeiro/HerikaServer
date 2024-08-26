@@ -1002,135 +1002,7 @@ function ExtractKeywords($sourceText) {
 function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
-    if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] && false) {
-        error_log("Searching memory ".implode("|",$gameRequest));
-        if (($gameRequest[0] == "inputtext") || ($gameRequest[0] == "inputtext_s")) {
-            $memory=array();
-
-            $textToEmbed=str_replace($DIALOGUE_TARGET, "", $gameRequest[3]);
-            $pattern = '/\([^)]+\)/';
-            $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
-            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:", "", $textToEmbedFinal);
-            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]} :", "", $textToEmbedFinal);
-
-            
-            // Give more weight to player's input and add last keywords to generate embedding.
-            $weightedTextToEmbedFinal = str_repeat(" $textToEmbedFinal ", 3).lastKeyWords(2,['inputtext','inputtext_s']);
-
-
-            
-            $GLOBALS["DEBUG_DATA"]["textToEmbedFinal"]=$weightedTextToEmbedFinal;
-            
-            $memories=queryMemory($weightedTextToEmbedFinal);
-
-            $GLOBALS["DEBUG_DATA"]["memories"][]=print_r($memories,true);
-
-            if (isset($memories["content"])) {
-                $ncn=0;
-
-                // Analize
-                $tooManyMsg=false;
-
-                $outputMemory = array_slice($memories["content"], 0, $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]);
-                $outLocalBuffer="";
-                $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=true;
-                if (isset($outputMemory)&&(sizeof($outputMemory)>0)) {
-                    foreach ($outputMemory as $singleMemory) {
-
-                        // Memory fuzz
-                        $fuzzMemoryElement="".randomReplaceShortWordsWithPoints($singleMemory["briefing"], $singleMemory["distance"])."";
-
-                        $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["timestamp"])/ (60*60*24*20), 0)." days ago. {$fuzzMemoryElement}";
-
-                    }
-                    $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
-                    $GLOBALS["DEBUG_DATA"]["memories"][]=$outLocalBuffer;
-
-
-                    if ($singleMemory["distance"]<($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]/100)) {
-                        $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
-                        $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=false;
-                        return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
-
-                    } elseif ($singleMemory["distance"]<($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]/100)) {
-                        $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
-                        return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
-
-                    } else {
-                        return "";
-                    }
-
-                    //$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$ncn;
-
-
-                } else {
-                    return "";
-                }
-            }
-        } elseif (($gameRequest[0] == "funcret")) {	//$gameRequest[3] will not contain last user chat, we must query database
-
-            $memory=array();
-            $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 1 offset 0");
-
-            $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine[0]["data"]);
-            $pattern = '/\([^)]+\)/';
-            $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
-            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]}:", "", $textToEmbedFinal);
-            $textToEmbedFinal=str_replace("{$GLOBALS["PLAYER_NAME"]} :", "", $textToEmbedFinal);
-
-            $textToEmbedFinal.=lastKeyWords(2,['inputtext','inputtext_s']);
-
-            $GLOBALS["DEBUG_DATA"]["textToEmbedFinal"]=$textToEmbedFinal;
-            //$embeddings=getEmbedding($textToEmbedFinal);
-            $memories=queryMemory($embeddings);
-
-
-            if (isset($memories["content"])) {
-                $ncn=0;
-
-                // Analize
-                $tooManyMsg=false;
-
-                $outputMemory = array_slice($memories["content"], 0, $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]);
-                $outLocalBuffer="";
-                $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=true;
-                if (isset($outputMemory)&&(sizeof($outputMemory)>0)) {
-                    foreach ($outputMemory as $singleMemory) {
-
-                        // Memory fuzz
-                        $fuzzMemoryElement="".randomReplaceShortWordsWithPoints($singleMemory["briefing"], $singleMemory["distance"])."";
-
-                        $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["timestamp"])/ (60*60*24*20), 0)." days ago. {$fuzzMemoryElement}";
-
-                    }
-                    $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
-                    $GLOBALS["DEBUG_DATA"]["memories"][]=$outLocalBuffer;
-                    $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
-                   
-                    
-                    if ($singleMemory["distance"]<($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]/100)) {
-                        $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
-                        $GLOBALS["USE_MEMORY_STATEMENT_DELETE"]=false;
-                        return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
-
-                    } elseif ($singleMemory["distance"]<($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]/100)) {
-                        $GLOBALS["DEBUG_DATA"]["memories"]["selected"]=[$singleMemory];
-                        return $GLOBALS["MEMORY_OFFERING"].$outLocalBuffer;
-
-                    } else {
-                        return "";
-                    }
-                    
-
-                    //$GLOBALS["DEBUG_DATA"]["memories_anz"][]=$ncn;
-
-
-                } else {
-                    return "";
-                }
-            }
-        }
-
+    if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && !$GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] ) {
         return "";
     }
 
@@ -1144,10 +1016,10 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     }
     $memories=DataSearchMemory($gameRequest[3],$npc);
    
-    error_log(print_r($memories[0],true));
     
     if (isset($memories[0])) {
-        
+        error_log(print_r($memories[0],true));
+
         if (($memories[0]["rank_any"]==$memories[0]["rank_all"])&&($memories[0]["rank_any"]>0.25)) {
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");

@@ -29,6 +29,9 @@ $NEWQUEUE=true;
 
 $MAX_WORDS_LIMIT=0;
 
+$CONTEXT_HISTORY="50";
+$HTTP_TIMEOUT=15;                       // How long we will wait for openai response
+
 
 $TTS["AZURE"]["fixedMood"]="";
 $TTS["AZURE"]["region"]="westeurope";			
@@ -109,8 +112,7 @@ $TTSFUNCTION="mimic3";								// Valid options are azure or mimic3, or 11labs so
 $ITTFUNCTION="none";								// Valid options are azure or mimic3, or 11labs so far
 
 
-$CONTEXT_HISTORY="15";
-$HTTP_TIMEOUT=15;                       // How long we will wait for openai response
+
 
 //$CORE_LANG="es";
 
@@ -253,7 +255,7 @@ $TTS["XTTS"]["voiceid"]='11labs_diane';	//Voice json file
 
 $TTS["XTTSFASTAPI"]["endpoint"]='http://127.0.0.1:8020';	//End point
 $TTS["XTTSFASTAPI"]["language"]='en';	//
-$TTS["XTTSFASTAPI"]["voiceid"]='';	//Voice json file
+$TTS["XTTSFASTAPI"]["voiceid"]='TheNarrator';	//Voice json file
 
 $TTS["STYLETTSV2"]["endpoint"]='http://127.0.0.1:5050/';	//End point
 $TTS["STYLETTSV2"]["voice"]='';	//WAV file with source voice to clone. Should be localte at /var/www/html/HerikaServer/data/voices/
