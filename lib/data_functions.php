@@ -1124,7 +1124,7 @@ function PackIntoSummary()
     $results = $db->query("insert into memory_summary select * from ( 
 								select max(gamets) as gamets_truncated,count(*) as n,
                                 STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
-                                NULL,'dialogue',max(uid) as uid
+                                NULL as summary,'dialogue' as classifier,max(uid) as uid
 								from memory_v
 								where 
 								message not like 'Dear Diary%'
@@ -1132,7 +1132,7 @@ function PackIntoSummary()
                                     OR (listener like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%' and speaker like '%".SQLite3::escapeString($GLOBALS["PLAYER_NAME"])."%' )
                                 )  
 								group by round(gamets/$pfi ,0) HAVING max(uid)>0 order by round(gamets/$pfi ,0) ASC
-							  ) where gamets_truncated>$maxRow
+							  ) as T where gamets_truncated>$maxRow
 							");
     
     error_log("Main insert done");
