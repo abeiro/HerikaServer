@@ -56,19 +56,20 @@ function convertImage($originalImage, $outputImage, $quality)
         imageflip($imageTmp, IMG_FLIP_VERTICAL);
 
     // quality is a value from 0 (worst) to 100 (best)
-    imagejpeg($imageTmp, $outputImage, $quality);
-
+    //imagepng($imageTmp, $outputImage, $quality);
+    imagejpeg($imageTmp, $outputImage, 90);
     imagedestroy($imageTmp);
 
     return 1;
 }
 
 if (isset($_GET["format"]) && $_GET["format"]=="png")
-    $finalNameJpeg=strtr($finalName,[".png"=>".jpg"]);
+    $finalNameJpeg=strtr($finalName,[".png"=>".jpg","_img_"=>"_img_p_"]);
 else
-    $finalNameJpeg=strtr($finalName,[".bmp"=>".jpg"]);
+    $finalNameJpeg=strtr($finalName,[".bmp"=>".jpg","_img_"=>"_img_p_"]);
 
-convertImage($finalName,$finalNameJpeg,90);
+error_log("Saving $finalName to $finalNameJpeg");
+convertImage($finalName,$finalNameJpeg,9);
 @unlink($finalName);
 
 

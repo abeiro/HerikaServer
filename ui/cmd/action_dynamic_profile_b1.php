@@ -51,7 +51,7 @@ if ($method === "POST") {
         $historyData="";
         $lastPlace="";
         $lastListener="";
-        foreach (json_decode(DataSpeechJournal($jsonDataInput["HERIKA_NAME"],50),true) as $element) {
+        foreach (json_decode(DataSpeechJournal($jsonDataInput["HERIKA_NAME"],100),true) as $element) {
           if ($lastListener!=$element["listener"]) {
             $listener=" (talking to {$element["listener"]})";
             $lastListener=$element["listener"];
@@ -75,32 +75,43 @@ if ($method === "POST") {
 			$REMINDER="SHORT";
 			$SUMMARIZE=",AND SUMMARIZE INTO 250 TOKENS,";
 		} else {
-			$SHORT="100 words";
-			$SHORTER="use keywords, short description";
+			$SHORT="75 words";
+			$SHORTER="15 keywords";
+			//$SHORTER="use keywords, short description";
 			$REMINDER="";
-			$SUMMARIZE="";
+			$SUMMARIZE=" and summarize";
 		}
         
+		$partyConf=DataGetCurrentPartyConf();
+		$partyConfA=json_decode($partyConf,true);
+		error_log($partyConf);
+		if (isset($partyConfA["{$jsonDataInput["HERIKA_NAME"]}"])) {
+			$charDesc=print_r($partyConfA["{$jsonDataInput["HERIKA_NAME"]}"],true).PHP_EOL.$jsonDataInput["HERIKA_PERS"];
+			$jsonDataInput["HERIKA_PERS"]=$charDesc;
+		}
+
 		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
 		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_PERS"], ];
-		$prompt[] = ["role"=> "user", "content"	=> "Use Dialogue history to update $SUMMARIZE character profile.  Dialogue history is more important that reference profile.
+		$prompt[] = ["role"=> "user", "content"	=> "Use Dialogue history to update $SUMMARIZE character profile.
 Mandatory Format:
 
 * Personality,($REMINDER description, $SHORT).
 * Bio: (birthplace, gender, race $SHORTER).
 * Speech style ($SHORTER).
+* Current goal ($SHORTER)
 * Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORT).
 * Likes ($SHORTER).
-* Fears ($SHORTER).
+* Fears ($SHORTER, pay atention to dramatic past events).
 * Dislikes ($SHORTER).
 * Current mood ($SHORTER, use last events to determine). 
+* Relation with other followers if any.
 
-Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}'.", ];
+Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}\r\n'.", ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
-        
-		$connectionHandler->open($contextData, ["max_tokens"=>350]);
+        $GLOBALS["FORCE_MAX_TOKENS"]=600;
+		$connectionHandler->open($contextData, ["max_tokens"=>600]);
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;

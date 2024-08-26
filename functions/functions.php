@@ -9,6 +9,7 @@ $ENABLED_FUNCTIONS=[
     'MoveTo',
     'OpenInventory',
     'Attack',
+    'AttackHunt',
     'Follow',
     'CheckInventory',
     'SheatheWeapon',
@@ -28,12 +29,13 @@ $ENABLED_FUNCTIONS=[
 
 
 
-$F_TRANSLATIONS["Inspect"]="Inspects another character's OUTFIT and GEAR. JUST REPLY something like 'Let me see' and wait";
+$F_TRANSLATIONS["Inspect"]="Inspects target character's OUTFIT and GEAR. JUST REPLY something like 'Let me see' and wait";
 $F_TRANSLATIONS["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
 $F_TRANSLATIONS["InspectSurroundings"]="Looks for beings or enemies nearby";
 $F_TRANSLATIONS["MoveTo"]= "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
 $F_TRANSLATIONS["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS["Attack"]="Attacks actor, npc or being.";
+$F_TRANSLATIONS["AttackHunt"]="Try to hunt/kill ar animal";
 $F_TRANSLATIONS["Follow"]="Moves to and follow a NPC, an actor or being";
 $F_TRANSLATIONS["CheckInventory"]="Search in {$GLOBALS["HERIKA_NAME"]}\'s inventory, backpack or pocket. List inventory";
 $F_TRANSLATIONS["SheatheWeapon"]="Sheates current weapon";
@@ -58,6 +60,7 @@ $F_RETURNMESSAGES["InspectSurroundings"]="{$GLOBALS["HERIKA_NAME"]} takes a look
 $F_RETURNMESSAGES["MoveTo"]= "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
 $F_RETURNMESSAGES["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}. Accept gift.";
 $F_RETURNMESSAGES["Attack"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
+$F_RETURNMESSAGES["AttackHunt"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES["Follow"]="Moves to and follow a NPC, an actor or being";
 $F_RETURNMESSAGES["CheckInventory"]="{$GLOBALS["HERIKA_NAME"]}'s INVENTORY:#RESULT#";
 $F_RETURNMESSAGES["SheatheWeapon"]="Sheates current weapon";
@@ -85,6 +88,7 @@ $F_NAMES["InspectSurroundings"]="InspectSurroundings";
 $F_NAMES["MoveTo"]= "MoveTo";
 $F_NAMES["OpenInventory"]="ExchangeItems";
 $F_NAMES["Attack"]="Attack";
+$F_NAMES["AttackHunt"]="Hunt";
 $F_NAMES["Follow"]="Follow";
 $F_NAMES["CheckInventory"]="ListInventory";
 $F_NAMES["SheatheWeapon"]="SheatheWeapon";
@@ -198,6 +202,20 @@ $FUNCTIONS = [
             "required" => ["target"],
         ]
     ],
+    [
+        "name" => $F_NAMES["AttackHunt"],
+        "description" => $F_TRANSLATIONS["AttackHunt"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Target animal",
+                ]
+            ],
+            "required" => ["target"],
+        ]
+        ],
     [
         "name" => $F_NAMES["Follow"],
         "description" => $F_TRANSLATIONS["Follow"],
@@ -483,6 +501,7 @@ $GLOBALS["ENABLED_FUNCTIONS"]=[
     //'MoveTo',
     'OpenInventory',
     'Attack',
+    'AttackHunt',
     'TravelTo',
     //'Follow',
     'CheckInventory',
