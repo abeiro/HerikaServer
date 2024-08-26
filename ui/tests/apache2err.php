@@ -26,5 +26,6 @@ function readErrorLog($errorLogPath, $logType) {
 // Read the Distro log
 if (file_exists($distroLogPath) && is_readable($distroLogPath)) {
     readErrorLog($distroLogPath, "DwemerDistro");
-}
+} else
+    echo "Error reading log";
 ?>
