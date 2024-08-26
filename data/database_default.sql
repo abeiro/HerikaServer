@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.7 (Debian 15.7-0+deb12u1)
--- Dumped by pg_dump version 15.7 (Debian 15.7-0+deb12u1)
+-- Dumped from database version 15.8 (Debian 15.8-0+deb12u1)
+-- Dumped by pg_dump version 15.8 (Debian 15.8-0+deb12u1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -108,6 +108,23 @@ CREATE TABLE public.animations_custom (
 
 
 ALTER TABLE public.animations_custom OWNER TO dwemer;
+
+--
+-- Name: audit_memory; Type: TABLE; Schema: public; Owner: dwemer
+--
+
+CREATE TABLE public.audit_memory (
+    input text,
+    keywords text,
+    rank_any numeric(20,10),
+    rank_all numeric(20,10),
+    memory text,
+    "time" text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.audit_memory OWNER TO dwemer;
 
 --
 -- Name: books; Type: TABLE; Schema: public; Owner: dwemer
@@ -316,7 +333,8 @@ CREATE TABLE public.eventlog (
     ts bigint,
     rowid bigint NOT NULL,
     people text,
-    location text
+    location text,
+    party text
 );
 
 
@@ -434,7 +452,9 @@ CREATE TABLE public.memory_summary (
     rowid integer NOT NULL,
     embedding public.vector(384),
     companions text,
-    embedding768 public.vector(768)
+    embedding768 public.vector(768),
+    tags text,
+    native_vec tsvector
 );
 
 
@@ -751,6 +771,14 @@ COPY public.animations_custom (mood, animations, npc) FROM stdin;
 
 
 --
+-- Data for Name: audit_memory; Type: TABLE DATA; Schema: public; Owner: dwemer
+--
+
+COPY public.audit_memory (input, keywords, rank_any, rank_all, memory, "time", created_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: books; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
 
@@ -786,7 +814,7 @@ COPY public.diarylog (ts, sess, topic, content, tags, people, localts, location,
 -- Data for Name: eventlog; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
 
-COPY public.eventlog (type, data, sess, gamets, localts, ts, rowid, people, location) FROM stdin;
+COPY public.eventlog (type, data, sess, gamets, localts, ts, rowid, people, location, party) FROM stdin;
 \.
 
 
@@ -810,7 +838,7 @@ COPY public.memory (speaker, message, session, uid, listener, localts, gamets, m
 -- Data for Name: memory_summary; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
 
-COPY public.memory_summary (gamets_truncated, n, packed_message, summary, classifier, uid, rowid, embedding, companions, embedding768) FROM stdin;
+COPY public.memory_summary (gamets_truncated, n, packed_message, summary, classifier, uid, rowid, embedding, companions, embedding768, tags, native_vec) FROM stdin;
 \.
 
 
