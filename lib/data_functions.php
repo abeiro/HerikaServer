@@ -1130,7 +1130,7 @@ function PackIntoSummary()
 								message not like 'Dear Diary%'
                                 and NOT ( speaker like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%'
                                     OR (listener like '%".SQLite3::escapeString($GLOBALS["HERIKA_NAME"])."%' and speaker like '%".SQLite3::escapeString($GLOBALS["PLAYER_NAME"])."%' )
-                                ) as AA 
+                                )  
 								group by round(gamets/$pfi ,0) HAVING max(uid)>0 order by round(gamets/$pfi ,0) ASC
 							  ) where gamets_truncated>$maxRow
 							");
