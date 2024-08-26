@@ -9,7 +9,7 @@ function readErrorLog($errorLogPath, $logType) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
         $errorLog = file($errorLogPath);
         $errorLog = array_reverse($errorLog);
-        echo "<h1>Reading $logType error.log (Filtered only for errors)</h1>";
+        echo "<h1>Reading $logType $errorLogPath (Filtered only for errors)</h1>";
         echo '<div style="max-height: 800px; overflow-y: scroll; background-color: black; color: white; font-size: 14px;">'; // Increase text size
         foreach ($errorLog as $line) {
             if (strpos($line, '[php:error]') !== false) {
@@ -27,5 +27,5 @@ function readErrorLog($errorLogPath, $logType) {
 if (file_exists($distroLogPath) && is_readable($distroLogPath)) {
     readErrorLog($distroLogPath, "DwemerDistro");
 } else
-    echo "Error reading log";
+    echo "Error reading log $distroLogPath";
 ?>

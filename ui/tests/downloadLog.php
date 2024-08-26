@@ -1,5 +1,5 @@
 <?php
-$logPath = __DIR__ . '/../../log/error.log'; // Adjust the path as necessary
+$logPath = __DIR__ . '/../../log/apache_error.log'; // Adjust the path as necessary
 
 if (file_exists($logPath) && is_readable($logPath)) {
     header('Content-Description: File Transfer');
@@ -11,5 +11,6 @@ if (file_exists($logPath) && is_readable($logPath)) {
     header('Content-Length: ' . filesize($logPath));
     readfile($logPath);
     exit;
-}
+} else
+    echo "Error reading $logPath";
 ?>
