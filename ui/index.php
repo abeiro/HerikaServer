@@ -53,6 +53,8 @@ $db = new sql();
 
 /* Check for database updates */
 
+// Add people info to event log
+
 $query = "
     SELECT column_name 
     FROM information_schema.columns 
@@ -64,6 +66,8 @@ if (!$existsColumn[0]["column_name"]) {
     $db->execQuery('ALTER TABLE "eventlog" ADD COLUMN "people" text');
     echo '<script>alert("A patch (0.1.2) has been applied to Database")</script>';
 }
+
+// Add location info to event log
 
 $query = "
     SELECT column_name 
@@ -77,6 +81,7 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (0.1.3) has been applied to Database")</script>';
 }
 
+// Add party info to event log
 $query = "
     SELECT column_name 
     FROM information_schema.columns 
@@ -89,6 +94,7 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (0.1.4p1) has been applied to Database")</script>';
 }
 
+// Add tags to memory summary
 $query = "
     SELECT column_name 
     FROM information_schema.columns 
@@ -101,6 +107,7 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (0.1.4p2) has been applied to Database")</script>';
 }
 
+// Ensure native_vec is created
 $query = "
     SELECT column_name 
     FROM information_schema.columns 
@@ -113,6 +120,28 @@ if (!$existsColumn[0]["column_name"]) {
     $db->execQuery('CREATE INDEX memory_summary_tsv_idx ON articles USING GIN(native_vec);');
     echo '<script>alert("A patch (0.1.4p3) has been applied to Database")</script>';
 }
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'audit_memory' AND column_name = 'keywords'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('
+    CREATE TABLE public.audit_memory (
+    input text,
+    keywords text,
+    rank_any numeric(20,10),
+    rank_all numeric(20,10),
+    memory text,
+    "time" text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+)');
+    echo '<script>alert("A patch (0.1.5p1) has been applied to Database")</script>';
+}
+
 
 /* END of check database for updates */
 
