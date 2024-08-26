@@ -53,7 +53,7 @@ class connector
         }
         
         $contextDataOrig=array_values($contextData);
-        
+        $pb["user"]="";
         foreach ($contextDataOrig as $n=>$element) {
             
             

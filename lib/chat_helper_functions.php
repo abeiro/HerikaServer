@@ -274,8 +274,16 @@ function returnLines($lines,$writeOutput=true)
         $sentence=$output;
 
         //$output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
-        
-        $output = strtr($sentence,["*smirks*"=>"","*winks*"=>"","*wink*"=>""]); // Manual cases
+        $output = preg_replace('/\*(\w+\s+\w+.*)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+        $sentence=$output;
+        $output = strtr($sentence,[
+                        "*Smirks*"=>"","*smirks*"=>"",
+                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"",
+                        "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"",
+                        "*pant*"=>"",
+                        "*whimper*"=>""
+                        ]
+                        ); // Manual cases
         
         $sentence = preg_replace('/"/', '', $output); // Remove "
 
@@ -706,17 +714,86 @@ function hashtagify($input) {
         return mb_strlen(trim($word)) >= 2;
     });
 
-    // Convert words to camel case
-    $words = array_map(function($word, $index) {
-        $word = '#' .ucfirst(strtolower(trim($word)));
-        return $word;
-    }, $words, array_keys($words));
+    // Join adjacent words that both start with an uppercase letter
+    $result = [];
+    $buffer = '';
 
-    // Combine the words into a single string and add the hashtag
-    $hashtag = $words;
+    foreach ($words as $word) {
+        if (ctype_upper(mb_substr($word, 0, 1))) {
+            if ($buffer !== '') {
+                $buffer .= $word;
+            } else {
+                $buffer = $word;
+            }
+        } else {
+            if ($buffer !== '') {
+                $result[] = "#".ucfirst($buffer);
+                $buffer = '';
+            }
+            $result[] =  "#".ucfirst($word);
+        }
+    }
+
+    if ($buffer !== '') {
+        $result[] = "#$buffer";
+    }
+
+    // Convert words to camel case
+    /*$result = array_map(function($word, $index) {
+        return $index === 0 ? strtolower($word) : ucfirst(strtolower($word));
+    }, $result, array_keys($result));*/
+
+    $hashtag = implode(' ', $result);
 
     return $hashtag;
 }
+
+function hashtagifySentences($input) {
+    // Remove all punctuation
+    $input = preg_replace('/[^\w\s]/u', ' ', $input);
+
+    // Split the string into words
+    $words = explode(' ', $input);
+
+    // Filter out words shorter than 2 characters
+    $words = array_filter($words, function($word) {
+        return mb_strlen(trim($word)) >= 2;
+    });
+
+    // Join adjacent words that both start with an uppercase letter
+    $result = [];
+    $buffer = '';
+
+    foreach ($words as $word) {
+        if (ctype_upper(mb_substr($word, 0, 1))) {
+            if ($buffer !== '') {
+                $buffer .= $word;
+            } else {
+                $buffer = $word;
+            }
+        } else {
+            if ($buffer !== '') {
+                $result[] = ucfirst($buffer);
+                $buffer = '';
+            }
+            $result[] = ucfirst($word);
+        }
+    }
+
+    if ($buffer !== '') {
+        $result[] = "#$buffer";
+    }
+
+    // Convert words to camel case
+    $result = array_map(function($word, $index) {
+        return $index === 0 ? strtolower($word) : ucfirst(strtolower($word));
+    }, $result, array_keys($result));
+
+    $hashtag = implode(' ', $result);
+
+    return $hashtag;
+}
+
 
 function offerMemoryOld($gameRequest, $DIALOGUE_TARGET)
 {
@@ -925,7 +1002,7 @@ function ExtractKeywords($sourceText) {
 function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
-    if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
+    if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] && false) {
         error_log("Searching memory ".implode("|",$gameRequest));
         if (($gameRequest[0] == "inputtext") || ($gameRequest[0] == "inputtext_s")) {
             $memory=array();
@@ -1075,7 +1152,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else if ($memories[0]["rank_any"]>0.25) {
+        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)>0.25) {
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             

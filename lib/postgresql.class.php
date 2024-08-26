@@ -92,6 +92,14 @@ class sql
         return pg_fetch_array($res);
     }
  
+    public function escape($string)
+    {
+        if ($string)
+            return pg_escape_string(self::$link,$string);
+        else
+            return "";
+    }
+
     public function updateRow($table, $data, $where)
     {
         $setClauses = [];

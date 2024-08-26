@@ -129,6 +129,7 @@ if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
 if (isset($_GET["profile"])) {
     
     $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
+    $OVERRIDES["MINIME_T5"]=$GLOBALS["MINIME_T5"];
     
     if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
        // error_log("PROFILE: {$_GET["profile"]}");
@@ -139,6 +140,7 @@ if (isset($_GET["profile"])) {
     }
     
     $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
+    $GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
     
 } else {
     //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
@@ -231,6 +233,10 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     
     if (sizeof($rechatHistory)>($GLOBALS["RECHAT_H"]))    {   // TOO MUCH RECHAT
         error_log("Rechat discarded");
+        // Lets try to summarize
+        sem_release($semaphore);
+        while(@ob_end_clean());
+        require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
         die();
     }
     
@@ -388,26 +394,66 @@ if ($memoryInjection) {
 }
 */   
 
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
 
-$memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
-if (!empty($memoryInjection)) {
-    
-    //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
-    $memoryInjectionCtx= array('role' => 'user', 'content' => "#MEMORY: {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection]");
-    //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
-    
-} else {
-    $memoryInjectionCtx=[];
-    $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+    $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+    if (!empty($memoryInjection)) {
         
-}
+        //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
+        $memoryInjectionCtx= array('role' => 'user', 'content' => "#MEMORY: {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection]");
+        //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
+        
+    } else {
+        $memoryInjectionCtx=[];
+        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+            
+    }
+} else
+     $memoryInjectionCtx=[];
 
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
-
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+    
+    if ($GLOBALS["MINIME_T5"]) {
+        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+        $replacement = "";
+        $TEST_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); // // assistant vs user war
+        
+        $pattern = '/\(talking to [^()]+\)/i';
+        $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+        $TEST_TEXT=strtr($TEST_TEXT,["."=>" "]);
+        $command=file_get_contents("http://127.0.0.1:8082/command?text=".urlencode($TEST_TEXT));
+        $preCommand=json_decode($command,true);
+        if ($preCommand["is_command"]!="Talk") {
+            $GLOBALS["db"]->insert(
+                'audit_memory',
+                array(
+                    'input' => $TEST_TEXT,
+                    'keywords' =>'command offered',
+                    'rank_any'=> -1,
+                    'rank_all'=>-1,
+                    'memory'=>$preCommand["is_command"],
+                    'time'=>$preCommand["elapsed_time"]
+                )
+            );
+            error_log("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
+            $memoryInjectionCtx=[]; // Disable memorie when command.
+            $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
+            $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+        }
+    }
+
     $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+}
+
+if (sizeof($memoryInjectionCtx)>0) {
+    // Persist memory injetction
+    $gameRequestCopy=$gameRequest;
+    $gameRequestCopy[0]="infoaction";
+    $gameRequestCopy[3]=$memoryInjectionCtx["content"];
+    logEvent($gameRequestCopy);
 }
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
@@ -464,8 +510,12 @@ if ($gameRequest[0] == "funcret") {
             
         } else
             $prompt=[];
-        
+     
         $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["stop"]=["\n"];
+        
+        if ($gameRequest[0]=="diary") {
+            unset($GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["stop"]);
+        }
         
         
     } else {
@@ -610,8 +660,9 @@ if ($connectionHandler->primary_handler === false) {
         $totalProcessedData.=trim($buffer);
     }
 
+    if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  // chatgpt smetime trigger actions even when disabled.
+        $actions=$connectionHandler->processActions();
 
-    $actions=$connectionHandler->processActions();
     if (is_array($actions) && (sizeof($actions)>0)) {
         
         // ACTION POST-FILTER
@@ -744,7 +795,7 @@ if (sizeof($talkedSoFar) == 0) {
 
 
 
-echo 'X-CUSTOM-CLOSE';
+echo 'X-CUSTOM-CLOSE'.PHP_EOL;
 
 if (php_sapi_name()=="cli") {
     echo PHP_EOL;
@@ -756,6 +807,9 @@ if (php_sapi_name()=="cli") {
 
 
 // POST PROCESS TASKS
+if ($semaphore) 
+    sem_release($semaphore);
+
 while(@ob_end_clean());
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 

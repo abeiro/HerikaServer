@@ -1,5 +1,24 @@
 <?php
 
+function lazyEmpty($string) {
+ 
+    if (empty(trim($string)))
+        return true;
+    
+    if (trim($string)=="Null")
+        return true;
+    
+    if (trim($string)=="null")
+        return true;
+    
+    if (trim($string)=="None")
+        return true;
+    
+    if (trim($string)=="none")
+        return true;
+    
+    
+}
 function __jpd__extractContentBetweenBraces($inputString) {
     // Find the position of the first {
     $startPos = strpos($inputString, '{');
@@ -94,6 +113,10 @@ function __jpd_decode_lazy($inputString) {
     if (is_array($realData))
         return $realData;
 
+    $realData = json_decode(strtr($inputString,["\n"=>""]), true);
+    if (is_array($realData))
+        return $realData;
+    
     $pattern = '/``json(.+?)```/s';
     // Extract the JSON code using the regular expression
     preg_match($pattern, $inputString, $matches);
@@ -371,7 +394,9 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{"character":"Ahadi","listener":"Volkur","mood":"teasing","action":"Inspect","target":"","message":"Oh, darling, 'sufficient' is such a dreadfully dull word. Let's see what you've got, shall we? I'm sure with a little... adjustment, we can turn 'sufficient' into 'sensational'. Come now, give us a twirl!"}
+{"character":"Laufey the Tiefling","listener":"Nubidia","mood":"amused","action":"Talk","target":"Nubidia","message":"Oh, Nubidia, always so *concerned*. 
+Don't worry, darling, I'm sure Volkur will find a way to amuse himself. 
+He's quite the resourceful one, isn't he?"} 
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);

@@ -5,7 +5,7 @@ function aiff_audit_end() {
     $elapsedTime = $endTime - $startTime;
 
     error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]);
-    error_log("Elapsed time: " . $elapsedTime . " seconds");
+    error_log("Audit Elapsed time: " . $elapsedTime . " seconds");
 }
 
 $GLOBALS["AUDIT_RUNID"] = strrev(uniqid());

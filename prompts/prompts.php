@@ -172,11 +172,17 @@ $PROMPTS=array(
     ],
     "rechat"=>[ 
         "cue"=>[
-            "{$GLOBALS["HERIKA_NAME"]} interjects in the conversation, talking to last speaker.) $TEMPLATE_DIALOG",
-            "{$GLOBALS["HERIKA_NAME"]} participates in the conversation, talking to last speaker.) $TEMPLATE_DIALOG",
-            "{$GLOBALS["HERIKA_NAME"]} follows the conversation.) $TEMPLATE_DIALOG",
-            "{$GLOBALS["HERIKA_NAME"]} makes a statement about the conversation.) $TEMPLATE_DIALOG",
-            "{$GLOBALS["HERIKA_NAME"]} tries to stop the conversation.) $TEMPLATE_DIALOG"
+                "({$GLOBALS['HERIKA_NAME']} interjects in the conversation, talking to last speaker.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} participates in the conversation, talking to last speaker.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} follows the conversation.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} makes a statement about the conversation.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} makes a remark to last speaker.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} jokes about last speaker sentence.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} adds a comment to the conversation.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} shares an opinion with the last speaker.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} responds thoughtfully to the last speaker.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} asks a question to the last speaker.) $TEMPLATE_DIALOG",
+                "({$GLOBALS['HERIKA_NAME']} gives feedback on the conversation.) $TEMPLATE_DIALOG"
         ]
         
     ],

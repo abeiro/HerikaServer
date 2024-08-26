@@ -22,6 +22,8 @@ function insertNoise($inputString, $noiseArray) {
     // Split the string into words
     $words = explode(' ', $inputString);
 
+	if (!is_array($words))
+		return $inputString;
     // Shuffle the noise array to ensure randomness
     shuffle($noiseArray);
 

@@ -89,8 +89,9 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 		require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 		
 		error_log("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
-        $results = $db->query("select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where gamets_truncated>$maxRow or summary is null 
-        order by uid desc ");
+        $results = $db->query("select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where 
+        (gamets_truncated>$maxRow or summary is null ) 
+        order by uid asc ");
         $counter=0;
 		$toUpdate=[];
 		
@@ -107,7 +108,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 				
 				$gameRequest=["summary"];	// Fake a diary call.
 				
-				$CLFORMAT="#Summary: {summary of events and dialogues}\r\n#Tags: {list of relevant hashtags}";
+				$CLFORMAT="#Summary: {summary of events and dialogues}\r\n#Tags: {list of relevant twitter-like hashtags}";
 				$prompt=[];
                 
                 $prompt[] = array('role' => 'system', 
@@ -115,7 +116,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 {$GLOBALS["PLAYER_NAME"]} is the player.
 {$people[0]["people"]} are {$GLOBALS["PLAYER_NAME"]}'s followers/companions.
 You must write {$GLOBALS["PLAYER_NAME"]} memories by analyzing chat history.
-Pay attention to details that can change character's behaviour, feelings,....
+Pay attention to details that can change character's behaviour, feelings,also tag names and locations
 ");
                 
                 $prompt[] = array('role' => 'user', 'content' =>"

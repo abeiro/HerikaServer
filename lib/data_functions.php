@@ -303,7 +303,7 @@ function DataQuestJournal($quest)
 }
 
 function removeTalkingToOccurrences($input) {
-    $pattern = '/\(talking to [^()]+\)/';
+    $pattern = '/\(talking to [^()]+\)/i';
     preg_match_all($pattern, $input, $matches, PREG_OFFSET_CAPTURE);
 
     // Get all positions of the matches
@@ -444,9 +444,9 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc'and  type<>'infonpc'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf'
     ".(($actor)?" and people like '|%$actor%|' ":"")." 
-    and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  
-    and gamets>".($currentGameTs-(60*60*60*60))."
-    order by gamets desc,ts desc,rowid desc LIMIT 1000 OFFSET 0";
+    and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
+    ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
+    " order by gamets desc,ts desc,rowid desc LIMIT 1000 OFFSET 0";
     
     $results = $db->fetchAll($query);
 
@@ -509,8 +509,22 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
         
         $printLocation=false;
-        if ($lastlocation!=$row["location"]) {
-            $lastlocation=$row["location"];
+        
+        $string = $row["location"];
+        preg_match('/Context\s*(new\s*)?location:\s*([a-zA-Z\s\'\-]+)(\s*,|$)/', $string, $locationMatch);
+        $location = trim($locationMatch[2]);
+        preg_match('/Hold:\s*([a-zA-Z\s\'\-]+)(\s*|$)/', $string, $holdMatch);
+        
+        if (!isset($holdMatch[1])) {
+            //error_log(print_r($string,true));
+            $locationFinal=$lastlocation;
+        } else {
+            $hold = trim($holdMatch[1]);
+            $locationFinal="$location, hold: $hold";
+        }
+        
+        if ($lastlocation!=$locationFinal) {
+            $lastlocation=$locationFinal;
             if ($row["type"]!="location")
                 $printLocation=true;
             $currentLocation=$lastlocation;
@@ -843,14 +857,16 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
 
 }
 
-function DataSpeechJournal($topic,$limit=25)
+function DataSpeechJournal($topic,$limit=50)
 {
 
     global $db;
 
     $lastDialogFull = [];
     $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest FROM speech
-      where (speaker like '%$topic%' or  listener like '%$topic%' or location like '%$topic%' or  companions like '%$topic%') order by rowid desc");
+      where (speaker like '%$topic%' or  listener like '%$topic%' or location like '%$topic%' or  companions like '%$topic%') 
+      and listener<>'unknown' 
+      order by rowid desc");
     if (!$results) {
         return json_encode([]);
     }
@@ -1119,7 +1135,7 @@ function PackIntoSummary()
 							  ) where gamets_truncated>$maxRow
 							");
     
- 
+    error_log("Main insert done");
     //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
     
     $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
@@ -1129,9 +1145,11 @@ function PackIntoSummary()
 								and gamets>$maxRow
 							");
 
-    foreach ( $db->fetchAll("select * from memory_summary") as $row) {
-        $people=$db->fetchAll("SELECT COALESCE(party,people) as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
-        $db->query("update memory_summary set companions='{$people[0]["people"]}' where rowid={$row["rowid"]}");
+    error_log("Diary insert done");
+    foreach ( $db->fetchAll("select * from memory_summary where gamets_truncated>$maxRow ") as $row) {
+        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(party,people) end  as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
+        $peopleFmt=$db->escape($people[0]["people"]);
+        $db->query("update memory_summary set companions='$peopleFmt' where rowid={$row["rowid"]}");
     }
     return $maxRow;
 }
@@ -1319,35 +1337,112 @@ function GetExpression($mood) {
 
 function DataSearchMemory($rawstring,$npcfilter) {
     
-    
-    
     //$kw=explode(" ",($rawstring));
-    $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-    $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+    if (is_array($rawstring)) {
+        $kwStringAny=implode(" | ",$rawstring);
+        $kwStringAll=implode(" & ",$rawstring);
+        
+    } else if ($GLOBALS["MINIME_T5"]) {
+        // MiniMe keyword extraction
+        $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-    //$res=FastCallOAI("Analyze the following sentence and extract only relevant words (names,items) for a search, strip common short words,convert words to singular,generate only words separated by commas:\n$rawstring");
+        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+        $replacement = "";
+        $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
+                    
+        
+        $keywords=file_get_contents("http://127.0.0.1:8082/extract?text=".urlencode($TEST_TEXT));
+        $reponse=json_decode($keywords,true);
+        
+        if ($reponse["is_memory_recall"]=="No") {
+             $GLOBALS["db"]->insert(
+                'audit_memory',
+                array(
+                    'input' => $TEST_TEXT,
+                    'keywords' =>'minibot declined',
+                    'rank_any'=> -1,
+                    'rank_all'=>-1,
+                    'memory'=>'',
+                    'time'=>$reponse["elapsed_time"]
+                )
+            );
+            return "";
+        } else {
+        
+            $altKeywords=explode(" ",lastNames(15,["inputtext"]));
+            
+            $keywords=explode("|",$reponse["generated_tags"]);
+            array_merge($keywords,$altKeywords);
+            $kw=[];
+            foreach ($keywords as $tag) {
+                $lkw=hashtagify($tag);    
+                if ($lkw) {
+                    $kw=array_merge($kw,explode(" ",$lkw));
+                }
+            }
+            $result = array_unique($kw);
+
+            $kwStringAny=implode(" | ",$result);
+            $kwStringAll=implode(" & ",$result);
+            error_log("CONTEXT SEARCH KEYWORDS ".print_r($result,true));
+        }
+        
+    }  else  {
+        $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+
+        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+        $replacement = "";
+        $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
+                    
+        
+        $keywords=hashtagifySentences($TEST_TEXT);
+        $kw=[];
+        foreach (explode(" ",$keywords) as $tag) {
+            $lkw=hashtagify($tag);    
+            if ($lkw) {
+                $kw=array_merge($kw,explode(" ",$lkw));
+            }
+        }
+        $result = array_unique($kw);
+
+        $kwStringAny=implode(" | ",$result);
+        $kwStringAll=implode(" & ",$result);
+        
+        $memory[]=["rank_any"=>-1,"rank_any"=>-1,"rank_any"=>-1];
+    }
     
-    $kw=hashtagify($res);
     
     
-    ksort($kw);
-    error_log(print_r($kw,true));
-    
-    $kwStringAny=implode(" | ",$kw);
-    $kwStringAll=implode(" & ",$kw);
-    
-    
-    return $GLOBALS["db"]->fetchAll("
+    $memory=$GLOBALS["db"]->fetchAll("
         SELECT summary,gamets_truncated,
         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any,
         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all
         FROM memory_summary A
         where native_vec @@to_tsquery('$kwStringAny')
+        and not (native_vec @@to_tsquery('#Reminiscence'))
         and companions like '%$npcfilter%'
 
         ORDER BY rank_all DESC, rank_any DESC;
         ");
             
+    
+        $GLOBALS["db"]->insert(
+                'audit_memory',
+                array(
+                    'input' => $TEST_TEXT,
+                    'keywords' =>$kwStringAny,
+                    'rank_any'=> $memory[0]["rank_any"],
+                    'rank_all'=>$memory[0]["rank_all"],
+                    'memory'=>$memory[0]["summary"],
+                    'time'=>isset($reponse["elapsed_time"])?$reponse["elapsed_time"]:"0 secs (internal)"
+                )
+            );
+            
+    
+    return $memory;
+    
 }
 
 function FastCallOAI($question) {

@@ -62,7 +62,7 @@ class connector
             $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
-                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
+                if (strpos($function["name"],"Attack")!==false) {   // Every command starting with Attack
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]}";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 } /*else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
@@ -423,7 +423,7 @@ class connector
                         $mangledBuffer = str_replace($this->_extractedbuffer, "", $finalData["message"]);
                         $this->_extractedbuffer=$finalData["message"];
                         if (isset($finalData["listener"])) {
-                            if (isset($finalData["action"])&&($finalData["action"]=="Talk")&&isset($finalData["target"])&&(!empty(trim($finalData["target"]))) &&(trim($finalData["target"])!="None"))
+                            if (isset($finalData["action"])&&($finalData["action"]=="Talk")&& lazyEmpty($finalData["listener"]) && !lazyEmpty($finalData["target"]))
                                 $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["target"];
                             else
                                 $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];

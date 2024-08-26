@@ -56,10 +56,17 @@ class connector
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
         
+        if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
+            $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+        } else {
+            ;
+            //$prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+        }
+        
         if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
             $contextData[]= [
                 'role' => 'user', 
-                'content' => "Use this JSON object to give your answer: ".json_encode([
+                'content' => "{$prefix}Use this JSON object to give your answer: ".json_encode([
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                     "mood"=>implode("|",$moods),
@@ -73,7 +80,7 @@ class connector
         } else {
             $contextData[]= [
                 'role' => 'user', 
-                'content' => "Use this JSON object to give your answer: ".json_encode([
+                'content' => "{$prefix}Use this JSON object to give your answer: ".json_encode([
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                     "mood"=>implode("|",$moods),
@@ -92,7 +99,7 @@ class connector
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
                 
-                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
+                if (strpos($function["name"],"Attack")!==false) {   // Every command starting with Attack
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]} ";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 }/* else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {

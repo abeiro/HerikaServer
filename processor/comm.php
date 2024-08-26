@@ -523,26 +523,37 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
           
         }
         
+        $partyConf=DataGetCurrentPartyConf();
+		$partyConfA=json_decode($partyConf,true);
+		error_log($partyConf);
+		if (isset($partyConfA["{$GLOBALS["HERIKA_NAME"]}"])) {
+			$charDesc=print_r($partyConfA["{$GLOBALS["HERIKA_NAME"]}"],true).PHP_EOL.$GLOBALS["HERIKA_PERS"];
+			$currentProfile=$charDesc;
+		} else
+            $currentProfile=$GLOBALS["HERIKA_PERS"];
+
 		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n" . $GLOBALS["HERIKA_PERS"], ];
-		$prompt[] = ["role"=> "user", "content"	=> "Use Dialogue history to update character profile.  Dialogue history is more important that reference profile.
+		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n$currentProfile", ];
+		$prompt[] = ["role"=> "user", "content"	=> "Use Dialogue history to update and summarize character profile. 
 Mandatory Format:
 
-* Personality,(concise description, 100 words).
+* Personality,(concise description, 75 words).
 * Bio: (birthplace, gender, race $SHORTER).
-* Speech style (use keywords, short description).
-* Relation with {$GLOBALS["PLAYER_NAME"]} (100 words).
-* Likes (use keywords, short description).
-* Fears( use keywords, short description).
-* Dislikes (use keywords, short description).
-* Current mood (use last events to determine). 
+* Speech style (15 keywords).
+* Current goal (15 keywords).
+* Relation with {$GLOBALS["PLAYER_NAME"]} (75 words).
+* Likes (15 keywords).
+* Fears 15 keywords, pay atention to dramatic past events).
+* Dislikes (15 keywords).
+* Current mood (15 keywords, use last events to determine). 
+* Relation with other followers if any.
 
 Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.", ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
         
-		$connectionHandler->open($contextData, ["max_tokens"=>350]);
+		$connectionHandler->open($contextData, ["max_tokens"=>500]);
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;
