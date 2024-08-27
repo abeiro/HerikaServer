@@ -439,11 +439,11 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         
         // No file exists, so seems is the first time NPC is added
 
-        $gameRequestCopy=$gameRequest;
-        
-        
+
         logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["PLAYER_NAME"],
-            "Important note to myself: I've met {$GLOBALS["HERIKA_NAME"]} for the first time.","", $momentum, $gameRequest[2],'first_met',$gameRequest[1]);
+            "(Important note: {$GLOBALS["PLAYER_NAME"]} met {$gameRequest[3]} for the first time. This is an important event, so use tag #FirstTimeMet.)",
+             $momentum, $gameRequest[2],'first_met',$gameRequest[1]);
+
         // Do customizations here
         $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
         copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);

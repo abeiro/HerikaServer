@@ -1227,15 +1227,17 @@ function DataGetCurrentPartyConf() {
     global $db;
 
     $results = $db->fetchAll("select value from conf_opts where id='CurrentParty'");
+    if (is_array($results) && is_array($results[0])) {
+        $guys=json_decode("[{$results[0]["value"]}\"\"]",true);
+        $finalparty=[];
+        foreach ($guys as $guy) {
+            if (isset($guy["name"]))
+                $finalparty[$guy["name"]]=$guy;
+        }
     
-    $guys=json_decode("[{$results[0]["value"]}\"\"]",true);
-    $finalparty=[];
-    foreach ($guys as $guy) {
-        if (isset($guy["name"]))
-            $finalparty[$guy["name"]]=$guy;
-    }
-    
-    return json_encode($finalparty);
+        return json_encode($finalparty);
+    } else
+        return "";
     
 }
 
