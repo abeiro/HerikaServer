@@ -33,7 +33,7 @@ class connector
                                                                                                 Tyler, 2023/11/09
         ****/
         
-        if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] && fasle) {
+        if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] && false) {
             // This is deprecated
             foreach ($contextData as $n=>$contextline)  {
                 if (strpos($contextline["content"],"#MEMORY")===0) {
