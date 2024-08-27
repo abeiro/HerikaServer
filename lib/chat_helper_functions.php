@@ -502,7 +502,7 @@ function returnLines($lines,$writeOutput=true)
 
 }
 
-function logMemory($speaker, $listener, $message, $momentum, $gamets,$event='')
+function logMemory($speaker, $listener, $message, $momentum, $gamets,$event='',$ts)
 {
     global $db;
 
@@ -516,7 +516,8 @@ function logMemory($speaker, $listener, $message, $momentum, $gamets,$event='')
                 'gamets' => $gamets,
                 'session' => "pending",
                 'momentum'=>$momentum,
-                'event'=>$event
+                'event'=>$event,
+                'ts'=>$ts
         )
     );
     /*

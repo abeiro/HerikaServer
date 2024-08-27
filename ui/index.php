@@ -142,6 +142,55 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (0.1.5p1) has been applied to Database")</script>';
 }
 
+// Memory ts
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'memory' AND column_name = 'ts'
+";
+
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+        $db->execQuery('ALTER TABLE "memory" ADD COLUMN "ts" bigint');
+        $db->execQuery("CREATE OR REPLACE VIEW public.memory_v AS
+ SELECT message,
+    uid,
+    gamets,
+    speaker,
+    listener,
+    ts
+   FROM ( SELECT memory.message,
+            memory.uid,
+            memory.gamets,
+            '-'::text AS speaker,
+            '-'::text AS listener,
+           ts
+           FROM public.memory
+          WHERE ((memory.message !~~ 'Dear Diary%'::text) AND (memory.message <> ''::text))
+        UNION
+         SELECT ((((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech),
+            0,
+            speech.gamets,
+            speech.speaker,
+            speech.listener,
+            speech.ts
+           FROM public.speech
+          WHERE (speech.speech <> ''::text)
+        UNION
+         SELECT eventlog.data,
+            0,
+            eventlog.gamets,
+            '-'::text AS text,
+            '-'::text AS listener,
+            eventlog.ts
+           FROM public.eventlog
+          WHERE ((eventlog.type)::text = ANY (ARRAY[('death'::character varying)::text, ('location'::character varying)::text]))) subquery
+  ORDER BY gamets, ts");
+  
+        echo '<script>alert("A patch (0.1.6p1) has been applied to Database")</script>';
+    
+}
 
 /* END of check database for updates */
 
