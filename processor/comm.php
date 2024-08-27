@@ -442,7 +442,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         $gameRequestCopy=$gameRequest;
         
         
-        logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["PLAYER_NAME"],"Important note to myself: I've met {$GLOBALS["HERIKA_NAME"]} for the first time.","", $momentum, $gameRequest[2],'first_met');
+        logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["PLAYER_NAME"],
+            "Important note to myself: I've met {$GLOBALS["HERIKA_NAME"]} for the first time.","", $momentum, $gameRequest[2],'first_met',$gameRequest[1]);
         // Do customizations here
         $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
         copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
