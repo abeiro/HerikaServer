@@ -225,7 +225,8 @@
   },
   "ITTFUNCTION": {
     "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition aka Soulgaze spell. Use OpenAI for OpenRouter!", 
-    "_title":"Image Recognition Service"
+    "_title":"Image Recognition Service to use",
+    "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
   },
   "ITT": {
     "_title":"Image Recognition Service",
@@ -268,8 +269,11 @@
     "MISC": {
       "_title":"Misc features/options",
       "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
-      "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest."}
+      "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest."},
+      "ITT_QUALITY": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
+
     }
+
   }
   
 }

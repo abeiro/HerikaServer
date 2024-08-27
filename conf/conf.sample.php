@@ -111,6 +111,7 @@ $STTFUNCTION="whisper";								// Valid options are azure or whisper so far
 $TTSFUNCTION="mimic3";								// Valid options are azure or mimic3, or 11labs so far
 $ITTFUNCTION="none";								// Valid options are azure or mimic3, or 11labs so far
 
+$FEATURES["MISC"]["ITT_QUALITY"]=90;
 
 
 

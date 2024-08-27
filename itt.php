@@ -57,7 +57,7 @@ function convertImage($originalImage, $outputImage, $quality)
 
     // quality is a value from 0 (worst) to 100 (best)
     //imagepng($imageTmp, $outputImage, $quality);
-    imagejpeg($imageTmp, $outputImage, 90);
+    imagejpeg($imageTmp, $outputImage, $GLOBALS["FEATURES"]["MISC"]["ITT_QUALITY"]);
     imagedestroy($imageTmp);
 
     return 1;
