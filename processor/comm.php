@@ -439,6 +439,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         
         // No file exists, so seems is the first time NPC is added
 
+        //logMemory($speaker, $listener, $message, $momentum, $gamets,$event,$ts)
 
         logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["PLAYER_NAME"],
             "(Important note: {$GLOBALS["PLAYER_NAME"]} met {$gameRequest[3]} for the first time. This is an important event, so use tag #FirstTimeMet.)",
