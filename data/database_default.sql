@@ -411,7 +411,8 @@ CREATE TABLE public.memory (
     gamets bigint NOT NULL,
     momentum text,
     rowid bigint NOT NULL,
-    event character varying(64)
+    event character varying(64),
+    ts bigint
 );
 
 
@@ -542,12 +543,12 @@ CREATE VIEW public.memory_v AS
             memory.gamets,
             '-'::text AS speaker,
             '-'::text AS listener,
-            '999999999999999999'::bigint AS ts
+            memory.ts
            FROM public.memory
           WHERE ((memory.message !~~ 'Dear Diary%'::text) AND (memory.message <> ''::text))
         UNION
          SELECT ((((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech),
-            0,
+            (speech.rowid)::integer AS rowid,
             speech.gamets,
             speech.speaker,
             speech.listener,
@@ -556,7 +557,7 @@ CREATE VIEW public.memory_v AS
           WHERE (speech.speech <> ''::text)
         UNION
          SELECT eventlog.data,
-            0,
+            (eventlog.rowid)::integer AS rowid,
             eventlog.gamets,
             '-'::text AS text,
             '-'::text AS listener,
@@ -830,7 +831,7 @@ COPY public.log (localts, prompt, response, url, rowid) FROM stdin;
 -- Data for Name: memory; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
 
-COPY public.memory (speaker, message, session, uid, listener, localts, gamets, momentum, rowid, event) FROM stdin;
+COPY public.memory (speaker, message, session, uid, listener, localts, gamets, momentum, rowid, event, ts) FROM stdin;
 \.
 
 

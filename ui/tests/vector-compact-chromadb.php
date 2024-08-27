@@ -10,17 +10,6 @@ $commandcompact = shell_exec($commandcompact);
 echo "<h1>Compact Memories</h1>";
 echo"<pre>$commandcompact</pre>";
 
-// Run sync command // Disabled
-//$commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php sync';
-//$outputsync = shell_exec($commandsync);
-
-// Output sync command
-if ($embedding == 'local') {
-    echo "<h1>Memory Sync for Local Text2Vec</h1>";
-} else {
-    echo "<h1>Memory Sync for OpenAI's ADA2</h1>";
-}
-
 echo "<ul>";
 $lines = explode("\n", $commandcompact);
 foreach ($lines as $line) {
@@ -30,4 +19,19 @@ foreach ($lines as $line) {
     }
 }
 echo "</ul>";
+
+// Run sync command // Disabled
+/*
+$commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php sync';
+//$outputsync = shell_exec($commandsync);
+
+// Output sync command
+if ($embedding == 'local') {
+    echo "<h1>Memory Sync for Local Text2Vec</h1>";
+} else {
+    echo "<h1>Memory Sync for OpenAI's ADA2</h1>";
+}
+*/
+
+
 ?>
