@@ -164,7 +164,7 @@ Pay attention to details that can change character's behaviour, feelings,also ta
 
 			
             error_log("$TEST_TEXT");
-            if (($argv[2]!="noembed")||true) {
+            if (($argv[2]!="noembed")&& false) {
                 error_log("Getting embedding");
                 storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]);
             }

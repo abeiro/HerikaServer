@@ -61,11 +61,12 @@
                             Export Diary
                         </a>
                     </li>
-                    <li>
+                    <!--<li>
                         <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync VectorDB Memories. Use this if you have changed Memory Embeddings service." target="_blank">
                             Sync Memories
                         </a>
                     </li>
+                    -->
                     <li>
                         <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync VectorDB Memories if you have changed Memory Embeddings service" onclick="return confirm('Will cost Tokens to use if using OpenAI. MAY TAKE A FEW MINUTES TO PROCESS, DO NOT REFRESH THE WEBPAGE! Are you sure?')">
                             Compact & Sync Memories
