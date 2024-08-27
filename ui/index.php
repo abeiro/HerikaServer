@@ -161,7 +161,7 @@ if (!$existsColumn[0]["column_name"]) {
     listener,
     ts
    FROM ( SELECT memory.message,
-            memory.uid,
+            CAST(memory.uid AS integer),
             memory.gamets,
             '-'::text AS speaker,
             '-'::text AS listener,
@@ -170,7 +170,7 @@ if (!$existsColumn[0]["column_name"]) {
           WHERE ((memory.message !~~ 'Dear Diary%'::text) AND (memory.message <> ''::text))
         UNION
          SELECT ((((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech),
-            0,
+            CAST(speech.rowid AS integer),
             speech.gamets,
             speech.speaker,
             speech.listener,
@@ -179,15 +179,16 @@ if (!$existsColumn[0]["column_name"]) {
           WHERE (speech.speech <> ''::text)
         UNION
          SELECT eventlog.data,
-            0,
+            CAST(eventlog.rowid AS integer),
             eventlog.gamets,
             '-'::text AS text,
             '-'::text AS listener,
             eventlog.ts
            FROM public.eventlog
           WHERE ((eventlog.type)::text = ANY (ARRAY[('death'::character varying)::text, ('location'::character varying)::text]))) subquery
-  ORDER BY gamets, ts");
-  
+  ORDER BY gamets, ts;
+");
+
         echo '<script>alert("A patch (0.1.6p1) has been applied to Database")</script>';
     
 }

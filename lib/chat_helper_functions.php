@@ -502,7 +502,7 @@ function returnLines($lines,$writeOutput=true)
 
 }
 
-function logMemory($speaker, $listener, $message, $momentum, $gamets,$event='',$ts)
+function logMemory($speaker, $listener, $message, $momentum, $gamets,$event,$ts)
 {
     global $db;
 

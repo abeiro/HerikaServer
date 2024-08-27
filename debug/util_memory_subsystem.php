@@ -91,7 +91,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 		error_log("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
         $results = $db->query("select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where 
         (gamets_truncated>$maxRow         or summary is null )
-        order by uid asc ");
+        order by rowid asc ");
         $counter=0;
 		$toUpdate=[];
 		
