@@ -270,7 +270,7 @@
       "_title":"Misc features/options",
       "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
       "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest."},
-      "ITT_QUALITY": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
+      "ITT_QUALITY": {"type":"integer","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
 
     }
 
