@@ -102,6 +102,7 @@
                     <li><a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test Google Cloud TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a></li>
                     <li><a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a></li>
+                    <li><a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json" target="_blank">Regen character map</a></li>
                 </ul>
             </li>
 
