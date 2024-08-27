@@ -4,15 +4,15 @@ require_once(__DIR__ . '/../../conf/conf.php');
 $embedding = $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"];
 
 //Run the Compact Command
-$commandcompact = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php compact';
+$commandcompact = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php compact noembed';
 $commandcompact = shell_exec($commandcompact);
 
 echo "<h1>Compact Memories</h1>";
 echo"<pre>$commandcompact</pre>";
 
-// Run sync command
-$commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php sync';
-$outputsync = shell_exec($commandsync);
+// Run sync command // Disabled
+//$commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php sync';
+//$outputsync = shell_exec($commandsync);
 
 // Output sync command
 if ($embedding == 'local') {
@@ -22,7 +22,7 @@ if ($embedding == 'local') {
 }
 
 echo "<ul>";
-$lines = explode("\n", $outputsync);
+$lines = explode("\n", $commandcompact);
 foreach ($lines as $line) {
     $line = trim($line);
     if (!empty($line)) {
