@@ -58,6 +58,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
     } elseif ($argv[1]=="sync") {
         
+        die("Sync is disabled atm. Will be enabled (maybe) in future releases. PostgreSQL pgvector will take care :)");
         echo "Creating memories".PHP_EOL;
         ;
         $db = new sql();
