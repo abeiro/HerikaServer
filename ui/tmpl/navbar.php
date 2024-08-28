@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
-        <a class="navbar-brand mr-2 Title" href="index.php" title="AI Follower Framework Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AI Follower Framework
+        <a class="navbar-brand mr-2 Title" href="/ui/conf_wizard.php" title="AI Follower Framework Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AI Follower Framework
         
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector" style="display:none">
         <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>-->
@@ -113,10 +113,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
-                    <li><a class="dropdown-item" href="conf_export.php" title="Export Configuration WIP" target="_blank">Export Configuration</a></li>
-                    <li><a class="dropdown-item" href="conf_import.php" title="Import Configuration WIP" target="_blank">Import Configuration</a></li>
                     <li><a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank">XTTS FastAPI Voice Management</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=openai_token_count">OpenAI Token Pricing</a></li>
                     <li><a class="dropdown-item" href="conf_editor.php" target="_blank">Manual Configuration (Advanced!)</a></li>
                     <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0' target="_blank">AI/LLM Supported Models List</a></li>
                 </ul>
