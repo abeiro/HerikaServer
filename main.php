@@ -220,10 +220,13 @@ if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
 
 $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 $currentParty=json_decode($GLOBALS["CACHE_PARTY"],true);
-if (in_array($GLOBALS["HERIKA_NAME"],array_keys($currentParty))) {
-    $GLOBALS["IS_NPC"]=false;
+if (is_array($currentParty)) {
+    if (in_array($GLOBALS["HERIKA_NAME"],array_keys($currentParty))) {
+        $GLOBALS["IS_NPC"]=false;
+    } else
+        $GLOBALS["IS_NPC"]=true;
 } else
-    $GLOBALS["IS_NPC"]=true;
+    $GLOBALS["IS_NPC"]=false;
 
 // RECHAT PRE MANAGMENT
 if (in_array($gameRequest[0],["rechat"]) ) {
