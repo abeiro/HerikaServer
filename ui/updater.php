@@ -19,11 +19,12 @@ echo $lastCommit;
     </div>
 
     <h4 class="my-3">
-        You can find us at Discord.
+        Our Discord:
         <a class="icon-link" href="https://discord.com/invite/NDn9qud2ug">
             https://discord.com/invite/NDn9qud2ug <i class='bi-discord'></i>
         </a>
-        Server code: <a href="https://github.com/abeiro/HerikaServer">https://github.com/abeiro/HerikaServer</a>
+        <br>
+        AI-FF Server source code: <a href="https://github.com/abeiro/HerikaServer">https://github.com/abeiro/HerikaServer</a>
     </h4>
 
 </div>
