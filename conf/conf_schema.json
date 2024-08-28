@@ -250,8 +250,8 @@
     "_title":"Memory Configuration",
     "MEMORY_EMBEDDING": {
       "_title":"Memory Settings",
-      "ENABLED": {"type":"boolean","description":"Enable long term memory.  It uses TXT2VEC (must be enabled in the distro) to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
-      "TXTAI_URL": {"type":"url","description":"TXT2VEC REST-API Endpoint. Can be left as default."},
+      "ENABLED": {"type":"boolean","description":"Enable long term memory. It will provide the most relevant memory with every AI response to be used as context."},
+      "TXTAI_URL": {"type":"url","description":"NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!"},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to delay before using a memory in a prompt. Used to avoid pushing recent dialogues as memories."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"The amount of the most relevant memory records that will be injected into the prompt."},
       "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will combine individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},
