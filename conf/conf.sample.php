@@ -20,8 +20,8 @@ $LANG_LLM_XTTS=false;
 $EMOTEMOODS="sassy,assertive,sexy,smug,kindly,lovely,seductive,sarcastic,sardonic,smirking,amused,default,assisting,irritated,playful,neutral,teasing,mocking";
 $MINIME_T5=false;
 
-$RECHAT_H=3;
-$RECHAT_P=0;
+$RECHAT_H=2;
+$RECHAT_P=50;
 $BORED_EVENT=5;
 $CORE_LANG="";
 
@@ -97,7 +97,7 @@ $ITT["LLAMACPP"]["AI_PROMPT"]='';
 
 
 $ITT["openai"]["url"]='https://api.openai.com/v1/chat/completions';	//OpenAI API endpoint
-$ITT["openai"]["model"]='gpt-4-vision-preview';	//Model to use
+$ITT["openai"]["model"]='gpt-4o-mini';	//Model to use
 $ITT["openai"]["max_tokens"]=256;	//Maximum tokens to generate
 $ITT["openai"]["detail"]='low';	//Low or high fidelity image understanding
 $ITT["openai"]["API_KEY"]='';	//OpenAI API key
@@ -141,7 +141,7 @@ $CONNECTOR["openai"]["top_p"]=1;        			//LLM parameter top_p
 
 $CONNECTOR["openaijson"]["url"]="https://api.openai.com/v1/chat/completions";
 $CONNECTOR["openaijson"]["model"]='gpt-4o-mini';	//Model to use
-$CONNECTOR["openaijson"]["max_tokens"]='250';
+$CONNECTOR["openaijson"]["max_tokens"]='500';
 $CONNECTOR["openaijson"]["temperature"]=1;
 $CONNECTOR["openaijson"]["presence_penalty"]=1;
 $CONNECTOR["openaijson"]["API_KEY"]="";
@@ -198,18 +198,18 @@ $CONNECTOR["openrouter"]["top_a"]=0;	//LLM parameter top_a
 
 
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions";
-$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3-8b-instruct";
-$CONNECTOR["openrouterjson"]["max_tokens"]='250';	//Maximum tokens to generate.
-$CONNECTOR["openrouterjson"]["temperature"]=1;	//LLM parameter temperature
+$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.1-70b-instruct";
+$CONNECTOR["openrouterjson"]["max_tokens"]='500';	//Maximum tokens to generate.
+$CONNECTOR["openrouterjson"]["temperature"]=0.8;	//LLM parameter temperature
 $CONNECTOR["openrouterjson"]["presence_penalty"]=0;	//LLM parameter presence_penalty
 $CONNECTOR["openrouterjson"]["frequency_penalty"]=0;	//LLM parameter frequency_penalty
-$CONNECTOR["openrouterjson"]["repetition_penalty"]=1;	//LLM parameter repetition_penalty
+$CONNECTOR["openrouterjson"]["repetition_penalty"]=1.1;	//LLM parameter repetition_penalty
 $CONNECTOR["openrouterjson"]["top_p"]=1;	//LLM parameter top_p
-$CONNECTOR["openrouterjson"]["top_k"]=0;	//LLM parameter top_k
+$CONNECTOR["openrouterjson"]["top_k"]=40;	//LLM parameter top_k
 $CONNECTOR["openrouterjson"]["min_p"]=0;	//LLM parameter min_p
 $CONNECTOR["openrouterjson"]["top_a"]=0;	//LLM parameter top_a
 $CONNECTOR["openrouterjson"]["ENFORCE_JSON"]=true;	//Will try to force JSON. Some models acept this. Other's dont.
-$CONNECTOR["openrouterjson"]["PREFILL_JSON"]=true;	//Will prefill JSON, which is usefull for some models, and destroy others
+$CONNECTOR["openrouterjson"]["PREFILL_JSON"]=false;	//Will prefill JSON, which is usefull for some models, and destroy others
 $CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]='512';	//Maximum tokens to generate when summarizing, such as writing to diary.
 $CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931";
 $CONNECTOR["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework";

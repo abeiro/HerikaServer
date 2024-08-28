@@ -6,25 +6,25 @@
   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "dynamic_profile_b1": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to update an NPC's personality dynamically, based on recent events. <strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill","helpurl":""},
   "dynamic_profile_b2": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs. <strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill","helpurl":""},
-  "MINIME_T5":{"userlvl":"wip","type":"boolean","scope":"global","description":"Enable MiniMeT5 model to assist in LLM communication"},
+  "MINIME_T5":{"userlvl":"wip","type":"boolean","scope":"global","description":"Enable MiniMeT5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in Distro."},
   "DYNAMIC_PROFILE":{"userlvl":"wip","type":"boolean","description":"Will trigger dynamic profile updates during certain ingame events (such as sleeping). Will cause the AI personality to dynamically change during gameplay based on player interaction."},
-  "RECHAT_H": {"userlvl":"pro","type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves.","_title":"Advanced Configuration"},
-  "RECHAT_P": {"userlvl":"pro","type":"integer","description":"Rechat probability. 0 = Always | 100 = Never"},
-  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an NPC starting a random conversation. 0 = NEVER | 1 = 50% | 2 = 75% ..."},
+  "RECHAT_H": {"userlvl":"pro","type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves. 1 = One Response | 2 = Two Responses etc","_title":"Advanced Configuration"},
+  "RECHAT_P": {"userlvl":"pro","type":"integer","description":"Rechat probability. 0 = Always | 50 = Sometimes | 100 = Never"},
+  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an NPC starting a random conversation. 0 = NEVER | 1 = 50% | 2 = 75% etc"},
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. Improves short term memory. More context = more tokens used, and slower response time."},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
   "NEWQUEUE": {"userlvl":"basic","scope":"constant","type":"boolean","description":"Leave as is. Can not be changed!"},
-  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to disable."},
-  "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send contents of book instead of only the book title to AI service. This will consume more tokens, but AI will accurately summarize any book."},
+  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
+  "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send contents of book instead of only the book title to AI service. This will consume more tokens, but AI will accurately summarize any book or note!"},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books. <strong>SET THIS ON default profile to apply to all followers.</strong>","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game.","scope":"global"},
   "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"Will offer a language field to LLM, and will try match to XTTSv2 language. "},
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations also to NPC"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger animations if passing animations are enabled"},
-  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service to use. Are used to connect with an AI service or program. Choose a json connector. * Non JSON connectors can work with older models, but are not recommended (don't bug us if they don't work.)","_title":"AI/LLM Service (JSON MODE)"},
-  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"AI Service to use. Are used to connect with an AI service or program. Will use this connector to generate content for diary/memories","_title":"AI/LLM Service "},
+  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used. Select the service(s) you have configured for below. Can be toggled ingame or in this menu. <strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong>","_title":"AI/LLM Service Selection"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"AI Service to use for creating diary entries."},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openai": {
@@ -225,16 +225,10 @@
   },
   "ITTFUNCTION": {
     "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition aka Soulgaze spell. Use OpenAI for OpenRouter!", 
-    "_title":"Image Recognition Service to use",
+    "_title":"Image Recognition Service",
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
   },
   "ITT": {
-    "_title":"Image Recognition Service",
-    "AZURE": {
-      "_title":"Azure Image-to-Text (DOES NOT WORK!)",
-      "ENDPOINT": {"type":"url","endpoint":"Endpoint URL","scope":"global"},
-      "API_KEY": {"type":"apikey","description":"Azure Computer Vision API KEY","code":"AZURE_API_KEY","scope":"global"}
-    },
     "LLAMACPP": {
       "_title":"LLama.cpp Server",
       "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md","scope":"global"},
@@ -253,26 +247,26 @@
     }
   },
   "FEATURES": {
-    "_title":"Other Features",
+    "_title":"Memory Configuration",
     "MEMORY_EMBEDDING": {
-      "_title":"Long Term Memory",
-      "ENABLED": {"type":"boolean","description":"Enable long term memory.  It uses TXTAI to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
-      "TXTAI_URL": {"type":"url","description":"TXTAI REST-API Endpoint. Copy and paste the [TXTAI REST-API] URL from the console window."},
-      "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to wait before using a memory in a prompt. Used to avoid pushing recent dialogues as memories. As that is covered by context history."},
-      "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"How many of the most relevant memory records will be injected in prompt."},
-      "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will summarize individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},
-      "AUTO_CREATE_SUMMARY_INTERVAL": {"type":"integer","description":"Time frame used to pack summary data. 10 = 13 in-game hours, 5 = 7,5 in-game hours etc"},
+      "_title":"Memory Settings",
+      "ENABLED": {"type":"boolean","description":"Enable long term memory.  It uses TXT2VEC (must be enabled in the distro) to automatically store memories. It will then provide the most relevant memory with every AI response to be used as context."},
+      "TXTAI_URL": {"type":"url","description":"TXT2VEC REST-API Endpoint. Can be left as default."},
+      "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to delay before using a memory in a prompt. Used to avoid pushing recent dialogues as memories."},
+      "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"The amount of the most relevant memory records that will be injected into the prompt."},
+      "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will combine individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},
+      "AUTO_CREATE_SUMMARY_INTERVAL": {"type":"integer","description":"Time frame used to pack summary data. 10 = 13 in-game hours | 5 = 7.5 in-game hours etc"},
       "MEMORY_BIAS_A": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer memory."},
       "MEMORY_BIAS_B": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer and endorse memory."}
       
     },
-    "MISC": {
-      "_title":"Misc features/options",
-      "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
-      "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest."},
-      "ITT_QUALITY": {"type":"integer","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
+  "MISC": {
+    "_title":"Other Options",
+    "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
+    "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest."},
+    "ITT_QUALITY": {"type":"integer","description":"Only for Soulgaze HD. Compression quality can be set from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
 
-    }
+  }
 
   }
   
