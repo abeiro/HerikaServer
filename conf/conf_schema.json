@@ -147,7 +147,7 @@
       "API_KEY": {"type":"apikey","description":"Azure TTS API KEY","code":"AZURE_API_KEY"}
     },
     "MIMIC3": {
-      "_title":"MIMIC3 Text-To-Speech (Automatically installed with DwemerDistro)",
+      "_title":"MIMIC3 Text-To-Speech ",
       "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, copy and paste [MIMIC3 Configuration] URL from the console window."},
       "voice": {"type":"string","description":"Voice code"},
       "rate": {"type":"number","description":"Talk speed"},
@@ -187,7 +187,7 @@
       "description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"
       },
     "XTTSFASTAPI": {
-      "_title":"XTTSv2 via fast-api",
+      "_title":"XTTSv2 Fast-API (Installed with DwemerDistro)",
       "endpoint":{"type":"url","description":"End point URL","helpurl":""},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
       "voiceid":{"type":"string","description":"WAV refernce (must be into server's voice folder)","helpurl":""}
@@ -230,7 +230,7 @@
   },
   "ITT": {
     "LLAMACPP": {
-      "_title":"LLama.cpp Server",
+      "_title":"LLama Server (Installed with DwemerDistro)",
       "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md","scope":"global"},
       "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the Vision AI","scope":"global"},
       "AI_PROMPT": {"type":"longstring","description":"Prompt to return to AI Character"}
