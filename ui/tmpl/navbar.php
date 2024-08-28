@@ -85,7 +85,7 @@
                     </li>
                     <li>
                         <a class="dropdown-item" href="tests/ai_agent_ini.php" title="Generate AIAgent.ini file for the mod file." target="_blank">
-                            Create AIAgent.ini (PLACE IN MOD FOLDER UNDER SKSE\Plugins)
+                            <strong>Create AIAgent.ini (PLACE IN MOD FOLDER UNDER SKSE\Plugins)</strong>
                         </a>
                     </li>
                 </ul>
@@ -105,7 +105,7 @@
                     <li><a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a></li>
                     <li><a class="dropdown-item" href="../debug/simple_stt_test.php" target="_blank">Current STT Connection Test</a></li>
                     <li><a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a></li>
-                    <li><a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json" target="_blank">Regen character map</a></li>
+                    <li><a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">Regenerate Character Map</a></li>
                 </ul>
             </li>
 
