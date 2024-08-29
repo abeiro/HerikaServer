@@ -65,7 +65,7 @@ class connector
 
        
         
-        
+        $FUNC_LIST[]="Talk";
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
@@ -85,19 +85,23 @@ class connector
                 $FUNC_LIST[]=$function["name"];
 
             }
-            $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk";
-             
-
         }
-        $FUNC_LIST[]="Talk";
+        
 
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
 
+        if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
+            $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+        }
+        $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+        //$FUNC_LIST[]="None";
+        //shuffle($FUNC_LIST); // Just for koboldcpp
+
         
         $contextData[]= [
             'role' => 'user', 
-            'content' => "Use this JSON object to give your answer: ".json_encode([
+            'content' => "{$prefix}Use this JSON object to give your answer: ".json_encode([
                "character"=>$GLOBALS["HERIKA_NAME"],
                 "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                 "mood"=>implode("|",$moods),
@@ -353,7 +357,12 @@ class connector
                 // echo "*{$this->_jsonBuffer}".PHP_EOL;
                 $this->_extractedbuffer=$partialResult[0]["message"];
                 if (isset($partialResult[0]["listener"])) {
-                     $GLOBALS["SCRIPTLINE_LISTENER"]=$partialResult[0]["listener"];
+                    if (isset($partialResult[0]["action"])&&($partialResult[0]["action"]=="Talk")&& lazyEmpty($partialResult[0]["listener"]) && !lazyEmpty($partialResult[0]["target"]))
+                        $GLOBALS["SCRIPTLINE_LISTENER"]=$partialResult[0]["target"];
+                    else
+                        $GLOBALS["SCRIPTLINE_LISTENER"]=$partialResult[0]["listener"];
+
+                     
                 }
                 
                 if (isset($partialResult[0]["mood"])) {
@@ -415,36 +424,37 @@ class connector
         if (is_array($jsonData)&&isset($jsonData["action"])) { // !!!
             $parsedResponse=$jsonData;
             
-              if (!empty($parsedResponse["action"])) {
-                    if (!isset($parsedResponse["target"]))
-                        $parsedResponse["target"]="";
+            if (!empty($parsedResponse["action"])) {
+                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
                     
-                    $functionDef=findFunctionByName($parsedResponse["action"]);
-                    if ($functionDef)
-                        error_log("Function : {$functionDef["name"]}");
-                    
-                    if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
-                        //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        
-                        if ($functionDef) {
-                            $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                           if (@strlen($functionDef["parameters"]["required"][0])>0) {
-                                if (!empty($parsedResponse["target"])) {
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                                }
-                                else {
-                                    error_log("Missing required parameter");
-                                }
-                                    
-                            } else {
+                    $functionDef=findFunctionByName(trim($parsedResponse["action"]));
+                    if ($functionDef) {
+                        $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
+                        if (@strlen($functionDef["parameters"]["required"][0])>0) {
+                            if (!empty($parsedResponse["target"])) {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
+                            else {
+                                error_log("Missing required parameter");
+                            }
+                                
+                        } else {
+                            $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                         }
-                        //echo "Herika|command|$functionCodeName@$parameter\r\n";
-                    } else
-                        $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=
-                    "{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
-              }
+                    } else {
+                        error_log("Function not found for {$parsedResponse["action"]}");
+                    }
+                    
+                    //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
+                    //$this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
+                    //echo "Herika|command|$functionCodeName@$parameter\r\n";
+                    $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
+                
+                } else {
+                      error_log("Function not found for {$parsedResponse["action"]} already sent");
+                }
+                    
+            }
         }
         
         //print_r($this->_jsonBuffer);
