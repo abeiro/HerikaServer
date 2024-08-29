@@ -1128,7 +1128,7 @@ function PackIntoSummary()
 								from memory_v
 								where 
 								message not like 'Dear Diary%'
-								group by round(gamets/$pfi ,0) HAVING max(uid)>0 order by round(gamets/$pfi ,0) ASC
+								group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
 							  ) as T where gamets_truncated>$maxRow
 							");
     
@@ -1355,7 +1355,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $keywords=file_get_contents("http://127.0.0.1:8082/extract?text=".urlencode($TEST_TEXT));
         $reponse=json_decode($keywords,true);
         
-        print_r($reponse);
+        //print_r($reponse);
         
         if ($reponse["is_memory_recall"]=="No") {
              $GLOBALS["db"]->insert(
@@ -1398,37 +1398,40 @@ function DataSearchMemory($rawstring,$npcfilter) {
 
             $kwStringAny=implode(" | ",$result);
             $kwStringAll=implode(" & ",$result);
-            error_log("CONTEXT SEARCH KEYWORDS ".print_r($result,true));
+            error_log("CONTEXT SEARCH KEYWORDS FROM MINIBOT: ".print_r($result,true));
         }
         
     } 
-    error_log("Using dumb context");
-    $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-    $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-    $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
-    $replacement = "";
-    $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
-                
-    
-    $keywords=hashtagifySentences($TEST_TEXT);
-    $kw=[];
-    
-    //print_r($keywords);
+    if (empty($kwStringAll)) {
+        error_log("Using dumb context");
+        $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-    foreach (explode(" ",$keywords) as $tag) {
-        if (strlen($tag)<4)
-            continue;
-        $lkw=hashtagify(strtr($tag,["remember"=>"","Remember"=>""]));    
-        if ($lkw) {
-            $kw=array_merge($kw,explode(" ",$lkw));
+        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+        $replacement = "";
+        $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
+                    
+        
+        $keywords=hashtagifySentences($TEST_TEXT);
+        $kw=[];
+        
+        //print_r($keywords);
+
+        foreach (explode(" ",$keywords) as $tag) {
+            if (strlen($tag)<4)
+                continue;
+            $lkw=hashtagify(strtr($tag,["remember"=>"","Remember"=>""]));    
+            if ($lkw) {
+                $kw=array_merge($kw,explode(" ",$lkw));
+            }
         }
-    }
-    $result = array_unique($kw);
+        $result = array_unique($kw);
 
-    $kwStringAny=implode(" | ",$result);
-    $kwStringAll=implode(" & ",$result);
-    error_log("CONTEXT SEARCH KEYWORDS ".print_r($result,true));
+        $kwStringAny=implode(" | ",$result);
+        $kwStringAll=implode(" & ",$result);
+        error_log("CONTEXT SEARCH KEYWORDS FROM DUMB: ".print_r($result,true));
+    }
         
     
     
@@ -1497,6 +1500,30 @@ function FastCallOAI($question) {
     else
         return null;
     
+}
+
+function AddFirstTimeMet($followerName,$momentum,$gamets,$ts) {
+
+    $already=$GLOBALS["db"]->fetchAll("select 1 as t from memory where event='first_met' and message like '%met {$followerName}%'");
+    if (is_array($already) && sizeof($already)>0) {
+        // Already exists;
+        return;
+    }
+
+    $realFirst=$GLOBALS["db"]->fetchAll("SELECT gamets,ts,localts FROM speech where companions like '%$followerName%' order by rowid asc limit 1 offset 0");
+
+    if (is_array($realFirst) && sizeof($realFirst)>0) {
+        $gamets=$realFirst[0]["gamets"];
+        $ts=$realFirst[0]["ts"];
+        $momentum=$realFirst[0]["localts"];
+    }
+
+
+    logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["PLAYER_NAME"],
+    "(Important note: {$GLOBALS["PLAYER_NAME"]} met {$followerName} for the first time. This is an important event, so use tag #FirstTimeMet.)",
+     $momentum, $gamets,'first_met',$ts);
+
+
 }
 
 function GetAnimationHex($mood)

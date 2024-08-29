@@ -1004,6 +1004,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && !$GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] ) {
+        error_log("MEMORY_EMBEDDING disabled");
         return "";
     }
 
