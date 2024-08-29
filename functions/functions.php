@@ -493,7 +493,7 @@ function requireFunctionFilesRecursively($dir) {
     }
 }
 
-if ($GLOBALS["NPC"]) { 
+if ($GLOBALS["IS_NPC"]) { 
     $GLOBALS["ENABLED_FUNCTIONS"]=[
         'Inspect',
         //'LookAt',
