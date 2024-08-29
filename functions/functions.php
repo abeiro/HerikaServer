@@ -493,31 +493,56 @@ function requireFunctionFilesRecursively($dir) {
     }
 }
 
+if ($GLOBALS["NPC"]) { 
+    $GLOBALS["ENABLED_FUNCTIONS"]=[
+        'Inspect',
+        //'LookAt',
+        'InspectSurroundings',
+        //'MoveTo',
+        'OpenInventory',
+        'Attack',
+        'AttackHunt',
+        'TravelTo',
+        //'Follow',
+        'CheckInventory',
+        //'SheatheWeapon',
+        'Relax',
+        //'LeadTheWayTo',
+        'TakeASeat',
+        'IncreaseWalkSpeed',
+        'DecreaseWalkSpeed',
+        //'GetDateTime',
+        //'SearchDiary',
+        'SetCurrentTask',
+        //'SearchMemory',
+        //'StopWalk'
+    ];
+} else {
+    $GLOBALS["ENABLED_FUNCTIONS"]=[
+        'Inspect',
+        //'LookAt',
+        'InspectSurroundings',
+        //'MoveTo',
+        'OpenInventory',
+        'Attack',
+        'AttackHunt',
+        'TravelTo',
+        //'Follow',
+        'CheckInventory',
+        //'SheatheWeapon',
+        'Relax',
+        //'LeadTheWayTo',
+        'TakeASeat',
+        'ReadQuestJournal',
+        'IncreaseWalkSpeed',
+        'DecreaseWalkSpeed',
+        //'GetDateTime',
+        //'SearchDiary',
+        //'SearchMemory',
+        //'StopWalk'
+    ];
 
-$GLOBALS["ENABLED_FUNCTIONS"]=[
-    'Inspect',
-    //'LookAt',
-    'InspectSurroundings',
-    //'MoveTo',
-    'OpenInventory',
-    'Attack',
-    'AttackHunt',
-    'TravelTo',
-    //'Follow',
-    'CheckInventory',
-    //'SheatheWeapon',
-    'Relax',
-    //'LeadTheWayTo',
-    'TakeASeat',
-    'ReadQuestJournal',
-    'IncreaseWalkSpeed',
-    'DecreaseWalkSpeed',
-    //'GetDateTime',
-    //'SearchDiary',
-    'SetCurrentTask',
-    //'SearchMemory',
-    //'StopWalk'
-];
+}
 
 
 $folderPath = __DIR__.DIRECTORY_SEPARATOR."../ext/";
