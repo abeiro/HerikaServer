@@ -113,6 +113,12 @@ if ($STTFUNCTION=="whisper")
         $errorFlag=true;
     }
 
+if ($STTFUNCTION=="deepgram")
+    if (!isset($STT["DEEPGRAM"]["API_KEY"])) {
+        echo 'Error: Deepgram is in use but $STT["DEEPGRAM"]["API_KEY"] not found <br/>';
+        $errorFlag=true;
+    }
+
 if ($STTFUNCTION=="localwhisper")
     if (!isset($STT["LOCALWHISPER"]["URL"])) {
         echo 'Error: Local Whisper is in use but $STT["LOCALWHISPER"]["URL"] not found <br/>';

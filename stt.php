@@ -25,6 +25,11 @@ if ($STTFUNCTION=="azure") {
 
     require_once($path."stt/stt-whisper.php");
     $text= stt($finalName);
+
+} else if ($STTFUNCTION=="deepgram") { 
+
+    require_once($path."stt/stt-deepgram.php");
+    $text= stt($finalName);
     
 } else if ($STTFUNCTION=="localwhisper") { 
 
