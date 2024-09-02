@@ -48,7 +48,7 @@ function itt($file,$hints)
     
 
     $response=json_decode($response,true);
-    
+    if ($db) {
      $db->insert(
             'log',
             array(
@@ -60,7 +60,7 @@ function itt($file,$hints)
 
             )
         );
-     
+    }
     return $response["content"];
 
 
