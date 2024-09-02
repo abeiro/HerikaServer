@@ -2,6 +2,8 @@
 
 session_start();
 
+error_reporting(E_ALL);
+
 $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 $enginePath = $localPath;
