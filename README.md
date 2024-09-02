@@ -4,8 +4,11 @@ Server for the Skyrim mod "AI Follower Framework". This component serves as a br
 
 It also serves as the character's memory, employing various techniques to mitigate the lack of long-term memory in current LLMs (Language Model Models)
 
-# Vanilla NPC Bio's Credit/Source
-The npc_templates_custom_mantella_currated.sql and npc_templates_custom_mantella.sql are modifications taken from the source code of Mantella here: https://github.com/art-from-the-machine/Mantella
+# NPC Bio's Credit/Source
+The npc_templates_custom_mantella_currated.sql and npc_templates_custom_mantella.sql are modifications taken from the source code.
+
+Mantella Source Code: https://github.com/art-from-the-machine/Mantella
+Mantella License: https://github.com/art-from-the-machine/Mantella/blob/main/LICENSE
 
 # Attributions
 AI-FF uses material from "Mantella" NPC character biographies. Their biographies use material from the "Skyrim: Characters" articles on the Elder Scrolls wiki at Fandom and is licensed under the Creative Commons Attribution-Share Alike License.
