@@ -69,15 +69,17 @@ function itt($file,$hints)
     $response = json_decode($rawResponse, true);
     file_put_contents(__DIR__."/../log/vision.log",print_r($rawResponse,true),FILE_APPEND);
     // Example: Inserting response into database
-    $db->insert(
-        'log',
-        array(
-            'localts' => time(),
-            'prompt' => print_r(strtr($GLOBALS["ITT"]["openai"]["AI_PROMPT"],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]), true),
-            'response' => strtr($response["choices"][0]["message"]["content"], ["." => "\n"]),
-            'url' => print_r($_GET, true)
-        )
-    );
+    if ($db) {
+        $db->insert(
+            'log',
+            array(
+                'localts' => time(),
+                'prompt' => print_r(strtr($GLOBALS["ITT"]["openai"]["AI_PROMPT"],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]), true),
+                'response' => strtr($response["choices"][0]["message"]["content"], ["." => "\n"]),
+                'url' => print_r($_GET, true)
+            )
+        );
+    }
 
   
 

@@ -60,17 +60,19 @@ function itt($file)
 	$uneditedResponse = $response["captionResult"]["text"] . " with these details: " . $tagString;
     $finalResponse = str_replace($badWords, "view", $uneditedResponse);
     
-    $db->insert(
-        'log',
-        array(
-              'localts' => time(),
-              'prompt' => print_r("USER:Context, roleplay In Skyrim universe, {$GLOBALS["HERIKA_NAME"]} watches this scene:", true),
-              'response' => $finalResponse,
-              'url' => $data
+    if ($db) {
+        $db->insert(
+            'log',
+            array(
+                'localts' => time(),
+                'prompt' => print_r("USER:Context, roleplay In Skyrim universe, {$GLOBALS["HERIKA_NAME"]} watches this scene:", true),
+                'response' => $finalResponse,
+                'url' => $data
 
 
-          )
-    );
+            )
+        );
+    }
     
     return $finalResponse;
     

@@ -109,6 +109,7 @@
                     -->
                     <li><a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a></li>
                     <li><a class="dropdown-item" href="../debug/simple_stt_test.php" target="_blank">Current STT Connection Test</a></li>
+                    <li><a class="dropdown-item" href="tests/itt-test.php" target="_blank">Current ITT Connection Test</a></li>
                     <li><a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a></li>
                     <li><a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">Regenerate Character Map</a></li>
                 </ul>
