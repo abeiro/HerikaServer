@@ -1143,9 +1143,32 @@ function PackIntoSummary()
 							");
 
     error_log("Diary insert done");
+
+    
+    $people=$db->fetchAll("SELECT distinct(data) as npc from eventlog where type='addnpc'");
+    $addednpc=[];
+    foreach ($people as $p)
+        $addednpc[]=$p["npc"];
+
+    
     foreach ( $db->fetchAll("select * from memory_summary where companions is null ") as $row) {
-        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(party,people) end  as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
-        $peopleFmt=$db->escape($people[0]["people"]);
+        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
+
+        preg_match_all("/[A-Za-z' \-]+/", $people[0]["people"], $matches);
+        // $matches[0] will contain the list of names
+        
+        $names = array_map('trim', $matches[0]);
+        
+        $npcInMemory=[];
+        foreach($names as $name) {
+            if (in_array($name,$addednpc)) {
+                $npcInMemory[]=$name;
+
+            }
+
+        }
+        $peopleFmt=$db->escape(implode(",",$npcInMemory));
+
         $db->query("update memory_summary set companions='$peopleFmt' where rowid={$row["rowid"]}");
     }
     return $maxRow;
@@ -1516,12 +1539,11 @@ function AddFirstTimeMet($followerName,$momentum,$gamets,$ts) {
         $gamets=$realFirst[0]["gamets"];
         $ts=$realFirst[0]["ts"];
         $momentum=$realFirst[0]["localts"];
+
+        logMemory($GLOBALS["PLAYER_NAME"], $followerName,
+        "(Important note: {$GLOBALS["PLAYER_NAME"]} met {$followerName} for the first time. This is an important event, so use tag #FirstTimeMet.)",
+        $momentum, $gamets,'first_met',$ts);
     }
-
-
-    logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["PLAYER_NAME"],
-    "(Important note: {$GLOBALS["PLAYER_NAME"]} met {$followerName} for the first time. This is an important event, so use tag #FirstTimeMet.)",
-     $momentum, $gamets,'first_met',$ts);
 
 
 }

@@ -203,7 +203,12 @@ function __jpd_decode_lazy($inputString) {
         }
     }
     
-    
+    $realData = json_decode( strtr($inputString,["None,"=>"null,","none,"=>"null,"]), true);    // COMMON GEMMA2 ERRORS
+    if (is_array($realData)) {
+        $result=returnObject($realData);
+        return $result;
+    }
+
     if (strpos($inputString,',listener"')!==false) {
         $realData = __jpd_decode_lazy( strtr($inputString,[',listener"'=>',"listener"']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
         if (is_array($realData)) {
@@ -394,9 +399,16 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{"character":"Laufey the Tiefling","listener":"Nubidia","mood":"amused","action":"Talk","target":"Nubidia","message":"Oh, Nubidia, always so *concerned*. 
-Don't worry, darling, I'm sure Volkur will find a way to amuse himself. 
-He's quite the resourceful one, isn't he?"} 
+```json
+{
+"character": "The Narrator",
+"listener": "Volkur",
+"mood": "smug",
+"action": None,
+"target": None,
+"message": "Intrigued, are we? What a surprise. Perhaps you've finally realized how fascinating it is to be a mere pawn in my game."
+}
+```
 EOIN;
 
 //$res= __jpd__extractContentBetweenBraces($FATA);

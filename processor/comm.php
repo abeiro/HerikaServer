@@ -457,6 +457,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         
         $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
         
+        // Consider adding here notes like 'They Just met' into profile.
+        
 
         file_put_contents($newFile, implode('', $file_lines));
         file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\''.$codename.'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
@@ -600,6 +602,19 @@ Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.", ];
             $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
             copy($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php",$path . "conf".DIRECTORY_SEPARATOR.".conf_{$newConfFile}_".time().".php");
             
+
+            $backup=file_get_contents($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
+
+            $backupFmtd=$db->escape($backup);
+
+            $db->insert(
+                'npc_profile_backup',
+                array(
+                        'name' => $db->escape($GLOBALS["HERIKA_NAME"]),
+                        'data' => $backupFmtd
+                )
+            );
+
             $file_lines = file($newFile);
 
             for ($i = count($file_lines) - 1; $i >= 0; $i--) {

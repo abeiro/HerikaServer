@@ -63,6 +63,8 @@ function reqSend() {
   var currentDate = new Date();
   var timestampInSeconds = parseInt(document.getElementById('last_gamets').value)+1;
 
+  var profile=document.getElementById('profile').value
+
   var xhr = new XMLHttpRequest();
 
   var urlDataRaw='inputtext|'+document.getElementById('gamets').value+'|'+timestampInSeconds+'|'+
@@ -72,7 +74,11 @@ function reqSend() {
   document.getElementById('last_gamets').value=parseInt(timestampInSeconds)+1;
 
   // Configure the request
-  xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData, true);
+  if (profile)
+    xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData+"&profile="+profile, true);
+  else
+    xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData, true);
+
 
   // Set up a function to handle the response
   xhr.onload = function() {
@@ -108,13 +114,17 @@ function logChat(chatline) {
   var urlDataRaw='chat|'+document.getElementById('gamets').value+'|'+timestampInSeconds+'|'+
     document.getElementById('herikaName').value+': '+unescapedString;
     
+  var profile=document.getElementById('profile').value
   var binaryData = new TextEncoder().encode(urlDataRaw);
   // Encode the binary data in Base64
   var base64String = btoa(String.fromCharCode.apply(null, binaryData));
   var urlData = base64String;
   
   // Configure the request
-  xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData, true);
+  if (profile)
+    xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData+"&profile="+profile, true);
+  else
+    xhr.open('GET', '/HerikaServer/stream.php?DATA='+urlData, true);
 
   // Set up a function to handle the response
   xhr.onload = function() {

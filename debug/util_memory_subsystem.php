@@ -98,8 +98,10 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 		
         while ($row = $db->fetchArray($results)) {
 
-            $people=$db->fetchAll("SELECT COALESCE(party,people) as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
-                
+            if (isset($argv[3]))
+                if ( $counter>=($argv[3]+0))
+                    break;
+
 
             if ($row["classifier"]=="diary") {
                 $TEST_TEXT=$row["packed_message"];
@@ -115,7 +117,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                 $prompt[] = array('role' => 'system', 
 								  'content' => "This is a playthrough in Skyrim universe. 
 {$GLOBALS["PLAYER_NAME"]} is the player.
-{$people[0]["people"]} are {$GLOBALS["PLAYER_NAME"]}'s followers/companions.
+{$row["companions"]} are {$GLOBALS["PLAYER_NAME"]}'s followers/companions.
 You must write {$GLOBALS["PLAYER_NAME"]} memories by analyzing chat history.
 Pay attention to details that can change character's behaviour, feelings,also tag names and locations
 ");
@@ -197,9 +199,7 @@ Pay attention to details that can change character's behaviour, feelings,also ta
             $toUpdate=[];
 			
             
-            if (isset($argv[3]))
-                if ( ($argv[3]+0)>=$counter)
-                    break;
+            
             
             sleep(1);
             //break;
