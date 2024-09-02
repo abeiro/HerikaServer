@@ -193,6 +193,26 @@ if (!$existsColumn[0]["column_name"]) {
     
 }
 
+// Npc profile backup
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'npc_profile_backup'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+        $db->execQuery("CREATE TABLE public.npc_profile_backup (
+    \"name\" text,
+    \"data\" text,
+    \"created_at\" timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    )
+    ");
+    echo '<script>alert("A patch (0.1.7p1) has been applied to Database")</script>';
+
+}
+
 /* END of check database for updates */
 
 /* Actions */
