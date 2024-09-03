@@ -15,7 +15,7 @@ session_start();
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 ini_set('display_errors', 1);
-error_reporting(E_ERROR);
+error_reporting(E_ALL);
 
 echo "Checking conf.php...";
 if (!file_exists($enginePath."conf".DIRECTORY_SEPARATOR."conf.php")) {

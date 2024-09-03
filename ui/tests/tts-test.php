@@ -36,10 +36,11 @@ $soundFile=returnLines([$testString]);
 //print_r($GLOBALS["TRACK"]["FILES_GENERATED"]);
 
 $file=basename($GLOBALS["TRACK"]["FILES_GENERATED"][0]);
+$ts=time();
 if ($file) {
 	echo "<h3>$testString</h3>
 	<audio controls>
-	<source src='../../soundcache/$file' type='audio/wav'>
+	<source src='../../soundcache/$file?ts=$ts' type='audio/wav'>
 	Your browser does not support the audio element.
 	</audio>
 	";

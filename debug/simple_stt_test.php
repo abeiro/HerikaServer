@@ -1,5 +1,5 @@
 <?php 
-error_reporting(E_ERROR);
+error_reporting(E_ALL);
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf/conf.php");
 require_once($enginePath . "lib/$DBDRIVER.class.php");
@@ -23,6 +23,8 @@ if ($STTFUNCTION=="azure") {
     require_once($enginePath."stt/stt-deepgram.php");
     
 }
+
+ini_set('display_errors', 1);
 
 
 if (!$argv[1]) {
