@@ -223,7 +223,7 @@
     }
   },
   "ITTFUNCTION": {
-    "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition aka Soulgaze spell. Use OpenAI if you want to use an OpenRouter model and change the URL!", 
+    "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition aka Soulgaze spell. Use OpenAI also works as a connector to OpenRouter!", 
     "_title":"Image Recognition Service",
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
   },
@@ -235,8 +235,8 @@
       "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
     },
     "openai": {
-      "_title":"OpenAI GPT-4V",
-      "url": {"type":"url","description":"OpenAI API endpoint","scope":"global"},
+      "_title":"OpenAI/OpenRouter",
+      "url": {"type":"url","description":"OpenAI API or OpenRouter endpoint. Use this for OpenRouter (https://openrouter.ai/api/v1/chat/completions)","scope":"global"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/","scope":"global"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate","scope":"global"},
       "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","helpurl":"https://platform.openai.com/docs/guides/vision?lang=curl","scope":"global"},
