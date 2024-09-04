@@ -117,7 +117,7 @@ include("tmpl/navbar.php");
 echo "<pre>$result</pre>";
 
 echo '
-<form action="xtts_manager.php" method="POST" enctype="multipart/form-data">
+<form action="xtts_clone.php" method="POST" enctype="multipart/form-data">
     <label><b>XTTS Voice Generation</b></label>
     <br>
     <label for="file">Select a .wav file and make sure it is named after the character\'s voice you want to generate.</label>
@@ -134,7 +134,7 @@ echo '
 ';
 
 echo '
-<form action="xtts_manager.php" method="POST">
+<form action="xtts_clone.php" method="POST">
     <br>
     <label><b>List Current Voices in XTTS</b></label>
     <br>
