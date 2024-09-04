@@ -244,8 +244,8 @@
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
     echo " <strong>AI/LLM Service:</strong> ";
-    echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong>/ current <strong style='color:green'>($currentModel)</strong>" : $CONNECTORS; 
-    echo " <a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'>Toogle Me!</a><br/>";
+    echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong> | Current AI Model -> <strong style='color:green'>($currentModel)</strong>" : $CONNECTORS; 
+    echo " <a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'><strong>Toogle Me!</strong></a><br/>";
     echo " <strong>TTS Service:</strong> ";
     echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:green">' . $TTSFUNCTION . '</strong>'; 
     echo " <strong>STT Service:</strong> ";
