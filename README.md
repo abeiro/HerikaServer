@@ -8,6 +8,7 @@ It also serves as the character's memory, employing various techniques to mitiga
 The npc_templates_custom_mantella_currated.sql and npc_templates_custom_mantella.sql are modifications taken from the source code.
 
 Mantella Source Code: https://github.com/art-from-the-machine/Mantella
+
 Mantella License: https://github.com/art-from-the-machine/Mantella/blob/main/LICENSE
 
 # Attributions
