@@ -1,12 +1,12 @@
 {
   "DBDRIVER": {"userlvl":"basic","type":"select","values":["postgresql"],"description":"Do not change.","_title":"Main Configuration"},
   "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"Your current character name."},
-  "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!"},
+  "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name! If you are in the default profile leave it as The Narrator"},
   "PROMPT_HEAD": {"userlvl":"basic","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
-  "dynamic_profile_b1": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to update an NPC's personality dynamically, based on recent events. <strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill","helpurl":""},
-  "dynamic_profile_b2": {"userlvl":"wip","type":"util","description":"Use LLM (non json model in this profile) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs. <strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill","helpurl":""},
-  "MINIME_T5":{"userlvl":"wip","type":"boolean","scope":"global","description":"Enable MiniMeT5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in Distro."},
+  "dynamic_profile_b1": {"userlvl":"wip","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. <strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill","helpurl":""},
+  "dynamic_profile_b2": {"userlvl":"wip","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs. <strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill","helpurl":""},
+  "MINIME_T5":{"userlvl":"wip","type":"boolean","scope":"global","description":"Enable MiniMeT5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in DwemerDistro under Tools/components."},
   "DYNAMIC_PROFILE":{"userlvl":"wip","type":"boolean","description":"Will trigger dynamic profile updates during certain ingame events (such as sleeping). Will cause the AI personality to dynamically change during gameplay based on player interaction."},
   "RECHAT_H": {"userlvl":"pro","type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves. 1 = One Response | 2 = Two Responses etc","_title":"Advanced Configuration"},
   "RECHAT_P": {"userlvl":"pro","type":"integer","description":"Rechat probability. 0 = Always | 50 = Sometimes | 100 = Never"},
@@ -16,13 +16,13 @@
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
   "NEWQUEUE": {"userlvl":"basic","scope":"constant","type":"boolean","description":"Leave as is. Can not be changed!"},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
-  "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send contents of book instead of only the book title to AI service. This will consume more tokens, but AI will accurately summarize any book or note!"},
+  "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books. <strong>SET THIS ON default profile to apply to all followers.</strong>","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game.","scope":"global"},
-  "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"Will offer a language field to LLM, and will try match to XTTSv2 language. "},
-  "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations also to NPC"},
-  "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger animations if passing animations are enabled"},
+  "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
+  "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations for the NPC to play"},
+  "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used. Select the service(s) you have configured for below. Can be toggled ingame or in this menu. <strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong>","_title":"AI/LLM Service Selection"},
   "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"AI Service to use for creating diary entries."},
   "CONNECTOR": {
@@ -87,7 +87,7 @@
       "_title":"OpenRouter API",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
       "model": {"type":"ormodellist","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
-      "PROVIDER": {"type":"string","description":"Comma separated string of providers. Depends on model. You can check models/providers in OR marketplace","helpurl":"https://openrouter.ai/docs/provider-routing"},
+      "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://openrouter.ai/docs#format"},
@@ -101,16 +101,16 @@
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
       "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
       "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
-      "get_parms1": {"type":"util","description":"Get parameters from openrouter directly (P10)","action":"action_openrouter_get_parm_p1.php?P=10","name":"Get parms P10","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms5": {"type":"util","description":"Get parameters from openrouter directly (P50)","action":"action_openrouter_get_parm_p1.php?P=50","name":"Get parms P50","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms9": {"type":"util","description":"Get parameters from openrouter directly (P90)","action":"action_openrouter_get_parm_p1.php?P=90","name":"Get parms P90","helpurl":"https://openrouter.ai/docs/parameters"}
+      "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouter_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouter_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for very randomness in AI response (P90)","action":"action_openrouter_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"}
       
     },
     "openrouterjson": {
       "_title":"OpenRouter API (JSON MODE)",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
       "model": {"type":"ormodellist","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
-      "PROVIDER": {"type":"string","description":"Comma separated string of providers. Depends on model. You can check models/providers in OR marketplace","helpurl":"https://openrouter.ai/docs/provider-routing"},
+      "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://openrouter.ai/docs#format"},
@@ -120,13 +120,12 @@
       "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k","helpurl":"https://openrouter.ai/docs#format"},
       "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p","helpurl":"https://openrouter.ai/docs#format"},
       "top_a": {"userlvl":"pro","type":"number","description":"LLM parameter top_a","helpurl":"https://openrouter.ai/docs#format"},
-      "ENFORCE_JSON": {"type":"boolean","description":"Will try to force JSON. Some models acept this. Other's dont.","helpurl":"https://openrouter.ai/docs#format"},
-      "PREFILL_JSON": {"type":"boolean","description":"Will prefill JSON, which is usefull for some models, and destroy others","helpurl":"https://openrouter.ai/docs#format"},
-      "top_a": {"userlvl":"pro","type":"number","description":"LLM parameter top_a","helpurl":"https://openrouter.ai/docs#format"},
+      "ENFORCE_JSON": {"type":"boolean","description":"Will attempt to enforce dumb LLM's to stay in JSON format. Leave as default, only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
+      "PREFILL_JSON": {"type":"boolean","description":"Will attempt to prefill the JSON AI response for some dumber LLM's. Leave as default, only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "get_parms1": {"type":"util","description":"Get parameters from openrouter directly (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Get parms P10","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms5": {"type":"util","description":"Get parameters from openrouter directly (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Get parms P50","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms9": {"type":"util","description":"Get parameters from openrouter directly (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Get parms P90","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for very randomness in AI response (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
       "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
       "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."}
@@ -188,9 +187,9 @@
       },
     "XTTSFASTAPI": {
       "_title":"XTTSv2 Fast-API (Installed with DwemerDistro)",
-      "endpoint":{"type":"url","description":"End point URL","helpurl":""},
+      "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.","helpurl":""},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
-      "voiceid":{"type":"string","description":"WAV refernce (must be into server's voice folder)","helpurl":""}
+      "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
     }
   },
   "STTFUNCTION": {
@@ -213,7 +212,7 @@
     },
     "LOCALWHISPER": {
       "_title":"Local Whisper Speech-to-Text (Installed with DwemerDistro)",
-      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default!","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
+      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default if you installed whisper through the Distro.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
       "FORMFIELD": {"type":"select","values":["audio_file","file"],"description":"Form field name for audio file. Sometimes needed to change to file to use another shiper implementations"}
 
     },"DEEPGRAM": {
@@ -233,7 +232,7 @@
       "_title":"LLama Server (Installed with DwemerDistro)",
       "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md","scope":"global"},
       "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the Vision AI","scope":"global"},
-      "AI_PROMPT": {"type":"longstring","description":"Prompt to return to AI Character"}
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing ths scene."}
     },
     "openai": {
       "_title":"OpenAI GPT-4V",
@@ -243,7 +242,7 @@
       "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","helpurl":"https://platform.openai.com/docs/guides/vision?lang=curl","scope":"global"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys","scope":"global"},
       "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the Vision AI","scope":"global"},
-      "AI_PROMPT": {"type":"longstring","description":"Prompt to return to AI Character"}
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing ths scene."}
     }
   },
   "FEATURES": {
