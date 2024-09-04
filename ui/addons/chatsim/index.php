@@ -39,7 +39,7 @@ echo "
 <div id='chatWindow' style='width:80%;height:300px;overflow-y:auto'></div>
 <form action='index.php' method='post'>
 <p>{$GLOBALS["PLAYER_NAME"]}</p>
-<input type='text' name='inputText' id='inputText' size='100' />
+<input type='text' name='inputText' id='inputText' size='100' placeholder=\"Don't use enter. Use button send\"/>
 <input type='hidden' name='localts' id='localts' value='".time()."' />
 <input type='hidden' name='gamets' id='gamets' value='0' />
 <input type='hidden' name='playerName' id='playerName' value='{$GLOBALS["PLAYER_NAME"]}' />
