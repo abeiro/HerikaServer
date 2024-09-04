@@ -89,7 +89,7 @@ if (isset($_POST["submit"])) {
                 
                 // Display the speakers list in a vertical format with indentation
                 echo '<div class="response-container">';
-                echo '<h3><b>     Cloned Voices:</b></h3>';
+                echo '<h3><b>     Current Voices:</b></h3>';
                 echo '<div class="indent">';
                 foreach ($speakersList as $speaker) {
                     echo htmlspecialchars($speaker) . '<br>';
@@ -117,11 +117,14 @@ include("tmpl/navbar.php");
 echo "<pre>$result</pre>";
 
 echo '
-<form action="xtts_clone.php" method="POST" enctype="multipart/form-data">
-    <label><b>XTTS Voice Cloning</b></label>
+<form action="xtts_manager.php" method="POST" enctype="multipart/form-data">
+    <label><b>XTTS Voice Generation</b></label>
     <br>
-    <label for="file">Select a .wav file and make sure it is named after the character\'s voice you want to clone:</label>
-    <label>(e.g. herika.wav, lydia.wav, mjoll_the_lioness.wav etc):</label>
+    <label for="file">Select a .wav file and make sure it is named after the character\'s voice you want to generate.</label>
+    <br>
+    <label>Examples: herika.wav, lydia.wav, mjoll_the_lioness.wav etc.</label>
+    <br>
+    <label>YOU MUST RESTART THE SERVER IF YOU ARE REPLACING AN ALREADY EXISITNG VOICE FILE!</label>
     <br>
     <input type="file" name="file" id="file">
     <br>
@@ -131,11 +134,11 @@ echo '
 ';
 
 echo '
-<form action="xtts_clone.php" method="POST">
+<form action="xtts_manager.php" method="POST">
     <br>
     <label><b>List Current Voices in XTTS</b></label>
     <br>
-    <input type="submit" name="get_speakers" value="Cloned Voices List">
+    <input type="submit" name="get_speakers" value="Current Voices List">
     <br>
     <br>
     <label>Link to advanced XTTS configuration menu: <a href="http://127.0.0.1:8020/docs#" target="_blank">http://127.0.0.1:8020/docs#</a></label>
