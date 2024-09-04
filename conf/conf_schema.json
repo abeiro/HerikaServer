@@ -223,7 +223,7 @@
     }
   },
   "ITTFUNCTION": {
-    "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition aka Soulgaze spell. Use OpenAI for OpenRouter!", 
+    "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition aka Soulgaze spell. Use OpenAI if you want to use an OpenRouter model and change the URL!", 
     "_title":"Image Recognition Service",
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
   },
@@ -231,8 +231,8 @@
     "LLAMACPP": {
       "_title":"LLama Server (Installed with DwemerDistro)",
       "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md","scope":"global"},
-      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the Vision AI","scope":"global"},
-      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing ths scene."}
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the llama vision model.","scope":"global"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
     },
     "openai": {
       "_title":"OpenAI GPT-4V",
@@ -241,8 +241,8 @@
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate","scope":"global"},
       "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","helpurl":"https://platform.openai.com/docs/guides/vision?lang=curl","scope":"global"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys","scope":"global"},
-      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the Vision AI","scope":"global"},
-      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing ths scene."}
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the OpenAI vision model.","scope":"global"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
     }
   },
   "FEATURES": {
