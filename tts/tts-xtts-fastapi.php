@@ -1,23 +1,6 @@
 <?php
 
 
-
-/*
- * Clone voice 
- * 
-curl -X 'POST' \
-  'https://k-looked-appointments-ordered.trycloudflare.com/clone_speaker' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'wav_file=@bella.wav;type=audio/wav'
-
-*/
-
-/*
- "en", "de", "fr", "es", "it", "pl", "pt", "tr", "ru", "nl", "cs", "ar", "zh", "ja", "hu", "ko",
- 
- */
-
 function insertNoise($inputString, $noiseArray) {
     // Split the string into words
     $words = explode(' ', $inputString);
