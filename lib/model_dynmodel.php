@@ -31,6 +31,19 @@ function DMgetCurrentModel() {
 
 }
 
+function DMgetCurrentModelFile() {
+    
+    $lprof=isset($GLOBALS["active_profile"])?$GLOBALS["active_profile"]:"";
+    
+    $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
+    if (!file_exists($file)) {
+        return $file;
+    }
+
+    return __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_72dc4b1c501563d149fec99eb45b45f1.json";
+
+}
+
 function DMsetCurrentModel($model) {
 
     $lprof=isset($GLOBALS["active_profile"])?$GLOBALS["active_profile"]:"";
