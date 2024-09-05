@@ -470,7 +470,9 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
             file_put_contents($newFile, '$HERIKA_PERS=\'Roleplay as '.trim($gameRequest[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
-        
+        error_log(DMgetCurrentModelFile()." ".$path."data/CurrentModel_".md5($gameRequest[3]).".json");
+        copy(DMgetCurrentModelFile(),$path."data/CurrentModel_".md5($gameRequest[3]).".json");
+
         
     }
 
@@ -601,7 +603,6 @@ Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.", ];
             // Do customizations here
             $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
             copy($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php",$path . "conf".DIRECTORY_SEPARATOR.".conf_{$newConfFile}_".time().".php");
-            
 
             $backup=file_get_contents($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
 
