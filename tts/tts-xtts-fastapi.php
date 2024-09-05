@@ -84,21 +84,8 @@ function tts($textString, $mood , $stringforhash) {
 				return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
 		*/
 		
-		$randomBreathS="";
-		$isSexScene=$GLOBALS["db"]->fetchAll("select 1 from conf_opts where id='sexscene' and value='on'");
 		
-		if ((is_array($isSexScene) && sizeof($isSexScene)==1)) {
-			
-			$breaths=["*Ooh*","*AhH!*","*MmM!*",""];	
-			array_rand($breaths);
-			$newString=insertNoise($textString,$breaths);
-			xtts_fastapi_settings(["speed"=>0.9]);
-			error_log("XTTS adding breaths <$newString> ".__FILE__);
-		} else {
-			xtts_fastapi_settings(["speed"=>1]);
-			$newString=$textString;
-		}
-		
+		$newString=$textString;
 		
 	    $starTime = microtime(true);
 
