@@ -98,7 +98,7 @@ MAIN FLOW
 ***********************/
 
 $startTime = microtime(true);
-
+error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " started: ".$startTime);
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 
