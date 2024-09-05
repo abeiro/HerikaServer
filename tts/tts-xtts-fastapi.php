@@ -102,7 +102,7 @@ function tts($textString, $mood , $stringforhash) {
 		
 	    $starTime = microtime(true);
 
-		$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]."/tts_to_audio";
+		$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]."/tts_to_audio/";
 
 		// Request headers
 		$headers = array(
