@@ -34,7 +34,7 @@ if (!$argv[1]) {
 	echo "Sending ".__DIR__.DIRECTORY_SEPARATOR."data/test.wav".PHP_EOL;
     echo "Expected result: 'Welcome to the jungle, we've got fun and games.': ".PHP_EOL;
 	echo "Obtaining transcription from STT service.... ";
-    
+
     echo  stt(__DIR__.DIRECTORY_SEPARATOR."data/test.wav").PHP_EOL;
     echo "Service used: ";
 
@@ -48,5 +48,9 @@ else
 	echo  stt($argv[1]).PHP_EOL;
 
 
-    
+
+    echo "<br>";
+    echo "<strong>IF EXPECTED RESULT AND TRANSCRIPT FROM STT ARE THE SAME, THEN STT WORKS!</strong>";
+    echo "<br>";
+    echo "If you are still having issues ingame, then check that your microphone is set as default in Windows system sounds.";
 ?>
