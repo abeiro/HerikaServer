@@ -418,7 +418,9 @@ class connector
             if (isset($jsonData[0])&& is_array($jsonData[0]))
                 $jsonData=$jsonData[0];
         }
-            
+        
+        $this->_commandBuffer=[];
+
         $GLOBALS["DEBUG_DATA"]["RAW"]=$this->_jsonBuffer;
         
         if (is_array($jsonData)&&isset($jsonData["action"])) { // !!!
