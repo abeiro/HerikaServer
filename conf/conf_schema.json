@@ -23,14 +23,14 @@
   "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations for the NPC to play"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled"},
-  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used. Select the service(s) you have configured for below. Can be toggled ingame or in this menu. <strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong>","_title":"AI/LLM Service Selection"},
-  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"AI Service to use for creating diary entries."},
+  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used. Select the service(s) you have configured for below. Can be toggled ingame or in this menu. <strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br><strong> Make sure to click Toggle Me at the top of the page if you change connectors!</strong>","_title":"AI/LLM Service Selection"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"AI Service to use for creating diary entries. <br><br><strong>You will need to place your API key in the regular/non-JSON connector for this to work!</strong>"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openai": {
       "_title":"OpenAI/ChatGPT API",
       "url": {"type":"url","description":"OpenAI API endpoint"},
-      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "model": {"type":"string","description":"Model to use.","helpurl":"https://platform.openai.com/docs/models/"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
@@ -42,7 +42,7 @@
     "openaijson": {
       "_title":"OpenAI/ChatGPT API (JSON mode)",
       "url": {"type":"url","description":"OpenAI API endpoint"},
-      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "model": {"type":"string","description":"Model to use.","helpurl":"https://platform.openai.com/docs/models/"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
@@ -86,7 +86,7 @@
     "openrouter": {
       "_title":"OpenRouter API",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
-      "model": {"type":"ormodellist","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
+      "model": {"type":"ormodellist","description":"Model to use. If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
@@ -109,7 +109,7 @@
     "openrouterjson": {
       "_title":"OpenRouter API (JSON MODE)",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
-      "model": {"type":"ormodellist","description":"Model to use.","helpurl":"https://openrouter.ai/docs#models"},
+      "model": {"type":"ormodellist","description":"Model to use. If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
