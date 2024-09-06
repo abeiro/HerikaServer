@@ -229,6 +229,52 @@
                 
             }
             
+        
+        
+            document.addEventListener("DOMContentLoaded", function () {
+                // Helper function to get a cookie value by name
+                function getCookie(name) {
+                    const value = `; ${document.cookie}`;
+                    const parts = value.split(`; ${name}=`);
+                    if (parts.length === 2) return parts.pop().split(';').shift();
+                }
+
+                // Helper function to set a cookie
+                function setCookie(name, value, days) {
+                    const date = new Date();
+                    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                    const expires = `expires=${date.toUTCString()}`;
+                    document.cookie = `${name}=${value}; ${expires}; path=/`;
+                }
+
+                // Function to check if we need to call the version check URL
+                function checkVersion() {
+                    const lastCheck = getCookie('versionCheck');
+                    const oneDay = 24 * 60 * 60 * 1000;
+                    const now = new Date().getTime();
+
+                    // If there's no cookie or the last check was over a day ago
+                    if (!lastCheck || (now - lastCheck) > oneDay) {
+                        // Make a request to the URL
+                        fetch('tools/version_check.php')
+                            .then(response => response.text())
+                            .then(data => {
+                                console.log("Version check successful:", data);
+                                if (data.last>data.local) {
+                                    alert("Notice: New version available via Update.bat, consider update");
+                                }
+                                // Store the current timestamp as the last check time
+                                setCookie('versionCheck', now, 1); // Store for 1 day
+                            })
+                            .catch(error => {
+                                console.error("Version check failed:", error);
+                            });
+                    }
+                }
+
+                // Run the version check when the page loads
+                checkVersion();
+            });
         </script>
     </head>
     <body>
