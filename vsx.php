@@ -13,6 +13,8 @@ if (strpos($_GET["oname"],".fuz"))  {
     $ext="fuz";
 } else if (strpos($_GET["oname"],".xwm")) {
     $ext="xwm";
+} else if (strpos($_GET["oname"],".wav")) {
+  $ext="wav";
 }
 
     
@@ -36,15 +38,20 @@ if (strpos($_GET["oname"],".fuz")) {
     $finalFile=fuzToWav($finalName);
     
 } else if (strpos($_GET["oname"],".xwm")) {
+
     $finalFile=xwmToWav($finalName);
+
+  } else if (strpos($_GET["oname"],".wav")) {
+
+    $finalFile=wavToWav($finalName);
 }
 
 if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) ) {
   die("Error");
 }
 
-$codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
-
+//$codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
+$codename = str_replace(" ", "_", mb_strtolower($_GET["codename"], 'UTF-8'));
 
 $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
 
