@@ -321,7 +321,8 @@ foreach ($summary as $k=>$item) {
 }
 
 //echo "<li><a href='#end'>Check & Save</a></li>";
-echo '<input class="btn btn-info" type="button" name="save" value="Save" onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' /></p>';
+echo '<input style="margin-top:10px" class="btn btn-info" type="button" name="save" value="Save" onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' />';
+echo ' :: <input style="margin-top:10px" class="btn btn-info" type="button" name="delete" value="Delete profile" onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_deletion.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' /></p>';
 echo "</ul></div>";
 
 
