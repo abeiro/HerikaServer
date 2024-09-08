@@ -213,6 +213,7 @@ if (!$existsColumn[0]["column_name"]) {
 
 }
 
+require_once(__DIR__."/../debug/npc_removal.php");
 /* END of check database for updates */
 
 /* Actions */
