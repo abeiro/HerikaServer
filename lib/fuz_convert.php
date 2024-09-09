@@ -114,6 +114,33 @@ function xwmToWav($fuzFileName)
      return "";
 }
 
+function wavToWav($fuzFileName)
+{
+    if (file_exists($fuzFileName)) {
+        // Output Folder path
+        $sOutputPath = dirname($fuzFileName);
+
+        // Convert the *.fuz file to *.xwm
+        $sOutputXwmFile = basename($fuzFileName, '.fuz') . '_.wav';
+
+        // Store the new full path for the xwm
+        $sOutputXwm = $sOutputPath . DIRECTORY_SEPARATOR . $sOutputXwmFile;
+
+        // Extract the xwm data from the fuz data file
+        if (!file_exists($sOutputXwm) || true) {
+          	$command = "ffmpeg -y -f wav -i $fuzFileName -ar 24000 -ac 1 -sample_fmt s16 $sOutputXwm";
+
+            exec($command, $output, $returnVar);
+            
+            return $sOutputXwm;
+			
+        } else {
+            return "";
+        }
+        
+    }
+     return "";
+}
 
 // Example usage
 
