@@ -131,7 +131,7 @@
       "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai","stylettsv2","xtts-fastapi"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai","stylettsv2","xtts-fastapi","melotts"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "AZURE": {
@@ -190,7 +190,15 @@
       "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.","helpurl":""},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
       "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
+    },
+    "MELOTTS": {
+      "_title":"MELOTTS",
+      "endpoint":{"type":"url","description":"End point URL. Avoid trailing slash","helpurl":""},
+      "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language"},
+      "speed":{"type":"number","description":"Speed.","helpurl":""},
+      "voiceid":{"type":"select","values":["EN-US","EN-BR","EN_INDIA","EN-AU","EN-Default","ES","FR","ZH","JP","KR"],"description":"Language"}
     }
+
   },
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
