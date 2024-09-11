@@ -54,7 +54,7 @@ function fuzToWav($fuzFileName)
 
                 // Use ffmpeg to specify input format and convert the file
                 
-				$command = "ffmpeg -y -f xwma -i $tmpXwmFile -ar 24000 -ac 1 -sample_fmt s16 $sOutputXwm";
+				$command = "ffmpeg -y -f xwma -i $tmpXwmFile -ar 22050 -ac 1 -sample_fmt s16 $sOutputXwm";
 
                 exec($command, $output, $returnVar);
 
@@ -100,7 +100,7 @@ function xwmToWav($fuzFileName)
 
         // Extract the xwm data from the fuz data file
         if (!file_exists($sOutputXwm) || true) {
-          	$command = "ffmpeg -y -f xwma -i $fuzFileName -ar 24000 -ac 1 -sample_fmt s16 $sOutputXwm";
+          	$command = "ffmpeg -y -f xwma -i $fuzFileName -ar 22050 -ac 1 -sample_fmt s16 $sOutputXwm";
 
             exec($command, $output, $returnVar);
             
@@ -128,7 +128,7 @@ function wavToWav($fuzFileName)
 
         // Extract the xwm data from the fuz data file
         if (!file_exists($sOutputXwm) || true) {
-          	$command = "ffmpeg -y -f wav -i $fuzFileName -ar 24000 -ac 1 -sample_fmt s16 $sOutputXwm";
+          	$command = "ffmpeg -y -f wav -i $fuzFileName -ar 22050 -ac 1 -sample_fmt s16 $sOutputXwm";
 
             exec($command, $output, $returnVar);
             
