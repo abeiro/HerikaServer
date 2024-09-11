@@ -220,7 +220,7 @@
     </form>
     </div>
     <div style="display:inline-block;font-size:10px;border:1px solid black;height:40px;padding-right:10px">
-        <span>Config Wizard Depth</span>
+        <span>Config Wizard Options Depth</span>
         <select onchange="location.href='set_option_conf.php?c='+this.value">
         <option type="radio" value="basic" label="Basic" title="Show only basic options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="basic")?'selected':''; ?> />
         <option type="radio" value="pro" label="Advanced" title="Show advanced options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="pro")?'selected':''; ?> />
@@ -243,7 +243,7 @@
 
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
-    echo " <strong>AI/LLM Service:</strong> ";
+    echo " <strong>AI/LLM Service(s):</strong> ";
     echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong> | Current AI Model -> <strong style='color:green'>($currentModel)</strong>" : $CONNECTORS; 
     echo " <a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'><strong>Toggle Me!</strong></a><br/>";
     echo " <strong>TTS Service:</strong> ";
