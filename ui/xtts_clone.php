@@ -1,3 +1,8 @@
+<?php 
+
+session_start();
+
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -16,6 +21,56 @@
 
 <?php
 
+
+
+$rootPath=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+$configFilepath =$rootPath."conf".DIRECTORY_SEPARATOR;
+
+require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
+
+require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.sample.php");	// Should contain defaults
+if (file_exists($rootPath."conf".DIRECTORY_SEPARATOR."conf.php"))
+    require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.php");	// Should contain current ones
+
+$configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
+
+// Profile selection
+foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
+    if (file_exists($mconf)) {
+        $filename=basename($mconf);
+        $pattern = '/conf_([a-f0-9]+)\.php/';
+        preg_match($pattern, $filename, $matches);
+        $hash = $matches[1];
+        $GLOBALS["PROFILES"][$hash]=$mconf;
+    }
+}
+
+
+// Function to compare modification dates
+function compareFileModificationDate($a, $b) {
+    return filemtime($b) - filemtime($a);
+}
+
+// Sort the profiles by modification date descending
+if (is_array($GLOBALS["PROFILES"]))
+    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
+else
+    $GLOBALS["PROFILES"]=[];
+
+$GLOBALS["PROFILES"]=array_merge(["default"=>"$configFilepath/conf.php"],$GLOBALS["PROFILES"]);
+
+
+if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
+    require_once($_SESSION["PROFILE"]);
+
+} else
+    $_SESSION["PROFILE"]="$configFilepath/conf.php";
+
+include("tmpl/head.html");
+$debugPaneLink = false;
+include("tmpl/navbar.php");
+
+
 if (isset($_POST["submit"])) {
     ob_start();
 
@@ -29,7 +84,7 @@ if (isset($_POST["submit"])) {
         echo "Error: Please upload a .wav file." . PHP_EOL;
     } else {
         // Prepare the cURL request
-        $url = 'http://127.0.0.1:8020/upload_sample';
+        $url =  $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
         $cfile = new CURLFile($fileTmpPath, $fileType, $fileName);
 
         $postFields = array('wavFile' => $cfile);
@@ -64,7 +119,7 @@ if (isset($_POST["submit"])) {
     ob_start();
 
     // Prepare the cURL request for getting the speakers list
-    $url = 'http://127.0.0.1:8020/speakers_list';
+    $url =  $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/speakers_list';
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -109,10 +164,7 @@ if (isset($_POST["submit"])) {
     $result = ob_get_clean();
 }
 
-include("tmpl/head.html");
 
-$debugPaneLink = false;
-include("tmpl/navbar.php");
 
 echo "<pre>$result</pre>";
 
@@ -141,7 +193,7 @@ echo '
     <input type="submit" name="get_speakers" value="Current Voices List">
     <br>
     <br>
-    <label>Link to advanced XTTS configuration menu: <a href="http://127.0.0.1:8020/docs#" target="_blank">http://127.0.0.1:8020/docs#</a></label>
+    <label>Link to advanced XTTS configuration menu: <a href="'.$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/docs#" target="_blank">'.$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/docs#</a></label>
 </form>
 ';
 
