@@ -98,7 +98,7 @@ $ITT["LLAMACPP"]["AI_PROMPT"]='';
 
 $ITT["openai"]["url"]='https://api.openai.com/v1/chat/completions';	//OpenAI API endpoint
 $ITT["openai"]["model"]='gpt-4o-mini';	//Model to use
-$ITT["openai"]["max_tokens"]=256;	//Maximum tokens to generate
+$ITT["openai"]["max_tokens"]=512;	//Maximum tokens to generate
 $ITT["openai"]["detail"]='low';	//Low or high fidelity image understanding
 $ITT["openai"]["API_KEY"]='';	//OpenAI API key
 // Prompt send to GTP-V
@@ -131,7 +131,7 @@ $CONNECTORS_DIARY=["koboldcpp","openai","openrouter"];
 
 $CONNECTOR["openai"]["url"]="https://api.openai.com/v1/chat/completions";
 $CONNECTOR["openai"]["model"]='gpt-4o-mini';	//Model to use
-$CONNECTOR["openai"]["max_tokens"]='500';
+$CONNECTOR["openai"]["max_tokens"]='512';
 $CONNECTOR["openai"]["temperature"]=1;
 $CONNECTOR["openai"]["presence_penalty"]=1;
 $CONNECTOR["openai"]["API_KEY"]="";
@@ -141,7 +141,7 @@ $CONNECTOR["openai"]["top_p"]=1;        			//LLM parameter top_p
 
 $CONNECTOR["openaijson"]["url"]="https://api.openai.com/v1/chat/completions";
 $CONNECTOR["openaijson"]["model"]='gpt-4o-mini';	//Model to use
-$CONNECTOR["openaijson"]["max_tokens"]='500';
+$CONNECTOR["openaijson"]["max_tokens"]='512';
 $CONNECTOR["openaijson"]["temperature"]=1;
 $CONNECTOR["openaijson"]["presence_penalty"]=1;
 $CONNECTOR["openaijson"]["API_KEY"]="";
@@ -150,7 +150,7 @@ $CONNECTOR["openaijson"]["frequency_penalty"]=0;    		//LLM parameter frequency_
 $CONNECTOR["openaijson"]["top_p"]=1;        			//LLM parameter top_p
 
 $CONNECTOR["koboldcpp"]["url"]='http://127.0.0.1:5001';	//KoboldCPP API Endpoint
-$CONNECTOR["koboldcpp"]["max_tokens"]='500';	//Maximum tokens to generate
+$CONNECTOR["koboldcpp"]["max_tokens"]='512';	//Maximum tokens to generate
 $CONNECTOR["koboldcpp"]["temperature"]=1;	//LLM parameter temperature
 $CONNECTOR["koboldcpp"]["rep_pen"]=1;	//LLM parameter rep_pen
 $CONNECTOR["koboldcpp"]["top_p"]=1;	//LLM parameter top_p
@@ -164,7 +164,7 @@ $CONNECTOR["koboldcpp"]["template"]='chatml';	//Prompt Format. Specified in the 
 
 
 $CONNECTOR["koboldcppjson"]["url"]='http://127.0.0.1:5001';	//KoboldCPP API Endpoint
-$CONNECTOR["koboldcppjson"]["max_tokens"]='500';	//Maximum tokens to generate
+$CONNECTOR["koboldcppjson"]["max_tokens"]='512';	//Maximum tokens to generate
 $CONNECTOR["koboldcppjson"]["temperature"]=0.9;	//LLM parameter temperature
 $CONNECTOR["koboldcppjson"]["rep_pen"]=1.12;	//LLM parameter rep_pen
 $CONNECTOR["koboldcppjson"]["top_p"]=0.9;	//LLM parameter top_p
@@ -182,7 +182,7 @@ $CONNECTOR["koboldcppjson"]["grammar"]=false;	//Enforces use of JSON grammar. Tr
 
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions";
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct";
-$CONNECTOR["openrouter"]["max_tokens"]=500;
+$CONNECTOR["openrouter"]["max_tokens"]=512;
 $CONNECTOR["openrouter"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931";
 $CONNECTOR["openrouter"]["xtitle"]="Skyrim AI Follower Framework";
 $CONNECTOR["openrouter"]["API_KEY"]="";
@@ -199,7 +199,7 @@ $CONNECTOR["openrouter"]["top_a"]=0;	//LLM parameter top_a
 
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions";
 $CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.1-70b-instruct";
-$CONNECTOR["openrouterjson"]["max_tokens"]='500';	//Maximum tokens to generate.
+$CONNECTOR["openrouterjson"]["max_tokens"]='512';	//Maximum tokens to generate.
 $CONNECTOR["openrouterjson"]["temperature"]=0.8;	//LLM parameter temperature
 $CONNECTOR["openrouterjson"]["presence_penalty"]=0;	//LLM parameter presence_penalty
 $CONNECTOR["openrouterjson"]["frequency_penalty"]=0;	//LLM parameter frequency_penalty
@@ -228,7 +228,7 @@ $CONNECTOR["llamacpp"]["max_tokens"]="75";	//Maximum tokens to generate (n_predi
 $CONNECTOR["llamacpp"]["temperature"]=0.7;	//LLM parameter temperature
 $CONNECTOR["llamacpp"]["rep_pen"]=1.12;	//LLM parameter rep_pen
 $CONNECTOR["llamacpp"]["top_p"]=0.9;	//LLM parameter top_p
-$CONNECTOR["llamacpp"]["MAX_TOKENS_MEMORY"]='256';	//Maximum tokens to generate when summarizing, such as writing to diary.
+$CONNECTOR["llamacpp"]["MAX_TOKENS_MEMORY"]='512';	//Maximum tokens to generate when summarizing, such as writing to diary.
 $CONNECTOR["llamacpp"]["eos_token"]='</s>';	//EOS token LLM uses.
 $CONNECTOR["llamacpp"]["template"]='alpaca';	//Prompt Format. Specified in the HuggingFace model card
 

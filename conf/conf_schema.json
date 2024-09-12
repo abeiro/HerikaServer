@@ -4,10 +4,10 @@
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name! If you are in the default profile leave it as The Narrator"},
   "PROMPT_HEAD": {"userlvl":"basic","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
-  "dynamic_profile_b1": {"userlvl":"wip","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. <strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill","helpurl":""},
-  "dynamic_profile_b2": {"userlvl":"wip","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs. <strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill","helpurl":""},
-  "MINIME_T5":{"userlvl":"wip","type":"boolean","scope":"global","description":"Enable MiniMeT5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in DwemerDistro under Tools/components."},
-  "DYNAMIC_PROFILE":{"userlvl":"wip","type":"boolean","description":"Will trigger dynamic profile updates during certain ingame events (such as sleeping). Will cause the AI personality to dynamically change during gameplay based on player interaction."},
+  "dynamic_profile_b1": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. <strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill","helpurl":""},
+  "dynamic_profile_b2": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs. <strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill","helpurl":""},
+  "DYNAMIC_PROFILE":{"userlvl":"pro","type":"boolean","description":"Will trigger dynamic profile updates during certain ingame events (such as sleeping). Will cause the AI personality to dynamically change during gameplay based on player interaction."},
+  "MINIME_T5":{"userlvl":"pro","type":"boolean","scope":"global","description":"Enable MiniMeT5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in DwemerDistro under Tools/components. <br> <strong> Must be configued in default profile!</strong>"},
   "RECHAT_H": {"userlvl":"pro","type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves. 1 = One Response | 2 = Two Responses etc","_title":"Advanced Configuration"},
   "RECHAT_P": {"userlvl":"pro","type":"integer","description":"Rechat probability. 0 = Always | 50 = Sometimes | 100 = Never"},
   "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an NPC starting a random conversation. 0 = NEVER | 1 = 50% | 2 = 75% etc"},
@@ -16,10 +16,10 @@
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
   "NEWQUEUE": {"userlvl":"basic","scope":"constant","type":"boolean","description":"Leave as is. Can not be changed!"},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
-  "BOOK_EVENT_FULL": {"userlvl":"wip","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
+  "BOOK_EVENT_FULL": {"userlvl":"pro","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books. <strong>SET THIS ON default profile to apply to all followers.</strong>","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
-  "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game.","scope":"global"},
+  "NARRATOR_WELCOME": {"userlvl":"wip","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game.","scope":"global"},
   "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations for the NPC to play"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled"},
@@ -30,7 +30,7 @@
     "openai": {
       "_title":"OpenAI/ChatGPT API",
       "url": {"type":"url","description":"OpenAI API endpoint"},
-      "model": {"type":"string","description":"Model to use.","helpurl":"https://platform.openai.com/docs/models/"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
@@ -42,7 +42,7 @@
     "openaijson": {
       "_title":"OpenAI/ChatGPT API (JSON mode)",
       "url": {"type":"url","description":"OpenAI API endpoint"},
-      "model": {"type":"string","description":"Model to use.","helpurl":"https://platform.openai.com/docs/models/"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
@@ -61,7 +61,7 @@
       "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p"},
       "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
+      "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2"],"description":"Prompt Format. Specified in the HuggingFace model card"}
@@ -77,7 +77,7 @@
       "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
       "PREFILL_JSON": {"type":"boolean","description":"Will prefill JSON, which is useful for some AI models, and destroy others."},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "newline_as_stopseq": {"type":"boolean","description":"A newline in the output that will be considered a stop sequence. Recommended to leave it as default."},
+      "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","alpacajson"],"description":"Prompt Format. Specified in the HuggingFace model card"},
@@ -131,7 +131,7 @@
       "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","coqui-ai","xvasynth","openai","convai","stylettsv2","xtts-fastapi","melotts"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","openai","convai","xtts-fastapi","melotts"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "AZURE": {
@@ -195,7 +195,7 @@
       "_title":"MELOTTS",
       "endpoint":{"type":"url","description":"End point URL. Avoid trailing slash","helpurl":""},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language"},
-      "speed":{"type":"number","description":"Speed.","helpurl":""},
+      "speed":{"type":"number","description":"Speech Speed","helpurl":""},
       "voiceid":{"type":"select","values":["EN-US","EN-BR","EN_INDIA","EN-AU","EN-Default","ES","FR","ZH","JP","KR"],"description":"Language"}
     }
 
@@ -231,9 +231,9 @@
     }
   },
   "ITTFUNCTION": {
-    "type":"select","values":["llamacpp","azure","openai"],"description":"Image recognition aka Soulgaze spell. Use OpenAI also works as a connector to OpenRouter!", 
+    "type":"select","values":["llamacpp","openai"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter! <br> <strong> Must be configured in default profile!</strong>", 
     "_title":"Image Recognition Service",
-    "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens","scope":"global"}
+    "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
   },
   "ITT": {
     "LLAMACPP": {
