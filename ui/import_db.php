@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo "Import completed.<br/><br>";
 
                 // Provide a clickable link and popup message
-                $redirectUrl = 'http://localhost:8081/HerikaServer/ui/index.php?table=eventlog';
+                $redirectUrl = '/HerikaServer/ui/index.php?table=eventlog';
                 echo "<script type='text/javascript'>
                         alert('Database restored successfully.');
                       </script>";

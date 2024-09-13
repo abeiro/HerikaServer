@@ -84,12 +84,12 @@
                     </li>
                     <li>
                         <a class="dropdown-item" href="export_db.php" target="_blank" title="Exports current database into a file.">
-                            DO NOT USE YET Backup Current Database
+                            Backup Current Database
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="import_db.php" target="_blank" title="Reimport an exported database file.">
-                            DO NOT USE YET Restore Database Backup
+                            Restore Database Backup
                         </a>
                     </li>
                     <li>
