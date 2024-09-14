@@ -127,7 +127,7 @@ function DataLastInfoFor($actor, $lastNelements = -2)
         $lastDialogFull[$n]["content"] = $result;
     }
 
-    $lastDialog[] = array('role' => 'user', 'content' => "Current followers:". prettyPrintJson(DataGetCurrentPartyConf()));
+    $lastDialog[] = array('role' => 'user', 'content' => "Current followers:". (DataGetCurrentPartyConf()));
      
     return $lastDialog;
 

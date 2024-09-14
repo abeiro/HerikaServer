@@ -101,10 +101,6 @@ $startTime = microtime(true);
 error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " started: ".$startTime);
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
-
-
-
-
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 $gameRequest = explode("|", $receivedData);
@@ -183,7 +179,7 @@ if ($gameRequest[0]=="diary") {
 
 
 // Exit if only a event info log.
-if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer","infosave"])) {
+if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer","infosave","status_msg"])) {
     logEvent($gameRequest);
     die();
 }

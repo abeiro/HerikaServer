@@ -307,7 +307,9 @@ echo str_repeat("</fieldset>", $lvl2);
 echo '</form>';
 
 echo "<div style='position:fixed;top:0px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'>
-<span><strong>Quick Access for <span style='color:green'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span></strong></span><ul>";
+<span><strong>Quick Access for <span style='color:green'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br/><span style='font-size:7px'>".
+    basename($_SESSION["PROFILE"])
+."</span></strong></span><ul>";
 //echo "<li><a href='#top'>Top</a></li>";
 
 
