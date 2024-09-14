@@ -24,7 +24,8 @@ $ENABLED_FUNCTIONS=[
     'SetCurrentTask',
     'StopWalk',
     'TravelTo',
-    'SearchMemory'
+    'SearchMemory',
+//    'WaitHere'
 ];
 
 
@@ -52,7 +53,7 @@ $F_TRANSLATIONS["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to acce
 $F_TRANSLATIONS["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
 $F_TRANSLATIONS["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_TRANSLATIONS["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
-
+$F_TRANSLATIONS["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and stands at the current place";
 
 $F_RETURNMESSAGES["Inspect"]="{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
 $F_RETURNMESSAGES["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
@@ -77,6 +78,7 @@ $F_RETURNMESSAGES["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to ac
 $F_RETURNMESSAGES["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
 $F_RETURNMESSAGES["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
 $F_RETURNMESSAGES["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
+$F_RETURNMESSAGES["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
 
 
 // What is this?. We can translate functions or give them a custom name. 
@@ -105,6 +107,7 @@ $F_NAMES["ReadDiaryPage"]="ReadDiaryPage";
 $F_NAMES["StopWalk"]="StopWalk";
 $F_NAMES["TravelTo"]="LeadTheWayTo";
 $F_NAMES["SearchMemory"]="TryToRemember";
+$F_NAMES["WaitHere"]="WaitHere";
 
 if (isset($GLOBALS["CORE_LANG"]))
 	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
@@ -432,7 +435,21 @@ $FUNCTIONS = [
             ],
             "required" =>[""]
         ]
-    ]
+        ],
+        [
+            "name" => $F_NAMES["WaitHere"],
+            "description" => $F_TRANSLATIONS["WaitHere"],
+            "parameters" => [
+                "type" => "object",
+                "properties" => [
+                    "target" => [
+                        "type" => "string",
+                        "description" => "",
+                    ]
+                ],
+                "required" =>[""]
+            ]
+        ]
 ];
 
 
@@ -516,6 +533,7 @@ if ($GLOBALS["IS_NPC"]) {
         'SetCurrentTask',
         //'SearchMemory',
         //'StopWalk'
+//        'WaitHere'
     ];
 } else {
     $GLOBALS["ENABLED_FUNCTIONS"]=[
@@ -536,6 +554,7 @@ if ($GLOBALS["IS_NPC"]) {
         'ReadQuestJournal',
         'IncreaseWalkSpeed',
         'DecreaseWalkSpeed',
+//        'WaitHere'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',

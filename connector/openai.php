@@ -171,6 +171,12 @@ class connector
 
         }
 
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_rray($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+
+            }
+        }
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
