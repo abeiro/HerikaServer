@@ -194,7 +194,19 @@ echo '
     <br>
     <br>
     <label>Link to advanced XTTS configuration menu: <a href="'.$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/docs#" target="_blank">'.$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/docs#</a></label>
-</form>
+    <br>
+    <br>
+    <label>Recommended .wav file specifications for uploading a voice.</label>
+    <br>
+    <ul>
+    <li>.wav format</li>
+        <li>PCM</li>
+        <li>16 bit</li>
+    <li>Mono</li>
+    <li>20500hz</li>
+    </ul>
+
+    </form>
 ';
 
 include("tmpl/footer.html");
