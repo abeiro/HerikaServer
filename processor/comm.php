@@ -407,12 +407,12 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "setconf") {
     
     $vars=explode("@",$gameRequest[3]);
-    $db->delete("conf_opts", "id='{$vars[0]}'");
+    $db->delete("conf_opts", "id='".$db->escape($vars[0])."'");
     $db->insert(
         'conf_opts',
         array(
-                'id' => $vars[0],
-                'value' => $vars[1]
+                'id' => $db->escape($vars[0]),
+                'value' => $db->escape($vars[1])
             )
     );
     
