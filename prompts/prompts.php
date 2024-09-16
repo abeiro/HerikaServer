@@ -62,27 +62,25 @@ $PROMPTS=array(
     
     "combatend"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} comments about the last combat encounter) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} comments about foes defeated) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} curses the defeated enemies.) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} insults the defeated enemies with anger) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} notes something peculiar) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} admires {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} makes a joke about the defeated enemies) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about the type of enemies that was defeated) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} notes something peculiar about last enemy defeated) $TEMPLATE_DIALOG"
         ],
         "extra"=>["force_tokens_max"=>"50","dontuse"=>(time()%10!=0)]   //10% chance
     ],
     "combatendmighty"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} comments about the last combat encounter) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} comments about foes defeated) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} curses the defeated enemies.) $TEMPLATE_DIALOG",
             "({$GLOBALS["HERIKA_NAME"]} insults the defeated enemies with anger) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} notes something peculiar about last enemy defeated) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} admires {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} makes a joke about the defeated enemies) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about the type of enemies that was defeated) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} notes something peculiar about last enemy defeated) $TEMPLATE_DIALOG"
         ]
     ],
     "quest"=>[
@@ -92,26 +90,32 @@ $PROMPTS=array(
     ],
 
     "bleedout"=>[
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} complain about almost being defeated, $TEMPLATE_DIALOG"]
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} complain about almost being defeated in battle, $TEMPLATE_DIALOG"]
     ],
-
+    //Some bored event ideas belong to L'ENFP from our discord!
     "bored"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a joke about current location) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the current weather) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the time and date) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about what you are currently thinking about) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a Skyrim Meme) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about any of the Gods) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the current political situation) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a historical event from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a book from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about the last task we have completed ) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a recent rumor) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about something you had to do in your past) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about current relationship/friendship status with {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about a random entity in the area) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} spontaneously makes a casual comment about our last combat encounter) $TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about the current location) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about the current weather) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about today) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about what you are currently thinking about) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about the Gods of the Elder Scrolls Universe) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about how they currently feel) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about a historical event from the Elder Scrolls Universe) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they like or dislike) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about the last task we have completed) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about a recent rumor) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something that happened in your past) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they're curious about regarding {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about current thoughts about {$GLOBALS["PLAYER_NAME"]}) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about a random entity in the area) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about what might happen next) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about their thoughts on the journey so far) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they like or dislike) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they've been wanting to do) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a random comment about something completely unrelated) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a vague comment about something they can't quite explain) $TEMPLATE_DIALOG",
+            "({$GLOBALS["HERIKA_NAME"]} makes a casual comment about the last combat encounter) $TEMPLATE_DIALOG"
         ]
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
         ,"extra"=>["dontuse"=>(time()%($GLOBALS["BORED_EVENT"]+1)==0)]   //50% chance
@@ -145,11 +149,11 @@ $PROMPTS=array(
             "default"=>"{$GLOBALS["HERIKA_NAME"]} talks to {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG",
             "TakeASeat"=>"({$GLOBALS["HERIKA_NAME"]} talks about sitting location)$TEMPLATE_DIALOG",
             "GetDateTime"=>"({$GLOBALS["HERIKA_NAME"]} answers with the current date and time in short sentence)$TEMPLATE_DIALOG",
-            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} makes a comment about movement destination)$TEMPLATE_DIALOG",
+            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} makes a comment about movement to the destination)$TEMPLATE_DIALOG",
             "CheckInventory"=>"({$GLOBALS["HERIKA_NAME"]} talks about inventory and backpack items)$TEMPLATE_DIALOG",
             "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected)$TEMPLATE_DIALOG",
-            "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests readed)$TEMPLATE_DIALOG",
-            "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about destination)$TEMPLATE_DIALOG",
+            "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests they have read in the quest journal)$TEMPLATE_DIALOG",
+            "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about the destination)$TEMPLATE_DIALOG",
             "InspectSurroundings"=>"({$GLOBALS["HERIKA_NAME"]} talks about beings or enemies detected)$TEMPLATE_DIALOG"
             ]
     ],
