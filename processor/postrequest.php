@@ -64,7 +64,7 @@ if ($GLOBALS["MINIME_T5"]) {
                         'localts' => time()
                     )
                 );
-                db->insert(
+                $db->insert(
                     'audit_memory',
                     array(
                         'input' => $TEST_TEXT,
