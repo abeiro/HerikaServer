@@ -64,8 +64,8 @@
                         <a class="dropdown-item" href="index.php?export=diary" title="Exports Diary Log to a csv file" target="_blank">
                             Export Diary
                         </a>
-                    </li> -->
-                    <!--<li>
+                    </li>
+                    <li>
                         <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync VectorDB Memories. Use this if you have changed Memory Embeddings service." target="_blank">
                             Sync Memories
                         </a>
