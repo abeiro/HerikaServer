@@ -55,7 +55,7 @@
                             Clean AI Log
                         </a>
                     </li>
-                    -<li>
+                    <li>
                         <a class="dropdown-item" href="index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
                             Export AI Log
                         </a>
