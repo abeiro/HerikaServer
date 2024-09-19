@@ -55,7 +55,7 @@ $PROMPTS=array(
         ],
     
     "book"=>[
-        "cue"=>["(Note that despite her poor memory, {$GLOBALS["HERIKA_NAME"]} is capable of remembering entire books)"],
+        "cue"=>["(Note that despite their poor memory, {$GLOBALS["HERIKA_NAME"]} is capable of remembering entire books)"],
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["HERIKA_NAME"]}, summarize this book shortly: "]  //requirement
         
     ],
@@ -204,7 +204,7 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation.) $TEMPLATE_DIALOG"]
     ],
     "im_alive"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} talks about she/he is 'feeling more real'.Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"],
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} talks about she/he is 'feeling more real'. Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"],
         "player_request"=>["The Narrator:  {$GLOBALS["HERIKA_NAME"]} feels a sudden shock...and feels 'more real'"],
     ],
     "playerinfo"=>[ 
