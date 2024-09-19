@@ -273,6 +273,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
 
         $host = parse_url($url, PHP_URL_HOST);
         $port = parse_url($url, PHP_URL_PORT);
+        $scheme = parse_url($url, PHP_URL_SCHEME);
 
 
         // Data to send in JSON format
@@ -288,7 +289,11 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         $request .= $dataJson;
 
         // Open a TCP connection
-        $this->primary_handler = fsockopen('tcp://' . $host, $port, $errno, $errstr, 30);
+        //$this->primary_handler = fsockopen('tcp://' . $host, $port, $errno, $errstr, 30);
+        if ($scheme=="https")
+            $this->primary_handler = fsockopen('ssl://' . $host, 443, $errno, $errstr, 30);
+        else
+            $this->primary_handler = fsockopen('tcp://' . $host, $port, $errno, $errstr, 30);
 
         // Send the HTTP request
         if ($this->primary_handler !== false) {
