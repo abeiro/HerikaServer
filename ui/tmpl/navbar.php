@@ -17,7 +17,6 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Events</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="index.php?table=eventlog">Events</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
                     <li><a class="dropdown-item" href="index.php?table=log">AI Log</a></li>
                     <li><a class="dropdown-item" href="index.php?table=quests">Current Active Quests</a></li>
                     <li><a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor Events</a></li>
@@ -149,6 +148,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Plugins</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href='index.php?plugins_show=true'>Installed Plugins</a></li>
+                    <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
                 </ul>
             </li>
 
