@@ -17,7 +17,6 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Events</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="index.php?table=eventlog">Events</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
                     <li><a class="dropdown-item" href="index.php?table=log">AI Log</a></li>
                     <li><a class="dropdown-item" href="index.php?table=quests">Current Active Quests</a></li>
                     <li><a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor Events</a></li>
@@ -48,7 +47,7 @@
                     </li>
                     <li>
                         <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('Sure?')">
-                            Delete Events
+                            Delete All Events
                         </a>
                     </li>
                     <li>
@@ -61,12 +60,12 @@
                             Export AI Log
                         </a>
                     </li>
-                    <li>
+                    <!--<li>
                         <a class="dropdown-item" href="index.php?export=diary" title="Exports Diary Log to a csv file" target="_blank">
                             Export Diary
                         </a>
                     </li>
-                    <!--<li>
+                    <li>
                         <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync VectorDB Memories. Use this if you have changed Memory Embeddings service." target="_blank">
                             Sync Memories
                         </a>
@@ -131,7 +130,6 @@
                     <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
                     <li><a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank">XTTS FastAPI Voice Management</a></li>
                     <li><a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">Mimic3 Voice Menu</a></li>
-                    <li><a class="dropdown-item" href="conf_editor.php" target="_blank">Manual Configuration (Advanced!)</a></li>
                     <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0' target="_blank">AI/LLM Supported Models List</a></li>
                 </ul>
             </li>
@@ -150,6 +148,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Plugins</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href='index.php?plugins_show=true'>Installed Plugins</a></li>
+                    <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
                 </ul>
             </li>
 
