@@ -47,7 +47,7 @@
                     </li>
                     <li>
                         <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('Sure?')">
-                            Delete Events
+                            Delete All Events
                         </a>
                     </li>
                     <li>
@@ -55,16 +55,16 @@
                             Clean AI Log
                         </a>
                     </li>
-                    <li>
+                    -<li>
                         <a class="dropdown-item" href="index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
                             Export AI Log
                         </a>
                     </li>
-                    <li>
+                    <!--<li>
                         <a class="dropdown-item" href="index.php?export=diary" title="Exports Diary Log to a csv file" target="_blank">
                             Export Diary
                         </a>
-                    </li>
+                    </li> -->
                     <!--<li>
                         <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync VectorDB Memories. Use this if you have changed Memory Embeddings service." target="_blank">
                             Sync Memories
