@@ -322,18 +322,24 @@ foreach ($summary as $k=>$item) {
     
 }
 
-//echo "<li><a href='#end'>Check & Save</a></li>";
-echo '<input style="margin-top:10px" class="btn btn-info" type="button" name="save" value="Save" onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' />';
-echo ' :: <input style="margin-top:10px" class="btn btn-info" type="button" name="delete" value="Delete profile" onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_deletion.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' /></p>';
+echo '<input
+    style="margin-top:10px; font-weight:bold; border:1px solid; padding:5px;"
+    class="btn btn-info"
+    type="button"
+    name="save"
+    value="Save"
+    onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' />';
+
+echo ' :: ';
+
+echo '<input
+    style="margin-top:10px; font-weight:bold; border:1px solid; padding:5px; background-color:red;"
+    class="btn btn-info"
+    type="button"
+    name="delete"
+    value="Delete profile"
+    onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_deletion.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' /></p>';
 echo "</ul></div>";
-
-
-echo '<p id="end"><input class="btn btn-info" style="display:none" type="button" name="check" value="Check [DOES NOT WORK]" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php";document.forms[0].submit()\' />';
-echo '<input class="btn btn-info" style="display:none" type="button" name="save" value="Save" onclick=\'document.forms[0].target="checker";document.forms[0].action="tools/conf_writer.php?save=true";document.forms[0].submit();\' /></p>';
-echo '<iframe class="w-75" name="checker" border="1" style="display:none" scrolling="no" src="tmpl/black.html"></iframe>';
-
-echo '<script>window.onload = scrollToHash;</script>';
-
 
 
 include("tmpl/footer.html");
