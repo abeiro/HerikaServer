@@ -15,7 +15,7 @@ $BOOK_EVENT_FULL=false;
 
 $HERIKA_ANIMATIONS=true;
 $DYNAMIC_PROFILE=false;
-$NARRATOR_WELCOME=true;
+$NARRATOR_WELCOME=false;
 $LANG_LLM_XTTS=false;
 $EMOTEMOODS="sassy,assertive,sexy,smug,kindly,lovely,seductive,sarcastic,sardonic,smirking,amused,default,assisting,irritated,playful,neutral,teasing,mocking";
 $MINIME_T5=false;

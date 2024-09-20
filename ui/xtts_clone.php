@@ -15,10 +15,12 @@ session_start();
         .indent {
             padding-left: 10ch; /* 10 character spaces */
         }
+        .indent5 {
+            padding-left: 5ch; /* 5 character spaces */
+        }
     </style>
 </head>
 <body>
-
 <?php
 
 
@@ -169,6 +171,7 @@ if (isset($_POST["submit"])) {
 echo "<pre>$result</pre>";
 
 echo '
+<div class="indent5">
 <form action="xtts_clone.php" method="POST" enctype="multipart/form-data">
     <label><b>XTTS Voice Generation</b></label>
     <br>
@@ -183,9 +186,11 @@ echo '
     <br>
     <input type="submit" name="submit" value="Upload">
 </form>
+</div>
 ';
 
 echo '
+<div class="indent5">
 <form action="xtts_clone.php" method="POST">
     <br>
     <label><b>List Current Voices in XTTS</b></label>
@@ -199,14 +204,14 @@ echo '
     <label>Recommended .wav file specifications for uploading a voice.</label>
     <br>
     <ul>
-    <li>.wav format</li>
+        <li>.wav format</li>
         <li>PCM</li>
         <li>16 bit</li>
-    <li>Mono</li>
-    <li>20500hz</li>
+        <li>Mono</li>
+        <li>20500hz</li>
     </ul>
-
-    </form>
+</form>
+</div>
 ';
 
 include("tmpl/footer.html");
