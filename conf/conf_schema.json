@@ -202,7 +202,7 @@
   },
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
-    "_title":"Speech-to-Text Service"
+    "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
   "_title":"Speech-to-Text Service",
@@ -232,7 +232,7 @@
   },
   "ITTFUNCTION": {
     "type":"select","values":["openai","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter! <br> <strong> Must be configured in default profile!</strong>", 
-    "_title":"Image Recognition Service",
+    "_title":"Image Recognition Service","scope":"global",
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
   },
   "ITT": {
