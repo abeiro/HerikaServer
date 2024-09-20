@@ -1,6 +1,6 @@
 {
-  "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change.","_title":"Main Configuration"},
-  "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"Your current character name."},
+  "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"Your current character name.","_title":"Main Configuration"},
+  "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change."},
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name! If you are in the default profile leave it as The Narrator"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
@@ -201,7 +201,7 @@
 
   },
   "STTFUNCTION": {
-    "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.<br><br><strong>Must be configured in default profile!</strong>", 
+    "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
