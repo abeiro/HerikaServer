@@ -341,7 +341,6 @@ pg_close($conn);
         <input type="submit" name="submit_csv" value="Upload CSV">
     </form>
 
-    <p>Example .csv format:</p>
     <form action="" method="get">
         <input type="hidden" name="action" value="download_example">
         <input type="submit" value="Download Example CSV">
