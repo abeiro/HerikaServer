@@ -187,7 +187,7 @@
       },
     "XTTSFASTAPI": {
       "_title":"XTTSv2 Fast-API (Installed with DwemerDistro)",
-      "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<strong>CAP YOUR SKYRIM FRAMERATE!</strong>It can be a resource hog and capping your framerate can save precious VRAM!","helpurl":""},
+      "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<br><strong>CAP YOUR SKYRIM FRAMERATE!</strong><br>It can be a resource hog and capping your framerate can save precious VRAM!","helpurl":""},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
       "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
     },
