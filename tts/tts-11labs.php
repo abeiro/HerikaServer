@@ -43,7 +43,8 @@ function tts($textString, $mood = "default", $stringforhash) {
 			'http' => array(
 				'method' => 'POST',
 				'header' => implode("\r\n", $headers),
-				'content' => json_encode($data)
+				'content' => json_encode($data),
+				'timeout' => 10 // Set the timeout value in seconds
 			)
 		);
 

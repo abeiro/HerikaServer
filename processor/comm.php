@@ -406,6 +406,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     
 } elseif ($gameRequest[0] == "setconf") {
     
+    logEvent($gameRequest);
+
     $vars=explode("@",$gameRequest[3]);
     $db->delete("conf_opts", "id='".$db->escape($vars[0])."'");
     $db->insert(
@@ -430,59 +432,10 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 
     logEvent($gameRequest);
     
-    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-    $newConfFile=md5($gameRequest[3]);
-    
-    $codename=strtr(strtolower(trim($gameRequest[3])),[" "=>"_","'"=>"+"]);
 
     AddFirstTimeMet($gameRequest[3], $momentum, $gameRequest[2],$gameRequest[1]);
-    
-    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") ) {
-        
 
-        // Do customizations here
-        $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
-        copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
-        
-        $file_lines = file($newFile);
-
-        for ($i = count($file_lines) - 1; $i >= 0; $i--) {
-            // If the line is not empty, break the loop // Will remove first entry 
-            if (trim($file_lines[$i]) !== '') {
-                unset($file_lines[$i]);
-                break;
-            }
-            unset($file_lines[$i]);
-        }
-        
-        $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
-        
-        // Consider adding here notes like 'They Just met' into profile.
-        
-
-        file_put_contents($newFile, implode('', $file_lines));
-        file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\''.$codename.'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        file_put_contents($newFile, '$HERIKA_NAME=\''.addslashes(trim($gameRequest[3])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        
-        if (is_array($npcTemlate[0]))
-            file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        else
-            file_put_contents($newFile, '$HERIKA_PERS=\'Roleplay as '.trim($gameRequest[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
-
-        error_log(DMgetCurrentModelFile()." ".$path."data/CurrentModel_".md5($gameRequest[3]).".json");
-        copy(DMgetCurrentModelFile(),$path."data/CurrentModel_".md5($gameRequest[3]).".json");
-
-        
-    }
-
-    // Character Map file
-    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json"))
-        $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
-    
-    
-    $characterMap[md5($gameRequest[3])]=$gameRequest[3];
-    file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
+    createProfile($gameRequest[3],[],false);
     
     
     $MUST_END=true;
