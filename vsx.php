@@ -6,7 +6,7 @@
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
-
+require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib".DIRECTORY_SEPARATOR."fuz_convert.php"); // API KEY must be there
 
 if (strpos($_GET["oname"],".fuz"))  {
@@ -17,7 +17,9 @@ if (strpos($_GET["oname"],".fuz"))  {
   $ext="wav";
 }
 
-    
+
+
+
 $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["tmp_name"]).".$ext";
 
 
@@ -52,6 +54,18 @@ if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTT
 
 //$codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
 $codename = str_replace(" ", "_", mb_strtolower($_GET["codename"], 'UTF-8'));
+$codename = str_replace("'", "+", $codename);
+
+$db=new sql();
+$db->delete("conf_opts", "id='".$db->escape("Voicetype/$codename")."'");
+$db->insert(
+  'conf_opts',
+  array(
+      'id' => $db->escape("Voicetype/$codename"),
+      'value' => $_GET["oname"]
+  )
+);
+$db->close();
 
 $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
 

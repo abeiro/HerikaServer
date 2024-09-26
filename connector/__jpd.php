@@ -17,8 +17,8 @@ function lazyEmpty($string) {
     if (trim($string)=="none")
         return true;
     
-    
 }
+
 function __jpd__extractContentBetweenBraces($inputString) {
     // Find the position of the first {
     $startPos = strpos($inputString, '{');

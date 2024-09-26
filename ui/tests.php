@@ -33,8 +33,19 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 
 
 if (isset($_SESSION["PROFILE"])) {
+    $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
+    $OVERRIDES["MINIME_T5"]=$GLOBALS["MINIME_T5"];
+    $OVERRIDES["STTFUNCTION"]=$GLOBALS["STTFUNCTION"];
+
     require_once($_SESSION["PROFILE"]);
-}
+
+    $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
+    $GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
+    $GLOBALS["STTFUNCTION"]=$OVERRIDES["STTFUNCTION"];
+    
+} else
+    $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+
 
 $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
 
@@ -89,7 +100,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
     require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 
-    $head[] = array('role' => 'system', 'content' => $GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] );
+    $head[] = array('role' => 'system', 'content' => strtr($GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] ,["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]]));
     $prompt[] = array('role' => 'user', 'content' => 
         "Hey, {$GLOBALS["HERIKA_NAME"]}, attack that monster!!"
     );

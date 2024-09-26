@@ -443,7 +443,7 @@ function returnLines($lines,$writeOutput=true)
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
                 }
                 
-                $listenerFix=explode("and",$GLOBALS["SCRIPTLINE_LISTENER"]);
+                $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix) && (sizeof($listenerFix)>1)) {
                     $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix[0];
                 }

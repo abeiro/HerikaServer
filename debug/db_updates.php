@@ -188,4 +188,33 @@ if (!$existsColumn[0]["npc_name"]) {
     echo '<script>alert("A patch (neiva follower) has been applied to Database")</script>';
 }
 
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'audit_request' AND column_name = 'request'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('
+    CREATE TABLE public.audit_request (
+        request text,
+        result text,
+        created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+        rowid bigint NOT NULL
+    );
+    CREATE SEQUENCE public.audit_request_rowid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+    ALTER TABLE ONLY public.audit_request ALTER COLUMN rowid SET DEFAULT nextval(\'public.audit_request_rowid_seq\'::regclass);
+    ALTER TABLE ONLY public.audit_request ADD CONSTRAINT audit_request_primary PRIMARY KEY (rowid);
+
+');
+    echo '<script>alert("A patch (0.9.7) has been applied to Database")</script>';
+}
+
 ?>

@@ -432,6 +432,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     }
     
     $lastDialogFull = array();
+    $actorEscaped=$db->escape($actor);
     $query="select  
     case 
       when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'The Narrator:'
@@ -443,7 +444,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc'and  type<>'infonpc'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf'
-    ".(($actor)?" and people like '|%$actor%|' ":"")." 
+    ".(($actorEscaped)?" and people like '|%$actorEscaped%|' ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
     " order by gamets desc,ts desc,rowid desc LIMIT 1000 OFFSET 0";
@@ -863,8 +864,9 @@ function DataSpeechJournal($topic,$limit=50)
     global $db;
 
     $lastDialogFull = [];
+    $tn=$db->escape($topic);
     $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest FROM speech
-      where (speaker like '%$topic%' or  listener like '%$topic%' or location like '%$topic%' or  companions like '%$topic%') 
+      where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  companions like '%$tn%' or  companions like '%$tn%') 
       and listener<>'unknown' 
       order by rowid desc");
     if (!$results) {
@@ -1527,13 +1529,14 @@ function FastCallOAI($question) {
 
 function AddFirstTimeMet($followerName,$momentum,$gamets,$ts) {
 
-    $already=$GLOBALS["db"]->fetchAll("select 1 as t from memory where event='first_met' and message like '%met {$followerName}%'");
+    $fn=$GLOBALS["db"]->escape($followerName);
+    $already=$GLOBALS["db"]->fetchAll("select 1 as t from memory where event='first_met' and message like '%met {$fn}%'");
     if (is_array($already) && sizeof($already)>0) {
         // Already exists;
         return;
     }
 
-    $realFirst=$GLOBALS["db"]->fetchAll("SELECT gamets,ts,localts FROM speech where companions like '%$followerName%' order by rowid asc limit 1 offset 0");
+    $realFirst=$GLOBALS["db"]->fetchAll("SELECT gamets,ts,localts FROM speech where companions like '%$fn%' order by rowid asc limit 1 offset 0");
 
     if (is_array($realFirst) && sizeof($realFirst)>0) {
         $gamets=$realFirst[0]["gamets"];
@@ -1651,5 +1654,90 @@ function GetAnimationHex($mood)
     return "";
 
 }
+
+function isOk($arr) {
+    if (is_array($arr))
+        if (sizeof($arr)>0)
+            return true;
+
+    return false;
+}
+
+function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
+
+    global $db; 
+    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+    $newConfFile=md5($npcname);
+
+    $codename=strtr(strtolower(trim($npcname)),[" "=>"_","'"=>"+"]);
+    $cn=$db->escape("Voicetype/$codename");
+    $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
+    $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
+    $voicetype=explode("\\",$voicetypeString);
+
+    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
+        
+
+        // Do customizations here
+        $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
+        copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
+        
+        $file_lines = file($newFile);
+
+        for ($i = count($file_lines) - 1; $i >= 0; $i--) {
+            // If the line is not empty, break the loop // Will remove first entry 
+            if (trim($file_lines[$i]) !== '') {
+                unset($file_lines[$i]);
+                break;
+            }
+            unset($file_lines[$i]);
+        }
+        
+        $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
+        
+        // Consider adding here notes like 'They Just met' into profile.
+        
+
+        file_put_contents($newFile, implode('', $file_lines));
+        file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\''.$codename.'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voicetype[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        file_put_contents($newFile, '$HERIKA_NAME=\''.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        
+        if (is_array($npcTemlate[0]))
+            file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        else
+            file_put_contents($newFile, '$HERIKA_PERS=\'Roleplay as '.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+
+        foreach ($FORCE_PARMS as $p=>$v) {
+            file_put_contents($newFile, '$'.$p.'=\''.addslashes($v).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
+        file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
+
+        error_log(DMgetCurrentModelFile()." ".$path."data/CurrentModel_".md5($npcname).".json");
+        copy(DMgetCurrentModelFile(),$path."data/CurrentModel_".md5($npcname).".json");
+
+        
+    }
+
+    // Character Map file
+    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json"))
+        $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
+
+
+    $characterMap[md5($npcname)]=$npcname;
+    file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
+}
+
+function getConfFileFor($npcname) {
+
+    global $db; 
+    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+    $newConfFile=md5($npcname);
+
+    $codename=strtr(strtolower(trim($npcname)),[" "=>"_","'"=>"+"]);
+    return $path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
+    
+}
+
 ?>
 

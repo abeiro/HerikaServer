@@ -21,12 +21,12 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
 
 
-$db = new sql();
 
 // PARSE GET RESPONSE into $gameRequest
 
 if (php_sapi_name()=="cli") {
     // You can run this script directly with php: main.php "Player text"
+    $GLOBALS["db"] = new sql();
 
     $latsRid=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0");
     $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$latsRid[0]["rowid"]}");
@@ -43,9 +43,9 @@ if (php_sapi_name()=="cli") {
     //$receivedData = "{$argv[1]}";
     $_GET["profile"]=$argv[2];
     //error_reporting(E_ERROR);
-    $FUNCTIONS_ARE_ENABLED=true;
+    $GLOBALS["FUNCTIONS_ARE_ENABLED"]=true;
 
-
+    unset($GLOBALS["db"]);
 } else {
 
     //$receivedData = base64_decode($_GET["DATA"]);
@@ -120,12 +120,15 @@ if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
 }
 
 
+$db = new sql();
 
 // Profile selection
 if (isset($_GET["profile"])) {
     
     $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
     $OVERRIDES["MINIME_T5"]=$GLOBALS["MINIME_T5"];
+    $OVERRIDES["STTFUNCTION"]=$GLOBALS["STTFUNCTION"];
+    //$OVERRIDES["PROMPT_HEAD"]=$GLOBALS["PROMPT_HEAD"];
     
     if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
        // error_log("PROFILE: {$_GET["profile"]}");
@@ -137,6 +140,9 @@ if (isset($_GET["profile"])) {
     
     $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
     $GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
+    $GLOBALS["STTFUNCTION"]=$OVERRIDES["STTFUNCTION"];
+    //$GLOBALS["PROMPT_HEAD"]=$OVERRIDES["PROMPT_HEAD"];
+
     
 } else {
     //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");

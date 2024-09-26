@@ -85,6 +85,7 @@ class connector
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         }
         $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+
         //$FUNC_LIST[]="None";
         shuffle($FUNC_LIST);
         
@@ -352,8 +353,29 @@ class connector
         
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
-                error_log(print_r(error_get_last(),true));
-                return null;
+            $error=error_get_last();
+            error_log(print_r($error,true));
+
+            if ($GLOBALS["db"]) {
+                $GLOBALS["db"]->insert(
+                'audit_request',
+                    array(
+                        'request' => json_encode($data),
+                        'result' => $error["message"]
+                    ));
+            }
+            return null;
+                
+        } else  {
+            if ($GLOBALS["db"]) {
+                $GLOBALS["db"]->insert(
+                 'audit_request',
+                 array(
+                    'request' => json_encode($data),
+                    'result' => "Ok"
+                ));
+            }
+
         }
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
