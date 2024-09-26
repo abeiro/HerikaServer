@@ -149,7 +149,7 @@
             
             }
             
-             function callHelper(helper) {
+            function callHelper(helper) {
                 document.body.style.cursor="wait";
                 form=document.querySelector(".confwizard")
                 var inputs = form.querySelectorAll('input');
@@ -275,6 +275,83 @@
                 // Run the version check when the page loads
                 checkVersion();
             });
+
+            function copyToAllprofiles(name,jsid) {
+                console.log(name)
+                var ok=false;
+                ele=document.querySelector("input[name='"+name+"']");
+                if (ele) {
+                    console.log(ele.value);
+                    ok=true;
+                    formData={"name":name,"value":ele.value}
+                }
+
+                if (!ok) {
+                    ele=document.querySelector("textarea[name='"+name+"']");
+                    if (ele) {
+                        console.log(ele.value);
+                        ok=true;
+                        formData={"name":name,"value":ele.value}
+                    }
+                }
+
+                if (!ok) {
+                    ele=document.querySelectorAll("input[name='"+name+"[]']");
+                    if (ele) {
+                        var values = [];
+                        ele.forEach(element => {
+                            if (element.checked) {
+                                console.log(element.value);      
+                                values.push(element.value)
+                                ok=true;
+                            }
+                            
+                        });
+                        formData={"name":name,"value":values}
+                    }
+                } 
+                if (!ok ) {
+                    ele=document.querySelector("select[name='"+name+"']");
+                    if (ele) {
+                        console.log(ele.options[ele.selectedIndex].value);
+                        ok=true;
+                        formData={"name":name,"value":ele.options[ele.selectedIndex].value}
+                    }
+                } 
+
+                if (ok) {
+                    fetch("cmd/action_copy_value_to_all_profiles.php", {
+                        method: 'POST',
+                        headers: {
+                        'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Success:', data);
+                        alert("Updated "+data.length+" profiles");
+                        let timestamp = new Date().getTime();
+                        window.location.href="?ts="+timestamp;
+
+                    })
+                    .catch(error => {
+                        console.error('There has been a problem with your fetch operation:', error);
+                        document.body.style.cursor="";
+                    });
+                    
+
+                } else {
+                    alert('Error ocurred');
+                }
+
+            }
+
         </script>
     </head>
     <body>
