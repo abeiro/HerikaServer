@@ -10,6 +10,39 @@ header("Expires: 0"); // Proxies
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <style>
+    /* Common Styles for All Buttons */
+    .custom-button {
+        margin-top: 10px;
+        font-weight: bold;
+        border: 1px solid;
+        padding: 10px 20px;
+        cursor: pointer;
+        transition: background-color 0.3s, color 0.3s;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    /* Save Button Styles */
+    .btn-save {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-save:hover {
+        background-color: #218838;
+    }
+
+    /* Delete Button Styles */
+    .btn-delete {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background-color: #c82333;
+    }
+    </style>
 </head>
 <body>
     
@@ -326,31 +359,34 @@ foreach ($summary as $k=>$item) {
     
 }
 
+// Save Button
 echo '<input
-    style="margin-top:10px; font-weight:bold; border:1px solid; padding:5px;"
-    class="btn btn-info"
-    type="button"
-    name="save"
-    value="Save"
-    onclick=\'formSubmitting=true;
-              document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();
-              document.getElementById("top").submit();\' />';
+type="button"
+name="save"
+value="Save"
+class="custom-button btn-save"
+onclick=\'formSubmitting=true;
+          document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();
+          document.getElementById("top").submit();\' />';
 
+// Separator
 echo ' :: ';
 
+// Delete Button
 echo '<input
-    style="margin-top:10px; font-weight:bold; border:1px solid; padding:5px; background-color:red;"
-    class="btn btn-info"
-    type="button"
-    name="delete"
-    value="Delete profile"
-    onclick=\'if (confirm("Are you sure?")) {
-                formSubmitting = true;
-                document.getElementById("top").target = "checker";
-                document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
-                document.getElementById("top").submit();
-             }\' /></p>';
+type="button"
+name="delete"
+value="Delete Profile"
+class="custom-button btn-delete"
+onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
+            formSubmitting = true;
+            document.getElementById("top").target = "_self"; // Ensures submission in the same tab
+            document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
+            document.getElementById("top").submit();
+         }\' /></p>';
+
 echo "</ul></div>";
+?>
 
 
 

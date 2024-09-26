@@ -41,48 +41,64 @@ header("Expires: 0"); // Proxies
         .form-text {
             color: #bbb;
         }
-        .btn-primary {
-            background-color: #6200ea;
-            border-color: #6200ea;
+        /* Common Styles for All Buttons */
+        .custom-button {
+            margin-top: 10px;
+            font-weight: bold;
+            border: 1px solid;
+            padding: 10px 20px;
+            cursor: pointer; /* Changes cursor to pointer on hover */
+            transition: background-color 0.3s, color 0.3s; /* Smooth transition for hover effects */
+            border-radius: 4px; /* Rounded corners */
+            font-size: 16px; /* Increased font size for better readability */
+            display: inline-block; /* Aligns buttons properly */
+            text-align: center; /* Centers text within the button */
+            text-decoration: none; /* Removes underline from text */
         }
-        .btn-primary:hover {
-            background-color: #7f39fb;
-            border-color: #7f39fb;
+
+        /* Save Button Styles */
+        .btn-save {
+            background-color: #28a745; /* Green background */
+            color: white; /* White text */
         }
-        .btn-danger {
-            background-color: #b00020;
-            border-color: #b00020;
+
+        .btn-save:hover {
+            background-color: #218838; /* Darker green on hover */
         }
-        .btn-danger:hover {
-            background-color: #cf6679;
-            border-color: #cf6679;
+
+        /* Delete Button Styles */
+        .btn-delete {
+            background-color: #dc3545; /* Red background */
+            color: white; /* White text */
         }
-        .input-group-append .btn-outline-secondary {
-            background-color: #2c2c2c;
-            color: #e0e0e0;
-            border: 1px solid #444;
+
+        .btn-delete:hover {
+            background-color: #c82333; /* Darker red on hover */
         }
-        .input-group-append .btn-outline-secondary:hover {
-            background-color: #444;
-            border-color: #555;
+
+        /* Download Button Styles */
+        .btn-download {
+            background-color: #ffc107; /* Yellow background */
+            color: black; /* Black text for contrast */
         }
-        .btn-group-custom {
-            margin-top: 30px;
+
+        .btn-download:hover {
+            background-color: #e0a800; /* Darker yellow/orange on hover */
         }
-        /* Optional: Style for the Unhide button in API Key */
-        .input-group-append .btn-outline-secondary {
-            cursor: pointer;
-        }
-        /* Make Save Button Larger */
+
+        /* Optional: Additional Classes for Consistent Sizing */
         .btn-lg {
-            padding: 10px 24px;
-            font-size: 1.25rem;
-            line-height: 1.5;
-            border-radius: 0.3rem;
+            padding: 12px 24px;
+            font-size: 18px;
         }
         /* Warning Text Styling */
         .warning-text {
             color: #ffcc00; /* Amber color for visibility */
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+                .warning-text2 {
+            color: #28a745; /* Amber color for visibility */
             font-weight: bold;
             margin-bottom: 15px;
         }
@@ -312,13 +328,41 @@ echo '<div class="btn-group-custom text-center">
     <a href="https://www.nexusmods.com/skyrimspecialedition/mods/126330?tab=files/" target="_blank"> Download AI-FF Mod</a>
 </p>
 <div class="btn-group-custom text-center">
-        <p class="warning-text">
+        <p class="warning-text2">
     After you click <b>Save</b> we <b>HIGHLY RECOMMEND</b> to open the Troubleshooting menu and run the LLM/AI, TTS and STT tests to verify everything is setup correctly.
 </p>
-        <button type="button" class="btn btn-info btn-lg" name="aiagentdownload" value="aiagentdownload" onclick=\'formSubmitting=true;document.getElementById("top").target="_blank";document.getElementById("top").action="tests/ai_agent_ini.php";document.getElementById("top").submit();\'>Download AIAgent.ini</button>
-        <button type="button" class="btn btn-primary btn-lg mr-2" name="save" value="Save" onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\'>Save</button>
-        
-    </div>';
+
+
+<button
+    type="button"
+    class="custom-button btn-download btn-lg"
+    name="aiagentdownload"
+    value="aiagentdownload"
+    onclick=\'
+        formSubmitting = true;
+        document.getElementById("top").target = "_self"; /* Ensures submission in the same tab */
+        document.getElementById("top").action = "tests/ai_agent_ini.php";
+        document.getElementById("top").submit();
+    \'
+>
+    Download AIAgent.ini
+</button>
+
+<button
+    type="button"
+    class="custom-button btn-save btn-lg mr-2"
+    name="save"
+    value="Save"
+    onclick=\'
+        formSubmitting = true;
+        document.getElementById("top").target = "_self"; /* Ensures submission in the same tab */
+        document.getElementById("top").action = "tools/conf_writer.php?save=true&sc=" + getAnchorNH();
+        document.getElementById("top").submit();
+    \'
+>
+    Save
+</button>
+</div>';
 
 echo '</form>
       </div>'; // End of container
