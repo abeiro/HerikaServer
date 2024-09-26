@@ -332,7 +332,9 @@ echo '<input
     type="button"
     name="save"
     value="Save"
-    onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' />';
+    onclick=\'formSubmitting=true;
+              document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();
+              document.getElementById("top").submit();\' />';
 
 echo ' :: ';
 
@@ -342,8 +344,14 @@ echo '<input
     type="button"
     name="delete"
     value="Delete profile"
-    onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_deletion.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' /></p>';
+    onclick=\'if (confirm("Are you sure?")) {
+                formSubmitting = true;
+                document.getElementById("top").target = "checker";
+                document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
+                document.getElementById("top").submit();
+             }\' /></p>';
 echo "</ul></div>";
+
 
 
 include("tmpl/footer.html");
