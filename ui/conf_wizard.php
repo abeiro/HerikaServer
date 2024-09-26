@@ -297,6 +297,10 @@ foreach ($currentConf as $pname=>$parms) {
             </p>".PHP_EOL;
 
         } 
+        if (!in_array($fieldName,["HERIKA_NAME","HERIKA_PERS"]))
+            if (!in_array($parms["type"],["util"]))
+                if (!in_array($parms["scope"],["global","constant"]))
+                    echo "<span title='Copy $fieldName to all profiles' style='color:pink;cursor:pointer;font-size:9px;display: block;position: relative;' onclick=\"copyToAllprofiles('$fieldName','$jsid')\">[Copy to all profiles]</span> ";
         echo "</div>";
     }
 
