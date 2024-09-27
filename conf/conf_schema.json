@@ -24,7 +24,7 @@
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations for the NPC to play"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for text generation.<br><br>Select the service(s) you have configured for AI/LLM Connectors below.<br><br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br><strong><br><br>Make sure to click Toggle Me at the top of the page if you change connectors!</strong>","_title":"AI/LLM Service Selection"},
-  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"<strong>Used for creating diary entries and memories!<br><br>You will need to place your API key in the regular/non-JSON connector for this to work!</strong>"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","koboldcpp"],"description":"<strong>Used for creating diary entries and memories!<br><br>You will need to place your API key in the regular/non-JSON connector for this to work!</strong>"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openai": {
