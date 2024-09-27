@@ -10,6 +10,7 @@ header("Expires: 0"); // Proxies
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+
 </head>
 <body>
     
@@ -326,30 +327,61 @@ foreach ($summary as $k=>$item) {
     
 }
 
-echo '<input
-    style="margin-top:10px; font-weight:bold; border:1px solid; padding:5px;"
-    class="btn btn-info"
-    type="button"
-    name="save"
-    value="Save"
-    onclick=\'formSubmitting=true;
-              document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();
-              document.getElementById("top").submit();\' />';
+        // Save Button
+        echo '<input
+            type="button"
+            name="save"
+            value="Save"
+            id="saveProfileButton"
+            style="
+                margin-top: 10px;
+                font-weight: bold;
+                border: 1px solid #ffffff; /* White border */
+                padding: 10px 20px;
+                cursor: pointer;
+                border-radius: 4px;
+                font-size: 16px;
+                background-color: #28a745; /* Green background */
+                color: white; /* White text */
+                transition: background-color 0.3s, color 0.3s; /* Smooth transition */
+            "
+            onclick=\'formSubmitting=true;
+                      document.getElementById("top").target="_self"; /* Ensures submission in the same tab */
+                      document.getElementById("top").action="tools/conf_writer.php?save=true&sc=" + getAnchorNH();
+                      document.getElementById("top").submit();\'
+            onmouseover=\'this.style.backgroundColor="#218838";\' /* Darker green on hover */
+            onmouseout=\'this.style.backgroundColor="#28a745";\' /* Revert to original green */
+        />';
 
 echo ' :: ';
 
-echo '<input
-    style="margin-top:10px; font-weight:bold; border:1px solid; padding:5px; background-color:red;"
-    class="btn btn-info"
-    type="button"
-    name="delete"
-    value="Delete profile"
-    onclick=\'if (confirm("Are you sure?")) {
-                formSubmitting = true;
-                document.getElementById("top").target = "checker";
-                document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
-                document.getElementById("top").submit();
-             }\' /></p>';
+        echo '<input
+            type="button"
+            name="delete"
+            value="Delete Profile"
+            id="deleteProfileButton"
+            aria-label="Delete your profile"
+            style="
+                margin-top: 10px;
+                font-weight: bold;
+                border: 1px solid #ffffff; /* White border */
+                padding: 10px 20px;
+                cursor: pointer;
+                border-radius: 4px;
+                font-size: 16px;
+                background-color: #dc3545; /* Red background */
+                color: white; /* White text */
+                transition: background-color 0.3s, color 0.3s; /* Smooth transition */
+            "
+            onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
+                        formSubmitting = true;
+                        document.getElementById("top").target = "_self"; /* Ensures submission in the same tab */
+                        document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
+                        document.getElementById("top").submit();
+                    }\' 
+            onmouseover=\'this.style.backgroundColor="#c82333";\' /* Darker red on hover */
+            onmouseout=\'this.style.backgroundColor="#dc3545";\' /* Revert to original red */
+        /></p>';
 echo "</ul></div>";
 
 
