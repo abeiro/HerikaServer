@@ -256,14 +256,14 @@
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
     echo " <strong>AI/LLM Service(s):</strong> ";
-    echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong> | Current AI Model -> <strong style='color:green'>($currentModel)</strong>" : $CONNECTORS; 
+    echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong> | Current AI Model -> <strong style='color:yellow'>($currentModel)</strong>" : $CONNECTORS; 
     echo " <a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'><strong>Toggle Me!</strong></a><br/>";
     echo " <strong>TTS Service:</strong> ";
-    echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:green">' . $TTSFUNCTION . '</strong>'; 
+    echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:#ff00c6">' . $TTSFUNCTION . '</strong>'; 
     echo " <strong>STT Service:</strong> ";
-    echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true)  : '<strong style="color:green">' . $STTFUNCTION . '</strong>' ; 
+    echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true)  : '<strong style="color:#ff00c6">' . $STTFUNCTION . '</strong>' ; 
     echo " <strong>ITT Service:</strong> ";
-    echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true)  : '<strong style="color:green">'  .$ITTFUNCTION . '</strong>' ; 
+    echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true)  : '<strong style="color:#ff00c6">'  .$ITTFUNCTION . '</strong>' ; 
     ?>
 </div>
 </div>
