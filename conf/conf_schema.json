@@ -27,61 +27,29 @@
   "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","koboldcpp"],"description":"<strong>Used for creating diary entries and memories!<br><br>You will need to place your API key in the regular/non-JSON connector for this to work!</strong>"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
-    "openai": {
-      "_title":"OpenAI/ChatGPT API",
-      "url": {"type":"url","description":"OpenAI API endpoint"},
-      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
-      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
-      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
-      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
-      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
-      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
-    },
-    "openaijson": {
-      "_title":"OpenAI/ChatGPT API (JSON mode)",
-      "url": {"type":"url","description":"OpenAI API endpoint"},
-      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
-      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
-      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
-      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
-      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
-      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
-    },
-    "koboldcpp": {
-      "_title":"KoboldCPP API",
-      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
-      "temperature": {"type":"number","description":"LLM parameter temperature"},
-      "rep_pen": {"userlvl":"pro","type":"number","description":"LLM parameter rep_pen"},
-      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p"},
-      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p"},
-      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
+    "openrouterjson": {
+      "_title":"OpenRouter API (JSON)",
+      "url": {"type":"url","description":"OpenRouter API endpoint"},
+      "model": {"type":"ormodellist","description":"<strong>Must be JSON/Instruct type of Model!</strong>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
+      "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
+      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "repetition_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter repetition_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://openrouter.ai/docs#format"},
+      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k","helpurl":"https://openrouter.ai/docs#format"},
+      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p","helpurl":"https://openrouter.ai/docs#format"},
+      "top_a": {"userlvl":"pro","type":"number","description":"LLM parameter top_a","helpurl":"https://openrouter.ai/docs#format"},
+      "ENFORCE_JSON": {"type":"boolean","description":"Will attempt to enforce dumb LLM's to stay in JSON format. Leave as default, only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
+      "PREFILL_JSON": {"type":"boolean","description":"Will attempt to prefill the JSON AI response for some dumber LLM's. Leave as default, only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
-      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
-      "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
-    },
-    "koboldcppjson": {
-      "_title":"KoboldCPP API JSON",
-      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
-      "temperature": {"type":"number","description":"LLM parameter temperature"},
-      "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
-      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p"},
-      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p"},
-      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
-      "PREFILL_JSON": {"type":"boolean","description":"Will prefill JSON, which is useful for some AI models, and destroy others."},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
-      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
-      "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
-      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","alpacajson","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"},
-      "grammar": {"type":"boolean","description":"Enforces use of JSON grammar. True to enforce (generation speed loss, but json format guaranteed). if false, the generation speed will be better but will depend on the model to produce valid JSON output." }
+      "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for very randomness in AI response (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
+      "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
+      "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."}
     },
     "openrouter": {
       "_title":"OpenRouter API",
@@ -104,36 +72,87 @@
       "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouter_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
       "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouter_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
       "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for very randomness in AI response (P90)","action":"action_openrouter_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"}
-      
     },
-    "openrouterjson": {
-      "_title":"OpenRouter API (JSON MODE)",
-      "url": {"type":"url","description":"OpenRouter API endpoint"},
-      "model": {"type":"ormodellist","description":"<strong>Must be JSON/Instruct type of Model!</strong>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
-      "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
-      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
-      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://openrouter.ai/docs#format"},
-      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://openrouter.ai/docs#format"},
-      "repetition_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter repetition_penalty","helpurl":"https://openrouter.ai/docs#format"},
-      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://openrouter.ai/docs#format"},
-      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k","helpurl":"https://openrouter.ai/docs#format"},
-      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p","helpurl":"https://openrouter.ai/docs#format"},
-      "top_a": {"userlvl":"pro","type":"number","description":"LLM parameter top_a","helpurl":"https://openrouter.ai/docs#format"},
-      "ENFORCE_JSON": {"type":"boolean","description":"Will attempt to enforce dumb LLM's to stay in JSON format. Leave as default, only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
-      "PREFILL_JSON": {"type":"boolean","description":"Will attempt to prefill the JSON AI response for some dumber LLM's. Leave as default, only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
+    "openaijson": {
+      "_title":"OpenAI/ChatGPT API (JSON)",
+      "url": {"type":"url","description":"OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
+    },
+    "openai": {
+      "_title":"OpenAI/ChatGPT API",
+      "url": {"type":"url","description":"OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
+    },
+    "koboldcppjson": {
+      "_title":"KoboldCPP API (JSON)",
+      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature"},
+      "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p"},
+      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p"},
+      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
+      "PREFILL_JSON": {"type":"boolean","description":"Will prefill JSON, which is useful for some AI models, and destroy others."},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for very randomness in AI response (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
-      "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
-      "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
-      "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."}
+      "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
+      "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","alpacajson","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"},
+      "grammar": {"type":"boolean","description":"Enforces use of JSON grammar. True to enforce (generation speed loss, but json format guaranteed). if false, the generation speed will be better but will depend on the model to produce valid JSON output." }
+    },
+    "koboldcpp": {
+      "_title":"KoboldCPP API",
+      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature"},
+      "rep_pen": {"userlvl":"pro","type":"number","description":"LLM parameter rep_pen"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p"},
+      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p"},
+      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
+      "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     }
   },
   "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","openai","convai","xtts-fastapi","melotts"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
+    "MELOTTS": {
+      "_title":"MELOTTS (Installed in DwemerDistro)",
+      "endpoint":{"type":"url","description":"End point URL. Avoid trailing slash","helpurl":""},
+      "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language"},
+      "speed":{"type":"number","description":"Speech Speed","helpurl":""},
+      "voiceid":{"type":"string","description":"voice id"}
+    },
+    "XTTSFASTAPI": {
+      "_title":"XTTSv2 Fast-API (Installed in DwemerDistro)",
+      "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<br><strong>CAP YOUR SKYRIM FRAMERATE!</strong><br>It can be a resource hog and capping your framerate can save precious VRAM!","helpurl":""},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
+      "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
+    },
+    "MIMIC3": {
+      "_title":"MIMIC3 Text-To-Speech (Installed in DwemerDistro)",
+      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, copy and paste [MIMIC3 Configuration] URL from the console window."},
+      "voice": {"type":"string","description":"Voice code"},
+      "rate": {"type":"number","description":"Talk speed"},
+      "volume": {"type":"integer","description":"Volume"}
+    },
     "AZURE": {
       "_title":"Azure Text-To-Speech",
       "fixedMood": {"type":"string","description":"Force mood (voice style)","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#use-speaking-styles-and-roles"},
@@ -145,12 +164,12 @@
       "validMoods": {"userlvl":"pro","type":"selectmultiple","values":["angry","chat","cheerful","customerservice","empathetic","excited","friendly","hopeful","narration-professional","newscast-casual","newscast-formal","sad","shouting","terrified","unfriendly","whispering","default","dazed"],"description":"Allowed voice styles"},
       "API_KEY": {"type":"apikey","description":"Azure TTS API KEY","code":"AZURE_API_KEY"}
     },
-    "MIMIC3": {
-      "_title":"MIMIC3 Text-To-Speech ",
-      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, copy and paste [MIMIC3 Configuration] URL from the console window."},
-      "voice": {"type":"string","description":"Voice code"},
-      "rate": {"type":"number","description":"Talk speed"},
-      "volume": {"type":"integer","description":"Volume"}
+    "openai": {
+      "_title":"OpenAI TTS",
+      "endpoint":{"type":"url","description":"Endpoint URL","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "API_KEY":{"type":"apikey","description":"API KEY"},
+      "voice":{"type":"select","values":["alloy", "echo", "fable", "onyx", "nova", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "model_id":{"type":"select","values":["tts-1", "tts-1-hd"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
     },
     "ELEVEN_LABS": {
       "_title":"ElevenLabs Text-To-Speech",
@@ -170,13 +189,6 @@
       "ssml_rate":{"type":"number","description":"Rate"},
       "ssml_pitch":{"type":"string","description":"Pitch"}
     },
-    "openai": {
-      "_title":"OpenAI TTS",
-      "endpoint":{"type":"url","description":"Endpoint URL","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
-      "API_KEY":{"type":"apikey","description":"API KEY"},
-      "voice":{"type":"select","values":["alloy", "echo", "fable", "onyx", "nova", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
-      "model_id":{"type":"select","values":["tts-1", "tts-1-hd"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
-    },
     "CONVAI": {
       "_title":"CONVAI TTS",
       "endpoint":{"type":"url","description":"End point URL","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"},
@@ -184,21 +196,7 @@
       "language":{"type":"select","values":["ar", "cmn-CN", "de-DE", "en-US", "es-ES", "es-MX", "es-US", "fr-FR", "hi-IN", "it-IT", "js-JP", "kk-KZ", "ko-KR", "nl-BE", "nl-NL", "pl-PL", "pt-BR", "pt-PT", "ru-RU", "sv-SE", "tr-TR", "vi-VN", "yue-HK", "zh-HK"],"description":"Language","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
       "voiceid":{"type":"string","description":"Voice id (check compatability with language)","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"},
       "description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"
-      },
-    "XTTSFASTAPI": {
-      "_title":"XTTSv2 Fast-API (Installed with DwemerDistro)",
-      "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<br><strong>CAP YOUR SKYRIM FRAMERATE!</strong><br>It can be a resource hog and capping your framerate can save precious VRAM!","helpurl":""},
-      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
-      "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
-    },
-    "MELOTTS": {
-      "_title":"MELOTTS",
-      "endpoint":{"type":"url","description":"End point URL. Avoid trailing slash","helpurl":""},
-      "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language"},
-      "speed":{"type":"number","description":"Speech Speed","helpurl":""},
-      "voiceid":{"type":"string","description":"voice id"}
-    }
-
+      }
   },
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
@@ -207,7 +205,7 @@
   "STT": {
   "_title":"Speech-to-Text Service",
     "WHISPER": {
-      "_title":"OpenAI's Whisper Speech-to-Text",
+      "_title":"OpenAI's Whisper",
       "LANG": {"type":"string","description":"Language to detect for STT."},
       "TRANSLATE": {"type":"boolean","description":"Will try to translate to english."},
       "API_KEY": {"type":"apikey","description":"OpenAI API key. Same used for OpenAI/ChatGPT AI service.","code":"OPENAI_API_KEY"}
@@ -219,10 +217,9 @@
       "API_KEY": {"type":"apikey","description":"Azure API key. Same used for Azure TTS Service.","code":"AZURE_API_KEY"}
     },
     "LOCALWHISPER": {
-      "_title":"Local Whisper Speech-to-Text (Installed with DwemerDistro)",
+      "_title":"Local Whisper (Installed in DwemerDistro)",
       "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default if you installed whisper through the Distro.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
       "FORMFIELD": {"type":"select","values":["audio_file","file"],"description":"Form field name for audio file. Sometimes needed to change to file to use another shiper implementations"}
-
     },"DEEPGRAM": {
       "_title":"Deepgram's Whisper Speech-to-Text",
       "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"},
@@ -236,12 +233,6 @@
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
   },
   "ITT": {
-    "LLAMACPP": {
-      "_title":"LLama Server (Installed with DwemerDistro)",
-      "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md","scope":"global"},
-      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the llama vision model.","scope":"global"},
-      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
-    },
     "openai": {
       "_title":"OpenAI/OpenRouter",
       "url": {"type":"url","description":"OpenAI API or OpenRouter endpoint. Use this for OpenRouter (https://openrouter.ai/api/v1/chat/completions)","scope":"global"},
@@ -250,6 +241,12 @@
       "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","helpurl":"https://platform.openai.com/docs/guides/vision?lang=curl","scope":"global"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys","scope":"global"},
       "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the OpenAI vision model.","scope":"global"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
+    },
+    "LLAMACPP": {
+      "_title":"LLama Server (Installed in DwemerDistro)",
+      "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md","scope":"global"},
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the llama vision model.","scope":"global"},
       "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
     }
   },
