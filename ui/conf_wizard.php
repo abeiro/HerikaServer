@@ -10,39 +10,6 @@ header("Expires: 0"); // Proxies
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <style>
-    /* Common Styles for All Buttons */
-    .custom-button {
-        margin-top: 10px;
-        font-weight: bold;
-        border: 1px solid;
-        padding: 10px 20px;
-        cursor: pointer;
-        transition: background-color 0.3s, color 0.3s;
-        border-radius: 4px;
-        font-size: 16px;
-    }
-
-    /* Save Button Styles */
-    .btn-save {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-save:hover {
-        background-color: #218838;
-    }
-
-    /* Delete Button Styles */
-    .btn-delete {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .btn-delete:hover {
-        background-color: #c82333;
-    }
-    </style>
 </head>
 <body>
     
@@ -330,11 +297,11 @@ foreach ($currentConf as $pname=>$parms) {
             </p>".PHP_EOL;
 
         } 
-        if (!in_array($fieldName,["HERIKA_NAME","HERIKA_PERS","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid"]))
+        if (!in_array($fieldName,["HERIKA_NAME","HERIKA_PERS"]))
             if (!in_array($parms["type"],["util"]))
                 if (!in_array($parms["scope"],["global","constant"]))
-                    echo "<button title='Copy $fieldName to all profiles' style='color:#FFFFFF; cursor:pointer; font-size:9px; display:block; position:relative; background-color:#444444; border:1px solid #FFFFFF; padding:2px 6px; border-radius:4px; text-decoration:none;' onmouseover=\"this.style.backgroundColor='#666666'; this.style.borderColor='#FFD700';\" onmouseout=\"this.style.backgroundColor='#444444'; this.style.borderColor='#FFFFFF';\" onclick=\"copyToAllprofiles('$fieldName','$jsid')\">Copy to All Profiles</button>";
-                echo "</div>";
+                    echo "<span title='Copy $fieldName to all profiles' style='color:pink;cursor:pointer;font-size:9px;display: block;position: relative;' onclick=\"copyToAllprofiles('$fieldName','$jsid')\">[Copy to all profiles]</span> ";
+        echo "</div>";
     }
 
 }
@@ -344,7 +311,7 @@ echo str_repeat("</fieldset>", $lvl2);
 echo '</form>';
 
 echo "<div style='position:fixed;top:0px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'>
-<span><strong>Quick Access for <span style='color:yellow'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br><span style='font-size:11px'>You must click save before using 'Copy to All Profiles'</span><br/><span style='font-size:7px'>".
+<span><strong>Quick Access for <span style='color:green'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br/><span style='font-size:7px'>".
     basename($_SESSION["PROFILE"])
 ."</span></strong></span><ul>";
 //echo "<li><a href='#top'>Top</a></li>";
@@ -359,35 +326,24 @@ foreach ($summary as $k=>$item) {
     
 }
 
-// Save Button
 echo '<input
-type="button"
-name="save"
-value="Save"
-class="custom-button btn-save"
-onclick=\'formSubmitting=true;
-          document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();
-          document.getElementById("top").submit();\' />';
+    style="margin-top:10px; font-weight:bold; border:1px solid; padding:5px;"
+    class="btn btn-info"
+    type="button"
+    name="save"
+    value="Save"
+    onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' />';
 
-// Separator
 echo ' :: ';
 
-// Delete Button
 echo '<input
-type="button"
-name="delete"
-value="Delete Profile"
-class="custom-button btn-delete"
-onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
-            formSubmitting = true;
-            document.getElementById("top").target = "_self"; // Ensures submission in the same tab
-            document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
-            document.getElementById("top").submit();
-         }\' /></p>';
-
+    style="margin-top:10px; font-weight:bold; border:1px solid; padding:5px; background-color:red;"
+    class="btn btn-info"
+    type="button"
+    name="delete"
+    value="Delete profile"
+    onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_deletion.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\' /></p>';
 echo "</ul></div>";
-?>
-
 
 
 include("tmpl/footer.html");

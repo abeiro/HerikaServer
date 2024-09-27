@@ -1,354 +1,280 @@
-<?php 
+{
+  "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"Your current character name.","_title":"Main Configuration"},
+  "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change."},
+  "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name! If you are in the default profile leave it as The Narrator"},
+  "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
+  "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
+  "dynamic_profile_b1": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. <strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill","helpurl":""},
+  "dynamic_profile_b2": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs. <strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill","helpurl":""},
+  "DYNAMIC_PROFILE":{"userlvl":"pro","type":"boolean","description":"Will trigger dynamic profile updates during certain ingame events (such as sleeping). Will cause the AI personality to dynamically change during gameplay based on player interaction."},
+  "MINIME_T5":{"userlvl":"basic","type":"boolean","scope":"global","description":"Enable MiniMeT5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in DwemerDistro under Tools/components. <br> <strong> Must be configued in default profile and only works in English!</strong>"},
+  "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat lines. Higher values will make followers keep talking between themselves. 1 = One Response | 2 = Two Responses etc","_title":"Advanced Configuration"},
+  "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat probability. 0 = Always | 50 = Sometimes | 100 = Never"},
+  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an NPC starting a random conversation. 0 = NEVER | 1 = 50% | 2 = 75% etc"},
+  "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be pushed to LLM. Improves short term memory. More context = more tokens used, and slower response time."},
+  "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
+  "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the AI Follower Framework Server. Leave it blank for English."},
+  "NEWQUEUE": {"userlvl":"wip","scope":"constant","type":"boolean","description":"Leave as is. Can not be changed!"},
+  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
+  "BOOK_EVENT_FULL": {"userlvl":"pro","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
+  "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books. <strong>SET THIS ON default profile to apply to all followers.</strong>","scope":"global"},
+  "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
+  "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game.","scope":"global"},
+  "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
+  "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations for the NPC to play"},
+  "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for text generation.<br><br>Select the service(s) you have configured for AI/LLM Connectors below.<br><br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br><strong><br><br>Make sure to click Toggle Me at the top of the page if you change connectors!</strong>","_title":"AI/LLM Service Selection"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openai","koboldcpp","openrouter"],"description":"<strong>Used for creating diary entries and memories!<br><br>You will need to place your API key in the regular/non-JSON connector for this to work!</strong>"},
+  "CONNECTOR": {
+    "_title":"AI/LLM Connectors",
+    "openai": {
+      "_title":"OpenAI/ChatGPT API",
+      "url": {"type":"url","description":"OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
+    },
+    "openaijson": {
+      "_title":"OpenAI/ChatGPT API (JSON mode)",
+      "url": {"type":"url","description":"OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
+    },
+    "koboldcpp": {
+      "_title":"KoboldCPP API",
+      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature"},
+      "rep_pen": {"userlvl":"pro","type":"number","description":"LLM parameter rep_pen"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p"},
+      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p"},
+      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
+      "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2"],"description":"Prompt Format. Specified in the HuggingFace model card"}
+    },
+    "koboldcppjson": {
+      "_title":"KoboldCPP API JSON",
+      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature"},
+      "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p"},
+      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p"},
+      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k"},
+      "PREFILL_JSON": {"type":"boolean","description":"Will prefill JSON, which is useful for some AI models, and destroy others."},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
+      "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
+      "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
+      "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","alpacajson"],"description":"Prompt Format. Specified in the HuggingFace model card"},
+      "grammar": {"type":"boolean","description":"Enforces use of JSON grammar. True to enforce (generation speed loss, but json format guaranteed). if false, the generation speed will be better but will depend on the model to produce valid JSON output." }
+    },
+    "openrouter": {
+      "_title":"OpenRouter API",
+      "url": {"type":"url","description":"OpenRouter API endpoint"},
+      "model": {"type":"ormodellist","description":"Model to use. If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
+      "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
+      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "repetition_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter repetition_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://openrouter.ai/docs#format"},
+      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k","helpurl":"https://openrouter.ai/docs#format"},
+      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p","helpurl":"https://openrouter.ai/docs#format"},
+      "top_a": {"userlvl":"pro","type":"number","description":"LLM parameter top_a","helpurl":"https://openrouter.ai/docs#format"},
+      "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
+      "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
+      "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouter_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouter_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for very randomness in AI response (P90)","action":"action_openrouter_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"}
+      
+    },
+    "openrouterjson": {
+      "_title":"OpenRouter API (JSON MODE)",
+      "url": {"type":"url","description":"OpenRouter API endpoint"},
+      "model": {"type":"ormodellist","description":"<strong>Must be JSON/Instruct type of Model!</strong>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
+      "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
+      "presence_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter presence_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "repetition_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter repetition_penalty","helpurl":"https://openrouter.ai/docs#format"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://openrouter.ai/docs#format"},
+      "top_k": {"userlvl":"pro","type":"number","description":"LLM parameter top_k","helpurl":"https://openrouter.ai/docs#format"},
+      "min_p": {"userlvl":"pro","type":"number","description":"LLM parameter min_p","helpurl":"https://openrouter.ai/docs#format"},
+      "top_a": {"userlvl":"pro","type":"number","description":"LLM parameter top_a","helpurl":"https://openrouter.ai/docs#format"},
+      "ENFORCE_JSON": {"type":"boolean","description":"Will attempt to enforce dumb LLM's to stay in JSON format. Leave as default, only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
+      "PREFILL_JSON": {"type":"boolean","description":"Will attempt to prefill the JSON AI response for some dumber LLM's. Leave as default, only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for very randomness in AI response (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
+      "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
+      "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."}
+    }
+  },
+  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","openai","convai","xtts-fastapi","melotts"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTS": {
+    "_title":"Text-to-Speech Service",
+    "AZURE": {
+      "_title":"Azure Text-To-Speech",
+      "fixedMood": {"type":"string","description":"Force mood (voice style)","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#use-speaking-styles-and-roles"},
+      "region": {"type":"string","description":"Region location of your API key"},
+      "voice": {"type":"string","description":"Voice","helpurl":"https://speech.microsoft.com/portal/voicegallery"},
+      "volume": {"type":"integer","description":"Volume","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#adjust-prosody"},
+      "rate": {"userlvl":"pro","type":"number","description":"Talk speed","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#adjust-prosody"},
+      "countour": {"userlvl":"pro","type":"string","description":"Voice contour","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#adjust-prosody"},
+      "validMoods": {"userlvl":"pro","type":"selectmultiple","values":["angry","chat","cheerful","customerservice","empathetic","excited","friendly","hopeful","narration-professional","newscast-casual","newscast-formal","sad","shouting","terrified","unfriendly","whispering","default","dazed"],"description":"Allowed voice styles"},
+      "API_KEY": {"type":"apikey","description":"Azure TTS API KEY","code":"AZURE_API_KEY"}
+    },
+    "MIMIC3": {
+      "_title":"MIMIC3 Text-To-Speech ",
+      "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, copy and paste [MIMIC3 Configuration] URL from the console window."},
+      "voice": {"type":"string","description":"Voice code"},
+      "rate": {"type":"number","description":"Talk speed"},
+      "volume": {"type":"integer","description":"Volume"}
+    },
+    "ELEVEN_LABS": {
+      "_title":"ElevenLabs Text-To-Speech",
+      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5578"},
+      "optimize_streaming_latency": {"type":"string","description":"Optimize Streaming Latency","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
+      "model_id": {"type":"string","description":"Model ID","helpurl":"https://beta.elevenlabs.io/speech-synthesis"},
+      "stability":{"userlvl":"pro","type":"number","description":"Stability"},
+      "similarity_boost": {"userlvl":"pro","type":"number","description":"Similarity_Boost"},
+      "style": {"type":"number","description":"Style"},
+      "API_KEY": {"type":"apikey","description":"Eleven Labs API key.","code":"11LABS_API_KEY"}
+    },
+    "GCP": {
+      "_title":"Google Cloud Platform Text-To-Speech",
+      "GCP_SA_FILEPATH": {"type":"string","description":"Google Cloud Platform auth file. Should be placed in the data folder.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5581"},
+      "voice_name":{"type":"string","description":"Voice","helpurl":"https://cloud.google.com/text-to-speech/docs/voices"},
+      "voice_languageCode":{"type":"string","description":"Language code","helpurl":"https://developers.google.com/admin-sdk/directory/v1/languages"},
+      "ssml_rate":{"type":"number","description":"Rate"},
+      "ssml_pitch":{"type":"string","description":"Pitch"}
+    },
+    "openai": {
+      "_title":"OpenAI TTS",
+      "endpoint":{"type":"url","description":"Endpoint URL","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "API_KEY":{"type":"apikey","description":"API KEY"},
+      "voice":{"type":"select","values":["alloy", "echo", "fable", "onyx", "nova", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "model_id":{"type":"select","values":["tts-1", "tts-1-hd"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
+    },
+    "CONVAI": {
+      "_title":"CONVAI TTS",
+      "endpoint":{"type":"url","description":"End point URL","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"},
+      "API_KEY":{"type":"apikey","description":"API KEY"},
+      "language":{"type":"select","values":["ar", "cmn-CN", "de-DE", "en-US", "es-ES", "es-MX", "es-US", "fr-FR", "hi-IN", "it-IT", "js-JP", "kk-KZ", "ko-KR", "nl-BE", "nl-NL", "pl-PL", "pt-BR", "pt-PT", "ru-RU", "sv-SE", "tr-TR", "vi-VN", "yue-HK", "zh-HK"],"description":"Language","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "voiceid":{"type":"string","description":"Voice id (check compatability with language)","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"},
+      "description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"
+      },
+    "XTTSFASTAPI": {
+      "_title":"XTTSv2 Fast-API (Installed with DwemerDistro)",
+      "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<br><strong>CAP YOUR SKYRIM FRAMERATE!</strong><br>It can be a resource hog and capping your framerate can save precious VRAM!","helpurl":""},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
+      "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
+    },
+    "MELOTTS": {
+      "_title":"MELOTTS",
+      "endpoint":{"type":"url","description":"End point URL. Avoid trailing slash","helpurl":""},
+      "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language"},
+      "speed":{"type":"number","description":"Speech Speed","helpurl":""},
+      "voiceid":{"type":"string","description":"voice id"}
+    }
 
-header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
-header("Pragma: no-cache"); // HTTP 1.0
-header("Expires: 0"); // Proxies
+  },
+  "STTFUNCTION": {
+    "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "_title":"Speech-to-Text Service","scope":"global"
+    },
+  "STT": {
+  "_title":"Speech-to-Text Service",
+    "WHISPER": {
+      "_title":"OpenAI's Whisper Speech-to-Text",
+      "LANG": {"type":"string","description":"Language to detect for STT."},
+      "TRANSLATE": {"type":"boolean","description":"Will try to translate to english."},
+      "API_KEY": {"type":"apikey","description":"OpenAI API key. Same used for OpenAI/ChatGPT AI service.","code":"OPENAI_API_KEY"}
+    },
+    "AZURE": {
+      "_title":"Azure Speech-to-Text",
+      "LANG": {"type":"string","description":"Language to detect for STT."},
+      "profanity": {"type":"select","values":["masked","removed","raw"],"description":"Specifies how to handle profanity in recognition results. Accepted values are:MASKED, which replaces profanity with asterisks. REMOVED, which removes all profanity from the result. RAW, which includes profanity in the result.","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short"},
+      "API_KEY": {"type":"apikey","description":"Azure API key. Same used for Azure TTS Service.","code":"AZURE_API_KEY"}
+    },
+    "LOCALWHISPER": {
+      "_title":"Local Whisper Speech-to-Text (Installed with DwemerDistro)",
+      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default if you installed whisper through the Distro.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
+      "FORMFIELD": {"type":"select","values":["audio_file","file"],"description":"Form field name for audio file. Sometimes needed to change to file to use another shiper implementations"}
 
-?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>AI Follower Framework Server</title>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        /* Dark Mode Styles */
-        body {
-            background-color: #121212;
-            color: #e0e0e0;
-            padding: 20px;
-        }
-        .confwizard {
-            background-color: #1e1e1e;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-        }
-        .conf-item label {
-            color: #e0e0e0;
-            font-weight: 500;
-        }
-        .form-control, .form-control:focus, .custom-select, .custom-select:focus, textarea.form-control {
-            background-color: #2c2c2c;
-            color: #e0e0e0;
-            border: 1px solid #444;
-        }
-        .form-control::placeholder {
-            color: #888;
-        }
-        .form-text {
-            color: #bbb;
-        }
-        .btn-primary {
-            background-color: #6200ea;
-            border-color: #6200ea;
-        }
-        .btn-primary:hover {
-            background-color: #7f39fb;
-            border-color: #7f39fb;
-        }
-        .btn-danger {
-            background-color: #b00020;
-            border-color: #b00020;
-        }
-        .btn-danger:hover {
-            background-color: #cf6679;
-            border-color: #cf6679;
-        }
-        .input-group-append .btn-outline-secondary {
-            background-color: #2c2c2c;
-            color: #e0e0e0;
-            border: 1px solid #444;
-        }
-        .input-group-append .btn-outline-secondary:hover {
-            background-color: #444;
-            border-color: #555;
-        }
-        .btn-group-custom {
-            margin-top: 30px;
-        }
-        /* Optional: Style for the Unhide button in API Key */
-        .input-group-append .btn-outline-secondary {
-            cursor: pointer;
-        }
-        /* Make Save Button Larger */
-        .btn-lg {
-            padding: 10px 24px;
-            font-size: 1.25rem;
-            line-height: 1.5;
-            border-radius: 0.3rem;
-        }
-        /* Warning Text Styling */
-        .warning-text {
-            color: #ffcc00; /* Amber color for visibility */
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-    </style>
-</head>
-<body>
-    
-<?php
+    },"DEEPGRAM": {
+      "_title":"Deepgram's Whisper Speech-to-Text",
+      "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"},
+      "LANG":{"type":"select","values":["en","es"],"description":"Language"},
+      "MODEL":{"type":"select","values":["nova-2","whisper-medium","enhanced","nova","base"],"description":"Model to use"}
+    }
+  },
+  "ITTFUNCTION": {
+    "type":"select","values":["openai","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter!<br><br><strong>Must be configured in default profile!</strong>", 
+    "_title":"Image Recognition Service","scope":"global",
+    "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
+  },
+  "ITT": {
+    "LLAMACPP": {
+      "_title":"LLama Server (Installed with DwemerDistro)",
+      "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md","scope":"global"},
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the llama vision model.","scope":"global"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
+    },
+    "openai": {
+      "_title":"OpenAI/OpenRouter",
+      "url": {"type":"url","description":"OpenAI API or OpenRouter endpoint. Use this for OpenRouter (https://openrouter.ai/api/v1/chat/completions)","scope":"global"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/","scope":"global"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate","scope":"global"},
+      "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","helpurl":"https://platform.openai.com/docs/guides/vision?lang=curl","scope":"global"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys","scope":"global"},
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the OpenAI vision model.","scope":"global"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
+    }
+  },
+  "FEATURES": {
+    "_title":"Memory Configuration",
+    "MEMORY_EMBEDDING": {
+      "_title":"Memory Settings",
+      "ENABLED": {"type":"boolean","description":"<Strong>Make sure CONNECTORS_DIARY is setup!</strong>Enable long term memory. It will provide the most relevant memory with every AI response to be used as context."},
+      "TXTAI_URL": {"type":"url","description":"NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!"},
+      "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to delay before using a memory in a prompt. Used to avoid pushing recent dialogues as memories."},
+      "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"The amount of the most relevant memory records that will be injected into the prompt."},
+      "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will combine individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},
+      "AUTO_CREATE_SUMMARY_INTERVAL": {"type":"integer","description":"Time frame used to pack summary data. 10 = 13 in-game hours | 5 = 7.5 in-game hours etc"},
+      "MEMORY_BIAS_A": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer memory."},
+      "MEMORY_BIAS_B": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer and endorse memory."}
+      
+    },
+  "MISC": {
+    "_title":"Other Options",
+    "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
+    "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest. Will trigger a lot of events on new game, so shoudl activated on loaded games"},
+    "ITT_QUALITY": {"type":"integer","description":"Only for Soulgaze HD. Compression quality can be set from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
 
-error_reporting(E_ERROR);
-session_start();
+  }
 
-ob_start();
-
-$url = 'conf_editor.php';
-$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
-
-$TITLE = "QUICKSTART MENU"; // Updated title
-
-$configFilepath = realpath($configFilepath) . DIRECTORY_SEPARATOR;
-
-// Include necessary files
-require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php"); // Defaults
-if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
-    require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php"); // Current configs
+  }
+  
 }
-require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
-
-// Profile selection
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf) {
-    if (file_exists($mconf)) {
-        $filename = basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        preg_match($pattern, $filename, $matches);
-        $hash = $matches[1];
-        $GLOBALS["PROFILES"][$hash] = $mconf;
-    }
-}
-
-// Function to compare modification dates
-function compareFileModificationDate($a, $b) {
-    return filemtime($b) - filemtime($a);
-}
-
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"])) {
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-} else {
-    $GLOBALS["PROFILES"] = [];
-}
-
-$GLOBALS["PROFILES"] = array_merge(["default" => "$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
-} else {
-    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
-    require_once($_SESSION["PROFILE"]);
-}
-// End of profile selection
-
-include("tmpl/head.html");
-$debugPaneLink = false;
-include("tmpl/navbar.php");
-
-// Load current configurations
-$currentConf = conf_loader_load();
-$currentConfTitles = conf_loader_load_titles();
-
-// Function to flatten the CONF_SCHEMA
-function flattenConfSchema($schema, $prefix = '') {
-    $result = [];
-    foreach ($schema as $key => $value) {
-        if ($key === '_title') {
-            continue;
-        }
-        $newKey = $prefix ? $prefix . '@' . $key : $key;
-        if (isset($value['type'])) {
-            $result[$newKey] = $value;
-        } else if (is_array($value)) {
-            // It's a nested array, recurse
-            $result = array_merge($result, flattenConfSchema($value, $newKey));
-        }
-    }
-    return $result;
-}
-
-// Flatten the CONF_SCHEMA
-$flatConfSchema = flattenConfSchema($CONF_SCHEMA);
-
-// Update currentConf with current values
-foreach ($flatConfSchema as $key => &$parms) {
-    $keys = explode('@', $key);
-    $varName = implode('_', $keys);
-    if (isset($$varName)) {
-        $parms['currentValue'] = $$varName;
-    } else {
-        $parms['currentValue'] = isset($parms['default']) ? $parms['default'] : '';
-    }
-}
-
-// Filter the configurations you want to display in the Quickstart Menu
-$quickstartKeys = [
-    "PLAYER_NAME",
-    "CONNECTOR@openrouter@API_KEY",
-    "CONNECTOR@openrouterjson@API_KEY",
-    "TTSFUNCTION",
-    "STT_WHISPER_API_KEY"
-];
-
-$quickstartConf = array_filter($flatConfSchema, function($key) use ($quickstartKeys) {
-    return in_array($key, $quickstartKeys);
-}, ARRAY_FILTER_USE_KEY);
-
-// Start of Form
-echo '<div class="container">
-        <form action="" method="post" name="mainC" class="confwizard" id="top">
-            <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"]) . '" />
-      ';
-
-// Main Heading
-echo '<div class="container">
-      <h1 class="text-center mb-4">QUICKSTART MENU</h1>
-      <h2 class="text-center mb-4">This menu is only meant to be used for the initial setup.</h2>
-      <h2 class="text-center mb-4">Please use the Configuration Wizard for any further changes.</h2>
-    </div>';
-
-if ($_SESSION["PROFILE"] == "$configFilepath/conf.php") {
-    $DEFAULT_PROFILE = true;
-} else {
-    $DEFAULT_PROFILE = false;
-}
-
-$access = ["basic" => 0, "pro" => 1, "wip" => 2];
-
-foreach ($quickstartConf as $pname => $parms) {
-
-    if (isset($parms["helpurl"])) {
-        $parms["description"] .= " <a target='_blank' href='" . htmlspecialchars($parms["helpurl"]) . "'>[help/doc]</a>";
-    }
-
-    if (isset($parms["userlvl"]) && !($access[$parms["userlvl"]] <= $access[$_SESSION["OPTION_TO_SHOW"]])) {
-        $MAKE_NO_VISIBLE_MARK = " style='display:none' ";
-    } else {
-        $MAKE_NO_VISIBLE_MARK = "";
-    }
-
-    // Adjust field name to match how it's used in the form
-    $fieldName = strtr($pname, array(" " => "@"));
-
-    if (!is_array($parms["currentValue"])) {
-        $fieldValue = htmlspecialchars(stripslashes($parms["currentValue"]));
-    } else {
-        $fieldValue = '';
-    }
-
-    $FORCE_DISABLED = "";
-
-    // Handle scope and constant parameters
-    if ($DEFAULT_PROFILE && $fieldName == "HERIKA_NAME") {
-        $fieldValue = "The Narrator";
-        $FORCE_DISABLED = " readonly='true' ";
-    } else {
-        $FORCE_DISABLED = "";
-    }
-
-    if (!$DEFAULT_PROFILE && isset($parms["scope"]) && $parms["scope"] == "global") {
-        $FORCE_DISABLED = " readonly='true' disabled='true' title='This is a global parameter. Set it on default profile' ";
-    }
-
-    if (isset($parms["scope"]) && $parms["scope"] == "constant") {
-        $FORCE_DISABLED = " readonly='true' disabled='true' title='This is a readonly parameter'";
-    }
-
-    echo "<div class='form-group' $MAKE_NO_VISIBLE_MARK>";
-
-    // Label
-    // Use currentConfTitles if available
-    $label = isset($currentConfTitles[$pname]) ? $currentConfTitles[$pname] : htmlspecialchars(str_replace('@', ' ', $pname));
-    echo "<label for='$fieldName'>" . $label . "</label>";
-
-    // Input Types
-    if ($parms["type"] == "string") {
-        echo "<input type='text' class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' value=\"$fieldValue\" $FORCE_DISABLED>";
-    } else if ($parms["type"] == "longstring") {
-        echo "<textarea class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>$fieldValue</textarea>";
-    } else if ($parms["type"] == "url") {
-        echo "<div class='input-group'>";
-        echo "<input type='url' class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' value='" . htmlspecialchars($fieldValue) . "' $FORCE_DISABLED>";
-        echo "<div class='input-group-append'>";
-        echo "<button class='btn btn-outline-secondary' type='button' onclick=\"checkUrlFromServer('$fieldName')\">Check</button>";
-        echo "</div></div>";
-    } else if ($parms["type"] == "select") {
-        echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
-        foreach ($parms["values"] as $item) {
-            $selected = ($item == $parms["currentValue"]) ? "selected" : "";
-            echo "<option value='" . htmlspecialchars($item) . "' $selected>" . htmlspecialchars($item) . "</option>";
-        }
-        echo "</select>";
-    } else if ($parms["type"] == "boolean") {
-        // Add a wrapper div to ensure radio buttons are on a new line
-        echo "<div class='mt-2'>";
-
-        // True Radio Button
-        $checkedTrue = ($parms["currentValue"]) ? "checked" : "";
-        $idTrue = uniqid("bool_true_");
-        echo "<div class='form-check'>";
-        echo "<input class='form-check-input' type='radio' name='" . htmlspecialchars($fieldName) . "' id='$idTrue' value='true' $checkedTrue $FORCE_DISABLED>";
-        echo "<label class='form-check-label' for='$idTrue'>True</label>";
-        echo "</div>";
-
-        // False Radio Button
-        $checkedFalse = (!$parms["currentValue"]) ? "checked" : "";
-        $idFalse = uniqid("bool_false_");
-        echo "<div class='form-check'>";
-        echo "<input class='form-check-input' type='radio' name='" . htmlspecialchars($fieldName) . "' id='$idFalse' value='false' $checkedFalse $FORCE_DISABLED>";
-        echo "<label class='form-check-label' for='$idFalse'>False</label>";
-        echo "</div>";
-
-        echo "</div>"; // End of mt-2 div
-    } else if ($parms["type"] == "integer") {
-        echo "<input type='number' class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' value='" . htmlspecialchars($fieldValue) . "' step='1' $FORCE_DISABLED>";
-    } else if ($parms["type"] == "number") {
-        echo "<input type='number' class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' value='" . htmlspecialchars($fieldValue) . "' step='0.01' $FORCE_DISABLED>";
-    } else if ($parms["type"] == "apikey") {
-        $jsid = strtr($fieldName, ["@" => "_"]);
-        // Display API keys in plain text
-        echo "<div class='input-group'>";
-        echo "<input type='text' class='form-control' id='$jsid' name='" . htmlspecialchars($fieldName) . "' value='" . htmlspecialchars($fieldValue) . "' $FORCE_DISABLED>";
-        echo "</div>";
-    }
-    // Add other input types as needed
-
-    // Description
-    if (isset($parms["description"]) && !empty($parms["description"])) {
-        echo "<small class='form-text'>" . $parms["description"] . "</small>";
-    }
-
-    echo "</div>";
-}
-
-echo '<div class="btn-group-custom text-center">
-        <p class="warning-text">
-    Click "Download AIAgent.ini" and place it in the AIAgent Skyrim mod folder under SKSE/Plugins 
-    <a href="https://www.nexusmods.com/skyrimspecialedition/mods/126330?tab=files/" target="_blank"> Download AI-FF Mod</a>
-</p>
-<div class="btn-group-custom text-center">
-        <p class="warning-text">
-    After you click <b>Save</b> we <b>HIGHLY RECOMMEND</b> to open the Troubleshooting menu and run the LLM/AI, TTS and STT tests to verify everything is setup correctly.
-</p>
-        <button type="button" class="btn btn-info btn-lg" name="aiagentdownload" value="aiagentdownload" onclick=\'formSubmitting=true;document.getElementById("top").target="_blank";document.getElementById("top").action="tests/ai_agent_ini.php";document.getElementById("top").submit();\'>Download AIAgent.ini</button>
-        <button type="button" class="btn btn-primary btn-lg mr-2" name="save" value="Save" onclick=\'formSubmitting=true;document.getElementById("top").target="checker";document.getElementById("top").action="tools/conf_writer.php?save=true&sc="+getAnchorNH();document.getElementById("top").submit();\'>Save</button>
-        
-    </div>';
-
-echo '</form>
-      </div>'; // End of container
-
-include("tmpl/footer.html");
-
-$buffer = ob_get_contents();
-ob_end_clean();
-$title = "AI Follower Framework Server";
-$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
-echo $buffer;
-
-?>
