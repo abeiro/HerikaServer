@@ -11,7 +11,7 @@ if (!file_exists($configFilepath."conf.php")) {
         require($rootEnginePath."ui".DIRECTORY_SEPARATOR."cmd".DIRECTORY_SEPARATOR."install-db.php");
         
     }*/
-    die(header("Location: conf_wizard.php"));
+    die(header("Location: quickstart.php"));
 }
 
 
