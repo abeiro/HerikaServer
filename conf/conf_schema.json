@@ -134,7 +134,7 @@
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
-      "_title":"MELOTTS (Installed in DwemerDistro)",
+      "_title":"MELOTTS (Soon...)",
       "endpoint":{"type":"url","description":"End point URL. Avoid trailing slash","helpurl":""},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language"},
       "speed":{"type":"number","description":"Speech Speed","helpurl":""},
@@ -147,7 +147,7 @@
       "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
     },
     "MIMIC3": {
-      "_title":"MIMIC3 Text-To-Speech (Installed in DwemerDistro)",
+      "_title":"MIMIC3 (Installed in DwemerDistro)",
       "URL": {"type":"url","description":"MIMIC3 Service URL. If using DwemerDistro, copy and paste [MIMIC3 Configuration] URL from the console window."},
       "voice": {"type":"string","description":"Voice code"},
       "rate": {"type":"number","description":"Talk speed"},
