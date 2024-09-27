@@ -126,8 +126,8 @@ $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10;
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]=33;
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66;
 
-$CONNECTORS=["koboldcppjson","openaijson","openrouterjson"];  
-$CONNECTORS_DIARY=["koboldcpp","openai","openrouter"];  
+$CONNECTORS=["openrouterjson","openaijson","koboldcppjson"];  
+$CONNECTORS_DIARY=["openrouter","openai","koboldcpp"];  
 
 $CONNECTOR["openai"]["url"]="https://api.openai.com/v1/chat/completions";
 $CONNECTOR["openai"]["model"]='gpt-4o-mini';	//Model to use
