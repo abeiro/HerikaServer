@@ -175,7 +175,6 @@ echo '
 <form action="xtts_clone.php" method="POST" enctype="multipart/form-data">
     <h2><b>XTTS Voice Generation</b></h2>
     <br>
-    <br>
     <label for="file">Select a .wav file and make sure it is named after the character\'s voice you want to generate.</label>
     <br>
     <label>Examples: herika.wav, lydia.wav, mjoll_the_lioness.wav etc.</label>
@@ -183,9 +182,7 @@ echo '
     <label><b>YOU MUST RESTART THE SERVER IF YOU ARE REPLACING AN ALREADY EXISITNG VOICE FILE!</b></label>
     <br>
     <input type="file" name="file" id="file">
-    <br>
-    <br>
-    <input type="submit" name="submit" value="Upload">
+<input type="submit" name="submit" value="Upload">
 </form>
 </div>
 ';
