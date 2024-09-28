@@ -261,7 +261,7 @@ foreach ($quickstartConf as $pname => $parms) {
     } else if ($parms["type"] == "select") {
         if ($pname == "TTSFUNCTION") {
             $parms["values"] = ["melotts","xtts-fastapi"];
-            $parms["description"] = "Select either MeloTTS or XTTS. You can install XTTS under Tools/Components/NVIDIA GPU. We recommend to use MeloTTS for most users.<br>Make sure you have installed the voice files!";
+            $parms["description"] = "Select either MeloTTS or XTTS. You can install XTTS under Tools/Components/NVIDIA GPU.<br><b>We recommend MeloTTS for most users.<b><br>Make sure you have installed the voice files!";
         }
     
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
@@ -300,9 +300,9 @@ foreach ($quickstartConf as $pname => $parms) {
         $jsid = strtr($fieldName, ["@" => "_"]);
 
         if ($pname == "CONNECTOR openrouter API_KEY") {
-            $parms["description"] = "Copy and Paste your OpenRouter API Key <br><a href='https://openrouter.ai/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
-        } elseif ($pname == "CONNECTOR openrouterjson API_KEY") {
             $parms["description"] = "Copy and Paste THE EXACT SAME OpenRouter API Key. <i>Yes we need to do it 2 times.</i>";
+        } elseif ($pname == "CONNECTOR openrouterjson API_KEY") {
+            $parms["description"] = "Copy and Paste your OpenRouter API Key <br><a href='https://openrouter.ai/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
         } elseif ($pname == "STT WHISPER API_KEY") {
         $parms["description"] = "Copy and Paste your OpenAI API Key <br><a href='https://platform.openai.com/docs/overview/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
         }
