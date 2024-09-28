@@ -19,7 +19,7 @@ Of course there can be case of large conversations... Which can be handled as we
 
 So now we have summary of previous conversations and it's not necessary to include dialogue lines from summarized dialogue lines. To track if dialogue line in `speech` table was already summarized I added column `summarized`.
 
-To store conversations summaries I created table `conversations_summaries`. It has for now 3 fields `conversationid`, `summary` and `participants`(to track who was involved in this conversation and later now to which characters add this context).
+To store conversations summaries I created table `conversations_summaries`. It has for now 3 fields `conversationid`, `summary` and `participants`(to track who was involved in this conversation and later now to which characters add this context). I probably had to add gamets, to be able to order them in chronologicle order.
 
 ## Next steps
 
@@ -28,11 +28,13 @@ I'm creating this PR just to demo what I did so far, and check if it makes sense
 If idea sounds interesting, next improvements will be next:
 
 - Dialogue lines - are short term memory. It's significant for current conversation characters have right now. But since context window isn't limitless with time we will start cutting those short memories out with window size of 50(or more, or less).
-- Conversations summaries - are mid-term memory, we don't all those details from conversation but we want to have a little bit of details. It will help characters to rember what you discuss/agreed/argued/etc... In the meantime it saves space for context.
-- Deep reflections - are long term memory. It's next step and similar to approach with conversations summaries. But in this case we will use conversations summaries to generate piece of long term memory.
+- Conversations summaries - are mid-term memory, we don't need all those details from conversation but we want to have a little bit of details. It will help characters to rember what you discuss/agreed/argued/etc... In the meantime it saves space for context.
+- Deep reflections - are long term memory. We want to store only significant events/changes in character behavior/biography. It's next step and similar to approach with conversations summaries. But in this case we will use conversations summaries to generate piece of long term memory.
     - to generate long term memory I would suggest to make: `current deep reflections` + `latest x(5-10) conversations summaries` -> feed to LLM to get new deep reflections.
 
-To estimate average increase of requests, I propose this formula: **1 deep reflection** = **10 conversations summaries** = **100-150 dialogue lines**(**10-15 in average dialogue lines per conversation**). In other words on each 100-150 real dialogue lines we are adding 11 additional requests. Which is increase of **11-7.3%** in requests. Assuming avarage conversation 10-15 dialogue lines long. 
+To estimate average increase of requests, I suggest this formula: **100-150 dialogue lines**(**10-15 in average dialogue lines per conversation**) -> **10 conversations summaries** ->  **1 deep reflection**. 
+
+In other words on each 100-150 real dialogue lines we are adding 11(10 mid term + 1 long term) additional requests. Which is increase of **7.3-11%** in requests. Assuming avarage conversation 10-15 dialogue lines long. 
 
 ## Composing character's prompt
 
@@ -40,16 +42,18 @@ To estimate average increase of requests, I propose this formula: **1 deep refle
 
 ## Technical details
 
-I'm not an expert in PHP, so gladly accept any inputs on code improvemets. I tried it and was generating summaries it's enough for me for POC.
+I'm not an expert in PHP, so gladly accept any inputs on code improvemets. I tried it and it was generating summaries it's enough for me for POC.
 
 Right now to trigger conversation summary just skip 1 hour in game and start new dialogue - it should summarize dialogue lines(which weren't processed before).
 In current implementation it shouldn't trigger all older dialogues to start summarizing.
 
-I tried to not overload and make summarization in batches(no more then 4 processings at one time).
+I tried not to overload and make summarization in batches(no more then 4 processings at one time).
 
 In real experience it should make **only** summary when you start new conversation, assuming all previous should be already summarized.
 
 Prompt for summary isn't polished it's just for testing purposes. It catches significant moments in conversation though.
+
+For migration for existing games it can be like this: go through lines in `speech` -> find rows with dealy between them less than threshold -> assign for them `conversationid`s. At this point we can create button in admin(so user will know what they are doing since if they have a lot of lines it can start sending many requests) which will trigger to go through not summarized lines and summarize lines with same `conversationid`s
 
 
 ## Example
