@@ -4,6 +4,189 @@ $MUST_END=false;
 
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
+
+function generateUUIDv4()
+{
+    // Generate 16 bytes (128 bits) of random data or use a cryptographically secure random generator
+    $data = random_bytes(16);
+
+    // Set version to 0100 (UUID version 4)
+    $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+    // Set variant to 10xx
+    $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+
+    // Output the 36-character UUID string
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+
+function ensureLockExists($db)
+{
+    // Check if the row exists
+    $checkQuery = "SELECT COUNT(*) AS count FROM conf_opts WHERE id = 'is_summarize_locked'";
+    $result = $db->fetchAll($checkQuery);
+    logMessage("ensureLockExists: ".json_encode($result));
+    // If no such row exists, insert it with the default value 'false'
+    if ($result['count'] == 0) {
+        $insertQuery = "INSERT INTO conf_opts (id, value) VALUES ('is_summarize_locked', 'false')";
+        $db->query($insertQuery);
+    }
+}
+
+function isLocked($db)
+{
+    $lockQuery = "SELECT value FROM conf_opts WHERE id = 'is_summarize_locked'";
+    $lock = $db->fetchAll($lockQuery); // Assuming the query returns one row
+
+    logMessage("isLocked: ".json_encode($lock));
+
+    if ($lock) {
+        return $lock['value'] === 'true';
+    }
+
+    return false;
+}
+
+function lock($db)
+{
+    ensureLockExists($db);
+    $updateLockQuery = "UPDATE conf_opts SET value = 'true' WHERE id = 'is_summarize_locked'";
+    $db->query($updateLockQuery);
+
+    logMessage("lock!");
+    isLocked($db);
+}
+
+function unlock($db)
+{
+    ensureLockExists($db);
+    $updateUnlockQuery = "UPDATE conf_opts SET value = 'false' WHERE id = 'is_summarize_locked'";
+    $db->query($updateUnlockQuery);
+
+    logMessage("unlock!");
+    isLocked($db);
+}
+
+$summarizingInProcess = false;
+function summarizeConversation($currentRowId)
+{
+    global $db;
+
+    lock($db);
+
+    // Fetch unsummarized conversation lines before the given row ID
+    $conversationLines = fetchConversationLines($currentRowId);
+
+    // Group conversation lines by conversation ID
+    $groupedByConversation = groupConversationsById($conversationLines);
+
+    logMessage("Before loop.");
+
+    $maxProcesses = 4; // Maximum number of parallel processes
+    $activeProcesses = 0;
+
+    // Process each conversation
+    foreach ($groupedByConversation as $conversationId => $conversation) {
+        logMessage("About to summarize conversation id: $conversationId.");
+
+        if ($activeProcesses >= $maxProcesses) {
+            // Wait for some processes to finish before spawning more
+            waitForChildProcesses();
+            $activeProcesses = countActiveProcesses(); // Update the active process count
+        }
+
+        // Sort and build the dialogue for the conversation
+        $dialogue = buildDialogue($conversation);
+
+        // Log the conversation ID and the dialogue
+        logMessage("Conversation ID: $conversationId");
+        logMessage("Dialogue: \n$dialogue");
+        
+        if (!file_exists('processor/summarize_process.php')) {
+            logMessage("File summarize_process.php does not exist.");
+            return false; // Fail if the script does not exist
+        }
+
+        // Prepare to run the external script to summarize the dialogue
+        $command = "php processor/summarize_process.php " . escapeshellarg($conversationId) . " " . escapeshellarg($dialogue) . " > /dev/null 2>&1 &";
+        exec($command);
+
+        logMessage("Started background process for conversation ID: $conversationId");
+
+        $activeProcesses++;
+    }
+
+    // Wait for all child processes to finish
+    waitForChildProcesses();
+    
+}
+
+// Function to fetch unsummarized conversation lines before the given row ID
+function fetchConversationLines($currentRowId)
+{
+    global $db;
+    return $db->fetchAll("SELECT * FROM speech WHERE rowid < $currentRowId AND summarized = FALSE AND speaker != 'The Narrator' AND conversationid IS NOT NULL AND conversationid <> '' ORDER BY rowid DESC;");
+}
+
+// Group conversation lines by conversation ID
+function groupConversationsById($conversationLines)
+{
+    $groupedByConversation = [];
+    foreach ($conversationLines as $line) {
+        $conversationId = $line['conversationid'];
+        if (!isset($groupedByConversation[$conversationId])) {
+            $groupedByConversation[$conversationId] = [];
+        }
+        $groupedByConversation[$conversationId][] = $line;
+    }
+    return $groupedByConversation;
+}
+
+// Sort conversation lines by timestamp and build dialogue
+function buildDialogue($conversation)
+{
+    $prevSpeaker = "";
+    usort($conversation, function($a, $b) {
+        return $a['gamets'] <=> $b['gamets']; // Sort by timestamp in ascending order
+    });
+
+    $dialogue = "";
+    foreach ($conversation as $conversationLine) {
+        $currentSpeaker = $conversationLine["speaker"];
+        if($prevSpeaker == $currentSpeaker) {
+            $dialogue .= " ".$conversationLine["speech"];
+        } else {
+            $dialogue .= "\n".$conversationLine["speaker"]." says: ".$conversationLine["speech"];
+        }
+        $prevSpeaker = $currentSpeaker;
+    }
+    return $dialogue;
+}
+
+// Wait for all child processes to finish
+function waitForChildProcesses()
+{
+    global $db;
+    while (countActiveProcesses() > 0) {
+        sleep(1); // Wait for a second and check again
+    }
+    unlock($db);
+}
+
+// Count active background processes
+function countActiveProcesses()
+{
+    // You can implement process checking logic here, like using 'ps' command or specific process status checks
+    $output = [];
+    exec("ps aux | grep 'summarize_process.php' | grep -v grep", $output);
+    return count($output);
+}
+
+// Log a message to the log file
+function logMessage($message)
+{
+    file_put_contents("my_logs.txt", "\n$message", FILE_APPEND);
+}
+
 if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about this)
     $now=time();
     $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
@@ -219,6 +402,30 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
    
     // error_log(print_r($speech,true));
     if (is_array($speech)) {
+        $conversationid = "";
+        $lastSpeech = $db->fetchAll("SELECT gamets, conversationid, rowid FROM speech ORDER BY gamets DESC LIMIT 1;");
+        if (count($lastSpeech) > 0) {
+            // Grab the 'ts' and 'gamets' from the newest entry in eventlog
+            $gamets = $lastSpeech[0]['gamets'];
+
+            if ($gameRequest[2] - $gamets >= 60*60*20*1) { // 4 game hours difference ot more. Can be changed to real time passed, like after 15 minutes of real time consider new dialogue line as new conversation.
+                // new conversation
+                $conversationid = generateUUIDv4();
+            } else {
+                $conversationid = $lastSpeech[0]['conversationid'];
+            }
+        } else {
+            // new conversation
+            $conversationid = generateUUIDv4();
+        }
+
+
+        file_put_contents("my_logs.txt", "\nold conversation id: ".$lastSpeech[0]['conversationid'].".\n new conversationid: ".$conversationid."\n\n", FILE_APPEND);
+        // we started a new conversation here. So let's summarize all previous conversations if they aren't summarized
+        if($lastSpeech[0]['conversationid'] !== $conversationid && !isLocked($db)) {
+            summarizeConversation($lastSpeech[0]['rowid']);
+        }
+
         $db->insert(
             'speech',
             array(
@@ -232,7 +439,9 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
                 'sess' => 'pending',
                 'audios' => isset($speech["audios"])?$speech["audios"]:null,
                 'topic' => isset($speech["debug"])?$speech["debug"]:null,
-                'localts' => time()
+                'localts' => time(),
+                'conversationid' => $conversationid,
+                'summarized' => 0,
             )
         );
     }
