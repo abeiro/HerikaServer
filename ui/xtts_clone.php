@@ -179,10 +179,14 @@ echo '
     <br>
     <label>Examples: herika.wav, lydia.wav, mjoll_the_lioness.wav etc.</label>
     <br>
-    <label><b>YOU MUST RESTART THE SERVER IF YOU ARE REPLACING AN ALREADY EXISITNG VOICE FILE!</b></label>
+    <label><b>YOU MUST RESTART THE SERVER IF YOU ARE REPLACING AN ALREADY EXISTING VOICE FILE!</b></label>
+    <br>
+    <label>Then you can select that voice for an AI NPC in the Config Wizard</label>
     <br>
     <input type="file" name="file" id="file">
-<input type="submit" name="submit" value="Upload">
+    <br>
+    <br>
+    <input type="submit" name="submit" value="Upload">
 </form>
 </div>
 ';
