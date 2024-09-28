@@ -173,13 +173,14 @@ echo "<pre>$result</pre>";
 echo '
 <div class="indent5">
 <form action="xtts_clone.php" method="POST" enctype="multipart/form-data">
-    <label><b>XTTS Voice Generation</b></label>
+    <h2><b>XTTS Voice Generation</b></h2>
+    <br>
     <br>
     <label for="file">Select a .wav file and make sure it is named after the character\'s voice you want to generate.</label>
     <br>
     <label>Examples: herika.wav, lydia.wav, mjoll_the_lioness.wav etc.</label>
     <br>
-    <label>YOU MUST RESTART THE SERVER IF YOU ARE REPLACING AN ALREADY EXISITNG VOICE FILE!</label>
+    <label><b>YOU MUST RESTART THE SERVER IF YOU ARE REPLACING AN ALREADY EXISITNG VOICE FILE!</b></label>
     <br>
     <input type="file" name="file" id="file">
     <br>
