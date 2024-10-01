@@ -1,144 +1,19 @@
 <?php
 
-
-function insertNoise($inputString, $noiseArray) {
-    // Split the string into words
-    $words = explode(' ', $inputString);
-
-	if (!is_array($words))
-		return $inputString;
-    // Shuffle the noise array to ensure randomness
-    shuffle($noiseArray);
-
-    // Calculate the number of insert positions (between words)
-    $numInsertPositions = count($words) - 1;
-
-    // Ensure we don't have more noises than insert positions
-    $numNoises = min(count($noiseArray), $numInsertPositions);
-
-    // Get a random subset of the insert positions
-    $insertPositions = array_rand(array_fill(0, $numInsertPositions, 1), $numNoises);
-
-    // Ensure $insertPositions is an array even if there's only one position
-    if (!is_array($insertPositions)) {
-        $insertPositions = array($insertPositions);
-    }
-
-    // Sort insert positions in descending order to avoid shifting positions
-    rsort($insertPositions);
-
-    // Insert the noise elements at the chosen positions
-    foreach ($insertPositions as $index => $pos) {
-        array_splice($words, $pos + 1, 0, $noiseArray[$index]);
-		break; //Comment  to more noise
-    }
-
-    // Join the words back into a string
-    return implode(' ', $words);
-}
-
-
-function queueJob($text,$voice="EN-US",$speed=1.2,$lang="EN") {
-
-    $url = $GLOBALS["TTS"]["MELOTTS"]["endpoint"];
-    $url.= "/queue/join";
-
-    $speed=1.2;
-
-    $voice=(empty(trim($voice)))?"EN-US":$voice;
-    $lang=(empty(trim($lang)))?"EN":$lang;
-    
-    // Data payload for the first request
-    $data = [
-        "data" => [$voice, $text, $speed, $lang],   // Speaker, Text, Speed, Lang
-        "event_data" => null,
-        "fn_index" => 1,
-        "session_hash" => "1"
-    ];
-
-    error_log("$url [$voice, $text, $speed, $lang]");
-    // Set up CURL for the initial request
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'Accept: */*'
-    ]);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-
-    // Execute the request
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    // Decode the JSON response to get the event_id
-    $responseData = json_decode($response, true);
-    if (isset($responseData['event_id'])) {
-        error_log(__FILE__." $response ");
-        return $responseData['event_id'];
-    }
-
-    return false;
-}
-
-function checkJobStatus($event_id) {
-
-    $url = $GLOBALS["TTS"]["MELOTTS"]["endpoint"];
-    $url .= "/queue/data?session_hash=1";
-    
-    $n=0;
-
-    while (true) {
-        // Set up CURL for the second request
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Accept: text/event-stream',
-            'Cache-Control: no-cache',
-            'Connection: keep-alive'
-        ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10); // Timeout for the entire cURL execution
-
-        // Execute the request
-        $response = curl_exec($ch);
-        curl_close($ch);
-
-        // Handle the raw event stream format, line by line
-        $lines = explode("\n", $response);
-
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (strpos($line, 'data:') === 0) {
-                $jsonData = json_decode(substr($line, 5), true);
-                
-                // Look for the 'process_completed' message
-                if (isset($jsonData['msg']) && $jsonData['msg'] === 'process_completed') {
-                    // Job is completed, return the URL of the generated file
-                    if (isset($jsonData['output']['data'][0]['url'])) {
-                        return $jsonData['output']['data'][0]['url'];
-                    }
-                }
-            }
-        }
-
-        // Sleep for a short period to avoid hammering the server too fast
-        $n++;
-        if ($n>100)
-            return false;
-        usleep(1000 * 250 );
-    }
-}
-
+/*
+curl -X 'POST' \
+  'http://localhost:8084/tts' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "speaker": "malenord",
+  "text": "Hello",
+  "speed": 1,
+  "language": "EN"
+}'
+*/
 
 function tts($textString, $mood , $stringforhash) {
-
-    //xtts_fastapi_settings([]); //Check this
-    
-    /*if (!isset($GLOBALS["AVOID_TTS_CACHE"]))
-        if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
-            return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
-    */
-    
     
     $newString=$textString;
     
@@ -164,27 +39,28 @@ function tts($textString, $mood , $stringforhash) {
         $voice=$GLOBALS["TTS"]["MELOTTS"]["voiceid"];
 
     
-    $speed=$GLOBALS["TTS"]["MELOTTS"]["speed"];
+    $speed=$GLOBALS["TTS"]["MELOTTS"]["speed"]+0;
 
-    /*
-    $event_id = queueJob($newString,$voice,$speed,$lang);
-    if ($event_id) {
-        error_log(__FILE__.": Job queued successfully. Event ID: $event_id");
-        $fileUrl = checkJobStatus($event_id);
-        error_log(__FILE__.": Process completed. File URL: $fileUrl");
-        
-    } else {
-        error_log(__FILE__.": Failed to queue the job");
-        file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".err", trim($textString));
-        return false;
-    }
-    */
 
-    $fileUrl="{$GLOBALS["TTS"]["MELOTTS"]["endpoint"]}/tts?speaker={$GLOBALS["TTS"]["MELOTTS"]["voiceid"]}&text=".urlencode($textString)."&speed=1&language=EN";
-    
+    $finalData =["speaker"=>"$voice","text"=>"$textString","language"=>"EN","speed"=>$speed];
+    print_r($finalData);
+	
+	$options = array(
+		'http' => array(
+			'header' => "Content-type: application/json\r\n" .
+						"Accept: application/json\r\n",
+			'method' => 'POST',
+			'content' => json_encode($finalData)
+		)
+	);
+	$context = stream_context_create($options);
+
+    $url="{$GLOBALS["TTS"]["MELOTTS"]["endpoint"]}/tts";
+    $result = file_get_contents($url, false, $context);
+
     // Handle the response
-    if ($fileUrl !== false ) {
-        $response = file_get_contents($fileUrl);
+    if ($result !== false ) {
+        $response = $result;
         // Handle the successful response
         $size=strlen($response);
         $oname=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . "_o.wav";
@@ -208,14 +84,15 @@ function tts($textString, $mood , $stringforhash) {
 
 
 /*
-$GLOBALS["TTS"]["MELOTTS"]["endpoint"]='http://127.0.0.1:7860';
-$GLOBALS["TTS"]["MELOTTS"]["voiceid"]='EN-US';
+$GLOBALS["TTS"]["MELOTTS"]["endpoint"]='http://127.0.0.1:8084';
+$GLOBALS["TTS"]["MELOTTS"]["voiceid"]='malenord';
 $GLOBALS["TTS"]["MELOTTS"]["language"]='EN';
+$GLOBALS["TTS"]["MELOTTS"]["speed"]=1;
 
 
 $textTosay="I used to wear light armor, but over the months it wore down until it became unusable.";
 
 echo tts($textTosay,'',$textTosay).PHP_EOL;
-
 */
+
 ?>
