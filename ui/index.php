@@ -216,7 +216,7 @@ include("tmpl/navbar.php");
         print_array_as_table($results);
     }
     if ($_GET["table"] == "log") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM log a order by localts desc,rowid desc");
+        $results = $db->fetchAll("select  A.*,ROWID FROM log a order by localts desc,rowid desc  LIMIT 50");
         echo "<h3 class='my-2'>AI Log</h3>";
         print_array_as_table($results);
     }

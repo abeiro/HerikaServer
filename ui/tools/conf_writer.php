@@ -18,6 +18,23 @@ if (isset($_POST["profile"])) {
     unset($_POST["profileSelector"]);
 }
 
+if (isset($_GET["incomplete"])) {
+    $defaultConf=file_get_contents($enginePath.DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf.sample.php');
+    $pattern = '/<\?php(.*?)\?>/s';
+
+    // Use preg_match to find the content between the PHP tags
+    if (preg_match($pattern, $defaultConf, $matches)) {
+        // $matches[1] contains the content between the tags
+        $php_code = trim($matches[1]);
+        $buffer="<?php".PHP_EOL.$php_code;
+
+    } else {
+        error_log("No PHP code found in the file.");
+    }
+
+
+}
+
 foreach ($_POST as $k=>$v) {
     
     $fullNameHierch=explode("@",$k);
