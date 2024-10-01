@@ -271,9 +271,9 @@ $TTS["XTTSFASTAPI"]["endpoint"]='';	//End point
 $TTS["XTTSFASTAPI"]["language"]='en';	//
 $TTS["XTTSFASTAPI"]["voiceid"]='';	//Voice json file
 
-$TTS["MELOTTS"]["endpoint"]='http://127.0.0.1:7860';
-$TTS["MELOTTS"]["voiceid"]='EN-US';
+$TTS["MELOTTS"]["endpoint"]='http://127.0.0.1:8084';
+$TTS["MELOTTS"]["voiceid"]='malenord';
 $TTS["MELOTTS"]["language"]='EN';
-$TTS["MELOTTS"]["speed"]=1.2;
+$TTS["MELOTTS"]["speed"]=1.0;
 
 ?>
