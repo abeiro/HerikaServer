@@ -35,7 +35,9 @@ class connector
         $context="";
 
         
-        
+        $GLOBALS["PROMPT_HEAD"]=strtr($GLOBALS["PROMPT_HEAD"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]]);
+        $GLOBALS["HERIKA_PERS"]=strtr($GLOBALS["HERIKA_PERS"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]]);
+
         foreach ($contextData as $n=>$s_msg) {	// Have to mangle context format
 
             if (!isset($s_msg["content"])) {
@@ -171,7 +173,7 @@ class connector
 
         } elseif (file_exists(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php")) {
 
-           
+            error_log("Using template ".__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
             include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
         }
