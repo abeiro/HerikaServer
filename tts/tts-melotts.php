@@ -43,7 +43,7 @@ function tts($textString, $mood , $stringforhash) {
 
 
     $finalData =["speaker"=>"$voice","text"=>"$textString","language"=>"EN","speed"=>$speed];
-    print_r($finalData);
+    //print_r($finalData);
 	
 	$options = array(
 		'http' => array(
