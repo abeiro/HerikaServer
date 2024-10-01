@@ -7,7 +7,7 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -d '{
   "speaker": "malenord",
-  "text": "Hello",
+  "text": "In Skyrim\'s land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.",
   "speed": 1,
   "language": "EN"
 }'
@@ -90,7 +90,7 @@ $GLOBALS["TTS"]["MELOTTS"]["language"]='EN';
 $GLOBALS["TTS"]["MELOTTS"]["speed"]=1;
 
 
-$textTosay="I used to wear light armor, but over the months it wore down until it became unusable.";
+$textTosay="In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
 
 echo tts($textTosay,'',$textTosay).PHP_EOL;
 */
