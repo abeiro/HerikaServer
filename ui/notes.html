@@ -23,6 +23,52 @@
 
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
+                        <div class="fw-bold">AI Command List </div>
+                            <ul>
+                                <li>Inspect NPC</li>
+                                <li>Inspect Surroundings</li>
+                                <li>Move To (Short distance travel)</li>
+                                <li>Travel To (Long distance travel)</li>
+                                <li>Attack</li>
+                                <li>Open Inventory</li>
+                                <li>Check Inventory</li>
+                                <li>Sheathe Weapon</li>
+                                <li>Take A Seat</li>
+                                <li>Read Quest Journal</li>
+                                <li>Increase Walk Speed</li>
+                                <li>Decrease Walk Speed</li>
+                                <li>Set Current Task</li>
+                                <li>Wait Here</li>
+                                <li>Stop Walking</li>
+                                <li>Stop/Relax (Will hard stop any AI actions)</li>
+                            </ul>
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">AI Awareness</div>
+                        <ul>
+                            <li>Combat Encounters</li>
+                            <li>Dialogue (traditional and AI spoken)</li>
+                            <li>Time/Date</li>
+                            <li>Weather</li>
+                            <li>Location (including modded location)</li>
+                            <li>Quests (including modded quests)</li>
+                            <li>Player Statistics</li>
+                            <li>Items Acquired</li>
+                            <li>Equipment</li>
+                            <li>Memories</li>
+                            <li>Diary Entries</li>
+                            <li>Books</li>
+                            <li>Who was present during events (You can keep secrets from AI NPCs!)</li>
+                        </ul>
+                        
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
                         <div class="fw-bold">How Profiles Work</div>
                         <ul>
                             <li><b>It's important to configure the default profile before adding followers to the framework.</b></li>
@@ -51,7 +97,7 @@
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">How to adjust the AI prompts</div>
-                        Create the files prompts_custom.php and command_prompt_custom.php. Look at the variables defined in the original
+                        You find the prompts files at <i>\\wsl.localhost\DwemerAI4Skyrim3\var\www\html\HerikaServer\prompts</i>. Create the files <b>prompts_custom.php</b> and <b>command_prompt_custom.php</b>. Look at the variables defined in the original
                         prompts.php and command_prompt.php, and redefine them in their respective custom files. Example:
 
                         <pre><code class="language-php">// We have this in prompts.php
@@ -67,7 +113,7 @@
 </code>
                         </pre>
 
-                        We can write in prompts_custom.php this new definition:
+                        We can edit the prompts_custom.php with this new definition:
 
                         <pre><code class="language-php">
 // $TEMPLATE_DIALOG is at prompts.php and is the standard cue. Cue is the last instruction sent to LLM. If cue is an array, a random cue will be choosen from
@@ -88,18 +134,18 @@ $PROMPTS["combatend"]=[
                         
 
 
-                        command_prompt_custom.php follow the same rules, but be cautious as that file contains important rule prompts.<br/>
+                        The command_prompt_custom.php file also follows the same rules, but be cautious as that file contains important rule prompts.<br/>
                         <br/>
                         This way we can release updates with new prompts definitions for new events, and your customized prompts will
-                        always overwrite vanilla ones.
+                        always overwrite vanilla ones!
                     </div>
                 </li>
 
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">Disabling command action functions</div>
-                        Just create the file functions_custom.php (top level dir, same directory level as conf.php), and just redeclare
-                        there enabled functions array.Example:
+                        Create the file functions_custom.php <i>\\wsl.localhost\DwemerAI4Skyrim3\var\www\html\HerikaServer\conf</i>, and just redeclare
+                        the enabled functions array. An example:
 
                         <pre><code class="language-php">$ENABLED_FUNCTIONS=[
     'Inspect',
@@ -121,6 +167,18 @@ $PROMPTS["combatend"]=[
     'SetCurrentTask'
 ];
 </code></pre>
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">Other Useful Tips</div>
+                        <ul>
+                            <li>You can manually edit events, diaries and memories under <b>Server Actions</b> - <b>Database Manager</b> <b><a class="icon-link" href="https://www.nexusmods.com/skyrimspecialedition/articles/7439" target="_blank">Quick Guide</a></b></li>
+                            <li>You can easily upload custom NPC profiles <b><a class="icon-link" href="/HerikaServer/ui/npc_upload.php" target="_blank">here</a></b></li>
+                            <li>Use the <b>Troubleshooting</b> menu to test LLM/TTS/STT/ITT services before using them ingame.
+                            <li><b>Loading older or new saves can delete memories and events!</b> This is to prevent time paradoxes. You can backup and restore the database to manage multiple saves under <b>Server Actions</b>.
+                        </ul>
                     </div>
                 </li>
             </ol>
