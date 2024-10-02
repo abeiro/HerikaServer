@@ -261,7 +261,7 @@ foreach ($quickstartConf as $pname => $parms) {
     } else if ($parms["type"] == "select") {
         if ($pname == "TTSFUNCTION") {
             $parms["values"] = ["melotts","xtts-fastapi"];
-            $parms["description"] = "Select either MeloTTS or XTTS. You can install XTTS under Tools/Components/NVIDIA GPU.<br><b>We recommend MeloTTS for most users.<b><br>Make sure you have installed the voice files!";
+            $parms["description"] = "Select either MeloTTS or XTTS. You can install XTTS under Tools/Components/NVIDIA GPU in the DwemerDistro folder.<br><b>We recommend MeloTTS for most users.<b><br>Make sure you have installed the voice files!";
         }
     
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
@@ -331,6 +331,12 @@ echo '<div class="btn-group-custom text-center">
         <p class="warning-text2">
     After you click <b>Save</b> we <b>HIGHLY RECOMMEND</b> to open the Troubleshooting menu and run the LLM/AI, TTS and STT tests to verify everything is setup correctly.
 </p>
+<div class="btn-group-custom text-center">
+    <p class="warning-text3">
+        Please also check out the <a href="/HerikaServer/ui/index.php?notes=true">AI-FF 101</a> guide and the <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm">AI-FF Manual</a> for more info on how to make the most out of this mod!
+    </p>
+</div>
+
 
 
 <button
