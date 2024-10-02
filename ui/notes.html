@@ -1,13 +1,13 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col">
-            <h4 class="my-2"><strong>Read these notes, they will help improve your experience!</strong></h4>
+            <h4 class="my-2"><strong>AI-FF 101 Guide</strong></h4>
 
             <ol class="list-group list-group-numbered">
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">The AI's are not deterministic!</div>
-                        Meaning the same input does not always produce the same result. Therefore, despite numerous tests, sometimes the AI will not respond as expected.
+                        <b>The same input does not always produce the same result!</b> Therefore the AI will not always respond as expected.
                         Different Large Language Models (LLM) will provide different outputs, not all are designed for role-playing. Smaller models will not have as much
                         accurate information about Tamriel and will often hallucinate.
                     </div>
@@ -18,13 +18,35 @@
                         <div class="fw-bold">Error Phrases</div>
                         Your AI followers will say certain phrases for when there is an error with the AI generation. It is a good idea to check the "AI Log" page for more information.
                         <ul>
-                            <li>"Didn't hear you, can you repeat?" = There is an error connecting to your LLM service</li>
-                            <li>"Be quiet, I'm having a flashback, give me a minute" = To many request being sent to your LLM service</li>
-                            <li>"I can't think clearly now..." = You broke OpenAI's useage policy (how naughty)</li>
+                            <li>"Didn't hear you, can you repeat?" = There is an error connecting to your LLM service.</li>
+                            <li>"Be quiet, I'm having a flashback, give me a minute" = To many request being sent to your LLM service.</li>
+                            <li>"I can't think clearly now..." = You broke OpenAI's useage policy (how naughty).</li>
                           </ul>
                     </div>
                 </li>
 
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">You must use a JSON LLM!</div>
+                        It allows us to force programmatic output from the AI which allow memories, animations, moods, multi-group conversations, etc to even work.
+                        If you have no idea what an <i>"Instruct/JSON"</i> model is we recommend to use <b>meta-llama/llama-3-70b-instruct</b> or any <b>ChatGPT model</b>.
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">How Profiles Work</div>
+                        <ul>
+                            <li><b>It's important to configure the default profile before adding followers to the framework.</b></li>
+                            <li>Each time a follower is added, it will inherit the default profile values.</li>
+                            <li>After this, the NPC name will be automatically filled and a new profile will appear in the drop down menu (you may need to refresh the interface).</li>
+                            <li>By configuring the default profile properly, you ensure that new followers have the appropriate settings from the start.</li>
+                            <li>When adding a new follower, the default profile will be copied over but with a different character name and personality profile.</li>
+                            <li>Leave the default profile named  as “The Narrator”.
+                            </li>
+                        </ul>
+                    </div>
+                </li>
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">How to adjust the AI prompts</div>
