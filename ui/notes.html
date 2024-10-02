@@ -1,15 +1,84 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col">
-            <h4 class="my-2"><strong>Read these notes, they will help improve your experience!</strong></h4>
+            <h4 class="my-2"><strong>AI-FF 101 Quick Guide</strong></h4>
 
             <ol class="list-group list-group-numbered">
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">The AI's are not deterministic!</div>
-                        Meaning the same input does not always produce the same result. Therefore, despite numerous tests, sometimes the AI will not respond as expected.
+                        <b>The same input does not always produce the same result!</b> Therefore the AI will not always respond as expected.
                         Different Large Language Models (LLM) will provide different outputs, not all are designed for role-playing. Smaller models will not have as much
                         accurate information about Tamriel and will often hallucinate.
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">You must use a JSON LLM!</div>
+                        It allows us to force programmatic output from the AI which allow memories, animations, moods, multi-group conversations, etc to even work.
+                        If you have no idea what an <i>"Instruct/JSON"</i> model is we recommend to use <b>meta-llama/llama-3-70b-instruct</b> or any <b>ChatGPT model</b>.
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">AI Command List </div>
+                            <ul>
+                                <li>Inspect NPC</li>
+                                <li>Inspect Surroundings</li>
+                                <li>Move To (Short distance travel)</li>
+                                <li>Travel To (Long distance travel)</li>
+                                <li>Attack</li>
+                                <li>Open Inventory</li>
+                                <li>Check Inventory</li>
+                                <li>Sheathe Weapon</li>
+                                <li>Take A Seat</li>
+                                <li>Read Quest Journal</li>
+                                <li>Increase Walk Speed</li>
+                                <li>Decrease Walk Speed</li>
+                                <li>Set Current Task</li>
+                                <li>Wait Here</li>
+                                <li>Stop Walking</li>
+                                <li>Stop/Relax (Will hard stop any AI actions)</li>
+                            </ul>
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">AI Awareness</div>
+                        <ul>
+                            <li>Combat Encounters</li>
+                            <li>Dialogue (traditional and AI spoken)</li>
+                            <li>Time/Date</li>
+                            <li>Weather</li>
+                            <li>Location (including modded location)</li>
+                            <li>Quests (including modded quests)</li>
+                            <li>Player Statistics</li>
+                            <li>Items Acquired</li>
+                            <li>Equipment</li>
+                            <li>Memories</li>
+                            <li>Diary Entries</li>
+                            <li>Books</li>
+                            <li>Who was present during events (You can keep secrets from AI NPCs!)</li>
+                        </ul>
+                        
+                    </div>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">How Profiles Work</div>
+                        <ul>
+                            <li><b>It's important to configure the default profile before adding followers to the framework.</b></li>
+                            <li>Each time a follower is added, it will inherit the default profile values.</li>
+                            <li>After this, the NPC name will be automatically filled and a new profile will appear in the drop down menu (you may need to refresh the interface).</li>
+                            <li>By configuring the default profile properly, you ensure that new followers have the appropriate settings from the start.</li>
+                            <li>When adding a new follower, the default profile will be copied over but with a different character name and personality profile.</li>
+                            <li>You can use the "Copy to All Profiles" button to make changes to all profiles.
+                            </li>
+                        </ul>
                     </div>
                 </li>
 
@@ -18,17 +87,17 @@
                         <div class="fw-bold">Error Phrases</div>
                         Your AI followers will say certain phrases for when there is an error with the AI generation. It is a good idea to check the "AI Log" page for more information.
                         <ul>
-                            <li>"Didn't hear you, can you repeat?" = There is an error connecting to your LLM service</li>
-                            <li>"Be quiet, I'm having a flashback, give me a minute" = To many request being sent to your LLM service</li>
-                            <li>"I can't think clearly now..." = You broke OpenAI's useage policy (how naughty)</li>
-                          </ul>
+                            <li>"Didn't hear you, can you repeat?" = There is an error connecting to your LLM service.</li>
+                            <li>"Be quiet, I'm having a flashback, give me a minute" = To many request being sent to your LLM service.</li>
+                            <li>"I can't think clearly now..." = You broke OpenAI's useage policy (how naughty).</li>
+                        </ul>
                     </div>
                 </li>
 
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">How to adjust the AI prompts</div>
-                        Create the files prompts_custom.php and command_prompt_custom.php. Look at the variables defined in the original
+                        You find the prompts files at <i>\\wsl.localhost\DwemerAI4Skyrim3\var\www\html\HerikaServer\prompts</i>. Create the files <b>prompts_custom.php</b> and <b>command_prompt_custom.php</b>. Look at the variables defined in the original
                         prompts.php and command_prompt.php, and redefine them in their respective custom files. Example:
 
                         <pre><code class="language-php">// We have this in prompts.php
@@ -44,7 +113,7 @@
 </code>
                         </pre>
 
-                        We can write in prompts_custom.php this new definition:
+                        We can edit the prompts_custom.php with this new definition:
 
                         <pre><code class="language-php">
 // $TEMPLATE_DIALOG is at prompts.php and is the standard cue. Cue is the last instruction sent to LLM. If cue is an array, a random cue will be choosen from
@@ -65,18 +134,18 @@ $PROMPTS["combatend"]=[
                         
 
 
-                        command_prompt_custom.php follow the same rules, but be cautious as that file contains important rule prompts.<br/>
+                        The command_prompt_custom.php file also follows the same rules, but be cautious as that file contains important rule prompts.<br/>
                         <br/>
                         This way we can release updates with new prompts definitions for new events, and your customized prompts will
-                        always overwrite vanilla ones.
+                        always overwrite vanilla ones!
                     </div>
                 </li>
 
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">Disabling command action functions</div>
-                        Just create the file functions_custom.php (top level dir, same directory level as conf.php), and just redeclare
-                        there enabled functions array.Example:
+                        Create the file functions_custom.php <i>\\wsl.localhost\DwemerAI4Skyrim3\var\www\html\HerikaServer\conf</i>, and just redeclare
+                        the enabled functions array. An example:
 
                         <pre><code class="language-php">$ENABLED_FUNCTIONS=[
     'Inspect',
@@ -100,16 +169,36 @@ $PROMPTS["combatend"]=[
 </code></pre>
                     </div>
                 </li>
+
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">Other Useful Tips</div>
+                        <ul>
+                            <li>You can manually edit events, diaries and memories under <b>Server Actions</b> - <b>Database Manager</b> <b><a class="icon-link" href="https://www.nexusmods.com/skyrimspecialedition/articles/7439" target="_blank">Quick Guide</a></b></li>
+                            <li>You can easily upload custom NPC profiles <b><a class="icon-link" href="/HerikaServer/ui/npc_upload.php" target="_blank">here</a></b></li>
+                            <li>Use the <b>Troubleshooting</b> menu to test LLM/TTS/STT/ITT services before using them ingame.
+                            <li><b>Loading older or new saves can delete memories and events!</b> This is to prevent time paradoxes. You can backup and restore the database to manage multiple saves under <b>Server Actions</b>.
+                        </ul>
+                    </div>
+                </li>
             </ol>
         </div>
     </div>
 
     <h4 class="my-3">
         For more info or help join our Discord:
-        <a class="icon-link" href="https://discord.com/invite/NDn9qud2ug">
+        <a class="icon-link" href="https://discord.com/invite/NDn9qud2ug" target="_blank">
             https://discord.com/invite/NDn9qud2ug <i class='bi-discord'></i>
         </a>
+        <br>
+        <br>
+        Also check out our manual:
+        <a class="icon-link" href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">
+            AI-FF Manual
+        </a>
     </h4>
+
+
 
     <h4 class="my-3" style="line-height:20px;vertical-align:middle;">Have fun! And remember, it's Herika, not <img src="images/Haruka.png" alt="Haruka" style="vertical-align:bottom;"></h4>
 </div>
