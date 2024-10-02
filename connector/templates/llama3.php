@@ -1,6 +1,8 @@
 <?php
 
 $GLOBALS["more_stopseq"][]="<|end_of_text|>";
+$GLOBALS["more_stopseq"][]="<end_of_turn>"; // Meta-Llama-3.1-8B-Instruct-GGUF
+
 $context="<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n{$GLOBALS["PROMPT_HEAD"]}\n";
 $context.="{$GLOBALS["HERIKA_PERS"]}\n";
 $context.="{$GLOBALS["COMMAND_PROMPT"]}\n#CONTEXT\n";

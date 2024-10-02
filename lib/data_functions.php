@@ -1666,6 +1666,8 @@ function isOk($arr) {
 function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
 
     global $db; 
+
+    sleep(1);
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($npcname);
 

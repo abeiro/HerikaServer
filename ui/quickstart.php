@@ -362,7 +362,7 @@ echo '<div class="btn-group-custom text-center">
     onclick=\'
         formSubmitting = true;
         document.getElementById("top").target = "_self"; /* Ensures submission in the same tab */
-        document.getElementById("top").action = "tools/conf_writer.php?save=true&sc=" + getAnchorNH();
+        document.getElementById("top").action = "tools/conf_writer.php?save=true&incomplete=true&sc=" + getAnchorNH();
         document.getElementById("top").submit();
     \'
 >

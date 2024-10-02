@@ -266,9 +266,9 @@ $TTS["STYLETTSV2"]["diffusion_steps"]=15;	//From 5 - Since the sampler is ancest
 $TTS["STYLETTSV2"]["embedding_scale"]=1.5;	//From 0.0 to 1.0 - This is the classifier-free guidance scale. The higher the scale, the more conditional the style is to the input text and hence more emotional.
 
 
-$TTS["MELOTTS"]["endpoint"]='http://127.0.0.1:7860';
-$TTS["MELOTTS"]["voiceid"]='EN-US';
+$TTS["MELOTTS"]["endpoint"]='http://127.0.0.1:8084';
+$TTS["MELOTTS"]["voiceid"]='malenord';
 $TTS["MELOTTS"]["language"]='EN';
-$TTS["MELOTTS"]["speed"]=1.2;
+$TTS["MELOTTS"]["speed"]=1.0;
 
 ?>
