@@ -188,6 +188,25 @@ if (!$existsColumn[0]["npc_name"]) {
     echo '<script>alert("A patch (neiva follower) has been applied to Database")</script>';
 }
 
+$query = "SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'conversations_summaries' AND column_name = 'conversationid'";
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["conversationid"]) {
+    $db->execQuery('CREATE TABLE public.conversations_summaries (
+    conversationid uuid NOT NULL,
+    summary text NOT NULL,
+    participants text NOT NULL,
+    PRIMARY KEY (conversationid)
+);
+
+ALTER TABLE public.conversations_summaries OWNER TO dwemer;');
+
+    $db->execQuery('ALTER TABLE "speech" ADD COLUMN "conversationid" UUID, ADD COLUMN summarized BOOLEAN DEFAULT FALSE');
+
+    echo '<script>alert("Added table conversations_summaries and columns conversationid and summarized to speech")</script>';
+}
+
 
 $query = "
     SELECT column_name 
