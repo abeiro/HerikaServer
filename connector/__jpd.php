@@ -399,22 +399,15 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-```json
-{
-"character": "The Narrator",
-"listener": "Volkur",
-"mood": "smug",
-"action": None,
-"target": None,
-"message": "Intrigued, are we? What a surprise. Perhaps you've finally realized how fascinating it is to be a mere pawn in my game."
-}
-```
+{"character": "Faendal", "listener": "min", "mood": "passionate", "action": "StimulateWithVibratorMedium","target": "min", "message":"Let me add some extra stimulation to drive you truly wild with ecstasy as our tongues intertwine..
+ I'm going to turn up the vibrations just enough to push you to the brink without sending you over the edge quite yet.. savour the building pleasure!"}
+{"character": "Faendal", "listener": "min", "mood": "passionate", "action": 
 EOIN;
-
 //$res= __jpd__extractContentBetweenBraces($FATA);
 //echo $res;
 
 print_r(__jpd_decode_lazy($FATA));
 */
+
 
 ?>
