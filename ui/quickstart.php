@@ -261,7 +261,7 @@ foreach ($quickstartConf as $pname => $parms) {
     } else if ($parms["type"] == "select") {
         if ($pname == "TTSFUNCTION") {
             $parms["values"] = ["melotts","xtts-fastapi"];
-            $parms["description"] = "Select either MeloTTS or XTTS. You can install XTTS under Tools/Components/NVIDIA GPU in the DwemerDistro folder.<br><b>We recommend MeloTTS for most users.<b><br>Make sure you have installed the voice files!";
+            $parms["description"] = "Select either MeloTTS or XTTS. <br>You can install MeloTTS under Tools/Components/AMD or NVIDIA GPU in the DwemerDistro folder if you have not already.<br> You can install XTTS under Tools/Components/NVIDIA GPU in the DwemerDistro folder. <br><b>We recommend MeloTTS for most users.</b>";
         }
     
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
@@ -302,9 +302,9 @@ foreach ($quickstartConf as $pname => $parms) {
         if ($pname == "CONNECTOR openrouter API_KEY") {
             $parms["description"] = "Copy and Paste THE EXACT SAME OpenRouter API Key. <i>Yes we need to do it 2 times.</i>";
         } elseif ($pname == "CONNECTOR openrouterjson API_KEY") {
-            $parms["description"] = "Copy and Paste your OpenRouter API Key <br><a href='https://openrouter.ai/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
+            $parms["description"] = "Copy and Paste your OpenRouter API Key. <br><a href='https://openrouter.ai/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
         } elseif ($pname == "STT WHISPER API_KEY") {
-        $parms["description"] = "Copy and Paste your OpenAI API Key <br><a href='https://platform.openai.com/docs/overview/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
+        $parms["description"] = "Copy and Paste your OpenAI API Key. If you do not plan to use your microphone you can skip this. <br><a href='https://platform.openai.com/docs/overview/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
         }
         echo "<div class='input-group'>";
         echo "<input type='text' class='form-control' id='$jsid' name='" . htmlspecialchars($fieldName) . "' value='" . htmlspecialchars($fieldValue) . "' style='filter: blur(3px);' $FORCE_DISABLED>";
@@ -333,7 +333,7 @@ echo '<div class="btn-group-custom text-center">
 </p>
 <div class="btn-group-custom text-center">
     <p class="warning-text3">
-        Also check out the <a href="/HerikaServer/ui/index.php?notes=true">AI-FF 101</a> guide and the <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm">AI-FF Manual</a> to learn how to make the most out of this mod!
+        Also check out the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank">AI-FF 101</a> guide and the <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">AI-FF Manual</a> to learn how to make the most out of this mod!
     </p>
 </div>
 
