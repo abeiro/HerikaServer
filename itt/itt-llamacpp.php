@@ -37,6 +37,7 @@ function itt($file,$hints)
             'method' => 'POST',
             'header' => implode("\r\n", $headers),
             'content' => $jsonData,
+            'timeout'=>120
         ],
     ]);
 
