@@ -37,6 +37,7 @@ function itt($file,$hints)
             'method' => 'POST',
             'header' => implode("\r\n", $headers),
             'content' => $jsonData,
+            'timeout'=>120
         ],
     ]);
 
@@ -44,10 +45,10 @@ function itt($file,$hints)
     $url = $GLOBALS["ITT"]["LLAMACPP"]["URL"]."/completion";
 
     // Perform the HTTP POST request
-    $response = file_get_contents($url, false, $context);
+    $responseRaw = file_get_contents($url, false, $context);
     
 
-    $response=json_decode($response,true);
+    $response=json_decode($responseRaw,true);
     if ($db) {
      $db->insert(
             'log',
@@ -62,7 +63,7 @@ function itt($file,$hints)
         );
     }
     return $response["content"];
-
+    error_log($responseRaw);
 
 }
 ?>

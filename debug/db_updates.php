@@ -217,4 +217,16 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (0.9.7) has been applied to Database")</script>';
 }
 
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'oghma' AND column_name = 'topic'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_infinium.sql"));
+    echo '<script>alert("A patch (oghma_infinium) has been applied to Database")</script>';
+}
 ?>
