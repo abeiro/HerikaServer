@@ -229,4 +229,21 @@ if (!$existsColumn[0]["column_name"]) {
     $db->execQuery(file_get_contents(__DIR__."/../data/oghma_infinium.sql"));
     echo '<script>alert("A patch (oghma_infinium) has been applied to Database")</script>';
 }
+
+$query = "SELECT 1 as bad_syntax_exists  FROM npc_templates WHERE  npc_name LIKE '%' || CHR(39) || '%'";
+
+$existsColumn=$db->fetchAll($query);
+if ($existsColumn[0]["bad_syntax_exists"]) {
+    $data = $db->fetchAll("SELECT npc_name FROM npc_templates WHERE npc_name LIKE '%' || CHR(39) || '%'");
+        
+    foreach ($data as $n=>$element) {
+        $currentName=$element["npc_name"];
+        $codename=strtr(strtolower(trim($currentName)),[" "=>"_","'"=>"+"]);
+        $cn=$db->escape($codename);
+        $on=$db->escape($currentName);
+        $db->execQuery("update npc_templates set npc_name='$cn' where npc_name='$on'");
+
+    }
+    error_log("Silent npc_name patch applied");
+}
 ?>
