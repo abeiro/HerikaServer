@@ -311,7 +311,7 @@ pg_close($conn);
 
 <div class="indent5">
     <h1>NPC Biography Upload</h1>
-    <h3><strong>Make sure that NPC names with spaces are replaced with underscores _ and lowercase</strong></h3>
+    <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
     <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
 
     <?php
@@ -347,5 +347,6 @@ pg_close($conn);
     </form>
 </div>
 <p> You can verify that NPC data has been uploaded successfully by going to <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b></p>
+<p> All uploaded biographies will be saved into the npc_templates_custom table. This overwrites any entries in the regular table.</p>
 </body>
 </html>
