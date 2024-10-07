@@ -65,7 +65,7 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROF
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>AI Follower Framework - NPC Biography Upload</title>
+    <title>Oghma Topic Upload</title>
     <style>
         /* Updated CSS for Dark Grey Background Theme */
         body {
@@ -106,7 +106,6 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROF
             font-size: 14px; /* Sets a readable font size */
         }
 
-
         input[type="submit"] {
             background-color: #007bff;
             border: none;
@@ -122,7 +121,6 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROF
         input[type="submit"]:hover {
             background-color: #0056b3; /* Darker shade on hover */
         }
-
 
         .message {
             background-color: #444444; /* Darker background for messages */
@@ -186,23 +184,19 @@ if (!$conn) {
 
 // Check if the individual form has been submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual'])) {
-    $npc_name = strtolower(trim($_POST['npc_name'] ?? ''));
-    $npc_pers = $_POST['npc_pers'] ?? '';
+    $topic = strtolower(trim($_POST['topic'] ?? ''));
+    $topic_desc = $_POST['topic_desc'] ?? '';
 
-    if (!empty($npc_name) && !empty($npc_pers)) {
-        // Set npc_misc to an empty string to avoid NULL
-        $npc_misc = '';
-
+    if (!empty($topic) && !empty($topic_desc)) {
         // Prepare and execute the INSERT statement with ON CONFLICT
         $query = "
-            INSERT INTO $schema.npc_templates_custom (npc_name, npc_pers, npc_misc)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (npc_name)
+            INSERT INTO $schema.oghma (topic, topic_desc)
+            VALUES ($1, $2)
+            ON CONFLICT (topic)
             DO UPDATE SET
-                npc_pers = EXCLUDED.npc_pers,
-                npc_misc = EXCLUDED.npc_misc;
+                topic_desc = EXCLUDED.topic_desc;
         ";
-        $result = pg_query_params($conn, $query, array($npc_name, $npc_pers, $npc_misc));
+        $result = pg_query_params($conn, $query, array($topic, $topic_desc));
 
         if ($result) {
             $message .= "<p>Data inserted successfully!</p>";
@@ -236,27 +230,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                 // Process each row in the CSV
                 $rowCount = 0;
                 while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                    // Assuming CSV columns are in order: npc_name, npc_pers
-                    $npc_name = strtolower(trim($data[0]));
-                    $npc_pers = trim($data[1]);
-                    $npc_misc = '';
+                    // Assuming CSV columns are in order: topic, topic_desc
+                    $topic = strtolower(trim($data[0]));
+                    $topic_desc = trim($data[1]);
 
-                    if (!empty($npc_name) && !empty($npc_pers)) {
+                    if (!empty($topic) && !empty($topic_desc)) {
                         // Prepare and execute the INSERT statement with ON CONFLICT
                         $query = "
-                            INSERT INTO $schema.npc_templates_custom (npc_name, npc_pers, npc_misc)
-                            VALUES ($1, $2, $3)
-                            ON CONFLICT (npc_name)
+                            INSERT INTO $schema.oghma (topic, topic_desc)
+                            VALUES ($1, $2)
+                            ON CONFLICT (topic)
                             DO UPDATE SET
-                                npc_pers = EXCLUDED.npc_pers,
-                                npc_misc = EXCLUDED.npc_misc;
+                                topic_desc = EXCLUDED.topic_desc;
                         ";
-                        $result = pg_query_params($conn, $query, array($npc_name, $npc_pers, $npc_misc));
+                        $result = pg_query_params($conn, $query, array($topic, $topic_desc));
 
                         if ($result) {
                             $rowCount++;
                         } else {
-                            $message .= "<p>Error processing row with npc_name '$npc_name': " . pg_last_error($conn) . "</p>";
+                            $message .= "<p>Error processing row with topic '$topic': " . pg_last_error($conn) . "</p>";
                         }
                     } else {
                         $message .= "<p>Skipping empty or invalid row in CSV.</p>";
@@ -279,20 +271,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
 // Handle the download request for the example CSV
 if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
     // Define the path to the example CSV file
-    $filePath = realpath(__DIR__ . '/../data/example_bios_format.csv');
+    $filePath = realpath(__DIR__ . '/../data/oghma_example.csv');
 
     if (file_exists($filePath)) {
         // Set headers to initiate file download
         header('Content-Description: File Transfer');
         header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="example.csv"');
+        header('Content-Disposition: attachment; filename="oghma_example.csv"');
         header('Expires: 0');
         header('Cache-Control: must-revalidate');
         header('Pragma: public');
         header('Content-Length: ' . filesize($filePath));
 
         // Clear output buffering to avoid any additional output
-        ob_end_clean();
+        if (ob_get_length()) ob_end_clean();
         flush();
 
         // Read the file and send it to the output buffer
@@ -310,10 +302,12 @@ pg_close($conn);
 ?>
 
 <div class="indent5">
-    <h1>NPC Biography Upload</h1>
-    <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
-    <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
-
+    <h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Entry Upload</h1>
+    <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
+    <p>We recommend to keep entries limited to "generic household knowledge" as ALL NPC's will have access to all entries.</p>
+    <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
+    <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
+    <p>There is no format restriction for the description.</p>
     <?php
     if (!empty($message)) {
         echo '<div class="message">';
@@ -322,17 +316,16 @@ pg_close($conn);
     }
     ?>
 
-    <h2>Single NPC Upload</h2>
+    <h2>Single Topic Upload</h2>
     <form action="" method="post">
-        <label for="npc_name">NPC Name:</label>
-        <input type="text" name="npc_name" id="npc_name" required>
+        <label for="topic">Topic:</label>
+        <input type="text" name="topic" id="topic" required>
 
-        <label for="npc_pers">NPC Personality:</label>
-        <textarea name="npc_pers" id="npc_pers" rows="5" required></textarea>
+        <label for="topic_desc">Topic Description:</label>
+        <textarea name="topic_desc" id="topic_desc" rows="5" required></textarea>
 
         <input type="submit" name="submit_individual" value="Submit">
     </form>
-
 
     <h2>Batch Upload</h2>
     <form action="" method="post" enctype="multipart/form-data">
@@ -346,7 +339,7 @@ pg_close($conn);
         <input type="submit" value="Download Example CSV">
     </form>
 </div>
-<p> You can verify that NPC data has been uploaded successfully by going to <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b></p>
-<p> All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
+<p>You can verify that the entry has been uploaded successfully by navigating to <b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
+<p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
 </body>
 </html>
