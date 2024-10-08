@@ -21,7 +21,7 @@ if (isset($_POST["profile"])) {
 $md5name=md5($_POST["HERIKA_NAME"]);
 if (basename($_SESSION["PROFILE"])=="conf_{$md5name}.php") {
     @unlink($_SESSION["PROFILE"]);
-    echo '<script>alert("Config file '.basename($_SESSION["PROFILE"]).' ('.$_POST["HERIKA_NAME"].') has been deleted");parent.location.href="../conf_wizard.php?ts='.(time()."#".$_GET["sc"]).'"</script>';
+    echo '<script>alert("Config file '.basename($_SESSION["PROFILE"]).' ('.addslashes($_POST["HERIKA_NAME"]).') has been deleted");parent.location.href="../conf_wizard.php?ts='.(time()."#".$_GET["sc"]).'"</script>';
 } else if (basename($_SESSION["PROFILE"])=="conf.php")  {
     echo '<script>alert("Default profile cannot be deleted")</script>';
 
