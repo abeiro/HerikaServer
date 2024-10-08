@@ -70,8 +70,8 @@ function reqSend() {
   var urlDataRaw='inputtext|'+document.getElementById('gamets').value+'|'+timestampInSeconds+'|'+
     document.getElementById('playerName').value+': '+document.getElementById('inputText').value;
   var urlData = btoa(urlDataRaw);
-  document.getElementById('gamets').value=parseInt(document.getElementById('gamets').value)+1;
-  document.getElementById('last_gamets').value=parseInt(timestampInSeconds)+1;
+  document.getElementById('gamets').value=parseInt(document.getElementById('gamets').value)+10;
+  document.getElementById('last_gamets').value=parseInt(timestampInSeconds)+10;
 
   // Configure the request
   if (profile)
@@ -103,7 +103,7 @@ function reqSend() {
 }
 
 function logChat(chatline) {
-
+  return;
   var xhr = new XMLHttpRequest();
 
   var unescapedString = chatline.replace(/\\'/g, "'");

@@ -107,7 +107,7 @@ $gameRequest = explode("|", $receivedData);
 
 
 // Lock to avoid TTS hangs
-if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setconf")) {
+if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setconf")&&($gameRequest[0]!="request")) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     while (sem_acquire($semaphore,true)!=true)  {
