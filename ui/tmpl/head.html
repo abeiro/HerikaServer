@@ -279,11 +279,23 @@
             function copyToAllprofiles(name,jsid) {
                 console.log(name)
                 var ok=false;
-                ele=document.querySelector("input[name='"+name+"']");
-                if (ele) {
+
+                ele=document.querySelectorAll("input[name='"+name+"']");
+                if (ele && ele.length>1) {
+                    ele = document.querySelector("input[name='" + name + "']:checked");
                     console.log(ele.value);
                     ok=true;
                     formData={"name":name,"value":ele.value}
+                }
+
+                if (!ok) {
+                    ele=document.querySelector("input[name='"+name+"']");
+                    if (ele) {
+                        debugger;
+                        console.log(ele.value);
+                        ok=true;
+                        formData={"name":name,"value":ele.value}
+                    }
                 }
 
                 if (!ok) {

@@ -2,7 +2,7 @@
 // Start the session to handle any messages if needed
 session_start();
 
-$enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+$enginePath = __DIR__ . DIRECTORY_SEPARATOR .  ".." . DIRECTORY_SEPARATOR;
 
 // Database connection details
 $host = 'localhost';

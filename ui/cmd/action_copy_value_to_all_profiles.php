@@ -44,9 +44,15 @@ if ($method === 'POST') {
             }
 
             $value=$jsonDataInput["value"];
+            error_log(print_r($jsonDataInput,true));
             $new_php_code="";
             if (!is_array($value))
-                $new_php_code.="$result='".addslashes($value)."';".PHP_EOL;
+                if ($value=='false')
+                    $new_php_code.="$result=false;".PHP_EOL;
+                else if ($value=='true')
+                    $new_php_code.="$result=true;".PHP_EOL;
+                else
+                    $new_php_code.="$result='".addslashes($value)."';".PHP_EOL;
             else {
                 $vv=[];
                 foreach ($value as $v) {

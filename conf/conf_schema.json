@@ -135,8 +135,8 @@
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
       "_title":"MeloTTS (Installed in DwemerDistro)",
-      "endpoint":{"type":"url","description":"Endpoint URL. Do not change!","helpurl":"https://github.com/myshell-ai/MeloTTS"},
-      "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model"},
+      "endpoint":{"type":"url","description":"Endpoint URL. Should be 'http://127.0.0.1:8084' if using default installation","helpurl":"https://github.com/myshell-ai/MeloTTS"},
+      "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model. Should be EN if using default installation"},
       "speed":{"type":"number","description":"Speech Speed"},
       "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.", "helpurl":"https://en.uesp.net/wiki/Category:Skyrim-VoiceTypes"}
     },

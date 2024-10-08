@@ -18,6 +18,8 @@ class connector
     private $_buffer;
     private $_stopProc;
     public $_extractedbuffer;
+    private $_rawbuffer;
+    private $_forcedClose=false;
 
     public function __construct()
     {
@@ -132,7 +134,7 @@ class connector
       
         
         $contextDataOrig=array_values($contextData);
-        
+        $lastrole="";
         $assistantAppearedInhistory=false;
         foreach ($contextDataOrig as $n=>$element) {
             
@@ -140,16 +142,32 @@ class connector
             if ($n>=(sizeof($contextDataOrig)-2)) {
                 // Last element
                 $pb["user"].=$element["content"];
+                $contextDataCopy[]=$element;
                 
             } else {
+
+                if ($lastrole=="assistant" && $lastrole!=$element["role"]) {
+                    $contextDataCopy[]=[
+                        "role"=>"assistant",
+                        "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"$lastTargetBuffer\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($assistantRoleBuffer)."\"}"
+                        
+                    ];
+                    $lastTargetBuffer="";
+                    $assistantRoleBuffer="";
+                    $lastrole=$element["role"];
+                }
+
                 if ($element["role"]=="system") {
                     
                     $pb["system"]=$element["content"]."\nThis is the script history for this story\n#CONTEXT_HISTORY\n";
+                    $contextDataCopy[]=$element;
                     
                 } else if ($element["role"]=="user") {
                     if (empty($element["content"])) {
-                        unset($contextData[$n]);
-                    }
+                        error_log("Empty element[content]".__FILE__." ".__LINE__);
+                        //unset($contextData[$n]);
+                    } else
+                        $contextDataCopy[]=$element;
                     
                     $pb["system"].=trim($element["content"])."\n";
                     
@@ -182,18 +200,22 @@ class connector
                     } else {
                         $alreadyJs=json_decode($element["content"],true);
                         if (is_array($alreadyJs)) {
-                            $contextData[$n]=[
+                            $contextDataCopy[]=[
                                     "role"=>"assistant",
                                     "content"=>json_encode($alreadyJs)
                                 ];
                             
                         } else {
+                            //error_log("#### ".$element["content"]);
                             $pb["system"].=$element["content"]."\n";
                             $dialogueTarget=extractDialogueTarget($element["content"]);
                             // Trying to provide examples
-                            if (false) {
-                                                                
+                            if (true) {
+                                $assistantRoleBuffer.=$dialogueTarget["cleanedString"];                                
+                                $lastTargetBuffer=$dialogueTarget["target"];
+                                unset($contextData[$n]);
                             } else {
+                                
                                 $contextData[$n]=[
                                         "role"=>"assistant",
                                         "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
@@ -207,20 +229,32 @@ class connector
                     
                         if (!empty($element["content"])) {
                             $pb["system"].=$element["content"]."\n";
-                            $contextData[$n]=[
+                            $contextDataCopy[]=[
                                     "role"=>"user",
                                     "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName)".strtr($lastAction,["#RESULT#"=>$element["content"]]),
                                     
                                 ];
                                 
                             $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
-                        } else
-                            unset($contextData[$n]);
+                        } else {
+                            ;
+                            //unset($contextData[$n]);
+                        }
                             
                 }
+                
             }
+
+            
+
+            // 
+            $lastrole=$element["role"];
         }
         
+
+        $contextData=$contextDataCopy;
+
+        //print_r($contextData);
         $contextData2=[];
         $contextData2[]= ["role"=>"system","content"=>$pb["system"]];
         $contextData2[]= ["role"=>"user","content"=>$pb["user"]];
@@ -289,6 +323,7 @@ class connector
          $data["min_p"]=$GLOBALS["CONNECTOR"][$this->name]["min_p"]+0;
          $data["top_a"]=$GLOBALS["CONNECTOR"][$this->name]["top_a"]+0;
          $data["top_k"]=$GLOBALS["CONNECTOR"][$this->name]["top_k"]+0;
+         $data["top_p"]=$GLOBALS["CONNECTOR"][$this->name]["top_p"]+0;
          
          if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
             $data["response_format"]=["type"=>"json_object"];
@@ -345,7 +380,7 @@ class connector
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+                'timeout' => 30
             )
         );
 
@@ -379,8 +414,8 @@ class connector
         }
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
-
-        
+        $this->_rawbuffer="";
+        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." START\n\n", FILE_APPEND);
         return true;
 
 
@@ -394,14 +429,34 @@ class connector
 
         static $numOutputTokens=0;
 
-        $line = fgets($this->primary_handler);
+        if (!isset($GLOBALS["patch_openrouter_timeout"]))
+            $GLOBALS["patch_openrouter_timeout"]=time();
+
+        if ($this->isDone()) {//  Didn't output anything?
+            if (empty(trim($this->_buffer))) {
+                $line="";    
+                error_log("LLM didn't output anything");
+            }
+        } else {
+            if ((time()-$GLOBALS["patch_openrouter_timeout"])>60) {
+                $this->_rawbuffer.="Error, timeout when receiving data from LLM";
+                error_log("Error, timeout when receiving data from LLM");
+                $this->_forcedClose=true;
+                
+                return;
+            }
+            //error_log("Performing fgets(this->primary_handler) START {$GLOBALS["patch_openrouter_timeout"]}");
+            $line = fgets($this->primary_handler);
+            //error_log("Performing fgets(this->primary_handler) DONE {$GLOBALS["patch_openrouter_timeout"]}");
+        }
+        
         $buffer="";
         $totalBuffer="";
         $finalData="";
         $mangledBuffer="";
         
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
-
+        $this->_rawbuffer.=$line;
         $data=json_decode(substr($line, 6), true);
         if (isset($data["choices"][0]["delta"]["content"])) {
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
@@ -475,7 +530,18 @@ class connector
 
         fclose($this->primary_handler);
         
-        file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
+        if (empty(trim($this->_buffer))) {
+
+            if ($GLOBALS["db"]) {
+                $GLOBALS["db"]->insert(
+                'audit_request',
+                    array(
+                        'request' => $this->_dataSent,
+                        'result' => $this->_rawbuffer
+                    ));
+            }
+        }
+        file_put_contents(__DIR__."/../log/output_from_llm.log","{$this->_buffer}\n\n".date(DATE_ATOM)." END\n==\n", FILE_APPEND);
 
 
     }
@@ -561,6 +627,8 @@ class connector
 
     public function isDone()
     {
+        if ($this->_forcedClose)
+            return true;
         return feof($this->primary_handler);
     }
 

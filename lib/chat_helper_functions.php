@@ -450,12 +450,13 @@ function returnLines($lines,$writeOutput=true)
                 
                 $listenerFix2=explode(",",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix2) && (sizeof($listenerFix2)>1)) {
-                    $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix[0];
+                    error_log("Applying listenerFix2");
+                    $GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[0]);
                 }
                 
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
                 $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
-                file_put_contents(__DIR__."/../log/ouput_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
+                file_put_contents(__DIR__."/../log/output_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
             }
             else
                 echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
@@ -1030,7 +1031,11 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        }  else
+        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)>0.05) {
+            
+            $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
+            
+        } else
             return "";
     } else
         return "";

@@ -250,7 +250,14 @@ function __jpd_decode_lazy($inputString) {
         }
     }
     
-    
+    if (strpos($inputString,'(')===0) {
+
+        $realData = __jpd_decode_lazy(strtr($inputString,['('=>'{',')'=>'}']), true);    // COMMON meta-llama/llama-3-8b-instruct erros
+        if (is_array($realData)) {
+            $result=returnObject($realData);
+            return $result;
+        }
+    }
         
     $re = '/\{.*\}$/m';
 
@@ -399,15 +406,13 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-{"character": "Faendal", "listener": "min", "mood": "passionate", "action": "StimulateWithVibratorMedium","target": "min", "message":"Let me add some extra stimulation to drive you truly wild with ecstasy as our tongues intertwine..
- I'm going to turn up the vibrations just enough to push you to the brink without sending you over the edge quite yet.. savour the building pleasure!"}
-{"character": "Faendal", "listener": "min", "mood": "passionate", "action": 
+("character": "Jenassa", "listener": "Volkur", "mood": "assertive", "action": "Attack", "target": "bandit", "message": "On it. But don't expect me to go easy on them.")
 EOIN;
 //$res= __jpd__extractContentBetweenBraces($FATA);
 //echo $res;
 
 print_r(__jpd_decode_lazy($FATA));
-*/
 
+*/
 
 ?>

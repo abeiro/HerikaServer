@@ -8,6 +8,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     $now=time();
     $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
+    $db->delete("eventlog", "type='playerinfo'");
     //$db->delete("quests", "1=1");
     $db->delete("speech", "gamets>{$gameRequest[2]}  ");
     $db->delete("speech", "localts>$now ");

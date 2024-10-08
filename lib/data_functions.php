@@ -451,7 +451,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     
     $results = $db->fetchAll($query);
 
-    //error_log($query);
+    error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;
@@ -584,7 +584,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         
         if (($lastSpeaker == $speaker) && ($speaker == "assistant") && $row["type"]!="logaction") {
             $buffer[] = $rowData;
-        } if (($lastSpeaker == $speaker) && $row["type"]=="itemfound") {
+        } else if (($lastSpeaker == $speaker) && $row["type"]=="itemfound") {
             $buffer[] = $rowData;
         } else {
             if (sizeof($buffer) > 0) {
@@ -620,22 +620,42 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $buffer));
     
     // Compact Herika's lines
+    $lastrole="";
+    $bufferHerika="";
+    
+    
     foreach ($lastDialogFull as $n => $line) {
-        if ($line["role"] == "assistant") {
-            $pattern = "/\([^)]*Context location[^)]*\)/";
+        if (($line["role"] == "assistant")) {
+            $isJson=json_decode($line["content"],true);
+            if (is_array($isJson)) {
+                $lastDialogFullCopy[]=$line;
+                continue;
+            }
+            $pattern = "/\([^)]*Context location[^)]*\)/"; 
             $cleanedText = trim(preg_replace($pattern, "", $line["content"])); // Remove context location always for assistant
             // This breaks with spaces?
-            //$re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
-            //$subst = "";
-            //$cleanedText = preg_replace($re, $subst, $cleanedText);
+            $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
+            $subst = "";
+            $cleanedText = preg_replace($re, $subst, $cleanedText);
             
             
             $cleanedText = removeTalkingToOccurrences($cleanedText);
             
-            $lastDialogFull[$n]["content"] = $cleanedText;
-        }
+            $bufferHerika.=$cleanedText;
+        } else {
+            if ($lastrole=="assistant") {
+                $lastDialogFullCopy[] = ["role"=>"assistant","content"=>$bufferHerika];
+                $bufferHerika="";
+            }
+            $lastDialogFullCopy[]=$line;
+        } 
 
+        
+        
+        $lastrole=$line["role"];
     }
+    
+    $lastDialogFull=$lastDialogFullCopy;
 
     // Replace player for user.
     foreach ($lastDialogFull as $n => $line) {
@@ -1376,7 +1396,9 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                     
-        
+        $pattern = '/\(talking to [^()]+\)/i';
+        $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+
         $keywords=file_get_contents("http://127.0.0.1:8082/extract?text=".urlencode($TEST_TEXT));
         $reponse=json_decode($keywords,true);
         
@@ -1437,7 +1459,9 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                     
-        
+        $pattern = '/\(talking to [^()]+\)/i';
+        $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+
         $keywords=hashtagifySentences($TEST_TEXT);
         $kw=[];
         

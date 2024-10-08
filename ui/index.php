@@ -292,6 +292,7 @@ include("tmpl/navbar.php");
             if (file_exists($pluginFoldersRoot.$folder.DIRECTORY_SEPARATOR."manifest.json")) {
                 $manifest=json_decode(file_get_contents($pluginFoldersRoot.$folder.DIRECTORY_SEPARATOR."manifest.json"),true);
                 $description=$manifest["description"];
+                $description=$manifest["config_url"];
             }
             else
                 $description="description not available";
