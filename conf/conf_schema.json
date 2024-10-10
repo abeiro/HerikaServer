@@ -138,7 +138,7 @@
       "endpoint":{"type":"url","description":"Endpoint URL. Should be 'http://127.0.0.1:8084' if using default installation","helpurl":"https://github.com/myshell-ai/MeloTTS"},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model. Should be EN if using default installation"},
       "speed":{"type":"number","description":"Speech Speed"},
-      "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.", "helpurl":"https://en.uesp.net/wiki/Category:Skyrim-VoiceTypes"}
+      "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.21ics3hex54a"}
     },
     "XTTSFASTAPI": {
       "_title":"XTTSv2 Fast-API (Installed in DwemerDistro)",
