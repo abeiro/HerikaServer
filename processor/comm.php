@@ -414,8 +414,8 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     $db->insert(
         'conf_opts',
         array(
-                'id' => $db->escape($vars[0]),
-                'value' => $db->escape($vars[1])
+                'id' => $vars[0],
+                'value' => $vars[1]
             )
     );
     
