@@ -231,6 +231,9 @@ if (is_array($currentParty)) {
     $GLOBALS["IS_NPC"]=false;
 
 // RECHAT PRE MANAGMENT
+
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
+
 if (in_array($gameRequest[0],["rechat"]) ) {
     //die();
     //RECHAT. Must choose if we continue conversation or no.
