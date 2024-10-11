@@ -1765,5 +1765,22 @@ function getConfFileFor($npcname) {
     
 }
 
+function requireFilesRecursively($dir,$name) {
+    $files = scandir($dir);
+    foreach ($files as $file) {
+        if ($file === '.' || $file === '..') {
+            continue;
+        }
+
+        $path = $dir . '/' . $file;
+
+        if (is_dir($path)) {
+            requireFilesRecursively($path,$name);
+        } elseif (is_file($path) && $file === $name) {
+            require_once($path);
+        } 
+    }
+}
+
 ?>
 
