@@ -119,7 +119,8 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 {$GLOBALS["PLAYER_NAME"]} is the player.
 {$row["companions"]} are {$GLOBALS["PLAYER_NAME"]}'s followers/companions.
 You must write {$GLOBALS["PLAYER_NAME"]} memories by analyzing chat history.
-Pay attention to details that can change character's behaviour, feelings,also tag names and locations
+Pay attention to details that can change character's behaviour, feelings,also tag names and locations.
+{$GLOBALS["SUMMARY_PROMPT"]}
 ");
                 
                 $prompt[] = array('role' => 'user', 'content' =>"

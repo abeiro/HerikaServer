@@ -276,4 +276,6 @@ $TTS["MELOTTS"]["voiceid"]='malenord';
 $TTS["MELOTTS"]["language"]='EN';
 $TTS["MELOTTS"]["speed"]=1.0;
 
+$SUMMARY_PROMPT='';
+
 ?>
