@@ -136,10 +136,12 @@ class connector
         $contextDataOrig=array_values($contextData);
         $lastrole="";
         $assistantAppearedInhistory=false;
+        $lastTargetBuffer="";
+        $assistantRoleBuffer="";
         foreach ($contextDataOrig as $n=>$element) {
             
             
-            if ($n>=(sizeof($contextDataOrig)-2)) {
+            if ($n>=(sizeof($contextDataOrig)-1)) {
                 // Last element
                 $pb["user"].=$element["content"];
                 $contextDataCopy[]=$element;
