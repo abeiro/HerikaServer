@@ -500,9 +500,13 @@ if ($gameRequest[0] == "funcret") {
 
     // Won't use  functions.
     // $prompt and $contextData will be created
-    $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
-
-    $contextData = array_merge($head, ($contextDataFull), $prompt);
+    if (!empty($request) && $request != "") {
+        $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
+        $contextData = array_merge($head, ($contextDataFull), $prompt);
+    }
+    else {
+        $contextData = array_merge($head, ($contextDataFull));
+    }
 
 
 }  else {
