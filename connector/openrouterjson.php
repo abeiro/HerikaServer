@@ -530,7 +530,7 @@ class connector
 
         fclose($this->primary_handler);
         
-        if (empty(trim($this->_buffer))) {
+        if (($this->_buffer==null) || (empty(trim($this->_buffer))) ) {
 
             if ($GLOBALS["db"]) {
                 $GLOBALS["db"]->insert(
