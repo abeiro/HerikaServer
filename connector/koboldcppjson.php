@@ -359,8 +359,12 @@ class connector
                         return "";
                     }
                 }
-                
-                $mangledBuffer = str_replace($this->_extractedbuffer, "", $partialResult[0]["message"]);
+                // workaround for some LLMs that return an array of strings for the dialogue in the JSON response.
+                if (is_array($partialResult[0]["message"])) {
+                    $mangledBuffer = str_replace($this->_extractedbuffer, "", implode(" ",$partialResult[0]["message"]));
+                } else {
+                    $mangledBuffer = str_replace($this->_extractedbuffer, "", $partialResult[0]["message"]);
+                }
                 // echo "*{$this->_jsonBuffer}".PHP_EOL;
                 $this->_extractedbuffer=$partialResult[0]["message"];
                 if (isset($partialResult[0]["listener"])) {
