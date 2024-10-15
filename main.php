@@ -97,13 +97,16 @@ $GLOBALS["SCRIPTLINE_ANIMATION"]="";
 MAIN FLOW
 ***********************/
 
+$gameRequest = explode("|", $receivedData);
+
+
 $startTime = microtime(true);
 error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " ({$gameRequest[0]}) started: ".$startTime);
+$GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
-$gameRequest = explode("|", $receivedData);
 
 
 // Lock to avoid TTS hangs
