@@ -4,7 +4,7 @@
 /* Definitions and main includes */
 error_reporting(E_ALL);
 
-define("STOPALL_MAGIC_WORD", "/safe\s*stop/i");
+define("STOPALL_MAGIC_WORD", "/halt/i");
 
 define("MAXIMUM_SENTENCE_SIZE", 125);
 define("MINIMUM_SENTENCE_SIZE", 50);
