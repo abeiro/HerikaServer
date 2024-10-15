@@ -66,7 +66,7 @@ class connector
         if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
             $contextData[]= [
                 'role' => 'user', 
-                'content' => "{$prefix}Use this JSON object to give your answer: ".json_encode([
+                'content' => "{$prefix} Use '*Speech Style'. Use this JSON object to give your answer : ".json_encode([
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                     "mood"=>implode("|",$moods),
@@ -80,7 +80,7 @@ class connector
         } else {
             $contextData[]= [
                 'role' => 'user', 
-                'content' => "{$prefix}Use this JSON object to give your answer: ".json_encode([
+                'content' => "{$prefix} Use '*Speech Style'.Use this JSON object to give your answer : ".json_encode([
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                     "mood"=>implode("|",$moods),
@@ -124,7 +124,7 @@ class connector
         foreach ($contextDataOrig as $n=>$element) {
             
             
-            if ($n>=(sizeof($contextDataOrig)-2)) {
+            if ($n>=(sizeof($contextDataOrig)-1)) {
                 // Last element
                 $pb["user"].=$element["content"];
                 

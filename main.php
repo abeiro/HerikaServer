@@ -98,7 +98,7 @@ MAIN FLOW
 ***********************/
 
 $startTime = microtime(true);
-error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " started: ".$startTime);
+error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " ({$gameRequest[0]}) started: ".$startTime);
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
@@ -450,7 +450,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $memoryInjectionCtx=[]; // Disable memorie when command.
             $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
             $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-        }
+        } 
     }
 
     $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];

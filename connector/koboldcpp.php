@@ -236,6 +236,18 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         }
 
 
+        if (isset($GLOBALS["PATCH_KOBOLDCPP_GRAMMAR"])) {
+
+            unset($postData["grammar"]);
+
+        }
+
+        if (isset($GLOBALS["PATCH_KOBOLDCPP_STOPSEQ"])) {
+
+            unset($postData["stop_sequence"]);
+
+        }
+
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==null) {
                 unset($postData["max_length"]);
@@ -342,11 +354,13 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         if (!$data)
             return "";
         
-        if (strpos($line, 'data: {"token": "{') !== false) {
-            $this->_jsonBuffer.=$data["token"];
-            $this->_jsonMode=true;
-            return "";
+        if (!isset($GLOBALS["PATCH_KOBOLDCPP_JSON_OLD"])) {
+            if (strpos($line, 'data: {"token": "{') !== false) {
+                $this->_jsonBuffer.=$data["token"];
+                $this->_jsonMode=true;
+                return "";
 
+            }
         }
 
          /*
