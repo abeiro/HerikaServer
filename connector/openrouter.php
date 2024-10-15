@@ -149,7 +149,8 @@ class connector
 
         $data=json_decode(substr($line, 6), true);
         if (isset($data["choices"][0]["delta"]["content"])) {
-            if (strlen(trim($data["choices"][0]["delta"]["content"]))>0) {
+            //if (strlen(trim($data["choices"][0]["delta"]["content"]))>0) {
+            if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
                 $buffer.=$data["choices"][0]["delta"]["content"];
                 //$numOutputTokens += 1;
 
