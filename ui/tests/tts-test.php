@@ -16,6 +16,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+requireFilesRecursively($enginePath . "ext".DIRECTORY_SEPARATOR,"globals.php");
 
 if (isset($_SESSION["PROFILE"])) {
     require_once($_SESSION["PROFILE"]);
