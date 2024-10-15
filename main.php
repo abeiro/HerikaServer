@@ -19,7 +19,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.ph
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
-
+requireFilesRecursively($path . "ext".DIRECTORY_SEPARATOR,"globals.php");
 
 
 // PARSE GET RESPONSE into $gameRequest
