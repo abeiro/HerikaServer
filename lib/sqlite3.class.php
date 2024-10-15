@@ -44,6 +44,10 @@ class sql
         foreach ($data as $key => $value) {
             if (in_array($key, ["gamets","localts","input_tokens","total_tokens_so_far","output_tokens","gamets_truncated","n"])) {
                 $type=SQLITE3_INTEGER;
+            } elseif ($key === "summarized") {
+                // For boolean values, map true/false to 1/0
+                $type = PDO::PARAM_BOOL;
+                $value = $value ? 1 : 0;
             } else {
                 $type=SQLITE3_TEXT;
             }
