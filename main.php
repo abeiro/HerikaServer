@@ -110,7 +110,8 @@ $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 
 
 // Lock to avoid TTS hangs
-if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setConf")&&($gameRequest[0]!="request")) {
+if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setConf")&&($gameRequest[0]!="request")
+    &&($gameRequest[0]!="addnpc")) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     while (sem_acquire($semaphore,true)!=true)  {
