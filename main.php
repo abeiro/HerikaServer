@@ -4,6 +4,8 @@
 /* Definitions and main includes */
 error_reporting(E_ALL);
 
+define("STOPALL_MAGIC_WORD", "/halt/i");
+
 define("MAXIMUM_SENTENCE_SIZE", 125);
 define("MINIMUM_SENTENCE_SIZE", 50);
 
@@ -306,13 +308,11 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
 /*
  Safe stop
 */
-
-if (stripos($gameRequest[3], "stop") !== false) {
+if (preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {  
     echo "{$GLOBALS["HERIKA_NAME"]}|command|StopAll@\r\n";
     @ob_flush();
     $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|StopAll@\r\n")] = "Herika|command|StopAll@\r\n";
 }
-
 
 if (!isset($GLOBALS["CACHE_PEOPLE"])) {
     $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
