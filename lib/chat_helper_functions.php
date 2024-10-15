@@ -343,71 +343,75 @@ function returnLines($lines,$writeOutput=true)
         $responseTextUnmooded = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseTextUnmooded);	// Should not happen
 
         $responseText = $responseTextUnmooded;
-
+        $ttsOutput = null;
 
         if ($responseText) {
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
 
                 require_once(__DIR__."/../tts/tts-azure.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
 
                 require_once(__DIR__."/../tts/tts-mimic3.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=ttsMimic($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=ttsMimic($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
 
                 require_once(__DIR__."/../tts/tts-11labs.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
 
                 require_once(__DIR__."/../tts/tts-gcp.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
 
                 require_once(__DIR__."/../tts/tts-coqui-ai.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
 
                 require_once(__DIR__."/../tts/tts-xvasynth.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
 
                 require_once(__DIR__."/../tts/tts-openai.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
 
                 require_once(__DIR__."/../tts/tts-convai.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
 
                 require_once(__DIR__."/../tts/tts-xtts.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
 
                 require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
 
                 require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
 
             } else {
                 if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
                     require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
-                    $GLOBALS["TRACK"]["FILES_GENERATED"][]=tts($responseTextUnmooded, $mood, $responseText);
+                    $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
                 }
             }
-            
+            if (!$ttsOutput) {
+                if (isset($GLOBALS["TTS_FALLBACK_FNCT"]))
+                    $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseTextUnmooded, $mood, $responseText);
+            }
+            $GLOBALS["TRACK"]["FILES_GENERATED"][] = $ttsOutput;
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
             }
