@@ -56,8 +56,9 @@ function tts($textString, $mood , $stringforhash) {
 	$context = stream_context_create($options);
 
     $url="{$GLOBALS["TTS"]["MELOTTS"]["endpoint"]}/tts";
-    $result = file_get_contents($url, false, $context);
     error_log(print_r($options,true));
+
+    $result = file_get_contents($url, false, $context);
     // Handle the response
     if ($result !== false ) {
         $response = $result;
