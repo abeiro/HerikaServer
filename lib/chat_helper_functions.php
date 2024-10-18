@@ -273,8 +273,12 @@ function returnLines($lines,$writeOutput=true)
 
         $sentence=$output;
 
-        //$output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
-        $output = preg_replace('/\*(\w+\s+\w+.*)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+        if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
+            $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
+        }
+        else {
+            $output = preg_replace('/\*(\w+\s+\w+.*)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+        }
         $sentence=$output;
         $output = strtr($sentence,[
                         "*Smirks*"=>"","*smirks*"=>"",
