@@ -278,4 +278,8 @@ $TTS["MELOTTS"]["speed"]=1.0;
 
 $SUMMARY_PROMPT='';
 
+$TTSFUNCTION_PLAYER="none";
+$TTSFUNCTION_PLAYER_VOICE="malenord";
+
+
 ?>

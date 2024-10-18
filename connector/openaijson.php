@@ -59,7 +59,7 @@ class connector
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         } else {
-            ;
+            $prefix="";
             //$prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         }
         
@@ -124,62 +124,128 @@ class connector
         foreach ($contextDataOrig as $n=>$element) {
             
             
-            if ($n>=(sizeof($contextDataOrig)-1)) {
+            if ($n>=(sizeof($contextDataOrig)-1) && $element["role"]!="tool") {
                 // Last element
                 $pb["user"].=$element["content"];
+                $contextDataCopy[]=$element;
                 
             } else {
+
+                if ($lastrole=="assistant" && $lastrole!=$element["role"] && $element["role"]!="tool" ) {
+                    $contextDataCopy[]=[
+                        "role"=>"assistant",
+                        "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"$lastTargetBuffer\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($assistantRoleBuffer)."\"}"
+                        
+                    ];
+                    $lastTargetBuffer="";
+                    $assistantRoleBuffer="";
+                    $lastrole=$element["role"];
+                }
+
                 if ($element["role"]=="system") {
                     
                     $pb["system"]=$element["content"]."\nThis is the script history for this story\n#CONTEXT_HISTORY\n";
+                    $contextDataCopy[]=$element;
                     
                 } else if ($element["role"]=="user") {
                     if (empty($element["content"])) {
-                        unset($contextData[$n]);
-                    }
+                        error_log("Empty element[content]".__FILE__." ".__LINE__);
+                        //unset($contextData[$n]);
+                    } else
+                        $contextDataCopy[]=$element;
                     
                     $pb["system"].=trim($element["content"])."\n";
                     
                 } else if ($element["role"]=="assistant") {
-                    
+                    $assistantAppearedInhistory=true;
                     if (isset($element["tool_calls"])) {
                         $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
                         $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
-                        
+                        $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
                         $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
                                         "#TARGET#"=>current($localArguments),
                                         ]);
                         
+                        $contextDataCopy[]=[
+                                "role"=>"assistant",
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
+                            ];
+                            
+                        $gameRequestCopy=$GLOBALS["gameRequest"];    
+                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
+                        $gameRequestCopy[0]="logaction";
+                        logEvent($gameRequestCopy);   
+                        
                         unset($contextData[$n]);
-                    } else
-                        $pb["system"].=$element["content"]."\n";
+                    } else {
+                        $alreadyJs=json_decode($element["content"],true);
+                        if (is_array($alreadyJs)) {
+                            $contextDataCopy[]=[
+                                    "role"=>"assistant",
+                                    "content"=>json_encode($alreadyJs)
+                                ];
+                            
+                        } else {
+                            //error_log("#### ".$element["content"]);
+                            $pb["system"].=$element["content"]."\n";
+                            $dialogueTarget=extractDialogueTarget($element["content"]);
+                            // Trying to provide examples
+                            if (true) {
+                                $assistantRoleBuffer.=$dialogueTarget["cleanedString"];                                
+                                $lastTargetBuffer=$dialogueTarget["target"];
+                                unset($contextData[$n]);
+                            } else {
+                                
+                                $contextData[$n]=[
+                                        "role"=>"assistant",
+                                        "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
+                                        
+                                    ];
+                            }
+                        }
+                    }
                     
                 } else if ($element["role"]=="tool") {
                     
-                     if (!empty($element["content"])) {
+                        if (!empty($element["content"])) {
                             $pb["system"].=$element["content"]."\n";
-                            if (strpos($element["content"],"Error")===false) {
-                                $contextData[$n]=[
-                                        "role"=>"user",
-                                        "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
-                                        
-                                    ];
+                            
+                           
+                            if (strpos($element["content"],"Error")===0) {
+                                $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
+                                $contextDataCopy[]=[
+                                    "role"=>"user",
+                                    "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName). {$GLOBALS["PATCH_STORE_FUNC_RES"]}"
                                     
-                                $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                                ];
                             } else {
-                                $contextData[$n]=[
-                                        "role"=>"user",
-                                        "content"=>"The Narrator: NOTE, cannot go to that place:".current($localArguments),
-                                        
+                                
+                                $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                                $contextDataCopy[]=[
+                                    "role"=>"user",
+                                    "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName). {$GLOBALS["PATCH_STORE_FUNC_RES"]} ",
+                                    
                                 ];
                             }
-                        } else
-                            unset($contextData[$n]);
+                        } else {
+                            ;
+                            //unset($contextData[$n]);
+                        }
+                            
                 }
+                
             }
+
+            
+
+            // 
+            $lastrole=$element["role"];
         }
+        
+        $contextData=$contextDataCopy;
+
         
         $contextData2=[];
         $contextData2[]= ["role"=>"system","content"=>$pb["system"]];

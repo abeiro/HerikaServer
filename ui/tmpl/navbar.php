@@ -150,7 +150,9 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Plugins</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href='index.php?plugins_show=true'>Installed Plugins</a></li>
+                    <span title="Touch only if you know what you are doing" style="display: inline-block;    width: 100%;    text-align: center;    font-style: italic;    border-bottom: 1px solid grey;">Development</span>
                     <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
+                    <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Requests logs</a></li>
                 </ul>
             </li>
 

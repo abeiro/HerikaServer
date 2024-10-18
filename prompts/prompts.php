@@ -230,7 +230,11 @@ $PROMPTS=array(
     "rpg_word"=>[ 
         "cue"=>["Comment/ask about the new word learned by {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
 
-    ]
+    ],
+    "instruction"=>[ 
+        "cue"=>["$TEMPLATE_DIALOG"],
+        "player_request"=>["The Narrator:  {$gameRequest[3]}"],
+    ],
 );
 
 

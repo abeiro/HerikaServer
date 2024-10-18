@@ -91,7 +91,15 @@ function tts($textString, $mood , $stringforhash)
         $voice = $doc->createElement("voice");
         //$voice->setAttribute( "xml:lang" , "en-us" );
         $voice->setAttribute("xml:gender", "Female");
-        $voice->setAttribute("name", $GLOBALS["TTS"]["AZURE"]["voice"]); // Read https://learn.microsoft.com/es-es/azure/cognitive-services/speech-service/language-support?tabs=tts
+
+        $voiceId=$GLOBALS["TTS"]["AZURE"]["voice"];
+
+        if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
+			$voiceId=$GLOBALS["PATCH_OVERRIDE_VOICE"];
+
+        
+
+        $voice->setAttribute("name", $voiceId); // Read https://learn.microsoft.com/es-es/azure/cognitive-services/speech-service/language-support?tabs=tts
 
         $text = $doc->createTextNode($textString);
 

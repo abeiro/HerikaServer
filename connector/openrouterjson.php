@@ -141,14 +141,14 @@ class connector
         foreach ($contextDataOrig as $n=>$element) {
             
             
-            if ($n>=(sizeof($contextDataOrig)-1)) {
+            if ($n>=(sizeof($contextDataOrig)-1) && $element["role"]!="tool") {
                 // Last element
                 $pb["user"].=$element["content"];
                 $contextDataCopy[]=$element;
                 
             } else {
 
-                if ($lastrole=="assistant" && $lastrole!=$element["role"]) {
+                if ($lastrole=="assistant" && $lastrole!=$element["role"] && $element["role"]!="tool" ) {
                     $contextDataCopy[]=[
                         "role"=>"assistant",
                         "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"$lastTargetBuffer\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($assistantRoleBuffer)."\"}"
@@ -185,16 +185,13 @@ class connector
                                         "#TARGET#"=>current($localArguments),
                                         ]);
                         
-                        $contextData[$n]=[
+                        $contextDataCopy[]=[
                                 "role"=>"assistant",
-                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", 
-                                \"action\": \"$lastActionName\", 
-                                \"target\": \"".current($localArguments)."\", \"message\": \"\"}"
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
                             ];
                             
                         $gameRequestCopy=$GLOBALS["gameRequest"];    
-                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", 
-                        \"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
+                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
                         $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
                         
@@ -231,13 +228,24 @@ class connector
                     
                         if (!empty($element["content"])) {
                             $pb["system"].=$element["content"]."\n";
-                            $contextDataCopy[]=[
+                            
+                           
+                            if (strpos($element["content"],"Error")===0) {
+                                $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
+                                $contextDataCopy[]=[
                                     "role"=>"user",
-                                    "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName)".strtr($lastAction,["#RESULT#"=>$element["content"]]),
+                                    "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName). {$GLOBALS["PATCH_STORE_FUNC_RES"]}"
                                     
                                 ];
+                            } else {
                                 
-                            $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                                $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
+                                $contextDataCopy[]=[
+                                    "role"=>"user",
+                                    "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName). {$GLOBALS["PATCH_STORE_FUNC_RES"]} ",
+                                    
+                                ];
+                            }
                         } else {
                             ;
                             //unset($contextData[$n]);

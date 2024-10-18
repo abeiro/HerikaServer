@@ -8,6 +8,7 @@ $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib".DIRECTORY_SEPARATOR."fuz_convert.php"); // API KEY must be there
+require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 
 if (strpos($_GET["oname"],".fuz"))  {
     $ext="fuz";

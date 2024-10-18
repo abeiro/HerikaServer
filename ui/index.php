@@ -32,7 +32,12 @@ foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as 
 }
 
 if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
+    if (file_exists($_SESSION["PROFILE"]))
+        require_once($_SESSION["PROFILE"]);
+    else {
+        $_SESSION["PROFILE"]="$configFilepath/conf.php";
+        
+    }
 
 } else
     $_SESSION["PROFILE"]="$configFilepath/conf.php";
@@ -254,6 +259,11 @@ include("tmpl/navbar.php");
         print_array_as_table($results);
     } 
 
+    if ($_GET["table"] == "audit_request") {
+        $results = $db->fetchAll("select  SUBSTRING(request,1,150) as request,result,created_at,rowid FROM audit_request A order by created_at desc limit 50 offset 0");
+        echo "<h3 class='my-2'>Request to LLM services Log</h3><span>Go to database manager, table audit_request for full detail</span>";
+        print_array_as_table($results);
+    } 
 
     if ($_GET["table"] == "openai_token_count") {
         $results = $db->fetchAll("select  A.*,ROWID FROM openai_token_count A order by rowid desc limit 150 offset 0");
