@@ -18,6 +18,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     $db->delete("diarylog", "localts>$now ");
     $db->delete("books", "gamets>{$gameRequest[2]}  ");
     $db->delete("books", "localts>$now ");
+    $db->delete("responselog", " 1=1 ");
 
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
         $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");
@@ -371,6 +372,7 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
         $lastSave=$lastSaveHistory[0]["ts"];
         
         $db->delete("eventlog", "gamets>$lastSave ");
+        
         $db->delete("speech", "gamets>$lastSave  ");
         $db->delete("currentmission", "gamets>$lastSave  ");
         $db->delete("diarylog", "gamets>$lastSave  ");
@@ -430,14 +432,12 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
 
     
 } elseif (strpos($gameRequest[0], "addnpc")===0) {    // info_whatever commands
-
     logEvent($gameRequest);
     
-
-    AddFirstTimeMet($gameRequest[3], $momentum, $gameRequest[2],$gameRequest[1]);
+    if (!profile_exists($gameRequest[3]))
+        AddFirstTimeMet($gameRequest[3], $momentum, $gameRequest[2],$gameRequest[1]);
 
     createProfile($gameRequest[3],[],false);
-    
     
     $MUST_END=true;
     

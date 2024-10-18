@@ -4,7 +4,10 @@
 
 	$returnFunction = explode("@", $gameRequest[3]); // Function returns here
 
-	$functionLocaleName=getFunctionTrlName($functionCodeName);
+	
+	$functionLocaleName=getFunctionTrlName($returnFunction[1]);
+	
+	$functionCodeName=$functionLocaleName;
 
 	$useFunctionsAgain = false;
 	
@@ -132,6 +135,8 @@
 
 	$contextData = array_merge($head, ($contextDataFull), $functionCalled, $returnFunctionArray);
 	
+	file_put_contents(__DIR__."/../log/context_for_{$GLOBALS["HERIKA_NAME"]}_after_func.txt",print_r($contextData,true));
+
 	if ($useFunctionsAgain) {
 		$GLOBALS["FUNCTIONS_ARE_ENABLED"]=true;
 		$GLOBALS["FUNCTIONS"];

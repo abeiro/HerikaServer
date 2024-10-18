@@ -442,8 +442,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     end||a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc'and  type<>'infonpc'  
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf'
+    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  
     ".(($actorEscaped)?" and people like '|%$actorEscaped%|' ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
@@ -451,7 +451,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     
     $results = $db->fetchAll($query);
 
-    error_log($query);
+    // error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;
@@ -586,6 +586,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $buffer[] = $rowData;
         } else if (($lastSpeaker == $speaker) && $row["type"]=="itemfound") {
             $buffer[] = $rowData;
+        } else if ( $row["type"]=="logaction") {
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => $rowData);
         } else {
             if (sizeof($buffer) > 0) {
                 $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $buffer));
@@ -1272,7 +1274,7 @@ function DataGetCurrentPartyConf() {
     global $db;
 
     $results = $db->fetchAll("select value from conf_opts where id='CurrentParty'");
-    if (is_array($results) && is_array($results[0])) {
+    if (is_array($results) && sizeof($results)>0) {
         $guys=json_decode("[{$results[0]["value"]}\"\"]",true);
         $finalparty=[];
         foreach ($guys as $guy) {
@@ -1667,9 +1669,17 @@ function GetAnimationHex($mood)
         return array_rand(array_flip([$ANIMATIONS["CleanSweat"],$ANIMATIONS["PointClose"],$ANIMATIONS["HandOnChinGesture"]]), 1);
     
         
-    } if ($mood=="neutral") {
+    } else if ($mood=="neutral") {
         return array_rand(array_flip([$ANIMATIONS["HappyDialogue"]]), 1);
         
+        
+    } else if ($mood=="drunk") {
+        // No animation :(
+        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=0.5"';
+        
+    } else if ($mood=="high") {
+        // No animation :(
+        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=1.25"';
         
     }
                             
@@ -1687,11 +1697,19 @@ function isOk($arr) {
     return false;
 }
 
+function profile_exists($npcname) {
+    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+    $newConfFile=md5($npcname);
+    return file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
+}
+
 function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
 
     global $db; 
 
-    sleep(1);
+    if ($npcname=="The Narrator")   // Refuse to add Narrator
+        return;
+
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($npcname);
 
@@ -1708,6 +1726,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
         copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
         
+        chmod($newFile,0777);
         $file_lines = file($newFile);
 
         for ($i = count($file_lines) - 1; $i >= 0; $i--) {
@@ -1743,15 +1762,20 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         copy(DMgetCurrentModelFile(),$path."data/CurrentModel_".md5($npcname).".json");
 
         
-    }
+         // Character Map file
+        if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json")) {
+            
+            $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
+            error_log("Loading character map: ".sizeof($characterMap));
+        }
 
-    // Character Map file
-    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json"))
-        $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
 
+        $characterMap[md5($npcname)]=$npcname;
+        file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
+        
+        }
 
-    $characterMap[md5($npcname)]=$npcname;
-    file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
+   
 }
 
 function getConfFileFor($npcname) {

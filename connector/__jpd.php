@@ -109,6 +109,9 @@ function __jpd_hash($object) {
 
 function __jpd_decode_lazy($inputString) {
  
+    if (!$inputString)
+        return null;
+
     $realData = json_decode($inputString, true);
     if (is_array($realData))
         return $realData;

@@ -533,7 +533,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'SetCurrentTask',
         //'SearchMemory',
         //'StopWalk'
-//        'WaitHere'
+        'WaitHere'
     ];
 } else {
     $GLOBALS["ENABLED_FUNCTIONS"]=[
@@ -554,7 +554,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'ReadQuestJournal',
         'IncreaseWalkSpeed',
         'DecreaseWalkSpeed',
-//        'WaitHere'
+        'WaitHere'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',
