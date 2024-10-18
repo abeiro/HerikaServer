@@ -105,15 +105,16 @@ $gameRequest = explode("|", $receivedData);
 $startTime = microtime(true);
 error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " ({$gameRequest[0]}) started: ".$startTime);
 $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
-//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
-//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
-
+$gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 
 
 // Lock to avoid TTS hangs
-if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setConf")&&($gameRequest[0]!="request")
-    &&($gameRequest[0]!="addnpc")) {
+/*if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setConf")&&($gameRequest[0]!="request")
+/*    &&($gameRequest[0]!="addnpc")&&($gameRequest[0]!="_speech")) {
+*/
+
+if (!in_array($gameRequest[0],["updateprofile","diary","_quest","setconf","request","_speech"])) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     while (sem_acquire($semaphore,true)!=true)  {
@@ -121,12 +122,41 @@ if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameReques
     }
 } 
 
+
 if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
 }
 
 
 $db = new sql();
+
+
+// Player TTS. We overwrite some confs an then restore them.
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+    // Use preg_replace to remove the name and colon before the dialogue
+    $cleaned_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+    error_log($cleaned_dialogue);
+    if ($TTSFUNCTION_PLAYER!="none") {
+        audit_log(__FILE__." ".__LINE__);
+        $GLOBALS["PATCH_OVERRIDE_VOICE"]=$TTSFUNCTION_PLAYER_VOICE;
+        $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;
+        $origTTS=$GLOBALS["TTSFUNCTION"];
+        $origName=$GLOBALS["HERIKA_NAME"];
+
+        $GLOBALS["TTSFUNCTION"]=$GLOBALS["TTSFUNCTION_PLAYER"];
+        $GLOBALS["HERIKA_NAME"]="Player";
+        $ownspeech=returnlines([$cleaned_dialogue]);
+        
+        unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+        $GLOBALS["TTSFUNCTION"]=$origTTS;
+        unset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]);
+        $GLOBALS["HERIKA_NAME"]=$origName;
+        unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
+        audit_log(__FILE__." ".__LINE__);
+
+    }
+}
+
 
 // Profile selection
 if (isset($_GET["profile"])) {
@@ -177,7 +207,6 @@ foreach ($gameRequest as $i => $ele) {
 }
 
 
-$gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 
 // $gameRequest = type of message|localts|gamets|data
 
@@ -217,7 +246,7 @@ if (in_array($gameRequest[0],["bored"])) {
 
 
 // Only allow functions when explicit request
-if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"])) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
@@ -271,7 +300,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc') ";  // Use prechat
+    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','logaction') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
 
 } else
@@ -437,24 +466,26 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
         $TEST_TEXT=strtr($TEST_TEXT,["."=>" "]);
         $command=file_get_contents("http://127.0.0.1:8082/command?text=".urlencode($TEST_TEXT));
-        $preCommand=json_decode($command,true);
-        if ($preCommand["is_command"]!="Talk") {
-            $GLOBALS["db"]->insert(
-                'audit_memory',
-                array(
-                    'input' => $TEST_TEXT,
-                    'keywords' =>'command offered',
-                    'rank_any'=> -1,
-                    'rank_all'=>-1,
-                    'memory'=>$preCommand["is_command"],
-                    'time'=>$preCommand["elapsed_time"]
-                )
-            );
-            error_log("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
-            $memoryInjectionCtx=[]; // Disable memorie when command.
-            $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
-            $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-        } 
+        if ($command) {
+            $preCommand=json_decode($command,true);
+            if ($preCommand["is_command"]!="Talk") {
+                $GLOBALS["db"]->insert(
+                    'audit_memory',
+                    array(
+                        'input' => $TEST_TEXT,
+                        'keywords' =>'command offered',
+                        'rank_any'=> -1,
+                        'rank_all'=>-1,
+                        'memory'=>$preCommand["is_command"],
+                        'time'=>$preCommand["elapsed_time"]
+                    )
+                );
+                error_log("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
+                $memoryInjectionCtx=[]; // Disable memorie when command.
+                $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
+                $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+            } 
+        }
     }
 
     $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
@@ -676,37 +707,38 @@ if ($connectionHandler->primary_handler === false) {
         $totalProcessedData.=trim($buffer);
     }
 
-    if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  // chatgpt smetime trigger actions even when disabled.
+    if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  {
         $actions=$connectionHandler->processActions();
 
-    if (is_array($actions) && (sizeof($actions)>0)) {
-        
-        // ACTION POST-FILTER
-        
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+        if (is_array($actions) && (sizeof($actions)>0)) {
             
-            foreach ($actions as $n=>$action) {
-                $actionParts=explode("|",$action);
-                $actionParts2=explode("@",$actionParts[2]);
+            // ACTION POST-FILTER
+            
+            if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                 
-                if (isset($actionParts2[1])) {
-                    // Parameter part 
-                    if ($actionParts2[0]=="Attack") {
-                        // Lets polish the parammeters
-                        $localtarget=$actionParts2[1];
-                        $mang1=explode(",",$localtarget);
-                        $mang2=explode(" and ",$mang1[0]);
-                        $mang3=explode("(",$mang2[0]);
-                        $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
+                foreach ($actions as $n=>$action) {
+                    $actionParts=explode("|",$action);
+                    $actionParts2=explode("@",$actionParts[2]);
+                    
+                    if (isset($actionParts2[1])) {
+                        // Parameter part 
+                        if ($actionParts2[0]=="Attack") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
+                        }
                     }
                 }
             }
+
+            $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
+            echo implode("\r\n", $actions).PHP_EOL;
+            file_put_contents(__DIR__."/log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
+
         }
-
-        $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
-        echo implode("\r\n", $actions).PHP_EOL;
-        file_put_contents(__DIR__."/log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
-
     }
     $connectionHandler->close();
     //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE

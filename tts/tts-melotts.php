@@ -33,13 +33,22 @@ function tts($textString, $mood , $stringforhash) {
         $lang=$GLOBALS["TTS"]["MELOTTS"]["language"];
 
 
+    
+
     $voice=$GLOBALS["TTS"]["MELOTTS"]["voiceid"];
     
     if (empty($voice))
         $voice=$GLOBALS["TTS"]["MELOTTS"]["voiceid"];
 
-    
-    $speed=$GLOBALS["TTS"]["MELOTTS"]["speed"]+0;
+    if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
+        $voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
+ 
+
+    $speed=$GLOBALS["TTS"]["MELOTTS"]["speed"]+0.01;
+
+
+    if (empty($voice))
+        error_log("Error, voiceid is no set");
 
 
     $finalData =["speaker"=>"$voice","text"=>"$textString","language"=>"EN","speed"=>$speed];
@@ -56,7 +65,9 @@ function tts($textString, $mood , $stringforhash) {
 	$context = stream_context_create($options);
 
     $url="{$GLOBALS["TTS"]["MELOTTS"]["endpoint"]}/tts";
+    
     $result = file_get_contents($url, false, $context);
+    
 
     // Handle the response
     if ($result !== false ) {

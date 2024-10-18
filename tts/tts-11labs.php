@@ -14,7 +14,14 @@ function tts($textString, $mood = "default", $stringforhash) {
 	
 	    $starTime = microtime(true);
 
-		$url = "https://api.elevenlabs.io/v1/text-to-speech/{$GLOBALS["TTS"]["ELEVEN_LABS"]["voice_id"]}?{$GLOBALS["TTS"]["ELEVEN_LABS"]["optimize_streaming_latency"]}=1";
+		
+
+		$voice=$GLOBALS["TTS"]["ELEVEN_LABS"]["voice_id"];
+
+		if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
+			$voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
+
+		$url = "https://api.elevenlabs.io/v1/text-to-speech/{$voice}?{$GLOBALS["TTS"]["ELEVEN_LABS"]["optimize_streaming_latency"]}=1";
 
 		// Request headers
 		$headers = array(

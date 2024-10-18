@@ -12,6 +12,10 @@ function ttsMimic($textString, $mood = "cheerful", $stringforhash='') {
     
     $testP="?text=".urlencode($textString);
     $voiceP="&voice=".urlencode($GLOBALS["TTS"]["MIMIC3"]["voice"]);
+
+    if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
+        $voiceP="&voice=".urlencode($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+
     $noiseScaleP="&noiseScale=0.667";
     $noiseW="&noiseW=0.8";
     $lengthScaleP="&lengthScale=".urlencode($GLOBALS["TTS"]["MIMIC3"]["rate"]);
