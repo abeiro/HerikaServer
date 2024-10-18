@@ -4,7 +4,7 @@ define("_MINIMAL_DISTANCE_TO_BE_THE_SAME", 0.0);
 define("_MAXIMAL_DISTANCE_TO_BE_RELATED", 0.8);
 define("_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE", 3);
 
-
+require_once(__DIR__."/online_translation.php");
 
 function randomReplaceShortWordsWithPoints($inputString, $distance)
 {
@@ -273,18 +273,16 @@ function returnLines($lines,$writeOutput=true)
 
         $sentence=$output;
 
-        //$output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
-        $output = preg_replace('/\*(\w+\s+\w+.*)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+        if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
+            $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
+        }
+        else {
+            $output = preg_replace('/\*(\w+\s+\w+.*)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+        }
         $sentence=$output;
         $output = strtr($sentence,[
                         "*Smirks*"=>"","*smirks*"=>"",
-                        "*smirking*"=>"","*winking*"=>"","*playful*"=>"",
-                        "*winking"=>"","*playful"=>"",
-                        "*laughing*"=>"", "*laughing"=>"",
-                        "*smirking"=>"","*teasing"=>"",
-                        "*assisting*"=>"",
                         "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"",
-                        "*wink"=>"","*smirk*"=>"","*smirk"=>"",
                         "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"",
                         "*pant*"=>"",
                         "*whimper*"=>""
@@ -350,6 +348,10 @@ function returnLines($lines,$writeOutput=true)
 
         $responseText = $responseTextUnmooded;
         $ttsOutput = null;
+
+        // Make translation here on $responseText
+
+        // $responseText=translate($responseTextUnmooded,'ES','EN');
 
         if ($responseText) {
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
@@ -428,13 +430,14 @@ function returnLines($lines,$writeOutput=true)
         $outBuffer = array(
             'localts' => time(),
             'sent' => 1,
-            'text' => trim(preg_replace('/\s\s+/', ' ', $responseTextUnmooded)),
+            'text' => trim(preg_replace('/\s\s+/', ' ', $responseText)),
             'actor' => $GLOBALS["HERIKA_NAME"],
             'action' => "AASPGQuestDialogue2Topic1B1Topic",
             'tag' => (isset($tag) ? $tag : "")
         );
         
-        $GLOBALS["DEBUG"]["BUFFER"][] = "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
+        
+        $GLOBALS["DEBUG"]["BUFFER"][] = "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseText\r\n";
         
         if ($writeOutput) {
             //if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"]) {
@@ -474,40 +477,45 @@ function returnLines($lines,$writeOutput=true)
             @ob_flush();
             @flush();
         }
-        $db->insert(
-            'log',
-            array(
-                'localts' => time(),
-                'prompt' => nl2br(SQLite3::escapeString(json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
-                'response' => (SQLite3::escapeString($responseTextUnmooded)),
-                'url' => nl2br(SQLite3::escapeString("$receivedData [AI secs] $elapsedTimeAI  [TTS secs] $elapsedTimeTTS"))
 
 
-            )
-        );
-        
-        // RECHAT
-        $originalRequest=$GLOBALS["gameRequest"];
-        $originalRequest[0]="prechat";
-        $originalRequest[1]++;
-        $originalRequest[2]++;
-        if ($GLOBALS["SCRIPTLINE_LISTENER"])
-            $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
-        else
-            $addonlistener="";
-        $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
-        logEvent($originalRequest);
-        
-        // Log chat here, because  function return comes back out of sync.
-        $originalRequest[0]="chat";
-        $originalRequest[1]++;
-        $originalRequest[2]++;
-        if ($GLOBALS["SCRIPTLINE_LISTENER"])
-            $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
-        else
-            $addonlistener="";
-        $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
-        logEvent($originalRequest);
+        if (!isset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"])) {
+
+            $db->insert(
+                'log',
+                array(
+                    'localts' => time(),
+                    'prompt' => nl2br(SQLite3::escapeString(json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
+                    'response' => (SQLite3::escapeString($responseTextUnmooded)),
+                    'url' => nl2br(SQLite3::escapeString("$receivedData [AI secs] $elapsedTimeAI  [TTS secs] $elapsedTimeTTS"))
+
+
+                )
+            );
+            
+            // RECHAT
+            $originalRequest=$GLOBALS["gameRequest"];
+            $originalRequest[0]="prechat";
+            $originalRequest[1]++;
+            $originalRequest[2]++;
+            if ($GLOBALS["SCRIPTLINE_LISTENER"])
+                $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
+            else
+                $addonlistener="";
+            $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
+            logEvent($originalRequest);
+            
+            // Log chat here, because  function return comes back out of sync.
+            $originalRequest[0]="chat";
+            $originalRequest[1]++;
+            $originalRequest[2]++;
+            if ($GLOBALS["SCRIPTLINE_LISTENER"])
+                $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
+            else
+                $addonlistener="";
+            $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
+            logEvent($originalRequest);
+        }
         
     }
 
