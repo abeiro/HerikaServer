@@ -49,7 +49,8 @@ function tts($textString, $mood , $stringforhash) {
 
     if (empty($voice))
         error_log("Error, voiceid is no set");
-    
+
+
     $finalData =["speaker"=>"$voice","text"=>"$textString","language"=>"EN","speed"=>$speed];
     //print_r($finalData);
 	
@@ -67,6 +68,7 @@ function tts($textString, $mood , $stringforhash) {
     
     $result = file_get_contents($url, false, $context);
     
+
     // Handle the response
     if ($result !== false ) {
         $response = $result;
