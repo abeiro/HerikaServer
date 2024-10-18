@@ -1,6 +1,6 @@
 <?php
 function translate($message, $toLang, $fromLang = 'EN') {
-    $authKey = '[60c523a1-b103-425a-97f0-08168ce4f673:fx]';  // Replace with your actual DeepL Auth Key
+    $authKey = '';  // Replace with your actual DeepL Auth Key
 
     audit_log(__FILE__." ".__LINE__);
 
