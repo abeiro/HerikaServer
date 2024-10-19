@@ -236,14 +236,14 @@ $CONNECTOR["llamacpp"]["template"]='alpaca';	//Prompt Format. Specified in the H
 $FEATURES["MISC"]["ADD_TIME_MARKS"]=false;
 $FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false;	
 
-$TTS["XVASYNTH"]["url"]='http://172.16.1.128:8008';	//xVASynth must be run in same machine as DwemerDistro, so this must be http://your-local-ip:8008
+$TTS["XVASYNTH"]["url"]='http://192.168.0.1:8008';	//xVASynth must be run in same machine as DwemerDistro, so this must be http://your-local-ip:8008
 $TTS["XVASYNTH"]["base_lang"]='en';	//Base language
 $TTS["XVASYNTH"]["modelType"]='xVAPitch';	//modelType
-$TTS["XVASYNTH"]["model"]='sk_femaleyoungeager';	//Model
+$TTS["XVASYNTH"]["model"]='sk_malenord';	//Model
 $TTS["XVASYNTH"]["pace"]=1.0;	//Pace
 $TTS["XVASYNTH"]["waveglowPath"]='resources/app/models/waveglow_256channels_universal_v4.pt';	//waveglowPath (relative)
 $TTS["XVASYNTH"]["vocoder"]='n/a';	//vocoder
-$TTS["XVASYNTH"]["distroname"]='DwemerAI4Skyrim2';	
+$TTS["XVASYNTH"]["distroname"]='DwemerAI4Skyrim3';	
 
 $TTS["CONVAI"]["endpoint"]='https://api.convai.com/tts';	//End point
 $TTS["CONVAI"]["API_KEY"]='';	//API KEY

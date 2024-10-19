@@ -131,7 +131,7 @@
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","mimic3","azure","11labs","gcp","openai","convai","xtts-fastapi","melotts"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
@@ -153,6 +153,17 @@
       "voice": {"type":"string","description":"Voice code"},
       "rate": {"type":"number","description":"Talk speed"},
       "volume": {"type":"integer","description":"Volume"}
+    },
+    "XVASYNTH": {
+      "_title":"xVASynth (DOES NOT WORK, WORK IN PROGRESS!)",
+      "url":{"type":"url","description":"xVASynth must be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008"},
+      "base_lang":{"type":"string","description":"Base language"},
+      "modelType":{"type":"string","description":"modelType"},
+      "model":{"type":"string","description":"Model"},
+      "pace":{"type":"number","description":"Pace"},
+      "waveglowPath":{"type":"string","description":"waveglowPath (relative)"},
+      "vocoder":{"type":"string","description":"vocoder"},
+      "distroname":{"type":"string","description":"Leave as default!"}
     },
     "AZURE": {
       "_title":"Azure Text-To-Speech",
