@@ -1746,6 +1746,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         file_put_contents($newFile, implode('', $file_lines));
         file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\''.$codename.'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voicetype[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_'.strtolower($voicetype[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         file_put_contents($newFile, '$HERIKA_NAME=\''.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         
         if (is_array($npcTemlate[0]))
