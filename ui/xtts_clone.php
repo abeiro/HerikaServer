@@ -175,6 +175,8 @@ echo '
 <form action="xtts_clone.php" method="POST" enctype="multipart/form-data">
     <h2><b>XTTS Voice Generation</b></h2>
     <br>
+    <h4>This page will not work with Mantella XTTS!</h4>
+    <br>
     <label for="file">Select a .wav file and make sure it is named after the character\'s voice you want to generate.</label>
     <br>
     <label>Examples: herika.wav, lydia.wav, mjoll_the_lioness.wav etc.</label>
