@@ -10,6 +10,20 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.ph
 require_once($path . "lib".DIRECTORY_SEPARATOR."fuz_convert.php"); // API KEY must be there
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 
+
+// Put info into DB asap
+$db=new sql();
+$db->delete("conf_opts", "id='".$db->escape("Voicetype/$codename")."'");
+$db->insert(
+  'conf_opts',
+  array(
+      'id' => $db->escape("Voicetype/$codename"),
+      'value' => $_GET["oname"]
+  )
+);
+$db->close();
+
+
 if (strpos($_GET["oname"],".fuz"))  {
     $ext="fuz";
 } else if (strpos($_GET["oname"],".xwm")) {
@@ -18,9 +32,12 @@ if (strpos($_GET["oname"],".fuz"))  {
   $ext="wav";
 }
 
+$codename = str_replace(" ", "_", mb_strtolower($_GET["codename"], 'UTF-8'));
+$codename = str_replace("'", "+", $codename);
+$already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
 
 
-
+if (!$already) {
 $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["tmp_name"]).".$ext";
 
 
@@ -53,31 +70,21 @@ if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTT
   die("Error");
 }
 
-//$codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
-$codename = str_replace(" ", "_", mb_strtolower($_GET["codename"], 'UTF-8'));
-$codename = str_replace("'", "+", $codename);
-
-$db=new sql();
-$db->delete("conf_opts", "id='".$db->escape("Voicetype/$codename")."'");
-$db->insert(
-  'conf_opts',
-  array(
-      'id' => $db->escape("Voicetype/$codename"),
-      'value' => $_GET["oname"]
-  )
-);
-$db->close();
-
-$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
-
-$already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
-if ($already) {
+} else {
   error_log("Empty file {$_FILES["file"]["tmp_name"]} already exists at {$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
+  
+}
+//$codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
+
+
+
+if ($already) {
+ 
   die();
 }
 
 
-
+$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
 $curl = curl_init();
 
 // Set cURL options
