@@ -13,6 +13,9 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 
 // Put info into DB asap
 $db=new sql();
+$codename = str_replace(" ", "_", mb_strtolower($_GET["codename"], 'UTF-8'));
+$codename = str_replace("'", "+", $codename);
+
 $db->delete("conf_opts", "id='".$db->escape("Voicetype/$codename")."'");
 $db->insert(
   'conf_opts',
@@ -32,8 +35,7 @@ if (strpos($_GET["oname"],".fuz"))  {
   $ext="wav";
 }
 
-$codename = str_replace(" ", "_", mb_strtolower($_GET["codename"], 'UTF-8'));
-$codename = str_replace("'", "+", $codename);
+
 $already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
 
 
