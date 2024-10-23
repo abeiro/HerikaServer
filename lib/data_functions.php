@@ -636,7 +636,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $pattern = "/\([^)]*Context location[^)]*\)/"; 
             $cleanedText = trim(preg_replace($pattern, "", $line["content"])); // Remove context location always for assistant
             // This breaks with spaces?
-            $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
+            $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
             $subst = "";
             $cleanedText = preg_replace($re, $subst, $cleanedText);
             
