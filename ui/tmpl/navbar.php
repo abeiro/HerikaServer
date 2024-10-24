@@ -170,45 +170,52 @@
 </nav>
 
 <?php
-    // Start the session if not already started
-    if (session_status() == PHP_SESSION_NONE) {
-        session_start();
+// Start the session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Initialize favorites in session if not set
+if (!isset($_SESSION['FAVORITES'])) {
+    $_SESSION['FAVORITES'] = [];
+}
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $redirectToConfWizard = false; // Flag to determine redirection
+
+    // Handle profile selection
+    if (isset($_POST['profileSelector'])) {
+        // Update the session with the selected profile
+        $_SESSION['PROFILE'] = $_POST['profileSelector'];
+
+        // Set the flag to true to redirect to conf_wizard.php
+        $redirectToConfWizard = true;
     }
 
-    // Initialize favorites in session if not set
-    if (!isset($_SESSION['FAVORITES'])) {
-        $_SESSION['FAVORITES'] = [];
+    // Handle favorite toggling
+    if (isset($_POST['favoriteToggle'])) {
+        $profileToToggle = $_POST['favoriteToggle'];
+        if (in_array($profileToToggle, $_SESSION['FAVORITES'])) {
+            // Remove from favorites
+            $_SESSION['FAVORITES'] = array_filter($_SESSION['FAVORITES'], function($fav) use ($profileToToggle) {
+                return $fav !== $profileToToggle;
+            });
+        } else {
+            // Add to favorites
+            $_SESSION['FAVORITES'][] = $profileToToggle;
+        }
     }
 
-    // Handle form submissions
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Handle profile selection
-        if (isset($_POST['profileSelector'])) {
-            // Update the session with the selected profile
-            $_SESSION['PROFILE'] = $_POST['profileSelector'];
-            
-            // Optionally, set a cookie if needed
-            // setcookie("OPTION_TO_SHOW", $_POST['OPTION_TO_SHOW'], time() + (86400 * 30), "/"); // 30 days
-        }
-
-        // Handle favorite toggling
-        if (isset($_POST['favoriteToggle'])) {
-            $profileToToggle = $_POST['favoriteToggle'];
-            if (in_array($profileToToggle, $_SESSION['FAVORITES'])) {
-                // Remove from favorites
-                $_SESSION['FAVORITES'] = array_filter($_SESSION['FAVORITES'], function($fav) use ($profileToToggle) {
-                    return $fav !== $profileToToggle;
-                });
-            } else {
-                // Add to favorites
-                $_SESSION['FAVORITES'][] = $profileToToggle;
-            }
-        }
-        
+    // Redirect based on the action performed
+    if ($redirectToConfWizard) {
+        header("Location: conf_wizard.php");
+    } else {
         // Redirect to avoid form resubmission
         header("Location: " . strtok($_SERVER["REQUEST_URI"], '#'));
-        exit();
     }
+    exit();
+}
 
     // Initialize session variable if not set
     if (!isset($_SESSION["OPTION_TO_SHOW"])) {
