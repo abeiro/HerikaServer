@@ -169,51 +169,91 @@
     </div>
 </nav>
 
-<div style="display: flex;    flex-direction: row;    flex-wrap: nowrap;    align-content: center;    justify-content: flex-start;    align-items: stretch;">
-    <div style="max-width: 30%; display: inline-block;border:1px solid black;height:40px;padding-right:10px">
-    <form action='set_profile.php' method="POST" enctype="multipart/form-data" id="formprofile" onsubmit='document.getElementById("shorcutholder").value=getAnchor()'>
-    <select name='profileSelector' ms-code-custom-select="select-with-search" style="min-width:250px" onchange='document.getElementById("shorcutholder").value=getAnchor();document.getElementById("formprofile").submit();'>
+<?php
+    // Start the session if not already started
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    <?php
+    // Initialize favorites in session if not set
+    if (!isset($_SESSION['FAVORITES'])) {
+        $_SESSION['FAVORITES'] = [];
+    }
 
+    // Handle form submissions
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Handle profile selection
+        if (isset($_POST['profileSelector'])) {
+            // Update the session with the selected profile
+            $_SESSION['PROFILE'] = $_POST['profileSelector'];
+            
+            // Optionally, set a cookie if needed
+            // setcookie("OPTION_TO_SHOW", $_POST['OPTION_TO_SHOW'], time() + (86400 * 30), "/"); // 30 days
+        }
+
+        // Handle favorite toggling
+        if (isset($_POST['favoriteToggle'])) {
+            $profileToToggle = $_POST['favoriteToggle'];
+            if (in_array($profileToToggle, $_SESSION['FAVORITES'])) {
+                // Remove from favorites
+                $_SESSION['FAVORITES'] = array_filter($_SESSION['FAVORITES'], function($fav) use ($profileToToggle) {
+                    return $fav !== $profileToToggle;
+                });
+            } else {
+                // Add to favorites
+                $_SESSION['FAVORITES'][] = $profileToToggle;
+            }
+        }
+        
+        // Redirect to avoid form resubmission
+        header("Location: " . strtok($_SERVER["REQUEST_URI"], '#'));
+        exit();
+    }
+
+    // Initialize session variable if not set
     if (!isset($_SESSION["OPTION_TO_SHOW"])) {
-        if (!isset($_COOKIE["OPTION_TO_SHOW"]))
-            $_SESSION["OPTION_TO_SHOW"]="basic";
-        else
-            if (isset($_COOKIE["OPTION_TO_SHOW"]))
-                $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
+        if (!isset($_COOKIE["OPTION_TO_SHOW"])) {
+            $_SESSION["OPTION_TO_SHOW"] = "basic";
+        } else {
+            $_SESSION["OPTION_TO_SHOW"] = $_COOKIE["OPTION_TO_SHOW"];
+        }
     } else {
-        if (isset($_COOKIE["OPTION_TO_SHOW"]))
-                $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
+        if (isset($_COOKIE["OPTION_TO_SHOW"])) {
+            $_SESSION["OPTION_TO_SHOW"] = $_COOKIE["OPTION_TO_SHOW"];
+        }
     }
 
     // Character Map file
-    if (file_exists(__DIR__ . "/../../conf/character_map.json"))
-        $characterMap=json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"),true);
+    $characterMap = [];
+    if (file_exists(__DIR__ . "/../../conf/character_map.json")) {
+        $characterMap = json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"), true);
+    }
 
-    $OPTIONS=[];
-    foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
-        $isSelected=($_SESSION["PROFILE"]==$lProfile)?"selected":"";
-        
+    // Prepare profile options
+    $OPTIONS = [];
+    foreach ($GLOBALS["PROFILES"] as $lProfkey => $lProfile) {
         $pattern = "/conf_([a-fA-F0-9]+)\.php/";
         if (preg_match($pattern, $lProfile, $matches)) {
             $hash = $matches[1];
             if (isset($characterMap["$hash"])) {
-                $OPTIONS[]=["html"=>"<option value='$lProfile' $isSelected >{$characterMap["$hash"]}</option>","name"=>$characterMap["$hash"]];
-                $LOCAL_CHAR_NAME=$characterMap["$hash"];
+                $name = $characterMap["$hash"];
+                $value = $lProfile;
+                $OPTIONS[] = ["value" => $value, "name" => $name];
+                $LOCAL_CHAR_NAME = $name;
             }
-        } else if ($lProfkey){
-            
-            $OPTIONS[]=["html"=>"<option value='$lProfile' $isSelected >* $lProfkey</option>","name"=>$lProfkey];
-            $LOCAL_CHAR_NAME=$lProfkey;
+        } else if ($lProfkey) {
+            $name = "* $lProfkey";
+            $value = $lProfile;
+            $OPTIONS[] = ["value" => $value, "name" => $name];
+            $LOCAL_CHAR_NAME = $lProfkey;
         }
-        if ($isSelected=="selected") {
-            $GLOBALS["CURRENT_PROFILE_CHAR"]=$LOCAL_CHAR_NAME;
+        if (isset($_SESSION["PROFILE"]) && $_SESSION["PROFILE"] == $lProfile) {
+            $GLOBALS["CURRENT_PROFILE_CHAR"] = $LOCAL_CHAR_NAME;
         }
-        
     }
-    
-    usort($OPTIONS, function($a, $b) {
+
+    // Sort options
+    usort($OPTIONS, function ($a, $b) {
         if ($a['name'] == 'default') {
             return -1;
         }
@@ -222,19 +262,318 @@
         }
         return strcmp($a['name'], $b['name']);
     });
-        
-    foreach ($OPTIONS as $op) {
-        echo $op["html"];
-    }
-
     ?>
-    </select>
-    <input type='hidden' value="" name="shortcut" id="shorcutholder">
-    <input type='submit' value="Change Profile">
-    </form>
-    </div>
-        <div style="display: inline-block; font-size: 10px; border: 1px solid black; height: 40px; padding-right: 10px; vertical-align: middle;">
-        <span style="margin-right: 5px; font-size: 14px; vertical-align: middle;">Configuration Depth</span>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Profile Selection Overlay</title>
+        <style>
+            /* Overlay Background with Blur Effect */
+            .overlay {
+                position: fixed; /* Sit on top of the page content */
+                display: none; /* Hidden by default */
+                width: 100%; /* Full width (cover the whole page) */
+                height: 100%; /* Full height (cover the whole page) */
+                top: 0;
+                left: 0;
+                background: rgba(255, 255, 255, 0.1); /* Semi-transparent for backdrop-filter */
+                backdrop-filter: blur(10px); /* Apply blur effect */
+                -webkit-backdrop-filter: blur(10px); /* Safari support */
+                z-index: 9999; /* Specify a stack order */
+                cursor: pointer; /* Add a pointer on hover */
+            }
+
+            /* When the URL has #overlay, display the overlay */
+            #overlay:target {
+                display: block;
+            }
+
+            /* Overlay Content */
+            .overlay-content {
+                position: absolute;
+                top: 10%; /* Position closer to the top */
+                left: 50%;
+                transform: translate(-50%, 0); /* Only center horizontally */
+                width: 90%;
+                max-width: 800px;
+                max-height: 80vh; /* Adjusted to fit better near the top */
+                background-color: rgb(32, 32, 32); /* Dark Gray for content */
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+                overflow-y: auto; /* Enable vertical scrolling */
+                cursor: default; /* Prevent cursor pointer inside content */
+                color: #ffffff; /* White text for readability */
+                font-weight: bold; /* Make all text bold */
+            }
+
+            /* Close Button */
+            .close-btn {
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                font-size: 30px;
+                font-weight: bold;
+                color: #ffffff; /* White color for visibility */
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            .close-btn:hover {
+                color: rgb(0, 48, 176); /* Deep Blue on hover */
+            }
+
+            /* Grid Layout for Options */
+            .options-container {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+                margin-top: 20px; /* Space for the filter buttons */
+            }
+
+            /* Option Buttons */
+            .dropdown-option {
+                position: relative; /* For positioning the favorite button */
+                padding: 15px;
+                background-color: #031633; /* Deep Navy Blue for option backgrounds */
+                border: 2px solid #021b4d; /* Slightly darker navy blue border */
+                border-radius: 6px;
+                cursor: pointer;
+                text-align: center;
+                font-size: 16px;
+                color: #ffffff; /* White text */
+                transition: background-color 0.3s, border-color 0.3s;
+                text-decoration: none;
+                display: block;
+                font-weight: bold; /* Make text bold */
+            }
+
+            .dropdown-option:hover {
+                background-color: #022a6a; /* Slightly lighter navy blue on hover */
+                border-color: #031633; /* Slightly lighter border on hover */
+            }
+
+            /* Favorite Button */
+            .favorite-btn {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 18px;
+                color: #FFD700; /* Gold color for visibility */
+                transition: color 0.3s;
+                font-weight: bold; /* Make icon bold */
+                z-index: 1; /* Ensure it stays on top */
+            }
+
+
+            .favorite-btn.favorited {
+                color: #FFD700; /* Gold color for favorites */
+            }
+
+            .favorite-btn:hover {
+                color: #FFD700; /* Gold color on hover */
+            }
+
+            /* Open Overlay Button */
+            .open-overlay-btn {
+                padding: 10px 20px;
+                background-color: rgb(0, 48, 176); /* Deep Navy Blue */
+                color: #ffffff; /* White text */
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                text-decoration: none;
+                display: inline-block;
+                transition: background-color 0.3s, color 0.3s;
+                margin: 5px;
+                font-weight: bold; /* Make text bold */
+            }
+
+            .open-overlay-btn:hover {
+                background-color: #022a6a; /* Slightly lighter navy blue on hover */
+                color: #ffffff; /* White text on hover */
+            }
+
+            /* A-Z and Favorites Filter Buttons */
+            .filter-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+                margin-bottom: 20px;
+                justify-content: center;
+            }
+
+            .filter-button {
+                padding: 8px 12px;
+                background-color: #031633; /* Deep Navy Blue */
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                color: #ffffff; /* White text */
+                transition: background-color 0.3s, color 0.3s;
+                font-weight: bold; /* Make text bold */
+            }
+
+            /* Specific Styling for "All" Filter Button */
+            .filter-button[data-filter="all"] {
+                background-color: #28a745; /* Green */
+            }
+
+            .filter-button[data-filter="all"]:hover,
+            .filter-button[data-filter="all"].active {
+                background-color: #218838; /* Darker Green on hover and active */
+                color: #ffffff; /* White text on hover and active */
+            }
+
+            .filter-button:not([data-filter="all"]):hover,
+            .filter-button:not([data-filter="all"]).active {
+                background-color: #022a6a; /* Slightly lighter navy blue on hover and active */
+                color: #ffffff; /* White text on hover and active */
+            }
+
+            /* Responsive Design */
+            @media (max-width: 800px) {
+                .options-container {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            @media (max-width: 500px) {
+                .options-container {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Ensure profile-select-btn occupies full space except favorite button */
+            .profile-select-btn {
+                width: 100%;
+                height: 100%;
+                background: none;
+                border: none;
+                padding: 0;
+                margin: 0;
+                text-align: center;
+                cursor: pointer;
+                font-size: 16px;
+                color: inherit;
+                font-weight: bold; /* Make text bold */
+            }
+
+            .profile-select-btn:focus {
+                outline: none;
+            }
+        </style>
+    </head>
+    <body>
+
+        <!-- Trigger Link to Open Overlay -->
+        <a href="#overlay" class="open-overlay-btn">Select Profile</a>
+
+        <!-- The Overlay -->
+        <div id="overlay" class="overlay">
+            <!-- Overlay Content -->
+            <div class="overlay-content">
+                <a href="#" class="close-btn">&times;</a>
+                <h2>Select Character Profile</h2>
+
+                <!-- A-Z and Favorites Filter Buttons -->
+                <div class="filter-buttons">
+                    <button class="filter-button" data-filter="all">All</button>
+                    <button class="filter-button" data-filter="favorites">Favorites</button>
+                    <?php foreach (range('A', 'Z') as $letter): ?>
+                        <button class="filter-button" data-filter="<?php echo $letter; ?>"><?php echo $letter; ?></button>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Profile Selection Form -->
+                <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" id="formprofile">
+                    <div class="options-container">
+                        <?php foreach ($OPTIONS as $op): ?>
+                            <?php
+                                $value = htmlspecialchars($op['value']);
+                                $name = htmlspecialchars($op['name']);
+                                $firstLetter = strtoupper(substr($name, 0, 1));
+                                if (!ctype_alpha($firstLetter)) {
+                                    $firstLetter = '#'; // Non-alphabetic characters grouped under '#'
+                                }
+                                // Determine if the profile is favorited
+                                $isFavorited = in_array($op['value'], $_SESSION['FAVORITES']);
+                            ?>
+                            <div class="dropdown-option" data-filter-letter="<?php echo $isFavorited ? 'favorites' : $firstLetter; ?>">
+                                <!-- Profile Selection Button -->
+                                <button type="submit" name="profileSelector" value="<?php echo $value; ?>" class="profile-select-btn" aria-label="Select profile <?php echo $name; ?>">
+                                    <?php echo $name; ?>
+                                </button>
+                                <!-- Favorite Toggle Form -->
+                                <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" class="favorite-form">
+                                    <input type="hidden" name="favoriteToggle" value="<?php echo $value; ?>">
+                                    <button type="submit" class="favorite-btn <?php echo $isFavorited ? 'favorited' : ''; ?>" title="<?php echo $isFavorited ? 'Unfavorite' : 'Favorite'; ?>" aria-label="<?php echo $isFavorited ? 'Unfavorite profile ' . $name : 'Favorite profile ' . $name; ?>">
+                                        <?php echo $isFavorited ? '★' : '☆'; ?>
+                                    </button>
+                                </form>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <input type="hidden" name="shorcutholder" id="shorcutholder" value="">
+                </form>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const filterButtons = document.querySelectorAll('.filter-button');
+                const profileContainers = document.querySelectorAll('.dropdown-option');
+
+                filterButtons.forEach(button => {
+                    button.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        // Remove 'active' class from all buttons
+                        filterButtons.forEach(btn => btn.classList.remove('active'));
+                        // Add 'active' class to the clicked button
+                        this.classList.add('active');
+
+                        const filter = this.getAttribute('data-filter');
+
+                        profileContainers.forEach(container => {
+                            if (filter === 'all') {
+                                container.style.display = 'block';
+                            } else if (filter === 'favorites') {
+                                // Show only favorited profiles
+                                if (container.getAttribute('data-filter-letter') === 'favorites') {
+                                    container.style.display = 'block';
+                                } else {
+                                    container.style.display = 'none';
+                                }
+                            } else {
+                                const containerLetter = container.getAttribute('data-filter-letter');
+                                if (containerLetter === filter) {
+                                    container.style.display = 'block';
+                                } else {
+                                    container.style.display = 'none';
+                                }
+                            }
+                        });
+                    });
+                });
+
+                // Optionally, activate 'All' filter by default
+                const allFilterBtn = document.querySelector('.filter-button[data-filter="all"]');
+                if (allFilterBtn) {
+                    allFilterBtn.click();
+                }
+            });
+        </script>
+    </body>
+</html>
+
+        <div style="display: inline-block; font-size: 10px; height: 40px; padding-right: 10px; vertical-align: top;">
+        <span style="margin-right: 5px; font-size: 14px; vertical-align: middle; font-weight: bold">Configuration Depth</span>
         
         <button
             style="
@@ -296,8 +635,9 @@
             Experimental
         </button>
     </div>
-    <div style='display:inline-block;max-widh:350px;font-size:small;border:1px solid black;height:40px;padding-right:10px'>
-    
+
+    <div style="display:inline-block; max-width:900px; font-size:small; height:50px; padding-right:10px; vertical-align: top;">
+
     <?php 
 
     $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."../";
