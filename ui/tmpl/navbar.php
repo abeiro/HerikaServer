@@ -313,7 +313,7 @@
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
     echo " <strong>AI/LLM Service(s):</strong> ";
-    echo is_array($CONNECTORS) ? implode(",", $CONNECTORS) . " | " : $CONNECTORS;
+    echo is_array($CONNECTORS) ? '<span style="color: yellow;">' . implode(",", $CONNECTORS) . '</span> | ' : '<span style="color: yellow;">' . $CONNECTORS . '</span>';
     echo '
     <form action="cmd/action_toogle_model.php" method="get" style="display:inline;">
         <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"], ENT_QUOTES, 'UTF-8') . '">
