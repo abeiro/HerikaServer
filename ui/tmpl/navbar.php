@@ -328,7 +328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             .close-btn:hover {
-                color: rgb(0, 48, 176); /* Deep Blue on hover */
+                color: rgb(255, 0, 0); /* Red on hover */
             }
 
             /* Grid Layout for Options */
@@ -488,7 +488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Overlay Content -->
             <div class="overlay-content">
                 <a href="#" class="close-btn">&times;</a>
-                <h2>Select Character Profile</h2>
+                <h2>Character Profile</h2>
 
                 <!-- A-Z and Favorites Filter Buttons -->
                 <div class="filter-buttons">
