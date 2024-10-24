@@ -473,8 +473,9 @@
     <body>
 
         <!-- Trigger Link to Open Overlay -->
-        <a href="#overlay" class="open-overlay-btn">Select Profile</a>
-
+        <a href="#overlay" class="open-overlay-btn">
+            <?php echo isset($GLOBALS["CURRENT_PROFILE_CHAR"]) ? htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"], ENT_QUOTES, 'UTF-8') : 'Select Profile'; ?>
+        </a>
         <!-- The Overlay -->
         <div id="overlay" class="overlay">
             <!-- Overlay Content -->
