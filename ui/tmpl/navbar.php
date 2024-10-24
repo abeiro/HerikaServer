@@ -2,7 +2,7 @@
     <div class="container-fluid mx-1">
         <!-- PLEASE LEAVE THIS LINK TO index.php, as database update checks are being made there -->
         <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="AI Follower Framework Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AI Follower Framework</a> -->
-        <a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/index.php" title="AI Follower Framework Server :: Go to Home Page">
+        <a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/index.php" title="Go to Home Page">
             <img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> 
             <img src="images/serverlogo.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> 
         </a> 
