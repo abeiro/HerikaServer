@@ -233,16 +233,71 @@
     <input type='submit' value="Change Profile">
     </form>
     </div>
-    <div style="display:inline-block;font-size:10px;border:1px solid black;height:40px;padding-right:10px">
-        <span>Config Wizard Options Depth</span>
-        <select onchange="location.href='set_option_conf.php?c='+this.value">
-        <option type="radio" value="basic" label="Basic" title="Show only basic options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="basic")?'selected':''; ?> />
-        <option type="radio" value="pro" label="Advanced" title="Show advanced options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="pro")?'selected':''; ?> />
-        <option type="radio" value="wip" label="Experimental" title="Show experimental options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="wip")?'selected':''; ?> />
-        </select>
+        <div style="display: inline-block; font-size: 10px; border: 1px solid black; height: 40px; padding-right: 10px; vertical-align: middle;">
+        <span style="margin-right: 5px; font-size: 14px; vertical-align: middle;">Configuration Depth</span>
+        
+        <button
+            style="
+                margin-top: 5px; 
+                font-weight: bold; 
+                border: 1px solid rgb(255, 255, 255); 
+                padding: 5px 10px; 
+                cursor: pointer; 
+                border-radius: 4px; 
+                font-size: 12px; 
+                background-color: #ffc107; /* Yellow */
+                color: black; 
+                transition: background-color 0.3s, color 0.3s;
+                <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'basic') ? 'border: 2px solid black;' : ''; ?>
+            "
+            onclick="location.href='set_option_conf.php?c=basic'"
+            onmouseover="this.style.backgroundColor='#e0a800';" /* Darker Yellow */
+            onmouseout="this.style.backgroundColor='#ffc107';">
+            Basic
+        </button>
+        
+        <button
+            style="
+                margin-top: 5px; 
+                font-weight: bold; 
+                border: 1px solid rgb(255, 255, 255); 
+                padding: 5px 10px; 
+                cursor: pointer; 
+                border-radius: 4px; 
+                font-size: 12px; 
+                background-color: #fd7e14; /* Orange */
+                color: black; 
+                transition: background-color 0.3s, color 0.3s;
+                <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'pro') ? 'border: 2px solid black;' : ''; ?>
+            "
+            onclick="location.href='set_option_conf.php?c=pro'"
+            onmouseover="this.style.backgroundColor='#e06b0d';" /* Darker Orange */
+            onmouseout="this.style.backgroundColor='#fd7e14';">
+            Advanced
+        </button>
+        
+        <button
+            style="
+                margin-top: 5px; 
+                font-weight: bold; 
+                border: 1px solid rgb(255, 255, 255); 
+                padding: 5px 10px; 
+                cursor: pointer; 
+                border-radius: 4px; 
+                font-size: 12px; 
+                background-color: #dc3545; /* Red */
+                color: black; 
+                transition: background-color 0.3s, color 0.3s;
+                <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'wip') ? 'border: 2px solid black;' : ''; ?>
+            "
+            onclick="location.href='set_option_conf.php?c=wip'"
+            onmouseover="this.style.backgroundColor='#c82333';" /* Darker Red */
+            onmouseout="this.style.backgroundColor='#dc3545';">
+            Experimental
+        </button>
     </div>
-
     <div style='display:inline-block;max-widh:350px;font-size:small;border:1px solid black;height:40px;padding-right:10px'>
+    
     <?php 
 
     $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."../";
@@ -258,8 +313,24 @@
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
     echo " <strong>AI/LLM Service(s):</strong> ";
-    echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong> | Current AI Model -> <strong style='color:yellow'>($currentModel)</strong>" : $CONNECTORS; 
-    echo " <a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'><strong>Toggle Me!</strong></a><br/>";
+    echo is_array($CONNECTORS) ? implode(",", $CONNECTORS) . " | " : $CONNECTORS;
+    echo '
+    <form action="cmd/action_toogle_model.php" method="get" style="display:inline;">
+        <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"], ENT_QUOTES, 'UTF-8') . '">
+        <button type="submit" style="
+            padding: 3px 8px; /* Reduced padding for smaller size */
+            font-weight: bold;
+            font-size: 12px; /* Reduced font size */
+            color: white;
+            background-color: #0030b0; /* Darker Blue */
+            border: 1px solid #0030b0; /* Darker Blue Border */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor=\'#0056b3\';" onmouseout="this.style.backgroundColor=\'#0030b0\';">
+            Current AI Service ➡ <span style="color:yellow;">(' . htmlspecialchars($currentModel, ENT_QUOTES, 'UTF-8') . ')</span>
+        </button>
+    </form><br/>';
     echo " <strong>TTS Service:</strong> ";
     echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:#ff00c6">' . $TTSFUNCTION . '</strong>'; 
     echo " <strong>STT Service:</strong> ";
