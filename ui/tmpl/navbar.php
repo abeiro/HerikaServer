@@ -181,7 +181,7 @@ if (!isset($_SESSION['FAVORITES'])) {
 }
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"]))) {
     $redirectToConfWizard = false; // Flag to determine redirection
 
     // Handle profile selection
