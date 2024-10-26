@@ -121,7 +121,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a></li>
-                    <li><a class="dropdown-item" href="updater.php">Update AI Follower Framework Server</a></li>
+                    <li><a class="dropdown-item" href="updater.php" target="_blank">Update AI Follower Framework Server</a></li>
                     <li><a class="dropdown-item" href="tests.php" target="_blank">Current LLM/AI Connection Test</a></li>
                     <!--<li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a></li>
