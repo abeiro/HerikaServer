@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $destinationPath = $saveDir . $fileName;
 
             if (move_uploaded_file($fileTmpPath, $destinationPath)) {
-                $message .= "<p>File has been successfully uploaded and saved to $destinationPath.</p>";
+                $message .= "<p>.wav file has been uploaded to $destinationPath</p>";
 
                 // Prepare the cURL request
                 $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/upload_sample';
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message .= '<p>cURL Error: ' . curl_error($ch) . '</p>';
                 } else {
                     if ($httpCode == 200) {
-                        $message .= "<p>File has been successfully sent to the server.</p>";
+                        $message .= "<p>.wav file has been uploaded to the XTTS server</p>";
                     } else {
                         $message .= '<p>Response from server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
                     }
