@@ -310,7 +310,7 @@ pg_close($conn);
 ?>
 
 <div class="indent5">
-    <h1>NPC Biography Upload</h1>
+    <h1>📝NPC Biography Upload</h1>
     <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
     <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
 

@@ -2,9 +2,9 @@
     <div class="container-fluid mx-1">
         <!-- PLEASE LEAVE THIS LINK TO index.php, as database update checks are being made there -->
         <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="AI Follower Framework Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AI Follower Framework</a> -->
-        <a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/index.php" title="AI Follower Framework Server :: Go to Home Page">
+        <a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/index.php" title="Go to Home Page">
             <img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> 
-        AI Follower Framework
+            <img src="images/serverlogo.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> 
         </a> 
         
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector" style="display:none">
@@ -110,7 +110,7 @@
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
                     <li><a class="dropdown-item" href="npc_upload.php" title="Upload NPC Biographies with a csv file" target="_blank">Upload NPC Biographies</a></li>
-                    <li><a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank">XTTS FastAPI Voice Management</a></li>
+                    <li><a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">XTTS FastAPI Voice Management</a></li>
                     <li><a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">Mimic3 Voice Menu</a></li>
                     <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0' target="_blank">AI/LLM Supported Models List</a></li>
                     <li><a class="dropdown-item" href='quickstart.php' target="_blank">Quickstart Menu</a></li>
@@ -121,7 +121,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a></li>
-                    <li><a class="dropdown-item" href="updater.php">Update AI Follower Framework Server</a></li>
+                    <li><a class="dropdown-item" href="updater.php" target="_blank">Update Server</a></li>
                     <li><a class="dropdown-item" href="tests.php" target="_blank">Current LLM/AI Connection Test</a></li>
                     <!--<li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a></li>
@@ -141,7 +141,7 @@
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="addons/diary" target="_blank">AI Diary</a></li>
                     <li><a class="dropdown-item" href="addons/chatsim" target="_blank">Chat Simulation</a></li>
-                    <li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>
+                    <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
                     <li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>
                 </ul>
             </li>
@@ -169,51 +169,98 @@
     </div>
 </nav>
 
-<div style="display: flex;    flex-direction: row;    flex-wrap: nowrap;    align-content: center;    justify-content: flex-start;    align-items: stretch;">
-    <div style="max-width: 30%; display: inline-block;border:1px solid black;height:40px;padding-right:10px">
-    <form action='set_profile.php' method="POST" enctype="multipart/form-data" id="formprofile" onsubmit='document.getElementById("shorcutholder").value=getAnchor()'>
-    <select name='profileSelector' ms-code-custom-select="select-with-search" style="min-width:250px" onchange='document.getElementById("shorcutholder").value=getAnchor();document.getElementById("formprofile").submit();'>
+<?php
+// Start the session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-    <?php
+// Initialize favorites in session if not set
+if (!isset($_SESSION['FAVORITES'])) {
+    $_SESSION['FAVORITES'] = [];
+}
 
-    if (!isset($_SESSION["OPTION_TO_SHOW"])) {
-        if (!isset($_COOKIE["OPTION_TO_SHOW"]))
-            $_SESSION["OPTION_TO_SHOW"]="basic";
-        else
-            if (isset($_COOKIE["OPTION_TO_SHOW"]))
-                $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
+// Handle form submissions
+if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"]))) {
+    $redirectToConfWizard = false; // Flag to determine redirection
+
+    // Handle profile selection
+    if (isset($_POST['profileSelector'])) {
+        // Update the session with the selected profile
+        $_SESSION['PROFILE'] = $_POST['profileSelector'];
+
+        // Set the flag to true to redirect to conf_wizard.php
+        $redirectToConfWizard = true;
+    }
+
+    // Handle favorite toggling
+    if (isset($_POST['favoriteToggle'])) {
+        $profileToToggle = $_POST['favoriteToggle'];
+        if (in_array($profileToToggle, $_SESSION['FAVORITES'])) {
+            // Remove from favorites
+            $_SESSION['FAVORITES'] = array_filter($_SESSION['FAVORITES'], function($fav) use ($profileToToggle) {
+                return $fav !== $profileToToggle;
+            });
+        } else {
+            // Add to favorites
+            $_SESSION['FAVORITES'][] = $profileToToggle;
+        }
+    }
+
+    // Redirect based on the action performed
+    if ($redirectToConfWizard) {
+        header("Location: conf_wizard.php");
     } else {
-        if (isset($_COOKIE["OPTION_TO_SHOW"]))
-                $_SESSION["OPTION_TO_SHOW"]=$_COOKIE["OPTION_TO_SHOW"];
+        // Redirect to avoid form resubmission
+        header("Location: " . strtok($_SERVER["REQUEST_URI"], '#'));
+    }
+    exit();
+}
+
+    // Initialize session variable if not set
+    if (!isset($_SESSION["OPTION_TO_SHOW"])) {
+        if (!isset($_COOKIE["OPTION_TO_SHOW"])) {
+            $_SESSION["OPTION_TO_SHOW"] = "basic";
+        } else {
+            $_SESSION["OPTION_TO_SHOW"] = $_COOKIE["OPTION_TO_SHOW"];
+        }
+    } else {
+        if (isset($_COOKIE["OPTION_TO_SHOW"])) {
+            $_SESSION["OPTION_TO_SHOW"] = $_COOKIE["OPTION_TO_SHOW"];
+        }
     }
 
     // Character Map file
-    if (file_exists(__DIR__ . "/../../conf/character_map.json"))
-        $characterMap=json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"),true);
+    $characterMap = [];
+    if (file_exists(__DIR__ . "/../../conf/character_map.json")) {
+        $characterMap = json_decode(file_get_contents(__DIR__ . "/../../conf/character_map.json"), true);
+    }
 
-    $OPTIONS=[];
-    foreach ($GLOBALS["PROFILES"] as $lProfkey=>$lProfile)  {
-        $isSelected=($_SESSION["PROFILE"]==$lProfile)?"selected":"";
-        
+    // Prepare profile options
+    $OPTIONS = [];
+    foreach ($GLOBALS["PROFILES"] as $lProfkey => $lProfile) {
         $pattern = "/conf_([a-fA-F0-9]+)\.php/";
         if (preg_match($pattern, $lProfile, $matches)) {
             $hash = $matches[1];
             if (isset($characterMap["$hash"])) {
-                $OPTIONS[]=["html"=>"<option value='$lProfile' $isSelected >{$characterMap["$hash"]}</option>","name"=>$characterMap["$hash"]];
-                $LOCAL_CHAR_NAME=$characterMap["$hash"];
+                $name = $characterMap["$hash"];
+                $value = $lProfile;
+                $OPTIONS[] = ["value" => $value, "name" => $name];
+                $LOCAL_CHAR_NAME = $name;
             }
-        } else if ($lProfkey){
-            
-            $OPTIONS[]=["html"=>"<option value='$lProfile' $isSelected >* $lProfkey</option>","name"=>$lProfkey];
-            $LOCAL_CHAR_NAME=$lProfkey;
+        } else if ($lProfkey) {
+            $name = "* $lProfkey";
+            $value = $lProfile;
+            $OPTIONS[] = ["value" => $value, "name" => $name];
+            $LOCAL_CHAR_NAME = $lProfkey;
         }
-        if ($isSelected=="selected") {
-            $GLOBALS["CURRENT_PROFILE_CHAR"]=$LOCAL_CHAR_NAME;
+        if (isset($_SESSION["PROFILE"]) && $_SESSION["PROFILE"] == $lProfile) {
+            $GLOBALS["CURRENT_PROFILE_CHAR"] = $LOCAL_CHAR_NAME;
         }
-        
     }
-    
-    usort($OPTIONS, function($a, $b) {
+
+    // Sort options
+    usort($OPTIONS, function ($a, $b) {
         if ($a['name'] == 'default') {
             return -1;
         }
@@ -222,27 +269,383 @@
         }
         return strcmp($a['name'], $b['name']);
     });
-        
-    foreach ($OPTIONS as $op) {
-        echo $op["html"];
-    }
-
     ?>
-    </select>
-    <input type='hidden' value="" name="shortcut" id="shorcutholder">
-    <input type='submit' value="Change Profile">
-    </form>
-    </div>
-    <div style="display:inline-block;font-size:10px;border:1px solid black;height:40px;padding-right:10px">
-        <span>Config Wizard Options Depth</span>
-        <select onchange="location.href='set_option_conf.php?c='+this.value">
-        <option type="radio" value="basic" label="Basic" title="Show only basic options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="basic")?'selected':''; ?> />
-        <option type="radio" value="pro" label="Advanced" title="Show advanced options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="pro")?'selected':''; ?> />
-        <option type="radio" value="wip" label="Experimental" title="Show experimental options" <?php echo ($_SESSION["OPTION_TO_SHOW"]=="wip")?'selected':''; ?> />
-        </select>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Profile Selection Overlay</title>
+        <style>
+            /* Overlay Background with Blur Effect */
+            .overlay {
+                position: fixed; /* Sit on top of the page content */
+                display: none; /* Hidden by default */
+                width: 100%; /* Full width (cover the whole page) */
+                height: 100%; /* Full height (cover the whole page) */
+                top: 0;
+                left: 0;
+                background: rgba(255, 255, 255, 0.1); /* Semi-transparent for backdrop-filter */
+                backdrop-filter: blur(10px); /* Apply blur effect */
+                -webkit-backdrop-filter: blur(10px); /* Safari support */
+                z-index: 9999; /* Specify a stack order */
+                cursor: pointer; /* Add a pointer on hover */
+            }
+
+            /* When the URL has #overlay, display the overlay */
+            #overlay:target {
+                display: block;
+            }
+
+            /* Overlay Content */
+            .overlay-content {
+                position: absolute;
+                top: 10%; /* Position closer to the top */
+                left: 50%;
+                transform: translate(-50%, 0); /* Only center horizontally */
+                width: 90%;
+                max-width: 800px;
+                max-height: 80vh; /* Adjusted to fit better near the top */
+                background-color: rgb(32, 32, 32); /* Dark Gray for content */
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+                overflow-y: auto; /* Enable vertical scrolling */
+                cursor: default; /* Prevent cursor pointer inside content */
+                color: #ffffff; /* White text for readability */
+                font-weight: bold; /* Make all text bold */
+            }
+
+            /* Close Button */
+            .close-btn {
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                font-size: 30px;
+                font-weight: bold;
+                color: #ffffff; /* White color for visibility */
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            .close-btn:hover {
+                color: rgb(255, 0, 0); /* Red on hover */
+            }
+
+            /* Grid Layout for Options */
+            .options-container {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+                margin-top: 20px; /* Space for the filter buttons */
+            }
+
+            /* Option Buttons */
+            .dropdown-option {
+                position: relative; /* For positioning the favorite button */
+                padding: 15px;
+                background-color: #031633; /* Deep Navy Blue for option backgrounds */
+                border: 2px solid #021b4d; /* Slightly darker navy blue border */
+                border-radius: 6px;
+                cursor: pointer;
+                text-align: center;
+                font-size: 16px;
+                color: #ffffff; /* White text */
+                transition: background-color 0.3s, border-color 0.3s;
+                text-decoration: none;
+                display: block;
+                font-weight: bold; /* Make text bold */
+            }
+
+            .dropdown-option:hover {
+                background-color: #022a6a; /* Slightly lighter navy blue on hover */
+                border-color: #031633; /* Slightly lighter border on hover */
+            }
+
+            /* Favorite Button */
+            .favorite-btn {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 18px;
+                color: #FFD700; /* Gold color for visibility */
+                transition: color 0.3s;
+                font-weight: bold; /* Make icon bold */
+                z-index: 1; /* Ensure it stays on top */
+            }
+
+
+            .favorite-btn.favorited {
+                color: #FFD700; /* Gold color for favorites */
+            }
+
+            .favorite-btn:hover {
+                color: #FFD700; /* Gold color on hover */
+            }
+
+            /* Open Overlay Button */
+            .open-overlay-btn {
+                padding: 10px 20px;
+                background-color: rgb(0, 48, 176); /* Deep Navy Blue */
+                color: #ffffff; /* White text */
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                text-decoration: none;
+                display: inline-block;
+                transition: background-color 0.3s, color 0.3s;
+                margin: 5px;
+                font-weight: bold; /* Make text bold */
+            }
+
+            .open-overlay-btn:hover {
+                background-color: #022a6a; /* Slightly lighter navy blue on hover */
+                color: #ffffff; /* White text on hover */
+            }
+
+            /* A-Z and Favorites Filter Buttons */
+            .filter-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+                margin-bottom: 20px;
+                justify-content: center;
+            }
+
+            .filter-button {
+                padding: 8px 12px;
+                background-color: #031633; /* Deep Navy Blue */
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                color: #ffffff; /* White text */
+                transition: background-color 0.3s, color 0.3s;
+                font-weight: bold; /* Make text bold */
+            }
+
+            /* Specific Styling for "All" Filter Button */
+            .filter-button[data-filter="all"] {
+                background-color: #28a745; /* Green */
+            }
+
+            .filter-button[data-filter="all"]:hover,
+            .filter-button[data-filter="all"].active {
+                background-color: #218838; /* Darker Green on hover and active */
+                color: #ffffff; /* White text on hover and active */
+            }
+
+            .filter-button:not([data-filter="all"]):hover,
+            .filter-button:not([data-filter="all"]).active {
+                background-color: #022a6a; /* Slightly lighter navy blue on hover and active */
+                color: #ffffff; /* White text on hover and active */
+            }
+
+            /* Responsive Design */
+            @media (max-width: 800px) {
+                .options-container {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            @media (max-width: 500px) {
+                .options-container {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Ensure profile-select-btn occupies full space except favorite button */
+            .profile-select-btn {
+                width: 100%;
+                height: 100%;
+                background: none;
+                border: none;
+                padding: 0;
+                margin: 0;
+                text-align: center;
+                cursor: pointer;
+                font-size: 16px;
+                color: inherit;
+                font-weight: bold; /* Make text bold */
+            }
+
+            .profile-select-btn:focus {
+                outline: none;
+            }
+        </style>
+    </head>
+    <body>
+
+        <!-- Trigger Link to Open Overlay -->
+        <a href="#overlay" class="open-overlay-btn">
+            <?php echo isset($GLOBALS["CURRENT_PROFILE_CHAR"]) ? htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"], ENT_QUOTES, 'UTF-8') : 'Select Profile'; ?>
+        </a>
+        <!-- The Overlay -->
+        <div id="overlay" class="overlay">
+            <!-- Overlay Content -->
+            <div class="overlay-content">
+                <a href="#" class="close-btn">&times;</a>
+                <h2>Character Profile</h2>
+
+                <!-- A-Z and Favorites Filter Buttons -->
+                <div class="filter-buttons">
+                    <button class="filter-button" data-filter="all">All</button>
+                    <button class="filter-button" data-filter="favorites">Favorites</button>
+                    <?php foreach (range('A', 'Z') as $letter): ?>
+                        <button class="filter-button" data-filter="<?php echo $letter; ?>"><?php echo $letter; ?></button>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Profile Selection Form -->
+                <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" id="formprofile">
+                    <div class="options-container">
+                        <?php foreach ($OPTIONS as $op): ?>
+                            <?php
+                                $value = htmlspecialchars($op['value']);
+                                $name = htmlspecialchars($op['name']);
+                                $firstLetter = strtoupper(substr($name, 0, 1));
+                                if (!ctype_alpha($firstLetter)) {
+                                    $firstLetter = '#'; // Non-alphabetic characters grouped under '#'
+                                }
+                                // Determine if the profile is favorited
+                                $isFavorited = in_array($op['value'], $_SESSION['FAVORITES']);
+                            ?>
+                            <div class="dropdown-option" data-filter-letter="<?php echo $isFavorited ? 'favorites' : $firstLetter; ?>">
+                                <!-- Profile Selection Button -->
+                                <button type="submit" name="profileSelector" value="<?php echo $value; ?>" class="profile-select-btn" aria-label="Select profile <?php echo $name; ?>">
+                                    <?php echo $name; ?>
+                                </button>
+                                <!-- Favorite Toggle Form -->
+                                <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" class="favorite-form">
+                                    <input type="hidden" name="favoriteToggle" value="<?php echo $value; ?>">
+                                    <button type="submit" class="favorite-btn <?php echo $isFavorited ? 'favorited' : ''; ?>" title="<?php echo $isFavorited ? 'Unfavorite' : 'Favorite'; ?>" aria-label="<?php echo $isFavorited ? 'Unfavorite profile ' . $name : 'Favorite profile ' . $name; ?>">
+                                        <?php echo $isFavorited ? '★' : '☆'; ?>
+                                    </button>
+                                </form>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <input type="hidden" name="shorcutholder" id="shorcutholder" value="">
+                </form>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const filterButtons = document.querySelectorAll('.filter-button');
+                const profileContainers = document.querySelectorAll('.dropdown-option');
+
+                filterButtons.forEach(button => {
+                    button.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        // Remove 'active' class from all buttons
+                        filterButtons.forEach(btn => btn.classList.remove('active'));
+                        // Add 'active' class to the clicked button
+                        this.classList.add('active');
+
+                        const filter = this.getAttribute('data-filter');
+
+                        profileContainers.forEach(container => {
+                            if (filter === 'all') {
+                                container.style.display = 'block';
+                            } else if (filter === 'favorites') {
+                                // Show only favorited profiles
+                                if (container.getAttribute('data-filter-letter') === 'favorites') {
+                                    container.style.display = 'block';
+                                } else {
+                                    container.style.display = 'none';
+                                }
+                            } else {
+                                const containerLetter = container.getAttribute('data-filter-letter');
+                                if (containerLetter === filter) {
+                                    container.style.display = 'block';
+                                } else {
+                                    container.style.display = 'none';
+                                }
+                            }
+                        });
+                    });
+                });
+
+                // Optionally, activate 'All' filter by default
+                const allFilterBtn = document.querySelector('.filter-button[data-filter="all"]');
+                if (allFilterBtn) {
+                    allFilterBtn.click();
+                }
+            });
+        </script>
+    </body>
+</html>
+
+        <div style="display: inline-block; font-size: 10px; height: 40px; padding-right: 10px; vertical-align: top;">
+        <span style="margin-right: 5px; font-size: 14px; vertical-align: middle; font-weight: bold">Configuration Depth</span>
+        
+        <button
+            style="
+                margin-top: 5px; 
+                font-weight: bold; 
+                border: 1px solid rgb(255, 255, 255); 
+                padding: 5px 10px; 
+                cursor: pointer; 
+                border-radius: 4px; 
+                font-size: 12px; 
+                background-color: #ffc107; /* Yellow */
+                color: black; 
+                transition: background-color 0.3s, color 0.3s;
+                <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'basic') ? 'border: 2px solid black;' : ''; ?>
+            "
+            onclick="location.href='set_option_conf.php?c=basic'"
+            onmouseover="this.style.backgroundColor='#e0a800';" /* Darker Yellow */
+            onmouseout="this.style.backgroundColor='#ffc107';">
+            Basic
+        </button>
+        
+        <button
+            style="
+                margin-top: 5px; 
+                font-weight: bold; 
+                border: 1px solid rgb(255, 255, 255); 
+                padding: 5px 10px; 
+                cursor: pointer; 
+                border-radius: 4px; 
+                font-size: 12px; 
+                background-color: #fd7e14; /* Orange */
+                color: black; 
+                transition: background-color 0.3s, color 0.3s;
+                <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'pro') ? 'border: 2px solid black;' : ''; ?>
+            "
+            onclick="location.href='set_option_conf.php?c=pro'"
+            onmouseover="this.style.backgroundColor='#e06b0d';" /* Darker Orange */
+            onmouseout="this.style.backgroundColor='#fd7e14';">
+            Advanced
+        </button>
+        
+        <button
+            style="
+                margin-top: 5px; 
+                font-weight: bold; 
+                border: 1px solid rgb(255, 255, 255); 
+                padding: 5px 10px; 
+                cursor: pointer; 
+                border-radius: 4px; 
+                font-size: 12px; 
+                background-color: #dc3545; /* Red */
+                color: black; 
+                transition: background-color 0.3s, color 0.3s;
+                <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'wip') ? 'border: 2px solid black;' : ''; ?>
+            "
+            onclick="location.href='set_option_conf.php?c=wip'"
+            onmouseover="this.style.backgroundColor='#c82333';" /* Darker Red */
+            onmouseout="this.style.backgroundColor='#dc3545';">
+            Experimental
+        </button>
     </div>
 
-    <div style='display:inline-block;max-widh:350px;font-size:small;border:1px solid black;height:40px;padding-right:10px'>
+    <div style="display:inline-block; max-width:900px; font-size:small; height:50px; padding-right:10px; vertical-align: top;">
+
     <?php 
 
     $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."../";
@@ -258,8 +661,24 @@
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
     echo " <strong>AI/LLM Service(s):</strong> ";
-    echo is_array($CONNECTORS) ? implode(",",$CONNECTORS) . "</strong> | Current AI Model -> <strong style='color:yellow'>($currentModel)</strong>" : $CONNECTORS; 
-    echo " <a href='cmd/action_toogle_model.php?profile={$_SESSION["PROFILE"]}'><strong>Toggle Me!</strong></a><br/>";
+    echo is_array($CONNECTORS) ? '<span style="color: yellow;">' . implode(",", $CONNECTORS) . '</span> | ' : '<span style="color: yellow;">' . $CONNECTORS . '</span>';
+    echo '
+    <form action="cmd/action_toogle_model.php" method="get" style="display:inline;">
+        <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"], ENT_QUOTES, 'UTF-8') . '">
+        <button type="submit" style="
+            padding: 3px 8px; /* Reduced padding for smaller size */
+            font-weight: bold;
+            font-size: 12px; /* Reduced font size */
+            color: white;
+            background-color: #0030b0; /* Darker Blue */
+            border: 1px solid #0030b0; /* Darker Blue Border */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor=\'#0056b3\';" onmouseout="this.style.backgroundColor=\'#0030b0\';">
+            Current AI Service ➡ <span style="color:yellow;">(' . htmlspecialchars($currentModel, ENT_QUOTES, 'UTF-8') . ')</span>
+        </button>
+    </form><br/>';
     echo " <strong>TTS Service:</strong> ";
     echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:#ff00c6">' . $TTSFUNCTION . '</strong>'; 
     echo " <strong>STT Service:</strong> ";
