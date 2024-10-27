@@ -1,7 +1,7 @@
 <?php
 
 
-function tts($textString, $mood , $stringforhash) {
+$GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 
 		$apiKey=$GLOBALS["TTS"]["openai"]["API_KEY"];
@@ -76,4 +76,4 @@ function tts($textString, $mood , $stringforhash) {
 			
 		}
 
-}
+};

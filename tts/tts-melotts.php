@@ -13,7 +13,7 @@ curl -X 'POST' \
 }'
 */
 
-function tts($textString, $mood , $stringforhash) {
+$GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
     
     $newString=$textString;
     
@@ -91,7 +91,7 @@ function tts($textString, $mood , $stringforhash) {
     } 
 
 
-}
+};
 
 
 /*

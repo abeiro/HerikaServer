@@ -3,6 +3,7 @@
   "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change."},
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name! If you are in the default profile leave it as The Narrator"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
+  "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description"},
   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "dynamic_profile_b1": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. <strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill"},
   "dynamic_profile_b2": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs. <strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill"},

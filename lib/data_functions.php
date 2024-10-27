@@ -1722,7 +1722,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
 
     if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
         
-
+        error_log("Overwritting conf");
         // Do customizations here
         $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
         copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
@@ -1775,7 +1775,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         $characterMap[md5($npcname)]=$npcname;
         file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
         
-        }
+    }
 
    
 }

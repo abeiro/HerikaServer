@@ -40,51 +40,55 @@ $already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$coden
 
 
 if (!$already) {
-$finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["tmp_name"]).".$ext";
+  $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["tmp_name"]).".$ext";
+
+  if (file_exists($path."data/voices/$codename.wav")) {
+    // File exists in HS data/voices. Dont't convert again
+    $finalFile=$path."data/voices/$codename.wav";
+
+  } else {
+
+    if (!$_FILES["file"]["tmp_name"])
+        die("VSX error, no data given");
+
+    if (filesize($_FILES["file"]["tmp_name"])==0) {
+        error_log("Empty file {$_FILES["file"]["tmp_name"]}");
+        die();
+    }
+
+    @copy($_FILES["file"]["tmp_name"] ,$finalName);
 
 
-if (!$_FILES["file"]["tmp_name"])
-    die("VSX error, no data given");
+    error_log("Received sample: {$_GET["oname"]}");
 
-if (filesize($_FILES["file"]["tmp_name"])==0) {
-    error_log("Empty file {$_FILES["file"]["tmp_name"]}");
-    die();
-}
+    if (strpos($_GET["oname"],".fuz")) {
+        $finalFile=fuzToWav($finalName);
+        
+    } else if (strpos($_GET["oname"],".xwm")) {
 
-@copy($_FILES["file"]["tmp_name"] ,$finalName);
+        $finalFile=xwmToWav($finalName);
 
+      } else if (strpos($_GET["oname"],".wav")) {
 
-error_log("Received sample: {$_GET["oname"]}");
-
-if (strpos($_GET["oname"],".fuz")) {
-    $finalFile=fuzToWav($finalName);
-    
-} else if (strpos($_GET["oname"],".xwm")) {
-
-    $finalFile=xwmToWav($finalName);
-
-  } else if (strpos($_GET["oname"],".wav")) {
-
-    $finalFile=wavToWav($finalName);
-}
-
-if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) ) {
-  die("Error");
-}
+        $finalFile=wavToWav($finalName);
+    }
+  }
+  if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) ) {
+    die("Error");
+  }
 
 } else {
   error_log("Empty file {$_FILES["file"]["tmp_name"]} already exists at {$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
   
 }
-//$codename=strtr(strtolower($_GET["codename"]),[" "=>"_"]);
-
 
 
 if ($already) {
- 
   die();
 }
 
+// Lets store voice files
+@copy($finalFile,$path."data/voices/$codename.wav");
 
 $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
 $curl = curl_init();

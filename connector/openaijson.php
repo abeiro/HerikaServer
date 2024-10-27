@@ -120,7 +120,8 @@ class connector
         $pb["user"]="";
         
         $contextDataOrig=array_values($contextData);
-        
+        $lastrole="";
+        $assistantRoleBuffer="";
         foreach ($contextDataOrig as $n=>$element) {
             
             
