@@ -1,7 +1,7 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col">
-            <h4 class="my-2"><strong>You can update this servering using the Update.bat script in the Tools folder</strong></h4>
+            <h4 class="my-2"><strong>You can update this servering using the Update.bat script.</strong></h4>
 
              <p>This is your current version</p> 
 <pre>
@@ -24,7 +24,7 @@ echo $lastCommit;
             https://discord.com/invite/NDn9qud2ug <i class='bi-discord'></i>
         </a>
         <br>
-        AI-FF Server source code: <a href="https://github.com/abeiro/HerikaServer">https://github.com/abeiro/HerikaServer</a>
+        AI-FF Server Codebase: <a href="https://github.com/abeiro/HerikaServer">https://github.com/abeiro/HerikaServer</a>
     </h4>
 
 </div>

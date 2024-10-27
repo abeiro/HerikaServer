@@ -110,7 +110,7 @@
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
                     <li><a class="dropdown-item" href="npc_upload.php" title="Upload NPC Biographies with a csv file" target="_blank">Upload NPC Biographies</a></li>
-                    <li><a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank">XTTS FastAPI Voice Management</a></li>
+                    <li><a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">XTTS FastAPI Voice Management</a></li>
                     <li><a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">Mimic3 Voice Menu</a></li>
                     <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0' target="_blank">AI/LLM Supported Models List</a></li>
                     <li><a class="dropdown-item" href='quickstart.php' target="_blank">Quickstart Menu</a></li>
@@ -121,7 +121,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a></li>
-                    <li><a class="dropdown-item" href="updater.php">Update AI Follower Framework Server</a></li>
+                    <li><a class="dropdown-item" href="updater.php" target="_blank">Update Server</a></li>
                     <li><a class="dropdown-item" href="tests.php" target="_blank">Current LLM/AI Connection Test</a></li>
                     <!--<li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
                     <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a></li>
@@ -141,7 +141,7 @@
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="addons/diary" target="_blank">AI Diary</a></li>
                     <li><a class="dropdown-item" href="addons/chatsim" target="_blank">Chat Simulation</a></li>
-                    <li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>
+                    <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
                     <li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>
                 </ul>
             </li>
