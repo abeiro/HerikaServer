@@ -40,6 +40,17 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
     if (empty($voice))
         $voice=$GLOBALS["TTS"]["MELOTTS"]["voiceid"];
 
+
+    if (empty($voice)) {
+        $codename=strtr(strtolower(trim($GLOBALS["HERIKA_NAME"])),[" "=>"_","'"=>"+"]);
+        $cn=$GLOBALS["db"]->escape("Voicetype/$codename");
+        $vtype=$GLOBALS["db"]->fetchAll("select value from conf_opts where id='$cn'");
+        $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
+        $voicetype=explode("\\",$voicetypeString);
+        $voice=strtolower($voicetype[3]);
+    }
+    
+
     if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
         $voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
  
