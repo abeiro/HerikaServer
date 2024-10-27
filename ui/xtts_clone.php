@@ -2,28 +2,7 @@
 
 session_start();
 
-?>
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>AI Follower Framework - File Upload</title>
-    <style>
-        .response-container {
-            margin-top: 20px;
-        }
-        .indent {
-            padding-left: 10ch; /* 10 character spaces */
-        }
-        .indent5 {
-            padding-left: 5ch; /* 5 character spaces */
-        }
-    </style>
-</head>
-<body>
-<?php
-
-
+ob_start();
 
 $rootPath=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 $configFilepath =$rootPath."conf".DIRECTORY_SEPARATOR;
@@ -139,7 +118,7 @@ if (isset($_POST["submit"])) {
         if ($httpCode == 200) {
             // Decode the JSON response
             $speakersList = json_decode($response, true);
-            
+            error_log($response);
             if (json_last_error() === JSON_ERROR_NONE) {
                 // Sort the speakers list alphabetically
                 sort($speakersList);
@@ -164,14 +143,63 @@ if (isset($_POST["submit"])) {
     curl_close($ch);
 
     $result = ob_get_clean();
+} elseif (isset($_POST["get_cache"])) {
+    ob_start();
+
+    $wavFiles = glob($rootPath . '/data/voices/*.wav');
+
+    // Sort the speakers list alphabetically
+    sort($wavFiles);
+    
+    // Display the speakers list in a vertical format with indentation
+    echo '<div class="response-container">';
+    echo '<h3><b>     Current Cached Voices on server:</b></h3>';
+    echo '<div class="indent">';
+    foreach ($wavFiles as $wavfile) {
+        echo htmlspecialchars($wavfile) . '<br>';
+    }
+    echo '</div>';
+    echo '</div>';
+
+    $result = ob_get_clean();
+
+} elseif (isset($_POST["send_cache"])) {
+    ob_start();
+
+    $wavFiles = glob($rootPath . '/data/voices/*.wav');
+
+    // Sort the speakers list alphabetically
+    sort($wavFiles);
+    
+    foreach ($wavFiles as $wavfile) {
+        $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
+        $curl = curl_init();
+
+        // Set cURL options
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => array(
+                'wavFile' => new CURLFile($wavfile, 'audio/wav', basename($wavfile))
+            ),
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: multipart/form-data'
+            )
+        ));
+
+        // Execute cURL request and get response
+        $response = curl_exec($curl);
+        $result .="Uploaded $response<br/>";
+
+    }
+    
 }
-
-
 
 echo "<pre>$result</pre>";
 
 echo '
-<div class="indent5">
+<div class="indent5" style="border:1px solid gray">
 <form action="xtts_clone.php" method="POST" enctype="multipart/form-data">
     <h2><b>XTTS Voice Generation</b></h2>
     <br>
@@ -193,11 +221,12 @@ echo '
 </div>
 ';
 
+
 echo '
-<div class="indent5">
+<div class="indent5" style="border:1px solid gray">
 <form action="xtts_clone.php" method="POST">
     <br>
-    <label><b>List Current Voices in XTTS</b></label>
+    <label><b>List Current Voices in XTTS SERVER</b></label>
     <br>
     <input type="submit" name="get_speakers" value="Current Voices List">
     <br>
@@ -214,6 +243,23 @@ echo '
         <li>Mono</li>
         <li>20500hz</li>
     </ul>
+</form>
+</div>
+';
+
+echo '
+<div class="indent5" style="border:1px solid gray">
+<form action="xtts_clone.php" method="POST">
+    <br>
+    <label><b>List Current Voices in Server</b></label>
+    <br>
+    <input type="submit" name="get_cache" value="Current Voices List">
+    <input type="submit" name="send_cache" value="Send cached voices to XTTS server">
+
+    <br>
+    <br>
+    <label>List voices samples on your LOCAL SERVER!. Your local server can cache voice samples, so you can upload again to XTTS server. Usefull if using runpod</label>
+
 </form>
 </div>
 ';
