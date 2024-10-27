@@ -37,10 +37,10 @@ if (strpos($_GET["oname"],".fuz"))  {
 
 
 $already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
-
+$finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["tmp_name"]).".$ext";
+@copy($_FILES["file"]["tmp_name"] ,$finalName);
 
 if (!$already) {
-  $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["tmp_name"]).".$ext";
 
   if (file_exists($path."data/voices/$codename.wav")) {
     // File exists in HS data/voices. Dont't convert again
@@ -56,9 +56,7 @@ if (!$already) {
         die();
     }
 
-    @copy($_FILES["file"]["tmp_name"] ,$finalName);
-
-
+    
     error_log("Received sample: {$_GET["oname"]}");
 
     if (strpos($_GET["oname"],".fuz")) {
