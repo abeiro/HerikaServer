@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 
 // Define the endpoint for the XTTS API
 require_once(__DIR__."/../conf/conf.php");
-if (isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]))
+if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]))
     $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = 'http://127.0.0.1:8020';
 
 // Initialize message variables
