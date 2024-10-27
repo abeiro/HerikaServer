@@ -264,4 +264,12 @@ if ($existsColumn[0]["bad_syntax_exists"]) {
     error_log("Silent npc_templates_custom patch applied");
 }
 
+$query = "select npc_name from npc_templates where npc_name='kishar'";
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["npc_name"]) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/npc_kishar_update.sql"));
+    echo '<script>alert("A patch (Kishar follower) has been applied to Database")</script>';
+}
+
+
 ?>

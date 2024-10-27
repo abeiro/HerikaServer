@@ -3,7 +3,7 @@ $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARA
 require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // Caching token
 
-function tts($textString, $mood , $stringforhash)
+$GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash)
 {
     if (!isset($GLOBALS["AVOID_TTS_CACHE"]))
         if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
@@ -182,4 +182,4 @@ function tts($textString, $mood , $stringforhash)
         return "soundcache/" . md5(trim($stringforhash)) . ".wav";
     }
     
-}
+};

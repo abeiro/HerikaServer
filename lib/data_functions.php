@@ -444,7 +444,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input' 
     ".(($actorEscaped)?" and people like '|%$actorEscaped%|' ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
@@ -1722,7 +1722,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
 
     if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
         
-
+        error_log("Overwritting conf");
         // Do customizations here
         $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
         copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
@@ -1775,7 +1775,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         $characterMap[md5($npcname)]=$npcname;
         file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
         
-        }
+    }
 
    
 }

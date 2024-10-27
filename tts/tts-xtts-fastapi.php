@@ -75,7 +75,7 @@ function xtts_fastapi_settings($settings) {
 
 
 
-function tts($textString, $mood , $stringforhash) {
+$GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 		//xtts_fastapi_settings([]); //Check this
 		
@@ -165,7 +165,7 @@ function tts($textString, $mood , $stringforhash) {
 			
 		}
 
-}
+};
 
 /*
 $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]='http://localhost:8020';

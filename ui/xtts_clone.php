@@ -5,7 +5,9 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // Define the endpoint for the XTTS API
-$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = 'http://127.0.0.1:8020';
+require_once(__DIR__."/../conf/conf.php");
+if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]))
+    $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = 'http://127.0.0.1:8020';
 
 // Initialize message variables
 $message = '';
@@ -14,55 +16,58 @@ $speakersMessage = '';
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST["submit"])) {
-        // Get the uploaded file details
-        $fileTmpPath = $_FILES["file"]["tmp_name"];
-        $fileName = $_FILES["file"]["name"];
-        $fileType = $_FILES["file"]["type"];
+        $total = count($_FILES['file']['name']);
+        for( $i=0 ; $i < $total ; $i++ ) {
+            // Get the uploaded file details
+            $fileTmpPath = $_FILES["file"]["tmp_name"][$i];
+            $fileName = $_FILES["file"]["name"][$i];
+            $fileType = $_FILES["file"]["type"][$i];
 
-        // Directory where you want to save the uploaded file
-        $saveDir = '../data/voices/';  // Adjust the path if needed
+            // Directory where you want to save the uploaded file
+            $saveDir = '../data/voices/';  // Adjust the path if needed
 
-        // Ensure the file is a .wav file
-        if ($fileType !== 'audio/wav') {
-            $message .= "<p>Error: Please upload a .wav file.</p>";
-        } else {
-            // Save the file to the specified directory
-            $destinationPath = $saveDir . $fileName;
-
-            if (move_uploaded_file($fileTmpPath, $destinationPath)) {
-                $message .= "<p>.wav file has been uploaded to $destinationPath</p>";
-
-                // Prepare the cURL request
-                $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/upload_sample';
-                $cfile = new CURLFile($destinationPath, $fileType, $fileName);
-
-                $postFields = array('wavFile' => $cfile);
-
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                    'accept: application/json',
-                    'Content-Type: multipart/form-data'
-                ));
-
-                $response = curl_exec($ch);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-                if (curl_errno($ch)) {
-                    $message .= '<p>cURL Error: ' . curl_error($ch) . '</p>';
-                } else {
-                    if ($httpCode == 200) {
-                        $message .= "<p>.wav file has been uploaded to the XTTS server</p>";
-                    } else {
-                        $message .= '<p>Response from server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
-                    }
-                }
-                curl_close($ch);
+            // Ensure the file is a .wav file
+            if ($fileType !== 'audio/wav') {
+                $message .= "<p>Error: Please upload a .wav file.</p>";
             } else {
-                $message .= "<p>Error: File could not be saved to $destinationPath.</p>";
+                // Save the file to the specified directory
+                $destinationPath = $saveDir . $fileName;
+
+                if (move_uploaded_file($fileTmpPath, $destinationPath)) {
+                    $message .= "<p>.wav file has been uploaded to $destinationPath</p>";
+
+                    // Prepare the cURL request
+                    $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/upload_sample';
+                    $cfile = new CURLFile($destinationPath, $fileType, $fileName);
+
+                    $postFields = array('wavFile' => $cfile);
+
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, $url);
+                    curl_setopt($ch, CURLOPT_POST, 1);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                        'accept: application/json',
+                        'Content-Type: multipart/form-data'
+                    ));
+
+                    $response = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+                    if (curl_errno($ch)) {
+                        $message .= '<p>cURL Error: ' . curl_error($ch) . '</p>';
+                    } else {
+                        if ($httpCode == 200) {
+                            $message .= "<p>.wav file has been uploaded to the XTTS server</p>";
+                        } else {
+                            $message .= '<p>Response from server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
+                        }
+                    }
+                    curl_close($ch);
+                } else {
+                    $message .= "<p>Error: File could not be saved to $destinationPath.</p>";
+                }
             }
         }
     } elseif (isset($_POST["get_speakers"])) {
@@ -268,7 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h2>Upload Voice Sample</h2>
     <form action="xtts_clone.php" method="post" enctype="multipart/form-data">
         <label for="file">Select a .wav file:</label>
-        <input type="file" name="file" id="file" accept=".wav" required>
+        <input type="file" name="file[]" id="file" accept=".wav" multiple="multiple" required>
 
         <input type="submit" name="submit" value="Upload">
     </form>
