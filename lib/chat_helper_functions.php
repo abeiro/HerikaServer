@@ -63,7 +63,15 @@ function cleanResponse($rawResponse)
         $toSplit = $rawResponse;
     }
 
-    if (stripos($toSplit, "{$GLOBALS["HERIKA_NAME"]}:") !== false) {
+    $herikaNameShort = $GLOBALS["HERIKA_NAME"];
+    $matches = [];
+    // Some LLM's will omit part of the name in brackets (Eg, Fred [Solitude Guard] becomes Fred in the response.
+    // This avoids reading off the abbreviated name in the TTS.
+    if (preg_match('/^(.+?) \[(.+)\]$/', $GLOBALS["HERIKA_NAME"], $matches)) {
+        $herikaNameShort = $matches[1];
+    }
+    
+    if (stripos($toSplit, "{$GLOBALS["HERIKA_NAME"]}:") !== false || preg_match("/{$herikaNameShort}\s*:/", $toSplit, $matches)) {
         $rawResponseSplited = explode(":", $toSplit);
         array_shift($rawResponseSplited);
         $toSplit = implode(":", $rawResponseSplited);
