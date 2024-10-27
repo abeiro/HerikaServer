@@ -91,4 +91,4 @@ function tts($textString, $mood = "default", $stringforhash)
 
     }
 
-}
+};
