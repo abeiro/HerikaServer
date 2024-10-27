@@ -210,8 +210,8 @@
       "description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"
       }
   },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"wip","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate your voice.  WIP needs plugin version 1.0.10 which is unreleased","_title":"Player TTS"},
-  "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"wip","scope":"global","description":"VoiceID to use for the player character. WIP needs plugin version 1.0.10 which is unreleased"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"pro","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"pro","scope":"global","description":"VoiceID to use for the player character."},
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
