@@ -95,6 +95,8 @@ $GLOBALS["SCRIPTLINE_EXPRESSION"]="";
 $GLOBALS["SCRIPTLINE_LISTENER"]="";
 $GLOBALS["SCRIPTLINE_ANIMATION"]="";
 
+$GLOBALS["TTS_FFMPEG_FILTERS"]="";
+
 /**********************
 MAIN FLOW
 ***********************/
@@ -103,7 +105,7 @@ $gameRequest = explode("|", $receivedData);
 
 
 $startTime = microtime(true);
-error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " ({$gameRequest[0]}) started: ".$startTime);
+//error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " ({$gameRequest[0]}) started: ".$startTime);
 $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
@@ -113,6 +115,26 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 /*if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setConf")&&($gameRequest[0]!="request")
 /*    &&($gameRequest[0]!="addnpc")&&($gameRequest[0]!="_speech")) {
 */
+
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+    $GLOBALS["ADD_PLAYER_BIOS"]=true;
+    $db = new sql();
+    $db->insert(
+        'eventlog',
+        array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'type' => "user_input",
+            'data' => $gameRequest[3],
+            'sess' => 'pending',
+            'localts' => time(),
+            'people'=> $GLOBALS["CACHE_PEOPLE"],
+            'location'=>$GLOBALS["CACHE_LOCATION"],
+            'party'=>$GLOBALS["CACHE_PARTY"]
+        )
+    );
+    unset($db);
+}
 
 if (!in_array($gameRequest[0],["updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc"])) {
     $semaphoreKey =abs(crc32(__FILE__));
@@ -136,7 +158,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
     error_log($cleaned_dialogue);
-    if ($TTSFUNCTION_PLAYER!="none") {
+    //if ($TTSFUNCTION_PLAYER!="none") {
         audit_log(__FILE__." ".__LINE__);
         $GLOBALS["PATCH_OVERRIDE_VOICE"]=$TTSFUNCTION_PLAYER_VOICE;
         $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;
@@ -154,7 +176,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
         audit_log(__FILE__." ".__LINE__);
 
-    }
+    //} 
 }
 
 
@@ -250,6 +272,11 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
+// Force actions when instruction issued
+if (in_array($gameRequest[0],["instruction"])) {
+    $FUNCTIONS_ARE_ENABLED=true;
+}
+
 
 if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
     $FUNCTIONS_ARE_ENABLED=false;
@@ -296,6 +323,13 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         sleep(1);
         while (sem_acquire($semaphore,true)!=true)  {
+            $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
+            if (isset($user_input_after[0]))
+                if (isset($user_input_after[0]["N"]))
+                    if ($user_input_after[0]["N"]>0) {
+                        die();// Abort rechat
+                    }
+
             usleep(1000);
         }
     }
@@ -510,7 +544,9 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 // Check for context overrides on ext dir (plugins)
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
-
+if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
+    $GLOBALS["PROMPT_HEAD"].=PHP_EOL.$GLOBALS["PLAYER_BIOS"];
+}
 
 $head[] = array('role' => 'system', 'content' =>  
     strtr($GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] . $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
@@ -687,6 +723,14 @@ if ($connectionHandler->primary_handler === false) {
             $totalProcessedData.=$extractedData;
             $extractedData="";
             $buffer=$remainingData;
+
+            $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
+            if (isset($user_input_after[0]))
+                if (isset($user_input_after[0]["N"]))
+                    if ($user_input_after[0]["N"]>0) {
+                        die('X-CUSTOM-CLOSE');
+                        // Abort , user input detected
+                    }
 
         }
 

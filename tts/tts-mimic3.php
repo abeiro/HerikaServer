@@ -4,7 +4,7 @@ $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARA
 require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); 
 
 
-function ttsMimic($textString, $mood = "cheerful", $stringforhash='') {
+$GLOBALS["TTS_IN_USE"]=function($textString, $mood = "cheerful", $stringforhash='') {
     
     $start = microtime(true);
 
@@ -44,7 +44,7 @@ function ttsMimic($textString, $mood = "cheerful", $stringforhash='') {
     return "soundcache/" . md5(trim($stringforhash)) . ".wav";
     
     
-}
+};
 
 function ttsMimicOld($textString, $mood = "cheerful", $stringforhash='')
 {

@@ -1,7 +1,7 @@
 <?php
 
 
-function tts($textString, $mood = "default", $stringforhash)
+$GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash)
 {
 
 
