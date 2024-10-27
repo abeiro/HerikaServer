@@ -243,6 +243,11 @@ if ($gameRequest[0]=="diary") {
 
 // Exit if only a event info log.
 if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer","infosave","status_msg"])) {
+    $lastInfoNpcData=$db->escape($gameRequest[3]);
+    $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc') and data='$lastInfoNpcData' and localts>".(time()-5));
+    if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+        die();
+    }
     logEvent($gameRequest);
     die();
 }
