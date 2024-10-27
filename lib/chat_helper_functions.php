@@ -357,62 +357,62 @@ function returnLines($lines,$writeOutput=true)
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
 
                 require_once(__DIR__."/../tts/tts-azure.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
 
                 require_once(__DIR__."/../tts/tts-mimic3.php");
-                $ttsOutput=ttsMimic($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
 
                 require_once(__DIR__."/../tts/tts-11labs.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
 
                 require_once(__DIR__."/../tts/tts-gcp.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
 
                 require_once(__DIR__."/../tts/tts-coqui-ai.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
 
                 require_once(__DIR__."/../tts/tts-xvasynth.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
 
                 require_once(__DIR__."/../tts/tts-openai.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
 
                 require_once(__DIR__."/../tts/tts-convai.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
 
                 require_once(__DIR__."/../tts/tts-xtts.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
 
                 require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
 
                 require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else {
                 if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
                     require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
-                    $ttsOutput=tts($responseTextUnmooded, $mood, $responseText);
+                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
                 }
             }
             if (!$ttsOutput) {
