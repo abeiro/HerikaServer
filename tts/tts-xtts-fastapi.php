@@ -138,7 +138,28 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		if ($response === FALSE) {
 			// Handle error
 			error_log("Error occurred.".__FILE__);
-			return "";
+			
+			// Lets try to use standard scheme:
+			$codename = str_replace(" ", "_", mb_strtolower($GLOBALS["HERIKA_NAME"], 'UTF-8'));
+			$codename = str_replace("'", "+", $codename);
+
+			$data = array(
+				'text' => $newString,
+				'speaker_wav' => $codename,
+				'language' => $lang
+			);
+			$options = array(
+				'http' => array(
+					'header' => "Content-type: application/json\r\n" .
+								"Accept: application/json\r\n",
+					'method' => 'POST',
+					'content' => json_encode($data)
+				)
+			);
+			$context = stream_context_create($options);
+			$response = file_get_contents($url, false, $context);
+
+
 		}
 		
 		// Handle the response
