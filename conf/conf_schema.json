@@ -156,7 +156,7 @@
       "volume": {"type":"integer","description":"Volume"}
     },
     "XVASYNTH": {
-      "_title":"xVASynth (DOES NOT WORK, WORK IN PROGRESS!)",
+      "_title":"xVASynth",
       "url":{"type":"url","description":"xVASynth must be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008"},
       "base_lang":{"type":"string","description":"Base language"},
       "modelType":{"type":"string","description":"modelType"},
