@@ -386,11 +386,11 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"])))
             }
 
             /* Open Overlay Button */
-            .open-overlay-btn {
+                        .open-overlay-btn {
                 padding: 10px 20px;
                 background-color: rgb(0, 48, 176); /* Deep Navy Blue */
                 color: #ffffff; /* White text */
-                border: none;
+                border: 2px solid #ffffff; /* White border */
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 16px;
@@ -400,6 +400,7 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"])))
                 margin: 5px;
                 font-weight: bold; /* Make text bold */
             }
+
 
             .open-overlay-btn:hover {
                 background-color: #022a6a; /* Slightly lighter navy blue on hover */
@@ -478,7 +479,6 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"])))
         </style>
     </head>
     <body>
-
         <!-- Trigger Link to Open Overlay -->
         <a href="#overlay" class="open-overlay-btn">
             <?php echo isset($GLOBALS["CURRENT_PROFILE_CHAR"]) ? htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"], ENT_QUOTES, 'UTF-8') : 'Select Profile'; ?>
@@ -669,9 +669,9 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"])))
             padding: 3px 8px; /* Reduced padding for smaller size */
             font-weight: bold;
             font-size: 12px; /* Reduced font size */
+            border: 2px solid #ffffff; /* White border */
             color: white;
             background-color: #0030b0; /* Darker Blue */
-            border: 1px solid #0030b0; /* Darker Blue Border */
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s;
