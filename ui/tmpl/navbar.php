@@ -92,6 +92,11 @@
                         </a>
                     </li>
                     <li>
+                        <a class="dropdown-item" href="export_conf.php" target="_blank" title="Exports current database into a file.">
+                            Backup Profiles
+                        </a>
+                    </li>
+                    <li>
                         <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Database." 
                         onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
                             Factory Reset Server Database
