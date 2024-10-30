@@ -32,7 +32,7 @@
     "openrouterjson": {
       "_title":"OpenRouter API (JSON)",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
-      "model": {"type":"ormodellist","description":"<strong>Must be JSON/Instruct type of Model!</strong><br>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
+      "model": {"type":"ormodellist","description":"<strong>Must be JSON/Instruct type of Model!</strong><br>FREE MODELS ARE NOT RECOMMENDED!<br>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
@@ -56,7 +56,7 @@
     "openrouter": {
       "_title":"OpenRouter API",
       "url": {"type":"url","description":"OpenRouter API endpoint"},
-      "model": {"type":"ormodellist","description":"Model to use.<br>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
+      "model": {"type":"ormodellist","description":"Model to use.<br>FREE MODELS ARE NOT RECOMMENDED!<br>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Leave as blank unless you want to manually select a provider from OpenRouter.","helpurl":"https://openrouter.ai/docs/provider-routing"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://openrouter.ai/docs#format"},
