@@ -14,22 +14,46 @@
 
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item dropdown mx-2">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Events</a>
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Events & Memories</a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="index.php?table=eventlog">Events</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=log">AI Log</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=quests">Current Active Quests</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor Events</a></li>
-                </ul>
-            </li>
-            <li class="nav-item dropdown mx-2">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Memories</a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="index.php?table=currentmission">Current AI Task/Goal</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=diarylog">Diary Log</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=books">Book Log</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=memory">Memories</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=memory_summary">Memories Summarized</a></li>
+
+                <!-- Events Category -->
+                <li><h6 class="dropdown-header">Events</h6></li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=eventlog">Events</a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor Events</a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=quests">Current Active Quests</a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=currentmission">Current AI Objective</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <!-- Logs Category -->
+                <li><h6 class="dropdown-header">Logs</h6></li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=log">AI Log</a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=diarylog">Diary Log</a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=books">Book Log</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+
+                <!-- Memories Category -->
+                <li><h6 class="dropdown-header">Memories</h6></li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=memory">Memories</a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="index.php?table=memory_summary">Memories Summarized</a>
+                </li>
+
                 </ul>
             </li>
             <li class="nav-item dropdown mx-2">
@@ -150,18 +174,20 @@
                     <li><h6 class="dropdown-header">AI Voice Management</h6></li>
                     <li>
                     <a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
-                        XTTS FastAPI Voice Management
+                        XTTS Distro Management
                     </a>
                     </li>
                     <li>
                     <a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">
-                        Mimic3 Voice Browser
+                        Mimic3 Browser
                     </a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Third Category Header -->
-                    <li><h6 class="dropdown-header">Resources</h6></li>
+                    <li><h6 class="dropdown-header">Guides (PLEASE READ!)</h6></li>
+                    <li><a class="dropdown-item" href='index.php?notes=true'>AI-FF 101 Quick Guide</a></li>
+                    <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">AI-FF Manual</a></li>
                     <li>
                     <a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">
                         AI/LLM Supported Models List
@@ -226,7 +252,6 @@
             </ul>
             </li>
 
-
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
                 <ul class="dropdown-menu">
@@ -246,16 +271,6 @@
                     <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Requests logs</a></li>
                 </ul>
             </li>
-
-            <li class="nav-item dropdown mx-2">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Please Read!</a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href='index.php?notes=true'>AI-FF 101 Quick Guide</a></li>
-                    <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">AI-FF Manual</a></li>
-                </ul>
-            </li>
-            
-
         </ul>
     </div>
 </nav>
