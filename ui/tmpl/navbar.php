@@ -35,111 +35,197 @@
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Actions</a>
                 <ul class="dropdown-menu">
+
+                    <!-- First Category Header -->
+                    <li><h6 class="dropdown-header">Event Management</h6></li>
                     <li>
-                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent events." onclick="return confirm('Sure?')">
-                            Clean Sent Events
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Marks unsent events from queue." onclick="return confirm('Sure?')">
-                            Reset Sent Events
-                        </a>
+                    <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent events." onclick="return confirm('Sure?')">
+                        Clean Sent Events
+                    </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('Sure?')">
-                            Delete All Events
-                        </a>
+                    <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Marks unsent events from queue." onclick="return confirm('Sure?')">
+                        Reset Sent Events
+                    </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('Sure?')">
-                            Clean AI Log
-                        </a>
+                    <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('Sure?')">
+                        Delete All Events
+                    </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Second Category Header -->
+                    <li><h6 class="dropdown-header">AI Log Management</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('Sure?')">
+                        Clean AI Log
+                    </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
-                            Export AI Log
-                        </a>
+                    <a class="dropdown-item" href="index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
+                        Export AI Log
+                    </a>
                     </li>
-                    <!--<li>
-                        <a class="dropdown-item" href="index.php?export=diary" title="Exports Diary Log to a csv file" target="_blank">
-                            Export Diary
-                        </a>
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Third Category Header -->
+                    <li><h6 class="dropdown-header">Database Operations</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
+                        <strong>Database Manager (Both User & Password = dwemer)</strong>
+                    </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="tests/vector-sync-chromadb.php" title="Sync VectorDB Memories. Use this if you have changed Memory Embeddings service." target="_blank">
-                            Sync Memories
-                        </a>
-                    </li>
-                    -->
-                    <li>
-                        <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync VectorDB Memories if you have changed Memory Embeddings service" onclick="return confirm('Will cost Tokens to use if using OpenAI. MAY TAKE A FEW MINUTES TO PROCESS, DO NOT REFRESH THE WEBPAGE! Are you sure?')">
-                            Compact & Sync Memories
-                        </a>
+                    <a class="dropdown-item" href="export_db.php" target="_blank" title="Exports current database into a file.">
+                        Backup Current Database
+                    </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
-                            Database Manager (user&pass: dwemer)
-                        </a>
+                    <a class="dropdown-item" href="import_db.php" target="_blank" title="Reimport an exported database file.">
+                        Restore Current Database 
+                    </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="export_db.php" target="_blank" title="Exports current database into a file.">
-                            Backup Current Database
-                        </a>
+                    <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Database." 
+                    onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
+                        Factory Reset Server Database
+                    </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Fourth Category Header -->
+                    <li><h6 class="dropdown-header">Character Profiles</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="export_conf.php" target="_blank" title="Exports current character profiles into a ZIP file.">
+                        Backup Character Profiles
+                    </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="import_db.php" target="_blank" title="Reimport an exported database file.">
-                            Restore Database Backup
-                        </a>
+                    <a class="dropdown-item" href="import_conf.php" target="_blank" title="Imports character profiles from a ZIP file.">
+                        Restore Character Profiles
+                    </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Fifth Category Header -->
+                    <li><h6 class="dropdown-header">Utilities</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use up tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
+                        Compact & Sync Memories
+                    </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="export_conf.php" target="_blank" title="Exports current database into a file.">
-                            Backup Profiles
-                        </a>
+                    <a class="dropdown-item" href="tests/ai_agent_ini.php" title="Generate AIAgent.ini file for the mod file." target="_blank">
+                        <strong>Create AIAgent.ini (Place in mod folder under SKSE\Plugins)</strong>
+                    </a>
                     </li>
-                    <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Database." 
-                        onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
-                            Factory Reset Server Database
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="tests/ai_agent_ini.php" title="Generate AIAgent.ini file for the mod file." target="_blank">
-                            <strong>Create AIAgent.ini (PLACE IN MOD FOLDER UNDER SKSE\Plugins)</strong>
-                        </a>
-                    </li>
+
                 </ul>
             </li>
 
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a></li>
-                    <li><a class="dropdown-item" href="npc_upload.php" title="Upload NPC Biographies with a csv file" target="_blank">Upload NPC Biographies</a></li>
-                    <li><a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">XTTS FastAPI Voice Management</a></li>
-                    <li><a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">Mimic3 Voice Menu</a></li>
-                    <li><a class="dropdown-item" href='https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0' target="_blank">AI/LLM Supported Models List</a></li>
-                    <li><a class="dropdown-item" href='quickstart.php' target="_blank">Quickstart Menu</a></li>
+
+                    <!-- First Category Header -->
+                    <li><h6 class="dropdown-header">Configuration Tools</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="npc_upload.php" title="Upload NPC Biographies with a csv file" target="_blank">
+                        Upload NPC Biographies
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="quickstart.php" target="_blank">
+                        Quickstart Menu
+                    </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Second Category Header -->
+                    <li><h6 class="dropdown-header">AI Voice Management</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
+                        XTTS FastAPI Voice Management
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">
+                        Mimic3 Voice Browser
+                    </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Third Category Header -->
+                    <li><h6 class="dropdown-header">Resources</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">
+                        AI/LLM Supported Models List
+                    </a>
+                    </li>
                 </ul>
             </li>
 
+
             <li class="nav-item dropdown mx-2">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a></li>
-                    <li><a class="dropdown-item" href="updater.php" target="_blank">Update Server</a></li>
-                    <li><a class="dropdown-item" href="tests.php" target="_blank">Current LLM/AI Connection Test</a></li>
-                    <!--<li><a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a></li>
-                    <li><a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a></li>
-                    <li><a class="dropdown-item" href="tests/tts-test-11labs.php" target="_blank">Test ElevenLabs TTS Connection</a></li>
-                    <li><a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test Google Cloud TTS Connection</a></li>
-                    -->
-                    <li><a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a></li>
-                    <li><a class="dropdown-item" href="../debug/simple_stt_test.php" target="_blank">Current STT Connection Test</a></li>
-                    <li><a class="dropdown-item" href="tests/itt-test.php" target="_blank">Current ITT Connection Test</a></li>
-                    <li><a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a></li>
-                    <li><a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">Regenerate Character Map</a></li>
-                </ul>
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
+            <ul class="dropdown-menu">
+                <!-- Connection Tests -->
+                <li><h6 class="dropdown-header">Connection Tests</h6></li>
+                <li>
+                <a class="dropdown-item" href="tests.php" target="_blank">Current LLM/AI Connection Test</a>
+                </li>
+                <!-- Uncomment the following items if needed -->
+                <!--
+                <li>
+                <a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a>
+                </li>
+                <li>
+                <a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a>
+                </li>
+                <li>
+                <a class="dropdown-item" href="tests/tts-test-11labs.php" target="_blank">Test ElevenLabs TTS Connection</a>
+                </li>
+                <li>
+                <a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test Google Cloud TTS Connection</a>
+                </li>
+                -->
+                <li>
+                <a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a>
+                </li>
+                <li>
+                <a class="dropdown-item" href="../debug/simple_stt_test.php" target="_blank">Current STT Connection Test</a>
+                </li>
+                <li>
+                <a class="dropdown-item" href="tests/itt-test.php" target="_blank">Current ITT Connection Test</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <!-- Logs & Cache -->
+                <li><h6 class="dropdown-header">Logs & Cache</h6></li>
+                <li>
+                <a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a>
+                </li>
+                <li>
+                <a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <!-- Utilities -->
+                <li><h6 class="dropdown-header">Utilities</h6></li>
+                <li>
+                <a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">
+                    Regenerate Character Map
+                </a>
+                </li>
+                <li>
+                <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
+                </li>
+            </ul>
             </li>
+
 
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
