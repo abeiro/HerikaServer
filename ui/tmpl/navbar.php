@@ -181,16 +181,15 @@ if (!isset($_SESSION['FAVORITES'])) {
 }
 
 // Handle form submissions
-if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"]))) {
-    $redirectToConfWizard = false; // Flag to determine redirection
-
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle profile selection
     if (isset($_POST['profileSelector'])) {
         // Update the session with the selected profile
         $_SESSION['PROFILE'] = $_POST['profileSelector'];
 
-        // Set the flag to true to redirect to conf_wizard.php
-        $redirectToConfWizard = true;
+        // Redirect to conf_wizard.php
+        header("Location: conf_wizard.php");
+        exit();
     }
 
     // Handle favorite toggling
@@ -205,18 +204,12 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"])))
             // Add to favorites
             $_SESSION['FAVORITES'][] = $profileToToggle;
         }
-    }
 
-    // Redirect based on the action performed
-    if ($redirectToConfWizard) {
-        header("Location: conf_wizard.php");
-    } else {
         // Redirect to avoid form resubmission
         header("Location: " . strtok($_SERVER["REQUEST_URI"], '#'));
+        exit();
     }
-    exit();
 }
-
     // Initialize session variable if not set
     if (!isset($_SESSION["OPTION_TO_SHOW"])) {
         if (!isset($_COOKIE["OPTION_TO_SHOW"])) {
@@ -364,18 +357,18 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"])))
             /* Favorite Button */
             .favorite-btn {
                 position: absolute;
-                top: 8px;
-                right: 8px;
+                top: 50%; /* Center vertically */
+                right: 8px; /* Align to the right */
+                transform: translateY(-50%); /* Adjusts for the button's height to truly center it */
                 background: none;
                 border: none;
                 cursor: pointer;
-                font-size: 18px;
+                font-size: 36px; /* 2x the original size of 18px */
                 color: #FFD700; /* Gold color for visibility */
                 transition: color 0.3s;
                 font-weight: bold; /* Make icon bold */
                 z-index: 1; /* Ensure it stays on top */
-            }
-
+                        }
 
             .favorite-btn.favorited {
                 color: #FFD700; /* Gold color for favorites */
@@ -390,7 +383,7 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"])))
                 padding: 10px 20px;
                 background-color: rgb(0, 48, 176); /* Deep Navy Blue */
                 color: #ffffff; /* White text */
-                border: 2px solid #ffffff; /* White border */
+                border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65); /* Border with custom RGBA color */
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 16px;
@@ -669,7 +662,7 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST')&&(isset($_POST["profileSelector"])))
             padding: 3px 8px; /* Reduced padding for smaller size */
             font-weight: bold;
             font-size: 12px; /* Reduced font size */
-            border: 2px solid #ffffff; /* White border */
+            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65); /* Border with custom RGBA color */
             color: white;
             background-color: #0030b0; /* Darker Blue */
             border-radius: 4px;
