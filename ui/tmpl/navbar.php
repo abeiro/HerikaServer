@@ -246,9 +246,9 @@
                     Regenerate Character Map
                 </a>
                 </li>
-                <li>
+                <!--<li>
                 <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
-                </li>
+                </li>-->
             </ul>
             </li>
 
