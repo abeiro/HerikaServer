@@ -116,7 +116,7 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 /*    &&($gameRequest[0]!="addnpc")&&($gameRequest[0]!="_speech")) {
 */
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"])) {
     $GLOBALS["ADD_PLAYER_BIOS"]=true;
     $db = new sql();
     $db->insert(
@@ -136,11 +136,19 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     unset($db);
 }
 
-if (!in_array($gameRequest[0],["updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc"])) {
+if (!in_array($gameRequest[0],["updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infoaction","status_msg"])) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     while (sem_acquire($semaphore,true)!=true)  {
         usleep(1000);
+    }
+} 
+
+if (in_array($gameRequest[0],["addnpc"])) {
+    $semaphoreKey2 =abs(crc32(__FILE__."_secondary"));
+    $semaphore2 = sem_get($semaphoreKey2);
+    while (sem_acquire($semaphore2,true)!=true)  {
+        usleep(100);
     }
 } 
 
@@ -175,7 +183,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         $GLOBALS["HERIKA_NAME"]=$origName;
         unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
         audit_log(__FILE__." ".__LINE__);
-
+        
     //} 
 }
 
@@ -246,6 +254,7 @@ if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoac
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc') and data='$lastInfoNpcData' and localts>".(time()-5));
     if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+        // error_log("Skipping {$gameRequest[0]}");
         die();
     }
     logEvent($gameRequest);
