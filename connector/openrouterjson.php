@@ -327,9 +327,9 @@ class connector
         
         
          $data["temperature"]=$GLOBALS["CONNECTOR"][$this->name]["temperature"]+0;
-         $data["frequency_penalty"]=$GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]+0;
-         $data["presence_penalty"]=$GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]+0;
-         $data["repetition_penalty"]=$GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]+0;
+         $data["frequency_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]+0);
+         $data["presence_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]+0);
+         $data["repetition_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]+0);
          $data["min_p"]=$GLOBALS["CONNECTOR"][$this->name]["min_p"]+0;
          $data["top_a"]=$GLOBALS["CONNECTOR"][$this->name]["top_a"]+0;
          $data["top_k"]=$GLOBALS["CONNECTOR"][$this->name]["top_k"]+0;
@@ -342,8 +342,8 @@ class connector
             
         // Mistral AI API does not support penalty params
         if (strpos($url, "mistral") === false) {
-            $data["presence_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0;
-            $data["frequency_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0;
+            $data["presence_penalty"]=floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0);
+            $data["frequency_penalty"]=floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0);
         }
   
         
