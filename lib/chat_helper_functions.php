@@ -282,7 +282,14 @@ function returnLines($lines,$writeOutput=true)
         $sentence=$output;
 
         if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
-            $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
+            // Check to see if the LLM responded with the entire message in **'s.
+            if (str_starts_with($output, "*") && str_ends_with($output, "*")) {
+                $output = ltrim($output, "*");
+                $output = rtrim($output, "*");
+            }
+            else {
+                $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
+            }
         }
         else {
             $output = preg_replace('/\*(\w+\s+\w+.*)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
