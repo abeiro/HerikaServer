@@ -48,10 +48,10 @@
                 <!-- Memories Category -->
                 <li><h6 class="dropdown-header">Memories</h6></li>
                 <li>
-                    <a class="dropdown-item" href="index.php?table=memory">Memories</a>
+                    <a class="dropdown-item" href="index.php?table=memory">Memories (WIP)</a>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="index.php?table=memory_summary">Memories Summarized</a>
+                    <a class="dropdown-item" href="index.php?table=memory_summary">Memory Summaries</a>
                 </li>
 
                 </ul>

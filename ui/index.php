@@ -280,7 +280,7 @@ include("tmpl/navbar.php");
     
     if ($_GET["table"] == "memory_summary") {
         $results = $db->fetchAll("select  gamets_truncated,n,packed_message,summary,companions,classifier,tags,uid,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 150 offset 0");
-        echo "<h3 class='my-2'>Summarized Memories Log</h3>";
+        echo "<h3 class='my-2'>Summarized Memories Log (Enable AUTO_CREATE_SUMMARYS in the default profile) </h3>";
         print_array_as_table($results);
     }
       
