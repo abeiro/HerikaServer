@@ -244,7 +244,7 @@
   },
   "ITTFUNCTION": {
     "type":"select","values":["openai","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter!<br><br><strong>Must be configured in default profile!</strong>", 
-    "_title":"Image Recognition Service","scope":"global",
+    "_title":"Soulgaze (ITT)","scope":"global",
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
   },
   "ITT": {
