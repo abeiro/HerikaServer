@@ -9,33 +9,32 @@ function toggleClass(e, toggleClassName) {
 }
 
 function movePage(e, page) {
-  if (page == currentPage) {
+  if (page >= currentPage) {
     currentPage+=2;
     toggleClass(e, "left-side");
     toggleClass(e.nextElementSibling, "left-side");
     
   }
-  else if (page = currentPage - 1) {
+  else if (page < currentPage && e.className.includes("left-side")) {
     currentPage-=2;
-    toggleClass(e, "left-side");
-    toggleClass(e.previousElementSibling, "left-side");
+	toggleClass(e, "left-side");
+	toggleClass(e.previousElementSibling, "left-side");
   }
   
 }
 
-let i=1;
-
 function moveToLast() {
-  i=currentPage;
   console.log("Current Page"+currentPage);
   movePageAndWait();
 }
 
 function movePageAndWait() {
-    total=document.querySelectorAll('body > div.book > div').length-1;
-    movePage(document.querySelector('body > div.book > div:nth-child('+i+')'), i);
-    i+=2;
-    if (i<total)
-      setTimeout(movePageAndWait, 100);
+	const total=document.querySelectorAll('body > div.book > div').length-1;
+	if (currentPage<total) {
+		movePage(document.querySelector('body > div.book > div:nth-child('+currentPage+')'), currentPage);
+	}
+	if (currentPage<total) {
+		setTimeout(movePageAndWait, 100);
+	}
 }
 
