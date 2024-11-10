@@ -28,6 +28,7 @@ body {
   height: 654.5px;
   transform: translate(-50%, -50%) rotatex(10deg) rotatey(-10deg);
   transform-style: preserve-3d;
+  pointer-events: none;
 }
 
 .page {
@@ -38,6 +39,7 @@ body {
   top: 0;
   right: 0;
   transition: transform 1s;
+  pointer-events: all;
 }
 
 .page:nth-child(1) {
