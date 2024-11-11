@@ -107,7 +107,7 @@ $FUNCTIONS = [
     ],
     [
         "name" => $F_NAMES["LookAt"],
-        "description" => $F_TRANSLATIONS["Inspect"],
+        "description" => $F_TRANSLATIONS["LookAt"],
         "parameters" => [
             "type" => "object",
             "properties" => [
