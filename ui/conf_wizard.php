@@ -393,7 +393,7 @@ include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "AI Follower Framework Server";
+$title = "CHIM";
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 
