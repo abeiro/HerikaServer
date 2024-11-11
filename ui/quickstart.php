@@ -9,7 +9,7 @@ header("Expires: 0"); // Proxies
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>AI Follower Framework Server</title>
+    <title>CHIM</title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
@@ -325,7 +325,7 @@ foreach ($quickstartConf as $pname => $parms) {
 echo '<div class="btn-group-custom text-center">
         <p class="warning-text">
     Click "Download AIAgent.ini" and place it in the AIAgent Skyrim mod folder under SKSE/Plugins 
-    <a href="https://www.nexusmods.com/skyrimspecialedition/mods/126330?tab=files/" target="_blank"> Download AI-FF Mod</a>
+    <a href="https://www.nexusmods.com/skyrimspecialedition/mods/126330?tab=files/" target="_blank"> Download CHIM Mod</a>
 </p>
 <div class="btn-group-custom text-center">
         <p class="warning-text2">
@@ -333,7 +333,7 @@ echo '<div class="btn-group-custom text-center">
 </p>
 <div class="btn-group-custom text-center">
     <p class="warning-text3">
-        Also check out the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank">AI-FF 101</a> guide and the <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">AI-FF Manual</a> to learn how to make the most out of this mod!
+        Also check out the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank">CHIM 101</a> guide and the <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">CHIM Manual</a> to learn how to make the most out of this mod!
     </p>
 </div>
 

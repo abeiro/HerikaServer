@@ -1,10 +1,10 @@
 <nav class="navbar navbar-expand-lg bg-primary-subtle">
     <div class="container-fluid mx-1">
         <!-- PLEASE LEAVE THIS LINK TO index.php, as database update checks are being made there -->
-        <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="AI Follower Framework Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> AI Follower Framework</a> -->
+        <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="CHIM Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> CHIM</a> -->
         <a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/index.php" title="Go to Home Page">
-            <img src="images/DwemerDynamics.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> 
-            <img src="images/serverlogo.png" alt="AI Follower Framework Server" style="vertical-align:bottom;"/> 
+            <img src="images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+            <img src="images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
         </a> 
         
         <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector" style="display:none">
@@ -111,7 +111,7 @@
                     </a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the AI Follower Framework Database." 
+                    <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the CHIM Database." 
                     onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
                         Factory Reset Server Database
                     </a>
@@ -186,8 +186,8 @@
 
                     <!-- Third Category Header -->
                     <li><h6 class="dropdown-header">Guides (PLEASE READ!)</h6></li>
-                    <li><a class="dropdown-item" href='index.php?notes=true'>AI-FF 101 Quick Guide</a></li>
-                    <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">AI-FF Manual</a></li>
+                    <li><a class="dropdown-item" href='index.php?notes=true'>CHIM 101 Quick Guide</a></li>
+                    <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">CHIM Manual</a></li>
                     <li>
                     <a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">
                         AI/LLM Supported Models List
