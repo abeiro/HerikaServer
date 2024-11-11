@@ -110,8 +110,8 @@ class connector
         $headers = array(
             'Content-Type: application/json',
             "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
-            "HTTP-Referer:  {$GLOBALS["CONNECTOR"][$this->name]["xreferer"]}",
-            "X-Title: {$GLOBALS["CONNECTOR"][$this->name]["xtitle"]}"
+            "HTTP-Referer:  https://www.nexusmods.com/skyrimspecialedition/mods/126330",
+            "X-Title: CHIM"
         );
 
         $options = array(
