@@ -832,14 +832,24 @@ function selectRandomInArray($arraySource)
         return "";
     
     $n=sizeof($arraySource);
-    if ($n==1) {
-        return strtr($arraySource[0],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
-        //return $arraySource[0];
+
+    //$arraySource could be empty, could contain undefined element, could contain empty element, could contain array element
+    if ($n > 0) {   
+        if ($n > 1) {
+            $ix = rand(0, $n-1);
+        } else {
+            $ix = 0;
+        }
+        if (isset($arraySource[$ix])) {
+            if (is_array($arraySource[$ix])) {
+                error_log("selectRandomInArray: expecting string, received array " . print_r($arraySource[$ix], true) ); 
+            } else {
+                if (strlen($arraySource[$ix]) > 0) {
+                    return strtr($arraySource[$ix],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
+                }
+            }
+        }
     }
-    
-    return strtr($arraySource[rand(0, $n-1)],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
-    //return $arraySource[rand(0, $n-1)];
-
-
+    return "";
 
 }
