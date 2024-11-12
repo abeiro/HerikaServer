@@ -333,8 +333,10 @@ function removeTalkingToOccurrences($input) {
 function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") {
 
         global $db;
+
+        $actorcn=$db->escape($actor);
         $results = $db->fetchAll("SELECT speaker,speech,listener,gamets,localts,'speech',gamets - LAG(gamets) OVER (ORDER BY gamets ASC) AS gamets_diff,location,ts
-        FROM speech where companions like '%$actor%' order by ts desc LIMIT 1000 OFFSET 0");    
+        FROM speech where companions like '%$actorcn%' order by ts desc LIMIT 1000 OFFSET 0");    
          $rawData=[];
         foreach ($results as $row) {
             $rawData[] = $row;
@@ -434,11 +436,13 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     
     $lastDialogFull = array();
     $actorEscaped=$db->escape($actor);
+    $playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
+
     $query="select  
     case 
       when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'The Narrator:'
       when a.data like '%background chat%' then 'The Narrator: background dialogue: '
-      when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
+      when type='book' then 'The Narrator: ({$playerEscaped} took the book ' 
       else '' 
     end||a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
@@ -1676,11 +1680,11 @@ function GetAnimationHex($mood)
         
     } else if ($mood=="drunk") {
         // No animation :(
-        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=0.5"';
+        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=0.6"';
         
     } else if ($mood=="high") {
         // No animation :(
-        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=1.25"';
+        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=1.45"';
         
     }
                             
