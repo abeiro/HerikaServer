@@ -32,9 +32,6 @@ if (php_sapi_name()=="cli") {
 
     $latsRid=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0");
     $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$latsRid[0]["rowid"]}");
-    
-    
-    
     $res[0]["ts"]=$res[0]["ts"]+0;
     $res[0]["gamets"]=$res[0]["ts"]+0;
         
@@ -116,7 +113,7 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 /*    &&($gameRequest[0]!="addnpc")&&($gameRequest[0]!="_speech")) {
 */
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"])) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","init"])) {
     $GLOBALS["ADD_PLAYER_BIOS"]=true;
     $db = new sql();
     $db->insert(
@@ -128,15 +125,15 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
             'data' => $gameRequest[3],
             'sess' => 'pending',
             'localts' => time(),
-            'people'=> $GLOBALS["CACHE_PEOPLE"],
-            'location'=>$GLOBALS["CACHE_LOCATION"],
-            'party'=>$GLOBALS["CACHE_PARTY"]
+            'people'=> '',
+            'location'=>'',
+            'party'=>''
         )
     );
     unset($db);
 }
 
-if (!in_array($gameRequest[0],["updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infoaction","status_msg"])) {
+if (!in_array($gameRequest[0],["updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infoaction","status_msg","delete_event"])) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     while (sem_acquire($semaphore,true)!=true)  {
@@ -144,6 +141,7 @@ if (!in_array($gameRequest[0],["updateprofile","diary","_quest","setconf","reque
     }
 } 
 
+// adnpc has its custom semaphore, as it write files
 if (in_array($gameRequest[0],["addnpc"])) {
     $semaphoreKey2 =abs(crc32(__FILE__."_secondary"));
     $semaphore2 = sem_get($semaphoreKey2);
@@ -157,8 +155,15 @@ if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
 }
 
-
 $db = new sql();
+
+if (($gameRequest[0]=="delete_event")) {
+    // Do this ASAP
+    $datacn=$db->escape($gameRequest[3]);
+    $db->delete("eventlog","type in ('chat','prechat') and data like '%$datacn%' and localts>".(time()- 120));
+    audit_log(__FILE__);
+    die();
+}
 
 
 // Player TTS. We overwrite some confs an then restore them.
@@ -289,6 +294,7 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
 // Force actions when instruction issued
 if (in_array($gameRequest[0],["instruction"])) {
     $FUNCTIONS_ARE_ENABLED=true;
+    $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
 }
 
 
@@ -382,9 +388,9 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
  Safe stop
 */
 if (preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {  
-    echo "{$GLOBALS["HERIKA_NAME"]}|command|StopAll@\r\n";
+    echo "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
     @ob_flush();
-    $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|StopAll@\r\n")] = "Herika|command|StopAll@\r\n";
+    $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
 }
 
 if (!isset($GLOBALS["CACHE_PEOPLE"])) {
