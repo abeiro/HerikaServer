@@ -276,12 +276,13 @@
             </li>
         </ul>
     </div>
-    <a href="https://discord.gg/NDn9qud2ug" target="_blank">
+    <a href="https://discord.gg/NDn9qud2ug" target="_blank" style="padding-right: 5px;">
     <img src="images/discord.png" alt="Join us on Discord">
     </a>
-    <a href="https://patreon.com/DwemerDynamics" target="_blank">
+    <a href="https://patreon.com/DwemerDynamics" target="_blank" style="padding-right: 10px;">
     <img src="images/patreon.png" alt="Join our Patreon">
-    </a>
+</a>
+
 </nav>
 
 <?php
