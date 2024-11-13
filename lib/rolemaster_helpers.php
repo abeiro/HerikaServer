@@ -50,7 +50,7 @@ You are a Skyrim quest creator. You can create quest using this tools
 
 Issue actions to make the workflow of the quest. This actions will be stored on property "stages":
 
-somes stages are branched. we use parent_stage property to specify if a stage is a branch and should be executed if parent branch ends sucesfully or not (fails)
+Some stages are branched. we use parent_stage property to specify if a stage is a branch and should be executed if parent branch ends successfully or not (fails)
 
 # Example
 
@@ -163,10 +163,10 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
     } else
         $currentProfile=$GLOBALS["HERIKA_PERS"];
 
-    $head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and determine if a topic has been fully or partially covered. ", ];
+    $head[]   = ["role"	=> "system", "content"	=> "You are an assistant. You will analyze a dialogue and determine if a topic has been fully or partially covered. ", ];
     $prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
     $prompt[] = ["role"=> "user", "content"	=> "is this topic fully or partially covered in the dialogue history? \"$topic\".\n". 
-    "Answer yes,or give a score from 1/10 , (not covered) to 10/10 (fully covered), and then write a dialogue sentence as the speaker (hint) to provide the missing info. Use a JSON object to give reponse {\"score\":[0-9],\"hint\":\"\"}"];
+    "Answer yes, or give a score from 1/, (not covered) to 10 (fully covered), and then write a dialogue sentence as the speaker (hint) to provide the missing info. Use a JSON object to give a response {\"score\":[0-9],\"hint\":\"\"}"];
     $contextData       = array_merge($head, $prompt);
 
     print_r($contextData);
