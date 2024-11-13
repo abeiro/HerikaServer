@@ -276,6 +276,12 @@
             </li>
         </ul>
     </div>
+    <a href="https://discord.gg/NDn9qud2ug" target="_blank">
+    <img src="images/discord.png" alt="Join us on Discord">
+    </a>
+    <a href="https://patreon.com/DwemerDynamics" target="_blank">
+    <img src="images/patreon.png" alt="Join our Patreon">
+    </a>
 </nav>
 <div style="width: 50%; display: inline-block;">
 <form action='set_profile.php' method="POST" enctype="multipart/form-data" id="formprofile" onsubmit='document.getElementById("shorcutholder").value=getAnchor()'>
