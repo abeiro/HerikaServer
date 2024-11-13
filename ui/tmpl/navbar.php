@@ -255,24 +255,34 @@
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
                 <ul class="dropdown-menu">
+                    <li><h6 class="dropdown-header">Immersion Tools</h6></li>
                     <li><a class="dropdown-item" href="addons/diary" target="_blank">AI Diary</a></li>
                     <li><a class="dropdown-item" href="addons/chatsim" target="_blank">Chat Simulation</a></li>
                     <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
-                    <li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>
+                    <!--<li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>-->
                 </ul>
             </li>
 
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Plugins</a>
                 <ul class="dropdown-menu">
+                    <li><h6 class="dropdown-header">CHIM Extensions</h6></li>
                     <li><a class="dropdown-item" href='index.php?plugins_show=true'>Installed Plugins</a></li>
-                    <span title="Touch only if you know what you are doing" style="display: inline-block;    width: 100%;    text-align: center;    font-style: italic;    border-bottom: 1px solid grey;">Development</span>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Debugging</h6></li>
                     <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
                     <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Requests logs</a></li>
                 </ul>
             </li>
         </ul>
     </div>
+    <a href="https://discord.gg/NDn9qud2ug" target="_blank" style="padding-right: 5px;">
+    <img src="images/discord.png" alt="Join us on Discord">
+    </a>
+    <a href="https://patreon.com/DwemerDynamics" target="_blank" style="padding-right: 10px;">
+    <img src="images/patreon.png" alt="Join our Patreon">
+</a>
+
 </nav>
 
 <?php
