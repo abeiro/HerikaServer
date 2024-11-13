@@ -74,7 +74,12 @@ switch ($action) {
             $newRunningQuest = $db->fetchAll("SELECT * FROM aiquests_template WHERE title='{$cn_title}'");
             $taskId = uniqid();
             $quest = json_decode($newRunningQuest[0]['data'], true);
-            $newQuest = createQuestFromTemplate($quest);
+
+            // Add some randomness
+            $notes=["dramatic story","romance story","comedy flair","rude cursed words story"];
+
+            $newQuest=createQuestFromTemplate($quest,$notes[array_rand($notes)].", adapt characters to it.");
+            
 
             if ($newQuest) {
                 $pointer = null;
