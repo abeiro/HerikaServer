@@ -46,7 +46,12 @@ if ($_GET["action"]=="stop") {
     $newRunningQuest=$db->fetchAll("SELECT * FROM aiquests_template where title='$cn_title'");
     $taskId=uniqid();
     $quest=json_decode($newRunningQuest[0]["data"],true);
-    $newquest=createQuestFromTemplate($quest);
+
+    $notes=["dramatic story","romance story","comedy flair","rude cursed words story"];
+
+    //$newquest=createQuestFromTemplate($quest,$notes[array_rand($notes)]);
+    $newquest=createQuestFromTemplate($quest,"$notes. adapt characters to it.");
+    
     if ($newquest) {
         $pointer=null;
 
