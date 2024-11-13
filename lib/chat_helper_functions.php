@@ -300,6 +300,8 @@ function returnLines($lines,$writeOutput=true)
                         "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"",
                         "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"",
                         "*pant*"=>"",
+                        "*cough*"=>"",
+                        "*hiccup*"=>"",
                         "*whimper*"=>""
                         ]
                         ); // Manual cases

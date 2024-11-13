@@ -105,7 +105,7 @@ foreach ($quest["initial_data"] as $n=>$step) {
 
 $quest["initial_data_done"]=true;
 
-$N_TOPIC_ELEMENTS=(sizeof($topics)+10)/24;
+$N_TOPIC_ELEMENTS=(sizeof($topics)+10)/32;
 $allDone=true;
 foreach ($quest["stages"] as $stage) {
     if (isset($stage["status"]))
@@ -122,7 +122,18 @@ if ($allDone) {
 }
 
 
+// Silence detector
 
+if (($quest["GLOBAL_LAST_LLM_CALL"]!=0)&&(time()-$quest["GLOBAL_LAST_LLM_CALL"]>15)) {
+    $lastChat=$db->fetchAll("select max(localts) as m from speech");
+    $lastEvent=$db->fetchAll("select max(localts) as n from eventlog ");
+    if (($lastEvent[0]["n"]-$lastChat[0]["m"])>20) {  // 20 seconds of silence
+        $quest["GLOBAL_LAST_LLM_CALL"]=0;
+        $N_TOPIC_ELEMENTS=0;
+        error_log("Silence detected {$lastEvent[0]["n"]}-{$lastChat[0]["m"]}");
+    } else 
+        error_log("Last talk {$lastEvent[0]["n"]}-{$lastChat[0]["m"]}\t".($lastEvent[0]["n"]-$lastChat[0]["m"])." secs");
+}
 
 foreach ($quest["stages"] as $n=>$stage) {
 
@@ -204,6 +215,8 @@ foreach ($quest["stages"] as $n=>$stage) {
                 } else if (in_array($character["disposition"],["high"])) {
                     $PARMS["EMOTEMOODS"]="high";
                 }
+
+                
 
                 createProfile($character["name"],$PARMS,true);
 
@@ -515,7 +528,7 @@ foreach ($quest["stages"] as $n=>$stage) {
                 $quest["stages"][$n]["status"]=2;
                 
             }
-            if (isset($quest["stages"][$n]["last_check"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_check"])> 120 * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS) {
+            if (isset($quest["stages"][$n]["last_check"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_check"])>= 120 * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS) {
                 error_log("Enforcing ask for gold");
 
                 if ($quest["stages"][$n]["checked_times"]>0) {
@@ -569,17 +582,25 @@ foreach ($quest["stages"] as $n=>$stage) {
 
 
             if (in_array($character["disposition"],["defiant","furious"])) {
-                $db->insert(
-                    'responselog',
-                    array(
-                        'localts' => time(),
-                        'sent' => 0,
-                        'actor' => "rolemaster",
-                        'text' => "",
-                        'action' => "rolecommand|Disposition@{$character["name"]}@{$character["disposition"]}@$taskId",
-                        'tag' => ""
-                    )
-                );
+                $canCombat=false;
+                foreach ($quest["stages"] as $localstage) 
+                    if ($localstage["label"]=="CombatPlayer")
+                        $canCombat=true;
+                
+                 
+                
+                if ($canCombat)
+                    $db->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => "",
+                            'action' => "rolecommand|Disposition@{$character["name"]}@{$character["disposition"]}@$taskId",
+                            'tag' => ""
+                        )
+                    );
 
             }
 
@@ -610,7 +631,7 @@ foreach ($quest["stages"] as $n=>$stage) {
                 echo "Dialogue is no too small ".(($contextDataHistoric)).PHP_EOL;
 
 
-                if (isset($quest["stages"][$n]["last_llm_call"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_llm_call"])> 120  * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS)
+                if (isset($quest["stages"][$n]["last_llm_call"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_llm_call"])>= 120  * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS)
                     $quest["stages"][$n]["last_llm_call"]=$GLOBALS["gameRequest"][2];
                 
                 else  if (!isset($quest["stages"][$n]["last_llm_call"])) {
@@ -630,7 +651,7 @@ foreach ($quest["stages"] as $n=>$stage) {
                 
                 if ($topiCall["res"]) {
                     $quest["stages"][$n]["status"]=2;
-                    $quest["stages"][$n]["last_llm_call"]=time();
+                    $quest["stages"][$n]["last_llm_call"]=$GLOBALS["gameRequest"][2];
                     $quest["GLOBAL_LAST_LLM_CALL"]=time();
                     
 
@@ -713,17 +734,22 @@ foreach ($quest["stages"] as $n=>$stage) {
 
 
             if (in_array($character["disposition"],["defiant","furious"])) {
-                $db->insert(
-                    'responselog',
-                    array(
-                        'localts' => time(),
-                        'sent' => 0,
-                        'actor' => "rolemaster",
-                        'text' => "",
-                        'action' => "rolecommand|Disposition@{$character["name"]}@{$character["disposition"]}@$taskId",
-                        'tag' => ""
-                    )
-                );
+                $canCombat=false;
+                foreach ($quest["stages"] as $localstage) 
+                    if ($localstage["label"]=="CombatPlayer")
+                        $canCombat=true;
+                if ($canCombat)   
+                    $db->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => "",
+                            'action' => "rolecommand|Disposition@{$character["name"]}@{$character["disposition"]}@$taskId",
+                            'tag' => ""
+                        )
+                    );
 
             }
 
@@ -754,7 +780,7 @@ foreach ($quest["stages"] as $n=>$stage) {
                 echo "Dialogue is no too small ".(($contextDataHistoric)).PHP_EOL;
 
 
-                if (isset($quest["stages"][$n]["last_llm_call"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_llm_call"])> 120  * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS)
+                if (isset($quest["stages"][$n]["last_llm_call"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_llm_call"])>= 120  * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS)
                     $quest["stages"][$n]["last_llm_call"]=$GLOBALS["gameRequest"][2];
                 
                 else  if (!isset($quest["stages"][$n]["last_llm_call"])) {
@@ -774,7 +800,7 @@ foreach ($quest["stages"] as $n=>$stage) {
                 
                 if ($topiCall["res"]) {
                     $quest["stages"][$n]["status"]=2;
-                    $quest["stages"][$n]["last_llm_call"]=time();
+                    $quest["stages"][$n]["last_llm_call"]=$GLOBALS["gameRequest"][2];
                     $quest["GLOBAL_LAST_LLM_CALL"]=time();    
 
                 } else if ($topiCall["missing"]=="skip"){ // Will jump to check later

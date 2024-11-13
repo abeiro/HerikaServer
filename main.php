@@ -297,6 +297,11 @@ if (in_array($gameRequest[0],["instruction"])) {
     $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
 }
 
+if (in_array($gameRequest[0],["suggestion"])) {
+    $FUNCTIONS_ARE_ENABLED=false;
+    $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
+}
+
 
 if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
     $FUNCTIONS_ARE_ENABLED=false;
