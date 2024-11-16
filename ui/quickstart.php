@@ -261,7 +261,7 @@ foreach ($quickstartConf as $pname => $parms) {
     } else if ($parms["type"] == "select") {
         if ($pname == "TTSFUNCTION") {
             $parms["values"] = ["melotts","xtts-fastapi"];
-            $parms["description"] = "Select either MeloTTS or XTTS. <br>You can install MeloTTS under Tools/Components/AMD or NVIDIA GPU in the DwemerDistro folder if you have not already.<br> You can install XTTS under Tools/Components/NVIDIA GPU in the DwemerDistro folder. <br><b>We recommend MeloTTS for most users.</b>";
+            $parms["description"] = "Select either MeloTTS or XTTS. <br>You can install MeloTTS under Tools/Components/AMD or NVIDIA GPU in the DwemerDistro folder if you have not already.<br> You can install XTTS under Tools/Components/NVIDIA GPU in the DwemerDistro folder. <br><b>We recommend MeloTTS for most users. <br>If you want to use xVASnyth you will need to configure it in the Configuration Wizard. </b>";
         }
     
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
@@ -377,7 +377,7 @@ include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "AI Follower Framework Server";
+$title = "CHIM";
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 
