@@ -4,7 +4,7 @@
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!<br>If you are in the default profile <b>YOU MUST</b> leave it as <i>The Narrator</i>!<br><b>You can change profiles by clicking the blue button in the top left.</b>"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
-  "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
+  "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"NPC Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "dynamic_profile_b1": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events.<br><strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill"},
   "dynamic_profile_b2": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs.<br><strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill"},
   "DYNAMIC_PROFILE":{"userlvl":"pro","type":"boolean","description":"Will trigger dynamic profile updates during certain ingame events (such as sleeping). Will cause the AI personality to dynamically change during gameplay based on player interaction."},
@@ -18,7 +18,7 @@
   "NEWQUEUE": {"userlvl":"wip","scope":"constant","type":"boolean","description":"Leave as is. Can not be changed!"},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "BOOK_EVENT_FULL": {"userlvl":"pro","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
-  "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.<br><strong>SET THIS ON default profile to apply to all followers.</strong>","scope":"global"},
+  "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.<br><strong>SET THIS ON default profile to apply to all NPCs.</strong>","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game.","scope":"global"},
   "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
@@ -132,7 +132,7 @@
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
@@ -157,7 +157,7 @@
     },
     "XVASYNTH": {
       "_title":"xVASynth",
-      "url":{"type":"url","description":"xVASynth ideally should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008"},
+      "url":{"type":"url","description":"xVASynth ideally should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008<br>Click the <b>help/doc</b> link for more info.","helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.3tf6myep6rmw"},
       "base_lang":{"type":"string","description":"Base language"},
       "modelType":{"type":"string","description":"modelType"},
       "model":{"type":"string","description":"Model"},
