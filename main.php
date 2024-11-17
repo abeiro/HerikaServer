@@ -122,7 +122,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
             'ts' => $gameRequest[1],
             'gamets' => $gameRequest[2],
             'type' => "user_input",
-            'data' => $gameRequest[3],
+            'data' => $gameRequest[0],
             'sess' => 'pending',
             'localts' => time(),
             'people'=> '',
@@ -133,12 +133,15 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     unset($db);
 }
 
-if (!in_array($gameRequest[0],["updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infoaction","status_msg","delete_event"])) {
+if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infoaction","status_msg","delete_event","itemfound","_questdata"])) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
+    
     while (sem_acquire($semaphore,true)!=true)  {
+        //error_log("Audit: Waiting for lock: {$gameRequest[0]}");
         usleep(1000);
     }
+    //error_log("Audit:Lock adquired: {$gameRequest[0]}");
 } 
 
 // adnpc has its custom semaphore, as it write files
