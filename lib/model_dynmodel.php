@@ -65,5 +65,19 @@ function DMtoggleModel() {
     return $nextModel;
 }
 
+function DMcopyModel() {
+    // Sets $cm to the current connector
+    $cm = DMgetCurrentModel();
+
+    // Loop over every file in "../data/" with a filename that matches "CurrentModel_*.json"
+    $directory = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data";
+    foreach (glob($directory . DIRECTORY_SEPARATOR . "CurrentModel_*.json") as $file) {
+        if (is_file($file)) {
+            // Set file contents to the current connector
+            $cmj=file_put_contents($file, json_encode($cm));
+        }
+    }
+}
+
 
 ?>
