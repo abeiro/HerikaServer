@@ -90,10 +90,9 @@ if ($method === "POST") {
 			$jsonDataInput["HERIKA_PERS"]=$charDesc;
 		}
 
-		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
-		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_PERS"], ];
-		$prompt[] = ["role"=> "user", "content"	=> "Use Dialogue history to update $SUMMARIZE character profile.
+		requireFilesRecursively($path . "ext".DIRECTORY_SEPARATOR,"globals.php");
+
+		$updateProfilePrompt = "Use Dialogue history to update $SUMMARIZE character profile.
 Mandatory Format:
 
 * Personality,($REMINDER description, $SHORT).
@@ -107,7 +106,17 @@ Mandatory Format:
 * Current mood ($SHORTER, use last events to determine). 
 * Relation with other followers if any.
 
-Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}\r\n'.", ];
+Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}\r\n'.";
+
+		// override update profile prompt from plugins
+        if(isset($GLOBALS["UPDATE_PERSONALITY_PROMPT"])) {
+            $updateProfilePrompt = $GLOBALS["UPDATE_PERSONALITY_PROMPT"];
+        }
+
+		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
+		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
+		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_PERS"], ];
+		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
         $GLOBALS["FORCE_MAX_TOKENS"]=600;
@@ -137,6 +146,12 @@ Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}\
 		
 		
 		$responseParsed["HERIKA_PERS"]=$buffer;
+
+		// custom function to process LLM output
+		if(array_key_exists("CustomUpdateProfileFunction", $GLOBALS) && is_callable($GLOBALS["CustomUpdateProfileFunction"])) {
+			$responseParsed["HERIKA_PERS"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
+		}
+		
         echo json_encode($responseParsed);
 	}
 }
