@@ -261,6 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h3><strong>This page is only for the DwemerDistro XTTS Server!</strong></h3>
     <h4>Make sure that all names with spaces are replaced with underscores (_) and all names are lowercase!</h4>
     <h4>Example: Mjoll the Lioness becomes <code>mjoll_the_lioness.wav</code></h4>
+    <h4>If you are replacing an existing voice you will need to restart the server.</h4>
 
     <?php
     if (!empty($message)) {
