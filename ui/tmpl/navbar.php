@@ -276,6 +276,9 @@
             </li>
         </ul>
     </div>
+    <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" style="padding-right: 5px;">
+    <img src="images/youtube.png" alt="Checkout our Youtube Channel">
+    </a>
     <a href="https://discord.gg/NDn9qud2ug" target="_blank" style="padding-right: 5px;">
     <img src="images/discord.png" alt="Join us on Discord">
     </a>
