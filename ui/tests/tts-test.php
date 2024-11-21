@@ -39,7 +39,7 @@ $ts = time();
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TTS Test Page</title>
+    <title>CHIM TTS Test</title>
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
     <style>
         /* Updated CSS for Dark Grey Background Theme */
@@ -150,7 +150,7 @@ $ts = time();
 </head>
 <body>
 
-<div class="header">Text-to-Speech Test Page</div>
+<div class="header">CHIM Text-to-Speech Test</div>
 
 <div class="section">
     <?php

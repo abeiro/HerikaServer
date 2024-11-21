@@ -30,7 +30,7 @@ if (php_sapi_name() != "cli") {
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Speech-to-Text Test Page</title>
+        <title>CHIM Speech-to-Text Test</title>
         <link rel="icon" type="image/x-icon" href="../ui/images/favicon.ico">
         <style>
             /* Updated CSS for Dark Grey Background Theme */
@@ -122,11 +122,16 @@ if (php_sapi_name() != "cli") {
                 color: #17a2b8;
                 font-weight: bold;
             }
+
+            .accuracy {
+                color: #ffc107;
+                font-weight: bold;
+            }
         </style>
     </head>
     <body>
 
-    <div class="header">Speech-to-Text Test Page</div>
+    <div class="header">CHIM Speech-to-Text Test</div>
 
     <div class="section">
 
@@ -136,7 +141,9 @@ if (php_sapi_name() != "cli") {
         $testFile = __DIR__ . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav";
         echo '<div class="message">Sending <code>' . htmlspecialchars($testFile) . '</code></div>';
 
-        echo '<div class="message">Expected result: "<em>Welcome to the jungle, we\'ve got fun and games.</em>"</div>';
+        // Define the expected transcription
+        $expected_transcription = "Welcome to the jungle, we've got fun and games.";
+        echo '<div class="message">Expected result: "<em>' . htmlspecialchars($expected_transcription) . '</em>"</div>';
 
         echo '<div class="status"><span class="label">Obtaining transcription from STT service...</span></div>';
 
@@ -145,6 +152,23 @@ if (php_sapi_name() != "cli") {
         if (!empty($transcription)) {
             echo '<div class="status"><span class="label ok">Transcription Successful!</span></div>';
             echo '<div class="response">' . nl2br(htmlspecialchars($transcription)) . '</div>';
+
+            // Calculate similarity percentage using levenshtein
+            $lev_distance = levenshtein(strtolower($expected_transcription), strtolower($transcription));
+            $max_len = max(strlen($expected_transcription), strlen($transcription));
+            if ($max_len > 0) {
+                $similarity = (1 - ($lev_distance / $max_len)) * 100;
+            } else {
+                $similarity = 0;
+            }
+
+            // Alternatively, you can use similar_text() function
+            /*
+            similar_text(strtolower($expected_transcription), strtolower($transcription), $similarity);
+            */
+
+            // Display similarity percentage
+            echo '<div class="message accuracy">Similarity: ' . number_format($similarity, 2) . '%</div>';
         } else {
             echo '<div class="status"><span class="label error">Transcription Failed</span></div>';
             echo '<div class="error-message">Transcription failed or returned an empty result.</div>';
@@ -168,13 +192,30 @@ if (php_sapi_name() != "cli") {
     // Running from CLI
     if (!isset($argv[1])) {
         echo "Sending " . __DIR__ . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav" . PHP_EOL;
-        echo "Expected result: 'Welcome to the jungle, we've got fun and games.'" . PHP_EOL;
+        $expected_transcription = "Welcome to the jungle, we've got fun and games.";
+        echo "Expected result: '" . $expected_transcription . "'" . PHP_EOL;
         echo "Obtaining transcription from STT service.... ";
 
         $transcription = stt(__DIR__ . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav");
         echo $transcription . PHP_EOL;
         echo "Service used: ";
         print_r($GLOBALS["STTFUNCTION"] . PHP_EOL);
+
+        // Calculate similarity percentage using levenshtein
+        $lev_distance = levenshtein(strtolower($expected_transcription), strtolower($transcription));
+        $max_len = max(strlen($expected_transcription), strlen($transcription));
+        if ($max_len > 0) {
+            $similarity = (1 - ($lev_distance / $max_len)) * 100;
+        } else {
+            $similarity = 0;
+        }
+
+        // Alternatively, you can use similar_text() function
+        /*
+        similar_text(strtolower($expected_transcription), strtolower($transcription), $similarity);
+        */
+
+        echo "Similarity: " . number_format($similarity, 2) . "%" . PHP_EOL;
 
         echo PHP_EOL;
         echo "IF EXPECTED RESULT AND TRANSCRIPT FROM STT ARE THE SAME, THEN STT WORKS!" . PHP_EOL;
