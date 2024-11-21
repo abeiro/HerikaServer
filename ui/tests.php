@@ -4,7 +4,7 @@ session_start();
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LLM Test Script</title>
+    <title>CHIM AI/LLM Test</title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <style>
         /* Updated CSS for Dark Grey Background Theme */
@@ -106,7 +106,7 @@ session_start();
 </head>
 <body>
 
-<div class="header">LLM Test Script</div>
+<div class="header">CHIM AI/LLM Test</div>
 
 <?php
 
