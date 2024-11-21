@@ -441,8 +441,8 @@ include("tmpl/navbar.php");
         echo '<ul>';
         echo '<li>Download a plugin by clicking the <b>[Download PLUGIN NAME]</b> button.</li>';
         echo '<li>Click the associated <b>[Mod Download]</b> button for the plugin. Install it with your mod manager of choice.</li>';
-        echo '<li>If the plugin allows it, click <b>[Configure plugin]</b> button to make any changes.</li>';
-        echo '<li>Start up the game and edit the plugin MCM menu if present.</li>';
+        echo '<li>If the plugin allows it, click the <b>[Configure Plugin]</b> button to make any changes.</li>';
+        echo '<li>Start up the game and open the MCM menu if present to make any further changes.</li>';
         echo '<li>Then you are good to go!</li>';
         echo '</ul>';
 
