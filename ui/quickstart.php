@@ -18,7 +18,6 @@ header("Expires: 0"); // Proxies
         body {
             background-color: #121212;
             color: #e0e0e0;
-            padding: 20px;
         }
         .confwizard {
             background-color: #1e1e1e;
@@ -192,8 +191,8 @@ echo '<div class="container">
 // Main Heading
 echo '<div class="container">
       <h1 class="text-center mb-4">QUICKSTART MENU</h1>
-      <h2 class="text-center mb-4">This menu is only meant to be used for the initial setup.</h2>
-      <h2 class="text-center mb-4">Please use the Configuration Wizard for any further changes.</h2>
+      <h2 class="text-center mb-4">Only to be used for the initial setup!</h2>
+      <h3 class="text-center mb-4">If you want to make more advanced changes, enter the appropriate info below to the best of your ability. Click Save and make further changes in the Configuration Wizard.</h3>
     </div>';
 
 if ($_SESSION["PROFILE"] == "$configFilepath/conf.php") {
@@ -332,9 +331,11 @@ echo '<div class="btn-group-custom text-center">
     After you click <b>Save</b> we <b>HIGHLY RECOMMEND</b> to open the Troubleshooting menu and run the LLM/AI, TTS and STT tests to verify everything is setup correctly.
 </p>
 <div class="btn-group-custom text-center">
-    <p class="warning-text3">
-        Also check out the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank">CHIM 101</a> guide and the <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">CHIM Manual</a> to learn how to make the most out of this mod!
-    </p>
+    <h3 class="warning-text3">
+        PLEASE READ the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank">CHIM 101</a> guide and the 
+        <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">CHIM Manual</a> 
+        to learn how to make the most out of this mod!
+    </h3>
 </div>
 
 

@@ -511,7 +511,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         if ($rowData==="The Narrator:") // Hunt empty rows
             continue;
         
-        $pattern = "/\(Context location: (.*?),(.*?)\)/";
+        $pattern = "/\(Context location: (.*)\)/";
         if ($rowData)
             $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
         
