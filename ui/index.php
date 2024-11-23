@@ -446,6 +446,9 @@ include("tmpl/navbar.php");
         echo '<li>Then you are good to go!</li>';
         echo '</ul>';
         echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
+        echo '<p>Making a plugin will allow your mod events and actions to be seen by the AI NPCs.</p>';
+        echo '<p>You can even add custom AI actions that can be triggered.</p>';
+        echo '';
         echo '<p>The herika_heal plugin provides an example of how our API works.</p>';
         echo '<button type="button" class="open-overlay-btn" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
             
