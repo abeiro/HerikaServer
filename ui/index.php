@@ -445,7 +445,11 @@ include("tmpl/navbar.php");
         echo '<li>Start up the game and open the MCM menu if present to make any further changes.</li>';
         echo '<li>Then you are good to go!</li>';
         echo '</ul>';
-
+        echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
+        echo '<p>The herika_heal plugin provides an example of how our API works.</p>';
+        echo '<button type="button" class="open-overlay-btn" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
+            
+        
         // Check if the MinAI plugin is already installed
         $minaiInstalled = is_dir($pluginFoldersRoot . 'minai_plugin');
     
@@ -456,7 +460,7 @@ include("tmpl/navbar.php");
                 <th>Description</th>
                 <th>Mod Page</th>
                 <th>Skyrim Mod Download</th>
-              </tr>';
+            </tr>';
         echo '<tr>';
     
         // Download cell
