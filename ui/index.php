@@ -483,7 +483,7 @@ include("tmpl/navbar.php");
     
         echo '</tr></table>';
     }
-    echo '';
+    echo '<br>';
     echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
     echo '<p>Making a plugin will allow your mod events and actions to be seen by the AI NPCs.</p>';
     echo '<p>You can even add scripted events that can be triggered by the AI.</p>';
