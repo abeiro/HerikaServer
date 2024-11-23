@@ -482,15 +482,16 @@ include("tmpl/navbar.php");
         echo '<td><a href="https://github.com/MinLL/MinAI/releases" target="_blank" class="configure-plugin-btn">Mod Download</a></td>';
     
         echo '</tr></table>';
+        echo '<br>';
+        echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
+        echo '<p>Making a plugin will allow your mod events and actions to be seen by the AI NPCs.</p>';
+        echo '<p>You can even add scripted events that can be triggered by the AI.</p>';
+        echo '';
+        echo '<p>The herika_heal plugin provides an example of how our API works.</p>';
+        echo '<button type="button" class="open-overlay-btn" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
+            
     }
-    echo '<br>';
-    echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
-    echo '<p>Making a plugin will allow your mod events and actions to be seen by the AI NPCs.</p>';
-    echo '<p>You can even add scripted events that can be triggered by the AI.</p>';
-    echo '';
-    echo '<p>The herika_heal plugin provides an example of how our API works.</p>';
-    echo '<button type="button" class="open-overlay-btn" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
-        
+
     if (isset($_POST['download_minai'])) {
         // URL of the MinAI stable branch zip file
         $zipUrl = 'https://github.com/MinLL/MinAI/archive/refs/heads/stable.zip';
