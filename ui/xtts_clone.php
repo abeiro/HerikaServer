@@ -117,6 +117,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         curl_close($ch);
+    } elseif (isset($_POST["upload_all"])) {
+        // Upload all .wav files in ../data/voices
+        $saveDir = '../data/voices/';
+        $files = glob($saveDir . '*.wav');
+        $numFiles = count($files);
+        $numUploaded = 0;
+
+        foreach ($files as $filePath) {
+            $fileName = basename($filePath);
+            $fileType = mime_content_type($filePath);
+
+            // Ensure the file is a .wav file
+            if ($fileType !== 'audio/wav' && $fileType !== 'audio/x-wav') {
+                $message .= "<p>Error: $fileName is not a valid .wav file.</p>";
+            } else {
+                // Prepare the cURL request
+                $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/upload_sample';
+                $cfile = new CURLFile($filePath, $fileType, $fileName);
+
+                $postFields = array('wavFile' => $cfile);
+
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                    'accept: application/json',
+                    'Content-Type: multipart/form-data'
+                ));
+
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+                if (curl_errno($ch)) {
+                    $message .= '<p>cURL Error while uploading ' . htmlspecialchars($fileName) . ': ' . curl_error($ch) . '</p>';
+                } else {
+                    if ($httpCode == 200) {
+                        $numUploaded++;
+                        $message .= "<p>$fileName has been uploaded to the XTTS server</p>";
+                    } else {
+                        $message .= '<p>Error uploading ' . htmlspecialchars($fileName) . ' (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
+                    }
+                }
+                curl_close($ch);
+            }
+        }
+        $message .= "<p>$numUploaded out of $numFiles voice files have been uploaded. </p>";
     }
 }
 ?>
@@ -182,16 +230,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .message {
-    background-color: #444444; /* Darker background for messages */
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #555555;
-    max-width: 1000px; /* Increased max-width for a wider message box */
-    width: 100%; /* Ensures it uses full width */
-    margin-bottom: 20px;
-    color: #f8f9fa; /* Light text in messages */
-}
-
+            background-color: #444444; /* Darker background for messages */
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #555555;
+            max-width: 1000px; /* Increased max-width for a wider message box */
+            width: 100%; /* Ensures it uses full width */
+            margin-bottom: 20px;
+            color: #f8f9fa; /* Light text in messages */
+        }
 
         .message p {
             margin: 0;
@@ -252,16 +299,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #f8f9fa;
             text-align: center;
         }
+
+        /* Loading overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(44, 44, 44, 0.95); /* Semi-transparent background */
+            z-index: 9999;
+            display: none;
+        }
+
+        #loading-overlay p {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #f8f9fa;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        #ellipsis {
+            display: inline-block;
+            width: 1em;
+            text-align: left;
+        }
     </style>
+    <script>
+        function showLoadingMessage() {
+            document.getElementById('loading-overlay').style.display = 'block';
+            animateEllipsis();
+        }
+
+        function animateEllipsis() {
+            var ellipsis = document.getElementById('ellipsis');
+            var dots = 0;
+            window.ellipsisInterval = setInterval(function() {
+                dots = (dots + 1) % 4;
+                var dotStr = '';
+                for (var i = 0; i < dots; i++) {
+                    dotStr += '.';
+                }
+                ellipsis.innerHTML = dotStr;
+            }, 500);
+        }
+    </script>
 </head>
 <body>
+
+<div id="loading-overlay">
+    <p>Syncing voice cache to XTTS server, this can take a couple minutes. <br><b>Do not refresh the page<span id="ellipsis"></span></b></p>
+</div>
 
 <div class="indent5">
     <h1>🎙 XTTS Voice Upload</h1>
     <h3><strong>This page is only for the DwemerDistro XTTS Server!</strong></h3>
     <h4>Make sure that all names with spaces are replaced with underscores (_) and all names are lowercase!</h4>
     <h4>Example: Mjoll the Lioness becomes <code>mjoll_the_lioness.wav</code></h4>
-    <h4>If you are replacing an existing voice you will need to restart the server.</h4>
+    <h4>If you are replacing an existing voice you will need to restart the XTTS server.</h4>
 
     <?php
     if (!empty($message)) {
@@ -284,6 +382,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="submit" name="get_speakers" value="Current Voices List">
     </form>
 
+    <h2>Sync Voices to Cloud XTTS</h2>
+    <label for="file">If you are running CHIM XTTS on the cloud, click the button below to sync cached voices to cloud XTTS.</label>
+    <br>
+    <label for="file"><a href="https://www.nexusmods.com/skyrimspecialedition/articles/7673" target="_blank">Here is a guide for running XTTS on the cloud.</a></label>
+        <br>
+    <label for="file">Cached voices are saved in the Server under data/voices. <a class="dropdown-item" href="../data/voices" target="_blank">View XTTS Cache</a></label>
+    <form action="xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
+        <input type="submit" name="upload_all" value="Sync Voice Files to Cloud XTTS">
+    </form>
     <?php
     // Display the speakers list message here
     if (!empty($speakersMessage)) {
