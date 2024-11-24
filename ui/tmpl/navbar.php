@@ -174,7 +174,7 @@
                     <li><h6 class="dropdown-header">AI Voice Management</h6></li>
                     <li>
                     <a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
-                        XTTS Distro Management
+                        CHIM XTTS Management
                     </a>
                     </li>
                     <li>
