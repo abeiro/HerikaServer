@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $message .= '<p>cURL Error: ' . curl_error($ch) . '</p>';
                     } else {
                         if ($httpCode == 200) {
-                            $message .= "<p>.wav file has been uploaded to the XTTS server</p>";
+                            $message .= "<p>.wav file has been cached to the CHIM server</p>";
                         } else {
                             $message .= '<p>Response from server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
                         }
@@ -362,7 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
 <div id="loading-overlay">
-    <p>Syncing voice cache to XTTS server, this can take a couple minutes. <br><b>Do not refresh the page<span id="ellipsis"></span></b></p>
+    <p>Syncing voice cache to CHIM XTTS server, this can take a couple minutes. <br><b>Do not refresh the page<span id="ellipsis"></span></b></p>
 </div>
 
 <div class="indent5">
