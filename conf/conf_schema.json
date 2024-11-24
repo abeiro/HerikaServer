@@ -143,7 +143,7 @@
       "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.21ics3hex54a"}
     },
     "XTTSFASTAPI": {
-      "_title":"XTTSv2 Fast-API (Installed in DwemerDistro)",
+      "_title":"CHIM XTTS (Installed in DwemerDistro)",
       "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<br>Be warned it takes 4GB of VRAM to run it!<br>You can run it on the cloud, click the help/doc link for instructions.", "helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/7673"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
       "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
