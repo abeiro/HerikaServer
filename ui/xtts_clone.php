@@ -18,17 +18,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST["submit"])) {
         $total = count($_FILES['file']['name']);
         for( $i=0 ; $i < $total ; $i++ ) {
+            if ($_FILES['file']['error'][$i] !== UPLOAD_ERR_OK) {
+                $message .= '<p>Error: File upload error code ' . $_FILES['file']['error'][$i] . '</p>';
+                continue;
+            }
+
             // Get the uploaded file details
             $fileTmpPath = $_FILES["file"]["tmp_name"][$i];
             $fileName = $_FILES["file"]["name"][$i];
-            $fileType = $_FILES["file"]["type"][$i];
+            $fileType = mime_content_type($fileTmpPath);
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
             // Directory where you want to save the uploaded file
-            $saveDir = '../data/voices/';  // Adjust the path if needed
+            $saveDir = __DIR__ . '/../data/voices/';  // Adjust the path if needed
+
+            // Ensure the directory exists
+            if (!is_dir($saveDir)) {
+                mkdir($saveDir, 0777, true);
+            }
 
             // Ensure the file is a .wav file
-            if ($fileType !== 'audio/wav') {
-                $message .= "<p>Error: Please upload a .wav file.</p>";
+            if ($fileExtension !== 'wav' || ($fileType !== 'audio/wav' && $fileType !== 'audio/x-wav')) {
+                $message .= "<p>Error: Please upload a valid .wav file.</p>";
             } else {
                 // Save the file to the specified directory
                 $destinationPath = $saveDir . $fileName;
@@ -119,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         curl_close($ch);
     } elseif (isset($_POST["upload_all"])) {
         // Upload all .wav files in ../data/voices
-        $saveDir = '../data/voices/';
+        $saveDir = __DIR__ . '/../data/voices/';
         $files = glob($saveDir . '*.wav');
         $numFiles = count($files);
         $numUploaded = 0;
@@ -377,12 +388,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="submit" name="submit" value="Upload">
     </form>
 
-    <h2>List Current Voices in XTTS</h2>
+    <h2>List Current Voices in CHIM XTTS</h2>
+    <label for="file">This is a list of all the available voices in the CHIM XTTS server.</label>
     <form action="xtts_clone.php" method="post">
         <input type="submit" name="get_speakers" value="Current Voices List">
     </form>
 
-    <h2>Sync Voices to Cloud XTTS</h2>
+    <h2>Sync Voices to Cloud CHIM XTTS</h2>
     <label for="file">If you are running CHIM XTTS on the cloud, click the button below to sync cached voices to a cloud hosted CHIM XTTS server.</label>
     <br>
     <label for="file"><a href="https://www.nexusmods.com/skyrimspecialedition/articles/7673" target="_blank">Here is a guide for running CHIM XTTS on the cloud.</a></label>
