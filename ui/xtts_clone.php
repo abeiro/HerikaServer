@@ -356,10 +356,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="indent5">
     <h1>🎙 XTTS Voice Upload</h1>
-    <h3><strong>This page is only for the DwemerDistro XTTS Server!</strong></h3>
+    <h3><strong>This page is only for the CHIM XTTS Server!</strong></h3>
     <h4>Make sure that all names with spaces are replaced with underscores (_) and all names are lowercase!</h4>
     <h4>Example: Mjoll the Lioness becomes <code>mjoll_the_lioness.wav</code></h4>
-    <h4>If you are replacing an existing voice you will need to restart the XTTS server.</h4>
+    <h4>If you are replacing an existing voice you will need to restart the CHIM XTTS server.</h4>
 
     <?php
     if (!empty($message)) {
@@ -383,11 +383,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <h2>Sync Voices to Cloud XTTS</h2>
-    <label for="file">If you are running CHIM XTTS on the cloud, click the button below to sync cached voices to cloud XTTS.</label>
+    <label for="file">If you are running CHIM XTTS on the cloud, click the button below to sync cached voices to a cloud hosted CHIM XTTS server.</label>
     <br>
-    <label for="file"><a href="https://www.nexusmods.com/skyrimspecialedition/articles/7673" target="_blank">Here is a guide for running XTTS on the cloud.</a></label>
+    <label for="file"><a href="https://www.nexusmods.com/skyrimspecialedition/articles/7673" target="_blank">Here is a guide for running CHIM XTTS on the cloud.</a></label>
         <br>
-    <label for="file">Cached voices are saved in the Server under data/voices. <a class="dropdown-item" href="../data/voices" target="_blank">View XTTS Cache</a></label>
+    <label for="file">Cached voices are saved in the Server under data/voices. <a class="dropdown-item" href="../data/voices" target="_blank">View CHIM XTTS Cache</a></label>
     <form action="xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
         <input type="submit" name="upload_all" value="Sync Voice Files to Cloud XTTS">
     </form>
