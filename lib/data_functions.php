@@ -519,7 +519,6 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         
         $string = $row["location"];
         preg_match('/Context\s*(new\s*)?location:\s*([a-zA-Z\s\'\-]+)(\s*,|$)/', $string, $locationMatch);
-        $location = trim($locationMatch[2]);
         preg_match('/Hold:\s*([a-zA-Z\s\'\-]+)(\s*|$)/', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
@@ -527,6 +526,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $locationFinal=$lastlocation;
         } else {
             $hold = trim($holdMatch[1]);
+			$location = trim($locationMatch[2]);
             $locationFinal="$location, hold: $hold";
         }
         
@@ -1674,7 +1674,7 @@ function GetAnimationHex($mood)
     
     $animationsDb=$GLOBALS["db"]->fetchAll("select animations from animations_custom where mood ilike '%$mood%'");
     foreach ($animationsDb as $an) {
-        $candidates=explode($an["animations"]);
+        $candidates=explode(",", $an["animations"]);
         if (is_array($candidates)) {
             return $candidates[array_rand($candidates)];
         }
@@ -1683,7 +1683,7 @@ function GetAnimationHex($mood)
 
     $animationsDb=$GLOBALS["db"]->fetchAll("select animations from animations where mood ilike '%$mood%'");
     foreach ($animationsDb as $an) {
-        $candidates=explode($an["animations"]);
+        $candidates=explode(",", $an["animations"]);
         if (is_array($candidates)) {
             return $candidates[array_rand($candidates)];
         }
