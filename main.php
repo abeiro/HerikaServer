@@ -387,11 +387,11 @@ if ($MUST_END) {  // Shorthand for non LLM processing
 
 // Include prompts, command prompts and functions.
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
+$gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
 
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
 
-$gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
 
 /*
  Safe stop
