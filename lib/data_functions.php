@@ -526,7 +526,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $locationFinal=$lastlocation;
         } else {
             $hold = trim($holdMatch[1]);
-			$location = trim($locationMatch[2]);
+            $location = trim($locationMatch[2]);
             $locationFinal="$location, hold: $hold";
         }
         
