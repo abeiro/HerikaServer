@@ -454,7 +454,7 @@ class connector
                         } else {
                             $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                         }
-                    } else {
+                    } elseif ($parsedResponse["action"] != "Talk") {
                         error_log("Function not found for {$parsedResponse["action"]}");
                     }
                     
