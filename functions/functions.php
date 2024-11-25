@@ -25,6 +25,9 @@ $ENABLED_FUNCTIONS=[
     'StopWalk',
     'TravelTo',
     'SearchMemory',
+    'GiveItemToPlayer',
+    'TakeGoldFromPlayer',
+    'FollowPlayer'
 //    'WaitHere'
 ];
 
@@ -54,6 +57,10 @@ $F_TRANSLATIONS["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmedi
 $F_TRANSLATIONS["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_TRANSLATIONS["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
 $F_TRANSLATIONS["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and stands at the current place";
+$F_TRANSLATIONS["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
+$F_TRANSLATIONS["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]} (property listener)";
+$F_TRANSLATIONS["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
+
 
 $F_RETURNMESSAGES["Inspect"]="{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
 $F_RETURNMESSAGES["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
@@ -79,6 +86,9 @@ $F_RETURNMESSAGES["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inme
 $F_RETURNMESSAGES["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
 $F_RETURNMESSAGES["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
 $F_RETURNMESSAGES["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
+$F_RETURNMESSAGES["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}";
+$F_RETURNMESSAGES["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}";
+$F_RETURNMESSAGES["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
 
 
 // What is this?. We can translate functions or give them a custom name. 
@@ -108,6 +118,10 @@ $F_NAMES["StopWalk"]="StopWalk";
 $F_NAMES["TravelTo"]="LeadTheWayTo";
 $F_NAMES["SearchMemory"]="TryToRemember";
 $F_NAMES["WaitHere"]="WaitHere";
+$F_NAMES["GiveItemToPlayer"]="GiveItemToPlayer";
+$F_NAMES["TakeGoldFromPlayer"]="TakeGoldFromPlayer";
+$F_NAMES["FollowPlayer"]="FollowPlayer";
+
 
 if (isset($GLOBALS["CORE_LANG"]))
 	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
@@ -435,8 +449,8 @@ $FUNCTIONS = [
             ],
             "required" =>[""]
         ]
-        ],
-        [
+    ],
+    [
             "name" => $F_NAMES["WaitHere"],
             "description" => $F_TRANSLATIONS["WaitHere"],
             "parameters" => [
@@ -449,7 +463,50 @@ $FUNCTIONS = [
                 ],
                 "required" =>[""]
             ]
+    ],
+    [
+            "name" => $F_NAMES["GiveItemToPlayer"],
+            "description" => $F_TRANSLATIONS["GiveItemToPlayer"],
+            "parameters" => [
+                "type" => "object",
+                "properties" => [
+                    "target" => [
+                        "type" => "string",
+                        "description" => "",
+                    ]
+                ],
+                "required" =>["target"]
+            ]
+    ],
+    [
+        "name" => $F_NAMES["TakeGoldFromPlayer"],
+        "description" => $F_TRANSLATIONS["TakeGoldFromPlayer"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "",
+                ]
+            ],
+            "required" =>["target"]
         ]
+    ],
+    [
+            "name" => $F_NAMES["FollowPlayer"],
+            "description" => $F_TRANSLATIONS["FollowPlayer"],
+            "parameters" => [
+                "type" => "object",
+                "properties" => [
+                    "target" => [
+                        "type" => "string",
+                        "description" => "",
+                    ]
+                ],
+                "required" =>[""]
+            ]
+    ]
+    
 ];
 
 
@@ -530,10 +587,13 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'DecreaseWalkSpeed',
         //'GetDateTime',
         //'SearchDiary',
-        'SetCurrentTask',
+        //'SetCurrentTask',
         //'SearchMemory',
         //'StopWalk'
-        'WaitHere'
+        'WaitHere',
+        //'GiveItemToPlayer',
+        //'TakeGoldFromPlayer',
+        //'FollowPlayer'
     ];
 } else {
     $GLOBALS["ENABLED_FUNCTIONS"]=[
@@ -554,7 +614,10 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'ReadQuestJournal',
         'IncreaseWalkSpeed',
         'DecreaseWalkSpeed',
-        'WaitHere'
+        'WaitHere',
+        'SetCurrentTask',
+        //'GiveItemToPlayer',
+        //'TakeGoldFromPlayer'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',
