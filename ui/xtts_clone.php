@@ -396,13 +396,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <h2>Sync Voices to Cloud CHIM XTTS</h2>
-    <label for="file">If you are running CHIM XTTS on the cloud, click the button below to sync cached voices to a cloud hosted CHIM XTTS server.</label>
+    <label for="file">If you are using a cloud based solution for CHIM XTTS, such as vast.ai, you will need to press the [Sync Voice Cache] button.</label>
+    <label for="file">You only need to Sync once you have setup the CHIM XTTS server. You do not need to press it again until you build a new instance.</label>
+    <label for="file">If you have no voices in your cache, that is fine! Any new NPC's will have their voice cached in the future.</label>
     <br>
     <label for="file"><a href="https://www.nexusmods.com/skyrimspecialedition/articles/7673" target="_blank">Here is a guide for running CHIM XTTS on the cloud.</a></label>
         <br>
     <label for="file">Cached voices are saved in the server under data/voices. <a class="dropdown-item" href="../data/voices" target="_blank">View CHIM XTTS Cache</a></label>
     <form action="xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
-        <input type="submit" name="upload_all" value="Sync Voice Files to Cloud XTTS">
+        <input type="submit" name="upload_all" value="Sync Voice Cache">
     </form>
     <?php
     // Display the speakers list message here
