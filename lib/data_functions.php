@@ -1672,6 +1672,25 @@ function GetAnimationHex($mood)
         
     ];
     
+    $animationsDb=$GLOBALS["db"]->fetchAll("select animations from animations_custom where mood ilike '%$mood%'");
+    foreach ($animationsDb as $an) {
+        $candidates=explode($an["animations"]);
+        if (is_array($candidates)) {
+            return $candidates[array_rand($candidates)];
+        }
+
+    }
+
+    $animationsDb=$GLOBALS["db"]->fetchAll("select animations from animations where mood ilike '%$mood%'");
+    foreach ($animationsDb as $an) {
+        $candidates=explode($an["animations"]);
+        if (is_array($candidates)) {
+            return $candidates[array_rand($candidates)];
+        }
+
+    }
+
+
     if ($mood=="sarcastic") {
         return array_rand(array_flip([$ANIMATIONS["SarcasticMove"],$ANIMATIONS["CleanSweat"],$ANIMATIONS["Agitated"],$ANIMATIONS["ApplauseSarcastic"]]), 1);
         
