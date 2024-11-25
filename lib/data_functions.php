@@ -448,7 +448,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input' 
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close'  and type<>'instruction'
+    and type<>'request'
     ".(($actorEscaped)?" and people like '|%$actorEscaped%|' ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
@@ -456,7 +457,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     
     $results = $db->fetchAll($query);
 
-    // error_log($query);
+    //error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;
@@ -518,7 +519,6 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         
         $string = $row["location"];
         preg_match('/Context\s*(new\s*)?location:\s*([a-zA-Z\s\'\-]+)(\s*,|$)/', $string, $locationMatch);
-        $location = trim($locationMatch[2]);
         preg_match('/Hold:\s*([a-zA-Z\s\'\-]+)(\s*|$)/', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
@@ -526,6 +526,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $locationFinal=$lastlocation;
         } else {
             $hold = trim($holdMatch[1]);
+            $location = trim($locationMatch[2]);
             $locationFinal="$location, hold: $hold";
         }
         
@@ -1031,9 +1032,9 @@ function DataGetCurrentTask()
     foreach ($results as $row) {
 
         if ($n == 0) {
-            $data = "Last task/quest/plan: {$row["description"]}.";
+            $data = "Current plan: {$row["description"]}.";
         } elseif ($n == 1) {
-            $data .= "Previous task/quest/plan: {$row["description"]}.";
+            $data .= "Previous plan: {$row["description"]}.";
         } else {
             break;
         }
@@ -1051,15 +1052,15 @@ function DataGetCurrentTask()
         return $data;
     }
 
-    $data = "";
+    //$data = "";
 
     $n = 0;
     foreach ($results as $row) {
 
         if ($n == 0) {
-            $data = "Current task/quest/plan: {$row["name"]}/{$row["description"]}.";
+            $data .= "Current quest: {$row["name"]}/{$row["description"]}.";
         } elseif ($n == 1) {
-            $data .= "Previous task/quest/plan: {$row["name"]}/{$row["description"]}.";
+            $data .= "Previous quest: {$row["name"]}/{$row["description"]}.";
         } else {
             break;
         }
@@ -1136,6 +1137,23 @@ function DataLastKnownLocation()
     preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
     */
     return $lastLoc[0]["data"];
+
+}
+
+function DataLastKnownLocationHuman()
+{
+
+    global $db;
+
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    
+    $re = '/Context location: ([\w\ \']*)/';
+    preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
+    
+    return $matches[1][0];
 
 }
 
@@ -1299,6 +1317,32 @@ function DataBeingsInRange()
     global $db;
 
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    
+    $beings=strtr($lastLoc[0]["data"],["beings in range:"=>""]);
+    $beingsArray=explode(",",$beings);
+    $beingsArrayNew=[];
+    foreach ($beingsArray as $k=>$v) {
+        if (strpos($v,")")===false) 
+            if (strpos($v,"Horse")!==0) 
+                if (strpos($v,"Chicken")!==0) 
+                    $beingsArrayNew[]=$v;
+            
+        
+    }
+    $beingsFormatted=implode("|",$beingsArrayNew);
+    
+    return "|".$beingsFormatted."|";
+}
+
+function DataBeingsInCloseRange()
+{
+
+    global $db;
+
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc_close')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         return "";
     }
@@ -1628,6 +1672,25 @@ function GetAnimationHex($mood)
         
     ];
     
+    $animationsDb=$GLOBALS["db"]->fetchAll("select animations from animations_custom where mood ilike '%$mood%'");
+    foreach ($animationsDb as $an) {
+        $candidates=explode(",", $an["animations"]);
+        if (is_array($candidates)) {
+            return $candidates[array_rand($candidates)];
+        }
+
+    }
+
+    $animationsDb=$GLOBALS["db"]->fetchAll("select animations from animations where mood ilike '%$mood%'");
+    foreach ($animationsDb as $an) {
+        $candidates=explode(",", $an["animations"]);
+        if (is_array($candidates)) {
+            return $candidates[array_rand($candidates)];
+        }
+
+    }
+
+
     if ($mood=="sarcastic") {
         return array_rand(array_flip([$ANIMATIONS["SarcasticMove"],$ANIMATIONS["CleanSweat"],$ANIMATIONS["Agitated"],$ANIMATIONS["ApplauseSarcastic"]]), 1);
         
@@ -1754,7 +1817,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_' . strtolower(str_replace(['maleunique', 'femaleunique'], '', $voicetype[3])) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
         file_put_contents($newFile, '$HERIKA_NAME=\''.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         
-        if (is_array($npcTemlate[0]))
+        if (isset($npcTemlate[0]) && is_array($npcTemlate[0]))
             file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         else
             file_put_contents($newFile, '$HERIKA_PERS=\'Roleplay as '.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);

@@ -66,7 +66,7 @@ class connector
         if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
             $contextData[]= [
                 'role' => 'user', 
-                'content' => "{$prefix} Use '*Speech Style'. Use this JSON object to give your answer : ".json_encode([
+                'content' => "{$prefix} Use #SpeechStyle. Use this JSON object to give your answer : ".json_encode([
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                     "mood"=>implode("|",$moods),
@@ -80,7 +80,7 @@ class connector
         } else {
             $contextData[]= [
                 'role' => 'user', 
-                'content' => "{$prefix} Use '*Speech Style'.Use this JSON object to give your answer : ".json_encode([
+                'content' => "{$prefix} Use #SpeechStyle.Use this JSON object to give your answer : ".json_encode([
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                     "mood"=>implode("|",$moods),
@@ -481,7 +481,7 @@ class connector
                             } else {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
-                        } else {
+                        } elseif ($parsedResponse["action"] != "Talk") {
                             error_log("Function not found for {$parsedResponse["action"]}");
                         }
                         

@@ -173,7 +173,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash)
         
         fsync($stream);
         fclose($stream);
-        shell_exec("ffmpeg -y -i $fileNameOrig -filter:a \"speechnorm=e=6:r=0.0001:l=1\" $fileName 2>/dev/null >/dev/null");
+        shell_exec("ffmpeg -y -i $fileNameOrig {$GLOBALS["TTS_FFMPEG_FILTERS_AZURE"]} $fileName 2>/dev/null >/dev/null");
         
         //file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR."soundcache/" . md5(trim($stringforhash)) . ".wav", $result);
         file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($data) . "\n\rCache:$cacheUsed\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rsize of wav ($size)\n\rfunction tts($textString,$mood / $validMood ,$stringforhash)");

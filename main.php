@@ -133,7 +133,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     unset($db);
 }
 
-if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infoaction","status_msg","delete_event","itemfound","_questdata"])) {
+if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close","infoaction","status_msg","delete_event","itemfound","_questdata"])) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     
@@ -168,6 +168,36 @@ if (($gameRequest[0]=="delete_event")) {
     die();
 }
 
+// Profile selection
+if (isset($_GET["profile"])) {
+    
+    $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
+    $OVERRIDES["MINIME_T5"]=$GLOBALS["MINIME_T5"];
+    $OVERRIDES["STTFUNCTION"]=$GLOBALS["STTFUNCTION"];
+    $OVERRIDES["TTSFUNCTION_PLAYER"]=$GLOBALS["TTSFUNCTION_PLAYER"];
+
+    
+    //$OVERRIDES["PROMPT_HEAD"]=$GLOBALS["PROMPT_HEAD"];
+    
+    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
+       // error_log("PROFILE: {$_GET["profile"]}");
+        require_once($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
+
+    } else {
+        // error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
+    }
+    
+    $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
+    $GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
+    $GLOBALS["STTFUNCTION"]=$OVERRIDES["STTFUNCTION"];
+    $GLOBALS["TTSFUNCTION_PLAYER"]=$OVERRIDES["TTSFUNCTION_PLAYER"];
+    //$GLOBALS["PROMPT_HEAD"]=$OVERRIDES["PROMPT_HEAD"];
+
+    
+} else {
+    //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
+    $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+}
 
 // Player TTS. We overwrite some confs an then restore them.
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
@@ -196,32 +226,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 
-// Profile selection
-if (isset($_GET["profile"])) {
-    
-    $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
-    $OVERRIDES["MINIME_T5"]=$GLOBALS["MINIME_T5"];
-    $OVERRIDES["STTFUNCTION"]=$GLOBALS["STTFUNCTION"];
-    //$OVERRIDES["PROMPT_HEAD"]=$GLOBALS["PROMPT_HEAD"];
-    
-    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
-       // error_log("PROFILE: {$_GET["profile"]}");
-        require_once($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
 
-    } else {
-        // error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
-    }
-    
-    $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
-    $GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
-    $GLOBALS["STTFUNCTION"]=$OVERRIDES["STTFUNCTION"];
-    //$GLOBALS["PROMPT_HEAD"]=$OVERRIDES["PROMPT_HEAD"];
-
-    
-} else {
-    //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
-    $GLOBALS["USING_DEFAULT_PROFILE"]=true;
-}
 
 $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
@@ -258,9 +263,9 @@ if ($gameRequest[0]=="diary") {
 
 
 // Exit if only a event info log.
-if (in_array($gameRequest[0],["info","infonpc","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer","infosave","status_msg"])) {
+if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer","infosave","status_msg"])) {
     $lastInfoNpcData=$db->escape($gameRequest[3]);
-    $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc') and data='$lastInfoNpcData' and localts>".(time()-5));
+    $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
     if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
         // error_log("Skipping {$gameRequest[0]}");
         die();
@@ -362,7 +367,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','logaction') ";  // Use prechat
+    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
 
 } else
@@ -387,6 +392,7 @@ if ($MUST_END) {  // Shorthand for non LLM processing
 
 // Include prompts, command prompts and functions.
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
+$gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
 
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
@@ -411,6 +417,11 @@ if (!isset($GLOBALS["CACHE_LOCATION"])) {
 if (!isset($GLOBALS["CACHE_PARTY"])) {
         $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
+
+if (in_array($gameRequest[0],["inputtext_s"])) {    // I stealth and targetet follower, CACHE_PEOPLE will only contain target NPC
+    $GLOBALS["CACHE_PEOPLE"]=$GLOBALS["HERIKA_NAME"];
+}
+
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary") {
     $db->insert(
@@ -438,7 +449,7 @@ if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
 }
 
 
-// Narrator stop
+// Narrator stop (from config)
 
 if (isset($GLOBALS["NARRATOR_TALKS"])&&($GLOBALS["NARRATOR_TALKS"]==false)) {
     if ($GLOBALS["HERIKA_NAME"]=="The Narrator")
@@ -470,6 +481,8 @@ if ($gameRequest[0] != "diary")
             $task="No active quests right now.";
         }
         $GLOBALS["COMMAND_PROMPT"].=$task;
+    } else {
+        error_log("Task avoided {$GLOBALS["IS_NPC"]} ");
     }
 
 // Offer memory in CONTEXT 
@@ -577,7 +590,7 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
 }
 
 $head[] = array('role' => 'system', 'content' =>  
-    strtr($GLOBALS["PROMPT_HEAD"] . $GLOBALS["HERIKA_PERS"] . $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
+    strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] ."\n". $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
 );
 
 

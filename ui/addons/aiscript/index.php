@@ -115,6 +115,18 @@ switch ($action) {
         // No action; proceed to display content
         break;
 }
+
+
+if (isset($_GET['cmd_stop'])) {
+    `kill -15 {$_GET['pid']}`;
+    header("Location: index.php");
+} 
+
+if (isset($_GET['cmd_start'])) {
+    exec("/usr/bin/nohup /var/www/html/HerikaServer/debug/aiscript_daemon.sh > /dev/null 2>&1 &");
+    header("Location: index.php");
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -257,8 +269,92 @@ input[type="submit"]:hover {
 <body>
 
 <?php
+
+// Fetch running quests from the database
+$results = $db->fetchAll("SELECT * FROM aiquest WHERE status=1");
+
+echo "<h3 class='my-2'>Running Quests</h3>";
+
+$list = [];
+foreach ($results as $n => $quest) {
+    $questData = json_decode($quest['definition'], true);
+
+    $list[$n]['Title'] = htmlspecialchars($questData['quest']);
+
+    // Find the current stage
+    $currentStage = '';
+    if (isset($questData['stages']) && is_array($questData['stages'])) {
+        foreach ($questData['stages'] as $stage) {
+            if (isset($stage['status'])&&($stage['status'] == 1)) {
+                $currentStage = htmlspecialchars($stage['label']);
+                break; // Assuming only one stage is active
+            }
+        }
+    }
+    $list[$n]['Current Stage'] = $currentStage;
+
+    // Create stop button
+    $stopButton = "<a href='?action=stop&taskid=" . htmlspecialchars($quest['taskid']) . "' class='button'>Stop</a>";
+
+    $list[$n]['Action'] = $stopButton;
+    
+}
+
+// Use the function from misc_ui_functions.php
+print_array_as_table($list);
+if (sizeof($list)>0)
+    echo "<img src='status.php' style='max-width:100%'>";
+
+
+// Check for dameon running
+
+$host = 'localhost'; // The host to connect to (localhost in this case)
+$port = 12345; // The port to check
+
+// Try to connect to the specified port
+$connection = @fsockopen($host, $port, $errno, $errstr, 1);
+$pid=null;
+// Check if the connection was successful
+if (is_resource($connection)) {
+    // If connection is successful, the script is running
+    $pid = fgets($connection); // Get the PID sent by the script on the port
+    fclose($connection); // Close the connection
+    echo "<p>The ai manager daemon is running. PID: $pid </p>";
+    echo "<a class='button' href='?cmd_stop=true&pid=$pid'>Stop Daemon</a>";
+} else {
+    // If connection fails, the script is not running
+    echo "<p>The ai manager daemon is not running on port $port!</p>";
+    echo "<a class='button' href='?cmd_start=true'>Start Daemon</a>";
+}
+
+// Log show
+if ($pid) {
+    $logFile = '/var/www/html/HerikaServer/log/aiscript.log';
+
+    // Check if the file exists
+    if (!file_exists($logFile)) {
+
+    } else {
+
+        // Read the file content
+        $lines = file($logFile, FILE_IGNORE_NEW_LINES);
+
+        // Get the last 3 lines
+        $lastLines = array_slice($lines, -3);
+
+        // Output the last 3 lines
+        echo "<pre>";
+        foreach ($lastLines as $line) {
+            echo $line . PHP_EOL;
+        }
+        echo "</pre>";
+    }
+
+}
+
+
 // Fetch quest templates from the database
-$results = $db->fetchAll("SELECT title, data, enabled FROM aiquests_template");
+$results = $db->fetchAll("SELECT title, data, enabled FROM aiquests_template order by enabled desc");
 
 // Display quest templates
 echo "<h3 class='my-2'>AI Adventure Manager</h3>";
@@ -281,37 +377,7 @@ foreach ($results as $n => $quest) {
 // Use the function from misc_ui_functions.php
 print_array_as_table($list);
 
-// Fetch running quests from the database
-$results = $db->fetchAll("SELECT * FROM aiquest WHERE status=1");
 
-echo "<h3 class='my-2'>Running Quests</h3>";
-
-$list = [];
-foreach ($results as $n => $quest) {
-    $questData = json_decode($quest['definition'], true);
-
-    $list[$n]['Title'] = htmlspecialchars($questData['quest']);
-
-    // Find the current stage
-    $currentStage = '';
-    if (isset($questData['stages']) && is_array($questData['stages'])) {
-        foreach ($questData['stages'] as $stage) {
-            if ($stage['status'] == 1) {
-                $currentStage = htmlspecialchars($stage['label']);
-                break; // Assuming only one stage is active
-            }
-        }
-    }
-    $list[$n]['Current Stage'] = $currentStage;
-
-    // Create stop button
-    $stopButton = "<a href='?action=stop&taskid=" . htmlspecialchars($quest['taskid']) . "' class='button'>Stop</a>";
-
-    $list[$n]['Action'] = $stopButton;
-}
-
-// Use the function from misc_ui_functions.php
-print_array_as_table($list);
 ?>
 
 </body>
