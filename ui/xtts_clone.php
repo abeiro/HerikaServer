@@ -370,9 +370,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h3><strong>This page is only for the CHIM XTTS Server!</strong></h3>
     <h3>It works differently from other TTS services! <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.ojs1hcgp0qwl" target="_blank">Click here for more info on how it works.</a></h3>
     <br>
-    <h4>Make sure that all names with spaces are replaced with underscores (_) and all names are lowercase!</h4>
-    <h4>Example: Mjoll the Lioness becomes <code>mjoll_the_lioness.wav</code></h4>
-    <h4>If you are replacing an existing voice you will need to restart the CHIM XTTS server.</h4>
+    
+
 
     <?php
     if (!empty($message)) {
@@ -384,6 +383,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <h2>Upload Voice Sample</h2>
     <label for="file">This will upload a .wav file to the running CHIM XTTS server and cache it in the CHIM server.</label>
+    <br>
+    <label>Make sure that all names with spaces are replaced with underscores (_) and all names are lowercase!</label>
+    <br>
+    <label>Example: Mjoll the Lioness becomes <code>mjoll_the_lioness.wav</code></label>
+    <br>
+    <label style="color: yellow;">If you are replacing an existing voice you will need to restart the CHIM XTTS server.</label>
     <form action="xtts_clone.php" method="post" enctype="multipart/form-data">
         <label for="file">Select a .wav file:</label>
         <input type="file" name="file[]" id="file" accept=".wav" multiple="multiple" required>
