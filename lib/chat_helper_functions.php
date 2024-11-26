@@ -297,8 +297,8 @@ function returnLines($lines,$writeOutput=true)
         $sentence=$output;
         $output = strtr($sentence,[
                         "*Smirks*"=>"","*smirks*"=>"",
-                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"",
-                        "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"",
+                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*laughs*"=>"",
+                        "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
                         "*pant*"=>"",
                         "*cough*"=>"",
                         "*hiccup*"=>"",
