@@ -276,7 +276,11 @@
                 checkVersion();
             });
 
-            function copyToAllprofiles(name,jsid) {
+            function copyToAllprofiles(event,name,jsid) {
+
+                event.preventDefault();  // Prevent default browser behavior
+                event.stopImmediatePropagation(); 
+
                 console.log(name)
                 var ok=false;
 
@@ -291,7 +295,6 @@
                 if (!ok) {
                     ele=document.querySelector("input[name='"+name+"']");
                     if (ele) {
-                        debugger;
                         console.log(ele.value);
                         ok=true;
                         formData={"name":name,"value":ele.value}
@@ -331,7 +334,9 @@
                     }
                 } 
 
+
                 if (ok) {
+                    
                     fetch("cmd/action_copy_value_to_all_profiles.php", {
                         method: 'POST',
                         headers: {
@@ -340,16 +345,18 @@
                         body: JSON.stringify(formData)
                     })
                     .then(response => {
+                        
                         if (!response.ok) {
-                        throw new Error('Network response was not ok ' + response.statusText);
+                            console.log(response)
+                            throw new Error('Network response was not ok ' + response.statusText);
                         }
                         return response.json();
                     })
                     .then(data => {
-                        console.log('Success:', data);
+                        console.log('Success:', data.length);
                         alert("Updated "+data.length+" profiles");
                         let timestamp = new Date().getTime();
-                        window.location.href="?ts="+timestamp;
+                        //window.location.href="?ts="+timestamp;
 
                     })
                     .catch(error => {
