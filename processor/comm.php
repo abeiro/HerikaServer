@@ -495,10 +495,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 		} else
             $currentProfile=$GLOBALS["HERIKA_PERS"];
 
-		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
-		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n$currentProfile", ];
-		$prompt[] = ["role"=> "user", "content"	=> "Use Dialogue history to update and summarize character profile. 
+        $updateProfilePrompt = "Use Dialogue history to update and summarize character profile. 
 Mandatory Format:
 
 * Personality,(concise description, 75 words).
@@ -512,7 +509,15 @@ Mandatory Format:
 * Current mood (15 keywords, use last events to determine). 
 * Relation with other followers if any.
 
-Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.", ];
+Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.";
+        if(isset($GLOBALS["UPDATE_PERSONALITY_PROMPT"])) {
+            $updateProfilePrompt = $GLOBALS["UPDATE_PERSONALITY_PROMPT"];
+        }
+
+		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
+		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
+		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n$currentProfile", ];
+		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
         
@@ -582,8 +587,11 @@ Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.", ];
                 }
                 unset($file_lines[$i]);
             }
-        
-            
+
+            if(array_key_exists("CustomUpdateProfileFunction", $GLOBALS) && is_callable($GLOBALS["CustomUpdateProfileFunction"])) {
+                $responseParsed["HERIKA_PERS"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
+            }
+
             file_put_contents($newFile, implode('', $file_lines));
             file_put_contents($newFile, PHP_EOL.'$HERIKA_PERS=\''.addslashes($responseParsed["HERIKA_PERS"]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
