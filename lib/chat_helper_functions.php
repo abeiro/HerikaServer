@@ -252,7 +252,7 @@ function split_sentences_stream($paragraph)
         $splitSentences[] = trim($currentSentence);
     }
 
-    error_log("<$paragraph> => ".implode("|", $splitSentences));
+    // error_log("<$paragraph> => ".implode("|", $splitSentences));
     return $splitSentences;
 }
 
@@ -460,6 +460,7 @@ function returnLines($lines,$writeOutput=true)
             }
         }
 
+        error_log("Speech sent for {$GLOBALS["HERIKA_NAME"]}, generator {$GLOBALS["TTSFUNCTION"]}, size: ".strlen($responseText). "  '".substr($responseText,0,10)."'");
         $elapsedTimeTTS=microtime(true) - $startTime;
 
         $outBuffer = array(
