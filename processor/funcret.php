@@ -101,6 +101,15 @@
 			//$useFunctionsAgain=true;
 
 
+		} else if ($functionCodeName == "GiveItemToPlayer") {
+			$useFunctionsAgain=true;
+			$request="(use action '".getFunctionTrlName("TakeGoldFromPlayer")."' if needed) $request";
+
+
+		} else if ($functionCodeName == "TakeGoldFromPlayer") {
+			$useFunctionsAgain=true;
+			die();
+
 		} else {
 			
 			if (isset($GLOBALS["FUNCRET"][$functionCodeName])) {

@@ -1140,7 +1140,7 @@ function DataLastKnownLocation()
 
 }
 
-function DataLastKnownLocationHuman()
+function DataLastKnownLocationHuman($hold=false)
 {
 
     global $db;
@@ -1150,12 +1150,18 @@ function DataLastKnownLocationHuman()
         return "";
     }
     
-    $re = '/Context location: ([\w\ \']*)/';
-    preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
-    
-    return $matches[1][0];
+    if (!$hold) {
+        $re = '/Context location: ([\w\ \']*)/';
+        preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
+        return $matches[1][0];
+    } else {
+        preg_match('/Hold:\s*(\w+)/', $lastLoc[0]["data"], $matches);
+        $hold = $matches[1];
+        return $hold;
+    }
 
 }
+
 
 function PackIntoSummary()
 {
@@ -1743,11 +1749,12 @@ function GetAnimationHex($mood)
         
     } else if ($mood=="drunk") {
         // No animation :(
-        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=0.6"';
+        $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=0.65';
+        return "DrunkStart";
         
     } else if ($mood=="high") {
         // No animation :(
-        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=1.45"';
+        $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=1.45';
         
     }
                             

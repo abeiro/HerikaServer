@@ -91,14 +91,16 @@ function cleanResponse($rawResponse)
     );
 
     // Strip no ascii.
+    /*
     $sentenceXX = str_replace(
         array('á', 'é', 'í', 'ó', 'ú', 'Á', 'É', 'Í', 'Ó', 'Ú', '¿', '¡'),
         array('a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U', '', ''),
         $sentenceX
     );
+    */
 
 
-    return $sentenceXX;
+    return $sentenceX;
 }
 
 function findDotPosition($string)
@@ -369,6 +371,22 @@ function returnLines($lines,$writeOutput=true)
         // Make translation here on $responseText
 
         // $responseText=translate($responseTextUnmooded,'ES','EN');
+
+        if (isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])&&($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) {
+            $random_per_character=sprintf('%u', crc32($GLOBALS["HERIKA_NAME"])); // Unsigned integer
+            $pitch=$random_per_character%5;
+
+            if ($pitch==0)
+                $GLOBALS["TTS_FFMPEG_FILTERS"]["rubberband"]="rubberband=pitch=1.02";
+            if ($pitch==1)
+                $GLOBALS["TTS_FFMPEG_FILTERS"]["rubberband"]="rubberband=pitch=0.98";
+            if ($pitch==2)
+                $GLOBALS["TTS_FFMPEG_FILTERS"]["rubberband"]="rubberband=pitch=1.01";
+            if ($pitch==3)
+                $GLOBALS["TTS_FFMPEG_FILTERS"]["rubberband"]="rubberband=pitch=0.99";
+            if ($pitch==4)
+                ;
+        }
 
         if ($responseText) {
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
