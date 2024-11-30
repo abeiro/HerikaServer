@@ -277,6 +277,7 @@ $SUMMARY_PROMPT='';
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
 
-
+$FEATURES["MISC"]["TTS_RANDOM_PITCH"]=false;	//Adjusting the pitch when generating the voice for this actor will add variation, so actors using the same voice sound slightly distinct.
+$FEATURES["MISC"]["OGHMA_INFINITUM"]=false;	//Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim.
 
 ?>

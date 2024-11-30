@@ -14,7 +14,7 @@ date_default_timezone_set('Europe/Madrid');
 $GLOBALS["AVOID_TTS_CACHE"]=true;
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php");
+require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
@@ -92,7 +92,7 @@ $GLOBALS["SCRIPTLINE_EXPRESSION"]="";
 $GLOBALS["SCRIPTLINE_LISTENER"]="";
 $GLOBALS["SCRIPTLINE_ANIMATION"]="";
 
-$GLOBALS["TTS_FFMPEG_FILTERS"]="";
+$GLOBALS["TTS_FFMPEG_FILTERS"]=[];
 
 /**********************
 MAIN FLOW
@@ -133,7 +133,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     unset($db);
 }
 
-if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close","infoaction","status_msg","delete_event","itemfound","_questdata"])) {
+if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close","infoaction",
+        "status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset"])) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     
@@ -141,7 +142,7 @@ if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setcon
         //error_log("Audit: Waiting for lock: {$gameRequest[0]}");
         usleep(1000);
     }
-    //error_log("Audit:Lock adquired: {$gameRequest[0]}");
+    error_log("Audit:Lock adquired by {$gameRequest[0]}");
 } 
 
 // adnpc has its custom semaphore, as it write files
@@ -175,13 +176,13 @@ if (isset($_GET["profile"])) {
     $OVERRIDES["MINIME_T5"]=$GLOBALS["MINIME_T5"];
     $OVERRIDES["STTFUNCTION"]=$GLOBALS["STTFUNCTION"];
     $OVERRIDES["TTSFUNCTION_PLAYER"]=$GLOBALS["TTSFUNCTION_PLAYER"];
+    $OVERRIDES["TTSFUNCTION_PLAYER_VOICE"]=$GLOBALS["TTSFUNCTION_PLAYER_VOICE"];
 
-    
     //$OVERRIDES["PROMPT_HEAD"]=$GLOBALS["PROMPT_HEAD"];
     
     if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
        // error_log("PROFILE: {$_GET["profile"]}");
-        require_once($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
+        require($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
 
     } else {
         // error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
@@ -191,8 +192,10 @@ if (isset($_GET["profile"])) {
     $GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
     $GLOBALS["STTFUNCTION"]=$OVERRIDES["STTFUNCTION"];
     $GLOBALS["TTSFUNCTION_PLAYER"]=$OVERRIDES["TTSFUNCTION_PLAYER"];
-    //$GLOBALS["PROMPT_HEAD"]=$OVERRIDES["PROMPT_HEAD"];
+    $GLOBALS["TTSFUNCTION_PLAYER_VOICE"]=$OVERRIDES["TTSFUNCTION_PLAYER_VOICE"];
 
+    // $GLOBALS["PROMPT_HEAD"]=$OVERRIDES["PROMPT_HEAD"];
+    // error_log("Using profile {$GLOBALS["TTSFUNCTION_PLAYER"]} {$_GET["profile"]} / ".$path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
     
 } else {
     //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
@@ -203,26 +206,28 @@ if (isset($_GET["profile"])) {
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
-    error_log($cleaned_dialogue);
-    //if ($TTSFUNCTION_PLAYER!="none") {
-        audit_log(__FILE__." ".__LINE__);
-        $GLOBALS["PATCH_OVERRIDE_VOICE"]=$TTSFUNCTION_PLAYER_VOICE;
-        $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;
-        $origTTS=$GLOBALS["TTSFUNCTION"];
-        $origName=$GLOBALS["HERIKA_NAME"];
+    
+    
+    // audit_log(__FILE__." ".__LINE__);
+    $GLOBALS["PATCH_OVERRIDE_VOICE"]=$TTSFUNCTION_PLAYER_VOICE;
+    $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;
+    $origTTS=$GLOBALS["TTSFUNCTION"];
+    $origName=$GLOBALS["HERIKA_NAME"];
 
-        $GLOBALS["TTSFUNCTION"]=$GLOBALS["TTSFUNCTION_PLAYER"];
-        $GLOBALS["HERIKA_NAME"]="Player";
-        $ownspeech=returnlines([$cleaned_dialogue]);
+    $GLOBALS["TTSFUNCTION"]=$GLOBALS["TTSFUNCTION_PLAYER"];
+    $GLOBALS["HERIKA_NAME"]="Player";
+
+    // error_log("$cleaned_dialogue {$GLOBALS["TTSFUNCTION_PLAYER"]} {$GLOBALS["TTSFUNCTION"]} {$GLOBALS["PATCH_OVERRIDE_VOICE"]} override:{$OVERRIDES["TTSFUNCTION_PLAYER"]}");
+    $ownspeech=returnlines([$cleaned_dialogue]);
+    
+    unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+    $GLOBALS["TTSFUNCTION"]=$origTTS;
+    unset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]);
+    $GLOBALS["HERIKA_NAME"]=$origName;
+    unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
+    // audit_log(__FILE__." ".__LINE__);
         
-        unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
-        $GLOBALS["TTSFUNCTION"]=$origTTS;
-        unset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]);
-        $GLOBALS["HERIKA_NAME"]=$origName;
-        unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
-        audit_log(__FILE__." ".__LINE__);
-        
-    //} 
+    
 }
 
 
@@ -264,6 +269,7 @@ if ($gameRequest[0]=="diary") {
 
 // Exit if only a event info log.
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","goodnight","itemfound","travelcancel","infoplayer","infosave","status_msg"])) {
+    $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
     if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
@@ -561,9 +567,80 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                 $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
             } 
         }
+
+       
     }
 
     $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+}
+
+
+// OGHMA STUFF
+if ($GLOBALS["MINIME_T5"]) {
+    if (isset($FEATURES["MISC"]["OGHMA_INFINITUM"])&&($FEATURES["MISC"]["OGHMA_INFINITUM"])) {
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"])) {
+
+            $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+            $replacement = "";
+            $TEST_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); 
+            
+            $pattern = '/\(talking to [^()]+\)/i';
+            $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+            $TEST_TEXT=strtr($TEST_TEXT,["."=>" "]);
+
+            $topic=file_get_contents("http://127.0.0.1:8082/topic?text=".urlencode($TEST_TEXT));
+            if ($topic) {
+                $preCommand=json_decode($topic,true);
+                if ($preCommand["generated_tags"]) {
+                    $locationCtx=DataLastKnownLocationHuman(true);
+                    if ($locationCtx)
+                        $preCommand["generated_tags"].=",$locationCtx";
+
+                    $result=explode(",",strtr($preCommand["generated_tags"],[" "=>","]));
+                    $kwStringAny=implode(" | ",$result);
+                    $kwStringAll=implode(" & ",$result);
+                    $query="
+            SELECT topic_desc,topic,
+            ts_rank(native_vector, to_tsquery('$kwStringAny')) AS rank_any,
+            ts_rank(native_vector, to_tsquery('$kwStringAll')) AS rank_all
+            FROM oghma A
+            where native_vector @@to_tsquery('$kwStringAny')
+            ORDER BY rank_all DESC, rank_any DESC;
+            ";
+
+                    // error_log($query);
+                    $oghmaTopics=$GLOBALS["db"]->fetchAll($query);
+                    if (isset($oghmaTopics[0]) && isset($oghmaTopics[0]["topic_desc"])) {
+                        $GLOBALS["PROMPT_HEAD"].="#Context information: {$oghmaTopics[0]["topic_desc"]}";
+                        $GLOBALS["db"]->insert(
+                            'audit_memory',
+                            array(
+                                'input' => $TEST_TEXT,
+                                'keywords' =>'oghma keyword offered',
+                                'rank_any'=> $oghmaTopics[0]["rank_any"],
+                                'rank_all'=>$oghmaTopics[0]["rank_all"],
+                                'memory'=>"{$preCommand["generated_tags"]}=>{$oghmaTopics[0]["topic"]}",
+                                'time'=>$preCommand["elapsed_time"]
+                            )
+                        );
+                        
+                    } else {
+                        $GLOBALS["db"]->insert(
+                            'audit_memory',
+                            array(
+                                'input' => $TEST_TEXT,
+                                'keywords' =>'oghma keyword NOT offered',
+                                'rank_any'=> -1,
+                                'rank_all'=>-1,
+                                'memory'=>"{$preCommand["generated_tags"]}=>".(is_array($oghmaTopics)?$oghmaTopics[0]["topic"]:""),
+                                'time'=>$preCommand["elapsed_time"]
+                            )
+                        );
+                    }
+                } 
+            }
+        }
+    }
 }
 
 if (sizeof($memoryInjectionCtx)>0) {
@@ -779,7 +856,7 @@ if ($connectionHandler->primary_handler === false) {
     
     
     if (trim($buffer)) {
-        error_log("REMAINING DATA <$buffer>");
+        // error_log("REMAINING DATA <$buffer>");
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
         $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
         $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
