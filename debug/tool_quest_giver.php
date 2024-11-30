@@ -94,7 +94,7 @@ foreach ($quest["initial_data"] as $n=>$step) {
 
         $characters[$step["id"]]=$step[$command]["character"];
         if ($characters[$step["id"]]["disposition"]=="drunk") {
-            $TALK_SPEED=1.25;
+            $TALK_SPEED=2;
         }
         if ($characters[$step["id"]]["disposition"]=="high") {
             $TALK_SPEED=0.75;
@@ -237,11 +237,32 @@ if (!$MUST_END) {
             }
         }
 
+        // Branch control
+
         if (isset($stage["parent_stage"])) {
             if ($quest["stages"][$stage["parent_stage"]-1]["status"]==2)    // Parent stage ended ok status=2 is ok, status>2 is failed
                 $localbranch=1;
             else
                 $localbranch=2;    
+        }
+
+        // First stage, First run
+        if ($n==0) {
+            if (!isset($stage["status"])) {
+                $db->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => "",
+                        'action' => "rolecommand|StartQuest@{$quest["quest"]}@$taskId",
+                        'tag' => ""
+                    )
+                );
+            }
+
+
         }
 
         if ($stage["label"]=="SpawnCharacter") {
@@ -256,8 +277,19 @@ if (!$MUST_END) {
 
                 $pclass=$character["class"];
 
+                // This will spawn character
                 npcProfileBase($character["name"],$pclass,$cn_race,$cn_gender,$cn_location,$taskId);
                 
+                $namedKey="{$character["name"]}_is_rolemastered";
+                $db->delete("conf_opts", "id='".$db->escape($namedKey)."'");
+                $db->insert(
+                    'conf_opts',
+                    array(
+                        'id' => $namedKey,
+                        'value' => true
+                    )
+                );
+
                 error_log("DONE 2");
                 $quest["stages"][$n]["status"]=1;
                 break;
@@ -332,8 +364,6 @@ if (!$MUST_END) {
                 }
                 break;
             }
-
-
         }
 
         if ($stage["label"]=="MoveToPlayer") {
@@ -478,7 +508,7 @@ if (!$MUST_END) {
                 
                 echo "TravelTo(\"{$character["name"]}\",\"$taskId\")".PHP_EOL;
 
-                $db->insert(
+                /*$db->insert(
                     'responselog',
                     array(
                         'localts' => time(),
@@ -488,15 +518,30 @@ if (!$MUST_END) {
                         'action' => $db->escape("rolecommand|TravelTo@{$character["name"]}@WIDeadBodyCleanupCell@$taskId"),
                         'tag' => ""
                     )
+                );*/
+                
+                // Don't do it inmediately
+                $db->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => "",
+                        'action' => "rolecommand|Sandbox@{$character["name"]}@$taskId",
+                        'tag' => ""
+                    )
                 );
+
                 $quest["stages"][$n]["status"]=1;
+                $quest["stages"][$n]["last_send_gamets"]=$GLOBALS["last_gamets"];
                 break;
 
             } else if ($stage["status"]==1){
                 $cn=$db->escape($character["name"]);
                 echo "Check if character {$stage["char_ref"]} has reached destination ".json_encode($characters[$stage["char_ref"]]["name"]).PHP_EOL;
-                $moved=$db->fetchAll("select count(*)  as n from (select * from eventlog where type='infonpc_close' order by rowid desc limit 1) where people ilike '%{$cn}%'");
-                
+                $moved=$db->fetchAll("select count(*)  as n from (select * from eventlog where type='infonpc_close' order by rowid desc limit 1) where data ilike '%{$cn}%'");
+                //error_log("select count(*)  as n from (select * from eventlog where type='infonpc_close' order by rowid desc limit 1) where people ilike '%{$cn}%'");
                 if (is_array($moved)&& ($moved[0]["n"]==0)) {
                     echo "Character has reached destination!".PHP_EOL;
                     $quest["stages"][$n]["status"]=2;
@@ -512,8 +557,28 @@ if (!$MUST_END) {
                             'tag' => ""
                         )
                     );
-                }
+                } else {
+                    
+                    if ($GLOBALS["last_gamets"]-$quest["stages"][$n]["last_send_gamets"]> 60 * SECOND_GAMETS_MULT) {
+                        echo "Retrying ToGoAway";
+                        $quest["stages"][$n]["last_send_gamets"]=$GLOBALS["last_gamets"];
+                        $db->insert(
+                            'responselog',
+                            array(
+                                'localts' => time(),
+                                'sent' => 0,
+                                'actor' => "rolemaster",
+                                'text' => "",
+                                'action' => $db->escape("rolecommand|TravelTo@{$character["name"]}@WIDeadBodyCleanupCell@$taskId"),
+                                'tag' => ""
+                            )
+                        );
 
+                    }
+
+
+                }
+                // Inext instructions is ToGoAway too. activate stage
                 if ((isset($quest["stages"][$n+1])) && ($quest["stages"][$n+1]["label"]=="ToGoAway") && ($quest["stages"][$n+1]["char_ref"]!=$quest["stages"][$n]["char_ref"])) {   // Run next instruction if moveToPlayer too
 
                     if ($quest["stages"][$n+1]["status"]<1) {
@@ -769,6 +834,7 @@ if (!$MUST_END) {
                             'tag' => ""
                         )
                     );
+                    $quest["stages"][$n]["last_llm_call"]=$GLOBALS["gameRequest"][2];// Dont make LLM call on next round
                     echo "First topic. Suggestion send".PHP_EOL;
                 } else if (!isset($topics[$stage["topic_ref"]]["first_one"])) { // If not first topic, make suggestion.
 
@@ -1336,6 +1402,10 @@ if ($allDone) {
        
     }
     $db->delete("currentmission","sess='$taskId'");
+    foreach ($characters as $character) {
+        $namedKey="{$character["name"]}_is_rolemastered";
+        $db->delete("conf_opts", "id='".$db->escape($namedKey)."'");
+    }
     if (!$failed) {
         $db->insert(
             'responselog',

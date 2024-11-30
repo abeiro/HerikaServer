@@ -8,6 +8,7 @@ $ENABLED_FUNCTIONS=[
     'InspectSurroundings',
     'MoveTo',
     'OpenInventory',
+    'OpenInventory2',
     'Attack',
     'AttackHunt',
     'Follow',
@@ -38,6 +39,7 @@ $F_TRANSLATIONS["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and G
 $F_TRANSLATIONS["InspectSurroundings"]="Looks for beings or enemies nearby";
 $F_TRANSLATIONS["MoveTo"]= "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
 $F_TRANSLATIONS["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
+$F_TRANSLATIONS["OpenInventory2"]="Initiates trading, {$GLOBALS["PLAYER_NAME"]} must give items to {$GLOBALS["HERIKA_NAME"]}";
 $F_TRANSLATIONS["Attack"]="Attacks actor, npc or being.";
 $F_TRANSLATIONS["AttackHunt"]="Try to hunt/kill ar animal";
 $F_TRANSLATIONS["Follow"]="Moves to and follow a NPC, an actor or being";
@@ -67,6 +69,7 @@ $F_RETURNMESSAGES["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and
 $F_RETURNMESSAGES["InspectSurroundings"]="{$GLOBALS["HERIKA_NAME"]} takes a look around and see this: #RESULT#";
 $F_RETURNMESSAGES["MoveTo"]= "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
 $F_RETURNMESSAGES["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}. Accept gift.";
+$F_RETURNMESSAGES["OpenInventory2"]="{$GLOBALS["PLAYER_NAME"]} give items to {$GLOBALS["HERIKA_NAME"]}";
 $F_RETURNMESSAGES["Attack"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES["AttackHunt"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES["Follow"]="Moves to and follow a NPC, an actor or being";
@@ -86,8 +89,8 @@ $F_RETURNMESSAGES["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inme
 $F_RETURNMESSAGES["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
 $F_RETURNMESSAGES["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
 $F_RETURNMESSAGES["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
-$F_RETURNMESSAGES["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}";
-$F_RETURNMESSAGES["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}";
+$F_RETURNMESSAGES["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
+$F_RETURNMESSAGES["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
 $F_RETURNMESSAGES["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
 
 
@@ -99,6 +102,7 @@ $F_NAMES["LookAt"]="LookAt";
 $F_NAMES["InspectSurroundings"]="InspectSurroundings";
 $F_NAMES["MoveTo"]= "MoveTo";
 $F_NAMES["OpenInventory"]="ExchangeItems";
+$F_NAMES["OpenInventory2"]="TakeItemsFromPlayer";
 $F_NAMES["Attack"]="Attack";
 $F_NAMES["AttackHunt"]="Hunt";
 $F_NAMES["Follow"]="Follow";
@@ -194,6 +198,20 @@ $FUNCTIONS = [
     [
         "name" => $F_NAMES["OpenInventory"],
         "description" => $F_TRANSLATIONS["OpenInventory"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ]
+            ],
+            "required" => []
+        ],
+    ],
+    [
+        "name" => $F_NAMES["OpenInventory2"],
+        "description" => $F_TRANSLATIONS["OpenInventory2"],
         "parameters" => [
             "type" => "object",
             "properties" => [

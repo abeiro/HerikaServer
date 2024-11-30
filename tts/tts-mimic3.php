@@ -88,6 +88,15 @@ function ttsMimicOld($textString, $mood = "cheerful", $stringforhash='')
 
     $context = stream_context_create($options);
 
+    if (is_array($GLOBALS["TTS_FFMPEG_FILTERS"])) {
+        $GLOBALS["TTS_FFMPEG_FILTERS"]["adelay"]="adelay=150|150";
+        $FFMPEG_FILTER='-af "'.implode(",",$GLOBALS["TTS_FFMPEG_FILTERS"]).'"';
+        
+    } else {
+        $FFMPEG_FILTER='-filter:a "adelay=150|150"';
+    }
+
+
     // get the wave data
     $result = file_get_contents($ttsServiceUri, false, $context);
     if (!$result) {
@@ -96,18 +105,24 @@ function ttsMimicOld($textString, $mood = "cheerful", $stringforhash='')
     } else {
     }
    
+    
 
     // Trying to avoid sync problems.
-    $stream = fopen(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav", 'w');
+    $oname=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . "_o.wav";
+    $stream = fopen($oname, 'w');
     $size = fwrite($stream, $result);
     fsync($stream);
     fclose($stream);
 
-    $end = microtime(true);
-
-    $executionTime = ($end - $start);
-
-    file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($data) . "\n\rsize of wav ($size)\n\rexecution time: $executionTime secs  function tts($textString,$mood=\"cheerful\",$stringforhash)");
-
+    $fname=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
+   
+    $startTimeTrans = microtime(true);
+    shell_exec("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname 2>/dev/null >/dev/null");
+    error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ");
+    $endTimeTrans = microtime(true)-$startTimeTrans;
+    
+    file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
+    $GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in xtts-fast-api call";
     return "soundcache/" . md5(trim($stringforhash)) . ".wav";
+
 }
