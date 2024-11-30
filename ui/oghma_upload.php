@@ -200,6 +200,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
 
         if ($result) {
             $message .= "<p>Data inserted successfully!</p>";
+
+            // Now run the update command
+            $update_query = "
+                UPDATE $schema.oghma
+                SET native_vector = setweight(to_tsvector(coalesce(topic, '')), 'A') || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
+            ";
+            $update_result = pg_query($conn, $update_query);
+
+            if ($update_result) {
+                $message .= "<p>Index updated successfully!</p>";
+            } else {
+                $message .= "<p>An error occurred while updating the index: " . pg_last_error($conn) . "</p>";
+            }
         } else {
             $message .= "<p>An error occurred while inserting or updating data: " . pg_last_error($conn) . "</p>";
         }
@@ -257,6 +270,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                 fclose($handle);
 
                 $message .= "<p>$rowCount records inserted or updated successfully from the CSV file.</p>";
+
+                // Run the SQL command to update 'native_vector' after data insertion
+                $update_query = "
+                    UPDATE $schema.oghma
+                    SET native_vector = 
+                        setweight(to_tsvector(coalesce(topic, '')), 'A') ||
+                        setweight(to_tsvector(coalesce(topic_desc, '')), 'B');
+                ";
+                $update_result = pg_query($conn, $update_query);
+
+                if ($update_result) {
+                    $message .= "<p>Vectors Updated.</p>";
+                } else {
+                    $message .= "<p>Error updating Vectors " . pg_last_error($conn) . "</p>";
+                }
+
             } else {
                 $message .= '<p>Error opening the CSV file.</p>';
             }
@@ -267,6 +296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
         $message .= '<p>No file uploaded or there was an upload error.</p>';
     }
 }
+
 
 // Handle the download request for the example CSV
 if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
