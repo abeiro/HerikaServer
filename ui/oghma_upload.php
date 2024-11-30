@@ -59,118 +59,6 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROF
 // Begin output buffering if necessary
 // ob_start();
 
-?>
-
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>Oghma Topic Upload</title>
-    <style>
-        /* Updated CSS for Dark Grey Background Theme */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c; /* Dark grey background */
-            color: #f8f9fa; /* Light grey text for readability */
-        }
-
-        h1, h2 {
-            color: #ffffff; /* White color for headings */
-        }
-
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
-            max-width: 600px;
-        }
-
-        label {
-            font-weight: bold;
-            color: #f8f9fa; /* Ensure labels are readable */
-        }
-
-        input[type="text"], input[type="file"], textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #555555; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            resize: vertical; /* Allows users to resize vertically if needed */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 14px; /* Sets a readable font size */
-        }
-
-        input[type="submit"] {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px; /* Slightly larger border radius */
-            cursor: pointer;
-            padding: 5px 15px; /* Increased padding for larger button */
-            font-size: 18px;    /* Increased font size */
-            font-weight: bold;  /* Bold text for better visibility */
-            transition: background-color 0.3s ease; /* Smooth hover transition */
-        }
-
-        input[type="submit"]:hover {
-            background-color: #0056b3; /* Darker shade on hover */
-        }
-
-        .message {
-            background-color: #444444; /* Darker background for messages */
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #555555;
-            max-width: 600px;
-            margin-bottom: 20px;
-            color: #f8f9fa; /* Light text in messages */
-        }
-
-        .message p {
-            margin: 0;
-        }
-
-        .response-container {
-            margin-top: 20px;
-        }
-
-        .indent {
-            padding-left: 10ch; /* 10 character spaces */
-        }
-
-        .indent5 {
-            padding-left: 5ch; /* 5 character spaces */
-        }
-
-        .button {
-            padding: 8px 16px;
-            margin-top: 10px;
-            cursor: pointer;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 3px;
-        }
-
-        .button:hover {
-            background-color: #0056b3;
-        }
-    </style>
-</head>
-<body>
-
-<?php
-// Include navbar and other templates if available
-// include("tmpl/head.html");
-// $debugPaneLink = false;
-// include("tmpl/navbar.php");
-
 // Initialize message variable
 $message = '';
 
@@ -297,7 +185,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
     }
 }
 
-
 // Handle the download request for the example CSV
 if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
     // Define the path to the example CSV file
@@ -324,15 +211,211 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         $message .= '<p>Example CSV file not found.</p>';
     }
 }
-
-// Close the database connection
-pg_close($conn);
-
-// Display the forms and messages
 ?>
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <title>CHIM - Oghma Infinium Management</title>
+    <style>
+        /* Updated CSS for Dark Grey Background Theme */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c2c2c; /* Dark grey background */
+            color: #f8f9fa; /* Light grey text for readability */
+        }
+
+        h1, h2 {
+            color: #ffffff; /* White color for headings */
+        }
+
+        form {
+            margin-bottom: 20px;
+            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #555555; /* Darker border for contrast */
+            max-width: 600px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #f8f9fa; /* Ensure labels are readable */
+        }
+
+        input[type="text"], input[type="file"], textarea {
+            width: 100%;
+            padding: 6px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #555555; /* Darker borders */
+            border-radius: 3px;
+            background-color: #4a4a4a; /* Dark input backgrounds */
+            color: #f8f9fa; /* Light text inside inputs */
+            resize: vertical; /* Allows users to resize vertically if needed */
+            font-family: Arial, sans-serif; /* Ensures consistent font */
+            font-size: 14px; /* Sets a readable font size */
+        }
+
+        input[type="submit"] {
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 5px; /* Slightly larger border radius */
+            cursor: pointer;
+            padding: 5px 15px; /* Increased padding for larger button */
+            font-size: 18px;    /* Increased font size */
+            font-weight: bold;  /* Bold text for better visibility */
+            transition: background-color 0.3s ease; /* Smooth hover transition */
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3; /* Darker shade on hover */
+        }
+
+        .message {
+            background-color: #444444; /* Darker background for messages */
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #555555;
+            max-width: 600px;
+            margin-bottom: 20px;
+            color: #f8f9fa; /* Light text in messages */
+        }
+
+        .message p {
+            margin: 0;
+        }
+
+        .response-container {
+            margin-top: 20px;
+        }
+
+        .indent {
+            padding-left: 10ch; /* 10 character spaces */
+        }
+
+        .indent5 {
+            padding-left: 5ch; /* 5 character spaces */
+        }
+
+        .button {
+            padding: 8px 16px;
+            margin-top: 10px;
+            cursor: pointer;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 3px;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            max-width: 1000px;
+            border-collapse: collapse;
+            background-color: #3a3a3a; /* Slightly lighter grey for table backgrounds */
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #555555; /* Darker borders */
+            padding: 8px;
+            text-align: left;
+            vertical-align: top; /* Align text to the top */
+            color: #f8f9fa; /* Light text */
+        }
+
+        th {
+            background-color: #4a4a4a; /* Slightly lighter for headers */
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #2c2c2c; /* Alternate row color */
+        }
+
+        .filter-buttons {
+            margin-bottom: 20px;
+            max-width: 1000px;
+        }
+
+        .filter-buttons form {
+            display: inline-block;
+            margin: 2px;
+        }
+
+        .filter-buttons button {
+            background-color: #007bff;
+            border: none;
+            color: white;
+            padding: 6px 10px;
+            margin: 0;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .filter-buttons button:hover {
+            background-color: #0056b3;
+        }
+
+        .table-container {
+            max-height: 400px; 
+            overflow-y: auto;
+            margin-bottom: 20px;
+            max-width: 1000px;
+        }
+
+        /* Container for the filter buttons */
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px; /* Adjust spacing between buttons as needed */
+            max-width: 1000px; /* Adjust as needed */
+        }
+
+        /* Alphabet button styles */
+        .filter-buttons .alphabet-button {
+            display: flex; /* Enable Flexbox */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            text-decoration: none;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            padding: 0; /* No padding */
+            margin: 0;
+            border-radius: 3px;
+            cursor: pointer;
+            
+            /* Typography */
+            font-size: 18px; /* Increased font size */
+            font-weight: bold; /* Make text bold */
+            
+            /* Size adjustments (30% larger) */
+            width: 52px; /* 40px * 1.3 = 52px */
+            height: 52px; /* 40px * 1.3 = 52px */
+            
+            /* Optional: Add transition for smooth hover effect */
+            transition: background-color 0.3s ease;
+        }
+
+        /* Hover state for alphabet buttons */
+        .filter-buttons .alphabet-button:hover {
+            background-color: #0056b3;
+        }
+
+
+    </style>
+</head>
+<body>
 
 <div class="indent5">
-    <h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Entry Upload</h1>
+    <h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Management</h1>
     <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
     <p>We recommend to keep entries limited to "generic household knowledge" as ALL NPC's will have access to all entries.</p>
     <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
@@ -368,8 +451,72 @@ pg_close($conn);
         <input type="hidden" name="action" value="download_example">
         <input type="submit" value="Download Example CSV">
     </form>
+
+    <!-- Removed the View Oghma button -->
 </div>
 <p>You can verify that the entry has been uploaded successfully by navigating to <b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
 <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+
+<?php
+// Always display the Oghma entries with filtering
+
+// Get the letter filter if set
+$letter = isset($_GET['letter']) ? $_GET['letter'] : '';
+$letter = strtoupper($letter); // Ensure the letter is uppercase
+
+// Generate the alphabet buttons
+echo '<div class="indent5">';
+echo '<h2>Oghma Infinium Entries</h2>';
+echo '<div class="filter-buttons">';
+
+// ALL button
+echo '<a href="?" class="alphabet-button">All</a>';
+
+// Generate A-Z buttons
+foreach (range('A', 'Z') as $char) {
+    echo '<a href="?letter=' . $char . '" class="alphabet-button">' . $char . '</a>';
+}
+
+echo '</div>';
+
+// Prepare the SQL query with optional filtering
+if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
+    $query = "SELECT topic, topic_desc FROM $schema.oghma WHERE topic ILIKE $1 ORDER BY topic ASC";
+    $params = array($letter . '%');
+} else {
+    $query = "SELECT topic, topic_desc FROM $schema.oghma ORDER BY topic ASC";
+    $params = array();
+}
+
+$result = pg_query_params($conn, $query, $params);
+
+if ($result) {
+    echo '<div class="table-container">';
+    echo '<table>';
+    echo '<tr><th>Topic</th><th>Topic Description</th></tr>';
+    $rowCount = 0;
+    while ($row = pg_fetch_assoc($result)) {
+        echo '<tr>';
+        echo '<td>' . htmlspecialchars($row['topic']) . '</td>';
+        echo '<td>' . nl2br(htmlspecialchars($row['topic_desc'])) . '</td>';
+        echo '</tr>';
+        $rowCount++;
+    }
+    echo '</table>';
+    echo '</div>';
+
+    if ($rowCount === 0) {
+        echo '<p>No entries found for the selected filter.</p>';
+    }
+
+    echo '</div>';
+} else {
+    echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
+}
+
+// Close the database connection
+pg_close($conn);
+?>
+
 </body>
 </html>
