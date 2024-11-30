@@ -281,7 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                 $update_result = pg_query($conn, $update_query);
 
                 if ($update_result) {
-                    $message .= "<p>'native_vector' column updated successfully.</p>";
+                    $message .= "<p>Vector updated successfully.</p>";
                 } else {
                     $message .= "<p>Error updating 'native_vector' column: " . pg_last_error($conn) . "</p>";
                 }
