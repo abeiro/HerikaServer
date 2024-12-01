@@ -450,14 +450,15 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close'  and type<>'instruction'
     and type<>'request'
-    ".(($actorEscaped)?" and people like '|%$actorEscaped%|' ":"")." 
+    ".(($actorEscaped)?" 
+    and (people like '|%$actorEscaped%|' or people like '$actorEscaped') ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
     " order by gamets desc,ts desc,rowid desc LIMIT 1000 OFFSET 0";
     
     $results = $db->fetchAll($query);
 
-    //error_log($query);
+    // error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;

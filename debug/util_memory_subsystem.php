@@ -112,6 +112,12 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 				$gameRequest=["summary"];	// Fake a diary call.
 				
 				$CLFORMAT="#Summary: {summary of events and dialogues}\r\n#Tags: {list of relevant twitter-like hashtags}";
+                IF (isset($GLOBALS["CORE_LANG"])) {
+                    if ($GLOBALS["CORE_LANG"]=="es") {
+                        $CLFORMAT.=" GENERA EL CONTENIDO Y LOS TAGS EN ESPAÑOL";
+                    }
+                    
+                }
 				$prompt=[];
                 
                 $prompt[] = array('role' => 'system', 
