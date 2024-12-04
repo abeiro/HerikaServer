@@ -161,7 +161,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash)
         }
         //fwrite(STDOUT, $result);
 
-
+        $GLOBALS["TTS_FFMPEG_FILTERS"]["loudnorm"]="loudnorm=I=-16:TP=-1.5:LRA=11";
        
         if (is_array($GLOBALS["TTS_FFMPEG_FILTERS"])) {
 			$GLOBALS["TTS_FFMPEG_FILTERS"]["adelay"]="adelay=150|150";

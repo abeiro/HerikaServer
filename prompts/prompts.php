@@ -186,7 +186,7 @@ $PROMPTS=array(
 
     ],
     "instruction"=>[ 
-        "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "cue"=>["{$gameRequest[3]} {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["The Narrator:  {$gameRequest[3]}"],
     ],
 );
