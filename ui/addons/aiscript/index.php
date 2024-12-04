@@ -276,6 +276,7 @@ $results = $db->fetchAll("SELECT * FROM aiquest WHERE status=1");
 echo "<h3 class='my-2'>Running Quests</h3>";
 
 $list = [];
+$characters=[];
 foreach ($results as $n => $quest) {
     $questData = json_decode($quest['definition'], true);
 
@@ -288,6 +289,13 @@ foreach ($results as $n => $quest) {
             if (isset($stage['status'])&&($stage['status'] == 1)) {
                 $currentStage = htmlspecialchars($stage['label']);
                 break; // Assuming only one stage is active
+            }
+
+        }
+
+        foreach ($questData['stages'] as $stage) {
+            if (isset($stage['formid']) && $stage['label']=="SpawnCharacter") {
+                $characters[]=["name"=>$questData['characters'][$stage['char_ref']]["name"],"formid"=>convertSignedToUnsignedHex($stage['formid'])];
             }
         }
     }
@@ -302,8 +310,13 @@ foreach ($results as $n => $quest) {
 
 // Use the function from misc_ui_functions.php
 print_array_as_table($list);
-if (sizeof($list)>0)
+
+if (sizeof($list)>0) {
     echo "<img src='status.php' style='max-width:100%'>";
+
+}
+
+print_array_as_table($characters);
 
 
 // Check for dameon running

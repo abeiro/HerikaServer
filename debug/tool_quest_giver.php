@@ -98,6 +98,8 @@ foreach ($quest["initial_data"] as $n=>$step) {
         }
         if ($characters[$step["id"]]["disposition"]=="high") {
             $TALK_SPEED=0.75;
+        } else {
+            $TALK_SPEED=0.85;
         }
 
     } else  if (($command=="spawnItem")||( ($command=="createItem"))) {
@@ -508,30 +510,34 @@ if (!$MUST_END) {
                 
                 echo "TravelTo(\"{$character["name"]}\",\"$taskId\")".PHP_EOL;
 
-                /*$db->insert(
-                    'responselog',
-                    array(
-                        'localts' => time(),
-                        'sent' => 0,
-                        'actor' => "rolemaster",
-                        'text' => "",
-                        'action' => $db->escape("rolecommand|TravelTo@{$character["name"]}@WIDeadBodyCleanupCell@$taskId"),
-                        'tag' => ""
-                    )
-                );*/
+                if (sizeof($characters)>1) {
+                    $db->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => "",
+                            'action' => $db->escape("rolecommand|TravelTo@{$character["name"]}@WIDeadBodyCleanupCell@$taskId"),
+                            'tag' => ""
+                        )
+                    );
                 
-                // Don't do it inmediately
-                $db->insert(
-                    'responselog',
-                    array(
-                        'localts' => time(),
-                        'sent' => 0,
-                        'actor' => "rolemaster",
-                        'text' => "",
-                        'action' => "rolecommand|Sandbox@{$character["name"]}@$taskId",
-                        'tag' => ""
-                    )
-                );
+                } else {
+                
+                    // Don't do it inmediately
+                    $db->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => "",
+                            'action' => "rolecommand|Sandbox@{$character["name"]}@$taskId",
+                            'tag' => ""
+                        )
+                    );
+                }
 
                 $quest["stages"][$n]["status"]=1;
                 $quest["stages"][$n]["last_send_gamets"]=$GLOBALS["last_gamets"];
@@ -559,7 +565,7 @@ if (!$MUST_END) {
                     );
                 } else {
                     
-                    if ($GLOBALS["last_gamets"]-$quest["stages"][$n]["last_send_gamets"]> 60 * SECOND_GAMETS_MULT) {
+                    if ($GLOBALS["last_gamets"]-$quest["stages"][$n]["last_send_gamets"]> 30 * SECOND_GAMETS_MULT) {
                         echo "Retrying ToGoAway";
                         $quest["stages"][$n]["last_send_gamets"]=$GLOBALS["last_gamets"];
                         $db->insert(
@@ -578,7 +584,7 @@ if (!$MUST_END) {
 
 
                 }
-                // Inext instructions is ToGoAway too. activate stage
+                // If next instructions is ToGoAway too. activate stage
                 if ((isset($quest["stages"][$n+1])) && ($quest["stages"][$n+1]["label"]=="ToGoAway") && ($quest["stages"][$n+1]["char_ref"]!=$quest["stages"][$n]["char_ref"])) {   // Run next instruction if moveToPlayer too
 
                     if ($quest["stages"][$n+1]["status"]<1) {
@@ -1422,6 +1428,7 @@ if ($allDone) {
     echo "Quest completed!".PHP_EOL;
 }
 
+$quest["characters"]=$characters;
 //updateRow. Store Instantiated quest with last updates.
 $db->updateRow(
     'aiquest',

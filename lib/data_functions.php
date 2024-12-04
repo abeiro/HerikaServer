@@ -458,7 +458,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     
     $results = $db->fetchAll($query);
 
-    // error_log($query);
+    //error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;
@@ -1157,7 +1157,10 @@ function DataLastKnownLocationHuman($hold=false)
         return $matches[1][0];
     } else {
         preg_match('/Hold:\s*(\w+)/', $lastLoc[0]["data"], $matches);
-        $hold = $matches[1];
+        if (isset($matches[1]))
+            $hold = $matches[1];
+        else 
+            $hold = "";
         return $hold;
     }
 
