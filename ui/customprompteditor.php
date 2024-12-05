@@ -228,7 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </head>
 <body>
     <h1>📝 Custom Prompt Editor</h1>
-    <p>By making your own prompts_custom.php file you can make edits to how AI respond to triggered events.</p>
+    <p>By making your own prompts_custom.php file you can make edits to how AI NPCs respond to triggered events.</p>
     <p>For example you can adjust how AI NPC's write their diary entries, what they say during bored events, how to summarize books and more!</p>
     <p>This file overwrites the standard prompts.php, meaning you can safely make edits to this without breaking the baseline if CHIM updates it.</p>
 
@@ -296,13 +296,6 @@ $PROMPTS["combatend"] = [
     ]
 ],
         </code></pre>
-
-        <p>
-            The <b>command_prompt_custom.php</b> file also follows the same rules, but be cautious as that file contains important rule prompts.
-        </p>
-        <p>
-            This way, we can release updates with new prompt definitions for new events, and your customized prompts will always overwrite the vanilla ones!
-        </p>
     </div>
     <br>
     <h3>Custom Prompt Examples:</h3>
