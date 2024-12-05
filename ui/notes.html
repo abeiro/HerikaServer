@@ -109,83 +109,6 @@
                         </ul>
                     </div>
                 </li>
-
-                <li class="list-group-item d-flex justify-content-between align-items-start">
-                    <div class="ms-2 me-auto">
-                        <div class="fw-bold">How to adjust the AI prompts</div>
-                        You find the prompts files at <i>\\wsl.localhost\DwemerAI4Skyrim3\var\www\html\HerikaServer\prompts</i>. Create the files <b>prompts_custom.php</b> and <b>command_prompt_custom.php</b>. Look at the variables defined in the original
-                        prompts.php and command_prompt.php, and redefine them in their respective custom files. Example:
-
-                        <pre><code class="language-php">// We have this in prompts.php
-"combatend"=&gt;[
-        "cue"=&gt;[
-            "({$GLOBALS["HERIKA_NAME"]} comments about the last combat encounter) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} laughs at {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} admires  {$GLOBALS["PLAYER_NAME"]}'s combat style) $TEMPLATE_DIALOG"
-        ],
-        "extra"=&gt;["mood"=>"whispering","force_tokens_max"=&gt;"50","dontuse"=&gt;(time()%5!=0)]   //20% chance
-    ],
-</code>
-                        </pre>
-
-                        We can edit the prompts_custom.php with this new definition:
-
-                        <pre><code class="language-php">
-// $TEMPLATE_DIALOG is at prompts.php and is the standard cue. Cue is the last instruction sent to LLM. If cue is an array, a random cue will be choosen from
-// that array.
-// You can disable some events by just adding this named key ["extra"]["dontuse"], so
-// * "dontuse"=true -> will disable the event
-// * "dontuse"=(time()%5!=0) -> will disable the event 4 from each 5 times (20%)
-// * "force_tokens_max" => will change token limit for this event
-// * "mood" => will force mood
-
-$PROMPTS["combatend"]=[
-        "cue"=&gt;[
-            "({$GLOBALS["HERIKA_NAME"]} boasts that she has defeated all the enemies by herself.) $TEMPLATE_DIALOG"
-        ],
-        "extra"=&gt;["mood"=>"whispering","force_tokens_max"=&gt;"50","dontuse"=&gt;(time()%5!=0)]   //20% chance
-    ],</code></pre>
-
-                        
-
-
-                        The command_prompt_custom.php file also follows the same rules, but be cautious as that file contains important rule prompts.<br/>
-                        <br/>
-                        This way we can release updates with new prompts definitions for new events, and your customized prompts will
-                        always overwrite vanilla ones!
-                    </div>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between align-items-start">
-                    <div class="ms-2 me-auto">
-                        <div class="fw-bold">Disabling command action functions</div>
-                        Create the file functions_custom.php <i>\\wsl.localhost\DwemerAI4Skyrim3\var\www\html\HerikaServer\conf</i>, and just redeclare
-                        the enabled functions array. An example:
-
-                        <pre><code class="language-php">$ENABLED_FUNCTIONS=[
-    'Inspect',
-    'LookAt',
-    'InspectSurroundings',
-    //'MoveTo',             // Will not be available
-    'OpenInventory',
-    'Attack',
-    'Follow',
-    'CheckInventory',
-    'SheatheWeapon',
-    'Relax',
-    //'LeadTheWayTo',       // Will not be available
-    //'TakeASeat',          // Will not be available
-    'ReadQuestJournal',
-    'SetSpeed',
-    'GetDateTime',
-    'SearchDiary',
-    'SetCurrentTask'
-];
-</code></pre>
-                    </div>
-                </li>
-
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">Other Useful Tips</div>
@@ -193,6 +116,7 @@ $PROMPTS["combatend"]=[
                             <li>You can manually edit events, diaries and memories under <b>Server Actions</b> - <b>Database Manager</b> <b><a class="icon-link" href="https://www.nexusmods.com/skyrimspecialedition/articles/7439" target="_blank">Quick Guide</a></b></li>
                             <li>You can easily upload custom NPC profiles <b><a class="icon-link" href="/HerikaServer/ui/npc_upload.php" target="_blank">here</a></b></li>
                             <li>Use the <b>Troubleshooting</b> menu to test LLM/TTS/STT/ITT services before using them ingame</li>
+                            <li>You can make advanced edits to how NPC's respond with our custom prompt editor <b><a class="icon-link" href="/HerikaServer/ui/customprompteditor.php" target="_blank">here</a></b></li>
                             <li>You can easily download plugin extensions that add more features to CHIM at <b><a class="icon-link" href="/HerikaServer/ui/index.php?plugins_show=true" target="_blank">Server Plugins - Plugin Manager</a></b></li>
                             <li><b>Loading older or new saves can delete memories and events!</b> This is to prevent time paradoxes. <b><a class="icon-link" href="https://www.nexusmods.com/skyrimspecialedition/articles/7548" target="_blank">Here</a></b> is a guide for profile backups</b>.
                         </ul>
