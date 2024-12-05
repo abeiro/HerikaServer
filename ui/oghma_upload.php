@@ -608,29 +608,5 @@ if ($result) {
 pg_close($conn);
 ?>
 
-<!-- Include JavaScript for edit functionality -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var editButtons = document.querySelectorAll('.edit-button');
-    var cancelButtons = document.querySelectorAll('.cancel-button');
-
-    editButtons.forEach(function(button) {
-        button.addEventListener('click', function() {
-            var topic = this.getAttribute('data-topic');
-            document.getElementById('display-' + topic).style.display = 'none';
-            document.getElementById('edit-' + topic).style.display = 'block';
-        });
-    });
-
-    cancelButtons.forEach(function(button) {
-        button.addEventListener('click', function() {
-            var topic = this.getAttribute('data-topic');
-            document.getElementById('edit-' + topic).style.display = 'none';
-            document.getElementById('display-' + topic).style.display = 'block';
-        });
-    });
-});
-</script>
-
 </body>
 </html>
