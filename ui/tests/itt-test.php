@@ -13,6 +13,9 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 
+
+$db=new sql();
+
 require_once($enginePath . "itt" . DIRECTORY_SEPARATOR . "itt-{$GLOBALS['ITTFUNCTION']}.php");
 
 $start_time = time();
