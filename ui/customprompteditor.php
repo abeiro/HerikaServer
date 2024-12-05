@@ -228,9 +228,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </head>
 <body>
     <h1>📝 Custom Prompt Editor</h1>
-    <p>By making your own prompts_custom.php file you can make edits to how AI NPCs respond to triggered events.</p>
+    <p>By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.</p>
     <p>For example you can adjust how AI NPC's write their diary entries, what they say during bored events, how to summarize books and more!</p>
-    <p>This file overwrites the standard prompts.php, meaning you can safely make edits to this without breaking the baseline if CHIM updates it.</p>
+    <p>This file overwrites whatever is in the standard prompts.php, meaning you can safely make edits to this without breaking it if CHIM updates.</p>
 
     <?php if (!empty($message)): ?>
         <div class="message"><p><?php echo nl2br($message); ?></p></div>
