@@ -24,7 +24,8 @@ function itt($file,$hints)
     
     $prompt = $GLOBALS["ITT"]["openai"]["AI_VISION_PROMPT"].". $hints";
 
-    foreach (json_decode(DataSpeechJournal("",50),true) as $element) {
+    /*
+    foreach (json_decode(DataSpeechJournal("",5),true) as $element) {
     
         if ($lastListener!=$element["listener"]) {
             if ($element["listener"]!="The Narrator")
@@ -48,6 +49,7 @@ function itt($file,$hints)
 
     // Also add some dialogue context
     $prompt.="#Context dialogie info\n$historyData\n";
+    */
     $fileContent = base64_encode(file_get_contents($file));
 
     $headers = [
