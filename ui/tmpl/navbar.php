@@ -152,7 +152,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
                 <ul class="dropdown-menu">
 
-                    <!-- First Category Header -->
+                    
                     <li><h6 class="dropdown-header">Configuration Tools</h6></li>
                     <li>
                     <a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a>
@@ -167,10 +167,15 @@
                         Quickstart Menu
                     </a>
                     </li>
+                    <li>
+                    <a class="dropdown-item" href="customprompteditor.php" target="_blank">
+                    Custom Prompt Editor
+                    </a>
+                    </li>
 
                     <li><hr class="dropdown-divider"></li>
 
-                    <!-- Second Category Header -->
+                    
                     <li><h6 class="dropdown-header">AI Voice Management</h6></li>
                     <li>
                     <a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
@@ -184,7 +189,7 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
 
-                    <!-- Third Category Header -->
+                    
                     <li><h6 class="dropdown-header">Guides (PLEASE READ!)</h6></li>
                     <li><a class="dropdown-item" href='index.php?notes=true'>CHIM 101 Quick Guide</a></li>
                     <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">CHIM Manual</a></li>
