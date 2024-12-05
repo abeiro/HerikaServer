@@ -211,6 +211,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         $message .= '<p>Example CSV file not found.</p>';
     }
 }
+
+// Handle update entry request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_entry') {
+    $topic = strtolower(trim($_POST['topic'] ?? ''));
+    $topic_desc = $_POST['topic_desc'] ?? '';
+
+    if (!empty($topic) && !empty($topic_desc)) {
+        // Prepare and execute the UPDATE statement
+        $query = "
+            UPDATE $schema.oghma
+            SET topic_desc = $1,
+                native_vector = setweight(to_tsvector(coalesce(topic, '')), 'A') || setweight(to_tsvector(coalesce($1, '')), 'B')
+            WHERE topic = $2
+        ";
+        $result = pg_query_params($conn, $query, array($topic_desc, $topic));
+
+        if ($result) {
+            $message .= "<p>Entry updated successfully!</p>";
+        } else {
+            $message .= "<p>An error occurred while updating data: " . pg_last_error($conn) . "</p>";
+        }
+    } else {
+        $message .= '<p>Please fill in all required fields.</p>';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -243,44 +268,62 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
             color: #f8f9fa; /* Ensure labels are readable */
         }
 
-        input[type="text"], input[type="file"], textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #555555; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            resize: vertical; /* Allows users to resize vertically if needed */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 14px; /* Sets a readable font size */
-        }
+        input[type="text"],
+input[type="file"] {
+    width: 100%;
+    padding: 6px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    border: 1px solid #555555; /* Darker borders */
+    border-radius: 3px;
+    background-color: #4a4a4a; /* Dark input backgrounds */
+    color: #f8f9fa; /* Light text inside inputs */
+    font-family: Arial, sans-serif; /* Ensures consistent font */
+    font-size: 14px; /* Sets a readable font size */
+}
 
-        input[type="submit"] {
+/* Styles specifically for textarea */
+textarea {
+    width: 100%;
+    padding: 6px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    border: 1px solid #555555; 
+    border-radius: 3px;
+    background-color: #4a4a4a; 
+    color: #f8f9fa; 
+    resize: vertical; 
+    font-family: Arial, sans-serif; 
+    font-size: 14px; 
+    height: 200px; 
+
+}
+
+        input[type="submit"], button {
             background-color: #007bff;
             border: none;
             color: white;
-            border-radius: 5px; /* Slightly larger border radius */
+            border-radius: 5px; 
             cursor: pointer;
-            padding: 5px 15px; /* Increased padding for larger button */
-            font-size: 18px;    /* Increased font size */
-            font-weight: bold;  /* Bold text for better visibility */
-            transition: background-color 0.3s ease; /* Smooth hover transition */
+            padding: 5px 15px; 
+            font-size: 18px;   
+            font-weight: bold; 
+            transition: background-color 0.3s ease; 
+            margin-top: 10px;
         }
 
-        input[type="submit"]:hover {
-            background-color: #0056b3; /* Darker shade on hover */
+        input[type="submit"]:hover, button:hover {
+            background-color: #0056b3; 
         }
 
         .message {
-            background-color: #444444; /* Darker background for messages */
+            background-color: #444444; 
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #555555;
             max-width: 600px;
             margin-bottom: 20px;
-            color: #f8f9fa; /* Light text in messages */
+            color: #f8f9fa; 
         }
 
         .message p {
@@ -292,11 +335,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         }
 
         .indent {
-            padding-left: 10ch; /* 10 character spaces */
+            padding-left: 10ch;
         }
 
         .indent5 {
-            padding-left: 5ch; /* 5 character spaces */
+            padding-left: 5ch; 
         }
 
         .button {
@@ -315,32 +358,32 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 
         table {
             width: 100%;
-            max-width: 1000px;
+            max-width: 1200px;
             border-collapse: collapse;
-            background-color: #3a3a3a; /* Slightly lighter grey for table backgrounds */
+            background-color: #3a3a3a; 
             margin-bottom: 20px;
         }
 
         th, td {
-            border: 1px solid #555555; /* Darker borders */
+            border: 1px solid #555555; 
             padding: 8px;
             text-align: left;
-            vertical-align: top; /* Align text to the top */
-            color: #f8f9fa; /* Light text */
+            vertical-align: top; 
+            color: #f8f9fa; 
         }
 
         th {
-            background-color: #4a4a4a; /* Slightly lighter for headers */
+            background-color: #4a4a4a; 
             font-weight: bold;
         }
 
         tr:nth-child(even) {
-            background-color: #2c2c2c; /* Alternate row color */
+            background-color: #2c2c2c; 
         }
 
         .filter-buttons {
             margin-bottom: 20px;
-            max-width: 1000px;
+            max-width: 1200px;
         }
 
         .filter-buttons form {
@@ -364,52 +407,74 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         }
 
         .table-container {
-            max-height: 400px; 
+            max-height: 800px; 
             overflow-y: auto;
             margin-bottom: 20px;
-            max-width: 1000px;
+            max-width: 1200px;
         }
 
-        /* Container for the filter buttons */
+
         .filter-buttons {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px; /* Adjust spacing between buttons as needed */
-            max-width: 1000px; /* Adjust as needed */
+            gap: 5px; 
+            max-width: 1200px; 
         }
 
-        /* Alphabet button styles */
+
         .filter-buttons .alphabet-button {
-            display: flex; /* Enable Flexbox */
-            justify-content: center; /* Center horizontally */
-            align-items: center; /* Center vertically */
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
             text-decoration: none;
             background-color: #007bff;
             border: none;
             color: white;
-            padding: 0; /* No padding */
+            padding: 0; 
             margin: 0;
             border-radius: 3px;
             cursor: pointer;
             
-            /* Typography */
-            font-size: 18px; /* Increased font size */
-            font-weight: bold; /* Make text bold */
             
-            /* Size adjustments (30% larger) */
-            width: 52px; /* 40px * 1.3 = 52px */
-            height: 52px; /* 40px * 1.3 = 52px */
+            font-size: 18px; 
+            font-weight: bold; 
             
-            /* Optional: Add transition for smooth hover effect */
+            
+            width: 52px; 
+            height: 52px; 
+            
+            
             transition: background-color 0.3s ease;
         }
 
-        /* Hover state for alphabet buttons */
+        
         .filter-buttons .alphabet-button:hover {
             background-color: #0056b3;
         }
 
+       
+        .edit-button, .cancel-button {
+            background-color: #28a745; 
+            color: white;
+            padding: 5px 10px;
+            margin-left: 5px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
 
+        .edit-button:hover, .cancel-button:hover {
+            background-color: #218838; 
+        }
+
+        .cancel-button {
+            background-color: #dc3545; 
+        }
+
+        .cancel-button:hover {
+            background-color: #c82333; 
+        }
     </style>
 </head>
 <body>
@@ -496,9 +561,34 @@ if ($result) {
     echo '<tr><th>Topic</th><th>Topic Description</th></tr>';
     $rowCount = 0;
     while ($row = pg_fetch_assoc($result)) {
+        $topic = htmlspecialchars($row['topic']);
+        $topic_desc = htmlspecialchars($row['topic_desc']);
+
         echo '<tr>';
-        echo '<td>' . htmlspecialchars($row['topic']) . '</td>';
-        echo '<td>' . nl2br(htmlspecialchars($row['topic_desc'])) . '</td>';
+        echo '<td>' . $topic . '</td>';
+
+        echo '<td>';
+
+        // The display div
+        echo '<div class="topic-desc-display" id="display-' . $topic . '">';
+        echo nl2br($topic_desc);
+        echo '<br>';
+        echo ' <button class="edit-button" data-topic="' . $topic . '">Edit</button>';
+        echo '</div>';
+
+        // The edit form, hidden by default
+        echo '<div class="topic-desc-edit" id="edit-' . $topic . '" style="display: none;">';
+        echo '<form action="" method="post">';
+        echo '<textarea name="topic_desc" rows="5" style="width:100%;">' . $topic_desc . '</textarea>';
+        echo '<input type="hidden" name="topic" value="' . $topic . '">';
+        echo '<input type="hidden" name="action" value="update_entry">';
+        echo '<input type="submit" value="Save">';
+        echo ' <button class="cancel-button" type="button" data-topic="' . $topic . '">Cancel</button>';
+        echo '</form>';
+        echo '</div>';
+
+        echo '</td>';
+
         echo '</tr>';
         $rowCount++;
     }
@@ -517,6 +607,30 @@ if ($result) {
 // Close the database connection
 pg_close($conn);
 ?>
+
+<!-- Include JavaScript for edit functionality -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var editButtons = document.querySelectorAll('.edit-button');
+    var cancelButtons = document.querySelectorAll('.cancel-button');
+
+    editButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            var topic = this.getAttribute('data-topic');
+            document.getElementById('display-' + topic).style.display = 'none';
+            document.getElementById('edit-' + topic).style.display = 'block';
+        });
+    });
+
+    cancelButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            var topic = this.getAttribute('data-topic');
+            document.getElementById('edit-' + topic).style.display = 'none';
+            document.getElementById('display-' + topic).style.display = 'block';
+        });
+    });
+});
+</script>
 
 </body>
 </html>
