@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <p>By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.</p>
     <p>For example you can adjust how AI NPC's write their diary entries, what they say during bored events, how to summarize books and more!</p>
     <p>This file overwrites whatever is in the standard prompts.php, meaning you can safely make edits to this without breaking it if CHIM updates.</p>
-
+    <p>The file requires proper JSON formatting!</p>
     <?php if (!empty($message)): ?>
         <div class="message"><p><?php echo nl2br($message); ?></p></div>
     <?php endif; ?>
