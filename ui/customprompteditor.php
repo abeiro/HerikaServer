@@ -287,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 $PROMPTS["combatend"] = [
     "cue" => [
-        "({$GLOBALS["HERIKA_NAME"]} boasts that she has defeated all the enemies by herself.) $TEMPLATE_DIALOG"
+        "({$GLOBALS["HERIKA_NAME"]} boasts that they have defeated all the enemies by herself.) $TEMPLATE_DIALOG"
     ],
     "extra" => [
         "mood" => "whispering",
@@ -300,7 +300,7 @@ $PROMPTS["combatend"] = [
     <br>
     <h3>Custom Prompt Examples:</h3>
 
-    <p><b>Remove the "I am alive" message when an AI NPC activates"</b></p>
+    <p><b>Remove the "I am alive" message when an AI NPC activates</b></p>
     <pre><code class="language-php">
 $PROMPTS["im_alive"]=[ 
     "cue"=>["{$GLOBALS["HERIKA_NAME"]} A short saying about the situation. Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"],
