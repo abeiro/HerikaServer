@@ -275,6 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <p>We can edit the <b>prompts_custom.php</b> with this new definition:</p>
 
         <pre><code class="language-php">
+// These are comments, you do not need to add them to the custom prompt file.
 // $TEMPLATE_DIALOG is in prompts.php and is the standard cue.
 // Cue is the last instruction sent to the LLM.
 // If cue is an array, a random cue will be chosen from that array.
@@ -284,10 +285,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // * "dontuse" = (time() % 5 != 0) -> will disable the event 4 out of 5 times (20% chance)
 // * "force_tokens_max" => will change token limit for this event
 // * "mood" => will force mood
+// End of comments.
 
 $PROMPTS["combatend"] = [
     "cue" => [
-        "({$GLOBALS["HERIKA_NAME"]} boasts that they have defeated all the enemies by herself.) $TEMPLATE_DIALOG"
+        "({$GLOBALS["HERIKA_NAME"]} boasts that they have defeated all the enemies.) $TEMPLATE_DIALOG"
     ],
     "extra" => [
         "mood" => "whispering",
