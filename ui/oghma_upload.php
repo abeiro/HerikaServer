@@ -573,18 +573,6 @@ if ($result) {
         echo '<div class="topic-desc-display" id="display-' . $topic . '">';
         echo nl2br($topic_desc);
         echo '<br>';
-        echo ' <button class="edit-button" data-topic="' . $topic . '">Edit</button>';
-        echo '</div>';
-
-        // The edit form, hidden by default
-        echo '<div class="topic-desc-edit" id="edit-' . $topic . '" style="display: none;">';
-        echo '<form action="" method="post">';
-        echo '<textarea name="topic_desc" rows="5" style="width:100%;">' . $topic_desc . '</textarea>';
-        echo '<input type="hidden" name="topic" value="' . $topic . '">';
-        echo '<input type="hidden" name="action" value="update_entry">';
-        echo '<input type="submit" value="Save">';
-        echo ' <button class="cancel-button" type="button" data-topic="' . $topic . '">Cancel</button>';
-        echo '</form>';
         echo '</div>';
 
         echo '</td>';
