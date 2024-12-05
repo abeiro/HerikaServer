@@ -5,6 +5,33 @@ Post tasks.
 
 */
 
+if ($GLOBALS["MINIME_T5"]) {
+    if (isset($FEATURES["MISC"]["OGHMA_INFINITUM"])&&($FEATURES["MISC"]["OGHMA_INFINITUM"])) {
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+
+            
+            //$TEST_TEXT=lastSpeech($GLOBALS["HERIKA_NAME"]);
+            //$TEST_TEXT="{$GLOBALS["HERIKA_NAME"]}:".implode(" ",$GLOBALS["talkedSoFar"]);
+            $TEST_TEXT=implode(" ",$GLOBALS["talkedSoFar"]);
+
+            $topic=json_decode(file_get_contents("http://127.0.0.1:8082/posttopic?text=".urlencode($TEST_TEXT)),true);
+            if (is_array($topic) && isset($topic["generated_tags"])) {
+                error_log("[OGMHA] Current Topic: {$topic["generated_tags"]}");
+                $db->delete("conf_opts", "id='current_oghma_topic'");
+                $db->insert(
+                'conf_opts',
+                    array(
+                            'id' =>'current_oghma_topic',
+                            'value' => $topic["generated_tags"]
+                        )
+                    );
+            }
+
+        }
+    }
+}
+
+
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
 $GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
 foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
@@ -79,3 +106,5 @@ if ($GLOBALS["MINIME_T5"]) {
         }
     }
 }
+
+

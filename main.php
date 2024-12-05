@@ -565,7 +565,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                 );
                 error_log("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
                 $memoryInjectionCtx=[]; // Disable memorie when command.
-                $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
+                $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
                 $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
             } 
         }
@@ -578,139 +578,8 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 
 
 // OGHMA STUFF
-if ($GLOBALS["MINIME_T5"]) {
-    if (isset($FEATURES["MISC"]["OGHMA_INFINITUM"])&&($FEATURES["MISC"]["OGHMA_INFINITUM"])) {
-        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
 
-            $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
-            $replacement = "";
-            $TEST_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); 
-            
-            $pattern = '/\(talking to [^()]+\)/i';
-            $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
-            $TEST_TEXT=strtr($TEST_TEXT,["."=>" ","{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-
-            $topic=file_get_contents("http://127.0.0.1:8082/topic?text=".urlencode($TEST_TEXT));
-            if ($topic) {
-                $preCommand=json_decode($topic,true);
-                if ($preCommand["generated_tags"]) {
-                    $locationCtx=DataLastKnownLocationHuman(true);
-                    if ($locationCtx)
-                        $tagsWithLocation="{$preCommand["generated_tags"]},$locationCtx";
-                    else 
-                        $tagsWithLocation="{$preCommand["generated_tags"]}";
-
-                    $tagsWithOutLocation=$preCommand["generated_tags"];
-                    
-                    $result1=explode(",",strtr($tagsWithLocation,[" "=>",","!"=>""]));
-                    $result2=explode(",",strtr($tagsWithOutLocation,[" "=>",","!"=>""]));
-
-                    $kwStringAny=implode(" | ",$result1);
-                    $kwStringAll=implode(" & ",$result1);
-                    $query="
-            SELECT topic_desc,topic,
-            ts_rank(native_vector, to_tsquery('$kwStringAny')) AS rank_any,
-            ts_rank(native_vector, to_tsquery('$kwStringAll')) AS rank_all
-            FROM oghma A
-            where native_vector @@to_tsquery('$kwStringAny')
-            ORDER BY rank_all DESC, rank_any DESC;
-            ";
-
-                    // error_log($query);
-                    $oghmaTopics=$GLOBALS["db"]->fetchAll($query);
-
-
-                    $kwStringAny2=implode(" | ",$result2);
-                    $kwStringAll2=implode(" & ",$result2);
-                    $query="
-                    SELECT topic_desc,topic,
-                    ts_rank(native_vector, to_tsquery('$kwStringAny2')) AS rank_any,
-                    ts_rank(native_vector, to_tsquery('$kwStringAll2')) AS rank_all
-                    FROM oghma A
-                    where native_vector @@to_tsquery('$kwStringAny2')
-                    ORDER BY rank_all DESC, rank_any DESC;
-                    ";
-                    // error_log($query);
-                    $oghmaTopicsNoLoc=$GLOBALS["db"]->fetchAll($query);
-                    $msg='oghma keyword offered';
-
-                    if (sizeof($result2)>3) {
-                        // Too much generated tags
-                        unset($oghmaTopics[0]);
-                        unset($oghmaTopicsNoLoc[0]);
-                        $msg='oghma keyword not offered, too many keywords';
-                    }
-
-                    if (isset($oghmaTopics[0]) && isset($oghmaTopics[0]["topic_desc"])) {
-                        $selectOneNoLoc=$selectOneLoc="";
-                      
-                        if (isset($oghmaTopicsNoLoc[0]) && isset($oghmaTopicsNoLoc[0]["topic_desc"])) {
-
-                            if ($oghmaTopics[0]["rank_all"] > 0.5 ) {
-                                $GLOBALS["PROMPT_HEAD"].="#Lore related info: {$oghmaTopics[0]["topic_desc"]}";
-                                $selectOneLoc="*";
-                                // Search with location matched all. Use it.
-                            } else if ($oghmaTopicsNoLoc[0]["rank_all"]>0.5){
-                                // Search without location matched better. Use it 
-                                $GLOBALS["PROMPT_HEAD"].="#Lore related info: {$oghmaTopicsNoLoc[0]["topic_desc"]}";
-                                $selectOneNoLoc="*";
-                                
-                            } else {
-                                // Dont offer
-                                
-                                $msg="oghma keyword NOT offered (not good results in combined search)";
-                            }
-
-
-                        } else {
-                            $msg="oghma keyword NOT offered (not good results on simple search)";
-                        }
-                        
-                        
-                        $GLOBALS["db"]->insert(
-                            'audit_memory',
-                            array(
-                                'input' => $TEST_TEXT,
-                                'keywords' =>$msg,
-                                'rank_any'=> $oghmaTopics[0]["rank_any"],
-                                'rank_all'=>$oghmaTopics[0]["rank_all"],
-                                'memory'=>"$selectOneLoc{$kwStringAny}=>{$oghmaTopics[0]["topic"]}",
-                                'time'=>$preCommand["elapsed_time"]
-                            )
-                        );
-                        if (isset($oghmaTopicsNoLoc[0])) {
-                            $GLOBALS["db"]->insert(
-                                'audit_memory',
-                                array(
-                                    'input' => $TEST_TEXT,
-                                    'keywords' =>$msg,
-                                    'rank_any'=> $oghmaTopicsNoLoc[0]["rank_any"],
-                                    'rank_all'=>$oghmaTopicsNoLoc[0]["rank_all"],
-                                    'memory'=>"$selectOneNoLoc{$kwStringAny2}=>{$oghmaTopicsNoLoc[0]["topic"]}",
-                                    'time'=>$preCommand["elapsed_time"]
-                                )
-                            );
-                        }
-                        
-                    } else {
-                        $msg='oghma keyword not offered, no results';
-                        $GLOBALS["db"]->insert(
-                            'audit_memory',
-                            array(
-                                'input' => $TEST_TEXT,
-                                'keywords' =>$msg,
-                                'rank_any'=> -1,
-                                'rank_all'=>-1,
-                                'memory'=>"{$preCommand["generated_tags"]}=>".(is_array($oghmaTopics)?$oghmaTopics[0]["topic"]:""),
-                                'time'=>$preCommand["elapsed_time"]
-                            )
-                        );
-                    }
-                } 
-            }
-        }
-    }
-}
+require(__DIR__."/processor/oghma.php");
 
 if (sizeof($memoryInjectionCtx)>0) {
     // Persist memory injetction

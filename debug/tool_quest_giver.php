@@ -304,7 +304,6 @@ if (!$MUST_END) {
                 if (is_array($spawned)&& isset($spawned[0]) && ($spawned[0]["n"]>0)) {
                     echo "Character has spawned!".PHP_EOL;
                     $quest["stages"][$n]["status"]=2;
-                    
 
                     $rowData=explode("@",$spawned[0]["data"]);
                     $formId=$rowData[2];
@@ -332,6 +331,14 @@ if (!$MUST_END) {
                             } else {
                                 $PARMS["HERIKA_PERS"].="*{$topic["info"]}\n";
                             }
+                        }
+                    }
+                    
+                    foreach ($items as $item) {
+                        if ($characters[$item["char_ref"]]["name"]==$character["name"]) {
+                            
+                            $PARMS["HERIKA_PERS"].="\nInitially owns '{$item["name"]}'\n";
+                            
                         }
                     }
                     
@@ -1408,6 +1415,9 @@ if ($allDone) {
        
     }
     $db->delete("currentmission","sess='$taskId'");
+    $db->delete("rumors","sess='$taskId'");
+
+
     foreach ($characters as $character) {
         $namedKey="{$character["name"]}_is_rolemastered";
         $db->delete("conf_opts", "id='".$db->escape($namedKey)."'");

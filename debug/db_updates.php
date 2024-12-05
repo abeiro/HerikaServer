@@ -230,6 +230,10 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (oghma_infinium) has been applied to Database")</script>';
 }
 
+
+$db->execQuery("update oghma SET native_vector = setweight(to_tsvector(coalesce(topic, '')),'A')||setweight(to_tsvector(coalesce(topic_desc, '')),'B')");
+
+
 $query = "SELECT 1 as bad_syntax_exists  FROM npc_templates WHERE  npc_name LIKE '%' || CHR(39) || '%'";
 
 $existsColumn=$db->fetchAll($query);

@@ -18,7 +18,7 @@ else
 
 
 if (!$_FILES["file"]["tmp_name"]) {
-    error_log("ITT error, no data given");
+    error_log("ITT error, no data given: ".print_r($_POST,true));
     die("ITT error, no data given");
     
 }

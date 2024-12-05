@@ -13,6 +13,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
+
 requireFilesRecursively($enginePath . "ext" . DIRECTORY_SEPARATOR, "globals.php");
 
 if (isset($_SESSION["PROFILE"])) {
@@ -26,6 +27,9 @@ error_reporting(E_ALL);
 $testString = "In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
 
 $db = new sql();
+
+require_once($enginePath . "prompt.includes.php");
+
 
 $GLOBALS["AVOID_TTS_CACHE"] = true;
 
