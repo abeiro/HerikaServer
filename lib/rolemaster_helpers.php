@@ -808,11 +808,19 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
     $parm2=$outfit["{$class}"][array_rand($outfit["{$class}"])];
 
     //$parm3=$weapon["{$weapon}"][0];
+    $rumors=false;
     $parm3=$weapon["sword"][0];
-    if ($location!="nearby")
-        $parm4 = $locations[$location][array_rand($locations[$location])];
-    else
+    if ($location=="nearby")
         $parm4=0;
+    else if ($location=="random") {
+        $posibleLoc=array_keys($locations);
+        $location = $posibleLoc[array_rand($posibleLoc)];
+        error_log($location);
+        $parm4 = $locations[$location][array_rand($locations[$location])];   
+        $rumors=true;
+    } else 
+        $parm4 = $locations[$location][array_rand($locations[$location])];
+
     
     $GLOBALS["db"]->insert(
         'responselog',
@@ -825,6 +833,19 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
             'tag' => ""
         )
     );
+    if ($rumors) {
+        $GLOBALS["db"]->insert(
+            'rumors',
+            array(
+                'localts' => time(),
+                'gamets'=>$GLOBALS["gameRequest"][2],
+                'ts'=>$GLOBALS["gameRequest"][1],
+                'location'=>$location,
+                'topic'=>"$name has been seen nearby",
+                'sess'=>$taskId
+            )
+        );
+    }
 
 }
 

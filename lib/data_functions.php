@@ -1776,6 +1776,14 @@ function isOk($arr) {
     return false;
 }
 
+function getArrayKey($arr,$key) {
+    if (is_array($arr))
+        if (isset($arr[$key]))
+            return $arr[$key];
+
+    return false;
+}
+
 function profile_exists($npcname) {
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($npcname);

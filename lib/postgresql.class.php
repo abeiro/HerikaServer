@@ -87,6 +87,24 @@ class sql
         return $finalData;
     }
     
+    public function fetchOne($q)
+    {
+        $result = pg_query(self::$link, $q);
+        if (!$result) {
+            error_log(pg_last_error(self::$link));
+            return [];
+        }
+
+        $finalData = array();
+        while ($row = pg_fetch_assoc($result)) {
+            $finalData = $row;
+            break;
+        }
+        
+
+        return $finalData;
+    }
+
     public function fetchArray($res)
     {
         return pg_fetch_array($res);
