@@ -135,7 +135,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	if (isset($PROMPTS[$gameRequest[0]]["player_request"])) {
 		$request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]); // Add support for arrays here	
 		$gameRequest[3]=selectRandomInArray($PROMPTS[$gameRequest[0]]["player_request"]);	// Overwrite
-		error_log(__FILE__." ".__LINE__." $request {$gameRequest[3]}");
+		// error_log(__FILE__." ".__LINE__." $request {$gameRequest[3]}");
 	}
 	else {
 		if (isset($PROMPTS[$gameRequest[0]]["cue"]))
