@@ -12,7 +12,7 @@ $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to 
 $BOOK_EVENT_ALWAYS_NARRATOR=false;
 //The Narrator will talk to you.
 $NARRATOR_TALKS=true;
-$BOOK_EVENT_FULL=false;
+$BOOK_EVENT_FULL=true;
 
 $HERIKA_ANIMATIONS=true;
 $DYNAMIC_PROFILE=false;
