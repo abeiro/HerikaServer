@@ -40,47 +40,47 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     } elseif (isset($_POST['validate'])) {
         // Perform validation
-    $validation_steps = [];
-    $errors = [];
+        $validation_steps = [];
+        $errors = [];
 
-    // Check if it starts with <?php
-    if (strpos($content, '<?php') !== 0) {
-        $errors[] = 'The file must start with <?php';
-    } else {
-        $validation_steps[] = 'File is in PHP format';
-    }
-
-    if (substr(trim($content), -2) !== '?>') {
-        $errors[] = 'The file must end with ?>';
-    } else {
-        $validation_steps[] = 'File ends with ?>';
-    }
-
-    if (empty($errors)) {
-        // Save the content to a temporary file
-        $tmpfname = tempnam(sys_get_temp_dir(), "phptest");
-        file_put_contents($tmpfname, $content);
-
-        // Execute PHP lint check
-        $output = [];
-        $return_var = 0;
-        exec("php -l " . escapeshellarg($tmpfname), $output, $return_var);
-
-        // Remove the temporary file
-        unlink($tmpfname);
-
-        if ($return_var !== 0) {
-            $errors[] = 'PHP syntax error: ' . implode("\n", $output);
+        // Check if it starts with <?php
+        if (strpos($content, '<?php') !== 0) {
+            $errors[] = 'The file must start with <?php';
         } else {
-            $validation_steps[] = 'PHP code syntax is valid';
+            $validation_steps[] = 'File is in PHP format';
         }
-    }
 
-    if (empty($errors)) {
-        $message = 'Validation successful. The following checks passed:<br>' . implode('<br>', $validation_steps);
-    } else {
-        $message = 'Validation failed:<br>' . implode('<br>', $errors);
-    }
+        if (substr(trim($content), -2) !== '?>') {
+            $errors[] = 'The file must end with ?>';
+        } else {
+            $validation_steps[] = 'File ends with ?>';
+        }
+
+        if (empty($errors)) {
+            // Save the content to a temporary file
+            $tmpfname = tempnam(sys_get_temp_dir(), "phptest");
+            file_put_contents($tmpfname, $content);
+
+            // Execute PHP lint check
+            $output = [];
+            $return_var = 0;
+            exec("php -l " . escapeshellarg($tmpfname), $output, $return_var);
+
+            // Remove the temporary file
+            unlink($tmpfname);
+
+            if ($return_var !== 0) {
+                $errors[] = 'PHP syntax error: ' . implode("\n", $output);
+            } else {
+                $validation_steps[] = 'PHP code syntax is valid';
+            }
+        }
+
+        if (empty($errors)) {
+            $message = 'Validation successful. The following checks passed:<br>' . implode('<br>', $validation_steps);
+        } else {
+            $message = 'Validation failed:<br>' . implode('<br>', $errors);
+        }
     } elseif (isset($_POST['view_prompts'])) {
         // Handle view_prompts
         $prompts_file_path = '../prompts/prompts.php';
@@ -89,9 +89,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             $message = 'prompts.php file not found.';
         }
+    } elseif (isset($_POST['verify'])) {
+        // Redirect to ../../streamv2.php when verify button is clicked
+        header("Location: ../../HerikaServer/streamv2.php");
+        exit;
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -241,9 +246,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <textarea name="content" id="content" rows="30"><?php echo htmlspecialchars($content); ?></textarea>
         <br>
         <input type="submit" name="save" value="Save">
-        <input type="submit" name="validate" value="Validate File">
+        <!-- <input type="submit" name="validate" value="Validate File"> -->
+        <input type="submit" name="verify" value="Verify">
     </form>
 
+<p>After you have <b>Saved</b> the file click <b>Verify</b> to check if the changes go through correctly.</p>
+<p><b>The Verify button should be a white page with no errors! If not then the formatting is wrong!</b></p>
+<p><i>You should be able to use an LLM chatbot to help fix any JSON formatting issues.</i></p>
     <!-- New form for viewing prompts.php -->
     <form method="post">
         <input type="submit" name="view_prompts" value="View prompts.php file">
@@ -307,7 +316,16 @@ $PROMPTS["combatend"] = [
 $PROMPTS["im_alive"]=[ 
     "cue"=>["{$GLOBALS["HERIKA_NAME"]} A short saying about the situation. Write {$GLOBALS["HERIKA_NAME"]} dialogue. $TEMPLATE_DIALOG"],
     "player_request"=>["The Narrator:  {$GLOBALS["HERIKA_NAME"]} feels a sudden shock...and feels 'more real'"],
-    "extra"=>["dontuse"=>true]   //10% chance
+    "extra"=>["dontuse"=>true] 
+];
+    </code></pre>
+</body>
+
+<p><b>Make diary entries smaller</b></p>
+    <pre><code class="language-php">
+$PROMPTS["diary"]=[ 
+    "cue"=>["Please write a very short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary. WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
+    "extra"=>["force_tokens_max"=>500]
 ];
     </code></pre>
 </body>
