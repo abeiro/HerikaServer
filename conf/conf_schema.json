@@ -146,7 +146,7 @@
       "_title":"CHIM XTTS (Installed in DwemerDistro)",
       "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<br>Be warned it takes 4GB of VRAM to run it!<br>You can run it on the cloud, click the help/doc link for instructions.", "helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/7673"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
-      "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
+      "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management to view voiceids.<br><b>To use Mantella XTTS voices you must install the MinAI plugin!</b>","helpurl":"/HerikaServer/ui/xtts_clone.php"}
     },
     "MIMIC3": {
       "_title":"MIMIC3 (Installed in DwemerDistro)",
