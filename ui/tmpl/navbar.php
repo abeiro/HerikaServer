@@ -605,7 +605,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Overlay Content -->
             <div class="overlay-content">
                 <a href="#" class="close-btn">&times;</a>
-                <h2>Character Profile <i>(Refresh page to see new characters)</i></h2>
+                <h2>Character Profile <i><p>(Refresh page to see new characters)</p></i></h2>
 
                 <!-- A-Z and Favorites Filter Buttons -->
                 <div class="filter-buttons">
