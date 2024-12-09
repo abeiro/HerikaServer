@@ -163,15 +163,16 @@
                     </a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="quickstart.php" target="_blank">
-                        Quickstart Menu
-                    </a>
-                    </li>
-                    <li>
                     <a class="dropdown-item" href="customprompteditor.php" target="_blank">
                     Custom Prompt Editor
                     </a>
                     </li>
+                    <li>
+                    <a class="dropdown-item" href="quickstart.php" target="_blank">
+                        Quickstart Menu
+                    </a>
+                    </li>
+
 
                     <li><hr class="dropdown-divider"></li>
 
@@ -210,21 +211,6 @@
                 <li>
                 <a class="dropdown-item" href="tests.php" target="_blank">Current LLM/AI Connection Test</a>
                 </li>
-                <!-- Uncomment the following items if needed -->
-                <!--
-                <li>
-                <a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a>
-                </li>
-                <li>
-                <a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a>
-                </li>
-                <li>
-                <a class="dropdown-item" href="tests/tts-test-11labs.php" target="_blank">Test ElevenLabs TTS Connection</a>
-                </li>
-                <li>
-                <a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test Google Cloud TTS Connection</a>
-                </li>
-                -->
                 <li>
                 <a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a>
                 </li>
