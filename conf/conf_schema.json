@@ -284,8 +284,8 @@
     "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
     "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest. Will trigger a lot of events on new game, so shoudl activated on loaded games"},
     "ITT_QUALITY": {"type":"integer","description":"Only for Soulgaze HD. Compression quality can be set from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"},
-    "TTS_RANDOM_PITCH": {"type":"boolean","userlvl":"pro","description":"Adjusting the pitch when generating the voice for this actor will add variation, so actors using the same voice sound slightly distinct."},
-    "OGHMA_INFINITUM": {"type":"boolean","userlvl":"pro","description":"Needs minime enabled. Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim."},
+    "TTS_RANDOM_PITCH": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Adjusting the pitch when generating the voice for this actor will add variation, so actors using the same voice sound slightly distinct."},
+    "OGHMA_INFINITUM": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Needs minime enabled. Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim."},
     "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the offered JSON schema. Some users report better action trigering using this"}
 
    }
