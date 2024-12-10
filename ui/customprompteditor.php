@@ -321,11 +321,11 @@ $PROMPTS["im_alive"]=[
     </code></pre>
 </body>
 
-<p><b>Make diary entries smaller</b></p>
+<p><b>Make diary entries more emotional and private (credit to Larrek)</b></p>
     <pre><code class="language-php">
 $PROMPTS["diary"]=[ 
-    "cue"=>["Please write a very short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary. WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
-    "extra"=>["force_tokens_max"=>500]
+    "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary, add {$GLOBALS["HERIKA_NAME"]}'s emotions and private thoughts on people and events . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
+    "extra"=>["force_tokens_max"=>0]
 ];
     </code></pre>
 </body>
