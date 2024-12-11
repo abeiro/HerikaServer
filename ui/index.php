@@ -208,7 +208,7 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "eventlog") {
-        $results = $db->fetchAll("select type,data,gamets,localts,ts,ROWID FROM eventlog a where type not in ('prechat','rechat','infonpc','request') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 50");
+        $results = $db->fetchAll("select type,data,gamets,localts,ts,ROWID FROM eventlog a where type not in ('prechat','rechat','infonpc','request','infonpc_close') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 50");
         echo "<h3 class='my-2'>Event Log</h3>";
         print_array_as_table($results);
         if ($_GET["autorefresh"]) {
