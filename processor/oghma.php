@@ -19,6 +19,8 @@ If the user changes the subject (e.g., "And what do you know about Mara?"), Mara
 
 */
 
+$GLOBALS["OGHMA_HINT"]="";
+
 if ($GLOBALS["MINIME_T5"]) {
     if (isset($FEATURES["MISC"]["OGHMA_INFINITUM"])&&($FEATURES["MISC"]["OGHMA_INFINITUM"])) {
         if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
@@ -97,11 +99,10 @@ if ($GLOBALS["MINIME_T5"]) {
             $oghmaTopics=$GLOBALS["db"]->fetchAll($query);
             $msg='oghma keyword offered';
 
-
             if (isset($oghmaTopics[0]) && isset($oghmaTopics[0]["topic_desc"])) {
 
                 if ($oghmaTopics[0]["combined_rank"] > 3.5 ) {
-                    $GLOBALS["PROMPT_HEAD"].="#Lore related info: {$oghmaTopics[0]["topic_desc"]}";
+                    $GLOBALS["OGHMA_HINT"].="#Lore related info: {$oghmaTopics[0]["topic_desc"]}";
 
                     // Search with location matched all. Use it.
                 } else {
