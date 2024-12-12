@@ -231,6 +231,7 @@ if (!$existsColumn[0]["column_name"]) {
 }
 
 
+
 $db->execQuery("update oghma SET native_vector = setweight(to_tsvector(coalesce(topic, '')),'A')||setweight(to_tsvector(coalesce(topic_desc, '')),'B')");
 
 
@@ -243,6 +244,8 @@ if ($existsColumn[0]["bad_syntax_exists"]) {
     foreach ($data as $n=>$element) {
         $currentName=$element["npc_name"];
         $codename=strtr(strtolower(trim($currentName)),[" "=>"_","'"=>"+"]);
+        $codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
+        
         $cn=$db->escape($codename);
         $on=$db->escape($currentName);
         $db->execQuery("update npc_templates set npc_name='$cn' where npc_name='$on'");
@@ -275,5 +278,18 @@ if (!$existsColumn[0]["npc_name"]) {
     echo '<script>alert("A patch (Kishar follower) has been applied to Database")</script>';
 }
 
+
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'oghma' AND column_name = 'native_vector'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_infinium2.sql"));
+    echo '<script>alert("A patch (oghma_infinium 2) has been applied to Database")</script>';
+}
 
 ?>
