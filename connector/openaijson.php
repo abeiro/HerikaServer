@@ -68,77 +68,77 @@ class connector
         } else
             $speechReinforcement="";
 
-        if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
-            
-            if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
-                $contextData[]= [
-                    'role' => 'user', 
-                    'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
-                        "character"=>$GLOBALS["HERIKA_NAME"],
-                        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                        "message"=>'lines of dialogue',
-                        "mood"=>implode("|",$moods),
-                        "action"=>'a valid action, (refer to available actions list) or None',
-                        "target"=>"action's target",
-                        "lang"=>"en|es",
-                        
-                        
-                    ])
-                ];
+            if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
+                
+                if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
+                    $contextData[]= [
+                        'role' => 'user', 
+                        'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
+                            "character"=>$GLOBALS["HERIKA_NAME"],
+                            "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                            "message"=>'lines of dialogue',
+                            "mood"=>implode("|",$moods),
+                            "action"=>'a valid action, (refer to available actions list) or None',
+                            "target"=>"action's target",
+                            "lang"=>"en|es",
+                            
+                            
+                        ])
+                    ];
+                } else {
+                    $contextData[]= [
+                        'role' => 'user', 
+                        'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
+                            "character"=>$GLOBALS["HERIKA_NAME"],
+                            "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                            "message"=>'lines of dialogue',
+                            "mood"=>implode("|",$moods),
+                            "action"=>'a valid action, (refer to available actions list) or None',
+                            "target"=>"action's target",
+                            
+                            
+                        ])
+                    ];
+                }
+    
             } else {
-                $contextData[]= [
-                    'role' => 'user', 
-                    'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
-                        "character"=>$GLOBALS["HERIKA_NAME"],
-                        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                        "message"=>'lines of dialogue',
-                        "mood"=>implode("|",$moods),
-                        "action"=>'a valid action, (refer to available actions list) or None',
-                        "target"=>"action's target",
-                        
-                        
-                    ])
-                ];
+                if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
+                    $contextData[]= [
+                        'role' => 'user', 
+                        'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
+                            "character"=>$GLOBALS["HERIKA_NAME"],
+                            "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                            "mood"=>implode("|",$moods),
+                            "action"=>'a valid action, (refer to available actions list) or None',
+                            "target"=>"action's target",
+                            "lang"=>"en|es",
+                            "message"=>'lines of dialogue',
+                            
+                        ])
+                    ];
+                } else {
+                    $contextData[]= [
+                        'role' => 'user', 
+                        'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
+                            "character"=>$GLOBALS["HERIKA_NAME"],
+                            "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                            "mood"=>implode("|",$moods),
+                            "action"=>'a valid action, (refer to available actions list) or None',
+                            "target"=>"action's target",
+                            "message"=>'lines of dialogue',
+                            
+                        ])
+                    ];
+                }
             }
-
-        } else {
-            if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
-                $contextData[]= [
-                    'role' => 'user', 
-                    'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
-                        "character"=>$GLOBALS["HERIKA_NAME"],
-                        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                        "mood"=>implode("|",$moods),
-                        "action"=>'a valid action, (refer to available actions list) or None',
-                        "target"=>"action's target",
-                        "lang"=>"en|es",
-                        "message"=>'lines of dialogue',
-                        
-                    ])
-                ];
-            } else {
-                $contextData[]= [
-                    'role' => 'user', 
-                    'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
-                        "character"=>$GLOBALS["HERIKA_NAME"],
-                        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                        "mood"=>implode("|",$moods),
-                        "action"=>'a valid action, (refer to available actions list) or None',
-                        "target"=>"action's target",
-                        "message"=>'lines of dialogue',
-                        
-                    ])
-                ];
-            }
-        }
         
 
 
-        
+        $action_array=[];
          if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
-                
+                $action_array[]=$function["name"];
                 if (strpos($function["name"],"Attack")!==false) {   // Every command starting with Attack
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]} ";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
@@ -152,6 +152,7 @@ class connector
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]}";
             }
             $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
+            $action_array[]="Talk";
              
 
         }
@@ -310,31 +311,39 @@ class connector
                     "type" => "object",
                     "properties" => array(
                         "character" => array(
-                            "type" => "string"
+                            "type" => "string",
+                            "description" => $GLOBALS["HERIKA_NAME"]
                         ),
                         "listener" => array(
-                            "type" => "string"
-                        ),
-                        "mood" => array(
-                            "type" => "string"
-                        ),
-                        "action" => array(
-                            "type" => "string"
-                        ),
-                        "target" => array(
-                            "type" => "string"
+                            "type" => "string",
+                            "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to"
                         ),
                         "message" => array(
-                            "type" => "string"
+                            "type" => "string",
+                            "description" => "lines of dialogue"
+                        ),
+                        "mood" => array(
+                            "type" => "string",
+                            "description" => "mood to use while speaking",
+                            "enum" => $moods
+                        ),
+                        "action" => array(
+                            "type" => "string",
+                            "description" => "a valid action (refer to available actions list)",
+                            "enum" => $action_array
+                        ),
+                        "target" => array(
+                            "type" => "string",
+                            "description" => "action's target"
                         )
                     ),
                     "required" => [
                         "character",
                         "listener",
+                        "message",
                         "mood",
                         "action",
-                        "target",
-                        "message"
+                        "target"
                     ],
                     "additionalProperties" => false
                 ),
