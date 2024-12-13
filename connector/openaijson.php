@@ -353,8 +353,15 @@ class connector
             'max_completion_tokens'=>$MAX_TOKENS,
             'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
             'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
-            'response_format'=>$response_format
+            'response_format'=>["type"=>"json_object"]
+
         );
+
+        
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
+            $data["response_format"]=$response_format;
+        }
+
         // Mistral AI API does not support penalty params
         if (strpos($url, "mistral") === false) {
             $data["presence_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0;
