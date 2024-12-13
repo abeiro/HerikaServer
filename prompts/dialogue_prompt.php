@@ -38,6 +38,11 @@ if (DMgetCurrentModel()=="openaijson") {
     $TEMPLATE_ACTION="";
 }
 
+if (DMgetCurrentModel()=="google_openaijson") {
+    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
+    $TEMPLATE_ACTION="";
+}
+
 if (DMgetCurrentModel()=="koboldcppjson") {
     $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
     $TEMPLATE_ACTION="";
