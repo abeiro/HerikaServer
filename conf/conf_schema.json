@@ -52,7 +52,7 @@
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
       "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
       "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
-      "json_schema": {"type":"boolean","description":"Enable OpenRouter Json schema. Does not work with all models. You must set a provider that supports structured outputs.","helpurl":"https://openrouter.ai/docs/structured-outputs#model-support"}
+      "json_schema": {"type":"boolean","description":"Enable OpenRouter Json schema. Does not work with all models. You must set a provider that supports structured outputs. Requires ENFORCE_JSON to be true.","helpurl":"https://openrouter.ai/docs/structured-outputs#model-support"}
     },
     "openrouter": {
       "_title":"OpenRouter API",
