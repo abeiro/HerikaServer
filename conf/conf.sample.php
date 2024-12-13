@@ -216,6 +216,7 @@ $CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]='512';	//Maximum tokens to gen
 $CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931";
 $CONNECTOR["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework";
 $CONNECTOR["openrouterjson"]["API_KEY"]="";
+$CONNECTOR["openrouterjson"]["json_schema"]=false;        			
 
 
 $CONNECTOR["oobabooga"]["HOST"]="127.0.0.1";

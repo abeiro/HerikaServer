@@ -380,54 +380,58 @@ class connector
          $data["top_p"]=$GLOBALS["CONNECTOR"][$this->name]["top_p"]+0;
          
          if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
-            $response_format = array(
-                "type" => "json_schema",
-                "json_schema" => array(
-                    "name" => "response",
-                    "schema" => array(
-                        "type" => "object",
-                        "properties" => array(
-                            "character" => array(
-                                "type" => "string",
-                                "description" => $GLOBALS["HERIKA_NAME"]
+            if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
+                $response_format = array(
+                    "type" => "json_schema",
+                    "json_schema" => array(
+                        "name" => "response",
+                        "schema" => array(
+                            "type" => "object",
+                            "properties" => array(
+                                "character" => array(
+                                    "type" => "string",
+                                    "description" => $GLOBALS["HERIKA_NAME"]
+                                ),
+                                "listener" => array(
+                                    "type" => "string",
+                                    "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to"
+                                ),
+                                "message" => array(
+                                    "type" => "string",
+                                    "description" => "lines of dialogue"
+                                ),
+                                "mood" => array(
+                                    "type" => "string",
+                                    "description" => "mood to use while speaking",
+                                    "enum" => $moods
+                                ),
+                                "action" => array(
+                                    "type" => "string",
+                                    "description" => "a valid action (refer to available actions list)",
+                                    "enum" => $action_array
+                                ),
+                                "target" => array(
+                                    "type" => "string",
+                                    "description" => "action's target"
+                                )
                             ),
-                            "listener" => array(
-                                "type" => "string",
-                                "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to"
-                            ),
-                            "message" => array(
-                                "type" => "string",
-                                "description" => "lines of dialogue"
-                            ),
-                            "mood" => array(
-                                "type" => "string",
-                                "description" => "mood to use while speaking",
-                                "enum" => $moods
-                            ),
-                            "action" => array(
-                                "type" => "string",
-                                "description" => "a valid action (refer to available actions list)",
-                                "enum" => $action_array
-                            ),
-                            "target" => array(
-                                "type" => "string",
-                                "description" => "action's target"
-                            )
+                            "required" => [
+                                "character",
+                                "listener",
+                                "message",
+                                "mood",
+                                "action",
+                                "target"
+                            ],
+                            "additionalProperties" => false
                         ),
-                        "required" => [
-                            "character",
-                            "listener",
-                            "message",
-                            "mood",
-                            "action",
-                            "target"
-                        ],
-                        "additionalProperties" => false
-                    ),
-                    "strict" => true
-                )
-            );
-            $data["response_format"]=$response_format;
+                        "strict" => true
+                    )
+                );
+                $data["response_format"]=$response_format;
+            } else {
+                $data["response_format"]=["type"=>"json_object"];
+            }
          }
         
             

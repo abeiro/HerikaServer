@@ -51,7 +51,8 @@
       "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for very randomness in AI response (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
       "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
-      "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."}
+      "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
+      "json_schema": {"type":"boolean","description":"Enable OpenRouter Json schema. Does not work with all models. You must set a provider that supports structured outputs.","helpurl":"https://openrouter.ai/docs/structured-outputs#model-support"}
     },
     "openrouter": {
       "_title":"OpenRouter API",
