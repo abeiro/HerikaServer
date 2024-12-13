@@ -312,7 +312,7 @@ class connector
                 $contextData
             ,
             'stream' => true,
-            'max_tokens'=>$MAX_TOKENS,
+            'max_completion_tokens'=>$MAX_TOKENS,
             'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
             'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
             'response_format'=>["type"=>"json_object"]
@@ -326,17 +326,17 @@ class connector
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
+                unset($data["max_completion_tokens"]);
             } elseif (isset($customParms["MAX_TOKENS"])) {
-                $data["max_tokens"]=$customParms["MAX_TOKENS"]+0;
+                $data["max_completion_tokens"]=$customParms["MAX_TOKENS"]+0;
             }
         }
 
         if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
             if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
+                unset($data["max_completion_tokens"]);
             } else
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
+                $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
             
         }
 
