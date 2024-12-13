@@ -239,9 +239,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                     $npc_misc = '';
 
                     // Handle voice IDs: if cell not empty, set value; else null
-                    $melotts_voiceid = (isset($data[2]) && trim($data[2]) !== '') ? trim($data[2]) : null;
-                    $xtts_voiceid = (isset($data[3]) && trim($data[3]) !== '') ? trim($data[3]) : null;
-                    $xvasynth_voiceid = (isset($data[4]) && trim($data[4]) !== '') ? trim($data[4]) : null;
+                    $melotts_voiceid = (isset($data[3]) && trim($data[3]) !== '') ? trim($data[3]) : null;
+                    $xtts_voiceid = (isset($data[4]) && trim($data[4]) !== '') ? trim($data[4]) : null;
+                    $xvasynth_voiceid = (isset($data[5]) && trim($data[5]) !== '') ? trim($data[5]) : null;
 
                     if (!empty($npc_name) && !empty($npc_pers)) {
                         // Prepare and execute the INSERT statement with ON CONFLICT
