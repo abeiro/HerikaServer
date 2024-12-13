@@ -25,7 +25,7 @@
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations for the NPC to play"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled"},
   "SUMMARY_PROMPT": {"userlvl":"wip","type":"longstring","description":"Instructions added when generating summaries for memories and other features.","scope":"global"},
-  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Service Selection"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Service Selection"},
   "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","koboldcpp"],"description":"<strong>Used for creating diary entries and memories!<br><br>You will need to place your API key in the regular/non-JSON connector for this to work!</strong>"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
@@ -86,7 +86,18 @@
       "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema. Does not work witl all OpenAI's models","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
+      "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema. Does not work with all OpenAI's models","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
+    },
+    "google_openaijson": {
+      "_title":"Google OpenAI API (JSON)",
+      "url": {"type":"url","description":"Google OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://ai.google.dev/gemini-api/docs/models/gemini"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://aistudio.google.com/apikey"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema.","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
     },
     "openai": {
       "_title":"OpenAI/ChatGPT API",
