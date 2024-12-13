@@ -366,6 +366,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
             if (isset($user_input_after[0]))
                 if (isset($user_input_after[0]["N"]))
                     if ($user_input_after[0]["N"]>0) {
+                        error_log("Generation stopped because user_input. ".__LINE__);
                         die();// Abort rechat
                     }
 
@@ -790,6 +791,7 @@ if ($connectionHandler->primary_handler === false) {
                 if (isset($user_input_after[0]["N"]))
                     if ($user_input_after[0]["N"]>0) {
                         die('X-CUSTOM-CLOSE');
+                        error_log("Generation stopped because user_input. ".__LINE__);
                         // Abort , user input detected
                     }
 
