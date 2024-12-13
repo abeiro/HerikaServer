@@ -149,6 +149,7 @@ $CONNECTOR["openaijson"]["API_KEY"]="";
 $CONNECTOR["openaijson"]["MAX_TOKENS_MEMORY"]="800";
 $CONNECTOR["openaijson"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
 $CONNECTOR["openaijson"]["top_p"]=1;        			//LLM parameter top_p
+$CONNECTOR["openaijson"]["json_schema"]=false;        			
 
 $CONNECTOR["koboldcpp"]["url"]='http://127.0.0.1:5001';	//KoboldCPP API Endpoint
 $CONNECTOR["koboldcpp"]["max_tokens"]='512';	//Maximum tokens to generate
