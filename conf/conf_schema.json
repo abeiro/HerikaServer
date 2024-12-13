@@ -86,7 +86,17 @@
       "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema. Does not work witl all OpenAI's models","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
+      "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema. Does not work with all OpenAI's models","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
+    },
+    "google_openaijson": {
+      "_title":"Google OpenAI API (JSON)",
+      "url": {"type":"url","description":"Google OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://ai.google.dev/gemini-api/docs/models/gemini"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://aistudio.google.com/apikey"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema.","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
     },
     "openai": {
       "_title":"OpenAI/ChatGPT API",
