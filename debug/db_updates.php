@@ -230,16 +230,26 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (oghma_infinium) has been applied to Database")</script>';
 }
 
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'oghma' AND column_name = 'native_vector'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_infinium2.sql"));
+    echo '<script>alert("A patch (oghma_infinium) has been applied to Database")</script>';
+}
+
+$db->execQuery("update public.oghma SET native_vector = setweight(to_tsvector(coalesce(topic, '')),'A')||setweight(to_tsvector(coalesce(topic_desc, '')),'B')");
 
 
-$db->execQuery("update oghma SET native_vector = setweight(to_tsvector(coalesce(topic, '')),'A')||setweight(to_tsvector(coalesce(topic_desc, '')),'B')");
-
-
-$query = "SELECT 1 as bad_syntax_exists  FROM npc_templates WHERE  npc_name LIKE '%' || CHR(39) || '%'";
+$query = "SELECT 1 as bad_syntax_exists  FROM public.npc_templates WHERE  npc_name LIKE '%' || CHR(39) || '%'";
 
 $existsColumn=$db->fetchAll($query);
 if ($existsColumn[0]["bad_syntax_exists"]) {
-    $data = $db->fetchAll("SELECT npc_name FROM npc_templates WHERE npc_name LIKE '%' || CHR(39) || '%'");
+    $data = $db->fetchAll("SELECT npc_name FROM public.npc_templates WHERE npc_name LIKE '%' || CHR(39) || '%'");
         
     foreach ($data as $n=>$element) {
         $currentName=$element["npc_name"];
@@ -248,7 +258,7 @@ if ($existsColumn[0]["bad_syntax_exists"]) {
         
         $cn=$db->escape($codename);
         $on=$db->escape($currentName);
-        $db->execQuery("update npc_templates set npc_name='$cn' where npc_name='$on'");
+        $db->execQuery("update public.npc_templates set npc_name='$cn' where npc_name='$on'");
 
     }
     error_log("Silent npc_name patch applied");
@@ -271,6 +281,8 @@ if ($existsColumn[0]["bad_syntax_exists"]) {
     error_log("Silent npc_templates_custom patch applied");
 }
 
+
+
 $query = "select npc_name from npc_templates where npc_name='kishar'";
 $existsColumn=$db->fetchAll($query);
 if (!$existsColumn[0]["npc_name"]) {
@@ -290,6 +302,37 @@ $existsColumn=$db->fetchAll($query);
 if (!$existsColumn[0]["column_name"]) {
     $db->execQuery(file_get_contents(__DIR__."/../data/oghma_infinium2.sql"));
     echo '<script>alert("A patch (oghma_infinium 2) has been applied to Database")</script>';
+}
+
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'npc_templates' AND column_name = 'xvasynth_voiceid'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/add_voiceid_to_templates.sql"));
+    $db->execQuery('ALTER TABLE "npc_templates" ADD COLUMN "melotts_voiceid" text');
+    $db->execQuery('ALTER TABLE "npc_templates" ADD COLUMN "xtts_voiceid" text');
+    $db->execQuery('ALTER TABLE "npc_templates" ADD COLUMN "xvasynth_voiceid" text');
+    $db->execQuery('ALTER TABLE "npc_templates_custom" ADD COLUMN "melotts_voiceid" text');
+    $db->execQuery('ALTER TABLE "npc_templates_custom" ADD COLUMN "xtts_voiceid" text');
+    $db->execQuery('ALTER TABLE "npc_templates_custom" ADD COLUMN "xvasynth_voiceid" text');
+
+    $db->execQuery('insert into npc_templates select * from npc_templates_v2 where npc_name not in (select npc_name from npc_templates)');
+
+    $db->execQuery('UPDATE "npc_templates" A SET "melotts_voiceid"=(select melotts_voiceid from  npc_templates_v2 where npc_name=A.npc_name)');
+    $db->execQuery('UPDATE "npc_templates" A SET "xtts_voiceid"=(select xtts_voiceid from  npc_templates_v2 where npc_name=A.npc_name)');
+    $db->execQuery('UPDATE "npc_templates" A SET "xvasynth_voiceid"=(select xvasynth_voiceid from  npc_templates_v2 where npc_name=A.npc_name)');
+
+    $db->execQuery('UPDATE "npc_templates_custom" A SET "melotts_voiceid"=(select melotts_voiceid from  npc_templates_v2 where npc_name=A.npc_name)');
+    $db->execQuery('UPDATE "npc_templates_custom" A SET "xtts_voiceid"=(select xtts_voiceid from  npc_templates_v2 where npc_name=A.npc_name)');
+    $db->execQuery('UPDATE "npc_templates_custom" A SET "xvasynth_voiceid"=(select xvasynth_voiceid from  npc_templates_v2 where npc_name=A.npc_name)');
+
+    $db->execQuery(file_get_contents(__DIR__."/../data/add_voiceid_to_templates_2stage.sql"));
+
+    echo '<script>alert("A patch (expanded npc table) has been applied to Database")</script>';
 }
 
 ?>

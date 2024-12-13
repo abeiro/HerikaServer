@@ -1801,10 +1801,16 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
     $newConfFile=md5($npcname);
 
     $codename=strtr(strtolower(trim($npcname)),[" "=>"_","'"=>"+"]);
+    $codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
+
     $cn=$db->escape("Voicetype/$codename");
     $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
     $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
     $voicetype=explode("\\",$voicetypeString);
+
+    $xttsid=$db->fetchAll("SELECT xtts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+    $melottsid=$db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+    $xvasnythid=$db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
 
     if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
         
@@ -1844,6 +1850,48 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         foreach ($FORCE_PARMS as $p=>$v) {
             file_put_contents($newFile, '$'.$p.'=\''.addslashes($v).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
+
+        /* New voice logic */
+
+        if (!empty($xttsid[0]['xtts_voiceid'])) {
+            file_put_contents(
+                $newFile,
+                '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $xttsid[0]['xtts_voiceid'] . '\';' . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        } else {
+            //original logic
+            file_put_contents(
+                $newFile,
+                '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        }
+
+        // Check if melotts_voiceid exists and is not null
+        if (!empty($melottsid[0]['melotts_voiceid'])) {
+            // Use the melotts_voiceid value
+            file_put_contents(
+                $newFile,
+                '$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        } else {
+            // original logic
+            file_put_contents(
+                $newFile,
+                '$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($voicetype[3]) . '\';' . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        }
+
+        //xvansnyth logic from override table
+        file_put_contents(
+            $newFile,
+            '$TTS["XVASYNTH"]["model"]=\'' . strtolower($xvasnythid[0]['xvasynth_voiceid']) . '\';' . PHP_EOL,
+            FILE_APPEND | LOCK_EX
+        );
+
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
         error_log(DMgetCurrentModelFile()." ".$path."data/CurrentModel_".md5($npcname).".json");
@@ -1872,7 +1920,7 @@ function getConfFileFor($npcname) {
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($npcname);
 
-    $codename=strtr(strtolower(trim($npcname)),[" "=>"_","'"=>"+"]);
+    
     return $path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
     
 }

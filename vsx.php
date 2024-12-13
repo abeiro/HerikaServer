@@ -15,7 +15,9 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 $db=new sql();
 $codename = str_replace(" ", "_", mb_strtolower($_GET["codename"], 'UTF-8'));
 $codename = str_replace("'", "+", $codename);
+$codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
 
+    
 $db->delete("conf_opts", "id='".$db->escape("Voicetype/$codename")."'");
 $db->insert(
   'conf_opts',

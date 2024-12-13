@@ -142,7 +142,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			// Lets try to use standard scheme:
 			$codename = str_replace(" ", "_", mb_strtolower($GLOBALS["HERIKA_NAME"], 'UTF-8'));
 			$codename = str_replace("'", "+", $codename);
-
+			$codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
+			
 			$data = array(
 				'text' => $newString,
 				'speaker_wav' => $codename,
