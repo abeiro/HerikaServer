@@ -1465,7 +1465,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         
         //print_r($reponse);
         
-        if ($reponse["is_memory_recall"]=="No") {
+        if (isset($reponse["is_memory_recall"]) && $reponse["is_memory_recall"]=="No") {
              $GLOBALS["db"]->insert(
                 'audit_memory',
                 array(

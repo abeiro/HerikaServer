@@ -119,7 +119,7 @@ if ($GLOBALS["MINIME_T5"]) {
                         'rank_any'=> $oghmaTopics[0]["combined_rank"],
                         'rank_all'=>$oghmaTopics[0]["combined_rank"],
                         'memory'=>"$currentInputTopic / $currentOghmaTopic / $locationCtxQuery / $contextKeywordsQuery => {$oghmaTopics[0]["topic"]}",
-                        'time'=>$preCommand["elapsed_time"]
+                        'time'=>$topic_req["elapsed_time"]
                     )
                 );
                 
@@ -134,7 +134,7 @@ if ($GLOBALS["MINIME_T5"]) {
                         'rank_any'=> -1,
                         'rank_all'=>-1,
                         'memory'=>"$currentInputTopic / $currentOghmaTopic / $locationCtxQuery / $contextKeywordsQuery => ",
-                        'time'=>$preCommand["elapsed_time"]
+                        'time'=>$topic_req["elapsed_time"]
                     )
                 );
             }
