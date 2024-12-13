@@ -92,6 +92,7 @@
       "_title":"Google OpenAI API (JSON)",
       "url": {"type":"url","description":"Google OpenAI API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://ai.google.dev/gemini-api/docs/models/gemini"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
       "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://aistudio.google.com/apikey"},
