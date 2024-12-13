@@ -360,14 +360,7 @@ class connector
         
         if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
             $data["response_format"]=$response_format;
-        }
-
-        // Mistral AI API does not support penalty params
-        if (strpos($url, "mistral") === false) {
-            $data["presence_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0;
-            $data["frequency_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0;
-        }
-  
+        }  
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
