@@ -178,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
     // Handle voice IDs: if field is empty, set to NULL, otherwise use the trimmed value.
     $melotts_voiceid = (isset($_POST['melotts_voiceid']) && trim($_POST['melotts_voiceid']) !== '') ? trim($_POST['melotts_voiceid']) : null;
     $xtts_voiceid = (isset($_POST['xtts_voiceid']) && trim($_POST['xtts_voiceid']) !== '') ? trim($_POST['xtts_voiceid']) : null;
-    $xvasnyth_voiceid = (isset($_POST['xvasnyth_voiceid']) && trim($_POST['xvasnyth_voiceid']) !== '') ? trim($_POST['xvasnyth_voiceid']) : null;
+    $xvasynth_voiceid = (isset($_POST['xvasynth_voiceid']) && trim($_POST['xvasynth_voiceid']) !== '') ? trim($_POST['xvasynth_voiceid']) : null;
 
     if (!empty($npc_name) && !empty($npc_pers)) {
         // Set npc_misc to an empty string to avoid NULL
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
 
         // Prepare and execute the INSERT statement with ON CONFLICT
         $query = "
-            INSERT INTO $schema.npc_templates_custom (npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasnyth_voiceid)
+            INSERT INTO $schema.npc_templates_custom (npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
             VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (npc_name)
             DO UPDATE SET
@@ -194,10 +194,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 npc_misc = EXCLUDED.npc_misc,
                 melotts_voiceid = EXCLUDED.melotts_voiceid,
                 xtts_voiceid = EXCLUDED.xtts_voiceid,
-                xvasnyth_voiceid = EXCLUDED.xvasnyth_voiceid;
+                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid;
         ";
 
-        $params = array($npc_name, $npc_pers, $npc_misc, $melotts_voiceid, $xtts_voiceid, $xvasnyth_voiceid);
+        $params = array($npc_name, $npc_pers, $npc_misc, $melotts_voiceid, $xtts_voiceid, $xvasynth_voiceid);
         $result = pg_query_params($conn, $query, $params);
 
         if ($result) {
@@ -233,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                 $rowCount = 0;
                 while (($data = fgetcsv($handle, 1000, ',')) !== false) {
                     // Assuming CSV columns are:
-                    // npc_name, npc_pers, melotts_voiceid, xtts_voiceid, xvasnyth_voiceid
+                    // npc_name, npc_pers, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
                     $npc_name = isset($data[0]) ? strtolower(trim($data[0])) : '';
                     $npc_pers = isset($data[1]) ? trim($data[1]) : '';
                     $npc_misc = '';
@@ -241,13 +241,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                     // Handle voice IDs: if cell not empty, set value; else null
                     $melotts_voiceid = (isset($data[2]) && trim($data[2]) !== '') ? trim($data[2]) : null;
                     $xtts_voiceid = (isset($data[3]) && trim($data[3]) !== '') ? trim($data[3]) : null;
-                    $xvasnyth_voiceid = (isset($data[4]) && trim($data[4]) !== '') ? trim($data[4]) : null;
+                    $xvasynth_voiceid = (isset($data[4]) && trim($data[4]) !== '') ? trim($data[4]) : null;
 
                     if (!empty($npc_name) && !empty($npc_pers)) {
                         // Prepare and execute the INSERT statement with ON CONFLICT
                         $query = "
                             INSERT INTO $schema.npc_templates_custom 
-                            (npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasnyth_voiceid)
+                            (npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
                             VALUES ($1, $2, $3, $4, $5, $6)
                             ON CONFLICT (npc_name)
                             DO UPDATE SET
@@ -255,10 +255,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 npc_misc = EXCLUDED.npc_misc,
                                 melotts_voiceid = EXCLUDED.melotts_voiceid,
                                 xtts_voiceid = EXCLUDED.xtts_voiceid,
-                                xvasnyth_voiceid = EXCLUDED.xvasnyth_voiceid;
+                                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid;
                         ";
 
-                        $params = array($npc_name, $npc_pers, $npc_misc, $melotts_voiceid, $xtts_voiceid, $xvasnyth_voiceid);
+                        $params = array($npc_name, $npc_pers, $npc_misc, $melotts_voiceid, $xtts_voiceid, $xvasynth_voiceid);
                         $result = pg_query_params($conn, $query, $params);
 
                         if ($result) {
@@ -344,8 +344,8 @@ pg_close($conn);
         <label for="xtts_voiceid">XTTS Voice ID (optional):</label>
         <input type="text" name="xtts_voiceid" id="xtts_voiceid">
 
-        <label for="xvasnyth_voiceid">XVASNYTH Voice ID (optional):</label>
-        <input type="text" name="xvasnyth_voiceid" id="xvasnyth_voiceid">
+        <label for="xvasynth_voiceid">xVASynth Voice ID (optional):</label>
+        <input type="text" name="xvasynth_voiceid" id="xvasynth_voiceid">
 
         <input type="submit" name="submit_individual" value="Submit">
     </form>
