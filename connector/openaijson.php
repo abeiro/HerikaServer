@@ -302,7 +302,45 @@ class connector
 
         // Forcing JSON output
       
-        
+        $response_format = array(
+			"type" => "json_schema",
+			"json_schema" => array(
+				"name" => "response",
+				"schema" => array(
+					"type" => "object",
+					"properties" => array(
+						"character" => array(
+							"type" => "string"
+						),
+						"listener" => array(
+							"type" => "string"
+						),
+						"mood" => array(
+							"type" => "string"
+						),
+						"action" => array(
+							"type" => "string"
+						),
+						"target" => array(
+							"type" => "string"
+						),
+						"message" => array(
+							"type" => "string"
+						)
+					),
+					"required" => [
+						"character",
+						"listener",
+						"mood",
+						"action",
+						"target",
+						"message"
+					],
+					"additionalProperties" => false
+				),
+				"strict" => true
+			)
+		);
         
         
         
@@ -315,7 +353,7 @@ class connector
             'max_completion_tokens'=>$MAX_TOKENS,
             'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
             'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
-            'response_format'=>["type"=>"json_object"]
+			'response_format'=>$response_format
         );
         // Mistral AI API does not support penalty params
         if (strpos($url, "mistral") === false) {
