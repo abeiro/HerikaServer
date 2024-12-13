@@ -134,7 +134,7 @@ if ($GLOBALS["MINIME_T5"]) {
                         'rank_any'=> -1,
                         'rank_all'=>-1,
                         'memory'=>"$currentInputTopic / $currentOghmaTopic / $locationCtxQuery / $contextKeywordsQuery => ",
-                        'time'=>$topic_req["elapsed_time"]
+                        'time'=>$topic_res["elapsed_time"]
                     )
                 );
             }
