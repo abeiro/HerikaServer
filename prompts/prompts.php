@@ -60,15 +60,15 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the last task we have completed) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about a recent rumor) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about something that happened in your past) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they're curious about regarding {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something theyre curious about regarding {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about current thoughts about {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about a random entity in the area) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about what might happen next) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about their thoughts on the journey so far) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they like or dislike) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they've been wanting to do) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something theyve been wanting to do) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about something completely unrelated) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they can't quite explain) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they cant quite explain) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the last combat encounter) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the current ambiance) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the smell of the area) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -95,7 +95,7 @@ $PROMPTS=array(
     ],
 
     "goodmorning"=>[
-        "cue"=>["({$GLOBALS["HERIKA_NAME"]} comment about {$GLOBALS["PLAYER_NAME"]}'s time asleep. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "cue"=>["({$GLOBALS["HERIKA_NAME"]} comment about {$GLOBALS["PLAYER_NAME"]}s time asleep. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["(waking up after sleep). ahhhh  "]
     ],
 
@@ -152,18 +152,18 @@ $PROMPTS=array(
             "({$GLOBALS['HERIKA_NAME']} disagrees politely with the last speaker.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} offers an alternative perspective to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} shares a personal anecdote related to the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} questions the logic behind the last speaker's statement.) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS['HERIKA_NAME']} questions the logic behind the last speakers statement.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} highlights an interesting point in the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} suggests a course of action based on the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} expresses concern about the implications of the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} makes a light-hearted comment to ease the tension.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} shares a related fact or piece of knowledge.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} encourages the last speaker to elaborate further.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} challenges the last speaker's viewpoint.) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS['HERIKA_NAME']} challenges the last speakers viewpoint.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} redirects the conversation to another aspect of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} expresses curiosity about the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} summarizes the key points of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} comments the last speaker's insight.) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS['HERIKA_NAME']} comments the last speakers insight.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} adds humor to lighten the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} ties the conversation back to a previous discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} subtly shifts the focus of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -173,7 +173,7 @@ $PROMPTS=array(
         
     ],
     "diary"=>[ 
-        "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
+        "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
         "extra"=>["force_tokens_max"=>0]
     ],
     "vision"=>[ 
@@ -186,8 +186,8 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} interjects in the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}"]
     ],
     "im_alive"=>[ 
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} talks about she/he is 'feeling more real'. Write {$GLOBALS["HERIKA_NAME"]} dialogue. {$GLOBALS["TEMPLATE_DIALOG"]}"],
-        "player_request"=>["The Narrator:  {$GLOBALS["HERIKA_NAME"]} feels a sudden shock...and feels 'more real'"],
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} talks about she/he is feeling more real. Write {$GLOBALS["HERIKA_NAME"]} dialogue. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "player_request"=>["The Narrator:  {$GLOBALS["HERIKA_NAME"]} feels a sudden shock...and feels more real"],
     ],
     "playerinfo"=>[ 
         "cue"=>["(Out of roleplay, game has been loaded) Tell {$GLOBALS["PLAYER_NAME"]} a short summary about last events, and then remind {$GLOBALS["PLAYER_NAME"]} the current task/quest/plan) {$GLOBALS["TEMPLATE_DIALOG"]}"]
