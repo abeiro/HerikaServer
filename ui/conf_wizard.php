@@ -296,14 +296,6 @@ echo "<div style='position:fixed;top:0px;right:25px;background-color:black;font-
     basename($_SESSION["PROFILE"])
 ."</span></strong></span><ul>";
 
-foreach ($summary as $k=>$item) {
-    echo "<li>&nbsp;<a href='#$k'>{$item["main"]}</a></li>";
-    
-    foreach ($item["childs"] as $localhash=>$subtitle) {
-        echo "<li class='subchild' id='mini_f_".md5($subtitle)."'>&nbsp;<a href='#" . md5($subtitle) . "'>$subtitle</a></li>";
-    }
-}
-
 // Save and delete buttons
 echo '<input
     type="button"
@@ -361,6 +353,16 @@ echo '<input
     onmouseover=\'this.style.backgroundColor="#c82333";\' /* Darker red on hover */
     onmouseout=\'this.style.backgroundColor="#dc3545";\' /* Revert to original red */
 /></p>';
+
+foreach ($summary as $k=>$item) {
+    echo "<li>&nbsp;<a href='#$k'>{$item["main"]}</a></li>";
+    
+    foreach ($item["childs"] as $localhash=>$subtitle) {
+        echo "<li class='subchild' id='mini_f_".md5($subtitle)."'>&nbsp;<a href='#" . md5($subtitle) . "'>$subtitle</a></li>";
+    }
+}
+
+
 
 echo "</ul></div>";
 
