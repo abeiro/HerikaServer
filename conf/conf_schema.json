@@ -22,9 +22,11 @@
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game.","scope":"global"},
   "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
+  "QUEST_COMMENT":{"type":"boolean","userlvl":"pro","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
+  "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations for the NPC to play"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled"},
-  "SUMMARY_PROMPT": {"userlvl":"wip","type":"longstring","description":"Instructions added when generating summaries for memories and other features.","scope":"global"},
+  "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Instructions added when generating summaries for memories and other features.","scope":"global"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Service Selection"},
   "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","koboldcpp"],"description":"<strong>Used for creating diary entries and memories!<br><br>You will need to place your API key in the regular/non-JSON connector for this to work!</strong>"},
   "CONNECTOR": {
@@ -294,12 +296,9 @@
   "MISC": {
     "_title":"Other Options",
     "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
-    "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest. Will trigger a lot of events on new game, so shoudl activated on loaded games"},
     "ITT_QUALITY": {"type":"integer","description":"Only for Soulgaze HD. Compression quality can be set from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"},
     "TTS_RANDOM_PITCH": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Adjusting the pitch when generating the voice for this actor will add variation, so actors using the same voice sound slightly distinct."},
-    "OGHMA_INFINITUM": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Needs minime enabled. Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim."},
-    "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the offered JSON schema. Some users report better action trigering using this"}
-
+    "OGHMA_INFINITUM": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Needs minime enabled. Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim."}
    }
   }
   
