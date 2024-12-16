@@ -333,8 +333,10 @@ function removeTalkingToOccurrences($input) {
 function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") {
 
         global $db;
+
+        $actorcn=$db->escape($actor);
         $results = $db->fetchAll("SELECT speaker,speech,listener,gamets,localts,'speech',gamets - LAG(gamets) OVER (ORDER BY gamets ASC) AS gamets_diff,location,ts
-        FROM speech where companions like '%$actor%' order by ts desc LIMIT 1000 OFFSET 0");    
+        FROM speech where companions like '%$actorcn%' order by ts desc LIMIT 1000 OFFSET 0");    
          $rawData=[];
         foreach ($results as $row) {
             $rawData[] = $row;
@@ -434,25 +436,29 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     
     $lastDialogFull = array();
     $actorEscaped=$db->escape($actor);
+    $playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
+
     $query="select  
     case 
       when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'The Narrator:'
       when a.data like '%background chat%' then 'The Narrator: background dialogue: '
-      when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
+      when type='book' then 'The Narrator: ({$playerEscaped} took the book ' 
       else '' 
     end||a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input' 
-    ".(($actorEscaped)?" and people like '|%$actorEscaped%|' ":"")." 
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close'  and type<>'instruction'
+    and type<>'request'
+    ".(($actorEscaped)?" 
+    and (people like '|%$actorEscaped%|' or people like '$actorEscaped') ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
     " order by gamets desc,ts desc,rowid desc LIMIT 1000 OFFSET 0";
     
     $results = $db->fetchAll($query);
 
-    // error_log($query);
+    //error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;
@@ -506,7 +512,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         if ($rowData==="The Narrator:") // Hunt empty rows
             continue;
         
-        $pattern = "/\(Context location: (.*?),(.*?)\)/";
+        $pattern = "/\(Context location: (.*)\)/";
         if ($rowData)
             $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
         
@@ -514,7 +520,6 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         
         $string = $row["location"];
         preg_match('/Context\s*(new\s*)?location:\s*([a-zA-Z\s\'\-]+)(\s*,|$)/', $string, $locationMatch);
-        $location = trim($locationMatch[2]);
         preg_match('/Hold:\s*([a-zA-Z\s\'\-]+)(\s*|$)/', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
@@ -522,6 +527,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             $locationFinal=$lastlocation;
         } else {
             $hold = trim($holdMatch[1]);
+            $location = trim($locationMatch[2]);
             $locationFinal="$location, hold: $hold";
         }
         
@@ -1027,9 +1033,9 @@ function DataGetCurrentTask()
     foreach ($results as $row) {
 
         if ($n == 0) {
-            $data = "Last task/quest/plan: {$row["description"]}.";
+            $data = "Current plan: {$row["description"]}.";
         } elseif ($n == 1) {
-            $data .= "Previous task/quest/plan: {$row["description"]}.";
+            $data .= "Previous plan: {$row["description"]}.";
         } else {
             break;
         }
@@ -1047,15 +1053,15 @@ function DataGetCurrentTask()
         return $data;
     }
 
-    $data = "";
+    //$data = "";
 
     $n = 0;
     foreach ($results as $row) {
 
         if ($n == 0) {
-            $data = "Current task/quest/plan: {$row["name"]}/{$row["description"]}.";
+            $data .= "Current quest: {$row["name"]}/{$row["description"]}.";
         } elseif ($n == 1) {
-            $data .= "Previous task/quest/plan: {$row["name"]}/{$row["description"]}.";
+            $data .= "Previous quest: {$row["name"]}/{$row["description"]}.";
         } else {
             break;
         }
@@ -1138,6 +1144,32 @@ function DataLastKnownLocation()
     return $lastLoc[0]["data"];
 
 }
+
+function DataLastKnownLocationHuman($hold=false)
+{
+
+    global $db;
+
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    
+    if (!$hold) {
+        $re = '/Context location: ([\w\ \']*)/';
+        preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
+        return $matches[1][0];
+    } else {
+        preg_match('/Hold:\s*(\w+)/', $lastLoc[0]["data"], $matches);
+        if (isset($matches[1]))
+            $hold = $matches[1];
+        else 
+            $hold = "";
+        return $hold;
+    }
+
+}
+
 
 function PackIntoSummary()
 {
@@ -1319,6 +1351,32 @@ function DataBeingsInRange()
     return "|".$beingsFormatted."|";
 }
 
+function DataBeingsInCloseRange()
+{
+
+    global $db;
+
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc_close')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    
+    $beings=strtr($lastLoc[0]["data"],["beings in range:"=>""]);
+    $beingsArray=explode(",",$beings);
+    $beingsArrayNew=[];
+    foreach ($beingsArray as $k=>$v) {
+        if (strpos($v,")")===false) 
+            if (strpos($v,"Horse")!==0) 
+                if (strpos($v,"Chicken")!==0) 
+                    $beingsArrayNew[]=$v;
+            
+        
+    }
+    $beingsFormatted=implode("|",$beingsArrayNew);
+    
+    return "|".$beingsFormatted."|";
+}
+
 function GetExpression($mood) {
    $EXPRESSIONS=[
     "DialogueAnger",    "DialogueFear",    "DialogueHappy",     "DialogueSad",
@@ -1411,7 +1469,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         
         //print_r($reponse);
         
-        if ($reponse["is_memory_recall"]=="No") {
+        if (isset($reponse["is_memory_recall"]) && $reponse["is_memory_recall"]=="No") {
              $GLOBALS["db"]->insert(
                 'audit_memory',
                 array(
@@ -1628,6 +1686,25 @@ function GetAnimationHex($mood)
         
     ];
     
+    $animationsDb=$GLOBALS["db"]->fetchAll("select animations from animations_custom where mood ilike '%$mood%'");
+    foreach ($animationsDb as $an) {
+        $candidates=explode(",", $an["animations"]);
+        if (is_array($candidates)) {
+            return $candidates[array_rand($candidates)];
+        }
+
+    }
+
+    $animationsDb=$GLOBALS["db"]->fetchAll("select animations from animations where mood ilike '%$mood%'");
+    foreach ($animationsDb as $an) {
+        $candidates=explode(",", $an["animations"]);
+        if (is_array($candidates)) {
+            return $candidates[array_rand($candidates)];
+        }
+
+    }
+
+
     if ($mood=="sarcastic") {
         return array_rand(array_flip([$ANIMATIONS["SarcasticMove"],$ANIMATIONS["CleanSweat"],$ANIMATIONS["Agitated"],$ANIMATIONS["ApplauseSarcastic"]]), 1);
         
@@ -1680,11 +1757,12 @@ function GetAnimationHex($mood)
         
     } else if ($mood=="drunk") {
         // No animation :(
-        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=0.5"';
+        $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=0.65';
+        return "DrunkStart";
         
     } else if ($mood=="high") {
         // No animation :(
-        $GLOBALS["TTS_FFMPEG_FILTERS"]='-filter:a "atempo=1.25"';
+        $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=1.45';
         
     }
                             
@@ -1698,6 +1776,14 @@ function isOk($arr) {
     if (is_array($arr))
         if (sizeof($arr)>0)
             return true;
+
+    return false;
+}
+
+function getArrayKey($arr,$key) {
+    if (is_array($arr))
+        if (isset($arr[$key]))
+            return $arr[$key];
 
     return false;
 }
@@ -1719,10 +1805,16 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
     $newConfFile=md5($npcname);
 
     $codename=strtr(strtolower(trim($npcname)),[" "=>"_","'"=>"+"]);
+    $codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
+
     $cn=$db->escape("Voicetype/$codename");
     $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
     $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
     $voicetype=explode("\\",$voicetypeString);
+
+    $xttsid=$db->fetchAll("SELECT xtts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+    $melottsid=$db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+    $xvasnythid=$db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
 
     if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
         
@@ -1754,7 +1846,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_' . strtolower(str_replace(['maleunique', 'femaleunique'], '', $voicetype[3])) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
         file_put_contents($newFile, '$HERIKA_NAME=\''.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         
-        if (is_array($npcTemlate[0]))
+        if (isset($npcTemlate[0]) && is_array($npcTemlate[0]))
             file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         else
             file_put_contents($newFile, '$HERIKA_PERS=\'Roleplay as '.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
@@ -1762,6 +1854,48 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         foreach ($FORCE_PARMS as $p=>$v) {
             file_put_contents($newFile, '$'.$p.'=\''.addslashes($v).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
+
+        /* New voice logic */
+
+        if (!empty($xttsid[0]['xtts_voiceid'])) {
+            file_put_contents(
+                $newFile,
+                '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $xttsid[0]['xtts_voiceid'] . '\';' . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        } else {
+            //original logic
+            file_put_contents(
+                $newFile,
+                '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        }
+
+        // Check if melotts_voiceid exists and is not null
+        if (!empty($melottsid[0]['melotts_voiceid'])) {
+            // Use the melotts_voiceid value
+            file_put_contents(
+                $newFile,
+                '$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        } else {
+            // original logic
+            file_put_contents(
+                $newFile,
+                '$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($voicetype[3]) . '\';' . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        }
+
+        //xvansnyth logic from override table
+        file_put_contents(
+            $newFile,
+            '$TTS["XVASYNTH"]["model"]=\'' . strtolower($xvasnythid[0]['xvasynth_voiceid']) . '\';' . PHP_EOL,
+            FILE_APPEND | LOCK_EX
+        );
+
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
         error_log(DMgetCurrentModelFile()." ".$path."data/CurrentModel_".md5($npcname).".json");
@@ -1790,7 +1924,7 @@ function getConfFileFor($npcname) {
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($npcname);
 
-    $codename=strtr(strtolower(trim($npcname)),[" "=>"_","'"=>"+"]);
+    
     return $path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
     
 }

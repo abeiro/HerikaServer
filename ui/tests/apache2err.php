@@ -27,7 +27,8 @@ function readErrorLog($errorLogPath, $logType) {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>DwemerDistro Error Logs</title>
+    <title>CHIM Server Error Logs</title>
+    <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
     <style>
         /* Updated CSS for Dark Grey Background Theme */
         body {

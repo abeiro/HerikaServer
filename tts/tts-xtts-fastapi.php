@@ -142,7 +142,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			// Lets try to use standard scheme:
 			$codename = str_replace(" ", "_", mb_strtolower($GLOBALS["HERIKA_NAME"], 'UTF-8'));
 			$codename = str_replace("'", "+", $codename);
-
+			$codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
+			
 			$data = array(
 				'text' => $newString,
 				'speaker_wav' => $codename,
@@ -161,6 +162,15 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 
 		}
+
+
+		if (is_array($GLOBALS["TTS_FFMPEG_FILTERS"])) {
+			$GLOBALS["TTS_FFMPEG_FILTERS"]["adelay"]="adelay=150|150";
+			$FFMPEG_FILTER='-af "'.implode(",",$GLOBALS["TTS_FFMPEG_FILTERS"]).'"';
+			
+		} else {
+			$FFMPEG_FILTER='-filter:a "adelay=150|150"';
+		}
 		
 		// Handle the response
 		if ($response !== false ) {
@@ -172,7 +182,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			file_put_contents($oname, $response); // Save the audio response to a file
 			$startTimeTrans = microtime(true);
 			//shell_exec("ffmpeg -y -i $oname  -af \"adelay=150|150,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-25dB,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-40dB,areverse,speechnorm=e=3:r=0.0001:l=1:p=0.75\" $fname 2>/dev/null >/dev/null");
-			shell_exec("ffmpeg -y -i $oname  -af \"adelay=150|150\" {$GLOBALS["TTS_FFMPEG_FILTERS"]} $fname 2>/dev/null >/dev/null");
+			shell_exec("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname 2>/dev/null >/dev/null");
+			//error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ");
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");

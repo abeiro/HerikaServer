@@ -208,7 +208,7 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "eventlog") {
-        $results = $db->fetchAll("select type,data,gamets,localts,ts,ROWID FROM eventlog a where type not in ('prechat','rechat','infonpc') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 50");
+        $results = $db->fetchAll("select type,data,gamets,localts,ts,ROWID FROM eventlog a where type not in ('prechat','rechat','infonpc','request','infonpc_close') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 50");
         echo "<h3 class='my-2'>Event Log</h3>";
         print_array_as_table($results);
         if ($_GET["autorefresh"]) {
@@ -289,31 +289,363 @@ include("tmpl/navbar.php");
     }
     
     if ($_GET["plugins_show"]) {
-        $pluginFoldersRoot=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR;
-        $pluginFolders=scandir($pluginFoldersRoot);
-        foreach ($pluginFolders as $n=>$folder)
-		if (!is_dir($pluginFoldersRoot.$folder))
-			unset($pluginFolders[$n]);
-		else if (strpos($folder,".")===0)
-			unset($pluginFolders[$n]);
-        
-        echo "<ul>";
-        foreach ($pluginFolders as $folder) {
-            if (file_exists($pluginFoldersRoot.$folder.DIRECTORY_SEPARATOR."manifest.json")) {
-                $manifest=json_decode(file_get_contents($pluginFoldersRoot.$folder.DIRECTORY_SEPARATOR."manifest.json"),true);
-                $description=$manifest["description"];
-                $description=$manifest["config_url"];
-            }
-            else
-                $description="description not available";
-            
-            echo "<li>$folder: $description</li>";
-            
+        $pluginFoldersRoot = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "ext" . DIRECTORY_SEPARATOR;
+        $pluginFolders = scandir($pluginFoldersRoot);
+        foreach ($pluginFolders as $n => $folder)
+            if (!is_dir($pluginFoldersRoot . $folder) || substr($folder, 0, 1) === '.')
+                unset($pluginFolders[$n]);
+    
+        // Add custom styles
+        echo '<style>
+        .open-overlay-btn {
+            padding: 10px 20px;
+            background-color: rgb(0, 48, 176);
+            color: #ffffff;
+            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+            transition: background-color 0.3s, color 0.3s;
+            margin: 5px;
+            font-weight: bold;
         }
-        echo "</ul>";
-        
+        .delete-plugin-btn {
+            padding: 10px 20px;
+            background-color: rgb(176, 0, 0);
+            color: #ffffff;
+            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+            transition: background-color 0.3s, color 0.3s;
+            margin: 5px;
+            font-weight: bold;
+        }
+        .configure-plugin-btn {
+            padding: 10px 20px;
+            background-color: rgb(0, 176, 80);
+            color: #ffffff;
+            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+            transition: background-color 0.3s, color 0.3s;
+            margin: 5px;
+            font-weight: bold;
+        }
+        table {
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table th, table td {
+            padding: 10px;
+        }
+        table th {
+            background-color: var(--bs-primary-bg-subtle) !important;
+        }
+        .title-with-button {
+            display: flex;
+            align-items: center;
+        }
+        .title-with-button h2 {
+            margin-right: 10px;
+            margin-bottom: 0;
+        }
+        </style>';
+    
+        // Add a title for installed plugins with Refresh button
+        echo '<br>';
+        echo '<div class="title-with-button">';
+        echo '<h2>Installed CHIM Plugins</h2>';
+        echo '<form method="post" style="margin: 0;">
+        <input type="hidden" name="refresh_plugins" value="1">
+        <button type="submit" class="open-overlay-btn">Refresh Plugins</button>
+        </form>';
+        echo '</div>';
+    
+        // Display installed plugins in a table
+        echo '<table border="1">';
+        echo '<tr>
+                <th>Plugin</th>
+                <th>Description</th>
+                <th>Plugin Menu</th>
+                <th>Delete Plugin</th>
+            </tr>';
+        foreach ($pluginFolders as $folder) {
+            $manifestPath = $pluginFoldersRoot . $folder . '/manifest.json';
+            if (file_exists($manifestPath)) {
+                $manifest = json_decode(file_get_contents($manifestPath), true);
+                $name = $manifest['name'] ?? $folder;
+                $description = $manifest['description'] ?? 'No description available';
+                $configUrl = $manifest['config_url'] ?? '';
+    
+                echo '<tr>';
+                echo '<td>' . htmlspecialchars($name) . '</td>';
+                echo '<td>' . htmlspecialchars($description) . '</td>';
+                echo '<td>';
+                if (!empty($configUrl)) {
+                    echo '<a href="' . htmlspecialchars($configUrl) . '" class="configure-plugin-btn">Configure Plugin</a>';
+                } else {
+                    echo 'No Plugin Page';
+                }
+                echo '</td>';
+                // Add delete button conditionally
+                echo '<td>';
+                if ($folder !== 'herika_heal') {
+                    echo '<form method="post" style="margin:0;" onsubmit="return confirm(\'Are you sure you want to delete the ' . htmlspecialchars($name) . ' plugin?\');">
+                            <input type="hidden" name="delete_plugin" value="' . htmlspecialchars($folder) . '">
+                            <button type="submit" class="delete-plugin-btn">Delete Plugin</button>
+                          </form>';
+                } else {
+                    echo 'Cannot be deleted';
+                }
+                echo '</td>';
+                echo '</tr>';
+            } else {
+                echo '<tr>';
+                echo '<td>' . htmlspecialchars($folder) . '</td>';
+                echo '<td colspan="2">No manifest.json found</td>';
+                // Add delete button conditionally
+                echo '<td>';
+                if ($folder !== 'herika_heal') {
+                    echo '<form method="post" style="margin:0;" onsubmit="return confirm(\'Are you sure you want to delete the ' . htmlspecialchars($folder) . ' plugin?\');">
+                            <input type="hidden" name="delete_plugin" value="' . htmlspecialchars($folder) . '">
+                            <button type="submit" class="delete-plugin-btn">Delete Plugin</button>
+                          </form>';
+                } else {
+                    echo 'Protected';
+                }
+                echo '</td>';
+                echo '</tr>';
+            }
+        }
+        echo '</table>';
+    
+        // Add the "CHIM Plugins" title
+        echo '<br>';
+        echo '<div style="display: flex; align-items: center; margin-top: 20px;">';
+        echo '<h2 style="margin-right: 10px;">CHIM Plugins Repository</h2>';
+        echo '</div>';
+    
+        // Add basic information paragraph
+        echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
+        echo '<ul>';
+        echo '<li>Download a plugin by clicking the <b>[Download PLUGIN NAME]</b> button.</li>';
+        echo '<li>Click the associated <b>[Mod Download]</b> button for the plugin. Install it with your mod manager of choice.</li>';
+        echo '<li>If the plugin allows it, click the <b>[Configure Plugin]</b> button to make any changes.</li>';
+        echo '<li>Start up the game and open the MCM menu if present to make any further changes.</li>';
+        echo '<li>Then you are good to go!</li>';
+        echo '</ul>';
+  
+        // Check if the MinAI plugin is already installed
+        $minaiInstalled = is_dir($pluginFoldersRoot . 'minai_plugin');
+    
+        // Display the MinAI plugin download section in a table
+        echo '<table border="1">';
+        echo '<tr>
+                <th>Plugin</th>
+                <th>Description</th>
+                <th>Mod Page</th>
+                <th>Skyrim Mod Download</th>
+            </tr>';
+        echo '<tr>';
+    
+        // Download cell
+        echo '<td style="text-align: center;">';
+        if ($minaiInstalled) {
+            // Show that plugin is already installed
+            echo '<button class="open-overlay-btn" disabled>MinAI Installed</button>';
+        } else {
+            echo '<form method="post" style="margin:0;">
+                    <input type="hidden" name="download_minai" value="1">
+                    <button type="submit" class="open-overlay-btn">Download MinAI</button>
+                  </form>';
+        }
+        echo '</td>';
+    
+        // Description cell
+        echo '<td>Adds more AI actions, Sapience, and NSFW integrations.</td>';
+    
+        // More Info cell with button
+        echo '<td><a href="https://github.com/MinLL/MinAI" target="_blank" class="configure-plugin-btn">More Info</a></td>';
+    
+        // Skyrim Mod Download cell with button
+        echo '<td><a href="https://github.com/MinLL/MinAI/releases" target="_blank" class="configure-plugin-btn">Mod Download</a></td>';
+    
+        echo '</tr></table>';
+        echo '<br>';
+        echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
+        echo '<p>Making a plugin will allow your mod events and actions to be seen by the AI NPCs.</p>';
+        echo '<p>You can even add scripted events that can be triggered by the AI.</p>';
+        echo '';
+        echo '<p>The herika_heal plugin provides an example of how our API works.</p>';
+        echo '<button type="button" class="open-overlay-btn" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
+            
+    }
+
+    if (isset($_POST['download_minai'])) {
+        // URL of the MinAI stable branch zip file
+        $zipUrl = 'https://github.com/MinLL/MinAI/archive/refs/heads/stable.zip';
+        $zipFile = tempnam(sys_get_temp_dir(), 'minai_') . '.zip';
+    
+        // Download the zip file
+        $zipContent = file_get_contents($zipUrl);
+        if ($zipContent === false) {
+            $errorMessage = 'Failed to download the zip file.';
+        } else {
+            file_put_contents($zipFile, $zipContent);
+    
+            $zip = new ZipArchive;
+            if ($zip->open($zipFile) === TRUE) {
+                $destination = __DIR__ . '/../ext/';
+                $extracted = $zip->extractTo($destination);
+                if ($extracted) {
+                    // Move the minai_plugin folder from MinAI-stable to ext
+                    $sourcePath = $destination . 'MinAI-stable/minai_plugin';
+                    $targetPath = $destination . 'minai_plugin';
+    
+                    // Remove existing minai_plugin directory if it exists
+                    if (is_dir($targetPath)) {
+                        rrmdir($targetPath);
+                    }
+    
+                    // Move the plugin directory
+                    rename($sourcePath, $targetPath);
+    
+                    // Clean up the extracted files
+                    rrmdir($destination . 'MinAI-stable');
+    
+                    $zip->close();
+                    unlink($zipFile);
+    
+                    // Recursively set permissions to 0777 and change owner and group to 'dwemer'
+                    function chmod_chown_chgrp_r($path, $filemode, $user, $group) {
+                        if (is_dir($path)) {
+                            // Change permissions, owner, and group for the directory
+                            if (!chmod($path, $filemode)) {
+                                echo "Failed to chmod directory $path<br>";
+                            }
+                            if (!chown($path, $user)) {
+                                echo "Failed to chown directory $path<br>";
+                            }
+                            if (!chgrp($path, $group)) {
+                                echo "Failed to chgrp directory $path<br>";
+                            }
+    
+                            // Process contents of the directory
+                            $objects = scandir($path);
+                            foreach ($objects as $file) {
+                                if ($file != '.' && $file != '..') {
+                                    $fullpath = $path . '/' . $file;
+                                    chmod_chown_chgrp_r($fullpath, $filemode, $user, $group);
+                                }
+                            }
+                        } else {
+                            // Change permissions, owner, and group for the file
+                            if (!chmod($path, $filemode)) {
+                                echo "Failed to chmod file $path<br>";
+                            }
+                            if (!chown($path, $user)) {
+                                echo "Failed to chown file $path<br>";
+                            }
+                            if (!chgrp($path, $group)) {
+                                echo "Failed to chgrp file $path<br>";
+                            }
+                        }
+                    }
+    
+                    // Set permissions and ownership
+                    chmod_chown_chgrp_r($targetPath, 0777, 'dwemer', 'www-data');
+    
+                    $successMessage = 'MinAI plugin downloaded and installed successfully.';
+                } else {
+                    $zip->close();
+                    unlink($zipFile);
+                    $errorMessage = 'Failed to extract the zip file.';
+                }
+            } else {
+                unlink($zipFile);
+                $errorMessage = 'Failed to open the zip file.';
+            }
+        }
+    
+        // Store messages in session and redirect to refresh the page
+        if (!empty($errorMessage)) {
+            $_SESSION['errorMessage'] = $errorMessage;
+        } elseif (!empty($successMessage)) {
+            $_SESSION['successMessage'] = $successMessage;
+        }
+        header('Location: ' . $_SERVER['REQUEST_URI']);
+        exit;
     }
     
+    
+    // Handle the Delete Plugin button click
+    if (isset($_POST['delete_plugin'])) {
+        $pluginToDelete = $_POST['delete_plugin'];
+        $pluginPath = __DIR__ . '/../ext/' . $pluginToDelete;
+    
+        if (is_dir($pluginPath)) {
+            rrmdir($pluginPath);
+            $successMessage = "Plugin '$pluginToDelete' has been deleted.";
+        } else {
+            $errorMessage = "Plugin '$pluginToDelete' not found.";
+        }
+    
+        // Store messages in session and redirect to refresh the page
+        if (!empty($errorMessage)) {
+            $_SESSION['errorMessage'] = $errorMessage;
+        } elseif (!empty($successMessage)) {
+            $_SESSION['successMessage'] = $successMessage;
+        }
+        header('Location: ' . $_SERVER['REQUEST_URI']);
+        exit;
+    }
+    
+    // Handle the Refresh Plugins button click
+    if (isset($_POST['refresh_plugins'])) {
+        // Redirect back to the same page
+        header('Location: ' . $_SERVER['REQUEST_URI']);
+        exit;
+    }
+    
+    // Handle messages from the session
+    if (isset($_SESSION['errorMessage'])) {
+        $errorMessage = $_SESSION['errorMessage'];
+        unset($_SESSION['errorMessage']);
+    }
+    
+    if (isset($_SESSION['successMessage'])) {
+        $successMessage = $_SESSION['successMessage'];
+        unset($_SESSION['successMessage']);
+    }
+    
+    // Recursive function to delete a directory and its contents
+    function rrmdir($dir) {
+        if (is_dir($dir)) {
+            $objects = scandir($dir);
+            foreach ($objects as $object) {
+                if ($object != '.' && $object != '..') {
+                    $path = $dir . DIRECTORY_SEPARATOR . $object;
+                    if (is_dir($path)) {
+                        rrmdir($path);
+                    } else {
+                        unlink($path);
+                    }
+                }
+            }
+            rmdir($dir);
+        }
+    }
     ?>
 </div> <!-- close main container -->
 <?php

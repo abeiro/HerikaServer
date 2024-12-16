@@ -4,28 +4,30 @@
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!<br>If you are in the default profile <b>YOU MUST</b> leave it as <i>The Narrator</i>!<br><b>You can change profiles by clicking the blue button in the top left.</b>"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
-  "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Follower Personality. Treat it like a DnD character bio.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
+  "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"NPC Personality. Treat it like a DnD character bio.<br><b>Variables you can use:</b><br>#PLAYER_NAME# = Your player name","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5321"},
   "dynamic_profile_b1": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events.<br><strong>Requires max_tokens set to a value at 500 or higher.</strong>","action":"action_dynamic_profile_b1.php","name":"Advanced Auto Fill"},
   "dynamic_profile_b2": {"userlvl":"pro","type":"util","description":"Use LLM (the regular connector not the JSON!) to update an NPC's personality dynamically, based on recent events. This is a shorter version for less important NPCs.<br><strong>Requires max_tokens to a value of 300 or higher.</strong>","action":"action_dynamic_profile_b1.php?short=yes","name":"Simple Auto Fill"},
   "DYNAMIC_PROFILE":{"userlvl":"pro","type":"boolean","description":"Will trigger dynamic profile updates during certain ingame events (such as sleeping). Will cause the AI personality to dynamically change during gameplay based on player interaction."},
   "MINIME_T5":{"userlvl":"basic","type":"boolean","scope":"global","description":"Enable MiniMeT5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in DwemerDistro under Tools/components. <br> <strong> Must be configued in default profile and only works in English!</strong>"},
-  "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of rounds NPC's will talk amongst themselves.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Advanced Configuration"},
-  "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability.<br>0 = Always | 50 = Sometimes | 100 = Never"},
-  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an NPC starting a random conversation after a set period of time.<br>0 = NEVER | 1 = 50% | 3 = 75% | 9 = 90% | 99 = 99% "},
-  "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.<br>Higher Context = more tokens used and slower response time."},
+  "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of rounds AI NPC's will talk amongst themselves.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Advanced Configuration"},
+  "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability that an AI NPC will continue an ongoing conversation.<br>0 = Always | 50 = Sometimes | 100 = Never"},
+  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.<br>0 = NEVER | 1 = 50% | 3 = 75% | 9 = 90% | 100 = 99.99% "},
+  "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.<br>Higher Context = more tokens used and slower response time.<br><b>We recommend you do not go over 100</b>"},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
   "NEWQUEUE": {"userlvl":"wip","scope":"constant","type":"boolean","description":"Leave as is. Can not be changed!"},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "BOOK_EVENT_FULL": {"userlvl":"pro","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
-  "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.<br><strong>SET THIS ON default profile to apply to all followers.</strong>","scope":"global"},
+  "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.<br><strong>SET THIS ON default profile to apply to all NPCs.</strong>","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game.","scope":"global"},
   "LANG_LLM_XTTS": {"userlvl":"wip","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
+  "QUEST_COMMENT":{"type":"boolean","userlvl":"pro","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
+  "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
   "HERIKA_ANIMATIONS": {"userlvl":"pro","type":"boolean","description":"Will issue animations for the NPC to play"},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled"},
-  "SUMMARY_PROMPT": {"userlvl":"wip","type":"longstring","description":"Instructions added when generating summary prompt","scope":"global"},
-  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for text generation.<br><br>Select the service(s) you have configured for AI/LLM Connectors below.<br><br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Service Selection"},
+  "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Instructions added when generating summaries for memories and other features.","scope":"global"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Service Selection"},
   "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","koboldcpp"],"description":"<strong>Used for creating diary entries and memories!<br><br>You will need to place your API key in the regular/non-JSON connector for this to work!</strong>"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
@@ -85,7 +87,19 @@
       "frequency_penalty": {"userlvl":"pro","type":"number","description":"LLM parameter frequency_penalty","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema. Does not work with all OpenAI's models","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
+    },
+    "google_openaijson": {
+      "_title":"Google OpenAI API (JSON)",
+      "url": {"type":"url","description":"Google OpenAI API endpoint"},
+      "model": {"type":"string","description":"Model to use","helpurl":"https://ai.google.dev/gemini-api/docs/models/gemini"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "temperature": {"type":"number","description":"LLM parameter temperature","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
+      "top_p": {"userlvl":"pro","type":"number","description":"LLM parameter top_p","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
+      "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://aistudio.google.com/apikey"},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema.","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
     },
     "openai": {
       "_title":"OpenAI/ChatGPT API",
@@ -101,7 +115,7 @@
     },
     "koboldcppjson": {
       "_title":"KoboldCPP API (JSON)",
-      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "url": {"type":"url","description":"Kobold ideally should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature"},
       "rep_pen": {"type":"number","description":"LLM parameter rep_pen"},
@@ -118,7 +132,7 @@
     },
     "koboldcpp": {
       "_title":"KoboldCPP API",
-      "url": {"type":"url","description":"KoboldCPP API Endpoint","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
+      "url": {"type":"url","description":"Kobold ideally should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/5742"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"LLM parameter temperature"},
       "rep_pen": {"userlvl":"pro","type":"number","description":"LLM parameter rep_pen"},
@@ -132,7 +146,7 @@
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate your follower's voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
@@ -143,10 +157,10 @@
       "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.21ics3hex54a"}
     },
     "XTTSFASTAPI": {
-      "_title":"XTTSv2 Fast-API (Installed in DwemerDistro)",
-      "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<br>It can be a resource hog so make sure you have enough VRAM to run it!"},
+      "_title":"CHIM XTTS (Installed in DwemerDistro)",
+      "endpoint":{"type":"url","description":"End point URL. Leave as default if you installed XTTS through the Distro.<br>Be warned it takes 4GB of VRAM to run it!<br>You can run it on the cloud, click the help/doc link for instructions.", "helpurl":"https://www.nexusmods.com/skyrimspecialedition/articles/7673"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
-      "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"}
+      "voiceid":{"type":"string","description":"Generated voice file name. Click link to go to XTTS management to view voiceids.<br><b>To use Mantella XTTS voices you must install the MinAI plugin!</b>","helpurl":"/HerikaServer/ui/xtts_clone.php"}
     },
     "MIMIC3": {
       "_title":"MIMIC3 (Installed in DwemerDistro)",
@@ -157,7 +171,7 @@
     },
     "XVASYNTH": {
       "_title":"xVASynth",
-      "url":{"type":"url","description":"xVASynth ideally should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008"},
+      "url":{"type":"url","description":"xVASynth ideally should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008<br>Click the <b>help/doc</b> link for more info.","helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.3tf6myep6rmw"},
       "base_lang":{"type":"string","description":"Base language"},
       "modelType":{"type":"string","description":"modelType"},
       "model":{"type":"string","description":"Model"},
@@ -211,8 +225,8 @@
       "description":"VoiceId","helpurl":"https://docs.convai.com/api-docs/reference/core-api-reference/standalone-voice-api/text-to-speech-api"
       }
   },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"pro","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
-  "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"pro","scope":"global","description":"VoiceID to use for the player character."},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
@@ -238,7 +252,7 @@
     },"DEEPGRAM": {
       "_title":"Deepgram's Whisper Speech-to-Text",
       "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"},
-      "LANG":{"type":"select","values":["en","es"],"description":"Language"},
+      "LANG":{"type":"string","description":"Language"},
       "MODEL":{"type":"select","values":["nova-2","whisper-medium","enhanced","nova","base"],"description":"Model to use"}
     }
   },
@@ -282,11 +296,10 @@
   "MISC": {
     "_title":"Other Options",
     "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
-    "QUEST_COMMENT":{"type":"boolean","description":"Will trigger AI to talk about new objectives in your current quest. Will trigger a lot of events on new game, so shoudl activated on loaded games"},
-    "ITT_QUALITY": {"type":"integer","description":"Only for Soulgaze HD. Compression quality can be set from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
-
-  }
-
+    "ITT_QUALITY": {"type":"integer","description":"Only for Soulgaze HD. Compression quality can be set from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"},
+    "TTS_RANDOM_PITCH": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Adjusting the pitch when generating the voice for this actor will add variation, so actors using the same voice sound slightly distinct."},
+    "OGHMA_INFINITUM": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Needs minime enabled. Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim."}
+   }
   }
   
 }

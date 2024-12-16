@@ -24,6 +24,32 @@ function itt($file,$hints)
     
     $prompt = $GLOBALS["ITT"]["openai"]["AI_VISION_PROMPT"].". $hints";
 
+    /*
+    foreach (json_decode(DataSpeechJournal("",5),true) as $element) {
+    
+        if ($lastListener!=$element["listener"]) {
+            if ($element["listener"]!="The Narrator")
+                $listener=" (talking to {$element["listener"]})";
+            $lastListener=$element["listener"];
+        }
+        else
+            $listener="";
+
+        if ($lastPlace!=$element["location"]){
+            $place=" (at {$element["location"]})";
+            $lastPlace=$element["location"];
+        }
+        else
+            $place="";
+
+       
+        $historyData.=trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place").PHP_EOL;
+    
+    }
+
+    // Also add some dialogue context
+    $prompt.="#Context dialogie info\n$historyData\n";
+    */
     $fileContent = base64_encode(file_get_contents($file));
 
     $headers = [

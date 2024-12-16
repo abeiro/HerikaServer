@@ -152,7 +152,7 @@
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
                 <ul class="dropdown-menu">
 
-                    <!-- First Category Header -->
+                    
                     <li><h6 class="dropdown-header">Configuration Tools</h6></li>
                     <li>
                     <a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a>
@@ -163,18 +163,24 @@
                     </a>
                     </li>
                     <li>
+                    <a class="dropdown-item" href="customprompteditor.php" target="_blank">
+                    Custom Prompt Editor
+                    </a>
+                    </li>
+                    <li>
                     <a class="dropdown-item" href="quickstart.php" target="_blank">
                         Quickstart Menu
                     </a>
                     </li>
 
+
                     <li><hr class="dropdown-divider"></li>
 
-                    <!-- Second Category Header -->
+                    
                     <li><h6 class="dropdown-header">AI Voice Management</h6></li>
                     <li>
                     <a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
-                        XTTS Distro Management
+                        CHIM XTTS Management
                     </a>
                     </li>
                     <li>
@@ -182,9 +188,10 @@
                         Mimic3 Browser
                     </a>
                     </li>
+                    <li><a class="dropdown-item" href="addons/pmstt" target="_blank">Chrome Free Speech-to-Text</a></li>
                     <li><hr class="dropdown-divider"></li>
 
-                    <!-- Third Category Header -->
+                    
                     <li><h6 class="dropdown-header">Guides (PLEASE READ!)</h6></li>
                     <li><a class="dropdown-item" href='index.php?notes=true'>CHIM 101 Quick Guide</a></li>
                     <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">CHIM Manual</a></li>
@@ -205,21 +212,6 @@
                 <li>
                 <a class="dropdown-item" href="tests.php" target="_blank">Current LLM/AI Connection Test</a>
                 </li>
-                <!-- Uncomment the following items if needed -->
-                <!--
-                <li>
-                <a class="dropdown-item" href="tests/tts-test-azure.php" target="_blank">Test Azure TTS Connection</a>
-                </li>
-                <li>
-                <a class="dropdown-item" href="tests/tts-test-mimic3.php" target="_blank">Test MIMIC3 TTS Connection</a>
-                </li>
-                <li>
-                <a class="dropdown-item" href="tests/tts-test-11labs.php" target="_blank">Test ElevenLabs TTS Connection</a>
-                </li>
-                <li>
-                <a class="dropdown-item" href="tests/tts-test-gcp.php" target="_blank">Test Google Cloud TTS Connection</a>
-                </li>
-                -->
                 <li>
                 <a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a>
                 </li>
@@ -255,24 +247,37 @@
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
                 <ul class="dropdown-menu">
+                    <li><h6 class="dropdown-header">Immersion Tools</h6></li>
                     <li><a class="dropdown-item" href="addons/diary" target="_blank">AI Diary</a></li>
                     <li><a class="dropdown-item" href="addons/chatsim" target="_blank">Chat Simulation</a></li>
                     <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
-                    <li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>
+                    <!--<li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>-->
                 </ul>
             </li>
 
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Plugins</a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href='index.php?plugins_show=true'>Installed Plugins</a></li>
-                    <span title="Touch only if you know what you are doing" style="display: inline-block;    width: 100%;    text-align: center;    font-style: italic;    border-bottom: 1px solid grey;">Development</span>
+                    <li><h6 class="dropdown-header">CHIM Extensions</h6></li>
+                    <li><a class="dropdown-item" href='index.php?plugins_show=true'>Plugin Manager</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Debugging</h6></li>
                     <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
                     <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Requests logs</a></li>
                 </ul>
             </li>
         </ul>
     </div>
+    <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" style="padding-right: 5px;">
+    <img src="images/youtube.png" alt="Checkout our Youtube Channel">
+    </a>
+    <a href="https://discord.gg/NDn9qud2ug" target="_blank" style="padding-right: 5px;">
+    <img src="images/discord.png" alt="Join us on Discord">
+    </a>
+    <a href="https://patreon.com/DwemerDynamics" target="_blank" style="padding-right: 10px;">
+    <img src="images/patreon.png" alt="Join our Patreon">
+</a>
+
 </nav>
 
 <?php
@@ -587,7 +592,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Overlay Content -->
             <div class="overlay-content">
                 <a href="#" class="close-btn">&times;</a>
-                <h2>Character Profile</h2>
+                <h2>Activated Character Profiles</h2>
+                <i><p>Refresh page to see new characters.</p></i>
 
                 <!-- A-Z and Favorites Filter Buttons -->
                 <div class="filter-buttons">
@@ -777,7 +783,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         " onmouseover="this.style.backgroundColor=\'#0056b3\';" onmouseout="this.style.backgroundColor=\'#0030b0\';">
             Current AI Service ➡ <span style="color:yellow;">(' . htmlspecialchars($currentModel, ENT_QUOTES, 'UTF-8') . ')</span>
         </button>
-    </form><br/>';
+    </form>';
+    echo '
+    <form action="cmd/action_copy_connector_to_all.php" method="get" style="display:inline;">
+        <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"], ENT_QUOTES, 'UTF-8') . '">';
+    echo "
+        <button type='submit' title='Copy AI service to all profiles' style='color:#FFFFFF; cursor:pointer; font-size:9px; position:relative; background-color:#444444; border:1px solid #FFFFFF; margin-left:1em; padding:2px 6px; border-radius:4px; text-decoration:none;' onmouseover=\"this.style.backgroundColor='#666666'; this.style.borderColor='#FFD700';\" onmouseout=\"this.style.backgroundColor='#444444'; this.style.borderColor='#FFFFFF';\">Copy to All Profiles</button>
+    </form><br/>";
     echo " <strong>TTS Service:</strong> ";
     echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:#ff00c6">' . $TTSFUNCTION . '</strong>'; 
     echo " <strong>STT Service:</strong> ";
@@ -788,4 +800,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 </div>
 
-<main style="max-height:760px;overflow-y:scroll">
+<main style="max-height:820px;overflow-y:scroll">

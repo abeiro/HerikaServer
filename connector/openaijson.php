@@ -63,33 +63,73 @@ class connector
             //$prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         }
         
-        if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
-            $contextData[]= [
-                'role' => 'user', 
-                'content' => "{$prefix} Use '*Speech Style'. Use this JSON object to give your answer : ".json_encode([
-                    "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                    "mood"=>implode("|",$moods),
-                    "action"=>'a valid action, (refer to available actions list) or None',
-                    "target"=>"action's target",
-                    "lang"=>"en|es",
-                    "message"=>'lines of dialogue',
-                    
-                ])
-            ];
+        if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
+            $speechReinforcement="Use #SpeechStyle.";
+        } else
+            $speechReinforcement="";
+
+        if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
+            
+            if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
+                $contextData[]= [
+                    'role' => 'user', 
+                    'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
+                        "character"=>$GLOBALS["HERIKA_NAME"],
+                        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                        "message"=>'lines of dialogue',
+                        "mood"=>implode("|",$moods),
+                        "action"=>'a valid action, (refer to available actions list) or None',
+                        "target"=>"action's target",
+                        "lang"=>"en|es",
+                        
+                        
+                    ])
+                ];
+            } else {
+                $contextData[]= [
+                    'role' => 'user', 
+                    'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
+                        "character"=>$GLOBALS["HERIKA_NAME"],
+                        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                        "message"=>'lines of dialogue',
+                        "mood"=>implode("|",$moods),
+                        "action"=>'a valid action, (refer to available actions list) or None',
+                        "target"=>"action's target",
+                        
+                        
+                    ])
+                ];
+            }
+
         } else {
-            $contextData[]= [
-                'role' => 'user', 
-                'content' => "{$prefix} Use '*Speech Style'.Use this JSON object to give your answer : ".json_encode([
-                    "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                    "mood"=>implode("|",$moods),
-                    "action"=>'a valid action, (refer to available actions list) or None',
-                    "target"=>"action's target",
-                    "message"=>'lines of dialogue',
-                    
-                ])
-            ];
+            if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
+                $contextData[]= [
+                    'role' => 'user', 
+                    'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
+                        "character"=>$GLOBALS["HERIKA_NAME"],
+                        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                        "mood"=>implode("|",$moods),
+                        "action"=>'a valid action, (refer to available actions list) or None',
+                        "target"=>"action's target",
+                        "lang"=>"en|es",
+                        "message"=>'lines of dialogue',
+                        
+                    ])
+                ];
+            } else {
+                $contextData[]= [
+                    'role' => 'user', 
+                    'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer : ".json_encode([
+                        "character"=>$GLOBALS["HERIKA_NAME"],
+                        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                        "mood"=>implode("|",$moods),
+                        "action"=>'a valid action, (refer to available actions list) or None',
+                        "target"=>"action's target",
+                        "message"=>'lines of dialogue',
+                        
+                    ])
+                ];
+            }
         }
         
 
@@ -262,7 +302,45 @@ class connector
 
         // Forcing JSON output
       
-        
+        $response_format = array(
+            "type" => "json_schema",
+            "json_schema" => array(
+                "name" => "response",
+                "schema" => array(
+                    "type" => "object",
+                    "properties" => array(
+                        "character" => array(
+                            "type" => "string"
+                        ),
+                        "listener" => array(
+                            "type" => "string"
+                        ),
+                        "mood" => array(
+                            "type" => "string"
+                        ),
+                        "action" => array(
+                            "type" => "string"
+                        ),
+                        "target" => array(
+                            "type" => "string"
+                        ),
+                        "message" => array(
+                            "type" => "string"
+                        )
+                    ),
+                    "required" => [
+                        "character",
+                        "listener",
+                        "mood",
+                        "action",
+                        "target",
+                        "message"
+                    ],
+                    "additionalProperties" => false
+                ),
+                "strict" => true
+            )
+        );
         
         
         
@@ -272,11 +350,18 @@ class connector
                 $contextData
             ,
             'stream' => true,
-            'max_tokens'=>$MAX_TOKENS,
+            'max_completion_tokens'=>$MAX_TOKENS,
             'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
             'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
             'response_format'=>["type"=>"json_object"]
+
         );
+
+        
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
+            $data["response_format"]=$response_format;
+        }
+
         // Mistral AI API does not support penalty params
         if (strpos($url, "mistral") === false) {
             $data["presence_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0;
@@ -286,17 +371,17 @@ class connector
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
+                unset($data["max_completion_tokens"]);
             } elseif (isset($customParms["MAX_TOKENS"])) {
-                $data["max_tokens"]=$customParms["MAX_TOKENS"]+0;
+                $data["max_completion_tokens"]=$customParms["MAX_TOKENS"]+0;
             }
         }
 
         if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
             if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
+                unset($data["max_completion_tokens"]);
             } else
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
+                $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
             
         }
 
@@ -481,7 +566,7 @@ class connector
                             } else {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
-                        } else {
+                        } elseif ($parsedResponse["action"] != "Talk") {
                             error_log("Function not found for {$parsedResponse["action"]}");
                         }
                         

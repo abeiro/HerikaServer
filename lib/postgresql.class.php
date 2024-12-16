@@ -87,6 +87,24 @@ class sql
         return $finalData;
     }
     
+    public function fetchOne($q)
+    {
+        $result = pg_query(self::$link, $q);
+        if (!$result) {
+            error_log(pg_last_error(self::$link));
+            return [];
+        }
+
+        $finalData = array();
+        while ($row = pg_fetch_assoc($result)) {
+            $finalData = $row;
+            break;
+        }
+        
+
+        return $finalData;
+    }
+
     public function fetchArray($res)
     {
         return pg_fetch_array($res);
@@ -120,6 +138,59 @@ class sql
             error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
     }
+
+    public function upsertRow($table, $data, $where) {
+        // Check if the row exists
+        $checkQuery = "SELECT 1 FROM $table WHERE $where LIMIT 1";
+        $checkResult = pg_query(self::$link, $checkQuery);
+
+        if (!$checkResult) {
+            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            return false;
+        }
+
+        if (pg_num_rows($checkResult) > 0) {
+            // Row exists, perform an update
+            $setClauses = [];
+            $params = [];
+            $i = 0;
+
+            foreach ($data as $column => $value) {
+                $setClauses[] = "$column = $" . (++$i);
+                $params[] = $value;
+            }
+
+            $set = implode(', ', $setClauses);
+            $query = "UPDATE $table SET $set WHERE $where";
+        } else {
+            // Row does not exist, perform an insert
+            $columns = array_keys($data);
+            $placeholders = [];
+            $params = [];
+            $i = 0;
+
+            foreach ($data as $value) {
+                $placeholders[] = '$' . (++$i);
+                $params[] = $value;
+            }
+
+            $columnList = implode(', ', $columns);
+            $placeholderList = implode(', ', $placeholders);
+
+            $query = "INSERT INTO $table ($columnList) VALUES ($placeholderList)";
+        }
+
+        // Execute the query
+        $result = pg_query_params(self::$link, $query, $params);
+        if (!$result) {
+            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            return false;
+        }
+
+        return true;
+}
+
+
 }
 
 ?>

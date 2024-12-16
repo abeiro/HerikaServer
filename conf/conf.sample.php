@@ -12,7 +12,7 @@ $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to 
 $BOOK_EVENT_ALWAYS_NARRATOR=false;
 //The Narrator will talk to you.
 $NARRATOR_TALKS=true;
-$BOOK_EVENT_FULL=false;
+$BOOK_EVENT_FULL=true;
 
 $HERIKA_ANIMATIONS=true;
 $DYNAMIC_PROFILE=false;
@@ -149,6 +149,16 @@ $CONNECTOR["openaijson"]["API_KEY"]="";
 $CONNECTOR["openaijson"]["MAX_TOKENS_MEMORY"]="800";
 $CONNECTOR["openaijson"]["frequency_penalty"]=0;    		//LLM parameter frequency_penalty
 $CONNECTOR["openaijson"]["top_p"]=1;        			//LLM parameter top_p
+$CONNECTOR["openaijson"]["json_schema"]=false;    
+
+$CONNECTOR["google_openaijson"]["url"]="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+$CONNECTOR["google_openaijson"]["model"]='gemini-1.5-flash';
+$CONNECTOR["google_openaijson"]["max_tokens"]='512';
+$CONNECTOR["google_openaijson"]["temperature"]=1;	//LLM parameter temperature
+$CONNECTOR["google_openaijson"]["API_KEY"]="";
+$CONNECTOR["google_openaijson"]["MAX_TOKENS_MEMORY"]="800";
+$CONNECTOR["google_openaijson"]["top_p"]=0.95;	//LLM parameter top_p
+$CONNECTOR["openaijson"]["json_schema"]=false;
 
 $CONNECTOR["koboldcpp"]["url"]='http://127.0.0.1:5001';	//KoboldCPP API Endpoint
 $CONNECTOR["koboldcpp"]["max_tokens"]='512';	//Maximum tokens to generate
@@ -277,6 +287,7 @@ $SUMMARY_PROMPT='';
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
 
-
-
+$FEATURES["MISC"]["TTS_RANDOM_PITCH"]=false;	//Adjusting the pitch when generating the voice for this actor will add variation, so actors using the same voice sound slightly distinct.
+$FEATURES["MISC"]["OGHMA_INFINITUM"]=false;	//Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim.
+$FEATURES["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"]=false;	//Reorders properties in the offered JSON schema. Some users report better action trigering using this
 ?>

@@ -4,11 +4,11 @@ $MUST_END=false;
 
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
-if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about this)
+if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
     $now=time();
     $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
-    $db->delete("eventlog", "type='playerinfo'");
+    //$db->delete("eventlog", "type='playerinfo'");
     //$db->delete("quests", "1=1");
     $db->delete("speech", "gamets>{$gameRequest[2]}  ");
     $db->delete("speech", "localts>$now ");
@@ -142,7 +142,9 @@ if ($gameRequest[0] == "init") { // Reset reponses if init sent (Think about thi
     foreach ($responseDataMl as $responseData) {
         echo "{$responseData["actor"]}|{$responseData["action"]}|{$responseData["text"]}\r\n";
     }
-
+    if (time()%5==0)
+        logEvent($gameRequest);
+    
     $MUST_END=true;
 
     // NEW METHODS FROM HERE

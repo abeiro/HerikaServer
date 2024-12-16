@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
+    <title>CHIM - Free Auto STT</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c2c2c; /* Dark grey background */
+            color: #f8f9fa; /* Light grey text for readability */
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #ffffff; /* White color for headings */
+            text-align: center;
+            margin-bottom: 20px; /* Reduced bottom margin */
+            font-size: 2em;
+        }
+
+        h2 {
+            color: #ffffff; /* White color for headings */
+            text-align: center;
+            margin-bottom: 20px; /* Reduced bottom margin */
+            font-size: 1.2em;
+        }
+
+        /* Result Display */
+        #result {
+            border: 2px solid #555555;
+            background-color: #3a3a3a; /* Slightly lighter grey */
+            height: 100px; /* Reduced height */
+            border-radius: 5px;
+            font-size: 16px;
+            padding: 10px; /* Reduced padding */
+            overflow-y: auto;
+            margin: 0 auto 20px auto; /* Reduced bottom margin */
+            max-width: 300px; /* Reduced width */
+            width: 100%;
+            color: #f8f9fa;
+            box-sizing: border-box;
+        }
+
+        /* Controls Container */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            max-width: 300px; /* Adjusted for consistency */
+            margin: 0 auto 40px auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Select Dropdown */
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            border: 1px solid #555555;
+            border-radius: 5px;
+            background-color: #4a4a4a;
+            color: #f8f9fa;
+            box-sizing: border-box;
+        }
+
+        /* Toggle Button */
+        #toggleButton {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+
+        #toggleButton:hover {
+            background-color: #0056b3; /* Darker shade on hover */
+        }
+
+        /* Additional Paragraph Styles */
+        .info-paragraph {
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.4; /* Slightly reduced line height for tighter spacing */
+            font-size: 16px;
+            text-align: center; /* Center-align text */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-paragraph ol {
+            margin: 4px 0; /* Reduced vertical spacing between lists */
+            padding: 0;
+            list-style-position: inside;
+            font-size: 16px;
+            text-align: left; /* Left-align list items for better readability */
+            line-height: 1.4; /* Match the reduced line height for consistency */
+            width: 100%; /* Ensure lists take full width for proper alignment */
+            max-width: 600px; /* Limit width for better readability */
+        }
+
+        .info-paragraph p {
+            margin: 8px 0; /* Reduced spacing between paragraphs */
+            font-size: 16px;
+            text-align: center; /* Center-align paragraphs */
+            line-height: 1.4;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1000px) {
+            #result, .controls, .info-paragraph {
+                max-width: 90%;
+            }
+
+            #toggleButton, select {
+                font-size: 16px;
+                padding: 10px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 20px;
+            }
+
+            h2 {
+                font-size: 1em;
+                margin-bottom: 15px;
+            }
+
+            #result {
+                height: 120px; /* Further reduced height for smaller screens */
+                padding: 8px; /* Further reduced padding */
+                font-size: 14px;
+            }
+
+            .controls {
+                max-width: 90%;
+                gap: 15px;
+            }
+
+            .info-paragraph {
+                font-size: 14px;
+            }
+
+            .info-paragraph ol, .info-paragraph p {
+                font-size: 14px;
+            }
+        }
+    </style>
+    <script>
+        let speechRecognizer; // Declare variable for speech recognition
+        let selectedLanguage = "en-US"; // Default language
+        let isListening = false; // Track listening state
+
+        function toggleListening() {
+            if (isListening) {
+                stop();
+            } else {
+                start();
+            }
+        }
+
+        function updateButton() {
+            const toggleButton = document.getElementById("toggleButton");
+            if (isListening) {
+                toggleButton.textContent = "Stop Listening";
+                toggleButton.style.backgroundColor = "#dc3545"; // Change to red
+            } else {
+                toggleButton.textContent = "Start Listening";
+                toggleButton.style.backgroundColor = "#007bff"; // Change to blue
+            }
+        }
+
+        function start() {
+            const r = document.getElementById("result");
+
+            if ("webkitSpeechRecognition" in window) {
+                speechRecognizer = new webkitSpeechRecognition();
+                speechRecognizer.continuous = true;
+                speechRecognizer.interimResults = true;
+                speechRecognizer.lang = selectedLanguage; // Set language dynamically
+
+                let finalTranscripts = "";
+                let pauseTimer;
+
+                speechRecognizer.start();
+                isListening = true;
+                updateButton();
+
+                speechRecognizer.onresult = function (event) {
+                    let interimTranscripts = "";
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        let transcript = event.results[i][0].transcript;
+                        transcript = transcript.replace("\n", "<br>");
+                        if (event.results[i].isFinal) {
+                            finalTranscripts += transcript;
+                            sendText(finalTranscripts); // Send final text
+                            finalTranscripts = ""; // Clear after sending
+                        } else {
+                            interimTranscripts += transcript;
+                        }
+                    }
+
+                    r.innerHTML = finalTranscripts + '<span style="color: #999;">' + interimTranscripts + '</span>';
+
+                    // Reset pause timer
+                    clearTimeout(pauseTimer);
+                    pauseTimer = setTimeout(() => {
+                        if (finalTranscripts) {
+                            sendText(finalTranscripts); // Send on longer pause
+                            finalTranscripts = ""; // Clear after sending
+                        }
+                    }, 1000); // 1 second pause
+                };
+
+                speechRecognizer.onerror = function (event) {
+                    console.error("Speech recognition error:", event.error);
+                    // Do not stop recognition; attempt to restart if possible
+                    // Optionally, you can display an error message to the user
+                    // For example:
+                    // r.innerHTML = "Error occurred in speech recognition: " + event.error;
+                };
+
+                speechRecognizer.onend = function () {
+                    console.log("Speech recognition ended.");
+                    // Attempt to restart recognition only if user hasn't stopped it
+                    if (isListening) {
+                        speechRecognizer.start();
+                    }
+                };
+
+            } else {
+                r.innerHTML = "Your browser does not support speech recognition.";
+            }
+
+            async function sendText(text) {
+                try {
+                    const url = `PlayerSays.php?speech=${encodeURIComponent(text)}`;
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        console.log("Text sent successfully:", text);
+                    } else {
+                        console.error("Failed to send text. HTTP Status:", response.status);
+                    }
+                } catch (error) {
+                    console.error("Error sending text:", error);
+                }
+            }
+        }
+
+        function stop() {
+            if (speechRecognizer) {
+                speechRecognizer.stop(); // Stop recognition
+                speechRecognizer = null; // Reset the recognizer
+                console.log("Speech recognition stopped.");
+            }
+            isListening = false;
+            updateButton();
+        }
+
+        function changeLanguage(event) {
+            selectedLanguage = event.target.value; // Update selected language
+            console.log("Language changed to:", selectedLanguage);
+            stop();
+            // Optionally, you can prompt the user to restart listening
+            // if they want the change to take effect immediately
+            // For example:
+            // if (confirm("Language changed. Start listening again?")) {
+            //     start();
+            // }
+        }
+
+        // Initialize button state on page load
+        window.onload = function() {
+            updateButton();
+        }
+    </script>
+</head>
+<body>
+    <h1>🎙Free Auto Speech-to-Text</h1>
+    <h2>Only works with Chrome!</h2>
+    <div id="result">Click "Start Listening" to begin speech recognition.</div>
+    <div class="controls">
+        <!-- Language Selection -->
+        <select onchange="changeLanguage(event)">
+            <option value="en-US" selected>English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="es-ES">Spanish (Spain)</option>
+            <option value="fr-FR">French (France)</option>
+            <option value="de-DE">German (Germany)</option>
+            <option value="zh-CN">Chinese (Simplified)</option>
+            <option value="ja-JP">Japanese</option>
+            <option value="hi-IN">Hindi (India)</option>
+        </select>
+        <!-- Toggle Button -->
+        <button id="toggleButton" onclick="toggleListening()">Start Listening</button>
+    </div>
+    <!-- New Information Paragraph -->
+    <div class="info-paragraph">
+        <p><b>Free Auto STT</b> is a <i>"hack"</i> that will allow your Chrome web browser to act as an STT service for CHIM. <b>To prevent bugs its recommended to only activate it when ingame.</b></p>
+        <p><b>It has 3 purposes:</b></p>
+        <ol>
+            <li>Uses Chrome's inbuilt STT to act as a free STT service</li>
+            <li>Acts as an "autotalk" solution for users who do not like push-to-talk</li>
+            <li>Allows you to talk to the AI NPCs outside of the game client</li>
+        </ol>
+        <br>
+        <p><b>How to use it:</b></p>
+        <ol>
+            <li>Click <b>Start Listening</b></li>
+            <li>Click <b>Allow Microphone</b> when the popup appears</li>
+            <li><b>Make sure to leave this web browser tab running in the background</b></li>
+            <li>AI NPC's ingame will hear you whenever you speak automatically!</li>
+            <li><b>AVOID USING THE MCM HOTKEY FOR SPEECH-TO-TEXT!</b></li>
+        </ol>
+        <br>
+        <p><b>If Chrome is blocking your microphone:</b></p>
+        <ol>
+            <li>In your Chrome settings under <b>Privacy and Security</b>, edit <b>Site Settings</b> to allow your microphone</li>
+            <li>Also check that your Windows settings are not blocking Chrome from using your microphone</li>
+            <li>If that does not work, go to this URL: <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></li>
+            <li>Enter the URL of <b>your</b> CHIM server in the textbox (e.g., <code>http://192.168.86.123:8081 YOUR IP WILL BE DIFFERENT</code>), select <b>Enabled</b>, then click <b>Relaunch</b></li>
+            <img src="./example.PNG" alt="How it should look." class="example-image">
+        </ol>
+    </div>
+</body>
+</html>

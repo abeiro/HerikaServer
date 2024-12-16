@@ -91,14 +91,16 @@ function cleanResponse($rawResponse)
     );
 
     // Strip no ascii.
+    /*
     $sentenceXX = str_replace(
         array('á', 'é', 'í', 'ó', 'ú', 'Á', 'É', 'Í', 'Ó', 'Ú', '¿', '¡'),
         array('a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U', '', ''),
         $sentenceX
     );
+    */
 
 
-    return $sentenceXX;
+    return $sentenceX;
 }
 
 function findDotPosition($string)
@@ -250,7 +252,7 @@ function split_sentences_stream($paragraph)
         $splitSentences[] = trim($currentSentence);
     }
 
-    error_log("<$paragraph> => ".implode("|", $splitSentences));
+    // error_log("<$paragraph> => ".implode("|", $splitSentences));
     return $splitSentences;
 }
 
@@ -297,9 +299,11 @@ function returnLines($lines,$writeOutput=true)
         $sentence=$output;
         $output = strtr($sentence,[
                         "*Smirks*"=>"","*smirks*"=>"",
-                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"",
-                        "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"",
+                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*laughs*"=>"",
+                        "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
                         "*pant*"=>"",
+                        "*cough*"=>"",
+                        "*hiccup*"=>"",
                         "*whimper*"=>""
                         ]
                         ); // Manual cases
@@ -367,6 +371,22 @@ function returnLines($lines,$writeOutput=true)
         // Make translation here on $responseText
 
         // $responseText=translate($responseTextUnmooded,'ES','EN');
+
+        if (isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])&&($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) {
+            $random_per_character=sprintf('%u', crc32($GLOBALS["HERIKA_NAME"])); // Unsigned integer
+            $pitch=$random_per_character%5;
+
+            if ($pitch==0)
+                $GLOBALS["TTS_FFMPEG_FILTERS"]["rubberband"]="rubberband=pitch=1.02";
+            if ($pitch==1)
+                $GLOBALS["TTS_FFMPEG_FILTERS"]["rubberband"]="rubberband=pitch=0.98";
+            if ($pitch==2)
+                $GLOBALS["TTS_FFMPEG_FILTERS"]["rubberband"]="rubberband=pitch=1.01";
+            if ($pitch==3)
+                $GLOBALS["TTS_FFMPEG_FILTERS"]["rubberband"]="rubberband=pitch=0.99";
+            if ($pitch==4)
+                ;
+        }
 
         if ($responseText) {
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
@@ -440,6 +460,7 @@ function returnLines($lines,$writeOutput=true)
             }
         }
 
+        error_log("Speech sent for {$GLOBALS["HERIKA_NAME"]}, generator {$GLOBALS["TTSFUNCTION"]}, size: ".strlen($responseText). "  '".substr($responseText,0,10)."'");
         $elapsedTimeTTS=microtime(true) - $startTime;
 
         $outBuffer = array(
@@ -453,7 +474,8 @@ function returnLines($lines,$writeOutput=true)
         
         
         $GLOBALS["DEBUG"]["BUFFER"][] = "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseText\r\n";
-        
+       
+
         if ($writeOutput) {
             //if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"]) {
             if (true) {
@@ -603,6 +625,105 @@ function lastNames($n, $eventypes)
     } else {
         return "";
     }
+}
+
+
+function lastSpeech($npcname)
+{
+
+    global $db;
+    
+    
+    $speaker=$db->escape($npcname);
+    $pj=$GLOBALS["PLAYER_NAME"];
+    $lastRecords = $db->fetchAll("SELECT * from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) order by rowid desc LIMIT 5 OFFSET 0");
+    $buffer="";
+    foreach (array_reverse($lastRecords) as $record) {
+        $buffer.="{$record["speaker"]}:{$record["speech"]}\n";
+        
+    }
+    
+    return $buffer;
+    
+
+}
+
+function lastKeyWordsContext($n, $npcname='')
+{
+
+    global $db;
+    
+    $m=$n+1;
+    $speaker=$db->escape($npcname);
+    $pj=$GLOBALS["PLAYER_NAME"];
+
+    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) 
+        order by gamets desc limit $m offset 0");
+    $words=[];
+    $uniqueArray=[];
+    $uppercaseWords = [];
+    foreach ($lastRecords as $record) {
+        $pattern = '/[A-Za-z\-]{4,}/';
+        $matches=[];
+        preg_match_all($pattern,  $record["speech"],$matches);
+        $uppercaseWords1 = array_merge($uppercaseWords, $matches[0]);
+
+        // Get words>4 chars starting with upercase, not in the beginning of string and not after .?
+        $pattern = '/(?<!^|[.?]\s)(\b[A-Z][a-zA-Z\-]{4,}\b)/';
+        $matches=[];
+        preg_match_all($pattern,  $record["speech"],$matches);
+        $uppercaseWords = array_merge($uppercaseWords1, $matches[0]);
+
+    }
+    foreach ($uppercaseWords as $n=>$e) {
+        if (stripos($e, $GLOBALS["PLAYER_NAME"])!==false) {
+          
+        } else if (stripos($e, $GLOBALS["HERIKA_NAME"])!==false) {
+            
+        } else {
+            if (!isset($words[$e]))
+                $words[$e]=0;
+            $words[$e]++;
+            if ( preg_match('~^\p{Lu}~u', $e) ) {
+                $words[$e]++;
+                
+            }
+
+            
+        }
+        
+    }
+
+    function startsWithUppercase($string) {
+        return preg_match('/^[A-Z]/', $string);
+    }
+
+    unset($words["Yeah"]);
+    unset($words["Wouldn"]);
+    unset($words["What"]);
+    unset($words["Well"]);
+    unset($words["Those"]);
+    unset($words["This"]);
+    unset($words["These"]);
+    unset($words["There"]);
+    unset($words["That"]);
+    unset($words["Seems"]);
+    unset($words["Shall"]);
+    unset($words["Maybe"]);
+    unset($words["Looks"]);
+    unset($words["Just"]);
+    
+    
+    foreach ($words as $n=>$e) {
+        if ($e>1)
+           if (startsWithUppercase($n))
+                $uniqueArray[]=$n;
+    }
+    $GLOBALS["DEBUG_DATA"]["textToEmbedFinalKwywords"]=implode(" ",$uniqueArray);
+    
+    rsort($uniqueArray);
+    return $uniqueArray;
+    
 }
 
 function lastKeyWordsNew($n, $eventypes='')

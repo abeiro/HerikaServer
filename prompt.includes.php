@@ -36,7 +36,7 @@ $FUNCTION_PARM_INSPECT[]=$GLOBALS["PLAYER_NAME"];
 require_once(__DIR__.DIRECTORY_SEPARATOR."prompts".DIRECTORY_SEPARATOR."command_prompt.php");
 
 if ($GLOBALS["OVERRIDE_DIALOGUE_TARGET"]) {
-    if ($GLOBALS["USING_DEFAULT_PROFILE"])
+    if (isset($GLOBALS["USING_DEFAULT_PROFILE"])&&($GLOBALS["USING_DEFAULT_PROFILE"]))
         $DIALOGUE_TARGET="(Talking to Narrator)";
     else
         $DIALOGUE_TARGET="(Talking to everyone)";
