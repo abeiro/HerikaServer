@@ -643,7 +643,7 @@ if ($gameRequest[0] == "funcret") {
 
 
 }  else {
-    if (in_array($GLOBALS["CURRENT_CONNECTOR"],["koboldcpp","openai","openrouter"])) {  // OLD SCHEMA
+    if (in_array($GLOBALS["CURRENT_CONNECTOR"],["koboldcpp","openai","google_openai","openrouter"])) {  // OLD SCHEMA
         if (!empty($request)) {
             if (sizeof($memoryInjectionCtx)>0) {
                 $prompt[] = $memoryInjectionCtx;
