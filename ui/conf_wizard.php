@@ -293,7 +293,7 @@ foreach ($currentConf as $pname=>$parms) {
         $lastParam = end($pnameSegments);
     
     // Check if this parameter matches our slider rules
-    if (in_array($lastParam, ["temperature", "repetition_penalty"])) {
+    if (in_array($lastParam, ["temperature", "repetition_penalty", "rep_pen"])) {
         echo "<p class='conf-item'>
                 <label for='$fieldName'>$pname</label>
                 <input type='range' min='0' max='2' step='0.01' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' 
