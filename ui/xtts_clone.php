@@ -407,8 +407,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <br>
     <label for="file">You only need to Sync once you have setup the CHIM XTTS server. You do not need to press it again until you build a new instance.</label>
     <br>
-    <label for="file">If you have no voices in your cache, that is fine! Any new NPC's will have their voice cached in the future.</label>
-    <br>
+    <label for="file" style="color: yellow;">If you have no voices in your cache, that is fine! Any new NPC's will have their voice cached in the future.</label>    <br>
     <br>
     <label for="file"><a href="https://www.nexusmods.com/skyrimspecialedition/articles/7673" target="_blank">Here is a guide for running CHIM XTTS on the cloud.</a></label>
         <br>
