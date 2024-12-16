@@ -248,48 +248,90 @@ foreach ($currentConf as $pname=>$parms) {
         
         } else if ($parms["type"]=="integer") {
             if ($pname === "RECHAT_P") {
-                // RECHAT_P: 0-100
-                echo "<p class='conf-item'>
-                        <label for='$fieldName'>$pname</label>
-                        <input type='range' min='0' max='100' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                        <input type='number' min='0' max='100' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;' readonly>
-                        <span>{$parms["description"]}</span>
-                      </p>".PHP_EOL;
-            } else if ($pname === "BORED_EVENT") {
-                // BORED_EVENT: 0-100
-                echo "<p class='conf-item'>
-                        <label for='$fieldName'>$pname</label>
-                        <input type='range' min='0' max='100' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                        <input type='number' min='0' max='100' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;' readonly>
-                        <span>{$parms["description"]}</span>
-                      </p>".PHP_EOL;
-            } else if ($pname === "CONTEXT_HISTORY") {
-                // CONTEXT_HISTORY: 10-200
-                echo "<p class='conf-item'>
-                        <label for='$fieldName'>$pname</label>
-                        <input type='range' min='10' max='200' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                        <input type='number' min='10' max='200' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;' readonly>
-                        <span>{$parms["description"]}</span>
-                      </p>".PHP_EOL;
-            } else if ($pname === "RECHAT_H") {
-                // RECHAT_H: 1-10
-                echo "<p class='conf-item'>
-                        <label for='$fieldName'>$pname</label>
-                        <input type='range' min='1' max='10' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                        <input type='number' min='1' max='10' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;' readonly>
-                        <span>{$parms["description"]}</span>
-                      </p>".PHP_EOL;
-            } else {
-                // Default integer handling
-                echo "<p class='conf-item'>
-                        <label for='$fieldName'>$pname</label>
-                        <input type='number' $FORCE_DISABLED inputmode='numeric' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName'>
-                        <span>Integer: {$parms["description"]}</span>
-                      </p>".PHP_EOL;
-            }   
+            // RECHAT_P: 0-100
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='100' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
+                    <input type='number' min='0' max='100' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;' readonly>
+                    <span>{$parms["description"]}</span>
+                    </p>".PHP_EOL;
+        } else if ($pname === "BORED_EVENT") {
+            // BORED_EVENT: 0-100
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='100' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
+                    <input type='number' min='0' max='100' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;' readonly>
+                    <span>{$parms["description"]}</span>
+                    </p>".PHP_EOL;
+        } else if ($pname === "CONTEXT_HISTORY") {
+            // CONTEXT_HISTORY: 10-200
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='10' max='200' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
+                    <input type='number' min='10' max='200' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;' readonly>
+                    <span>{$parms["description"]}</span>
+                    </p>".PHP_EOL;
+        } else if ($pname === "RECHAT_H") {
+            // RECHAT_H: 1-10
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='1' max='10' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
+                    <input type='number' min='1' max='10' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;' readonly>
+                    <span>{$parms["description"]}</span>
+                    </p>".PHP_EOL;
+        } else {
+            // Default integer handling
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='number' $FORCE_DISABLED inputmode='numeric' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName'>
+                    <span>Integer: {$parms["description"]}</span>
+                    </p>".PHP_EOL;
+        }   
     } else if ($parms["type"]=="number") {
-        echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input type='number' $FORCE_DISABLED inputmode='numeric' step='0.01' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName'><span>Decimal: {$parms["description"]}</span></p>".PHP_EOL;
-
+        // Extract the final parameter name segment
+        $pnameSegments = explode(" ", $pname);
+        $lastParam = end($pnameSegments);
+    
+        // Check if this parameter matches our slider rules
+        if (in_array($lastParam, ["temperature", "frequency_penalty", "presence_penalty", "repetition_penalty"])) {
+            // Range: 0 to 2, step 0.1
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='2' step='0.1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' 
+                        name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
+                    <input type='number' min='0' max='2' step='0.1' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' style='width:60px;' readonly>
+                    <span>{$parms["description"]}</span>
+                </p>".PHP_EOL;
+    
+        } else if (in_array($lastParam, ["top_p", "min_p", "top_a"])) {
+            // Range: 0 to 1, step 0.1
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='1' step='0.1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' 
+                        name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
+                    <input type='number' min='0' max='1' step='0.1' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' style='width:60px;' readonly>
+                    <span>{$parms["description"]}</span>
+                </p>".PHP_EOL;
+    
+        } else if ($lastParam === "top_k") {
+            // Range: 0 to 100, step 1
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='100' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' 
+                        name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
+                    <input type='number' min='0' max='100' step='1' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' style='width:60px;' readonly>
+                    <span>{$parms["description"]}</span>
+                </p>".PHP_EOL;
+    
+        } else {
+            // Default handling for other numeric parameters
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='number' $FORCE_DISABLED inputmode='numeric' step='0.01' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' name='$fieldName'>
+                    <span>Decimal: {$parms["description"]}</span>
+                </p>".PHP_EOL;
+        }
+    
     } else if ($parms["type"]=="apikey") {
         $jsid=strtr($fieldName,["@"=>"_"]);
         $checkButton="<button class='url' type='button' onclick=\"document.getElementById('$jsid').style.filter=''\">Unhide</button>";

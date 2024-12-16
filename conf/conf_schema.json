@@ -11,7 +11,7 @@
   "MINIME_T5":{"userlvl":"basic","type":"boolean","scope":"global","description":"Enable MiniMeT5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in DwemerDistro under Tools/components. <br> <strong> Must be configued in default profile and only works in English!</strong>"},
   "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of rounds AI NPC's will talk amongst themselves.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Advanced Configuration"},
   "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability that an AI NPC will continue an ongoing conversation.<br>0 = Always | 50 = Sometimes | 100 = Never"},
-  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an NPC starting a random conversation after a set period of time.<br>0 = NEVER | 1 = 50% | 3 = 75% | 9 = 90% | 99 = 99% "},
+  "BORED_EVENT": {"userlvl":"pro","type":"integer","description":"Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.<br>0 = NEVER | 1 = 50% | 3 = 75% | 9 = 90% | 100 = 99.99% "},
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.<br>Higher Context = more tokens used and slower response time.<br><b>We recommend you do not go over 100</b>"},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
