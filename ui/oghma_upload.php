@@ -241,7 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>CHIM - Oghma Infinium Management</title>
+    <title>📙CHIM - Oghma Infinium Management</title>
     <style>
         /* Updated CSS for Dark Grey Background Theme */
         body {

@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>CHIM - Custom Prompts</title>
+    <title>📝CHIM - Custom Prompts</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -232,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </style>
 </head>
 <body>
-    <h1>📝 Custom Prompt Editor</h1>
+    <h1>📝CHIM Custom Prompt Editor</h1>
     <p>By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.</p>
     <p>For example you can adjust how AI NPC's write their diary entries, what they say during bored events, how to summarize books and more!</p>
     <p>This file overwrites whatever is in the standard prompts.php, meaning you can safely make edits to this without breaking it if CHIM updates.</p>
