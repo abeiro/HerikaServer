@@ -59,34 +59,45 @@ if (!$result) {
 }
 
 /**
- * Function to render navigation buttons for previous and next days.
+ * Function to render navigation buttons and calendar within the same container.
  * 
- * This version simply calculates the previous and next dates without
- * checking if there is any data for those dates.
- *
  * @param string $currentDate The currently selected date in 'Y-m-d' format.
  */
-function renderNavigation($currentDate) {
+function renderHeader($currentDate) {
     // Compute previous and next dates
     $prevDate = date('Y-m-d', strtotime($currentDate . ' -1 day'));
     $nextDate = date('Y-m-d', strtotime($currentDate . ' +1 day'));
 
-    // **Debugging Information**
-    // Uncomment the line below to view the previous and next dates in the page source
-    echo "<!-- Debugging Info: Prev Date = {$prevDate}, Next Date = {$nextDate} -->";
+    // Format the display date
+    $displayDate = date('d-M-y', strtotime($currentDate));
 
-    echo "<div class='pagination'>";
+    echo "<div class='calendar-container'>";
 
     // Previous Day Button
-    echo "<a href='?date={$prevDate}' class='button'>&laquo; Previous Day</a> ";
+    echo "<a href='?date={$prevDate}' class='button'>&laquo; Previous Day</a>";
 
-    // Display current date
-    echo "<span>Date: {$currentDate}</span> ";
+    // Calendar
+    echo "<div class='calendar-navigation'>";
+    echo "<form method='GET' action='' id='dateForm'>";
+    echo "<label for='datePicker'>Select Date: </label>";
+    echo "<input type='date' id='datePicker' name='date' value='{$currentDate}' max='" . date('Y-m-d') . "' />";
+    echo "<noscript><input type='submit' value='Go'></noscript>";
+    echo "</form>";
+    echo "</div>";
 
     // Next Day Button
     echo "<a href='?date={$nextDate}' class='button'>Next Day &raquo;</a>";
 
     echo "</div>";
+
+    // Automatically submit the form when a date is selected
+    echo "
+    <script>
+        document.getElementById('datePicker').addEventListener('change', function() {
+            document.getElementById('dateForm').submit();
+        });
+    </script>
+    ";
 }
 ?> 
 
@@ -121,20 +132,20 @@ function renderNavigation($currentDate) {
         }
 
         /* Define column widths using <colgroup> */
-        colgroup col:nth-child(1) { /* Data */
+        colgroup col:nth-child(1) { /* Context */
             width: 50%;
         }
 
-        colgroup col:nth-child(2) { /* People */
-            width: 30%;
+        colgroup col:nth-child(2) { /* Nearby People */
+            width: 25%;
         }
 
-        colgroup col:nth-child(3) { /* Location */
-            width: 10%;
+        colgroup col:nth-child(3) { /* Location & Tamriel Time */
+            width: 19%;
         }
 
         colgroup col:nth-child(4) { /* Time */
-            width: 10%;
+            width: 6%;
         }
 
         th, td {
@@ -175,28 +186,32 @@ function renderNavigation($currentDate) {
 
         /* Navigation Styles */
         .pagination {
-            margin: 20px 0;
-            text-align: center;
+            /* Removed as we are using a new combined header */
         }
 
         .pagination .button {
-            color: #f8f9fa;
-            padding: 8px 16px;
-            text-decoration: none;
-            background-color: #007bff;
-            border-radius: 5px;
-            margin: 0 5px;
-            transition: background-color 0.3s ease;
-            display: inline-block;
-        }
-
-        .pagination .button:hover {
-            background-color: #0056b3;
+            /* Removed as we are using a new combined header */
         }
 
         .pagination span {
+            /* Removed as we are using a new combined header */
+        }
+
+        /* Calendar Navigation Styles */
+        .calendar-navigation {
+            margin: 0 20px;
+        }
+
+        /* New styles for the calendar container */
+        .calendar-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .calendar-container .button {
             margin: 0 10px;
-            font-weight: bold;
         }
 
         /* Responsive Design */
@@ -205,9 +220,18 @@ function renderNavigation($currentDate) {
                 font-size: 14px;
             }
 
-            .pagination .button {
-                padding: 6px 12px;
-                font-size: 14px;
+            .calendar-container {
+                flex-direction: column;
+            }
+
+            .calendar-container .button,
+            .calendar-navigation {
+                margin: 10px 0;
+            }
+
+            .calendar-navigation input[type="date"] {
+                width: 100%;
+                box-sizing: border-box;
             }
         }
 
@@ -275,8 +299,8 @@ function renderNavigation($currentDate) {
     <h1>📆CHIM Adventure Log</h1>
 
     <?php
-    // Render Navigation at the Top
-    renderNavigation($selectedDate);
+    // Render Combined Navigation and Calendar at the Top
+    renderHeader($selectedDate);
     ?>
 
     <table>
@@ -314,7 +338,7 @@ function renderNavigation($currentDate) {
 
             // **Extract 'Context location' for location**
             // Remove leading/trailing parentheses
-            
+
             // Step 1: Clean the raw location by removing surrounding parentheses
             $cleanLocation = trim($rawLocation, "()");
 
@@ -364,7 +388,7 @@ function renderNavigation($currentDate) {
 
             // Step 2: Validate and format the timestamp
             if ($timestamp > 0) { // Basic validation to ensure it's a valid timestamp
-                // Change the date format to 'H:i:s d-m-Y'
+                // Change the date format to 'H:i:s'
                 $timeDisplay = date('H:i:s', $timestamp);
             } else {
                 // If 'localts' is invalid, display as-is with HTML special characters converted
@@ -384,8 +408,8 @@ function renderNavigation($currentDate) {
     </table>
 
     <?php
-    // Render Navigation at the Bottom
-    renderNavigation($selectedDate);
+    // Render Combined Navigation and Calendar at the Bottom
+    renderHeader($selectedDate);
 
     // **Close Database Connection**
     pg_close($conn);
