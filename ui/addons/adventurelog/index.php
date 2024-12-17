@@ -93,7 +93,7 @@ function renderNavigation($currentDate) {
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
     <title>CHIM Adventure Log</title>
     <style>
         /* Updated CSS for Dark Grey Background Theme */
