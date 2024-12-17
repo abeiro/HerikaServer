@@ -22,6 +22,214 @@ function compareFileModificationDate($a, $b) {
     return filemtime($b) - filemtime($a);
 }
 
+/**
+ * Function to render navigation buttons, calendar, and CSV download button within the same container.
+ * 
+ * @param string $currentDate The currently selected date in 'Y-m-d' format.
+ */
+function renderHeader($currentDate) {
+    // Compute previous and next dates
+    $prevDate = date('Y-m-d', strtotime($currentDate . ' -1 day'));
+    $nextDate = date('Y-m-d', strtotime($currentDate . ' +1 day'));
+
+    // Format the display date
+    $displayDate = date('d-M-y', strtotime($currentDate));
+
+    // Start the header container
+    echo "<div class='calendar-container'>";
+
+    // Previous Day Button
+    echo "<a href='?date={$prevDate}' class='button'>&laquo; Previous Day</a>";
+
+    // Calendar
+    echo "<div class='calendar-navigation'>";
+    echo "<form method='GET' action='' id='dateForm'>";
+    echo "<label for='datePicker'>Select Date: </label>";
+    echo "<input type='date' id='datePicker' name='date' value='{$currentDate}' max='" . date('Y-m-d') . "' />";
+
+    // Preserve existing GET parameters except 'date' and 'export'
+    foreach ($_GET as $key => $value) {
+        if ($key !== 'date' && $key !== 'export') {
+            echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "' />";
+        }
+    }
+
+    echo "<noscript><input type='submit' value='Go'></noscript>";
+    echo "</form>";
+    echo "</div>";
+
+    // Next Day Button
+    echo "<a href='?date={$nextDate}' class='button'>Next Day &raquo;</a>";
+
+    // Build the current query parameters
+    $queryParams = $_GET;
+    $queryParams['export'] = 'csv';
+    $queryString = http_build_query($queryParams);
+    echo "<a href='?" . htmlspecialchars($queryString) . "' class='button'>Download Current Table as CSV</a>";
+
+    echo "</div>";
+
+    // Automatically submit the form when a date is selected
+    echo "
+    <script>
+        document.getElementById('datePicker').addEventListener('change', function() {
+            document.getElementById('dateForm').submit();
+        });
+    </script>
+    ";
+}
+
+// Check if 'export' parameter is set to 'csv'
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    // Connect to the database
+    $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
+
+    if (!$conn) {
+        // Handle connection error for CSV export
+        header('Content-Type: text/plain');
+        echo "Failed to connect to database: " . pg_last_error();
+        exit;
+    }
+
+    // Get the selected date from the URL parameter, default to today if not set
+    $selectedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
+
+    // Validate the selected date format (YYYY-MM-DD)
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
+        $selectedDate = date('Y-m-d'); // Fallback to today if invalid
+    }
+
+    // Calculate the start and end timestamps for the selected day
+    $startOfDay = strtotime($selectedDate . ' 00:00:00');
+    $endOfDay = strtotime($selectedDate . ' 23:59:59');
+
+    // Modify the SQL query to fetch records for the selected day
+    $query = "
+        SELECT type, data, people, location, localts
+        FROM {$schema}.eventlog
+        WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+        AND localts BETWEEN $startOfDay AND $endOfDay
+        ORDER BY localts ASC
+    ";
+
+    $result = pg_query($conn, $query);
+
+    if (!$result) {
+        // Handle query error for CSV export
+        header('Content-Type: text/plain');
+        echo "Query error: " . pg_last_error($conn);
+        pg_close($conn);
+        exit;
+    }
+
+    // Prepare CSV headers
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=eventlog_' . $selectedDate . '.csv');
+
+    // Open the output stream
+    $output = fopen('php://output', 'w');
+
+    // Output the column headings
+    fputcsv($output, ['Context', 'Nearby People', 'Location & Tamriel Time', 'Time (UTC)']);
+
+    // Process each row and write to CSV
+    while ($row = pg_fetch_assoc($result)) {
+        // **Step 1: Check the 'type' column**
+        $type = $row['type'];
+
+        // Define the allowed types
+        $allowedTypes = ['im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend'];
+
+        // If the type is not in the allowed list, skip this row
+        if (!in_array($type, $allowedTypes)) {
+            continue; // Skip to the next iteration of the loop
+        }
+
+        // **Raw values**
+        $rawData = $row['data'];
+        $rawPeople = $row['people'];
+        $rawLocation = $row['location'];
+        $rawLocalts = $row['localts']; // Original localts timestamp
+
+        // Step 1: Clean the raw location by removing surrounding parentheses
+        $cleanLocation = trim($rawLocation, "()");
+
+        // Step 2: Initialize the variable to hold the combined display
+        $locationDisplay = '';
+
+        // Step 3: Extract the Date and Time
+        // Updated regex to match 'current date' followed by multiple date components
+        $datePattern = '/current date\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^,]+)/i';
+        if (preg_match($datePattern, $cleanLocation, $dateMatch)) {
+            // Combine the captured groups to form the complete date string
+            // $dateMatch[1] = Loredas
+            // $dateMatch[2] = 11:15 PM
+            // $dateMatch[3] = 14th of First Seed
+            // $dateMatch[4] = 4E 202
+            $dateDisplay = trim("{$dateMatch[1]}, {$dateMatch[2]}, {$dateMatch[3]}, {$dateMatch[4]}");
+        } else {
+            // Handle cases where date/time information is missing
+            $dateDisplay = 'Unknown Date';
+        }
+
+        // Step 4: Extract the Location and Combine with Date/Time
+        // Updated regex to match 'Context new location:'
+        $locationPattern = '/Context new location:\s*([^,]+)/i';
+        if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
+            // Successfully matched 'Context new location'
+            $location = trim($locationMatch[1]);
+            $locationDisplay = "{$location} - {$dateDisplay}";
+        } else {
+            // Fallback to 'Hold' if 'Context new location' is not found
+            $holdPattern = '/Hold:\s*([^,]+)/i';
+            if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
+                $hold = trim($holdMatch[1]);
+                $locationDisplay = "{$hold} - {$dateDisplay}";
+            } else {
+                // Fallback to the entire cleanLocation if both extractions fail
+                $locationDisplay = "{$cleanLocation} - {$dateDisplay}";
+            }
+        }
+
+        // **Transform people**
+        // Remove leading/trailing pipes and spaces, then split by '|'
+        $cleanPeople = trim($rawPeople, "|() ");
+        $peopleList = array_filter(explode("|", $cleanPeople), 'strlen');
+        $people = implode(", ", $peopleList);
+
+        // Remove the '(Context location: ...)' substring
+        $data = preg_replace('/\(Context location:[^)]+\)/i', '', $rawData);
+        $data = trim($data);
+
+        // **Format 'localts' into a readable date format**
+        // Assuming 'localts' is a Unix timestamp (integer)
+        // Directly use it in date() without strtotime()
+        // Step 1: Convert the raw timestamp to an integer
+        $timestamp = (int)$rawLocalts;
+
+        // Step 2: Validate and format the timestamp
+        if ($timestamp > 0) { // Basic validation to ensure it's a valid timestamp
+            // Change the date format to 'H:i:s'
+            $timeDisplay = date('H:i:s', $timestamp);
+        } else {
+            // If 'localts' is invalid, display as-is
+            $timeDisplay = $rawLocalts;
+        }
+
+        // **Write the CSV row**
+        fputcsv($output, [$data, $people, $locationDisplay, $timeDisplay]);
+    }
+
+    // Close the output stream
+    fclose($output);
+
+    // Close Database Connection
+    pg_close($conn);
+
+    // Exit to prevent the rest of the page from rendering
+    exit;
+}
+
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
 
@@ -56,48 +264,6 @@ $result = pg_query($conn, $query);
 if (!$result) {
     echo "<div class='message'>Query error: " . pg_last_error($conn) . "</div>";
     exit;
-}
-
-/**
- * Function to render navigation buttons and calendar within the same container.
- * 
- * @param string $currentDate The currently selected date in 'Y-m-d' format.
- */
-function renderHeader($currentDate) {
-    // Compute previous and next dates
-    $prevDate = date('Y-m-d', strtotime($currentDate . ' -1 day'));
-    $nextDate = date('Y-m-d', strtotime($currentDate . ' +1 day'));
-
-    // Format the display date
-    $displayDate = date('d-M-y', strtotime($currentDate));
-
-    echo "<div class='calendar-container'>";
-
-    // Previous Day Button
-    echo "<a href='?date={$prevDate}' class='button'>&laquo; Previous Day</a>";
-
-    // Calendar
-    echo "<div class='calendar-navigation'>";
-    echo "<form method='GET' action='' id='dateForm'>";
-    echo "<label for='datePicker'>Select Date: </label>";
-    echo "<input type='date' id='datePicker' name='date' value='{$currentDate}' max='" . date('Y-m-d') . "' />";
-    echo "<noscript><input type='submit' value='Go'></noscript>";
-    echo "</form>";
-    echo "</div>";
-
-    // Next Day Button
-    echo "<a href='?date={$nextDate}' class='button'>Next Day &raquo;</a>";
-
-    echo "</div>";
-
-    // Automatically submit the form when a date is selected
-    echo "
-    <script>
-        document.getElementById('datePicker').addEventListener('change', function() {
-            document.getElementById('dateForm').submit();
-        });
-    </script>
-    ";
 }
 ?> 
 
