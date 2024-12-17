@@ -18,19 +18,6 @@ $schema = 'public';
 $username = 'dwemer';
 $password = 'dwemer';
 
-// Profile selection
-$GLOBALS["PROFILES"] = []; // Initialize the PROFILES array
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf) {
-    if (file_exists($mconf)) {
-        $filename = basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        if (preg_match($pattern, $filename, $matches)) {
-            $hash = $matches[1];
-            $GLOBALS["PROFILES"][$hash] = $mconf;
-        }
-    }
-}
-
 function compareFileModificationDate($a, $b) {
     return filemtime($b) - filemtime($a);
 }
@@ -42,8 +29,6 @@ if (!$conn) {
     echo "<div class='message'>Failed to connect to database: " . pg_last_error() . "</div>";
     exit;
 }
-
-// *** Date-Based Navigation Implementation ***
 
 // Get the selected date from the URL parameter, default to today if not set
 $selectedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
@@ -75,14 +60,21 @@ if (!$result) {
 
 /**
  * Function to render navigation buttons for previous and next days.
+ * 
+ * This version simply calculates the previous and next dates without
+ * checking if there is any data for those dates.
  *
  * @param string $currentDate The currently selected date in 'Y-m-d' format.
  */
 function renderNavigation($currentDate) {
-    // Calculate previous and next dates
+    // Compute previous and next dates
     $prevDate = date('Y-m-d', strtotime($currentDate . ' -1 day'));
     $nextDate = date('Y-m-d', strtotime($currentDate . ' +1 day'));
-    
+
+    // **Debugging Information**
+    // Uncomment the line below to view the previous and next dates in the page source
+    echo "<!-- Debugging Info: Prev Date = {$prevDate}, Next Date = {$nextDate} -->";
+
     echo "<div class='pagination'>";
 
     // Previous Day Button
@@ -122,6 +114,10 @@ function renderNavigation($currentDate) {
             width: 100%;
             margin-top: 20px;
             table-layout: fixed; /* Enforce fixed table layout */
+        }
+
+        .bold-name {
+            font-weight: bold;
         }
 
         /* Define column widths using <colgroup> */
@@ -288,14 +284,14 @@ function renderNavigation($currentDate) {
         <colgroup>
             <col style="width: 50%;">
             <col style="width: 25%;">
-            <col style="width: 10%;">
-            <col style="width: 15%;"> <!-- Adjusted width for Time column -->
+            <col style="width: 19%;">
+            <col style="width: 6%;"> <!-- Adjusted width for Time column -->
         </colgroup>
         <tr>
-            <th>Data</th>
-            <th>People</th>
-            <th>Location</th>
-            <th>Time</th>
+            <th>Context</th>
+            <th>Nearby People</th>
+            <th>Location & Tamriel Time</th>
+            <th>Time(UTC)</th>
         </tr>
         <?php
         while ($row = pg_fetch_assoc($result)) {
@@ -318,17 +314,35 @@ function renderNavigation($currentDate) {
 
             // **Extract 'Context location' for location**
             // Remove leading/trailing parentheses
+            
+            // Step 1: Clean the raw location by removing surrounding parentheses
             $cleanLocation = trim($rawLocation, "()");
 
+            // Step 2: Initialize the variable to hold the combined display
+            $locationDisplay = '';
+
+            // Step 3: Extract the Date and Time
+            if (preg_match('/Current Date in Skyrim World:\s*([^)]*)/i', $cleanLocation, $dateMatch)) {
+                // Successfully matched 'Current Date in Skyrim World'
+                $dateDisplay = trim($dateMatch[1]);
+            } else {
+                // Handle cases where date/time information is missing
+                $dateDisplay = 'Unknown Date';
+            }
+
+            // Step 4: Extract the Location and Combine with Date/Time
             if (preg_match('/Context location:\s*([^,]+)/i', $cleanLocation, $locationMatch)) {
-                $locationDisplay = trim($locationMatch[1]);
+                // Successfully matched 'Context location'
+                $location = trim($locationMatch[1]);
+                $locationDisplay = $location . ' - ' . $dateDisplay;
             } else {
                 // Fallback to 'Hold' if 'Context location' is not found
                 if (preg_match('/Hold:\s*([^,]+)/i', $cleanLocation, $holdMatch)) {
-                    $locationDisplay = trim($holdMatch[1]);
+                    $hold = trim($holdMatch[1]);
+                    $locationDisplay = $hold . ' - ' . $dateDisplay;
                 } else {
                     // Fallback to the entire cleanLocation if both extractions fail
-                    $locationDisplay = $cleanLocation;
+                    $locationDisplay = $cleanLocation . ' - ' . $dateDisplay;
                 }
             }
 
@@ -338,7 +352,6 @@ function renderNavigation($currentDate) {
             $peopleList = array_filter(explode("|", $cleanPeople), 'strlen');
             $people = implode(", ", $peopleList);
 
-            // **Transform data**
             // Remove the '(Context location: ...)' substring
             $data = preg_replace('/\(Context location:[^)]+\)/i', '', $rawData);
             $data = trim($data);
@@ -346,11 +359,15 @@ function renderNavigation($currentDate) {
             // **Format 'localts' into a readable date format**
             // Assuming 'localts' is a Unix timestamp (integer)
             // Directly use it in date() without strtotime()
+            // Step 1: Convert the raw timestamp to an integer
             $timestamp = (int)$rawLocalts;
+
+            // Step 2: Validate and format the timestamp
             if ($timestamp > 0) { // Basic validation to ensure it's a valid timestamp
-                $timeDisplay = date('Y-m-d H:i:s', $timestamp);
+                // Change the date format to 'H:i:s d-m-Y'
+                $timeDisplay = date('H:i:s', $timestamp);
             } else {
-                // If 'localts' is invalid, display as-is
+                // If 'localts' is invalid, display as-is with HTML special characters converted
                 $timeDisplay = htmlspecialchars($rawLocalts);
             }
 
