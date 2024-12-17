@@ -113,8 +113,10 @@ session_start();
 ob_start();
 
 $url = 'conf_editor.php';
+
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
+$configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
+$rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 $TITLE = "QUICKSTART MENU"; // Updated title
 
@@ -127,6 +129,13 @@ if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
     require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php"); // Current configs
 }
 require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
+
+/* DB update logic */
+require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+$db = new sql();
+/* Check for database updates */
+require_once(__DIR__."/../debug/db_updates.php");
+/* END of check database for updates */
 
 // Profile selection
 foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf) {
