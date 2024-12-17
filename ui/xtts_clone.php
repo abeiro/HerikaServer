@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>CHIM - XTTS Voice Upload</title>
+    <title>🎙CHIM - XTTS Voice Upload</title>
     <style>
         /* Updated CSS for Dark Grey Background Theme */
         body {

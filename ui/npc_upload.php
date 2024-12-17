@@ -57,7 +57,7 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROF
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>CHIM - NPC Biography Upload</title>
+    <title>📝CHIM - NPC Biography Upload</title>
     <style>
         /* Updated CSS for Dark Grey Background Theme */
         body {

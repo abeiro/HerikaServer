@@ -272,7 +272,7 @@ function renderNavigation($currentDate) {
     </style>
 </head>
 <body>
-    <h1>CHIM Adventure Log</h1>
+    <h1>📆CHIM Adventure Log</h1>
 
     <?php
     // Render Navigation at the Top
