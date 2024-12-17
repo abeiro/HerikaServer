@@ -480,7 +480,7 @@ textarea {
 <body>
 
 <div class="indent5">
-    <h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Management</h1>
+    <h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32">Oghma Infinium Management</h1>
     <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
     <p>We recommend to keep entries limited to "generic household knowledge" as ALL NPC's will have access to all entries.</p>
     <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
