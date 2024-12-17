@@ -297,6 +297,7 @@ function renderHeader($currentDate) {
 </head>
 <body>
     <h1>📆CHIM Adventure Log</h1>
+    <h2>All time and dates are in UTC</h2>
 
     <?php
     // Render Combined Navigation and Calendar at the Top
@@ -314,7 +315,7 @@ function renderHeader($currentDate) {
         <tr>
             <th>Context</th>
             <th>Nearby People</th>
-            <th>Location & Tamriel Time</th>
+            <th>Location & <a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank">Tamriel Time</a></th>
             <th>Time(UTC)</th>
         </tr>
         <?php
@@ -336,8 +337,6 @@ function renderHeader($currentDate) {
             $rawLocation = $row['location'];
             $rawLocalts = $row['localts']; // Original localts timestamp
 
-            // **Extract 'Context location' for location**
-            // Remove leading/trailing parentheses
 
             // Step 1: Clean the raw location by removing surrounding parentheses
             $cleanLocation = trim($rawLocation, "()");
@@ -346,27 +345,36 @@ function renderHeader($currentDate) {
             $locationDisplay = '';
 
             // Step 3: Extract the Date and Time
-            if (preg_match('/Current Date in Skyrim World:\s*([^)]*)/i', $cleanLocation, $dateMatch)) {
-                // Successfully matched 'Current Date in Skyrim World'
-                $dateDisplay = trim($dateMatch[1]);
+            // Updated regex to match 'current date' followed by multiple date components
+            $datePattern = '/current date\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^,]+)/i';
+            if (preg_match($datePattern, $cleanLocation, $dateMatch)) {
+                // Combine the captured groups to form the complete date string
+                // $dateMatch[1] = Loredas
+                // $dateMatch[2] = 11:15 PM
+                // $dateMatch[3] = 14th of First Seed
+                // $dateMatch[4] = 4E 202
+                $dateDisplay = trim("{$dateMatch[1]}, {$dateMatch[2]}, {$dateMatch[3]}, {$dateMatch[4]}");
             } else {
                 // Handle cases where date/time information is missing
                 $dateDisplay = 'Unknown Date';
             }
 
             // Step 4: Extract the Location and Combine with Date/Time
-            if (preg_match('/Context location:\s*([^,]+)/i', $cleanLocation, $locationMatch)) {
-                // Successfully matched 'Context location'
+            // Updated regex to match 'Context new location:'
+            $locationPattern = '/Context new location:\s*([^,]+)/i';
+            if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
+                // Successfully matched 'Context new location'
                 $location = trim($locationMatch[1]);
-                $locationDisplay = $location . ' - ' . $dateDisplay;
+                $locationDisplay = "{$location} - {$dateDisplay}";
             } else {
-                // Fallback to 'Hold' if 'Context location' is not found
-                if (preg_match('/Hold:\s*([^,]+)/i', $cleanLocation, $holdMatch)) {
+                // Fallback to 'Hold' if 'Context new location' is not found
+                $holdPattern = '/Hold:\s*([^,]+)/i';
+                if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
                     $hold = trim($holdMatch[1]);
-                    $locationDisplay = $hold . ' - ' . $dateDisplay;
+                    $locationDisplay = "{$hold} - {$dateDisplay}";
                 } else {
                     // Fallback to the entire cleanLocation if both extractions fail
-                    $locationDisplay = $cleanLocation . ' - ' . $dateDisplay;
+                    $locationDisplay = "{$cleanLocation} - {$dateDisplay}";
                 }
             }
 
