@@ -1,4 +1,4 @@
-<?php
+<?php 
 session_start();
 
 // Enable error reporting (for development purposes)
@@ -27,35 +27,157 @@ function sanitize_int($value, $default) {
     return ($value !== false) ? $value : $default;
 }
 
+/**
+ * Function to process a single event row into formatted data.
+ *
+ * @param array $row The associative array representing a database row.
+ * @param bool $for_csv Indicates whether the output is for CSV (true) or HTML (false).
+ * @return array|null An associative array with keys: Context, Nearby People, Location & Tamrelic Time, Time(UTC).
+ */
+function process_event_row($row, $for_csv = false) {
+    // **Step 1: Check the 'type' column**
+    $type = $row['type'];
+
+    // Define the allowed types
+    $allowedTypes = ['im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend'];
+
+    // If the type is not in the allowed list, return null to skip
+    if (!in_array($type, $allowedTypes)) {
+        return null;
+    }
+
+    // **Raw values**
+    $rawData = $row['data'];
+    $rawPeople = $row['people'];
+    $rawLocation = $row['location'];
+    $rawLocalts = $row['localts']; // Original localts timestamp
+
+    // Step 1: Clean the raw location by removing surrounding parentheses
+    $cleanLocation = trim($rawLocation, "()");
+
+    // Step 2: Initialize the variable to hold the combined display
+    $locationDisplay = '';
+
+    // Step 3: Extract the Date and Time
+    // Updated regex to match 'current date' followed by multiple date components
+    $datePattern = '/current date\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^,]+)/i';
+    if (preg_match($datePattern, $cleanLocation, $dateMatch)) {
+        // Combine the captured groups to form the complete date string
+        // $dateMatch[1] = Loredas
+        // $dateMatch[2] = 11:15 PM
+        // $dateMatch[3] = 14th of First Seed
+        // $dateMatch[4] = 4E 202
+        $dateDisplay = trim("{$dateMatch[1]}, {$dateMatch[2]}, {$dateMatch[3]}, {$dateMatch[4]}");
+    } else {
+        // Handle cases where date/time information is missing
+        $dateDisplay = 'Unknown Date';
+    }
+
+    // Step 4: Extract the Location and Combine with Date/Time
+    // Updated regex to match 'Context new location:'
+    $locationPattern = '/Context new location:\s*([^,]+)/i';
+    if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
+        // Successfully matched 'Context new location'
+        $location = trim($locationMatch[1]);
+        $locationDisplay = "{$location} - {$dateDisplay}";
+    } else {
+        // Fallback to 'Hold' if 'Context new location' is not found
+        $holdPattern = '/Hold:\s*([^,]+)/i';
+        if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
+            $hold = trim($holdMatch[1]);
+            $locationDisplay = "{$hold} - {$dateDisplay}";
+        } else {
+            // Fallback to the entire cleanLocation if both extractions fail
+            $locationDisplay = "{$cleanLocation} - {$dateDisplay}";
+        }
+    }
+
+    // **Transform people**
+    // Remove leading/trailing pipes and spaces, then split by '|'
+    $cleanPeople = trim($rawPeople, "|() ");
+    $peopleList = array_filter(explode("|", $cleanPeople), 'strlen');
+    $people = implode(", ", $peopleList);
+
+    // Remove the '(Context location: ...)' substring
+    $data = preg_replace('/\(Context location:[^)]+\)/i', '', $rawData);
+    $data = trim($data);
+
+    // **Format 'localts' into a readable date format**
+    // Assuming 'localts' is a Unix timestamp (integer)
+    // Directly use it in date() without strtotime()
+    // Step 1: Convert the raw timestamp to an integer
+    $timestamp = (int)$rawLocalts;
+
+    // Step 2: Validate and format the timestamp
+    if ($timestamp > 0) { // Basic validation to ensure it's a valid timestamp
+        // Change the date format to 'H:i:s - d-m-y'
+        $timeDisplay = date('H:i:s - d-m-y', $timestamp);
+    } else {
+        // If 'localts' is invalid, display as-is
+        $timeDisplay = $rawLocalts;
+    }
+
+    if (!$for_csv) {
+        // **Escape HTML for safety only if not exporting to CSV**
+        $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+        $people = htmlspecialchars($people, ENT_QUOTES, 'UTF-8');
+        $locationDisplay = htmlspecialchars($locationDisplay, ENT_QUOTES, 'UTF-8');
+        $timeDisplay = htmlspecialchars($timeDisplay, ENT_QUOTES, 'UTF-8');
+    }
+
+    // Return the processed data
+    return [
+        'Context' => $data,
+        'Nearby People' => $people,
+        'Location & Tamrelic Time' => $locationDisplay,
+        'Time(UTC)' => $timeDisplay
+    ];
+}
+
 // Function to handle CSV export
 function handle_csv_export($conn, $schema) {
     if (isset($_GET['export'])) {
         $exportType = $_GET['export'];
 
-        if ($exportType === 'csv' && isset($_GET['date'])) {
-            // Export CSV for the selected date
-            $selectedDate = $_GET['date'];
+        if (($exportType === 'csv' && isset($_GET['date'])) || $exportType === 'all_csv') {
+            // Determine if exporting a specific date or all data
+            $is_specific_date = ($exportType === 'csv' && isset($_GET['date']));
 
-            // Validate the selected date format (YYYY-MM-DD)
-            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
-                // Invalid date format
-                header("HTTP/1.1 400 Bad Request");
-                echo "Invalid date format.";
-                exit;
+            if ($is_specific_date) {
+                // Export CSV for the selected date
+                $selectedDate = $_GET['date'];
+
+                // Validate the selected date format (YYYY-MM-DD)
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
+                    // Invalid date format
+                    header("HTTP/1.1 400 Bad Request");
+                    echo "Invalid date format.";
+                    exit;
+                }
+
+                // Calculate the start and end timestamps for the selected day
+                $startOfDay = strtotime($selectedDate . ' 00:00:00');
+                $endOfDay = strtotime($selectedDate . ' 23:59:59');
+
+                // Prepare the SQL query
+                $query = "
+                    SELECT type, data, people, location, localts
+                    FROM {$schema}.eventlog
+                    WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+                    AND to_timestamp(localts) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
+                    ORDER BY localts ASC
+                ";
+            } elseif ($exportType === 'all_csv') {
+                // Export CSV for all data
+
+                // Prepare the SQL query
+                $query = "
+                    SELECT type, data, people, location, localts
+                    FROM {$schema}.eventlog
+                    WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+                    ORDER BY localts ASC
+                ";
             }
-
-            // Calculate the start and end timestamps for the selected day
-            $startOfDay = strtotime($selectedDate . ' 00:00:00');
-            $endOfDay = strtotime($selectedDate . ' 23:59:59');
-
-            // Prepare the SQL query
-            $query = "
-                SELECT type, data, people, location, localts
-                FROM {$schema}.eventlog
-                WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-                AND to_timestamp(localts) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
-                ORDER BY localts ASC
-            ";
 
             $result = pg_query($conn, $query);
 
@@ -67,68 +189,32 @@ function handle_csv_export($conn, $schema) {
 
             // Set headers to prompt file download
             header('Content-Type: text/csv; charset=utf-8');
-            header('Content-Disposition: attachment; filename=adventure_log_' . $selectedDate . '.csv');
+            if ($is_specific_date) {
+                header('Content-Disposition: attachment; filename=adventure_log_' . $selectedDate . '.csv');
+            } else {
+                header('Content-Disposition: attachment; filename=adventure_log_full.csv');
+            }
+
+            // Add BOM for Excel compatibility
+            fprintf($output = fopen('php://output', 'w'), chr(0xEF).chr(0xBB).chr(0xBF));
 
             // Open the output stream
             $output = fopen('php://output', 'w');
 
-            // Output the column headings
-            fputcsv($output, ['Type', 'Data', 'People', 'Location', 'Local Timestamp']);
+            // Output the column headings matching the table
+            fputcsv($output, ['Context', 'Nearby People', 'Location & Tamrelic Time', 'Time(UTC)']);
 
-            // Fetch and write each row to the CSV
+            // Fetch and process each row, then write to the CSV
             while ($row = pg_fetch_assoc($result)) {
-                fputcsv($output, [
-                    $row['type'],
-                    $row['data'],
-                    $row['people'],
-                    $row['location'],
-                    date('Y-m-d H:i:s', (int)$row['localts'])
-                ]);
-            }
-
-            fclose($output);
-            exit; // Terminate the script after exporting CSV
-        } elseif ($exportType === 'all_csv') {
-            // Export CSV for all data
-
-            // Optionally, you can limit the data fetched based on other parameters like month and year
-            // For simplicity, we'll fetch all relevant data
-
-            // Prepare the SQL query
-            $query = "
-                SELECT type, data, people, location, localts
-                FROM {$schema}.eventlog
-                WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-                ORDER BY localts ASC
-            ";
-
-            $result = pg_query($conn, $query);
-
-            if (!$result) {
-                header("HTTP/1.1 500 Internal Server Error");
-                echo "Error fetching data: " . pg_last_error($conn);
-                exit;
-            }
-
-            // Set headers to prompt file download
-            header('Content-Type: text/csv; charset=utf-8');
-            header('Content-Disposition: attachment; filename=adventure_log_full.csv');
-
-            // Open the output stream
-            $output = fopen('php://output', 'w');
-
-            // Output the column headings
-            fputcsv($output, ['Type', 'Data', 'People', 'Location', 'Local Timestamp']);
-
-            // Fetch and write each row to the CSV
-            while ($row = pg_fetch_assoc($result)) {
-                fputcsv($output, [
-                    $row['type'],
-                    $row['data'],
-                    $row['people'],
-                    $row['location'],
-                    date('Y-m-d H:i:s', (int)$row['localts'])
-                ]);
+                $processed_row = process_event_row($row, true); // true indicates CSV context
+                if ($processed_row !== null) { // Only include allowed types
+                    fputcsv($output, [
+                        $processed_row['Context'],
+                        $processed_row['Nearby People'],
+                        $processed_row['Location & Tamrelic Time'],
+                        $processed_row['Time(UTC)']
+                    ]);
+                }
             }
 
             fclose($output);
@@ -521,6 +607,7 @@ if (!$result) {
             padding: 10px;
             text-align: center;
             vertical-align: middle;
+            position: relative; /* For tooltip positioning */
         }
 
         .calendar th {
@@ -563,6 +650,11 @@ if (!$result) {
             transition: opacity 0.3s ease;
             font-size: 12px;
             z-index: 10;
+        }
+
+        .calendar td.has-event a:hover::after {
+            opacity: 1;
+            visibility: visible;
         }
 
         .calendar-navigation {
@@ -643,95 +735,21 @@ if (!$result) {
             <th>Time(UTC)</th>
         </tr>
         <?php
+        // Reset the result pointer to the beginning for table rendering
+        pg_result_seek($result, 0);
+
+        // Fetch and display each row in the table
         while ($row = pg_fetch_assoc($result)) {
-            // **Step 1: Check the 'type' column**
-            $type = $row['type'];
-
-            // Define the allowed types
-            $allowedTypes = ['im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend'];
-
-            // If the type is not in the allowed list, skip this row
-            if (!in_array($type, $allowedTypes)) {
-                continue; // Skip to the next iteration of the loop
+            $processed_row = process_event_row($row, false); // false indicates HTML context
+            if ($processed_row === null) {
+                continue; // Skip rows with types not in the allowed list
             }
 
-            // **Raw values**
-            $rawData = $row['data'];
-            $rawPeople = $row['people'];
-            $rawLocation = $row['location'];
-            $rawLocalts = $row['localts']; // Original localts timestamp
-
-
-            // Step 1: Clean the raw location by removing surrounding parentheses
-            $cleanLocation = trim($rawLocation, "()");
-
-            // Step 2: Initialize the variable to hold the combined display
-            $locationDisplay = '';
-
-            // Step 3: Extract the Date and Time
-            // Updated regex to match 'current date' followed by multiple date components
-            $datePattern = '/current date\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^,]+)/i';
-            if (preg_match($datePattern, $cleanLocation, $dateMatch)) {
-                // Combine the captured groups to form the complete date string
-                // $dateMatch[1] = Loredas
-                // $dateMatch[2] = 11:15 PM
-                // $dateMatch[3] = 14th of First Seed
-                // $dateMatch[4] = 4E 202
-                $dateDisplay = trim("{$dateMatch[1]}, {$dateMatch[2]}, {$dateMatch[3]}, {$dateMatch[4]}");
-            } else {
-                // Handle cases where date/time information is missing
-                $dateDisplay = 'Unknown Date';
-            }
-
-            // Step 4: Extract the Location and Combine with Date/Time
-            // Updated regex to match 'Context new location:'
-            $locationPattern = '/Context new location:\s*([^,]+)/i';
-            if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
-                // Successfully matched 'Context new location'
-                $location = trim($locationMatch[1]);
-                $locationDisplay = "{$location} - {$dateDisplay}";
-            } else {
-                // Fallback to 'Hold' if 'Context new location' is not found
-                $holdPattern = '/Hold:\s*([^,]+)/i';
-                if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
-                    $hold = trim($holdMatch[1]);
-                    $locationDisplay = "{$hold} - {$dateDisplay}";
-                } else {
-                    // Fallback to the entire cleanLocation if both extractions fail
-                    $locationDisplay = "{$cleanLocation} - {$dateDisplay}";
-                }
-            }
-
-            // **Transform people**
-            // Remove leading/trailing pipes and spaces, then split by '|'
-            $cleanPeople = trim($rawPeople, "|() ");
-            $peopleList = array_filter(explode("|", $cleanPeople), 'strlen');
-            $people = implode(", ", $peopleList);
-
-            // Remove the '(Context location: ...)' substring
-            $data = preg_replace('/\(Context location:[^)]+\)/i', '', $rawData);
-            $data = trim($data);
-
-            // **Format 'localts' into a readable date format**
-            // Assuming 'localts' is a Unix timestamp (integer)
-            // Directly use it in date() without strtotime()
-            // Step 1: Convert the raw timestamp to an integer
-            $timestamp = (int)$rawLocalts;
-
-            // Step 2: Validate and format the timestamp
-            if ($timestamp > 0) { // Basic validation to ensure it's a valid timestamp
-                // Change the date format to 'H:i:s - d-m-y'
-                $timeDisplay = date('H:i:s - d-m-y', $timestamp);
-            } else {
-                // If 'localts' is invalid, display as-is with HTML special characters converted
-                $timeDisplay = htmlspecialchars($rawLocalts);
-            }
-
-            // **Escape HTML for safety**
-            $data = htmlspecialchars($data);
-            $people = htmlspecialchars($people);
-            $location = htmlspecialchars($locationDisplay); // Display only the main location
-            $timeDisplay = htmlspecialchars($timeDisplay);
+            // Extract processed data
+            $data = $processed_row['Context'];
+            $people = $processed_row['Nearby People'];
+            $location = $processed_row['Location & Tamrelic Time'];
+            $timeDisplay = $processed_row['Time(UTC)'];
 
             // **Output the table row**
             echo "<tr><td>{$data}</td><td>{$people}</td><td>{$location}</td><td>{$timeDisplay}</td></tr>";
