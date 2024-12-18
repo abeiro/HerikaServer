@@ -309,7 +309,7 @@
     "ADD_TIME_MARKS":{"type":"boolean","description":"Add timestamps to the context logs. Helps with memory recollection."},
     "ITT_QUALITY": {"type":"integer","description":"Only for Soulgaze HD. Compression quality can be set from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"},
     "TTS_RANDOM_PITCH": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Adjusting the pitch when generating the voice for this actor will add variation, so actors using the same voice sound slightly distinct."},
-    "OGHMA_INFINITUM": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Needs minime enabled. Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim."}
+    "OGHMA_INFINIUM": {"type":"boolean","userlvl":"pro","description":"WIP DO NOT USE! Needs minime enabled. Skyrim context information will be added to the prompt, enhancing the understanding of LLMs that lack specific knowledge about Skyrim."}
    }
   }
   

@@ -308,7 +308,7 @@ $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66; //0-100 - Minimal distance to
 $FEATURES["MISC"]["ADD_TIME_MARKS"]=false; //Add timestamps to the context logs. Assists with memory recollection.
 $FEATURES["MISC"]["ITT_QUALITY"]=90; //0-100 - Image compression and comprehension. Only for Soulgaze HD.
 $FEATURES["MISC"]["TTS_RANDOM_PITCH"]=false; //Adjusting the pitch when generating the voice for this actor will add variation.
-$FEATURES["MISC"]["OGHMA_INFINITUM"]=false;	//Skyrim context information will be added to the prompt. Use for small weight LLMs.
+$FEATURES["MISC"]["OGHMA_INFINIUM"]=false;	//Skyrim context information will be added to the prompt. Use for small weight LLMs.
 $FEATURES["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"]=false; //Reorders properties in the offered JSON schema.
 $FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false; //KoboldCPP Actions.
 

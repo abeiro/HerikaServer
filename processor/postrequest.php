@@ -6,7 +6,7 @@ Post tasks.
 */
 
 if ($GLOBALS["MINIME_T5"]) {
-    if (isset($FEATURES["MISC"]["OGHMA_INFINITUM"])&&($FEATURES["MISC"]["OGHMA_INFINITUM"])) {
+    if (isset($FEATURES["MISC"]["OGHMA_INFINIUM"])&&($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
         if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
 
             
