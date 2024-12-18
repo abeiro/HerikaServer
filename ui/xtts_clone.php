@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>CHIM - XTTS Voice Upload</title>
+    <title>🔊CHIM - XTTS Voice Upload</title>
     <style>
         /* Updated CSS for Dark Grey Background Theme */
         body {
@@ -366,7 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <div class="indent5">
-    <h1>🎙 CHIM XTTS Voice Management</h1>
+    <h1>🔊CHIM XTTS Voice Management</h1>
     <h3><strong>This page is only for the CHIM XTTS Server!</strong></h3>
     <h3>It works differently from other TTS services! <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.ojs1hcgp0qwl" target="_blank">Click here for more info on how it works.</a></h3>
     <br>
@@ -407,8 +407,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <br>
     <label for="file">You only need to Sync once you have setup the CHIM XTTS server. You do not need to press it again until you build a new instance.</label>
     <br>
-    <label for="file">If you have no voices in your cache, that is fine! Any new NPC's will have their voice cached in the future.</label>
-    <br>
+    <label for="file" style="color: yellow;">If you have no voices in your cache, that is fine! Any new NPC's will have their voice cached in the future.</label>    <br>
     <br>
     <label for="file"><a href="https://www.nexusmods.com/skyrimspecialedition/articles/7673" target="_blank">Here is a guide for running CHIM XTTS on the cloud.</a></label>
         <br>
