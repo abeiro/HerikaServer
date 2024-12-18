@@ -357,7 +357,7 @@ pg_close($conn);
         <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
         <input type="submit" name="submit_csv" value="Upload CSV">
     </form>
-
+    <p>Do not change the CSV column format. You can ignore the npc_misc column, it does not do anything currently.</p>
     <form action="" method="get">
         <input type="hidden" name="action" value="download_example">
         <input type="submit" value="Download Example CSV">
