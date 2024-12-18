@@ -21,19 +21,136 @@ if (!$conn) {
     exit;
 }
 
-// Determine the month and year to display
-if (isset($_GET['month']) && isset($_GET['year'])) {
-    $month = (int)$_GET['month'];
-    $year = (int)$_GET['year'];
-    
-    // Validate month and year
-    if ($month < 1 || $month > 12) $month = date('n');
-    if ($year < 1970 || $year > 2100) $year = date('Y');
-} else {
-    // Default to current month and year
-    $month = date('n');
-    $year = date('Y');
+// Function to sanitize and validate integers
+function sanitize_int($value, $default) {
+    $value = filter_var($value, FILTER_VALIDATE_INT);
+    return ($value !== false) ? $value : $default;
 }
+
+// Function to handle CSV export
+function handle_csv_export($conn, $schema) {
+    if (isset($_GET['export'])) {
+        $exportType = $_GET['export'];
+
+        if ($exportType === 'csv' && isset($_GET['date'])) {
+            // Export CSV for the selected date
+            $selectedDate = $_GET['date'];
+
+            // Validate the selected date format (YYYY-MM-DD)
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
+                // Invalid date format
+                header("HTTP/1.1 400 Bad Request");
+                echo "Invalid date format.";
+                exit;
+            }
+
+            // Calculate the start and end timestamps for the selected day
+            $startOfDay = strtotime($selectedDate . ' 00:00:00');
+            $endOfDay = strtotime($selectedDate . ' 23:59:59');
+
+            // Prepare the SQL query
+            $query = "
+                SELECT type, data, people, location, localts
+                FROM {$schema}.eventlog
+                WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+                AND to_timestamp(localts) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
+                ORDER BY localts ASC
+            ";
+
+            $result = pg_query($conn, $query);
+
+            if (!$result) {
+                header("HTTP/1.1 500 Internal Server Error");
+                echo "Error fetching data: " . pg_last_error($conn);
+                exit;
+            }
+
+            // Set headers to prompt file download
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename=adventure_log_' . $selectedDate . '.csv');
+
+            // Open the output stream
+            $output = fopen('php://output', 'w');
+
+            // Output the column headings
+            fputcsv($output, ['Type', 'Data', 'People', 'Location', 'Local Timestamp']);
+
+            // Fetch and write each row to the CSV
+            while ($row = pg_fetch_assoc($result)) {
+                fputcsv($output, [
+                    $row['type'],
+                    $row['data'],
+                    $row['people'],
+                    $row['location'],
+                    date('Y-m-d H:i:s', (int)$row['localts'])
+                ]);
+            }
+
+            fclose($output);
+            exit; // Terminate the script after exporting CSV
+        } elseif ($exportType === 'all_csv') {
+            // Export CSV for all data
+
+            // Optionally, you can limit the data fetched based on other parameters like month and year
+            // For simplicity, we'll fetch all relevant data
+
+            // Prepare the SQL query
+            $query = "
+                SELECT type, data, people, location, localts
+                FROM {$schema}.eventlog
+                WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+                ORDER BY localts ASC
+            ";
+
+            $result = pg_query($conn, $query);
+
+            if (!$result) {
+                header("HTTP/1.1 500 Internal Server Error");
+                echo "Error fetching data: " . pg_last_error($conn);
+                exit;
+            }
+
+            // Set headers to prompt file download
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename=adventure_log_full.csv');
+
+            // Open the output stream
+            $output = fopen('php://output', 'w');
+
+            // Output the column headings
+            fputcsv($output, ['Type', 'Data', 'People', 'Location', 'Local Timestamp']);
+
+            // Fetch and write each row to the CSV
+            while ($row = pg_fetch_assoc($result)) {
+                fputcsv($output, [
+                    $row['type'],
+                    $row['data'],
+                    $row['people'],
+                    $row['location'],
+                    date('Y-m-d H:i:s', (int)$row['localts'])
+                ]);
+            }
+
+            fclose($output);
+            exit; // Terminate the script after exporting CSV
+        }
+    }
+}
+
+// Handle CSV export if requested
+handle_csv_export($conn, $schema);
+
+// Determine the month and year to display
+$month = isset($_GET['month']) && isset($_GET['year']) 
+    ? sanitize_int($_GET['month'], date('n')) 
+    : date('n');
+$year = isset($_GET['month']) && isset($_GET['year']) 
+    ? sanitize_int($_GET['year'], date('Y')) 
+    : date('Y');
+
+// Validate month and year
+$month = ($month >= 1 && $month <= 12) ? $month : date('n');
+$year = ($year >= 1970 && $year <= 2100) ? $year : date('Y');
 
 // Fetch all unique dates with events for the selected month and year
 $startOfMonth = strtotime("$year-$month-01 00:00:00");
@@ -41,7 +158,7 @@ $endOfMonth = strtotime("+1 month", $startOfMonth) - 1;
 
 $allEventDates = [];
 
-// Query to get all unique dates with events within the selected month
+// Prepare the SQL query
 $allDatesQuery = "
     SELECT DISTINCT to_char(to_timestamp(localts), 'YYYY-MM-DD') as event_date
     FROM {$schema}.eventlog
@@ -72,11 +189,25 @@ function renderHeader() {
         $currentCsvParams['date'] = $_GET['date'];
     }
     $currentCsvParams['export'] = 'csv';
+    // Preserve month and year if they exist
+    if (isset($_GET['month'])) {
+        $currentCsvParams['month'] = $_GET['month'];
+    }
+    if (isset($_GET['year'])) {
+        $currentCsvParams['year'] = $_GET['year'];
+    }
     $currentCsvQuery = http_build_query($currentCsvParams);
     echo "<a href='?" . htmlspecialchars($currentCsvQuery) . "' class='button'>Download Current Date</a>";
 
     // Build the current query parameters for all data CSV download
     $allCsvParams = ['export' => 'all_csv'];
+    // Optionally preserve month and year
+    if (isset($_GET['month'])) {
+        $allCsvParams['month'] = $_GET['month'];
+    }
+    if (isset($_GET['year'])) {
+        $allCsvParams['year'] = $_GET['year'];
+    }
     $allCsvQuery = http_build_query($allCsvParams);
     echo "<a href='?" . htmlspecialchars($allCsvQuery) . "' class='button'>Download Entire Adventure Log</a>";
 
