@@ -269,7 +269,7 @@ foreach ($quickstartConf as $pname => $parms) {
     } else if ($parms["type"] == "select") {
         if ($pname == "TTSFUNCTION") {
             $parms["values"] = ["melotts","xtts-fastapi","xvasynth"];
-            $parms["description"] = "Select the TTS service you wish to use. <br>You can install MeloTTS under <i>Tools/Components/AMD or NVIDIA GPU<i> in the DwemerDistro folder.<br> You can install XTTS under <i>Tools/Components/NVIDIA GPU</i> in the DwemerDistro folder. <br><b>For xVASnyth you will need to edit the [TTS XVASNYTH url] in the Configuration Wizard to complete the setup after you are done with this menu!</b> <br><b>We recommend MeloTTS for most first time users.</b>";
+            $parms["description"] = "Select the TTS service you wish to use. <br>You can install MeloTTS under <i>Tools/Components/AMD or NVIDIA GPU<i> in the DwemerDistro folder.<br> You can install XTTS under <i>Tools/Components/NVIDIA GPU</i> in the DwemerDistro folder. <br><b>For xVASynth you will need to edit the [TTS XVASynTH url] in the Configuration Wizard to complete the setup after you are done with this menu!</b> <br><b>We recommend MeloTTS for most first time users.</b>";
         }
     
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
