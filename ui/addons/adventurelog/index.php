@@ -1,6 +1,7 @@
 <?php 
 session_start();
 
+date_default_timezone_set('UTC');
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
@@ -35,6 +36,18 @@ function sanitize_int($value, $default) {
  * @return array|null An associative array with keys: Context, Nearby People, Location & Tamrelic Time, Time(UTC).
  */
 function process_event_row($row, $for_csv = false) {
+    // **Format 'localts' into a readable UTC date format**
+    $timestamp = (int)$row['localts'];
+
+    if ($timestamp > 0) {
+        // Using DateTime for better control
+        $dt = new DateTime("@$timestamp"); // The @ symbol tells DateTime to interpret as Unix timestamp
+        $dt->setTimezone(new DateTimeZone('UTC'));
+        $timeDisplay = $dt->format('H:i:s - d-m-Y');
+    } else {
+        $timeDisplay = $row['localts'];
+    }
+
     // **Step 1: Check the 'type' column**
     $type = $row['type'];
 
@@ -102,21 +115,6 @@ function process_event_row($row, $for_csv = false) {
     $data = preg_replace('/\(Context location:[^)]+\)/i', '', $rawData);
     $data = trim($data);
 
-    // **Format 'localts' into a readable date format**
-    // Assuming 'localts' is a Unix timestamp (integer)
-    // Directly use it in date() without strtotime()
-    // Step 1: Convert the raw timestamp to an integer
-    $timestamp = (int)$rawLocalts;
-
-    // Step 2: Validate and format the timestamp
-    if ($timestamp > 0) { // Basic validation to ensure it's a valid timestamp
-        // Change the date format to 'H:i:s - d-m-y'
-        $timeDisplay = date('H:i:s - d-m-y', $timestamp);
-    } else {
-        // If 'localts' is invalid, display as-is
-        $timeDisplay = $rawLocalts;
-    }
-
     if (!$for_csv) {
         // **Escape HTML for safety only if not exporting to CSV**
         $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
@@ -140,7 +138,6 @@ function handle_csv_export($conn, $schema) {
         $exportType = $_GET['export'];
 
         if (($exportType === 'csv' && isset($_GET['date'])) || $exportType === 'all_csv') {
-            // Determine if exporting a specific date or all data
             $is_specific_date = ($exportType === 'csv' && isset($_GET['date']));
 
             if ($is_specific_date) {
@@ -155,22 +152,25 @@ function handle_csv_export($conn, $schema) {
                     exit;
                 }
 
-                // Calculate the start and end timestamps for the selected day
-                $startOfDay = strtotime($selectedDate . ' 00:00:00');
-                $endOfDay = strtotime($selectedDate . ' 23:59:59');
+                // Calculate the start and end timestamps for the selected day in UTC
+                $dtSelected = new DateTime($selectedDate . ' 00:00:00', new DateTimeZone('UTC'));
+                $startOfDay = $dtSelected->getTimestamp();
+                $dtSelectedEnd = clone $dtSelected;
+                $dtSelectedEnd->modify('+1 day')->modify('-1 second');
+                $endOfDay = $dtSelectedEnd->getTimestamp();
 
-                // Prepare the SQL query
+                // Prepare the SQL query with explicit casting to double precision
                 $query = "
                     SELECT type, data, people, location, localts
                     FROM {$schema}.eventlog
                     WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-                    AND to_timestamp(localts) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
+                    AND to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
                     ORDER BY localts ASC
                 ";
             } elseif ($exportType === 'all_csv') {
-                // Export CSV for all data
+                // Export CSV for all data without date filtering
 
-                // Prepare the SQL query
+                // Prepare the SQL query without date filters
                 $query = "
                     SELECT type, data, people, location, localts
                     FROM {$schema}.eventlog
@@ -238,18 +238,21 @@ $year = isset($_GET['month']) && isset($_GET['year'])
 $month = ($month >= 1 && $month <= 12) ? $month : date('n');
 $year = ($year >= 1970 && $year <= 2100) ? $year : date('Y');
 
-// Fetch all unique dates with events for the selected month and year
-$startOfMonth = strtotime("$year-$month-01 00:00:00");
-$endOfMonth = strtotime("+1 month", $startOfMonth) - 1;
+// Create DateTime objects in UTC
+$dtStartOfMonth = new DateTime("{$year}-{$month}-01 00:00:00", new DateTimeZone('UTC'));
+$startOfMonth = $dtStartOfMonth->getTimestamp();
+$dtEndOfMonth = clone $dtStartOfMonth;
+$dtEndOfMonth->modify('+1 month')->modify('-1 second');
+$endOfMonth = $dtEndOfMonth->getTimestamp();
 
 $allEventDates = [];
 
-// Prepare the SQL query
+// Prepare the SQL query with explicit casting to double precision
 $allDatesQuery = "
-    SELECT DISTINCT to_char(to_timestamp(localts), 'YYYY-MM-DD') as event_date
+    SELECT DISTINCT to_char(to_timestamp(localts::double precision) AT TIME ZONE 'UTC', 'YYYY-MM-DD') as event_date
     FROM {$schema}.eventlog
     WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-    AND to_timestamp(localts) BETWEEN to_timestamp($startOfMonth) AND to_timestamp($endOfMonth)
+    AND to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfMonth) AND to_timestamp($endOfMonth)
     ORDER BY event_date ASC
 ";
 
@@ -313,7 +316,7 @@ function renderCalendar($month, $year, $eventDates) {
     $daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     // First day of the month
-    $firstDayTimestamp = strtotime("$year-$month-01");
+    $firstDayTimestamp = strtotime("$year-$month-01 UTC");
     $firstDayOfWeek = date('w', $firstDayTimestamp); // 0 (for Sunday) through 6 (for Saturday)
 
     // Number of days in the month
@@ -360,7 +363,7 @@ function renderCalendar($month, $year, $eventDates) {
     }
 
     // Empty cells after the last day
-    $lastDayOfWeek = (date('w', strtotime("$year-$month-$daysInMonth")));
+    $lastDayOfWeek = (date('w', strtotime("$year-$month-$daysInMonth UTC")));
     if ($lastDayOfWeek < 6) {
         for ($i = $lastDayOfWeek + 1; $i <= 6; $i++) {
             $calendar .= "<td></td>";
@@ -385,16 +388,19 @@ if (isset($_GET['date'])) {
     $selectedDate = date('Y-m-d');
 }
 
-// Calculate the start and end timestamps for the selected day
-$startOfDay = strtotime($selectedDate . ' 00:00:00');
-$endOfDay = strtotime($selectedDate . ' 23:59:59');
+// Create DateTime objects in UTC for the selected day
+$dtSelected = new DateTime($selectedDate . ' 00:00:00', new DateTimeZone('UTC'));
+$startOfDay = $dtSelected->getTimestamp();
+$dtSelectedEnd = clone $dtSelected;
+$dtSelectedEnd->modify('+1 day')->modify('-1 second');
+$endOfDay = $dtSelectedEnd->getTimestamp();
 
-// Modify the SQL query to fetch records for the selected day
+// Modify the SQL query to fetch records for the selected day with explicit casting
 $query = "
     SELECT type, data, people, location, localts
     FROM {$schema}.eventlog
     WHERE type IN ('im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-    AND to_timestamp(localts) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
+    AND to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
     ORDER BY localts ASC
 ";
 
@@ -470,7 +476,6 @@ if (!$result) {
         tr:nth-child(even) {
             background-color: #3a3a3a; /* Zebra striping for table rows */
         }
-
 
         .message {
             background-color: #444444; /* Darker background for messages */
@@ -678,7 +683,7 @@ if (!$result) {
 </head>
 <body>
     <h1>📆CHIM Adventure Log</h1>
-    <h2>Time and Date are in UTC</h2>
+    <h2>All time and date are in UTC. Tamrelic Time may be inconsistent.</h2>
 
     <?php
     // Render Combined CSV Download Buttons at the Top
@@ -707,7 +712,7 @@ if (!$result) {
         echo "<a href='?month={$prevMonth}&year={$prevYear}'>&laquo; <b>Previous Month</b></a>";
 
         // Display current month and year
-        $monthName = date('F', strtotime("$year-$month-01"));
+        $monthName = date('F', strtotime("$year-$month-01 UTC"));
         echo "<span style='padding: 0 15px; color: #f8f9fa; font-size: 1.5em;'><b>{$monthName} {$year}</b></span>";
 
         // Link to next month
