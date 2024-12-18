@@ -1,6 +1,6 @@
-npc_name,npc_pers,melotts_voiceid,xtts_voiceid,xvasynth_voiceid
-rangroo,Hello,maleargonian,,sk_maleargonian
-tyler_maister,Hola,maleeventonedaccented,,sk_maleeventonedaccented
+npc_name,npc_pers,npc_misc,melotts_voiceid,xtts_voiceid,xvasynth_voiceid
+rangroo,Hello,,maleargonian,,sk_maleargonian
+tyler_maister,Hola,,maleeventonedaccented,,sk_maleeventonedaccented
 jack_the_ripper,"Jack the Ripper is an enigmatic figure who haunts the narrow, fog-laden streets of the city after dusk. Clad in a dark cloak and top hat, his face is always obscured by shadows, adding to his mysterious and ominous presence. His arrival is often heralded by a chilling silence, broken only by the distant echo of footsteps fading into the night. Little is known about his origins or motives, but rumors suggest he possesses extensive knowledge of anatomy and the arcane, hinting at a possible background as a surgeon or scholar gone astray.
 
-In the unfolding narrative, Jack the Ripper serves as a complex antagonist—or perhaps a reluctant ally—whose presence challenges players to consider their own stances on law, chaos, and morality. His character adds depth to the story, prompting players to navigate ethical dilemmas and make choices that could alter the course of their adventure. Whether he remains a shadowy figure lurking in the periphery or becomes a central focus depends on how the players choose to engage with the mysteries that shroud him.",maleelfhaughty,,sk_maleelfhaughty
+In the unfolding narrative, Jack the Ripper serves as a complex antagonist—or perhaps a reluctant ally—whose presence challenges players to consider their own stances on law, chaos, and morality. His character adds depth to the story, prompting players to navigate ethical dilemmas and make choices that could alter the course of their adventure. Whether he remains a shadowy figure lurking in the periphery or becomes a central focus depends on how the players choose to engage with the mysteries that shroud him.",,maleelfhaughty,,sk_maleelfhaughty
