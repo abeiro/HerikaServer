@@ -683,7 +683,7 @@ if (!$result) {
 </head>
 <body>
     <h1>📆CHIM Adventure Log</h1>
-    <h2>All time and date are in UTC. Tamrelic Time may be inconsistent.</h2>
+    <h2>All time and dates are in UTC. Tamrelic Time may be inconsistent.</h2>
 
     <?php
     // Render Combined CSV Download Buttons at the Top
