@@ -72,6 +72,7 @@ $CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]='512'; //Maximum tokens to gen
 $CONNECTOR["openrouterjson"]["API_KEY"]=""; //API key.
 $CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $CONNECTOR["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework"; //Stub needed header.
+$CONNECTOR["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
 //OpenRouter (Legacy)
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.

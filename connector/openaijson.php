@@ -134,11 +134,11 @@ class connector
         
 
 
-        
+        $action_array=[];
          if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
-                
+                $action_array[]=$function["name"];
                 if (strpos($function["name"],"Attack")!==false) {   // Every command starting with Attack
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]} ";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
@@ -152,6 +152,7 @@ class connector
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]}";
             }
             $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
+            $action_array[]="Talk";
              
 
         }
@@ -310,31 +311,39 @@ class connector
                     "type" => "object",
                     "properties" => array(
                         "character" => array(
-                            "type" => "string"
+                            "type" => "string",
+                            "description" => $GLOBALS["HERIKA_NAME"]
                         ),
                         "listener" => array(
-                            "type" => "string"
-                        ),
-                        "mood" => array(
-                            "type" => "string"
-                        ),
-                        "action" => array(
-                            "type" => "string"
-                        ),
-                        "target" => array(
-                            "type" => "string"
+                            "type" => "string",
+                            "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to"
                         ),
                         "message" => array(
-                            "type" => "string"
+                            "type" => "string",
+                            "description" => "lines of dialogue"
+                        ),
+                        "mood" => array(
+                            "type" => "string",
+                            "description" => "mood to use while speaking",
+                            "enum" => $moods
+                        ),
+                        "action" => array(
+                            "type" => "string",
+                            "description" => "a valid action (refer to available actions list)",
+                            "enum" => $action_array
+                        ),
+                        "target" => array(
+                            "type" => "string",
+                            "description" => "action's target"
                         )
                     ),
                     "required" => [
                         "character",
                         "listener",
+                        "message",
                         "mood",
                         "action",
-                        "target",
-                        "message"
+                        "target"
                     ],
                     "additionalProperties" => false
                 ),

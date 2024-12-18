@@ -59,11 +59,14 @@ class connector
         
         
         
+         $action_array=[];
+         $action_array[]="Talk";
          $FUNC_LIST[]="Talk";
          if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
+                $action_array[]=$function["name"];
                 if (strpos($function["name"],"Attack")!==false) {   // Every command starting with Attack
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]}";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
@@ -97,7 +100,7 @@ class connector
         if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle.";
         } else
-            $speechReinforcement="";
+        $speechReinforcement="";
 
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
     
@@ -377,7 +380,58 @@ class connector
          $data["top_p"]=$GLOBALS["CONNECTOR"][$this->name]["top_p"]+0;
          
          if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
-            $data["response_format"]=["type"=>"json_object"];
+            if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
+                $response_format = array(
+                    "type" => "json_schema",
+                    "json_schema" => array(
+                        "name" => "response",
+                        "schema" => array(
+                            "type" => "object",
+                            "properties" => array(
+                                "character" => array(
+                                    "type" => "string",
+                                    "description" => $GLOBALS["HERIKA_NAME"]
+                                ),
+                                "listener" => array(
+                                    "type" => "string",
+                                    "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to"
+                                ),
+                                "message" => array(
+                                    "type" => "string",
+                                    "description" => "lines of dialogue"
+                                ),
+                                "mood" => array(
+                                    "type" => "string",
+                                    "description" => "mood to use while speaking",
+                                    "enum" => $moods
+                                ),
+                                "action" => array(
+                                    "type" => "string",
+                                    "description" => "a valid action (refer to available actions list)",
+                                    "enum" => $action_array
+                                ),
+                                "target" => array(
+                                    "type" => "string",
+                                    "description" => "action's target"
+                                )
+                            ),
+                            "required" => [
+                                "character",
+                                "listener",
+                                "message",
+                                "mood",
+                                "action",
+                                "target"
+                            ],
+                            "additionalProperties" => false
+                        ),
+                        "strict" => true
+                    )
+                );
+                $data["response_format"]=$response_format;
+            } else {
+                $data["response_format"]=["type"=>"json_object"];
+            }
          }
         
             
