@@ -254,6 +254,7 @@ if (!$result) {
             background-color: #3a3a3a; /* Zebra striping for table rows */
         }
 
+
         .message {
             background-color: #444444; /* Darker background for messages */
             padding: 10px;
@@ -355,7 +356,26 @@ if (!$result) {
         .has-event a {
             background-color: #007bff !important; /* Blue background matching buttons */
             color: white !important;
-            border-radius: 50%;
+            text-decoration: none; /* Ensures no underline */
+
+            display: block; /* Make the link fill the cell */
+            width: 100%; /* Full width of the parent cell */
+            height: 100%; /* Full height of the parent cell */
+            text-align: center; /* Center align the text */
+            line-height: 1.5; /* Ensures vertical alignment if needed */
+            box-sizing: border-box; /* Include padding and borders in size */
+
+            border: 2px solid white; /* White border around the link */
+            border-radius: 5px; /* Rounded corners for a smooth look */
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+            transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
+        }
+
+        /* Extra hover event */
+        .has-event a:hover {
+            background-color: #0056b3 !important; /* Darker blue on hover */
+            color: #ffcc00 !important; /* Yellow text for contrast */
+            transition: all 0.2s ease-in-out; /* Smooth hover animation */
         }
 
         /* Calendar Styles */
@@ -372,8 +392,12 @@ if (!$result) {
             vertical-align: middle;
         }
 
+        .calendar th {
+            background-color: #3a3a3a;
+            color: #f8f9fa;
+        }
+
         .calendar td.has-event {
-            background-color: #007bff; /* Blue highlight */
             color: #ffffff; /* White text for contrast */
         }
 
@@ -410,6 +434,22 @@ if (!$result) {
             z-index: 10;
         }
 
+        .calendar-navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .calendar-navigation a {
+            margin: 0 10px;
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
 
     </style>
 </head>
