@@ -408,7 +408,7 @@ class connector
                                     array(
                                         "type" => "string",
                                         "description" => "mood to use while speaking",
-                                        "enum" => !empty($moods) ? $moods : null
+                                        "enum" => $moods
                                     ),
                                 "action" => empty($action_array) ? 
                                     array(
