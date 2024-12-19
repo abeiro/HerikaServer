@@ -1889,7 +1889,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
             );
         }
 
-        //xvansnyth logic from override table
+        //xvansynth logic from override table
         file_put_contents(
             $newFile,
             '$TTS["XVASYNTH"]["model"]=\'' . strtolower($xvasnythid[0]['xvasynth_voiceid']) . '\';' . PHP_EOL,
