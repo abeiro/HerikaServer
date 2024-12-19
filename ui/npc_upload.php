@@ -243,6 +243,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                     $xtts_voiceid = (isset($data[4]) && trim($data[4]) !== '') ? trim($data[4]) : null;
                     $xvasynth_voiceid = (isset($data[5]) && trim($data[5]) !== '') ? trim($data[5]) : null;
 
+                    // Convert to UTF-8 to avoid invalid byte sequences
+                    $npc_name = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
+                    $npc_pers = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_pers);
+                    $npc_misc = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_misc);
+
+                    if ($melotts_voiceid !== null) {
+                        $melotts_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $melotts_voiceid);
+                    }
+
+                    if ($xtts_voiceid !== null) {
+                        $xtts_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $xtts_voiceid);
+                    }
+
+                    if ($xvasynth_voiceid !== null) {
+                        $xvasynth_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $xvasynth_voiceid);
+                    }
+
                     if (!empty($npc_name) && !empty($npc_pers)) {
                         // Prepare and execute the INSERT statement with ON CONFLICT
                         $query = "
@@ -365,5 +382,6 @@ pg_close($conn);
 </div>
 <p> You can verify that NPC data has been uploaded successfully by going to <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b></p>
 <p> All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
+<p> Also you can check the merged table at <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combind_npc_templates</b></p>
 </body>
 </html>
