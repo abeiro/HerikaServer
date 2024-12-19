@@ -322,16 +322,26 @@ class connector
                             "type" => "string",
                             "description" => "lines of dialogue"
                         ),
-                        "mood" => array(
-                            "type" => "string",
-                            "description" => "mood to use while speaking",
-                            "enum" => $moods
-                        ),
-                        "action" => array(
-                            "type" => "string",
-                            "description" => "a valid action (refer to available actions list)",
-                            "enum" => $action_array
-                        ),
+                        "mood" => empty($moods) ?
+                            array(
+                                "type" => "string",
+                                "description" => "mood to use while speaking"
+                            ) :
+                            array(
+                                "type" => "string",
+                                "description" => "mood to use while speaking",
+                                "enum" => $moods
+                            ),
+                        "action" => empty($action_array) ? 
+                            array(
+                                "type" => "string",
+                                "description" => "a valid action (refer to available actions list)"
+                            ) :
+                            array(
+                                "type" => "string",
+                                "description" => "a valid action (refer to available actions list)",
+                                "enum" => $action_array
+                            ),
                         "target" => array(
                             "type" => "string",
                             "description" => "action's target"
