@@ -60,8 +60,9 @@ class connector
 
         if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle.";
-        } else
+        } else {
         	$speechReinforcement="";
+		}
 
 		global $responseTemplate;
 		global $structuredOutputTemplate;
