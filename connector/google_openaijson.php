@@ -61,20 +61,20 @@ class connector
         if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle.";
         } else {
-        	$speechReinforcement="";
-		}
+            $speechReinforcement="";
+        }
 
-		global $responseTemplate;
-		global $structuredOutputTemplate;
-		$responseTemplate=[];
-		$structuredOutputTemplate=array();
-		$GLOBALS["gameRequest"][0] = "cyoa_prompt"; // TESTING ONLY!!!!
-		require_once(__DIR__.DIRECTORY_SEPARATOR."json_response.php");
+        global $responseTemplate;
+        global $structuredOutputTemplate;
+        $responseTemplate=[];
+        $structuredOutputTemplate=array();
+        $GLOBALS["gameRequest"][0] = "cyoa_prompt"; // TESTING ONLY!!!!
+        require_once(__DIR__.DIRECTORY_SEPARATOR."json_response.php");
 
         $contextData[]=[
-			'role' => 'user', 
-			'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($responseTemplate)
-		];
+            'role' => 'user', 
+            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($responseTemplate)
+        ];
         $pb=[];
         $pb["user"]="";
         
