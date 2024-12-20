@@ -18,7 +18,7 @@ if (!$confDir) {
 }
 
 // Define the acceptable filename pattern
-$acceptablePattern = '/^(conf_[a-f0-9]{32}\.php|conf\.php|character_map\.json)$/i';
+$acceptablePattern = '/^(conf_[a-f0-9]{32}\.php|conf\.php|character_map\.json|\.conf_[a-f0-9]{32}_[0-9]{10}\.php)$/i';
 
 // Initialize message variable
 $message = '';
