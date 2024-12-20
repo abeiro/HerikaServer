@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  #status { color: red; }
+  #status.connected { color: green; }
+</style>
+</head>
+<body>
+  <h1>ChatGPT Remote Interface</h1>
+  <div>Status: <span id="status">Disconnected</span></div>
+  <input type="text" id="userInput" placeholder="Enter your prompt..." />
+  <button id="sendBtn">Send</button>
+  <h3>Latest Response</h3>
+  <div id="response"></div>
+
+  <script>
+    let ws = new WebSocket('ws://localhost:43443/chat');
+    const statusEl = document.getElementById('status');
+    const sendBtn = document.getElementById('sendBtn');
+    const userInput = document.getElementById('userInput');
+    const responseEl = document.getElementById('response');
+
+    ws.onopen = () => {
+      statusEl.textContent = 'Connected (server)';
+      statusEl.classList.add('connected');
+    };
+
+    ws.onmessage = (event) => {
+      let data = JSON.parse(event.data);
+      if (data.type === 'latest_response') {
+        responseEl.textContent = data.data;
+      }
+    };
+
+    ws.onclose = () => {
+      statusEl.textContent = 'Disconnected';
+      statusEl.classList.remove('connected');
+    };
+
+    sendBtn.addEventListener('click', () => {
+      const text = userInput.value.trim();
+      if (!text) return;
+      userInput.value = '';
+      ws.send(JSON.stringify({ type: 'input', data: text }));
+      responseEl.textContent = '';
+    });
+  </script>
+
+  <hr>
+
+  <h2>Instructions</h2>
+  <ol>
+    <li><a href="websocket_conf.php">Download websocket.zip</a></li>
+    <li>Extract the contents of <code>websocket.zip</code> to a folder.</li>
+    <li>Run <code>Enable Websocket.bat</code> to set up the websocket server.</li>
+    <li>
+      Open Chrome or Edge and navigate to:
+      <ul>
+        <li><code>chrome://extensions</code> (Chrome)</li>
+        <li><code>edge://extensions</code> (Edge)</li>
+      </ul>
+    </li>
+    <li>Enable "Developer mode" in the top-right corner.</li>
+    <li>Click "Load unpacked" and select the <code>browser_extension</code> folder from the extracted files in <code>websocket_util</code>.</li>
+    <li>Your websocket extension is now installed and ready to use.</li>
+  </ol>
+</body>
+</html>
