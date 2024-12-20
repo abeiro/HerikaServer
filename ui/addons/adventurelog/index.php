@@ -52,7 +52,7 @@ function process_event_row($row, $for_csv = false) {
     $type = $row['type'];
 
     // Define the allowed types
-    $allowedTypes = ['im_alive', 'chat', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend'];
+    $allowedTypes = ['im_alive', 'chat', 'infoaction','rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend'];
 
     // If the type is not in the allowed list, return null to skip
     if (!in_array($type, $allowedTypes)) {
