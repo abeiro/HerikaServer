@@ -68,7 +68,6 @@ class connector
         global $structuredOutputTemplate;
         $responseTemplate=[];
         $structuredOutputTemplate=array();
-        $GLOBALS["gameRequest"][0] = "cyoa_prompt"; // TESTING ONLY!!!!
         require_once(__DIR__.DIRECTORY_SEPARATOR."json_response.php");
 
         $contextData[]=[
