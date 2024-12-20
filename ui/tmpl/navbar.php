@@ -188,7 +188,12 @@
                         Mimic3 Browser
                     </a>
                     </li>
-                    <li><a class="dropdown-item" href="addons/pmstt" target="_blank">Chrome Free Speech-to-Text</a></li>
+                    <li>
+                    <a class="dropdown-item" href="addons/pmstt" target="_blank">Chrome Free Speech-to-Text</a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="addons/websocket" target="_blank">Websocket Configuration (WIP)</a>
+                    </li>
                     <li><hr class="dropdown-divider"></li>
 
                     

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; width: 200px; }
+    .status { margin-top: 10px; }
+    #urlInput { width: 100%; }
+    button { width: 100%; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <input type="text" id="urlInput" placeholder="ws://localhost:43443/chat">
+  <button id="connectBtn">Connect</button>
+  <div class="status">
+    Status: <span id="statusText">Disconnected</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
