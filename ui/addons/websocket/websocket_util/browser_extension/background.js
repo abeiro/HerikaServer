@@ -6,6 +6,9 @@ let connected = false;
 let activeTabId = null;
 let pingInterval = null;
 
+// To track the currently focused ChatGPT tab reliably
+let focusedChatGPTTabId = null;
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   console.log("[background.js] onMessage received:", msg);
 
@@ -25,7 +28,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'RESPONSE_FROM_CHATGPT') {
-    // This message comes from content_script.js after it gets a new assistant response
     console.log("[background.js] RESPONSE_FROM_CHATGPT received:", msg.response);
     if (connected && ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'response', data: msg.response }));
@@ -38,7 +40,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
   console.log("[background.js] Active tab changed:", activeInfo);
-  activeTabId = activeInfo.tabId;
+  chrome.tabs.get(activeInfo.tabId, (tab) => {
+    if (tab.url && tab.url.includes("chatgpt.com")) {
+      focusedChatGPTTabId = activeInfo.tabId;
+      console.log("[background.js] ChatGPT tab focused:", focusedChatGPTTabId);
+    } else {
+      focusedChatGPTTabId = null;
+      console.log("[background.js] Non-ChatGPT tab focused. Clearing focus.");
+    }
+  });
 });
 
 function connectWebSocket() {
@@ -66,11 +76,10 @@ function connectWebSocket() {
     }
     if (!data) return;
 
-    // If server sends an input message, forward it to the content script
     if (data.type === 'input') {
       console.log("[background.js] Received input from server:", data.text);
-      if (activeTabId !== null) {
-        chrome.tabs.sendMessage(activeTabId, { type: 'INPUT_FROM_SERVER', text: data.text }, (response) => {
+      if (focusedChatGPTTabId !== null) {
+        chrome.tabs.sendMessage(focusedChatGPTTabId, { type: 'INPUT_FROM_SERVER', text: data.text }, (response) => {
           if (chrome.runtime.lastError) {
             console.error("[background.js] Error sending message to content script:", chrome.runtime.lastError);
           } else {
@@ -78,7 +87,7 @@ function connectWebSocket() {
           }
         });
       } else {
-        console.warn("[background.js] No activeTabId. Cannot send input to content script.");
+        console.warn("[background.js] No focused ChatGPT tab. Cannot send input to content script.");
       }
     }
   };
@@ -140,3 +149,11 @@ function stopPing() {
   }
   pingInterval = null;
 }
+
+// Periodic alarm to keep worker alive
+chrome.alarms.create("keepAlive", { periodInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "keepAlive") {
+    console.log("[background.js] Keeping the service worker alive.");
+  }
+});

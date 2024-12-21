@@ -54,4 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
       sendResponse({ received: true });
     }
   });
+
+  // Periodic UI refresh to handle unexpected disconnects
+  setInterval(() => {
+    chrome.storage.sync.get(['wsConnected'], (data) => {
+      updateUI(data.wsConnected);
+    });
+  }, 10000); // Refresh every 10 seconds
 });
