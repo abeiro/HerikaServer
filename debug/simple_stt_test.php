@@ -151,7 +151,7 @@ if (php_sapi_name() != "cli") {
 
         if (!empty($transcription)) {
             echo '<div class="status"><span class="label ok">Transcription Successful!</span></div>';
-            echo '<div class="response">' . nl2br(htmlspecialchars($transcription)) . '</div>';
+            echo '<div class="response">Output: ' . nl2br(htmlspecialchars($transcription)) . '</div>';            
 
             // Calculate similarity percentage using levenshtein
             $lev_distance = levenshtein(strtolower($expected_transcription), strtolower($transcription));
@@ -180,8 +180,14 @@ if (php_sapi_name() != "cli") {
 
         echo '<div class="section">';
         echo '<div class="divider"></div>';
-        echo '<div class="message"><strong>Note:</strong> If the expected result and the transcription from the STT service are the same, then your STT setup is working correctly!</div>';
-        echo '<div class="message">If you are still having issues in-game, please check that your microphone is set as the default device in your system settings.</div>';
+        echo '<div style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+                <span style="font-weight: bold; color: yellow; font-size: 18px;">
+                    IF TRANSCRIPTION IS SUCCESSFUL, THEN THE STT SERVICE WORKS!
+                </span><br>
+                <b>If you are still having issues in-game, then check that your microphone is set as default in your system settings.</b>
+                <br>
+                <b>If that does not work then try the Chrome Free Speech-to-Text under Configuration.</b>
+            </div>'; 
         echo '</div>';
         ?>
 
@@ -209,11 +215,6 @@ if (php_sapi_name() != "cli") {
         } else {
             $similarity = 0;
         }
-
-        // Alternatively, you can use similar_text() function
-        /*
-        similar_text(strtolower($expected_transcription), strtolower($transcription), $similarity);
-        */
 
         echo "Similarity: " . number_format($similarity, 2) . "%" . PHP_EOL;
 
