@@ -1,18 +1,16 @@
 <?php
 
-    setResponseTemplate($contextData);
-    setStructuredOutputTemplate();
+    $FUNC_LIST = getActions($contextData);
+    setResponseTemplate($FUNC_LIST);
+    setStructuredOutputTemplate($FUNC_LIST);
     requireFilesRecursively("..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
 
-    Function setResponseTemplate($contextData) {
-        $action_array=[];
-        $action_array[]="Talk";
+	Function getActions($contextData) {
         $FUNC_LIST[]="Talk";
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].="\nAVAILABLE ACTION: Talk";
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
-                $action_array[]=$function["name"];
                 if (strpos($function["name"],"Attack")!==false) {   // Every command starting with Attack
                     $contextData[0]["content"].="\nAVAILABLE ACTION: {$function["name"]} : {$function["description"]}";
                     $contextData[0]["content"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
@@ -28,19 +26,16 @@
                 $FUNC_LIST[]=$function["name"];
             }
         }
-    
-        if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
-        $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
-        }
-        $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
-    
+
         //$FUNC_LIST[]="None";
         shuffle($FUNC_LIST);
-    
+
+		return $FUNC_LIST;
+	}
+
+    Function setResponseTemplate($FUNC_LIST) {
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
-    
-        $formatJsonTemplate = [];
     
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
@@ -87,7 +82,7 @@
         }
     }
     
-    Function setStructuredOutputTemplate() {
+    Function setStructuredOutputTemplate($FUNC_LIST) {
         $GLOBALS["structuredOutputTemplate"] = array(
             "type" => "json_schema",
             "json_schema" => array(
@@ -117,7 +112,7 @@
                                 "description" => "mood to use while speaking",
                                 "enum" => $moods
                             ),
-                        "action" => empty($action_array) ? 
+                        "action" => empty($FUNC_LIST) ? 
                             array(
                                 "type" => "string",
                                 "description" => "a valid action (refer to available actions list)"
@@ -125,7 +120,7 @@
                             array(
                                 "type" => "string",
                                 "description" => "a valid action (refer to available actions list)",
-                                "enum" => $action_array
+                                "enum" => $FUNC_LIST
                             ),
                         "target" => array(
                             "type" => "string",
