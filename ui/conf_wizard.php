@@ -4,6 +4,8 @@ header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
 header("Pragma: no-cache"); // HTTP 1.0
 header("Expires: 0"); // Proxies
 
+
+
 ?>
 
 <!DOCTYPE html>
@@ -112,6 +114,22 @@ function getFilesByExtension($directory, $extension) {
 
     return $filteredFiles;
 }
+
+echo "<script>
+function syncInputs(rangeId, numberId, source) {
+    const rangeInput = document.getElementById(rangeId);
+    const numberInput = document.getElementById(numberId);
+    
+    // If either input is not found, just bail out
+    if (!rangeInput || !numberInput) return;
+    
+    if (source === 'range') {
+        numberInput.value = rangeInput.value;
+    } else {
+        rangeInput.value = numberInput.value;
+    }
+}
+</script>";
 
 foreach ($currentConf as $pname=>$parms) {
 
@@ -246,100 +264,175 @@ foreach ($currentConf as $pname=>$parms) {
             <span $FORCE_DISABLED> {$parms["description"]}</span></p>".PHP_EOL;
 
         
-        } else if ($parms["type"]=="integer") {
+        } else if ($parms["type"] == "integer") {
+
             if ($pname === "RECHAT_P") {
             // RECHAT_P: 0-100
             echo "<p class='conf-item'>
                     <label for='$fieldName'>$pname</label>
-                    <input type='range' min='0' max='100' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                    <input type='number' min='0' max='100' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;'>
+                    <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:60px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
                     <span>{$parms["description"]}</span>
-                    </p>".PHP_EOL;
+                    </p>" . PHP_EOL;
+        
         } else if ($pname === "BORED_EVENT") {
             // BORED_EVENT: 0-100
             echo "<p class='conf-item'>
                     <label for='$fieldName'>$pname</label>
-                    <input type='range' min='0' max='100' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                    <input type='number' min='0' max='100' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;'>
+                    <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:60px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
                     <span>{$parms["description"]}</span>
-                    </p>".PHP_EOL;
+                    </p>" . PHP_EOL;
+        
         } else if ($pname === "CONTEXT_HISTORY") {
-            // CONTEXT_HISTORY: 10-200
+            // CONTEXT_HISTORY: 0-100
             echo "<p class='conf-item'>
                     <label for='$fieldName'>$pname</label>
-                    <input type='range' min='10' max='200' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                    <input type='number' min='10' max='200' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;'>
+                    <input type='range' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:60px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
                     <span>{$parms["description"]}</span>
-                    </p>".PHP_EOL;
+                    </p>" . PHP_EOL;
+    
         } else if ($pname === "RECHAT_H") {
             // RECHAT_H: 1-10
             echo "<p class='conf-item'>
                     <label for='$fieldName'>$pname</label>
-                    <input type='range' min='1' max='10' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                    <input type='number' min='1' max='10' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' style='width:60px;'>
+                    <input type='range' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:60px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
                     <span>{$parms["description"]}</span>
-                    </p>".PHP_EOL;
+                    </p>" . PHP_EOL;
+        
         } else {
             // Default integer handling
             echo "<p class='conf-item'>
                     <label for='$fieldName'>$pname</label>
-                    <input type='number' $FORCE_DISABLED inputmode='numeric' step='1' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName'>
+                    <input type='number' $FORCE_DISABLED inputmode='numeric' step='1' 
+                            value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            name='$fieldName'>
                     <span>Integer: {$parms["description"]}</span>
-                    </p>".PHP_EOL;
-        }   
-    } else if ($parms["type"]=="number") {
+                    </p>" . PHP_EOL;
+        }
+    
+    } else if ($parms["type"] == "number") {
         // Extract the final parameter name segment
         $pnameSegments = explode(" ", $pname);
         $lastParam = end($pnameSegments);
+        
+        // Check if this parameter matches our slider rules
+        if (in_array($lastParam, ["temperature", "repetition_penalty", "rep_pen"])) {
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='2' step='0.01' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            name='$fieldName'
+                            oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                            id='{$fieldName}_range'
+                            $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='2' step='0.01' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            style='width:60px;'
+                            oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                            id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
     
-    // Check if this parameter matches our slider rules
-    if (in_array($lastParam, ["temperature", "repetition_penalty", "rep_pen"])) {
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='0' max='2' step='0.01' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' 
-                    name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                <input type='number' min='0' max='2' step='0.01' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' style='width:60px;' 
-                    oninput='this.previousElementSibling.value=this.value'>
-                <span>{$parms["description"]}</span>
-            </p>".PHP_EOL;
-    } else if (in_array($lastParam, ["presence_penalty", "frequency_penalty"])) {
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='-2' max='2' step='0.01' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' 
-                    name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                <input type='number' min='-2' max='2' step='0.01' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' style='width:60px;' 
-                    oninput='this.previousElementSibling.value=this.value'>
-                <span>{$parms["description"]}</span>
-            </p>".PHP_EOL;
-
-    } else if (in_array($lastParam, ["top_p", "min_p", "top_a"])) {
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='0' max='1' step='0.01' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' 
-                    name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                <input type='number' min='0' max='1' step='0.01' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' style='width:60px;' 
-                    oninput='this.previousElementSibling.value=this.value'>
-                <span>{$parms["description"]}</span>
-            </p>".PHP_EOL;
-
-    } else if ($lastParam === "top_k") {
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='0' max='100' step='1' $FORCE_DISABLED value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' 
-                    name='$fieldName' oninput='this.nextElementSibling.value=this.value'>
-                <input type='number' min='0' max='100' step='1' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' style='width:60px;' 
-                    oninput='this.previousElementSibling.value=this.value'>
-                <span>{$parms["description"]}</span>
-            </p>".PHP_EOL;
-
-    } else {
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='number' $FORCE_DISABLED inputmode='numeric' step='0.01' value='".htmlspecialchars($parms["currentValue"], ENT_QUOTES)."' name='$fieldName'>
-                <span>Decimal: {$parms["description"]}</span>
-            </p>".PHP_EOL;
-    }
-
+        } else if (in_array($lastParam, ["presence_penalty", "frequency_penalty"])) {
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='-2' max='2' step='0.01' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            name='$fieldName'
+                            oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                            id='{$fieldName}_range'
+                            $FORCE_DISABLED>
+                    
+                    <input type='number' min='-2' max='2' step='0.01' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            style='width:60px;'
+                            oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                            id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        
+        } else if (in_array($lastParam, ["top_p", "min_p", "top_a"])) {
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='1' step='0.01' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            name='$fieldName'
+                            oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                            id='{$fieldName}_range'
+                            $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='1' step='0.01' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            style='width:60px;'
+                            oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                            id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+    
+        } else if ($lastParam === "top_k") {
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            name='$fieldName'
+                            oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                            id='{$fieldName}_range'
+                            $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            style='width:60px;'
+                            oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                            id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+    
+        } else {
+            // Default decimal handling
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='number' $FORCE_DISABLED inputmode='numeric' step='0.01'
+                            value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "'
+                            name='$fieldName'>
+                    <span>Decimal: {$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        }
     } else if ($parms["type"]=="apikey") {
         $jsid=strtr($fieldName,["@"=>"_"]);
         $checkButton="<button class='url' type='button' onclick=\"document.getElementById('$jsid').style.filter=''\">Unhide</button>";
