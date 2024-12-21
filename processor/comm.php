@@ -369,7 +369,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 } elseif ($gameRequest[0] == "playerdied") {
     
     
-    $lastSaveHistory=$db->fetchAll("select gamets from eventlog where type='infosaved' order by ts desc limit 1 offset 0");
+    $lastSaveHistory=$db->fetchAll("select gamets from eventlog where type='infosave' order by ts desc limit 1 offset 0");
     if (isset($lastSaveHistory[0]["ts"])) {
         $lastSave=$lastSaveHistory[0]["ts"];
         
