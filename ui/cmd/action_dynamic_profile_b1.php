@@ -102,16 +102,18 @@ Mandatory Format:
 * Current goal ($SHORTER)
 * Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORT).
 * Likes ($SHORTER).
-* Fears ($SHORTER, pay atention to dramatic past events).
+* Fears ($SHORTER, pay attention to dramatic past events).
 * Dislikes ($SHORTER).
 * Current mood ($SHORTER, use last events to determine). 
-* Relation with other followers if any.
+* Relation with other characters if any.
+
+*DO NOT WRITE HOW MANY KEYWORDS YOU HAVE USED!
 
 Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}\r\n'.", ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
-        $GLOBALS["FORCE_MAX_TOKENS"]=600;
-		$connectionHandler->open($contextData, ["max_tokens"=>600]);
+        $GLOBALS["FORCE_MAX_TOKENS"]=1200;
+		$connectionHandler->open($contextData, ["max_tokens"=>1200]);
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;
