@@ -235,8 +235,55 @@ echo '</div>'; // End of section
 
 echo '<div class="section">';
 echo '<div class="divider"></div>';
-echo '<div class="status"><span class="label">LLM Response:</span></div>';
-echo '<div class="response">' . nl2br(htmlspecialchars($buffer)) . '</div>';
+echo '<div class="status">
+        <span class="label" style="font-weight: bold;">LLM Response:</span>
+        <div class="response">' . nl2br(htmlspecialchars($buffer)) . '</div>
+    </div>';
+echo '<br>';
+echo '<div class="status">
+        <span class="label" style="font-weight: bold; color: yellow; background-color: black; padding: 5px; display: inline-block;">
+            IF YOU DO NOT GET AN LLM RESPONSE, HERE ARE A LIST OF POTENTIAL ERRORS AND FIXES
+        </span>
+        <ul class="error-list" style="margin-top: 15px; list-style-type: none; padding-left: 0;">
+            <li style="margin-bottom: 20px;">
+                <strong>401 = Unauthorized</strong>
+                <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                    <li>Check your API key is correct</li>
+                    <li>Make sure you have credits on your account</li>
+                </ul>
+            </li>
+            <li style="margin-bottom: 20px;">
+                <strong>402 = Payment Required</strong>
+                <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                    <li>Make sure you have credits on your account</li>
+                </ul>
+            </li>
+            <li style="margin-bottom: 20px;">
+                <strong>403 = Forbidden</strong>
+                <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                    <li>Your prompt may have been flagged for content moderation</li>
+                </ul>
+            </li>
+            <li style="margin-bottom: 20px;">
+                <strong>404 = Not Found</strong>
+                <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                    <li>Your connector URL has been changed or is incorrect</li>
+                </ul>
+            </li>
+            <li style="margin-bottom: 20px;">
+                <strong>500 = Internal Server Error</strong>
+                <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                    <li>The server is experiencing technical difficulties</li>
+                </ul>
+            </li>
+            <li style="margin-bottom: 20px;">
+                <strong>LLM Response is Empty</strong>
+                <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                    <li>You need to put credits in your account</li>
+                </ul>
+            </li>
+        </ul>
+    </div>';
 echo '</div>'; // End of section
 
 ?>
