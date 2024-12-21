@@ -110,12 +110,14 @@
                         Restore Current Database 
                     </a>
                     </li>
+                    <!--
                     <li>
                     <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the CHIM Database." 
                     onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
                         Factory Reset Server Database
                     </a>
                     </li>
+                    -->
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Fourth Category Header -->
