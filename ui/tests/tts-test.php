@@ -216,6 +216,13 @@ $ts = time();
                 <li>If their voice is still wrong, check their voiceID field and the TTSFUNCTION you have selected</li>
             </ul>
         </li>
+        <li style="margin-bottom: 20px;">
+            <strong>The audio test works here but you hear nothing ingame</strong>
+            <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                <li>Make sure AIAgent.ini is in SKSE/Plugins </li>
+                <li>Make sure you Windows "System Sounds" is not muted. All the AI dialogue audio is actually played through here. </li>
+            </ul>
+        </li>
     </ul>
 </div>
 
