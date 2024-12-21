@@ -91,9 +91,34 @@
                         Export AI Log
                     </a>
                     </li>
-                    <li><hr class="dropdown-divider"></li>
 
-                    <!-- Third Category Header -->
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Memory Management</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use up tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
+                        Compact & Sync Memories
+                    </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Character Profiles</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="export_conf.php" target="_blank" title="Exports current character profiles into a ZIP file.">
+                        Backup Character Profiles
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="import_conf.php" target="_blank" title="Imports character profiles from a ZIP file.">
+                        Restore Character Profiles
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="delete_conf.php" target="_blank" title="Deletes all character profiles apart from the default." onclick="return confirm('This will delete ALL CHARACTER PROFILES. You can not reverse this operation. ARE YOU SURE???')">
+                        Delete All Character Profiles
+                    </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Database Operations</h6></li>
                     <li>
                     <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
@@ -118,40 +143,36 @@
                     </a>
                     </li>
                     -->
-                    <li><hr class="dropdown-divider"></li>
 
-                    <!-- Fourth Category Header -->
-                    <li><h6 class="dropdown-header">Character Profiles</h6></li>
-                    <li>
-                    <a class="dropdown-item" href="export_conf.php" target="_blank" title="Exports current character profiles into a ZIP file.">
-                        Backup Character Profiles
-                    </a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="import_conf.php" target="_blank" title="Imports character profiles from a ZIP file.">
-                        Restore Character Profiles
-                    </a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="delete_conf.php" target="_blank" title="Deletes all character profiles apart from the default." onclick="return confirm('This will delete ALL CHARACTER PROFILES. You can not reverse this operation. ARE YOU SURE???')">
-                        Delete All Character Profiles
-                    </a>
-                    </li>
                     <li><hr class="dropdown-divider"></li>
-
-                    <!-- Fifth Category Header -->
                     <li><h6 class="dropdown-header">Utilities</h6></li>
                     <li>
-                    <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use up tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
-                        Compact & Sync Memories
-                    </a>
+                    <div style="
+                        display: flex; 
+                        justify-content: center; 
+                        align-items: center; 
+                        margin-top: 20px;">
+                        <button style="
+                            font-weight: bold;
+                            border: 1px solid;
+                            transition: background-color 0.3s, color 0.3s;
+                            border-radius: 4px;
+                            text-align: center;
+                            text-decoration: none;
+                            background-color: #ffc107;
+                            color: black;
+                            padding: 6px 12px;
+                            font-size: 14px;
+                            cursor: pointer;
+                        " 
+                        onmouseover="this.style.backgroundColor='#e6ac00';"
+                        onmouseout="this.style.backgroundColor='#ffc107';"
+                        onclick="window.open('tests/ai_agent_ini.php', '_blank')" 
+                        title="Generate AIAgent.ini file for the mod file.">
+                            <strong>Create AIAgent.ini<br>(Place in mod folder under SKSE\Plugins)</strong>
+                        </button>
+                    </div>
                     </li>
-                    <li>
-                    <a class="dropdown-item" href="tests/ai_agent_ini.php" title="Generate AIAgent.ini file for the mod file." target="_blank">
-                        <strong>Create AIAgent.ini (Place in mod folder under SKSE\Plugins)</strong>
-                    </a>
-                    </li>
-
                 </ul>
             </li>
 
@@ -281,6 +302,9 @@
             </li>
         </ul>
     </div>
+
+
+
     <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" style="padding-right: 5px;">
     <img src="images/youtube.png" alt="Checkout our Youtube Channel">
     </a>
