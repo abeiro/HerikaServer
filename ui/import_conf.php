@@ -18,10 +18,29 @@ if (!$confDir) {
 }
 
 // Define the acceptable filename pattern
-$acceptablePattern = '/^conf_[a-f0-9]{32}\.php$/i';
+$acceptablePattern = '/^(conf_[a-f0-9]{32}\.php|conf\.php|character_map\.json|\.conf_[a-f0-9]{32}_[0-9]{10}\.php)$/i';
 
 // Initialize message variable
 $message = '';
+
+// Define deleteDir() function at the top so it’s always available
+function deleteDir($dirPath) {
+    if (!is_dir($dirPath)) {
+        return;
+    }
+    $files = scandir($dirPath);
+    foreach ($files as $file) {
+        if ($file != '.' && $file != '..') {
+            $filePath = $dirPath . DIRECTORY_SEPARATOR . $file;
+            if (is_dir($filePath)) {
+                deleteDir($filePath);
+            } else {
+                unlink($filePath);
+            }
+        }
+    }
+    rmdir($dirPath);
+}
 
 // Check if the form has been submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -86,23 +105,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (!empty($invalidFiles)) {
                     // Delete the temporary directory and its contents
-                    function deleteDir($dirPath) {
-                        if (!is_dir($dirPath)) {
-                            return;
-                        }
-                        $files = scandir($dirPath);
-                        foreach ($files as $file) {
-                            if ($file != '.' && $file != '..') {
-                                $filePath = $dirPath . DIRECTORY_SEPARATOR . $file;
-                                if (is_dir($filePath)) {
-                                    deleteDir($filePath);
-                                } else {
-                                    unlink($filePath);
-                                }
-                            }
-                        }
-                        rmdir($dirPath);
-                    }
                     deleteDir($tempDir);
 
                     $message .= '<p>Invalid files detected in the ZIP archive:</p><ul>';
