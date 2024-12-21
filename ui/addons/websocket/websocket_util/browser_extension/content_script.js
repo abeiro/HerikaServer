@@ -2,6 +2,7 @@ console.log("[content_script.js] Loaded and running.");
 
 let lastProcessedMessage = "";
 let observerActive = true; // Track whether MutationObserver is active
+let isFinalizing = false; // Flag to indicate we're waiting for the final message
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -68,7 +69,7 @@ function findDynamicInputField() {
 
     const selectors = [
         'p[data-placeholder*="Message"]',
-        'div[contenteditable="true"]' 
+        'div[contenteditable="true"]'
     ];
 
     for (const selector of selectors) {
@@ -94,34 +95,63 @@ console.log("[content_script.js] MutationObserver set up to detect assistant res
 
 // Fallback polling for throttled tabs
 setInterval(() => {
-    if (!observerActive) {
+    if (!observerActive && !isFinalizing) {
         console.warn("[content_script.js] Fallback polling active due to inactive observer.");
         processAssistantMessages();
     }
     observerActive = false; // Reset flag for the next interval
 }, 5000);
 
-// Unified message processing function
+let debounceTimer;
+// Unified message processing function with debouncing and finalization check
 function processAssistantMessages() {
+    if (isFinalizing) {
+        console.log("[content_script.js] Already finalizing, ignoring message.");
+        return;
+    }
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(attemptFinalMessage, 750); // Increased debounce to 750ms
+}
+
+function attemptFinalMessage() {
     const assistantMessages = document.querySelectorAll('div[data-message-author-role="assistant"] .markdown');
     if (assistantMessages.length > 0) {
         const latestMessageElement = assistantMessages[assistantMessages.length - 1];
         const latestMessage = latestMessageElement.innerText.trim();
 
+        // Check if the message is different from the last processed one
         if (latestMessage && latestMessage !== lastProcessedMessage) {
-            console.log("[content_script.js] New assistant response detected:", latestMessage);
+            console.log("[content_script.js] Potential final message detected:", latestMessage);
             lastProcessedMessage = latestMessage;
+            isFinalizing = true; // Set the finalizing flag
 
-            chrome.runtime.sendMessage({
-                type: 'RESPONSE_FROM_CHATGPT',
-                response: latestMessage
-            }, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error("[content_script.js] Error sending response to background:", chrome.runtime.lastError);
+            // Wait a bit longer to ensure no more changes
+            setTimeout(() => {
+                const confirmedLatestMessageElement = document.querySelectorAll('div[data-message-author-role="assistant"] .markdown');
+                if (confirmedLatestMessageElement.length > 0) {
+                    const confirmedLatestMessage = confirmedLatestMessageElement[confirmedLatestMessageElement.length - 1].innerText.trim();
+                    if (confirmedLatestMessage === latestMessage) {
+                        console.log("[content_script.js] Confirmed final message, sending:", confirmedLatestMessage);
+                        chrome.runtime.sendMessage({
+                            type: 'RESPONSE_FROM_CHATGPT',
+                            response: confirmedLatestMessage
+                        }, () => {
+                            if (chrome.runtime.lastError) {
+                                console.error("[content_script.js] Error sending response to background:", chrome.runtime.lastError);
+                            } else {
+                                console.log("[content_script.js] Response relayed to background successfully.");
+                            }
+                            isFinalizing = false; // Reset the flag
+                        });
+                    } else {
+                        console.log("[content_script.js] Message changed during finalization, waiting for more.");
+                        isFinalizing = false; // Reset the flag
+                    }
                 } else {
-                    console.log("[content_script.js] Response relayed to background successfully.");
+                    console.log("[content_script.js] No message element found during finalization.");
+                    isFinalizing = false; // Reset the flag
                 }
-            });
+            }, 250); // Short delay to double-check
         }
     }
 }
