@@ -117,6 +117,11 @@
                         Delete All Character Profiles
                     </a>
                     </li>
+                    <li>
+                    <a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">
+                        Regenerate Character Map
+                    </a>
+                    </li>
 
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Database Operations</h6></li>
@@ -211,7 +216,7 @@
                     </li>
                     <li>
                     <a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">
-                        Mimic3 Browser
+                        Mimic3 Management
                     </a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
@@ -251,14 +256,6 @@
                 </li>
                 <li>
                 <a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <!-- Utilities -->
-                <li><h6 class="dropdown-header">Utilities</h6></li>
-                <li>
-                <a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">
-                    Regenerate Character Map
-                </a>
                 </li>
                 <!--<li>
                 <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
