@@ -1,6 +1,7 @@
 console.log("[content_script.js] Loaded and running.");
 
 let lastProcessedMessage = "";
+let observerActive = true; // Track whether MutationObserver is active
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -65,7 +66,6 @@ function setNativeValue(element, value) {
 function findDynamicInputField() {
     console.log("[content_script.js] Attempting to find dynamic input field...");
 
-// fallback if no placeholder is present
     const selectors = [
         'p[data-placeholder*="Message"]',
         'div[contenteditable="true"]' 
@@ -85,7 +85,25 @@ function findDynamicInputField() {
 
 // Observe the DOM for new assistant responses
 const observer = new MutationObserver(() => {
-    let assistantMessages = document.querySelectorAll('div[data-message-author-role="assistant"] .markdown');
+    observerActive = true; // Observer is actively processing
+    processAssistantMessages();
+});
+
+observer.observe(document.body, { childList: true, subtree: true });
+console.log("[content_script.js] MutationObserver set up to detect assistant responses.");
+
+// Fallback polling for throttled tabs
+setInterval(() => {
+    if (!observerActive) {
+        console.warn("[content_script.js] Fallback polling active due to inactive observer.");
+        processAssistantMessages();
+    }
+    observerActive = false; // Reset flag for the next interval
+}, 5000);
+
+// Unified message processing function
+function processAssistantMessages() {
+    const assistantMessages = document.querySelectorAll('div[data-message-author-role="assistant"] .markdown');
     if (assistantMessages.length > 0) {
         const latestMessageElement = assistantMessages[assistantMessages.length - 1];
         const latestMessage = latestMessageElement.innerText.trim();
@@ -94,7 +112,6 @@ const observer = new MutationObserver(() => {
             console.log("[content_script.js] New assistant response detected:", latestMessage);
             lastProcessedMessage = latestMessage;
 
-            // Relay response back to background
             chrome.runtime.sendMessage({
                 type: 'RESPONSE_FROM_CHATGPT',
                 response: latestMessage
@@ -107,7 +124,4 @@ const observer = new MutationObserver(() => {
             });
         }
     }
-});
-
-observer.observe(document.body, { childList: true, subtree: true });
-console.log("[content_script.js] MutationObserver set up to detect assistant responses.");
+}
