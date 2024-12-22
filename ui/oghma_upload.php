@@ -484,7 +484,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 </head>
 <div class="indent5">
     <h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32">Oghma Infinium Management</h1>
-    <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay. <a href="https://www.youtube.com/watch?v=vY8cnwDtACs" target="_blank" title="Watch the explanation video">This video explains it.</a></p>
+    <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay. <a href="https://www.youtube.com/watch?v=vY8cnwDtACs" target="_blank" title="Watch the explanation video" style="color: yellow;">This video explains it.</a></p>
     <p>To use it you must have [MINIME_T5] and [OGHMA_INFINIUM] enabled in the default profile. You also need Minime-T5 installed and running.</p>
     <p>We recommend to keep entries limited to "generic household knowledge" as ALL NPC's will have access to all entries.</p>
     <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
