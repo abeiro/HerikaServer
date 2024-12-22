@@ -52,7 +52,9 @@ class connector
                 }
             }
         }
-        
+
+        require_once("..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         } else {
@@ -64,14 +66,12 @@ class connector
         } else
             $speechReinforcement="";
 
-        global $responseTemplate;
-        global $structuredOutputTemplate;
-        $responseTemplate=[];
-        $structuredOutputTemplate=array();
-        require_once(__DIR__.DIRECTORY_SEPARATOR."json_response.php");
+        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
+        }
 
         $contextData[]=[
-            'role' => 'user', 
+            'role' => 'user',
             'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($responseTemplate)
         ];
         $pb=[];
@@ -237,7 +237,7 @@ class connector
 
         
         if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
-            $data["response_format"]=$structuredOutputTemplate;
+            $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
         }  
 
         if (isset($customParms["MAX_TOKENS"])) {

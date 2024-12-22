@@ -64,55 +64,28 @@ class connector
 
         $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###"];
 
-
-       
-        
-        $FUNC_LIST[]="Talk";
-        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
-            foreach ($GLOBALS["FUNCTIONS"] as $function) {
-                //$data["tools"][]=["type"=>"function","function"=>$function];
-                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                    $GLOBALS["COMMAND_PROMPT"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
-                } else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                    $GLOBALS["COMMAND_PROMPT"].="(run|fastwalk|jog|walk)";
-                }  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
-                    
-                } else
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                
-                $FUNC_LIST[]=$function["name"];
-
-            }
-        }
-        
-
-        $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
-        shuffle($moods);
+        require_once("..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         }
         $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
-        //$FUNC_LIST[]="None";
-        //shuffle($FUNC_LIST); // Just for koboldcpp
 
-        
-        $contextData[]= [
-            'role' => 'user', 
-            'content' => "{$prefix}Use this JSON object to give your answer: ".json_encode([
-               "character"=>$GLOBALS["HERIKA_NAME"],
-                "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
-                "mood"=>implode("|",$moods),
-                "action"=>implode("|",$FUNC_LIST),
-                "target"=>"action's target|destination name",
-                "message"=>'lines of dialogue',
-            ])
+        if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
+            $speechReinforcement="Use #SpeechStyle. ";
+        } else
+            $speechReinforcement="";
+
+        /* This is handled in the template files
+        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
+        }
+        */
+
+        $contextData[]=[
+            'role' => 'user',
+            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($responseTemplate)
         ];
-        
         
         if ($GLOBALS["CONNECTOR"][$this->name]["template"]=="alpaca") {
            
@@ -228,7 +201,7 @@ class connector
                 $moodsText='("["' . implode('","', $GLOBALS["TTS"]["AZURE"]["validMoods"]) . '"]*")"';
 
 
-        $postData["grammar"]=file_get_contents(__DIR__.DIRECTORY_SEPARATOR."grammar".DIRECTORY_SEPARATOR."json.bnf");
+        $postData["grammar"]=$GLOBALS["grammar"];
 
         if (!$GLOBALS["CONNECTOR"][$this->name]["grammar"])
             unset($postData["grammar"]);
