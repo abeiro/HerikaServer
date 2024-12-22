@@ -39,11 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (in_array($fileExtension, $allowedfileExtensions)) {
             // Directory where the uploaded file will be moved
-            $uploadFileDir = $enginePath . 'data' . DIRECTORY_SEPARATOR;
+            $uploadFileDir = $rootPath . 'data' . DIRECTORY_SEPARATOR;
             $destPath = $uploadFileDir . 'dwemer.sql';
 
             // Ensure the upload directory exists
             if (!file_exists($uploadFileDir)) {
+                error_log("Creating $uploadFileDir");
                 mkdir($uploadFileDir, 0755, true);
             }
 
