@@ -15,7 +15,7 @@
     setGBNFGrammar();
 
     // allow for edits to the json templates by extensions
-    requireFilesRecursively("..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
+    requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
 
     // specify the available actions which will be made available in the context
     Function setActions() {
