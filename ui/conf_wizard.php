@@ -14,6 +14,48 @@ header("Expires: 0"); // Proxies
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
 </head>
 <body>
+
+<style>
+    label{
+        color: #ff00c6;
+
+    }
+
+    p.conf-item{
+        color: #ff00c6;
+
+    }
+
+
+    p.conf-item input[type=radio] + label {
+        color: white;
+
+    }
+    span {
+        color: white;
+
+    }
+
+    button {
+    padding: 5px 10px;
+    background-color: rgb(0, 48, 176);
+    color: #ffffff;
+    border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s, color 0.3s;
+    margin: 2px;
+    font-weight: bold;
+    }
+
+    button:hover {
+        background-color: rgb(0, 38, 156); /* Darker shade for hover */
+    }
+
+</style>
     
 <?php
 
@@ -246,7 +288,25 @@ foreach ($currentConf as $pname=>$parms) {
                 }
             
             $checked = in_array($item, $parms["currentValue"]) ? "checked" : "";
-            $buffer .= "<input type='checkbox' name='{$fieldName}[]' value='$item' $checked> $item $addnote<br>";
+            $buffer .= "<input type='checkbox' name='{$fieldName}[]' value='$item' $checked> " .
+            "<span style='"
+                . "color-scheme: dark; "
+                . "line-height: var(--bs-body-line-height); "
+                . "text-align: var(--bs-body-text-align); "
+                . "color: yellow; "
+                . "-webkit-text-size-adjust: 100%; "
+                . "-webkit-tap-highlight-color: transparent; "
+                . "box-sizing: border-box; "
+                . "margin-top: 0; "
+                . "display: inline-block; "
+                . "min-width: 480px; "
+                . "font-size: 16px; "
+                . "font-weight: bold; "
+                . "font-family: 'Arial', Times, serif; "
+                . "max-width: 100%;"
+            . "'>"
+            . "$item $addnote</span><br>";
+
         }
     
         echo "<p class='conf-item'><label>$pname</label>$buffer<span>{$parms["description"]}</span></p>".PHP_EOL;

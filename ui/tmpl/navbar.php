@@ -832,7 +832,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $currentModel=DMgetCurrentModel();
     // Convert arrays to strings or use print_r for debugging
-    echo " <strong>AI/LLM Service(s):</strong> ";
+    echo " <strong>AI/LLM Connectors:</strong> ";
     echo is_array($CONNECTORS) ? '<span style="color: yellow;">' . implode(",", $CONNECTORS) . '</span> | ' : '<span style="color: yellow;">' . $CONNECTORS . '</span>';
     echo '
     <form action="cmd/action_toogle_model.php" method="get" style="display:inline;">
