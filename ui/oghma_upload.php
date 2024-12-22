@@ -420,7 +420,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             gap: 5px; 
             max-width: 1400px; 
         }
-        .filter-buttons .alphabet-button {
+        .alphabet-button {
             display: inline-block;
             margin-right: 5px;
             padding: 6px 10px;
@@ -431,16 +431,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             font-weight: bold;
         }
 
-        .filter-buttons .alphabet-button:hover {
+        .alphabet-button:hover {
             background-color: #0056b3;
         }
 
-        
-        .filter-buttons .alphabet-button:hover {
-            background-color: #0056b3;
-        }
-
-       
         .edit-button, .cancel-button {
             background-color: #28a745; 
             color: white;
