@@ -12,11 +12,12 @@
     setActions();
     setResponseTemplate();
     setStructuredOutputTemplate();
-    setGrammar();
+    setGBNFGrammar();
 
     // allow for edits to the json templates by extensions
     requireFilesRecursively("..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
 
+    // specify the available actions which will be made available in the context
     Function setActions() {
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
@@ -43,6 +44,7 @@
         }
     }
 
+    // specify the json object that will be requested from the LLM (via prompt, not enforced)
     Function setResponseTemplate() {
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
@@ -55,7 +57,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target",
+                    "target"=>"action's target|destination name",
                     "lang"=>"en|es",
                 ];
             } else {
@@ -65,7 +67,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target",
+                    "target"=>"action's target|destination name",
                 ];
             }
         } else {
@@ -77,7 +79,7 @@
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target",
                     "lang"=>"en|es",
-                    "message"=>"lines of dialogue",
+                    "message"=>"action's target|destination name",
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -86,12 +88,13 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target",
-                    "message"=>"lines of dialogue",
+                    "message"=>"action's target|destination name",
                 ];
             }
         }
     }
     
+    // for use with openai and openrouter providers that support structured outputs to enforce a json schema
     Function setStructuredOutputTemplate() {
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
@@ -137,7 +140,7 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                            "description" => "action's target (name of a character or location)"
+                            "description" => "action's target|destination name"
                         )
                     ),
                     "required" => [
@@ -156,7 +159,7 @@
     }
 
     // sets the grammar used by koboldcpp
-    Function setGrammar() {
+    Function setGBNFGrammar() {
         // build the string for moods
         // should look like: ("\"playful\"" | "\"default\"" | ...)
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
