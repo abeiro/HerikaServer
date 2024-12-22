@@ -1,3 +1,4 @@
+
 <?php
 session_start();
 
@@ -51,115 +52,6 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROF
     $_SESSION["PROFILE"] = "$configFilepath/conf.php";
 }
 
-?>
-
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>📝CHIM - NPC Biography Upload</title>
-    <style>
-        /* Updated CSS for Dark Grey Background Theme */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c; /* Dark grey background */
-            color: #f8f9fa; /* Light grey text for readability */
-        }
-
-        h1, h2 {
-            color: #ffffff; /* White color for headings */
-        }
-
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
-            max-width: 600px;
-        }
-
-        label {
-            font-weight: bold;
-            color: #f8f9fa; /* Ensure labels are readable */
-        }
-
-        input[type="text"], input[type="file"], textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #555555; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            resize: vertical; /* Allows users to resize vertically if needed */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 14px; /* Sets a readable font size */
-        }
-
-
-        input[type="submit"] {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px; /* Slightly larger border radius */
-            cursor: pointer;
-            padding: 5px 15px; /* Increased padding for larger button */
-            font-size: 18px;    /* Increased font size */
-            font-weight: bold;  /* Bold text for better visibility */
-            transition: background-color 0.3s ease; /* Smooth hover transition */
-        }
-
-        input[type="submit"]:hover {
-            background-color: #0056b3; /* Darker shade on hover */
-        }
-
-
-        .message {
-            background-color: #444444; /* Darker background for messages */
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #555555;
-            max-width: 600px;
-            margin-bottom: 20px;
-            color: #f8f9fa; /* Light text in messages */
-        }
-
-        .message p {
-            margin: 0;
-        }
-
-        .response-container {
-            margin-top: 20px;
-        }
-
-        .indent {
-            padding-left: 10ch; /* 10 character spaces */
-        }
-
-        .indent5 {
-            padding-left: 5ch; /* 5 character spaces */
-        }
-
-        .button {
-            padding: 8px 16px;
-            margin-top: 10px;
-            cursor: pointer;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 3px;
-        }
-
-        .button:hover {
-            background-color: #0056b3;
-        }
-    </style>
-</head>
-<body>
-
-<?php
 // Initialize message variable
 $message = '';
 
@@ -327,12 +219,184 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         $message .= '<p>Example CSV file not found.</p>';
     }
 }
-
-// Close the database connection
-pg_close($conn);
-
-// Display the forms and messages
 ?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <title>📝CHIM - NPC Biography Upload</title>
+    <style>
+        /* Updated CSS for Dark Grey Background Theme */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c2c2c; /* Dark grey background */
+            color: #f8f9fa; /* Light grey text for readability */
+        }
+
+        h1, h2 {
+            color: #ffffff; /* White color for headings */
+        }
+
+        form {
+            margin-bottom: 20px;
+            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #555555; /* Darker border for contrast */
+            max-width: 600px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #f8f9fa; /* Ensure labels are readable */
+        }
+
+        input[type="text"], input[type="file"], textarea {
+            width: 100%;
+            padding: 6px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #555555; /* Darker borders */
+            border-radius: 3px;
+            background-color: #4a4a4a; /* Dark input backgrounds */
+            color: #f8f9fa; /* Light text inside inputs */
+            resize: vertical; /* Allows users to resize vertically if needed */
+            font-family: Arial, sans-serif; /* Ensures consistent font */
+            font-size: 14px; /* Sets a readable font size */
+        }
+
+        input[type="submit"] {
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 5px; /* Slightly larger border radius */
+            cursor: pointer;
+            padding: 5px 15px; /* Increased padding for larger button */
+            font-size: 18px;    /* Increased font size */
+            font-weight: bold;  /* Bold text for better visibility */
+            transition: background-color 0.3s ease; /* Smooth hover transition */
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3; /* Darker shade on hover */
+        }
+
+        .message {
+            background-color: #444444; /* Darker background for messages */
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #555555;
+            max-width: 600px;
+            margin-bottom: 20px;
+            color: #f8f9fa; /* Light text in messages */
+        }
+
+        .message p {
+            margin: 0;
+        }
+
+        .response-container {
+            margin-top: 20px;
+        }
+
+        .indent {
+            padding-left: 10ch; /* 10 character spaces */
+        }
+
+        .indent5 {
+            padding-left: 5ch; /* 5 character spaces */
+        }
+
+        .button {
+            padding: 8px 16px;
+            margin-top: 10px;
+            cursor: pointer;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 3px;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .filter-buttons {
+            margin: 1em 0;
+        }
+
+        .alphabet-button {
+            display: inline-block;
+            margin-right: 5px;
+            padding: 6px 10px;
+            color: #fff;
+            background-color: #007bff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .alphabet-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Make the table narrower and fix the third column (npc_misc) width */
+        .table-container {
+            max-width: 1600px;    /* Limit overall table width */
+        }
+
+        .table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #3a3a3a;
+    table-layout: fixed; /* Ensures fixed column widths are respected */
+        }
+
+        .table-container th, .table-container td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+            word-wrap: break-word;    
+            overflow-wrap: break-word; 
+        }
+
+        .table-container th {
+            background-color: #4a4a4a;
+        }
+
+        .table-container th:nth-child(1),
+        .table-container td:nth-child(1) {
+            width: 150px; 
+        }
+
+        /* 2nd Column: Large */
+        .table-container th:nth-child(2),
+        .table-container td:nth-child(2) {
+            width: 600px; 
+        }
+
+        /* 3rd Column: Small */
+        .table-container th:nth-child(3),
+        .table-container td:nth-child(3) {
+            width: 80px; 
+        }
+
+        /* 4th to 6th Columns: Mid Size */
+        .table-container th:nth-child(4),
+        .table-container td:nth-child(4),
+        .table-container th:nth-child(5),
+        .table-container td:nth-child(5) {
+            width: 100px; 
+        }
+        .table-container th:nth-child(6),
+        .table-container td:nth-child(6) {
+            width: 180px; 
+        }
+
+    </style>
+</head>
+<body>
 
 <div class="indent5">
     <h1>📝NPC Biography Upload</h1>
@@ -380,8 +444,95 @@ pg_close($conn);
         <input type="submit" value="Download Example CSV">
     </form>
 </div>
-<p> You can verify that NPC data has been uploaded successfully by going to <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b></p>
-<p> All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
-<p> Also you can check the merged table at <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combind_npc_templates</b></p>
+<p>You can verify that NPC data has been uploaded successfully by going to 
+   <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b></p>
+<p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
+<p>Also you can check the merged table at 
+   <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combind_npc_templates</b>
+</p>
+<br>
+<?php
+$letter = isset($_GET['letter']) ? strtoupper($_GET['letter']) : '';
+
+// Build query based on optional filter
+if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
+    // Filter by first letter
+    $query_combined = "
+        SELECT npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
+        FROM {$schema}.combined_npc_templates
+        WHERE npc_name ILIKE $1
+        ORDER BY npc_name ASC
+    ";
+    $params_combined = [$letter . '%'];
+    $result_combined = pg_query_params($conn, $query_combined, $params_combined);
+} else {
+    // No filter: show all
+    $query_combined = "
+        SELECT npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
+        FROM {$schema}.combined_npc_templates
+        ORDER BY npc_name ASC
+    ";
+    $result_combined = pg_query($conn, $query_combined);
+}
+
+// ----------------------------------------------
+// Display the filter buttons + Table
+// ----------------------------------------------
+echo '<h2>NPC Templates Database</h2>';
+echo '<p>These are the current biographies in the CHIM database that will be pulled when a new profile is created for a character.</p>';
+echo '<p>Once a character has been activated, use their profile in the Configuration Wizard to make further changes.</p>';
+echo '<p><b>It is OK that melotts_voiceid and xtts_voiceid columns are empty!</b> They are just for custom voice overrides as we use code to automatically assign them a voice if it is empty. <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" style="color:yellow;" target="_blank">Read this to learn how voice IDs are assigned.</a></p>';
+
+
+echo '<div class="filter-buttons">';
+echo '<a href="?" class="alphabet-button">All</a>';
+foreach (range('A', 'Z') as $char) {
+    echo '<a href="?letter=' . $char . '" class="alphabet-button">' . $char . '</a>';
+}
+echo '</div>';
+
+// Start table container
+if ($result_combined) {
+    echo '<div class="table-container">';
+    echo '<table>';
+    echo '<tr>';
+    echo '  <th>npc_name</th>';
+    echo '  <th>npc_pers</th>';
+    echo '  <th>npc_misc</th>';
+    echo '  <th>melotts_voiceid</th>';
+    echo '  <th>xtts_voiceid</th>';
+    echo '  <th>xvasynth_voiceid</th>';
+    echo '</tr>';
+
+    $rowCountCombined = 0;
+    while ($row = pg_fetch_assoc($result_combined)) {
+        echo '<tr>';
+        // Use ?? '' to avoid passing null to htmlspecialchars
+        echo '  <td>' . htmlspecialchars($row['npc_name'] ?? '') . '</td>';
+        echo '  <td>' . nl2br(htmlspecialchars($row['npc_pers'] ?? '')) . '</td>';
+        echo '  <td>' . nl2br(htmlspecialchars($row['npc_misc'] ?? '')) . '</td>';
+        echo '  <td>' . htmlspecialchars($row['melotts_voiceid'] ?? '') . '</td>';
+        echo '  <td>' . htmlspecialchars($row['xtts_voiceid'] ?? '') . '</td>';
+        echo '  <td>' . htmlspecialchars($row['xvasynth_voiceid'] ?? '') . '</td>';
+        echo '</tr>';
+        
+        $rowCountCombined++;
+    }
+    echo '</table>';
+    echo '</div>';
+
+    if ($rowCountCombined === 0) {
+        echo '<p>No combined NPC templates found.</p>';
+    }
+} else {
+    echo '<p>Error fetching combined NPC templates: ' . pg_last_error($conn) . '</p>';
+}
+
+echo '</div>'; 
+
+// Close the database connection
+pg_close($conn);
+?>
+
 </body>
 </html>
