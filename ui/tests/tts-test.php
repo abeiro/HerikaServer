@@ -217,6 +217,12 @@ $ts = time();
             </ul>
         </li>
         <li style="margin-bottom: 20px;">
+            <strong>Error: An Unknown error occurred</strong>
+            <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                <li>Make sure the TTS service is installed and running correctly.</li>
+            </ul>
+        </li>
+        <li style="margin-bottom: 20px;">
             <strong>The audio test works here but you hear nothing ingame</strong>
             <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
                 <li>Make sure AIAgent.ini is in SKSE/Plugins </li>
