@@ -225,7 +225,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>📝CHIM - NPC Biography Upload</title>
+    <title>📝CHIM - NPC Biography Management</title>
     <style>
         /* Updated CSS for Dark Grey Background Theme */
         body {
@@ -409,7 +409,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 <body>
 
 <div class="indent5">
-    <h1>📝NPC Biography Upload</h1>
+    <h1>📝NPC Biography Management</h1>
     <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
     <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
 
