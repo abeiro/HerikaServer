@@ -243,7 +243,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
             background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
             padding: 15px;
             border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
+            border: 1px solid #4a4a4a; /* Darker border for contrast */
             max-width: 600px;
         }
 
@@ -257,7 +257,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
             padding: 6px;
             margin-top: 5px;
             margin-bottom: 15px;
-            border: 1px solid #555555; /* Darker borders */
+            border: 1px solid #4a4a4a; /* Darker borders */
             border-radius: 3px;
             background-color: #4a4a4a; /* Dark input backgrounds */
             color: #f8f9fa; /* Light text inside inputs */
@@ -286,7 +286,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
             background-color: #444444; /* Darker background for messages */
             padding: 10px;
             border-radius: 5px;
-            border: 1px solid #555555;
+            border: 1px solid #4a4a4a;
             max-width: 600px;
             margin-bottom: 20px;
             color: #f8f9fa; /* Light text in messages */
@@ -341,59 +341,69 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
             background-color: #0056b3;
         }
 
-        /* Make the table narrower and fix the third column (npc_misc) width */
         .table-container {
-            max-width: 1600px;    /* Limit overall table width */
+            max-height: 800px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            max-width: 1600px;
         }
 
         .table-container table {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: #3a3a3a;
-    table-layout: fixed; /* Ensures fixed column widths are respected */
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #3a3a3a; /* Base background color */
         }
 
         .table-container th, .table-container td {
-            border: 1px solid #555;
+            border: 1px solid #555555; /* Border color */
             padding: 8px;
             text-align: left;
-            word-wrap: break-word;    
-            overflow-wrap: break-word; 
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            color: #f8f9fa; /* Text color */
         }
 
         .table-container th {
-            background-color: #4a4a4a;
+            background-color: #4a4a4a; /* Header background color */
+            font-weight: bold;
         }
 
+        /* Alternating row colors */
+        .table-container tr:nth-child(even) {
+            background-color: #2c2c2c; /* Dark grey for even rows */
+        }
+
+        .table-container tr:nth-child(odd) {
+            background-color: #3a3a3a; /* Slightly lighter grey for odd rows */
+        }
+
+        /* Specific column widths */
         .table-container th:nth-child(1),
         .table-container td:nth-child(1) {
-            width: 150px; 
+            width: 150px; /* Small */
         }
 
-        /* 2nd Column: Large */
         .table-container th:nth-child(2),
         .table-container td:nth-child(2) {
-            width: 600px; 
+            width: 600px; /* Large */
         }
 
-        /* 3rd Column: Small */
         .table-container th:nth-child(3),
         .table-container td:nth-child(3) {
-            width: 80px; 
+            width: 80px; /* Small */
         }
 
-        /* 4th to 6th Columns: Mid Size */
         .table-container th:nth-child(4),
         .table-container td:nth-child(4),
         .table-container th:nth-child(5),
         .table-container td:nth-child(5) {
             width: 100px; 
         }
+
         .table-container th:nth-child(6),
         .table-container td:nth-child(6) {
             width: 180px; 
         }
-
     </style>
 </head>
 <body>

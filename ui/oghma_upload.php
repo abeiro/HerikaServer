@@ -269,35 +269,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         input[type="text"],
-input[type="file"] {
-    width: 100%;
-    padding: 6px;
-    margin-top: 5px;
-    margin-bottom: 15px;
-    border: 1px solid #555555; /* Darker borders */
-    border-radius: 3px;
-    background-color: #4a4a4a; /* Dark input backgrounds */
-    color: #f8f9fa; /* Light text inside inputs */
-    font-family: Arial, sans-serif; /* Ensures consistent font */
-    font-size: 14px; /* Sets a readable font size */
-}
+        input[type="file"] {
+            width: 100%;
+            padding: 6px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #555555; /* Darker borders */
+            border-radius: 3px;
+            background-color: #4a4a4a; /* Dark input backgrounds */
+            color: #f8f9fa; /* Light text inside inputs */
+            font-family: Arial, sans-serif; /* Ensures consistent font */
+            font-size: 14px; /* Sets a readable font size */
+        }
 
-/* Styles specifically for textarea */
-textarea {
-    width: 100%;
-    padding: 6px;
-    margin-top: 5px;
-    margin-bottom: 15px;
-    border: 1px solid #555555; 
-    border-radius: 3px;
-    background-color: #4a4a4a; 
-    color: #f8f9fa; 
-    resize: vertical; 
-    font-family: Arial, sans-serif; 
-    font-size: 14px; 
-    height: 200px; 
+        /* Styles specifically for textarea */
+        textarea {
+            width: 100%;
+            padding: 6px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #555555; 
+            border-radius: 3px;
+            background-color: #4a4a4a; 
+            color: #f8f9fa; 
+            resize: vertical; 
+            font-family: Arial, sans-serif; 
+            font-size: 14px; 
+            height: 200px; 
 
-}
+        }
 
         input[type="submit"], button {
             background-color: #007bff;
@@ -358,7 +358,7 @@ textarea {
 
         table {
             width: 100%;
-            max-width: 1200px;
+            max-width: 1400px;
             border-collapse: collapse;
             background-color: #3a3a3a; 
             margin-bottom: 20px;
@@ -383,7 +383,7 @@ textarea {
 
         .filter-buttons {
             margin-bottom: 20px;
-            max-width: 1200px;
+            max-width: 1400px;
         }
 
         .filter-buttons form {
@@ -410,7 +410,7 @@ textarea {
             max-height: 800px; 
             overflow-y: auto;
             margin-bottom: 20px;
-            max-width: 1200px;
+            max-width: 1400px;
         }
 
 
@@ -418,33 +418,21 @@ textarea {
             display: flex;
             flex-wrap: wrap;
             gap: 5px; 
-            max-width: 1200px; 
+            max-width: 1400px; 
+        }
+        .filter-buttons .alphabet-button {
+            display: inline-block;
+            margin-right: 5px;
+            padding: 6px 10px;
+            color: #fff;
+            background-color: #007bff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
         }
 
-
-        .filter-buttons .alphabet-button {
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            text-decoration: none;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            padding: 0; 
-            margin: 0;
-            border-radius: 3px;
-            cursor: pointer;
-            
-            
-            font-size: 18px; 
-            font-weight: bold; 
-            
-            
-            width: 52px; 
-            height: 52px; 
-            
-            
-            transition: background-color 0.3s ease;
+        .filter-buttons .alphabet-button:hover {
+            background-color: #0056b3;
         }
 
         
@@ -475,10 +463,31 @@ textarea {
         .cancel-button:hover {
             background-color: #c82333; 
         }
+
+        .table-container th, .table-container td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+            word-wrap: break-word;    
+            overflow-wrap: break-word; 
+        }
+
+        .table-container th {
+            background-color: #4a4a4a;
+        }
+
+        .table-container th:nth-child(1),
+        .table-container td:nth-child(1) {
+            width: 150px; 
+        }
+
+        /* 2nd Column: Large */
+        .table-container th:nth-child(2),
+        .table-container td:nth-child(2) {
+            width: 600px; 
+        }
     </style>
 </head>
-<body>
-
 <div class="indent5">
     <h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32">Oghma Infinium Management</h1>
     <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay. <a href="https://www.youtube.com/watch?v=vY8cnwDtACs" target="_blank" title="Watch the explanation video">This video explains it.</a></p>
@@ -522,7 +531,8 @@ textarea {
 </div>
 <p>You can verify that the entry has been uploaded successfully by navigating to <b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
 <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
-
+</div>
+<br>
 <?php
 // Always display the Oghma entries with filtering
 
@@ -531,7 +541,6 @@ $letter = isset($_GET['letter']) ? $_GET['letter'] : '';
 $letter = strtoupper($letter); // Ensure the letter is uppercase
 
 // Generate the alphabet buttons
-echo '<div class="indent5">';
 echo '<h2>Oghma Infinium Entries</h2>';
 echo '<div class="filter-buttons">';
 
