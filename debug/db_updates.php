@@ -239,8 +239,19 @@ $query = "
 $existsColumn=$db->fetchAll($query);
 if (!$existsColumn[0]["column_name"]) {
     $db->execQuery(file_get_contents(__DIR__."/../data/oghma_infinium2.sql"));
-    echo '<script>alert("A patch (oghma_infinium) has been applied to Database")</script>';
+    echo '<script>alert("A patch (oghma_infinium 2) has been applied to Database")</script>';
 }
+
+$query = "SELECT 1 as column_name FROM oghma where topic='magnus'";
+$existsColumn=$db->fetchAll($query);
+
+// magnus
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_infinium3.sql"));
+    echo '<script>alert("A patch (oghma_infinium 3) has been applied to Database")</script>';
+}
+
 
 $db->execQuery("update public.oghma SET native_vector = setweight(to_tsvector(coalesce(topic, '')),'A')||setweight(to_tsvector(coalesce(topic_desc, '')),'B')");
 
