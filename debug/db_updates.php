@@ -253,6 +253,7 @@ if (!$existsColumn[0]["column_name"]) {
 }
 
 
+
 $db->execQuery("update public.oghma SET native_vector = setweight(to_tsvector(coalesce(topic, '')),'A')||setweight(to_tsvector(coalesce(topic_desc, '')),'B')");
 
 
