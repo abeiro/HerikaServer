@@ -91,34 +91,16 @@
                         Export AI Log
                     </a>
                     </li>
-                    <li><hr class="dropdown-divider"></li>
 
-                    <!-- Third Category Header -->
-                    <li><h6 class="dropdown-header">Database Operations</h6></li>
-                    <li>
-                    <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
-                        <strong>Database Manager (Both User & Password = dwemer)</strong>
-                    </a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="export_db.php" target="_blank" title="Exports current database into a file.">
-                        Backup Current Database
-                    </a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="import_db.php" target="_blank" title="Reimport an exported database file.">
-                        Restore Current Database 
-                    </a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the CHIM Database." 
-                    onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
-                        Factory Reset Server Database
-                    </a>
-                    </li>
                     <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Memory Management</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use up tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
+                        Compact & Sync Memories
+                    </a>
+                    </li>
 
-                    <!-- Fourth Category Header -->
+                    <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Character Profiles</h6></li>
                     <li>
                     <a class="dropdown-item" href="export_conf.php" target="_blank" title="Exports current character profiles into a ZIP file.">
@@ -135,21 +117,67 @@
                         Delete All Character Profiles
                     </a>
                     </li>
-                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                    <a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">
+                        Regenerate Character Map
+                    </a>
+                    </li>
 
-                    <!-- Fifth Category Header -->
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Database Operations</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
+                        <strong>Database Manager (Both User & Password = dwemer)</strong>
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="export_db.php" target="_blank" title="Exports current database into a file.">
+                        Backup Current Database
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="import_db.php" target="_blank" title="Reimport an exported database file.">
+                        Restore Current Database 
+                    </a>
+                    </li>
+                    <!--
+                    <li>
+                    <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the CHIM Database." 
+                    onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
+                        Factory Reset Server Database
+                    </a>
+                    </li>
+                    -->
+
+                    <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Utilities</h6></li>
                     <li>
-                    <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use up tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
-                        Compact & Sync Memories
-                    </a>
+                    <div style="
+                        display: flex; 
+                        justify-content: center; 
+                        align-items: center; 
+                        margin-top: 20px;">
+                        <button style="
+                            font-weight: bold;
+                            border: 1px solid;
+                            transition: background-color 0.3s, color 0.3s;
+                            border-radius: 4px;
+                            text-align: center;
+                            text-decoration: none;
+                            background-color: #ffc107;
+                            color: black;
+                            padding: 6px 12px;
+                            font-size: 14px;
+                            cursor: pointer;
+                        " 
+                        onmouseover="this.style.backgroundColor='#e6ac00';"
+                        onmouseout="this.style.backgroundColor='#ffc107';"
+                        onclick="window.open('tests/ai_agent_ini.php', '_blank')" 
+                        title="Generate AIAgent.ini file for the mod file.">
+                            <strong>Create AIAgent.ini<br>(Place in mod folder under SKSE\Plugins)</strong>
+                        </button>
+                    </div>
                     </li>
-                    <li>
-                    <a class="dropdown-item" href="tests/ai_agent_ini.php" title="Generate AIAgent.ini file for the mod file." target="_blank">
-                        <strong>Create AIAgent.ini (Place in mod folder under SKSE\Plugins)</strong>
-                    </a>
-                    </li>
-
                 </ul>
             </li>
 
@@ -180,9 +208,7 @@
 
 
                     <li><hr class="dropdown-divider"></li>
-
-                    
-                    <li><h6 class="dropdown-header">AI Voice Management</h6></li>
+                    <li><h6 class="dropdown-header">TTS Voice Management</h6></li>
                     <li>
                     <a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
                         CHIM XTTS Management
@@ -190,25 +216,16 @@
                     </li>
                     <li>
                     <a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">
-                        Mimic3 Browser
+                        Mimic3 Management
                     </a>
                     </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Web Extensions</h6></li>
                     <li>
                     <a class="dropdown-item" href="addons/pmstt" target="_blank">Chrome Free Speech-to-Text</a>
                     </li>
                     <li>
                     <a class="dropdown-item" href="addons/websocket" target="_blank">Websocket Configuration (WIP)</a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-
-                    
-                    <li><h6 class="dropdown-header">Guides (PLEASE READ!)</h6></li>
-                    <li><a class="dropdown-item" href='index.php?notes=true'>CHIM 101 Quick Guide</a></li>
-                    <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">CHIM Manual</a></li>
-                    <li>
-                    <a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">
-                        AI/LLM Supported Models List
-                    </a>
                     </li>
                 </ul>
             </li>
@@ -240,14 +257,6 @@
                 <li>
                 <a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a>
                 </li>
-                <li><hr class="dropdown-divider"></li>
-                <!-- Utilities -->
-                <li><h6 class="dropdown-header">Utilities</h6></li>
-                <li>
-                <a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">
-                    Regenerate Character Map
-                </a>
-                </li>
                 <!--<li>
                 <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
                 </li>-->
@@ -277,8 +286,24 @@
                     <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Requests logs</a></li>
                 </ul>
             </li>
+            <li class="nav-item dropdown mx-2">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Guides</a>
+                <ul class="dropdown-menu">
+                    <li><h6 class="dropdown-header">PLEASE READ!</h6></li>
+                    <li><a class="dropdown-item" href='index.php?notes=true'>CHIM 101 Quick Guide</a></li>
+                    <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">CHIM Manual</a></li>
+                    <li>
+                    <a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">
+                        AI/LLM Supported Models List
+                    </a>
+                    </li>
+                </ul>
+            </li>
         </ul>
     </div>
+
+
+
     <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" style="padding-right: 5px;">
     <img src="images/youtube.png" alt="Checkout our Youtube Channel">
     </a>

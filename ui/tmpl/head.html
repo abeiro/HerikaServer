@@ -32,12 +32,12 @@
             
             function checkRetVal(json) {
                 if (json.status==0) {
-                    alert("URL seems ok and available.");
+                    alert("URL connection is valid and established.");
                     console.log("Connection info: (This test only tests connection, so you can get 40x/50x Headers. It's normal.)",json.info)
                 } else  if (json.status==1) {
-                    alert("URL seems ok, but cannot connect. Debug info:"+json.info)
+                    alert("URL is valid, but can not connect. Debug info:"+json.info)
                 } else  if (json.status==2) {
-                    alert("URL seems wrong and malformed: "+json.info)
+                    alert("URL is wrong and malformed: "+json.info)
                 }
                 document.body.style.cursor=""
                 document.body.style.opacity=1

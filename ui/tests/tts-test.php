@@ -43,6 +43,7 @@ $ts = time();
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>CHIM TTS Test</title>
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
     <style>
@@ -176,6 +177,55 @@ $ts = time();
     }
     ?>
 </div>
+
+<br>
+<div class="status">
+    <span class="label" style="font-weight: bold; color: yellow; background-color: black; padding: 5px; display: inline-block;">
+        IF YOU DO NOT SEE AN AUDIO FILE, HERE ARE A LIST OF POTENTIAL ERRORS AND FIXES
+    </span>
+    <ul class="error-list" style="margin-top: 15px; list-style-type: none; padding-left: 0;">
+        <li style="margin-bottom: 20px;">
+            <strong>500 = Internal Server Error</strong>
+            <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                <li>The audio file for the voice ID does not exist</li>
+                <li>CHIM XTTS = Sync Voices in XTTS Management page</li>
+                <li>MeloTTS= Use one of the 
+                    <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.21ics3hex54a" target="_blank" style="color: yellow;">approved voice IDs</a>
+                </li>
+                <li>xVASynth = Make sure you have the voice ID installed</li>
+            </ul>
+        </li>
+        <li style="margin-bottom: 20px;">
+            <strong>404 = Not Found</strong>
+            <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                <li>The URL is not valid for your TTS server</li>
+                <li>CHIM XTTS = If locally installed make sure it is http://127.0.0.1:8020. If its on the cloud verify the URL from the cloud provider </li>
+                <li>MeloTTS= Make sure it is http://127.0.0.1:8084</li>
+                <li>xVASynth = Make sure you have the URL pointed to your PC's IP address. 
+                    <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.3tf6myep6rmw" target="_blank" style="color: yellow;">Read this guide.</a>
+                </li>
+                <li>Using a 2nd PC = Make sure your local network and firewall is not blocking the connections. 
+                    <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.3amyap27i7u8" target="_blank" style="color: yellow;">Read this guide.</a>
+                </li>
+            </ul>
+        </li>
+        <li style="margin-bottom: 20px;">
+            <strong>If it's not the voice you expected</strong>
+            <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                <li>Change the profile (Blue Button) in the top left on the CHIM server page. Select the NPC you want to hear</li>
+                <li>If their voice is still wrong, check their voiceID field and the TTSFUNCTION you have selected</li>
+            </ul>
+        </li>
+        <li style="margin-bottom: 20px;">
+            <strong>The audio test works here but you hear nothing ingame</strong>
+            <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                <li>Make sure AIAgent.ini is in SKSE/Plugins </li>
+                <li>Make sure you Windows "System Sounds" is not muted. All the AI dialogue audio is actually played through here. </li>
+            </ul>
+        </li>
+    </ul>
+</div>
+
 
 </body>
 </html>

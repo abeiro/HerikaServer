@@ -29,6 +29,6 @@ foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as 
 
 file_put_contents($enginePath . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($GLOBALS["PROFILES"]));
     
-echo "Done! You close this";
+echo "Done! You can close this tab. If you see nothing then it means your character map was already good to go.";
 
 ?>
