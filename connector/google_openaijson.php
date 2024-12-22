@@ -53,27 +53,29 @@ class connector
             }
         }
 
-        require_once("..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
-
+		require_once("..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+        
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         } else {
             $prefix="";
+            //$prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         }
-
+        
         if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle.";
         } else
-            $speechReinforcement="";
-
-        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
-        }
+        	$speechReinforcement="";
 
         $contextData[]=[
-            'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($responseTemplate)
-        ];
+			'role' => 'user',
+			'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"])
+		];
+
+		if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+			$contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
+		}
+
         $pb=[];
         $pb["user"]="";
         

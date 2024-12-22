@@ -64,7 +64,13 @@ class connector
 
         $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###"];
 
-        require_once("..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+		require_once("..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+		/* This is handled in the template files
+		if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+			$contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
+		}
+		*/
 
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
@@ -74,18 +80,12 @@ class connector
         if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle. ";
         } else
-            $speechReinforcement="";
+        	$speechReinforcement="";
 
-        /* This is handled in the template files
-        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
-        }
-        */
-
-        $contextData[]=[
-            'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($responseTemplate)
-        ];
+		$contextData[]=[
+			'role' => 'user',
+			'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"])
+		];
         
         if ($GLOBALS["CONNECTOR"][$this->name]["template"]=="alpaca") {
            
