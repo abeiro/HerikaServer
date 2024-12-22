@@ -191,12 +191,12 @@
                     <a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="npc_upload.php" title="Edit NPC biographies table" target="_blank">
-                        NPC Biographies Management
+                    <a class="dropdown-item" href="npc_upload.php" title="Edit NPC biographies entries" target="_blank">
+                        NPC Biography Management
                     </a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="oghma_upload.php" title="Edit Oghma Infinium table" target="_blank">
+                    <a class="dropdown-item" href="oghma_upload.php" title="Edit Oghma Infinium entries" target="_blank">
                         Oghma Infinium Management
                     </a>
                     </li>
@@ -289,6 +289,32 @@
                     <li><h6 class="dropdown-header">Debugging</h6></li>
                     <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
                     <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Requests logs</a></li>
+                    <div style="
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    margin-top: 20px;">
+                    <button style="
+                        font-weight: bold;
+                        border: 1px solid;
+                        transition: background-color 0.3s, color 0.3s;
+                        border-radius: 4px;
+                        text-align: center;
+                        text-decoration: none;
+                        background-color: #dc3545; /* Red background */
+                        color: black;
+                        padding: 6px 12px;
+                        font-size: 14px;
+                        cursor: pointer;
+                    " 
+                    onmouseover="this.style.backgroundColor='#c82333';"
+                    onmouseout="this.style.backgroundColor='#dc3545';"
+                    onclick="if (confirm('This will wipe and reinstall the entire database!!! ARE YOU SURE?')) { window.location.href = 'index.php?reinstall=true&delete=true'; }"
+                    title="Fully reinstalls the CHIM Database.">
+                        <strong>Factory Reset Server Database</strong>
+                    </button>
+                </div>
+
                 </ul>
             </li>
             <li class="nav-item dropdown mx-2">
