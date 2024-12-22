@@ -191,8 +191,13 @@
                     <a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="npc_upload.php" title="Upload NPC Biographies with a csv file" target="_blank">
-                        Upload NPC Biographies
+                    <a class="dropdown-item" href="npc_upload.php" title="Edit NPC biographies table" target="_blank">
+                        NPC Biographies Management
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="oghma_upload.php" title="Edit Oghma Infinium table" target="_blank">
+                        Oghma Infinium Management
                     </a>
                     </li>
                     <li>
