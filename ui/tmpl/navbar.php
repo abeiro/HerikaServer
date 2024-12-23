@@ -288,7 +288,7 @@
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Debugging</h6></li>
                     <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
-                    <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Requests logs</a></li>
+                    <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Request Logs</a></li>
                     <div style="
                     display: flex; 
                     justify-content: center; 
