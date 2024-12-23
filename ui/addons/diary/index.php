@@ -27,7 +27,8 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
     require_once($_SESSION["PROFILE"]);
 
 } else {
-  print_r($_SESSION["PROFILE"]);
+  echo "Profile in sesssion".$_SESSION["PROFILE"].PHP_EOL;
+  echo "Availabel profiles".PHP_EOL;
   print_r($GLOBALS["PROFILES"]);
   die();
 }
@@ -49,8 +50,8 @@ echo <<<HEAD
 <body>
 HEAD;
 
-
-$results = $db->query("SElECT  topic,content,tags,people  FROM diarylog where people='{$GLOBALS["HERIKA_NAME"]}' order by gamets asc");
+$cn=$db->escape($GLOBALS["HERIKA_NAME"]);
+$results = $db->query("SElECT  topic,content,tags,people  FROM diarylog where people='$cn' order by gamets asc");
 while ($row = $db->fetchArray($results)) {
   $data[] = $row;
   $pageElements.="
