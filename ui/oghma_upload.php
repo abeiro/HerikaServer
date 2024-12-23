@@ -515,7 +515,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
         <input type="submit" name="submit_csv" value="Upload CSV">
     </form>
-
+    <p>You can download a backup of the full oghma database in the<a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener">csv files channel in our discord</a>.</p>
     <form action="" method="get">
         <input type="hidden" name="action" value="download_example">
         <input type="submit" value="Download Example CSV">
