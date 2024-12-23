@@ -193,6 +193,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['truncate_npc'])) {
+    $truncateQuery = "TRUNCATE TABLE $schema.npc_templates_custom RESTART IDENTITY CASCADE";
+    $truncateResult = pg_query($conn, $truncateQuery);
+
+    if ($truncateResult) {
+        $message .= "<p style='color: #ff6464; font-weight: bold;'>The npc_templates_custom table has been emptied successfully.</p>";
+    } else {
+        $message .= "<p>Error emptying npc_templates_custom table: " . pg_last_error($conn) . "</p>";
+    }
+}
+
 // Handle the download request for the example CSV
 if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
     // Define the path to the example CSV file
@@ -404,6 +415,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         .table-container td:nth-child(6) {
             width: 180px; 
         }
+
+        input[type="submit"].btn-danger {
+        background-color: rgb(200, 53, 69); 
+        color: #fff;
+        border: 1px solid rgb(255, 255, 255);
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 14px;
+        border-radius: 4px;
+        transition: background-color 0.3s ease; 
+        }
+
+        input[type="submit"].btn-danger:hover {
+        background-color: rgb(200, 35, 51); 
+        }
+
     </style>
 </head>
 <body>
@@ -461,6 +488,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 <p>Also you can check the merged table at 
    <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combind_npc_templates</b>
 </p>
+<br>
+<div class="indent5">
+<h2>Delete All Custom Character Entries</h2>
+<form action="" method="post">
+    <input 
+        type="submit" 
+        name="truncate_npc" 
+        value="Factory Reset NPC Overide Table"
+        class="btn-danger"
+        onclick="return confirm('Are you absolutely sure you want to DELETE ALL ENTRIES the npc_templates_custom table? This action is IRREVERSIBLE!');"
+    >
+</form>
+</div>
 <br>
 <?php
 $letter = isset($_GET['letter']) ? strtoupper($_GET['letter']) : '';
