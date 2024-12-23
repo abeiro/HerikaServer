@@ -22,7 +22,7 @@ If the user changes the subject (e.g., "And what do you know about Mara?"), Mara
 $GLOBALS["OGHMA_HINT"]="";
 
 if ($GLOBALS["MINIME_T5"]) {
-    if (isset($FEATURES["MISC"]["OGHMA_INFINIUM"])&&($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
+    if (isset($GLOBALS["OGHMA_INFINIUM"])&&($GLOBALS["OGHMA_INFINIUM"])) {
         if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
 
             $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..

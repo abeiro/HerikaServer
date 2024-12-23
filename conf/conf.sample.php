@@ -312,4 +312,6 @@ $FEATURES["MISC"]["OGHMA_INFINIUM"]=false;	//Skyrim context information will be 
 $FEATURES["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"]=false; //Reorders properties in the offered JSON schema.
 $FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false; //KoboldCPP Actions.
 
+$OGHMA_INFINIUM=false;
+
 ?>
