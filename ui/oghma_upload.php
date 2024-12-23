@@ -524,6 +524,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <!-- Removed the View Oghma button -->
 </div>
 <p>You can verify that the entry has been uploaded successfully by navigating to <b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
+<p>You can see how it picks a relevant article during conversation by navigating to <b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
 <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
 </div>
 <br>
