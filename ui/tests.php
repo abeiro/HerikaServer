@@ -282,6 +282,12 @@ echo '<div class="status">
                     <li>You need to put credits in your account</li>
                 </ul>
             </li>
+            <li style="margin-bottom: 20px;">
+                <strong>If you get a response but it fails ingame (array) </strong>
+                <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
+                    <li>Check Server Plugins - Request Logs, you most likely have a token credit limit on your API.</li>
+                </ul>
+            </li>
         </ul>
     </div>';
 echo '</div>'; // End of section
