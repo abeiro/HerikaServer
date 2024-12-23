@@ -274,7 +274,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
             color: #f8f9fa; /* Light text inside inputs */
             resize: vertical; /* Allows users to resize vertically if needed */
             font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 14px; /* Sets a readable font size */
+            font-size: 16px; /* Sets a readable font size */
         }
 
         input[type="submit"] {
@@ -422,9 +422,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         border: 1px solid rgb(255, 255, 255);
         padding: 10px 20px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 16px;
         border-radius: 4px;
         transition: background-color 0.3s ease; 
+        font-weight: bold;
         }
 
         input[type="submit"].btn-danger:hover {
@@ -476,7 +477,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         <input type="submit" name="submit_csv" value="Upload CSV">
     </form>
     <p>Do not change the CSV column format. You can ignore the npc_misc column, it does not do anything currently.</p>
-    <p>You can download a backup of the full character database in the<a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
     <form action="" method="get">
         <input type="hidden" name="action" value="download_example">
         <input type="submit" value="Download Example CSV">
@@ -491,6 +491,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 <br>
 <div class="indent5">
 <h2>Delete All Custom Character Entries</h2>
+<p>You can download a backup of the full character database in the<a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
 <form action="" method="post">
     <input 
         type="submit" 
