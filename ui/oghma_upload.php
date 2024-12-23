@@ -236,6 +236,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $message .= '<p>Please fill in all required fields.</p>';
     }
 }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all') {
+    // Perform the DELETE query
+    $delete_query = "DELETE FROM $schema.oghma";
+    $delete_result = pg_query($conn, $delete_query);
+    
+    if ($delete_result) {
+        $message .= "<p>All entries in the Oghma Infinium have been deleted successfully.</p>";
+    } else {
+        $message .= "<p>Error deleting entries: " . pg_last_error($conn) . "</p>";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -256,10 +268,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         form {
             margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
+            background-color: #3a3a3a;
             padding: 15px;
             border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
+            border: 1px solid #4a4a4a;
             max-width: 600px;
         }
 
@@ -279,7 +291,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             background-color: #4a4a4a; /* Dark input backgrounds */
             color: #f8f9fa; /* Light text inside inputs */
             font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 14px; /* Sets a readable font size */
+            font-size: 16px; /* Sets a readable font size */
         }
 
         /* Styles specifically for textarea */
@@ -294,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: #f8f9fa; 
             resize: vertical; 
             font-family: Arial, sans-serif; 
-            font-size: 14px; 
+            font-size: 16px; 
             height: 200px; 
 
         }
@@ -399,7 +411,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             margin: 0;
             border-radius: 3px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
         }
 
         .filter-buttons button:hover {
@@ -480,6 +492,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         .table-container td:nth-child(2) {
             width: 600px; 
         }
+
+        input[type="submit"].btn-danger {
+            background-color: rgb(200, 53, 69); 
+            color: #fff;
+            border: 1px solid rgb(255, 255, 255);
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease; 
+            font-weight: bold;
+        }
+
+        input[type="submit"].btn-danger:hover {
+            background-color: rgb(200, 35, 51); 
+        }
     </style>
 </head>
 <div class="indent5">
@@ -515,17 +543,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
         <input type="submit" name="submit_csv" value="Upload CSV">
     </form>
-    <p>You can download a backup of the full oghma database in the <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
     <form action="" method="get">
         <input type="hidden" name="action" value="download_example">
         <input type="submit" value="Download Example CSV">
     </form>
 
-    <!-- Removed the View Oghma button -->
+
 </div>
 <p>You can verify that the entry has been uploaded successfully by navigating to <b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
 <p>You can see how it picks a relevant article during conversation by navigating to <b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
 <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+</div>
+<br>
+<div class="indent5">
+<h2>Delete All Oghma Infinium Entries</h2>
+<p>You can download a backup of the full oghma database in the <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
+<form action="" method="post" 
+      onsubmit="return confirm('Are you sure you want to delete ALL entries in the Oghma Infinium? This action CANNOT be undone! You can download the full CSV from our discord.');">
+    <input type="hidden" name="action" value="delete_all">
+    <input type="submit" class="btn-danger" value="Delete All Oghma Entries">
+</form>
 </div>
 <br>
 <?php
