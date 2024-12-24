@@ -519,8 +519,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         $printLocation=false;
         
         $string = $row["location"];
-        preg_match('/Context\s*(new\s*)?location:\s*([a-zA-Z\s\'\-]+)(\s*,|$)/', $string, $locationMatch);
-        preg_match('/Hold:\s*([a-zA-Z\s\'\-]+)(\s*|$)/', $string, $holdMatch);
+        preg_match('/Context\s*(new\s*)?location:\s*([^$|,]+)/', $string, $locationMatch);
+        preg_match('/Hold:\s*([^$|,]+)/', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
             //error_log(print_r($string,true));
@@ -1804,8 +1804,9 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($npcname);
 
-    $codename=strtr(strtolower(trim($npcname)),[" "=>"_","'"=>"+"]);
-    $codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
+    $codename=mb_convert_encoding($npcname, 'UTF-8', mb_detect_encoding($npcname));
+    $codename=strtr(strtolower(trim($codename)),[" "=>"_","'"=>"+"]);
+    $codename=preg_replace('/[^a-zA-Z0-9\p{Han}\p{Hiragana}\p{Katakana}\p{Cyrillic}\p{Greek}\p{Latin}\p{Arabic}_+]/u', '', $codename);
 
     $cn=$db->escape("Voicetype/$codename");
     $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
