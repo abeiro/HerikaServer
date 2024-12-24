@@ -550,7 +550,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 
         $TEST_TEXT=strtr($TEST_TEXT,["."=>" ","{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $command=file_get_contents("http://127.0.0.1:8082/command?text=".urlencode($TEST_TEXT));
-        if ($command) {
+        if ($command && is_valid_json($command)) {
             $preCommand=json_decode($command,true);
             if ($preCommand["is_command"]!="Talk") {
                 $GLOBALS["db"]->insert(
