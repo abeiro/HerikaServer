@@ -140,9 +140,9 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			error_log("Error occurred.".__FILE__);
 			
 			// Lets try to use standard scheme:
-			$codename = str_replace(" ", "_", mb_strtolower($GLOBALS["HERIKA_NAME"], 'UTF-8'));
-			$codename = str_replace("'", "+", $codename);
-			$codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
+            $codename=mb_convert_encoding($GLOBALS["HERIKA_NAME"], 'UTF-8', mb_detect_encoding($GLOBALS["HERIKA_NAME"]));
+            $codename=strtr(strtolower(trim($codename)),[" "=>"_","'"=>"+"]);
+            $codename=preg_replace('/[^a-zA-Z0-9\p{Han}\p{Hiragana}\p{Katakana}\p{Cyrillic}\p{Greek}\p{Latin}\p{Arabic}_+]/u', '', $codename);
 			
 			$data = array(
 				'text' => $newString,
