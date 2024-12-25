@@ -288,65 +288,31 @@ class connector
      */
     public function processActions()
     {
-        global $alreadysent;
+        global $ALREADY_SENT_BUFFER, $HERIKA_NAME;
+        if (!isset($ALREADY_SENT_BUFFER)) {
+            $ALREADY_SENT_BUFFER = [];
+        }
 
-        if ($this->_functionName) {
-            $parameterArr = json_decode($this->_parameterBuff, true);
-            if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+        foreach ($this->_parsedData as $parsed) {
+            $action = isset($parsed['action']) ? $parsed['action'] : null;
+            $target = isset($parsed['target']) ? $parsed['target'] : null;
 
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
-                    //echo "Herika|command|$functionCodeName@$parameter\r\n";
+            // If no action or "Talk", skip
+            if (empty($action) || $action === 'Talk') {
+                continue;
+            }
 
-                }
+            // Example: "The Narrator|command|Attack@Jesse"
+            $commandString = "{$parsed['character']}|command|{$action}@{$target}";
 
-                $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
-            } else 
-                return null;
-        } else {
-            $GLOBALS["DEBUG_DATA"]["RAW"]=$this->_buffer;
-            $parsedResponse=__jpd_decode_lazy($this->_buffer);   // USE JPD_LAZY?
-            if (is_array($parsedResponse)) {
-                if (!empty($parsedResponse["action"])) {
-                    if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
-                        
-                        $functionDef=findFunctionByName($parsedResponse["action"]);
-                        if ($functionDef) {
-                            $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                            if (@strlen($functionDef["parameters"]["required"][0])>0) {
-                                if (!empty($parsedResponse["target"])) {
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                                }
-                                else {
-                                    error_log("Missing required parameter");
-                                }
-                                    
-                            } else {
-                                $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                            }
-                        } elseif ($parsedResponse["action"] != "Talk") {
-                            error_log("Function not found for {$parsedResponse["action"]}");
-                        }
-                        
-                        //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        //$this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
-                        //echo "Herika|command|$functionCodeName@$parameter\r\n";
-                        $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
-                    
-                    } 
-                        
-                }
-                
-                @ob_flush();    
-            } else {
-                error_log("No actions");
-                return null;
+            // Avoid duplicates if we’ve already “sent” it
+            $hash = md5($commandString."\r\n");
+            if (!isset($ALREADY_SENT_BUFFER[$hash])) {
+                $this->_actionBuffer[] = $commandString."\r\n";
+                $ALREADY_SENT_BUFFER[$hash] = $commandString."\r\n";
             }
         }
 
-        return $this->_commandBuffer;
+        return $this->_actionBuffer;
     }
 }
