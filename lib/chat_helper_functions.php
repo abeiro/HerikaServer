@@ -99,6 +99,12 @@ function cleanResponse($rawResponse)
     );
     */
 
+	// convert to half-width numbers
+	$sentenceXX = str_replace(
+        array('１', '２', '３', '４', '５', '６', '７', '８', '９', '０'),
+        array('1', '2', '3', '4', '5', '6', '7', '8', '9', '0'),
+        $sentenceX
+    );
 
     return $sentenceX;
 }
