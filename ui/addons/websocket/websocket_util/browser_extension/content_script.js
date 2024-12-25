@@ -136,7 +136,8 @@ function attemptFinalMessage() {
                         console.log("[content_script.js] Confirmed final message, sending:", confirmedLatestMessage);
                         chrome.runtime.sendMessage({
                             type: 'RESPONSE_FROM_CHATGPT',
-                            response: confirmedLatestMessage
+                            response: confirmedLatestMessage,
+                            msg_id: currentMsgId
                         }, () => {
                             if (chrome.runtime.lastError) {
                                 console.error("[content_script.js] Error sending response to background:", chrome.runtime.lastError);
