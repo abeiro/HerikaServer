@@ -81,7 +81,7 @@ function cleanResponse($rawResponse)
 
     $sentences = split_sentences($toSplit);
 
-    $sentence = trim((implode(".", $sentences)));
+    $sentence = trim((implode("", $sentences)));
 
     $sentenceX = strtr(
         $sentence,
@@ -135,7 +135,8 @@ function split_sentences($paragraph)
     
     $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
     // Split the paragraph into an array of sentences using a regular expression
-    preg_match_all('/[^\n?.!]+[?.!]/', $paragraphNcr, $matches);
+    $splitSentenceRegex = "/[^\n" . preg_quote(getEndOfSentencePunctuation()) . "]+[" . preg_quote(getEndOfSentencePunctuation()) . "]/u";
+    preg_match_all($splitSentenceRegex, $paragraphNcr, $matches);
     //print_r($matches);
     $sentences = $matches[0];
     // Check if the last sentence is truncated (i.e., doesn't end with a period)
@@ -232,7 +233,8 @@ function split_sentences_stream($paragraph)
         return [$paragraph];
     }
 
-    $sentences = preg_split('/(?<=[.!?])\s+/', $paragraph, -1, PREG_SPLIT_NO_EMPTY);
+    $splitSentenceRegex = "/(?<=[" . preg_quote(getEndOfSentencePunctuation()) . "])[\s+]?/u";
+    $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
 
     $splitSentences = [];
     $currentSentence = '';
@@ -1390,5 +1392,12 @@ function prettyPrintJson($json )
     }
 
     return $result;
+}
+
+function getEndOfSentencePunctuation() {
+    $en='.?!';
+    $cjk='。？！';
+
+    return $en.$cjk;
 }
 
