@@ -24,6 +24,7 @@ if (isset($_GET['reset_tables'])) {
             "CREATE TABLE output_queue_websocket (
                 id SERIAL PRIMARY KEY,
                 response TEXT NOT NULL,
+                msg_id INT NOT NULL,
                 timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )"
         ];

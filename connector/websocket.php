@@ -24,16 +24,14 @@ class websocket implements MessageComponentInterface {
         $password = 'dwemer';
 
         $this->db_conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
-
         if (!$this->db_conn) {
             error_log("WebSocket server failed to connect to the database!");
         }
     }
 
     private function startPolling() {
-        // Poll every 1 second (adjust as needed)
         echo "starting polling".PHP_EOL;
-        $rate_limit=1;
+        $rate_limit = 1; // seconds
         Loop::addPeriodicTimer($rate_limit, function () {
             $this->checkInputQueue();
         });
@@ -46,20 +44,21 @@ class websocket implements MessageComponentInterface {
                 return;
             }
         }
-    
-        $query = "SELECT id, message FROM input_queue_websocket ORDER BY timestamp ASC";
+
+        // Process all messages in input_queue_websocket by ascending ID
+        $query = "SELECT id, message FROM input_queue_websocket ORDER BY id ASC";
         $result = pg_query($this->db_conn, $query);
-    
+
         if ($result) {
             while ($row = pg_fetch_assoc($result)) {
                 $messageData = json_decode($row['message'], true);
                 if ($messageData) {
-                    // Send the message to all connected clients (e.g., Chrome extension)
+                    // Broadcast messageData and the input row ID as msg_id
                     foreach ($this->clients as $client) {
-                        // We broadcast the original array as JSON-encoded text for the extension
                         $client->send(json_encode([
                             'type' => 'input',
-                            'text' => json_encode($messageData)
+                            'text' => json_encode($messageData),
+                            'msg_id' => $row['id']  // <--- Pass the input's ID
                         ]));
                     }
                 }
@@ -91,13 +90,19 @@ class websocket implements MessageComponentInterface {
                     return;
                 }
             }
-            // CHANGED: Instead of json_encode, just store plain text in the DB
             $escapedResponse = pg_escape_string($this->db_conn, $data['data']);
-            $query = "INSERT INTO output_queue_websocket (response) VALUES ('$escapedResponse')";
+            
+            // We must have a msg_id to know which input this response belongs to
+            $msgId = isset($data['msg_id']) ? (int) $data['msg_id'] : 0;
+            if ($msgId === 0) {
+                error_log("Received response without a valid msg_id!");
+                return;
+            }
+            $query = "INSERT INTO output_queue_websocket (msg_id, response) VALUES ($msgId, '$escapedResponse')";
             pg_query($this->db_conn, $query);
         }
 
-        // Keep the existing logic for direct client-to-client messaging if needed
+        // Optionally keep the existing logic for direct client-to-client messaging if needed
         if ($data['type'] === 'input') {
             foreach ($this->clients as $client) {
                 if ($client !== $from) {
