@@ -1,6 +1,7 @@
 console.log("[content_script.js] Loaded and running.");
 
 let lastProcessedMessage = "";
+let currentMsgId = null;
 let observerActive = true; // Track whether MutationObserver is active
 let isFinalizing = false; // Flag to indicate we're waiting for the final message
 
@@ -8,15 +9,16 @@ let isFinalizing = false; // Flag to indicate we're waiting for the final messag
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'INPUT_FROM_SERVER') {
         console.log("[content_script.js] INPUT_FROM_SERVER received:", request.text);
-        handleServerInput(request.text);
+        handleServerInput(request.text, request.msg_id);
         sendResponse({ status: "received" });
     }
     return true;
 });
 
 // Handle server input: insert text, dispatch input/enter
-function handleServerInput(text) {
+function handleServerInput(text, msgId) {
     console.log("[content_script.js] Handling server input:", text);
+    currentMsgId = msgId;
 
     const targetElement = findDynamicInputField();
     if (!targetElement) {
