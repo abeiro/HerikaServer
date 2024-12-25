@@ -122,7 +122,7 @@ function DataLastInfoFor($actor, $lastNelements = -2)
 
     foreach ($lastDialog as $n => $line) {
 
-        $pattern = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
+        $pattern = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:\w+)?(?:(?:st|nd|rd|th) of |\/)(.+), 4E (\d+)/u'; //extract also for months with apostrophe like Sun's Something
         $replacement = 'Day name: $1, Hour: $2, Day Number: $3, Month: $4, 4th Era, Year: $5';
         $result = preg_replace($pattern, $replacement, $line["content"]);
         $lastDialogFull[$n]["content"] = $result;
