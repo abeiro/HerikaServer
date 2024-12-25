@@ -50,7 +50,7 @@ $EMOTEMOODS="sassy,"
 $SUMMARY_PROMPT=''; //Instructions added when generating summaries for memories and other features.
 
 //[AI/LLM Service Selection]
-$CONNECTORS=["openrouterjson","openaijson","google_openaijson","koboldcppjson"]; //AI Service(s).
+$CONNECTORS=["openrouterjson","openaijson","google_openaijson","web_connector","koboldcppjson"]; //AI Service(s).
 $CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp"]; //Creates diary entries and memories.
 
 //[AI/LLM Connectors]

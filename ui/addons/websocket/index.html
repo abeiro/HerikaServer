@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
 <head>
 <style>
@@ -7,19 +6,49 @@
 </style>
 </head>
 <body>
-  <h1>ChatGPT Remote Interface</h1>
+  <h1>AI WebSocket (WIP)</h1>
   <div>Status: <span id="status">Disconnected</span></div>
   <input type="text" id="userInput" placeholder="Enter your prompt..." />
   <button id="sendBtn">Send</button>
   <h3>Latest Response</h3>
   <div id="response"></div>
 
+  <hr>
+
+  <h2>Database Management</h2>
+  <button id="createTablesBtn">Create/Reset Tables</button>
+  <button id="checkTablesBtn">Check Tables</button>
+  <div id="dbResponse"></div>
+
+  <h2>Instructions</h2>
+  <ol>
+    <li><a href="websocket_conf.php">Download websocket.zip</a></li>
+    <li>Extract the contents of <code>websocket.zip</code> to a folder.</li>
+    <li>Run <code>Enable Websocket.bat</code> to set up the websocket server.</li>
+    <li>
+      Open Chrome or Edge - Experimental and navigate to:
+      <ul>
+        <li><code>chrome://extensions</code> (Chrome)</li>
+        <li><code>edge://extensions</code> (Edge - Experimental)</li>
+      </ul>
+    </li>
+    <li>Enable "Developer mode" in the top-right corner.</li>
+    <li>Click "Load unpacked" and select the <code>browser_extension</code> folder from the extracted files in <code>websocket_util</code>.</li>
+    <li>Enter in <code>ws://localhost:43443/chat</code> in the websocket URL field and save.</li>
+    <li>Restart your browser and navigate to ChatGPT.com.</li>
+    <li>Break off the tab into a separate window (It can be in the background but not minimized!)</li>
+    <li>Select <code>Target ChatGPT tab</code> and select your ChatGPT chrome tab from the drop down box.</li>
+    <li>Enter in a test message above and click send, a response should arrive from ChatGPT.</li>
+  </ol>
+
   <script>
+    // WebSocket setup
     let ws = new WebSocket('ws://localhost:43443/chat');
     const statusEl = document.getElementById('status');
     const sendBtn = document.getElementById('sendBtn');
     const userInput = document.getElementById('userInput');
     const responseEl = document.getElementById('response');
+    const dbResponseEl = document.getElementById('dbResponse');
 
     ws.onopen = () => {
       statusEl.textContent = 'Connected (server)';
@@ -45,25 +74,42 @@
       ws.send(JSON.stringify({ type: 'input', data: text }));
       responseEl.textContent = '';
     });
+
+    // Create/Reset Tables button
+    document.getElementById('createTablesBtn').addEventListener('click', async () => {
+      dbResponseEl.textContent = 'Resetting tables...';
+
+      try {
+        const response = await fetch('websocket_conf.php?reset_tables=1', { method: 'GET' });
+
+        if (response.ok) {
+          const result = await response.text();
+          dbResponseEl.textContent = result;
+        } else {
+          dbResponseEl.textContent = 'Failed to reset tables. Please check logs.';
+        }
+      } catch (error) {
+        dbResponseEl.textContent = 'Error: ' + error.message;
+      }
+    });
+
+    // Check Tables button
+    document.getElementById('checkTablesBtn').addEventListener('click', async () => {
+      dbResponseEl.textContent = 'Fetching table contents...';
+
+      try {
+        const response = await fetch('websocket_conf.php?check_tables=1', { method: 'GET' });
+
+        if (response.ok) {
+          const result = await response.text();
+          dbResponseEl.textContent = result;
+        } else {
+          dbResponseEl.textContent = 'Failed to fetch tables. Please check logs.';
+        }
+      } catch (error) {
+        dbResponseEl.textContent = 'Error: ' + error.message;
+      }
+    });
   </script>
-
-  <hr>
-
-  <h2>Instructions</h2>
-  <ol>
-    <li><a href="websocket_conf.php">Download websocket.zip</a></li>
-    <li>Extract the contents of <code>websocket.zip</code> to a folder.</li>
-    <li>Run <code>Enable Websocket.bat</code> to set up the websocket server.</li>
-    <li>
-      Open Chrome or Edge and navigate to:
-      <ul>
-        <li><code>chrome://extensions</code> (Chrome)</li>
-        <li><code>edge://extensions</code> (Edge)</li>
-      </ul>
-    </li>
-    <li>Enable "Developer mode" in the top-right corner.</li>
-    <li>Click "Load unpacked" and select the <code>browser_extension</code> folder from the extracted files in <code>websocket_util</code>.</li>
-    <li>Your websocket extension is now installed and ready to use.</li>
-  </ol>
 </body>
 </html>
