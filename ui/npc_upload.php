@@ -116,6 +116,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
         $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
 
         if (in_array($fileExtension, $allowedfileExtensions)) {
+            // Get file encoding
+            $encoding = mb_detect_encoding(file_get_contents($fileTmpPath), 'UTF-8', true);
+
             // Open the file for reading
             if (($handle = fopen($fileTmpPath, 'r')) !== false) {
                 // Skip the header row
@@ -135,21 +138,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                     $xtts_voiceid = (isset($data[4]) && trim($data[4]) !== '') ? trim($data[4]) : null;
                     $xvasynth_voiceid = (isset($data[5]) && trim($data[5]) !== '') ? trim($data[5]) : null;
 
-                    // Convert to UTF-8 to avoid invalid byte sequences
-                    $npc_name = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
-                    $npc_pers = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_pers);
-                    $npc_misc = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_misc);
+                    // Convert to UTF-8 to avoid invalid byte sequences, if not already UTF-8
+                    if ($encoding !== 'UTF-8') {
+                        $npc_name = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
+                        $npc_pers = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_pers);
+                        $npc_misc = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_misc);
 
-                    if ($melotts_voiceid !== null) {
-                        $melotts_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $melotts_voiceid);
-                    }
+                        if ($melotts_voiceid !== null) {
+                            $melotts_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $melotts_voiceid);
+                        }
 
-                    if ($xtts_voiceid !== null) {
-                        $xtts_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $xtts_voiceid);
-                    }
+                        if ($xtts_voiceid !== null) {
+                            $xtts_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $xtts_voiceid);
+                        }
 
-                    if ($xvasynth_voiceid !== null) {
-                        $xvasynth_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $xvasynth_voiceid);
+                        if ($xvasynth_voiceid !== null) {
+                            $xvasynth_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $xvasynth_voiceid);
+                        }
                     }
 
                     if (!empty($npc_name) && !empty($npc_pers)) {
