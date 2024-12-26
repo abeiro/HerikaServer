@@ -81,7 +81,7 @@ function cleanResponse($rawResponse)
 
     $sentences = split_sentences($toSplit);
 
-    $sentence = trim((implode("", $sentences)));
+    $sentence = trim((implode(" ", $sentences)));
 
     $sentenceX = strtr(
         $sentence,
@@ -140,27 +140,28 @@ function split_sentences($paragraph)
     }
     
     $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
-    // Split the paragraph into an array of sentences using a regular expression
-    $eosPunc = preg_quote(getEndOfSentencePunctuation());
-    $splitSentenceRegex = "/[^\n" . $eosPunc . "]+[" . $eosPunc . "]/u";
-    preg_match_all($splitSentenceRegex, $paragraphNcr, $matches);
-    //print_r($matches);
-    $sentences = $matches[0];
-    // Check if the last sentence is truncated (i.e., doesn't end with a period)
-    /*$last_sentence = end($sentences);
-    if (!preg_match('/[.?|]$/', $last_sentence)) {
-        // Remove the last sentence if it's truncated
-        array_pop($sentences);
-    }*/
 
-    if (is_array($sentences)) {
-        /*if (sizeof($sentences)==0)
-             return array($paragraphNcr);
-        else*/
-        return $sentences;
-    } else {
-        return array($sentences);
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/');
+    $splitSentenceRegex = "/[^\n" . $eosPunc . "]+[" . $eosPunc . "]/u";
+    $sentences = preg_split($splitSentenceRegex, $paragraphNcr, PREG_SPLIT_NO_EMPTY);
+
+    // remove matched strings from the original paragraph in case the end of the paragraph didn't end with punctuation
+    foreach ($sentences as $sentence) {
+        $position = strpos($paragraph, $sentence);
+        if ($position !== false) {
+            $paragraph = substr_replace($paragraph, '', $position, strlen($sentence));
+        }
     }
+
+    // clean the remaining paragraph after matched parts were removed
+    $paragraph=trim($paragraph);
+    $paragraph=preg_replace('/^[\p{P}|\s]+/u', '', $paragraph);
+
+    if ($paragraph) {
+        $sentences[]=$paragraph;
+    }
+
+    return $sentences;
 }
 
 function checkOAIComplains($responseTextUnmooded)
@@ -240,19 +241,39 @@ function split_sentences_stream($paragraph)
         return [$paragraph];
     }
 
-    $eosPunc = preg_quote(getEndOfSentencePunctuation());
-    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\s+]?/u";
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/');
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\p{P}]?[\s+]?/u";
     $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
+
+    // remove matched strings from the original paragraph in case the end of the paragraph didn't end with punctuation
+    foreach ($sentences as $sentence) {
+        $position = strpos($paragraph, $sentence);
+        if ($position !== false) {
+            $paragraph = substr_replace($paragraph, '', $position, strlen($sentence));
+        }
+    }
+
+    // clean the remaining paragraph after matched parts were removed
+    $paragraph=trim($paragraph);
+    $paragraph=preg_replace('/^[\p{P}|\s]+/u', '', $paragraph);
+
+    if ($paragraph) {
+        $sentences[]=$paragraph;
+    }
+
+    if ($paragraph) {
+        $sentences[]=$paragraph;
+    }
 
     $splitSentences = [];
     $currentSentence = '';
 
     foreach ($sentences as $sentence) {
         $currentSentence .= ' ' . $sentence;
-        if (strlen($currentSentence) > 120) {
+        if (strlen($currentSentence) > MAXIMUM_SENTENCE_SIZE) {
             $splitSentences[] = trim($currentSentence);
             $currentSentence = '';
-        } elseif (strlen($currentSentence) >= 60 && strlen($currentSentence) <= MAXIMUM_SENTENCE_SIZE) {
+        } elseif (strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE && strlen($currentSentence) <= MAXIMUM_SENTENCE_SIZE) {
             $splitSentences[] = trim($currentSentence);
             $currentSentence = '';
         }
@@ -266,6 +287,12 @@ function split_sentences_stream($paragraph)
     return $splitSentences;
 }
 
+function getEndOfSentencePunctuation() {
+    $en='.?!';
+    $cjk='。？！';
+
+    return $en.$cjk;
+}
 
 function returnLines($lines,$writeOutput=true)
 {
@@ -1400,12 +1427,5 @@ function prettyPrintJson($json )
     }
 
     return $result;
-}
-
-function getEndOfSentencePunctuation() {
-    $en='.?!';
-    $cjk='。？！';
-
-    return $en.$cjk;
 }
 
