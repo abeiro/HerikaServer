@@ -22,23 +22,38 @@
 
   <h2>Instructions</h2>
   <ol>
-    <li><a href="websocket_conf.php">Download websocket.zip</a></li>
+    <li>Click on <code>Create/Reset Tables</code> button on this page</li>
+    <li><a href="websocket_conf.php">
+      Download websocket.zip</a>
+    </li>
+    <li><a href="https://github.com/brian-girko/always-active/tree/master">
+      Install always-active extension</a>
+    </li>
+    <li>NOTE: Should any tab open for the always-active extension, close it out.</li>
     <li>Extract the contents of <code>websocket.zip</code> to a folder.</li>
     <li>Run <code>Enable Websocket.bat</code> to set up the websocket server.</li>
+    <li>Re-launch CHIM and navigate back to this page to see the <code>connected</code> status</li>
     <li>
-      Open Chrome or Edge - Experimental and navigate to:
+      Open Chrome or Edge and navigate to:
       <ul>
         <li><code>chrome://extensions</code> (Chrome)</li>
-        <li><code>edge://extensions</code> (Edge - Experimental)</li>
+        <li><code>edge://extensions</code> (Edge)</li>
       </ul>
     </li>
-    <li>Enable "Developer mode" in the top-right corner.</li>
-    <li>Click "Load unpacked" and select the <code>browser_extension</code> folder from the extracted files in <code>websocket_util</code>.</li>
+    <li>Enable "Developer mode" on this page.</li>
+    <li>Click "Load unpacked" and select the <code>browser_extension</code> folder.</li>
+    <li>Navigate to ChatGPT.com and select the bridge extension</li>
     <li>Enter in <code>ws://localhost:43443/chat</code> in the websocket URL field and save.</li>
-    <li>Restart your browser and navigate to ChatGPT.com.</li>
-    <li>Break off the tab into a separate window (It can be in the background but not minimized!)</li>
+    <li>Restart your browser and navigate back to ChatGPT.com.</li>
+    <li>Select the always-active extension and the icon should now be marked with a check mark</li>
+    <li>NOTE: Skipping the always-active step can cause ChatGPT.com to pause in the background!</li>
+    <li>Select the bridge extension once more.</li>
     <li>Select <code>Target ChatGPT tab</code> and select your ChatGPT chrome tab from the drop down box.</li>
-    <li>Enter in a test message above and click send, a response should arrive from ChatGPT.</li>
+    <li>On the CHIM Default configuration page, place a check mark next to the web_connector under connectors.</li>
+    <li></li>Click save, and select copy to all profiles.</li>
+    <li>Now change your connector selection at the top of the page to <code>web_connector</code></li>
+    <li>Again select save and navigate to Troubleshooting > and run the LLM connector test</li>
+    <li>You should now see a response in the LLM response field as well as messages on ChatGPT.com</li>
   </ol>
 
   <script>

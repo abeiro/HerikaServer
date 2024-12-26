@@ -112,7 +112,7 @@ function processAssistantMessages() {
         return;
     }
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(attemptFinalMessage, 750); // Increased debounce to 750ms
+    debounceTimer = setTimeout(attemptFinalMessage, 1000);
 }
 
 function attemptFinalMessage() {
@@ -154,7 +154,7 @@ function attemptFinalMessage() {
                     console.log("[content_script.js] No message element found during finalization.");
                     isFinalizing = false; // Reset the flag
                 }
-            }, 250); // Short delay to double-check
+            }, 1000); // Short delay to double-check
         }
     }
 }
