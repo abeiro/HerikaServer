@@ -46,7 +46,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'RESPONSE_FROM_CHATGPT') {
     console.log("[background.js] RESPONSE_FROM_CHATGPT received:", msg.response);
     if (connected && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'response', data: msg.response }));
+      ws.send(JSON.stringify({
+        type: 'response',
+        data: msg.response,
+        msg_id: msg.msg_id  // pass along the msg_id
+        }));
       console.log("[background.js] Sent response back to WebSocket server:", msg.response);
     } else {
       console.warn("[background.js] WebSocket not connected or not open. Cannot send response back.");
@@ -87,7 +91,11 @@ function connectWebSocket() {
     if (data.type === 'input') {
       console.log("[background.js] Received input from server:", data.text);
       if (targetedTabId !== null) {
-        chrome.tabs.sendMessage(targetedTabId, { type: 'INPUT_FROM_SERVER', text: data.text }, (response) => {
+        chrome.tabs.sendMessage(targetedTabId, {
+          type: 'INPUT_FROM_SERVER',
+          text: data.text,
+          msg_id: data.msg_id
+          }, (response) => {
           if (chrome.runtime.lastError) {
             console.error("[background.js] Error sending message to content script:", chrome.runtime.lastError);
           } else {

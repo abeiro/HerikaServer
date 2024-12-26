@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
 <head>
 <style>
@@ -7,19 +6,81 @@
 </style>
 </head>
 <body>
-  <h1>ChatGPT Remote Interface</h1>
+  <h1>AI WebSocket (WIP)</h1>
   <div>Status: <span id="status">Disconnected</span></div>
   <input type="text" id="userInput" placeholder="Enter your prompt..." />
   <button id="sendBtn">Send</button>
   <h3>Latest Response</h3>
   <div id="response"></div>
 
+  <hr>
+
+  <h2>Database Management</h2>
+  <button id="createTablesBtn">Create/Reset Tables</button>
+  <button id="checkTablesBtn">Check Tables</button>
+  <div id="dbResponse"></div>
+
+  <h2>Instructions</h2>
+  <ol>
+    <li>Click on <code>Create/Reset Tables</code> button on this page</li>
+    <li><a href="websocket_conf.php">
+      Download websocket.zip</a> Current version 1.0 (Check back after every CHIM update!)
+    </li>
+    <li><a href="https://github.com/brian-girko/always-active/tree/master">
+      Install always-active extension</a>
+    </li>
+    <li>NOTE: Should any tab open for the always-active extension, close it out.</li>
+    <li>Extract the contents of <code>websocket.zip</code> to a folder.</li>
+    <li>Run <code>Enable Websocket.bat</code> to set up the websocket server.</li>
+    <li>Re-launch CHIM and navigate back to this page to see the <code>connected</code> status</li>
+    <li>
+      Open Chrome or Edge and navigate to:
+      <ul>
+        <li><code>chrome://extensions</code> (Chrome)</li>
+        <li><code>edge://extensions</code> (Edge)</li>
+      </ul>
+    </li>
+    <li>Enable "Developer mode" on this page.</li>
+    <li>Click "Load unpacked" and select the <code>browser_extension</code> folder.</li>
+    <li>Navigate to ChatGPT.com and select the bridge extension</li>
+    <li>Enter in <code>ws://localhost:43443/chat</code> in the websocket URL field and save.</li>
+    <li>Restart your browser and navigate back to ChatGPT.com.</li>
+    <li>Select the always-active extension and the icon should now be marked with a check mark</li>
+    <li>NOTE: Skipping the always-active step can cause ChatGPT.com to pause in the background!</li>
+    <li>Select the bridge extension once more.</li>
+    <li>Select <code>Target ChatGPT tab</code> and select your ChatGPT chrome tab from the drop down box.</li>
+    <li>On the CHIM Default configuration page, place a check mark next to the web_connector under connectors.</li>
+    <li>Click save, and select copy to all profiles.</li>
+    <li>Now change your connector selection at the top of the page to <code>web_connector</code></li>
+    <li>Again select save and navigate to Troubleshooting > and run the LLM connector test</li>
+    <li>You should now see a response in the LLM response field as well as messages on ChatGPT.com</li>
+  </ol>
+  <h2>Known Bugs</h2>
+  <o1>
+    <li>Right now Web Connector is in beta and may not function as intended!</li>
+    <li>Web connector is slower at responding when ChatGPT.com is not visibile in the foreground.</li>
+    <li>Actions and commands may not work correctly.</li>
+  </o1>
+  
+  <h2>Roadmap</h2>
+  <o1>
+    <li>Integrate actions and commands.</li>
+    <li>Custom websocket address and port configuration.</li>
+    <li>Optional Remote PC port forwarding scripts. 
+      -- Solves the response slowness limitation by offloading to a seperate PC with Chrome running.
+    </li>
+    <li>Expand compatibility to Firefox.</li>
+    <li>Add support for more AI websites.</li>
+  </o1>
+
   <script>
+    // WebSocket setup
     let ws = new WebSocket('ws://localhost:43443/chat');
     const statusEl = document.getElementById('status');
     const sendBtn = document.getElementById('sendBtn');
     const userInput = document.getElementById('userInput');
     const responseEl = document.getElementById('response');
+    const dbResponseEl = document.getElementById('dbResponse');
 
     ws.onopen = () => {
       statusEl.textContent = 'Connected (server)';
@@ -45,25 +106,42 @@
       ws.send(JSON.stringify({ type: 'input', data: text }));
       responseEl.textContent = '';
     });
+
+    // Create/Reset Tables button
+    document.getElementById('createTablesBtn').addEventListener('click', async () => {
+      dbResponseEl.textContent = 'Resetting tables...';
+
+      try {
+        const response = await fetch('websocket_conf.php?reset_tables=1', { method: 'GET' });
+
+        if (response.ok) {
+          const result = await response.text();
+          dbResponseEl.textContent = result;
+        } else {
+          dbResponseEl.textContent = 'Failed to reset tables. Please check logs.';
+        }
+      } catch (error) {
+        dbResponseEl.textContent = 'Error: ' + error.message;
+      }
+    });
+
+    // Check Tables button
+    document.getElementById('checkTablesBtn').addEventListener('click', async () => {
+      dbResponseEl.textContent = 'Fetching table contents...';
+
+      try {
+        const response = await fetch('websocket_conf.php?check_tables=1', { method: 'GET' });
+
+        if (response.ok) {
+          const result = await response.text();
+          dbResponseEl.textContent = result;
+        } else {
+          dbResponseEl.textContent = 'Failed to fetch tables. Please check logs.';
+        }
+      } catch (error) {
+        dbResponseEl.textContent = 'Error: ' + error.message;
+      }
+    });
   </script>
-
-  <hr>
-
-  <h2>Instructions</h2>
-  <ol>
-    <li><a href="websocket_conf.php">Download websocket.zip</a></li>
-    <li>Extract the contents of <code>websocket.zip</code> to a folder.</li>
-    <li>Run <code>Enable Websocket.bat</code> to set up the websocket server.</li>
-    <li>
-      Open Chrome or Edge and navigate to:
-      <ul>
-        <li><code>chrome://extensions</code> (Chrome)</li>
-        <li><code>edge://extensions</code> (Edge)</li>
-      </ul>
-    </li>
-    <li>Enable "Developer mode" in the top-right corner.</li>
-    <li>Click "Load unpacked" and select the <code>browser_extension</code> folder from the extracted files in <code>websocket_util</code>.</li>
-    <li>Your websocket extension is now installed and ready to use.</li>
-  </ol>
 </body>
 </html>

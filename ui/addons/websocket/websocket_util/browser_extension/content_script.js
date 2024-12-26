@@ -1,6 +1,7 @@
 console.log("[content_script.js] Loaded and running.");
 
 let lastProcessedMessage = "";
+let currentMsgId = null;
 let observerActive = true; // Track whether MutationObserver is active
 let isFinalizing = false; // Flag to indicate we're waiting for the final message
 
@@ -8,15 +9,16 @@ let isFinalizing = false; // Flag to indicate we're waiting for the final messag
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'INPUT_FROM_SERVER') {
         console.log("[content_script.js] INPUT_FROM_SERVER received:", request.text);
-        handleServerInput(request.text);
+        handleServerInput(request.text, request.msg_id);
         sendResponse({ status: "received" });
     }
     return true;
 });
 
 // Handle server input: insert text, dispatch input/enter
-function handleServerInput(text) {
+function handleServerInput(text, msgId) {
     console.log("[content_script.js] Handling server input:", text);
+    currentMsgId = msgId;
 
     const targetElement = findDynamicInputField();
     if (!targetElement) {
@@ -110,7 +112,7 @@ function processAssistantMessages() {
         return;
     }
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(attemptFinalMessage, 750); // Increased debounce to 750ms
+    debounceTimer = setTimeout(attemptFinalMessage, 1000);
 }
 
 function attemptFinalMessage() {
@@ -134,7 +136,8 @@ function attemptFinalMessage() {
                         console.log("[content_script.js] Confirmed final message, sending:", confirmedLatestMessage);
                         chrome.runtime.sendMessage({
                             type: 'RESPONSE_FROM_CHATGPT',
-                            response: confirmedLatestMessage
+                            response: confirmedLatestMessage,
+                            msg_id: currentMsgId
                         }, () => {
                             if (chrome.runtime.lastError) {
                                 console.error("[content_script.js] Error sending response to background:", chrome.runtime.lastError);
@@ -151,7 +154,7 @@ function attemptFinalMessage() {
                     console.log("[content_script.js] No message element found during finalization.");
                     isFinalizing = false; // Reset the flag
                 }
-            }, 250); // Short delay to double-check
+            }, 1000); // Short delay to double-check
         }
     }
 }
