@@ -520,7 +520,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         
         $string = $row["location"];
         preg_match('/Context\s*(new\s*)?location:\s*([^$,]+)/', $string, $locationMatch);
-        preg_match('/Hold:\s*([^$,]+)/', $string, $holdMatch);
+        preg_match('/Hold:\s*([^$,\)]+)/', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
             //error_log(print_r($string,true));
