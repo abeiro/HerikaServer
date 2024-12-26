@@ -99,8 +99,8 @@ function cleanResponse($rawResponse)
     );
     */
 
-	// convert to half-width numbers
-	$sentenceXX = str_replace(
+    // convert to half-width numbers (to avoid display issues with japanese font)
+    $sentenceXX = str_replace(
         array('１', '２', '３', '４', '５', '６', '７', '８', '９', '０'),
         array('1', '2', '3', '4', '5', '6', '7', '8', '9', '0'),
         $sentenceX
@@ -141,7 +141,8 @@ function split_sentences($paragraph)
     
     $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
     // Split the paragraph into an array of sentences using a regular expression
-    $splitSentenceRegex = "/[^\n" . preg_quote(getEndOfSentencePunctuation()) . "]+[" . preg_quote(getEndOfSentencePunctuation()) . "]/u";
+    $eosPunc = preg_quote(getEndOfSentencePunctuation());
+    $splitSentenceRegex = "/[^\n" . $eosPunc . "]+[" . $eosPunc . "]/u";
     preg_match_all($splitSentenceRegex, $paragraphNcr, $matches);
     //print_r($matches);
     $sentences = $matches[0];
@@ -239,7 +240,8 @@ function split_sentences_stream($paragraph)
         return [$paragraph];
     }
 
-    $splitSentenceRegex = "/(?<=[" . preg_quote(getEndOfSentencePunctuation()) . "])[\s+]?/u";
+    $eosPunc = preg_quote(getEndOfSentencePunctuation());
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\s+]?/u";
     $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
 
     $splitSentences = [];
