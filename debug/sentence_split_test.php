@@ -4,34 +4,34 @@
     <title>Sentence Splitter Test</title>
     <meta charset="UTF-8">
     <style>
-		.code-block {
-			background-color: #f0f0f0;
-			border: 1px solid #ccc;
-			padding: 10px;
-			margin-bottom: 15px;
-		}
-		.code-block .content {
-			overflow: hidden; /* Hide content initially */
-			transition: max-height 0.3s ease-out; /* Smooth transition for expanding/collapsing */
-			max-height: 0; /* Initially collapsed */
-		}
-		.code-block.expanded .content {
-			max-height: 500px; /* Adjust as needed */
-		}
-		.code-block .toggle {
-			cursor: pointer;
-			font-weight: bold;
-			margin-bottom: 5px;
-		}
-		.pass { color: green; }
-		.fail { color: red; }
+        .code-block {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .code-block .content {
+            overflow: hidden; /* Hide content initially */
+            transition: max-height 0.3s ease-out; /* Smooth transition for expanding/collapsing */
+            max-height: 0; /* Initially collapsed */
+        }
+        .code-block.expanded .content {
+            max-height: 500px; /* Adjust as needed */
+        }
+        .code-block .toggle {
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .pass { color: green; }
+        .fail { color: red; }
     </style>
 
-	<script>
-		function toggleCodeBlock(element) {
-			element.classList.toggle("expanded");
-		}
-	</script>
+    <script>
+        function toggleCodeBlock(element) {
+            element.classList.toggle("expanded");
+        }
+    </script>
 </head>
 <body>
 
@@ -50,9 +50,9 @@ define("MINIMUM_SENTENCE_SIZE", 25);
 // approximately copies the logic in main.php
 function mainFunction($inputText) {
     $buffer="";
-	$returnSentences=[];
+    $returnSentences=[];
 
-	// looping over each character of the input string to simulate a buffer from the LLM
+    // looping over each character of the input string to simulate a buffer from the LLM
     foreach (mb_str_split($inputText) as $char) {
         $buffer.=$char;
 
@@ -77,45 +77,45 @@ function mainFunction($inputText) {
         $returnSentences=array_merge($returnSentences, split_sentences_stream(cleanResponse(trim($buffer))));
     }
 
-	return $returnSentences;
+    return $returnSentences;
 }
 
 // Array of strings to be tested along with their expected outputs
 $testStrings = [
-	// regular paragraph
+    // regular paragraph
     "Upon the realm of Tamriel, an empire stands. With Iron will and disciplined hands. United under Mede, they strive to keep."
-		=> ["Upon the realm of Tamriel, an empire stands.", "With Iron will and disciplined hands.", "United under Mede, they strive to keep."],
-	// zero punctuation
-	"Upon the realm of Tamriel an empire stands With Iron will and disciplined hands United under Mede they strive to keep"
-		=> ["Upon the realm of Tamriel an empire stands With Iron will and disciplined hands United under Mede they strive to keep"],
-	// incomplete ending
+        => ["Upon the realm of Tamriel, an empire stands.", "With Iron will and disciplined hands.", "United under Mede, they strive to keep."],
+    // zero punctuation
+    "Upon the realm of Tamriel an empire stands With Iron will and disciplined hands United under Mede they strive to keep"
+        => ["Upon the realm of Tamriel an empire stands With Iron will and disciplined hands United under Mede they strive to keep"],
+    // incomplete ending
     "Upon the realm of Tamriel, an empire stands. With Iron will and disciplined hands. United under Mede, they strive to keep. And it will"
-		=> ["Upon the realm of Tamriel, an empire stands.", "With Iron will and disciplined hands.", "United under Mede, they strive to keep.", "And it will"],
-	// incomplete ending with no periods
-	"Upon the realm of Tamriel, an empire stands! With Iron will and disciplined hands! United under Mede, they strive to keep! And it will"
-		=> ["Upon the realm of Tamriel, an empire stands!", "With Iron will and disciplined hands!", "United under Mede, they strive to keep!", "And it will"],
-	// incomplete ending (short)
-	"Okay. And"
-		=> ["Okay. And"],
-	// double punctuation
-	"Upon the realm of Tamriel, an empire stands?! With Iron will and disciplined hands!! United under Mede, they strive to keep!!"
-		=> ["Upon the realm of Tamriel, an empire stands?", "With Iron will and disciplined hands!", "United under Mede, they strive to keep!"],
-	// abbreviations - currently FAILS
-	"I've been to Daggerfall, Morrowind, Cyrodiil, and Skyrim. But I've never been to the U.S. Is it as exciting as Nirn?"
-		=> ["I've been to Daggerfall, Morrowind, Cyrodiil, and Skyrim.", "But I've never been to the U.S.", "Is it as exciting as Nirn?"],
-	// ellipsis 
-	"Upon the realm of Tamriel, an empire stands... With Iron will and disciplined hands... United under Mede, they strive to keep..."
-		=> ["Upon the realm of Tamriel, an empire stands...", "With Iron will and disciplined hands...", "United under Mede, they strive to keep..."],
+        => ["Upon the realm of Tamriel, an empire stands.", "With Iron will and disciplined hands.", "United under Mede, they strive to keep.", "And it will"],
+    // incomplete ending with no periods
+    "Upon the realm of Tamriel, an empire stands! With Iron will and disciplined hands! United under Mede, they strive to keep! And it will"
+        => ["Upon the realm of Tamriel, an empire stands!", "With Iron will and disciplined hands!", "United under Mede, they strive to keep!", "And it will"],
+    // incomplete ending (short)
+    "Okay. And"
+        => ["Okay. And"],
+    // double punctuation
+    "Upon the realm of Tamriel, an empire stands?! With Iron will and disciplined hands!! United under Mede, they strive to keep!!"
+        => ["Upon the realm of Tamriel, an empire stands?", "With Iron will and disciplined hands!", "United under Mede, they strive to keep!"],
+    // abbreviations - currently FAILS
+    "I've been to Daggerfall, Morrowind, Cyrodiil, and Skyrim. But I've never been to the U.S. Is it as exciting as Nirn?"
+        => ["I've been to Daggerfall, Morrowind, Cyrodiil, and Skyrim.", "But I've never been to the U.S.", "Is it as exciting as Nirn?"],
+    // ellipsis 
+    "Upon the realm of Tamriel, an empire stands... With Iron will and disciplined hands... United under Mede, they strive to keep..."
+        => ["Upon the realm of Tamriel, an empire stands...", "With Iron will and disciplined hands...", "United under Mede, they strive to keep..."],
 
-	// regular paragraph
+    // regular paragraph
     "ああ、カスティル。飲み物ならここにあるよ。何がいい？エールか、ミードか？それとも他に何か欲しいものがあるかい？食事もいかがですか？"
-		=> ["ああ、カスティル。", "飲み物ならここにあるよ。", "何がいい？ エールか、ミードか？", "それとも他に何か欲しいものがあるかい？", "食事もいかがですか？"],
-	// incomplete ending
+        => ["ああ、カスティル。", "飲み物ならここにあるよ。", "何がいい？ エールか、ミードか？", "それとも他に何か欲しいものがあるかい？", "食事もいかがですか？"],
+    // incomplete ending
     "ああ、カスティル。飲み物ならここにあるよ。何がいい？エールか、ミードか？それとも他に何か欲しいものがあるかい？食事もいかがですか？何でも"
-		=> ["ああ、カスティル。", "飲み物ならここにあるよ。", "何がいい？ エールか、ミードか？", "それとも他に何か欲しいものがあるかい？", "食事もいかがですか？", "何でも"],
-	// incomplete ending (short)
-	"あ。それで"
-		=> ["あ。それで"],
+        => ["ああ、カスティル。", "飲み物ならここにあるよ。", "何がいい？ エールか、ミードか？", "それとも他に何か欲しいものがあるかい？", "食事もいかがですか？", "何でも"],
+    // incomplete ending (short)
+    "あ。それで"
+        => ["あ。それで"],
 ];
 
 foreach ($testStrings as $input => $expected) {
@@ -143,9 +143,9 @@ foreach ($testStrings as $input => $expected) {
     if (!$pass) {
         // Show expected output on failure
         echo "<p>#EXPECTED:</p>";
-		foreach ($expected as $sentence) {
-			echo "<p>" . htmlspecialchars($sentence) . "</p>";
-		}
+        foreach ($expected as $sentence) {
+            echo "<p>" . htmlspecialchars($sentence) . "</p>";
+        }
     }
 
     echo "</div>"; // Close content div
