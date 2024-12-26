@@ -24,7 +24,7 @@
   <ol>
     <li>Click on <code>Create/Reset Tables</code> button on this page</li>
     <li><a href="websocket_conf.php">
-      Download websocket.zip</a>
+      Download websocket.zip</a> Current version 1.0 (Check back after every CHIM update!)
     </li>
     <li><a href="https://github.com/brian-girko/always-active/tree/master">
       Install always-active extension</a>
@@ -50,11 +50,28 @@
     <li>Select the bridge extension once more.</li>
     <li>Select <code>Target ChatGPT tab</code> and select your ChatGPT chrome tab from the drop down box.</li>
     <li>On the CHIM Default configuration page, place a check mark next to the web_connector under connectors.</li>
-    <li></li>Click save, and select copy to all profiles.</li>
+    <li>Click save, and select copy to all profiles.</li>
     <li>Now change your connector selection at the top of the page to <code>web_connector</code></li>
     <li>Again select save and navigate to Troubleshooting > and run the LLM connector test</li>
     <li>You should now see a response in the LLM response field as well as messages on ChatGPT.com</li>
   </ol>
+  <h2>Known Bugs</h2>
+  <o1>
+    <li>Right now Web Connector is in beta and may not function as intended!</li>
+    <li>Web connector is slower at responding when ChatGPT.com is not visibile in the foreground.</li>
+    <li>Actions and commands may not work correctly.</li>
+  </o1>
+  
+  <h2>Roadmap</h2>
+  <o1>
+    <li>Integrate actions and commands.</li>
+    <li>Custom websocket address and port configuration.</li>
+    <li>Optional Remote PC port forwarding scripts. 
+      -- Solves the response slowness limitation by offloading to a seperate PC with Chrome running.
+    </li>
+    <li>Expand compatibility to Firefox.</li>
+    <li>Add support for more AI websites.</li>
+  </o1>
 
   <script>
     // WebSocket setup
