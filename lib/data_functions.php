@@ -1806,7 +1806,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
 
     $codename=mb_convert_encoding($npcname, 'UTF-8', mb_detect_encoding($npcname));
     $codename=strtr(strtolower(trim($codename)),[" "=>"_","'"=>"+"]);
-    $codename=preg_replace('/[^\w\p{L}\p{N}_+]/u', '', $codename);
+    $codename=preg_replace('/[^\w]/u', '', $codename);
 
     $cn=$db->escape("Voicetype/$codename");
     $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
