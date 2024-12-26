@@ -261,10 +261,6 @@ function split_sentences_stream($paragraph)
         $sentences[]=$paragraph;
     }
 
-    if ($paragraph) {
-        $sentences[]=$paragraph;
-    }
-
     $splitSentences = [];
     $currentSentence = '';
 
