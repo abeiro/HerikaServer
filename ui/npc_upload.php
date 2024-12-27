@@ -473,7 +473,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 
         <input type="submit" name="submit_individual" value="Submit">
     </form>
-    <p>You do not need to fill in the Voice ID fields. To understand the logic of how they work, read <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" target="_blank">the manual page here</a>.</p>
+    <p>You do not need to fill in the Voice ID fields. To understand the logic of how they work, read <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" style="color:yellow;" target="_blank">the manual page here</a>.</p>
 
     <h2>Batch Upload</h2>
     <form action="" method="post" enctype="multipart/form-data">
