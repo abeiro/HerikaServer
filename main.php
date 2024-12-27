@@ -646,7 +646,10 @@ if ($gameRequest[0] == "funcret") {
     if (in_array($GLOBALS["CURRENT_CONNECTOR"],["koboldcpp","openai","google_openai","openrouter"])) {  // OLD SCHEMA
         if (!empty($request)) {
             if (sizeof($memoryInjectionCtx)>0) {
-                $prompt[] = $memoryInjectionCtx;
+                if (!isset($prompt)) {
+                    $prompt=[];
+                }
+                array_splice($prompt, -1, 0, $memoryInjectionCtx); // add memory as second-to-last entry
                 error_log("Injected memory");
             }
             $FUNCTIONS_ARE_ENABLED=false;
@@ -667,7 +670,7 @@ if ($gameRequest[0] == "funcret") {
         if (!empty($request)) {
             $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
             if (sizeof($memoryInjectionCtx)>0) {
-                $prompt[] = $memoryInjectionCtx;
+                array_splice($prompt, -1, 0, $memoryInjectionCtx); // add memory as second-to-last entry
                 error_log("Injected memory");
             }
             
