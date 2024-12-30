@@ -330,9 +330,13 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         }
     } else
         $MUST_END=true;
-    
+    /*
     if (isset($GLOBALS["FEATURES"]["MISC"]["QUEST_COMMENT"]))
         if ($GLOBALS["FEATURES"]["MISC"]["QUEST_COMMENT"]===false)
+            $MUST_END=true;
+    */
+    if (isset($GLOBALS["QUEST_COMMENT"])) 
+        if ($GLOBALS["QUEST_COMMENT"]===false)
             $MUST_END=true;
 
 } elseif ($gameRequest[0] == "location") {
