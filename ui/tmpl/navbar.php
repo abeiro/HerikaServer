@@ -96,7 +96,7 @@
                     <li><h6 class="dropdown-header">Memory Management</h6></li>
                     <li>
                     <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
-                        Sync Memory Summaries
+                        Sync & Create Memory Summaries
                     </a>
                     </li><li>
                     <a class="dropdown-item" href="tests/vector-delete-memory_summary.php" title="Compact and Sync Memories." onclick="return confirm('Will delete all summarized memories. ARE YOU SURE?')">
