@@ -5,60 +5,6 @@ header("Pragma: no-cache"); // HTTP 1.0
 header("Expires: 0"); // Proxies
 
 
-
-?>
-
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-</head>
-<body>
-
-<style>
-    label{
-        color: #ff00c6;
-
-    }
-
-    p.conf-item{
-        color: #ff00c6;
-
-    }
-
-
-    p.conf-item input[type=radio] + label {
-        color: white;
-
-    }
-    span {
-        color: white;
-
-    }
-
-    button {
-    padding: 5px 10px;
-    background-color: rgb(0, 48, 176);
-    color: #ffffff;
-    border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.3s, color 0.3s;
-    margin: 2px;
-    font-weight: bold;
-    }
-
-    button:hover {
-        background-color: rgb(0, 38, 156); /* Darker shade for hover */
-    }
-
-</style>
-    
-<?php
-
 error_reporting(E_ERROR);
 session_start();
 
@@ -114,6 +60,50 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
 // End of profile selection
 
 include("tmpl/head.html");
+// Config wizard styles
+echo "
+<style>
+    label{
+        color: #ff00c6;
+
+    }
+
+    p.conf-item{
+        color: #ff00c6;
+
+    }
+
+
+    p.conf-item input[type=radio] + label {
+        color: white;
+
+    }
+    span {
+        color: white;
+
+    }
+
+    button {
+    padding: 5px 10px;
+    background-color: rgb(0, 48, 176);
+    color: #ffffff;
+    border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s, color 0.3s;
+    margin: 2px;
+    font-weight: bold;
+    }
+
+    button:hover {
+        background-color: rgb(0, 38, 156); /* Darker shade for hover */
+    }
+
+</style>
+";
 $debugPaneLink = false;
 include("tmpl/navbar.php");
 

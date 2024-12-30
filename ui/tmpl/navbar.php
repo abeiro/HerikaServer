@@ -871,4 +871,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 </div>
 
-<main style="max-height:820px;overflow-y:scroll">
+<main style="max-height:750px;overflow-y:scroll">
