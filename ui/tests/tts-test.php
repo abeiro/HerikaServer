@@ -181,7 +181,7 @@ $ts = time();
 <br>
 <div class="status">
     <span class="label" style="font-weight: bold; color: yellow; background-color: black; padding: 5px; display: inline-block;">
-        IF YOU DO NOT SEE AN AUDIO FILE, HERE ARE A LIST OF POTENTIAL ERRORS AND FIXES
+        TROUBLESHOOTING FIXES
     </span>
     <ul class="error-list" style="margin-top: 15px; list-style-type: none; padding-left: 0;">
         <li style="margin-bottom: 20px;">
