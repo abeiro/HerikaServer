@@ -227,7 +227,9 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || !file_exists($enginePath . "connect
     }
 
     print_r($GLOBALS["DEBUG_DATA"]);
-    print_r($GLOBALS["ALREADY_SENT_BUFFER"]); 
+    if (isset($GLOBALS["ALREADY_SENT_BUFFER"])) {
+        print_r($GLOBALS["ALREADY_SENT_BUFFER"]);
+    }
 }
 
 echo '</pre>';

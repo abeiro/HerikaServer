@@ -122,7 +122,7 @@ function DataLastInfoFor($actor, $lastNelements = -2)
 
     foreach ($lastDialog as $n => $line) {
 
-        $pattern = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
+        $pattern = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:\w+)?(?:(?:st|nd|rd|th) of |\/)(.+), 4E (\d+)/u'; //extract also for months with apostrophe like Sun's Something
         $replacement = 'Day name: $1, Hour: $2, Day Number: $3, Month: $4, 4th Era, Year: $5';
         $result = preg_replace($pattern, $replacement, $line["content"]);
         $lastDialogFull[$n]["content"] = $result;
@@ -519,8 +519,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         $printLocation=false;
         
         $string = $row["location"];
-        preg_match('/Context\s*(new\s*)?location:\s*([a-zA-Z\s\'\-]+)(\s*,|$)/', $string, $locationMatch);
-        preg_match('/Hold:\s*([a-zA-Z\s\'\-]+)(\s*|$)/', $string, $holdMatch);
+        preg_match('/Context\s*(new\s*)?location:\s*([^$,]+)/', $string, $locationMatch);
+        preg_match('/Hold:\s*([^$,\)]+)/', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
             //error_log(print_r($string,true));
@@ -1804,8 +1804,9 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
     $newConfFile=md5($npcname);
 
-    $codename=strtr(strtolower(trim($npcname)),[" "=>"_","'"=>"+"]);
-    $codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
+    $codename=mb_convert_encoding($npcname, 'UTF-8', mb_detect_encoding($npcname));
+    $codename=strtr(strtolower(trim($codename)),[" "=>"_","'"=>"+"]);
+    $codename=preg_replace('/[^\w+]/u', '', $codename);
 
     $cn=$db->escape("Voicetype/$codename");
     $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
