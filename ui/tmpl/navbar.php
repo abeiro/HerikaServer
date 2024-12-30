@@ -100,7 +100,7 @@
                     </a>
                     </li><li>
                     <a class="dropdown-item" href="tests/vector-delete-memory_summary.php" title="Compact and Sync Memories." onclick="return confirm('Will delete all summarized memories. ARE YOU SURE?')">
-                        Delete all Memory Summaries
+                        Delete All Memory Summaries
                     </a>
                     </li>
 
