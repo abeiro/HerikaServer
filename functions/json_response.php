@@ -77,9 +77,9 @@
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target",
+                    "target"=>"action's target|destination name",
                     "lang"=>"en|es",
-                    "message"=>"action's target|destination name",
+                    "message"=>"lines of dialogue",
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -87,8 +87,8 @@
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target",
-                    "message"=>"action's target|destination name",
+                    "target"=>"action's target|destination name",
+                    "message"=>"lines of dialogue",
                 ];
             }
         }
