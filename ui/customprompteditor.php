@@ -11,6 +11,7 @@ $content = '';
 
 // Check if the file exists
 if (!file_exists($file_path)) {
+    // Create a minimal file if none exists
     $content = "<?php\n?>";
     file_put_contents($file_path, $content);
 } else {
@@ -20,7 +21,6 @@ if (!file_exists($file_path)) {
 
 // Initialize message variable
 $message = '';
-
 // Initialize prompts_content variable
 $prompts_content = '';
 
@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $content = $_POST['content'];
     }
 
+    // Save button
     if (isset($_POST['save'])) {
         // Save the new content back to the file
         if (file_put_contents($file_path, $content) !== false) {
@@ -38,7 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             $message = 'Error saving the file.';
         }
-    } elseif (isset($_POST['validate'])) {
+    }
+    // Validate button
+    elseif (isset($_POST['validate'])) {
         // Perform validation
         $validation_steps = [];
         $errors = [];
@@ -47,13 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (strpos($content, '<?php') !== 0) {
             $errors[] = 'The file must start with <?php';
         } else {
-            $validation_steps[] = 'File is in PHP format';
+            $validation_steps[] = 'The file starts with the correct PHP syntax';
         }
 
         if (substr(trim($content), -2) !== '?>') {
             $errors[] = 'The file must end with ?>';
         } else {
-            $validation_steps[] = 'File ends with ?>';
+            $validation_steps[] = 'The file ends with ?>';
         }
 
         if (empty($errors)) {
@@ -61,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $tmpfname = tempnam(sys_get_temp_dir(), "phptest");
             file_put_contents($tmpfname, $content);
 
-            // Execute PHP lint check
+            // Execute PHP lint check (php -l)
             $output = [];
             $return_var = 0;
             exec("php -l " . escapeshellarg($tmpfname), $output, $return_var);
@@ -70,18 +73,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             unlink($tmpfname);
 
             if ($return_var !== 0) {
-                $errors[] = 'PHP syntax error: ' . implode("\n", $output);
+                $errors[] = 'JSON syntax error detected. Check for errors below (the little red boxes).';
             } else {
-                $validation_steps[] = 'PHP code syntax is valid';
+                $validation_steps[] = 'JSON code syntax is valid';
             }
         }
 
         if (empty($errors)) {
-            $message = 'Validation successful. The following checks passed:<br>' . implode('<br>', $validation_steps);
+            $message = '<div style="color: #32CD32; font-weight: bold;">Validation successful. The following checks passed:<br></div>' . 
+            '<div style="color: #32CD32;">' . implode('<br>', $validation_steps) . '</div>';
+ 
+
         } else {
-            $message = 'Validation failed:<br>' . implode('<br>', $errors);
+            $message = '<div style="color: red; font-weight: bold;">Validation failed:<br></div>' . 
+            '<div style="color: red;">' . implode('<br>', $errors) . '</div>';
+
         }
-    } elseif (isset($_POST['view_prompts'])) {
+    }
+    // View prompts button
+    elseif (isset($_POST['view_prompts'])) {
         // Handle view_prompts
         $prompts_file_path = '../prompts/prompts.php';
         if (file_exists($prompts_file_path)) {
@@ -89,11 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             $message = 'prompts.php file not found.';
         }
-    } elseif (isset($_POST['verify'])) {
-        // Redirect to ../../streamv2.php when verify button is clicked
-        header("Location: ../../HerikaServer/streamv2.php");
-        exit;
     }
+
 }
 ?>
 
@@ -147,9 +154,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: white;
             border-radius: 5px; /* Slightly larger border radius */
             cursor: pointer;
-            padding: 5px 15px; /* Increased padding for larger button */
-            font-size: 18px;    /* Increased font size */
-            font-weight: bold;  /* Bold text for better visibility */
+            padding: 8px 16px; /* Increased padding for a larger button */
+            font-size: 18px;   /* Increased font size */
+            font-weight: bold; /* Bold text for better visibility */
             transition: background-color 0.3s ease; /* Smooth hover transition */
             margin-right: 10px;
         }
@@ -204,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border: 1px solid #555555;
         }
 
-        /* New Styles for <pre> and <code> Elements */
+        /* Code blocks styling */
         pre {
             background-color: #1e1e1e; /* Distinct dark background for code blocks */
             border: 1px solid #555555; /* Border to make it stand out */
@@ -215,49 +222,68 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         pre code {
-            background-color: #2a2a2a; /* Slightly lighter background for code */
-            border: none; /* Remove border from code to rely on pre's border */
-            padding: 0; /* Remove padding from code */
+            border: none;
+            padding: 0;
             color: #f8f9fa; /* Ensure code text is readable */
             font-family: 'Courier New', Courier, monospace; /* Monospace font for code */
             font-size: 14px; /* Consistent font size */
         }
 
-        /* Optional: Syntax Highlighting Colors (Example for PHP) */
-        .language-php {
-            color: #89e051; /* Keyword color */
+        /* ACE Editor container */
+        #editor {
+            width: 100%;
+            height: 700px; /* Force the main textbox to be large */
+            background-color: #1e1e1e; /* Dark background for Ace Editor */
+            margin-top: 10px;
+            border: 1px solid #555555;
+            border-radius: 5px;
         }
-
-        /* You can add more syntax highlighting rules as needed */
     </style>
 </head>
 <body>
     <h1>📝CHIM Custom Prompt Editor</h1>
-    <p>By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.</p>
-    <p>For example you can adjust how AI NPC's write their diary entries, what they say during bored events, how to summarize books and more!</p>
-    <p>This file overwrites whatever is in the standard prompts.php, meaning you can safely make edits to this without breaking it if CHIM updates.</p>
-    <p>The file requires proper JSON formatting!</p>
+    <p>
+        By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.
+        For example, you can adjust how AI NPCs write their diary entries, what they say during bored events, and more!
+    </p>
+    <p>
+        The contents of this file overwrites whatever is in the standard <code>prompts.php</code>, meaning you can safely make edits to it without breaking it when CHIM updates.
+    </p>
+    <p>
+        <b>The file must be in valid PHP format!</b> Make sure it starts with <code>&lt;?php</code> and ends with <code>?&gt;</code>.
+    </p>
+
     <?php if (!empty($message)): ?>
         <div class="message"><p><?php echo nl2br($message); ?></p></div>
     <?php endif; ?>
 
-    <form method="post">
-        <label for="content">prompts_custom.php Editor:</label>
-        <textarea name="content" id="content" rows="30"><?php echo htmlspecialchars($content); ?></textarea>
+    <!-- Main form for editing and saving the prompts_custom.php file -->
+    <form method="post" onsubmit="return syncAceContent()">
+        <label for="editor">prompts_custom.php Editor:</label>
+
+        <!-- Ace Editor replaces the traditional <textarea> -->
+        <div id="editor"></div>
+        <!-- Hidden textarea to store final text from Ace Editor -->
+        <textarea name="content" id="hiddenContent" style="display:none;"></textarea>
+        
         <br>
         <input type="submit" name="save" value="Save">
-        <!-- <input type="submit" name="validate" value="Validate File"> -->
-        <input type="submit" name="verify" value="Verify">
+        <input type="submit" name="validate" value="Validate">
     </form>
 
-<p>After you have <b>Saved</b> the file click <b>Verify</b> to check if the changes go through correctly.</p>
-<p><b>The Verify button should be a white page with no errors! If not then the formatting is wrong!</b></p>
-<p><i>You should be able to use an LLM chatbot to help fix any JSON formatting issues.</i></p>
-    <!-- New form for viewing prompts.php -->
+    <p>
+        Click the <b>Validate</b> button to confirm the file is in proper format. Then click <b>Save</b>. 
+    </p>
+    <p>
+        <i>Use an LLM chatbot if you need help fixing syntax errors.</i>
+    </p>
+
+    <!-- Form to view prompts.php -->
     <form method="post">
         <input type="submit" name="view_prompts" value="View prompts.php file">
     </form>
 
+    <!-- If user clicked "View prompts" and found content, show it -->
     <?php if (isset($prompts_content) && !empty($prompts_content)): ?>
         <textarea rows="30" readonly><?php echo htmlspecialchars($prompts_content); ?></textarea>
     <?php endif; ?>
@@ -279,10 +305,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             "dontuse" => (time() % 5 != 0) // 20% chance
         ]
     ],
-    </code></pre>
+        </code></pre>
 
         <p>We can edit the <b>prompts_custom.php</b> with this new definition:</p>
-
         <pre><code class="language-php">
 // These are comments, you do not need to add them to the custom prompt file.
 // $TEMPLATE_DIALOG is in prompts.php and is the standard cue.
@@ -310,7 +335,6 @@ $PROMPTS["combatend"] = [
     </div>
     <br>
     <h3>Custom Prompt Examples:</h3>
-
     <p><b>Remove the "I am alive" message when an AI NPC activates</b></p>
     <pre><code class="language-php">
 $PROMPTS["im_alive"]=[ 
@@ -319,15 +343,50 @@ $PROMPTS["im_alive"]=[
     "extra"=>["dontuse"=>true] 
 ];
     </code></pre>
-</body>
 
-<p><b>Make diary entries more emotional and private (credit to Larrek)</b></p>
+    <p><b>Make diary entries more emotional and private (credit to Larrek)</b></p>
     <pre><code class="language-php">
 $PROMPTS["diary"]=[ 
     "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary, add {$GLOBALS["HERIKA_NAME"]}'s emotions and private thoughts on people and events . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
     "extra"=>["force_tokens_max"=>0]
 ];
     </code></pre>
+
+    <!-- Include Ace Editor scripts from jsDelivr -->
+    <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.5.0/src-min-noconflict/ace.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.5.0/src-min-noconflict/ext-language_tools.js"></script>
+    <script>
+    let editor;
+
+    // Initialize Ace Editor after DOM is loaded
+    window.addEventListener('DOMContentLoaded', function() {
+        editor = ace.edit("editor", {
+            mode: "ace/mode/php",
+            theme: "ace/theme/monokai",
+            wrap: true,
+            autoScrollEditorIntoView: true,
+        });
+
+        editor.setValue(<?php echo json_encode($content); ?>, -1);
+    });
+
+    // On form submission, copy Ace Editor content to hidden textarea
+    function syncAceContent() {
+    const code = editor.getValue().trim();
+
+    // Quick check for start/end tags:
+    if (!code.startsWith('<' + '?php')) {
+        alert('Error: File must start with "<php?"');
+        return false;
+    }
+    if (!code.endsWith('?' + '>')) {
+        alert('Error: File must end with "?>"');
+        return false;
+    }
+
+    document.getElementById('hiddenContent').value = code;
+    return true; // Allow form submission
+}
+</script>
 </body>
 </html>
-
