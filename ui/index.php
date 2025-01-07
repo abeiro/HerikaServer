@@ -488,6 +488,7 @@ include("tmpl/navbar.php");
         echo '<p>You can even add scripted events that can be triggered by the AI.</p>';
         echo '';
         echo '<p>The herika_heal plugin provides an example of how our API works.</p>';
+        echo '<p>Here is a link to the <a href="https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files" target="_blank">herika_heal example .ESP file (Optional Files)</a></p>';
         echo '<button type="button" class="open-overlay-btn" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
             
     }
