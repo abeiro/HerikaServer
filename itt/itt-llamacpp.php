@@ -14,7 +14,7 @@ function itt($file,$hints)
 
     // Define the POST data as an associative array
     $postData = [
-        'prompt' => strtr("{$GLOBALS["ITT"]["LLAMACPP"]["AI_VISION_PROMPT"]}.Hints: $hints. \nASSISTANT:",["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]),
+        'prompt' => strtr("{$GLOBALS["ITT"]["llamacpp"]["AI_VISION_PROMPT"]}.Hints: $hints. \nASSISTANT:",["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]),
         'n_predict' => 256,
         'image_data' => [["data"=>$base64Encoded,"id"=>1]],
         'ignore_eos' => false,
@@ -42,7 +42,7 @@ function itt($file,$hints)
     ]);
 
     // Specify the URL
-    $url = $GLOBALS["ITT"]["LLAMACPP"]["URL"]."/completion";
+    $url = $GLOBALS["ITT"]["llamacpp"]["URL"]."/completion";
 
     // Perform the HTTP POST request
     $responseRaw = file_get_contents($url, false, $context);
