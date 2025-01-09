@@ -45,10 +45,13 @@ class connector
         
         if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] && isset($GLOBALS["MEMORY_STATEMENT"]) ) {
             foreach ($contextData as $n=>$contextline)  {
-                if (strpos($contextline["content"],"#MEMORY")===0) {
-                    $contextData[$n]["content"]=str_replace("#MEMORY","##\nMEMORY\n",$contextline["content"]."\n##\n");
-                } else if (strpos($contextline["content"],$GLOBALS["MEMORY_STATEMENT"])!==false) {
-                    $contextData[$n]["content"]=str_replace($GLOBALS["MEMORY_STATEMENT"],"(USE MEMORY reference)",$contextline["content"]);
+                if (is_array($contextline)) {
+
+                    if (strpos($contextline["content"],"#MEMORY")===0) {
+                        $contextData[$n]["content"]=str_replace("#MEMORY","##\nMEMORY\n",$contextline["content"]."\n##\n");
+                    } else if (strpos($contextline["content"],$GLOBALS["MEMORY_STATEMENT"])!==false) {
+                        $contextData[$n]["content"]=str_replace($GLOBALS["MEMORY_STATEMENT"],"(USE MEMORY reference)",$contextline["content"]);
+                    }
                 }
             }
         }
@@ -84,7 +87,12 @@ class connector
         $assistantRoleBuffer="";
         foreach ($contextDataOrig as $n=>$element) {
             
-            
+            if (!is_array($element)) {
+                error_log("Warning: $n=>$element was not an array");
+                continue;
+
+            }
+
             if ($n>=(sizeof($contextDataOrig)-1) && $element["role"]!="tool") {
                 // Last element
                 $pb["user"].=$element["content"];
