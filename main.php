@@ -226,7 +226,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     $GLOBALS["HERIKA_NAME"]=$origName;
     unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
     // audit_log(__FILE__." ".__LINE__);
-        
+    $startTimeAfterPlayerTTTS = microtime(true);
+    
     
 }
 
