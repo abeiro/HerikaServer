@@ -56,9 +56,11 @@ include("tmpl/head.html");
 $db = new sql();
 
 
-/* Check for database updates */
-require_once(__DIR__."/../debug/db_updates.php");
-require_once(__DIR__."/../debug/npc_removal.php");
+/* Check for database updates only in index.php with no parms*/
+if (sizeof($_GET)==0) {
+    require_once(__DIR__."/../debug/db_updates.php");
+    require_once(__DIR__."/../debug/npc_removal.php");
+}
 /* END of check database for updates */
 
 /* Actions */
