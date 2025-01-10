@@ -1,4 +1,5 @@
 <?php 
+$TEMPLATE_DIALOG="genera las siguientes lineas de dialogo para {$GLOBALS["HERIKA_NAME"]}. Evita narraciones.";
 
 $PROMPTS=array(
     "location"=>[
