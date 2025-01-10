@@ -84,13 +84,17 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash)
 
         $root = $doc->createElement("speak");
         $root->setAttribute("version", "1.0");
+
+
+       
+
         $root->setAttribute("xml:lang", "en-us");
         $root->setAttribute("xmlns:mstts", "https://www.w3.org/2001/mstts");
 
 
         $voice = $doc->createElement("voice");
         //$voice->setAttribute( "xml:lang" , "en-us" );
-        $voice->setAttribute("xml:gender", "Female");
+        //$voice->setAttribute("xml:gender", "Female");
 
         $voiceId=$GLOBALS["TTS"]["AZURE"]["voice"];
 
@@ -98,6 +102,14 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash)
 			$voiceId=$GLOBALS["PATCH_OVERRIDE_VOICE"];
 
         
+            $pattern = '/^[a-z]{2}-[A-Z]{2}/'; // Matches language-region code at the start of the string
+            if (preg_match($pattern, $voiceId, $matches)) {
+            
+            $language = strtolower($matches[0]);
+            
+            $root->setAttribute("xml:lang", $language);
+
+        } 
 
         $voice->setAttribute("name", $voiceId); // Read https://learn.microsoft.com/es-es/azure/cognitive-services/speech-service/language-support?tabs=tts
 
