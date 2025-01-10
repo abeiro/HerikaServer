@@ -30,7 +30,7 @@ abstract class DatabaseTestCase extends TestCase
         // Drop the test database if it already exists
         $dropResult = pg_query($mainConnection, "DROP DATABASE IF EXISTS ".self::$testDatabaseName." WITH (FORCE)");
         if (!$dropResult) {
-            error_log("Failed to drop test database: " . pg_last_error($mainConnection));
+            $this->fail("Failed to drop test database: " . pg_last_error($mainConnection));
         }
 
         // Create the test database
