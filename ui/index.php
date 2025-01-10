@@ -475,7 +475,7 @@ include("tmpl/navbar.php");
         echo '</td>';
     
         // Description cell
-        echo '<td>Adds more AI actions, Sapience, and NSFW integrations.</td>';
+        echo '<td>Extension for CHIM that expands its capabilities and optionally adds NSFW integrations.<br>Requirements: <a href="https://www.nexusmods.com/skyrimspecialedition/mods/16495" target="_blank">JContainers</a>, <a href="https://www.nexusmods.com/skyrimspecialedition/mods/22854" target="_blank">Papyrus Extender</a>, <a href="https://www.nexusmods.com/skyrimspecialedition/mods/36869" target="_blank">SPID</a>.</td>';
     
         // More Info cell with button
         echo '<td><a href="https://github.com/MinLL/MinAI" target="_blank" class="configure-plugin-btn">More Info</a></td>';
