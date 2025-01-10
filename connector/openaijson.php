@@ -290,7 +290,8 @@ class connector
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30,
+                "ignore_errors" => true
             )
         );
 
@@ -298,28 +299,53 @@ class connector
         
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
-                $error=error_get_last();
-                error_log(print_r($error,true));
+            $error=error_get_last();
+            error_log(print_r($error,true));
+
+            if ($GLOBALS["db"]) {
+                $GLOBALS["db"]->insert(
+                'audit_request',
+                    array(
+                        'request' => json_encode($data),
+                        'result' => $error["message"]
+                    ));
+            }
+            return null;
+        } else {
+            // Get HTTP response code
+            $response_info = stream_get_meta_data($this->primary_handler);
+            $status_line = $response_info['wrapper_data'][0];
+            preg_match('/\d{3}/', $status_line, $matches); // get three digits (200, 300, 404, etc)
+            $status_code = isset($matches[0]) ? intval($matches[0]) : null;
+
+            if ($status_code >= 300) {
+                $response = stream_get_contents($this->primary_handler);
+                $error_message = "Request to openaijson connector failed: {$status_line}.\nResponse body: {$response}";
+                trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
                     $GLOBALS["db"]->insert(
                     'audit_request',
                         array(
                             'request' => json_encode($data),
-                            'result' => $error["message"]
+                            'result' => $error_message
                         ));
                 }
-                return null;
-        } else  {
-            if ($GLOBALS["db"]) {
-                $GLOBALS["db"]->insert(
-                 'audit_request',
-                 array(
-                    'request' => json_encode($data),
-                    'result' => "Ok"
-                ));
-            }
 
+                $this->close();
+                $this->primary_handler=false;
+                return null;
+            } else  {
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                    array(
+                        'request' => json_encode($data),
+                        'result' => "Ok"
+                    ));
+                }
+
+            }
         }
 
 
@@ -338,7 +364,11 @@ class connector
 
         static $numOutputTokens=0;
 
-        $line = fgets($this->primary_handler);
+        if (!$this->primary_handler) {
+            $line = "";
+        } else {
+            $line = fgets($this->primary_handler);
+        }
         $buffer="";
         $totalBuffer="";
         $finalData="";
@@ -402,9 +432,9 @@ class connector
     // Method to close the data processing operation
     public function close()
     {
-
-        fclose($this->primary_handler);
-        
+        if ($this->primary_handler) {
+            fclose($this->primary_handler);
+        }
         
         //file_put_contents(__DIR__."/../log/ouput_from_llm.log",$this->_buffer, FILE_APPEND | LOCK_EX);
         file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
@@ -479,7 +509,7 @@ class connector
 
     public function isDone()
     {
-        return feof($this->primary_handler);
+        return !$this->primary_handler || feof($this->primary_handler);
     }
 
 }
