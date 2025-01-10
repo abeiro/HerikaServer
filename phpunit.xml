@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit bootstrap="unittests/vendor/autoload.php"
-	cacheResult="false"
+    cacheResult="false"
 >
 
-	<testsuites>
-		<testsuite name="CHIM Unit Tests">
-			<directory>unittests/tests</directory>
-		</testsuite>
-	</testsuites>
+    <testsuites>
+        <testsuite name="CHIM Unit Tests">
+            <directory>unittests/tests</directory>
+        </testsuite>
+    </testsuites>
 
     <php>
-		<env name="PHPUNIT_TEST" value="true" />
+        <env name="PHPUNIT_TEST" value="true" />
     </php>
 
-	<source>
-		<include>
-			<directory suffix=".php">.</directory>
-		</include>
-		<exclude>
-			<directory suffix=".php">***/vendor</directory>
-			<directory suffix=".php">unittests</directory>
-		</exclude>
-	</source>
+    <source>
+        <include>
+            <directory suffix=".php">.</directory>
+        </include>
+        <exclude>
+            <directory suffix=".php">***/vendor</directory>
+            <directory suffix=".php">unittests</directory>
+        </exclude>
+    </source>
 
-	<coverage>
-		<report>
-			<clover outputFile="cov.xml" />
-		</report>
-	</coverage>
+    <coverage>
+        <report>
+            <clover outputFile="cov.xml" />
+        </report>
+    </coverage>
 
 </phpunit>
