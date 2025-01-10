@@ -426,7 +426,7 @@ class connector
             $GLOBALS["patch_openrouter_timeout"]=time();
 
         if ($this->isDone()) {//  Didn't output anything?
-            if (empty(trim($this->_buffer))) {
+            if (!$this->_buffer || empty(trim($this->_buffer))) {
                 $line="";    
                 error_log("LLM didn't output anything");
             }
