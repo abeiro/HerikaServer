@@ -1,0 +1,14 @@
+
+/ext/*
+!/ext/herika_heal
+!/ext/xLifeLink_plugin
+/log
+/soundcache
+data/CurrentModel_*.json
+conf/character_map.json
+conf/conf.php
+conf/conf_*.php
+!conf/conf_loader.php
+!conf/conf_schema.php
+/data/voices/*
+!/data/voices/TheNarrator.wav

@@ -347,4 +347,7 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (expanded npc table) has been applied to Database")</script>';
 }
 
+$path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
+require_once("$path/add_json_personalities.php");
+
 ?>
