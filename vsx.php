@@ -1,5 +1,6 @@
 <?php
 
+require_once("lib/utils.php");
 
 /* Voice Sample Extractor */
 
@@ -13,9 +14,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 
 // Put info into DB asap
 $db=new sql();
-$codename=mb_convert_encoding($_GET["codename"], 'UTF-8', mb_detect_encoding($_GET["codename"]));
-$codename=strtr(strtolower(trim($codename)),[" "=>"_","'"=>"+"]);
-$codename=preg_replace('/[^\w+]/u', '', $codename);
+$codename = npcNameToCodename($_GET["codename"]);
 
     
 $db->delete("conf_opts", "id='".$db->escape("Voicetype/$codename")."'");
