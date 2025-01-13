@@ -1,6 +1,10 @@
 <?php
 require_once("util.php");
 
+if (!$GLOBALS["FEATURES"]["MISC"]["LIFE_LINK_PLUGIN"]) {
+    return;
+}
+
 /**
  * Shortcut for HERIKA_NAME
  * @var mixed
