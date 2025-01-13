@@ -1,5 +1,9 @@
 <?php
 
+if (!$GLOBALS["FEATURES"]["MISC"]["LIFE_LINK_PLUGIN"]) {
+    return;
+}
+
 require_once("util.php");
 
 $GLOBALS["UPDATE_PERSONALITY_PROMPT"] = "**Based on the Dialogue History, update the following:** 
