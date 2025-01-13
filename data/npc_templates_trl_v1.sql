@@ -16,8 +16,6 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-ALTER TABLE ONLY public.npc_templates_trl DROP CONSTRAINT npc_templates_trl_pk;
-DROP TABLE public.npc_templates_trl;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
