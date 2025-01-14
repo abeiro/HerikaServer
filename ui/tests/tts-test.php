@@ -35,7 +35,40 @@ $GLOBALS["AVOID_TTS_CACHE"] = true;
 
 $DEBUG_DATA = [];
 
-$soundFile = returnLines([$testString]);
+
+$cleanString = $testString;
+
+$melotts_pronunciation_file = $enginePath . "tts" . DIRECTORY_SEPARATOR ."tts-melotts_pronunciation.php";
+$b_conf_melotts = file_exists($melotts_pronunciation_file);
+if ($b_conf_melotts) {
+    include_once($melotts_pronunciation_file);
+}
+
+$b_melotts = (strtolower($TTSFUNCTION) == 'melotts');
+if ($b_melotts) {
+    if ($b_conf_melotts && (pronunciation_adjust_enabled())) {
+        $testString .= $s_pronunciation_test; // add pronunciation test sample
+        $cleanString = adjust_pronunciation($testString); // clean English mispronunciations.
+    }
+}
+
+$soundFile=returnLines([$cleanString], false); 
+
+// clean eventlog and log tables: 
+$s_sample = $db->escape(trim(substr($cleanString, 14, 92)));
+if (strlen($s_sample) > 48) { 
+    $s_time = (time() - 180);
+    $s_SQL = "DELETE FROM eventlog WHERE (data LIKE '%" .$s_sample. "%') AND (type in ('chat','prechat')) AND (localts > " .$s_time. ") ";
+    //error_log("melotts SQL: " . $s_SQL);
+    $db->query($s_SQL);
+    //$s_SQL = "DELETE FROM log WHERE (response LIKE '%" .$s_sample. "%') AND (localts > " .$s_time. ") "; // !!! not working because in log table, respunse field is double escaped !!!
+    $s_SQL = "DELETE FROM log WHERE (response LIKE '%" .$db->escape($s_sample). "%') AND (localts > " .$s_time. ") ";
+    //error_log("melotts SQL: " . $s_SQL);
+    $db->query($s_SQL);
+}
+
+$db->close();
+unset($db);
 
 $file = basename($GLOBALS["TRACK"]["FILES_GENERATED"][0]);
 $ts = time();
@@ -161,6 +194,8 @@ $ts = time();
     <?php
     if ($file) {
         echo '<h3>' . htmlspecialchars($testString) . '</h3>';
+        if ($b_melotts && $b_conf_melotts && pronunciation_debug_enabled()) 
+            echo '<h3>' . htmlspecialchars($cleanString) . '</h3>'; 
         echo '<audio controls>';
         echo '<source src="../../soundcache/' . htmlspecialchars($file) . '?ts=' . htmlspecialchars($ts) . '" type="audio/wav">';
         echo 'Your browser does not support the audio element.';
