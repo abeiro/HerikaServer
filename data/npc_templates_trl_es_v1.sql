@@ -10640,4 +10640,8 @@ Bor is a straightforward and no-nonsense character who speaks in a direct manner
 --
 -- PostgreSQL database dump complete
 --
+
+INSERT INTO public.database_versioning
+SELECT 'npc_templates_trl',20250117001 where not exists (SELECT 1 from database_versioning where tablename='npc_templates_trl');
+
 UPDATE public.database_versioning set version=20250117001 WHERE tablename='npc_templates_trl';
