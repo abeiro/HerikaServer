@@ -23,10 +23,10 @@
         </exclude>
     </source>
 
-    <coverage>
+    <!--coverage>
         <report>
             <clover outputFile="cov.xml" />
         </report>
-    </coverage>
+    </coverage-->
 
 </phpunit>
