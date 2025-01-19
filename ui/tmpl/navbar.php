@@ -73,7 +73,7 @@
                     </a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('Sure?')">
+                    <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('This will delete all events in the eventlog. ARE YOU SURE?')">
                         Delete All Events
                     </a>
                     </li>
@@ -82,7 +82,7 @@
                     <!-- Second Category Header -->
                     <li><h6 class="dropdown-header">AI Log Management</h6></li>
                     <li>
-                    <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('Sure?')">
+                    <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('This will clear all the entries in the AI Log. ARE YOU SURE?')">
                         Clean AI Log
                     </a>
                     </li>
