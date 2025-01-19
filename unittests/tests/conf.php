@@ -69,7 +69,7 @@ $GLOBALS["CONNECTOR"]["openrouterjson"]["top_a"]=0; //LLM parameter top_a.
 $GLOBALS["CONNECTOR"]["openrouterjson"]["ENFORCE_JSON"]=true; //Attempts to enforce JSON. Only valid for some models.
 $GLOBALS["CONNECTOR"]["openrouterjson"]["PREFILL_JSON"]=false; //Prefill JSON, Only valid for some models.
 $GLOBALS["CONNECTOR"]["openrouterjson"]["MAX_TOKENS_MEMORY"]='1024'; //Maximum tokens to generate when summarizing.
-$GLOBALS["CONNECTOR"]["openrouterjson"]["API_KEY"]=""; //API key.
+$GLOBALS["CONNECTOR"]["openrouterjson"]["API_KEY"]="openrouterjson_key"; //API key.
 $GLOBALS["CONNECTOR"]["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $GLOBALS["CONNECTOR"]["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework"; //Stub needed header.
 $GLOBALS["CONNECTOR"]["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
@@ -311,6 +311,7 @@ $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"]=false; //Adjusting the pitch wh
 $GLOBALS["FEATURES"]["MISC"]["OGHMA_INFINIUM"]=false;	//Skyrim context information will be added to the prompt. Use for small weight LLMs.
 $GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"]=false; //Reorders properties in the offered JSON schema.
 $GLOBALS["FEATURES"]["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false; //KoboldCPP Actions.
+$GLOBALS["FEATURES"]["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dynamic profiles
 
 $GLOBALS["OGHMA_INFINIUM"]=true;
 
@@ -321,9 +322,27 @@ global $MAXIMUM_WORDS;
 global $FUNCTION_PARM_INSPECT;
 global $COMMAND_PROMPT;
 global $COMMAND_PROMPT_ENFORCE_ACTIONS;
+global $F_NAMES;
+global $F_RETURNMESSAGES;
+global $contextData;
+global $contextDataHistoric;
+global $contextDataWorld;
+global $contextDataFull;
 global $gameRequest;
+global $request;
+global $talkedSoFar;
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."phpunit.class.php");
 $GLOBALS["db"] = new sql();
+$GLOBALS["contextData"]=[];
+$GLOBALS["contextDataHistoric"]=[];
+$GLOBALS["contextDataWorld"]=[];
 $GLOBALS["contextDataFull"]=[];
+$GLOBALS["request"]="";
+$GLOBALS["COMMAND_PROMPT"]="";
+$GLOBALS["CACHE_PEOPLE"]="";
+$GLOBALS["CACHE_LOCATION"]="";
+$GLOBALS["CACHE_PARTY"]="";
+$GLOBALS["PATCH_STORE_FUNC_RES"]=null;
+
 ?>

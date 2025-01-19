@@ -106,6 +106,9 @@ abstract class DatabaseTestCase extends TestCase
             rewind($resourceMock);
             return $resourceMock;
         };
+        $GLOBALS["mockConnectorResponseMetaData"] = function() {
+            return ["wrapper_data" => ["HTTP/1.1 200 OK"]];
+        };
     }
 
     public function tearDownDB(): void
