@@ -28,7 +28,6 @@ function parse_log_to_csv($log_file, $csv_file) {
                 if (is_array($object)) {
                     $json_string = json_encode($object, JSON_PRETTY_PRINT);
                     if ($json_string === false) {
-                        error_log("JSON encoding error for object: " . var_export($object, true));
                         $json_string = "JSON Encoding Error"; // Or handle the error differently
                     }
                     $csv_data[] = ["prompt" => $json_string];
