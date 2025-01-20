@@ -177,7 +177,7 @@ $FUNCTIONS_ARE_ENABLED = true;
 if ($FUNCTIONS_ARE_ENABLED) {
     $GLOBALS["TEMPLATE_DIALOG"] = "";
     $FUNCTION_PARM_MOVETO = [$GLOBALS["PLAYER_NAME"]];
-    $FUNCTION_PARM_INSPECT = [$GLOBALS["PLAYER_NAME"]];
+    $FUNCTION_PARM_INSPECT = [$GLOBALS["PLAYER_NAME"], "monster"];
 
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "../prompts" . DIRECTORY_SEPARATOR . "command_prompt.php");
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "../functions" . DIRECTORY_SEPARATOR . "functions.php");
