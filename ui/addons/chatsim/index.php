@@ -137,7 +137,7 @@ echo "
     <form action='index.php' method='post'>
         <!-- You could add labels if you like; for now, we keep your existing structure. -->
         <p>Player: <b>{$GLOBALS["PLAYER_NAME"]}</b></p>
-        <input type='text' name='inputText' id='inputText' size='100' placeholder=\"Don't use enter. Use button send\"/>
+        <input type='text' name='inputText' id='inputText' size='100' placeholder=\"Don't use enter. Use the send button\"/>
 
         <input type='hidden' name='localts'   id='localts'   value='" . time() . "' />
         <input type='hidden'   name='gamets'    id='gamets'    value='0' />
