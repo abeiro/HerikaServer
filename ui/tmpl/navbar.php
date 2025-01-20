@@ -62,33 +62,33 @@
 
                     <!-- First Category Header -->
                     <li><h6 class="dropdown-header">Event Management</h6></li>
-                    <li>
+                    <!-- <li>
                     <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent events." onclick="return confirm('Sure?')">
                         Clean Sent Events
                     </a>
                     </li>
-                    <li>
-                    <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Marks unsent events from queue." onclick="return confirm('Sure?')">
-                        Reset Sent Events
+                    <li>-->
+                    <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Will clear the current short term context log." onclick="return confirm('This will clear the short term context buffer of events. ARE YOU SURE?')">
+                        Clear Current Context Events
                     </a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('This will delete all events in the eventlog. ARE YOU SURE?')">
+                    <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG! ARE YOU SURE???')">
                         Delete All Events
                     </a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Second Category Header -->
-                    <li><h6 class="dropdown-header">AI Log Management</h6></li>
+                    <li><h6 class="dropdown-header">Response Log Management</h6></li>
                     <li>
                     <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('This will clear all the entries in the AI Log. ARE YOU SURE?')">
-                        Clean AI Log
+                        Clean Response Log
                     </a>
                     </li>
                     <li>
                     <a class="dropdown-item" href="index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
-                        Export AI Log
+                        Export Response Log
                     </a>
                     </li>
 
