@@ -340,7 +340,7 @@ while ($row = $db->fetchArray($results)) {
 
 
 $SUBSTITUTIONS=[
-  "#BOOK_NAME#"=>"$HERIKA_NAME's diary",
+  "#BOOK_NAME#"=>"$HERIKA_NAME's Diary",
   "#HERIKA_NAME#"=>"$HERIKA_NAME",
   "##PAGES##"=>"$pageElements"
 ];
