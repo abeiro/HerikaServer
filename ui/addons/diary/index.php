@@ -235,7 +235,7 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
     if (!isset($_SESSION["PROFILE"])) {
         echo "<h2>Select a character before opening this page</h2>";
     } else {
-      echo "<h2>Select a character, that is not The Narrator before opening this page.</h2>";
+      echo "<h2>Select a character that is not The Narrator before opening this page.</h2>";
       echo "<h2>E.G. Select Hulda to read Hulda's diary, if she has written any entries.</h2>";
     }
     ?>

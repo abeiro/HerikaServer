@@ -2,6 +2,26 @@
 @import url("https://fonts.googleapis.com/css2?family=EB+Garamond&display=swap");
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fasthand&display=swap');
 
+@font-face {
+  font-family: 'MagicCardsNormal';
+  src: url('MagicCardsNormal.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Daedra';
+  src: url('Daedra.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.publisher p {
+  font-family: 'Daedra', sans-serif;
+  font-size: 16px; /* Adjust as needed */
+  color: #000000; /* Optional: set the color */
+}
+
 * {
   margin: 0;
   box-sizing: border-box;
@@ -1192,35 +1212,43 @@ p {
 
 .cover-front:nth-child(1) {
     text-align: center;
-    background: linear-gradient(#afd2dd, #a1d5e5) 50% 50%/80% 86% no-repeat, linear-gradient(#ffffff, #ffffff) 50% 50%/90% 93% no-repeat, linear-gradient(#9bc8d6, #9bc8d6) no-repeat;
-    background-image: url(images/cover.jpg);
+    background: linear-gradient(#afd2dd, #a1d5e5) 100% 100%/100% 100% no-repeat, linear-gradient(#ffffff, #ffffff) 100% 100%/100% 100%  no-repeat, linear-gradient(#9bc8d6, #9bc8d6) no-repeat;
+    background-image: url(images/cover.png);
 }
 
 .cover-front:nth-child(1) h1 {
-    font-family: 'Caveat', cursive;
-    font-size: 25px;
-    color: white;
-    margin-top: 50px;
-    text-transform: uppercase;
-    text-shadow: 3px 2px 3px black;
-
+  font-family: 'MagicCardsNormal', sans-serif;
+  font-size: 25px;
+  color: #ffe1a9; /* Light engraving color */
+  margin-top: 50px;
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  word-spacing: 6px;
+  text-shadow: 
+    -1px -1px 1px #000000, /* Top-left shadow for depth */
+    1px 1px 1px #ffffff, /* Bottom-right highlight for engraving */
+    inset -1px -1px 2px rgba(0, 0, 0, 0.5), /* Inner shadow for engraving effect */
+    inset 1px 1px 2px rgba(255, 255, 255, 0.2); /* Light highlight inside */
 }
 
 .page:nth-child(2) {
     background: #fbecb4;
     background-image: url(images/paper.jpg);
+    
 
 }
 
 
 .cover-front:nth-child(1) h2 {
-    font-family: 'Caveat', cursive;
+    font-family: 'MagicCardsNormal', sans-serif;
     font-size: 15px;
     color: white;
     margin-top: 30px;
     text-transform: uppercase;
     text-shadow: 3px 2px 3px black;
     top:60%;
+    letter-spacing: 5px; 
+    word-spacing: 6px;
 }
 
 body > div.book > div.text-page {
