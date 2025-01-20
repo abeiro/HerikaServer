@@ -38,8 +38,8 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
             /* Updated CSS for Dark Grey Background Theme */
             body {
                 font-family: Arial, sans-serif;
-                background-color: #2c2c2c; /* Dark grey background */
-                color: #f8f9fa; /* Light grey text for readability */
+                background-color: #2c2c2c; 
+                color: #f8f9fa;
             }
 
             h1, h2 {
@@ -262,14 +262,76 @@ echo <<<HEAD
 <body>
 HEAD;
 
+/**
+ * Splits text into multiple chunks of up to $maxLength characters,
+ * ensuring words aren't cut in half.
+ *
+ * @param string $text       The full text to chunk
+ * @param int    $maxLength  The maximum characters allowed in each chunk
+ * @return array             An array of text chunks
+ */
+function chunkTextByWords($text, $maxLength = 1000) {
+    // Split the text on whitespace to get individual words
+    $words = preg_split('/\s+/', $text);
+
+    $chunks = [];
+    $currentChunk = '';
+
+    foreach ($words as $word) {
+        // +1 for the space if $currentChunk is not empty
+        $space = ($currentChunk === '') ? '' : ' ';
+        // Check if adding this word would exceed our limit
+        if (strlen($currentChunk) + strlen($space) + strlen($word) <= $maxLength) {
+            // If it fits, add the word to current chunk
+            $currentChunk .= $space . $word;
+        } else {
+            // If it doesn't fit, push the current chunk into array and start a new one
+            $chunks[] = $currentChunk;
+            $currentChunk = $word; // begin new chunk with current word
+        }
+    }
+
+    // Add the last chunk if there's anything left in $currentChunk
+    if (!empty($currentChunk)) {
+        $chunks[] = $currentChunk;
+    }
+
+    return $chunks;
+}
+
+$maxChars = 890;
+
 $cn=$db->escape($GLOBALS["HERIKA_NAME"]);
-$results = $db->query("SElECT  topic,content,tags,people  FROM diarylog where people='$cn' order by gamets asc");
+$results = $db->query("SELECT topic, content, tags, people FROM diarylog WHERE people='$cn' ORDER BY gamets ASC");
+
 while ($row = $db->fetchArray($results)) {
-  $data[] = $row;
-  $pageElements.="
-    <div class=\"page text-page\" onclick=\"movePage(this, $n)\"><h3>{$row["topic"]}</h3>{$row["content"]}
-    <span class='readbutton' onclick='speak(document.querySelector(\"body > div.book > div:nth-child($n)\").innerHTML);event.stopPropagation()')>read</span></div>";
-  $n++;  
+    $topic   = $row["topic"];
+    $content = $row["content"];
+    
+    // Split by words, ensuring no word is cut off
+    $chunks = chunkTextByWords($content, $maxChars);
+
+    // Build HTML pages from each chunk
+    foreach ($chunks as $index => $chunk) {
+        // Append "(continued)" if not the first chunk
+        $title = $topic;
+        if ($index > 0) {
+            $title .= " (continued)";
+        }
+
+        // Build page content
+        $pageElements .= "
+            <div class=\"page text-page\" onclick=\"movePage(this, $n)\">
+                <h3>{$title}</h3>
+                <p>" . nl2br($chunk) . "</p>
+                <span class='readbutton'
+                      onclick='speak(document.querySelector(\"body > div.book > div:nth-child($n)\").innerHTML);event.stopPropagation()'>
+                      read
+                </span>
+            </div>
+        ";
+        $n++;
+    }
 }
 
 

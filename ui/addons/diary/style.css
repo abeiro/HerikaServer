@@ -16,6 +16,13 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'SkyrimBook';
+  src: url('SkyrimBooks_Handwritten_Bold-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 .publisher p {
   font-family: 'Daedra', sans-serif;
   font-size: 16px; /* Adjust as needed */
@@ -25,6 +32,7 @@
 * {
   margin: 0;
   box-sizing: border-box;
+  font-family: 'SkyrimBook', sans-serif;
 }
 
 .instruction, .book {
@@ -1174,7 +1182,7 @@ body {
   text-transform: uppercase;
 }
 .cover-front:nth-child(1) h2 {
-  font-family: "EB Garamond", serif;
+  font-family: "SkyrimBook", serif;
   font-size: 24px;
   color: #134a78;
   position: relative;
@@ -1189,7 +1197,7 @@ body {
 
 p {
   margin-bottom: 4%;
-  font-family: "EB Garamond", serif;
+  font-family: "SkyrimBook", serif;
   font-size: 16px;
 }
 
@@ -1200,7 +1208,7 @@ p {
 .instruction {
   left: calc(50% - 150px);
   font-size: 26px;
-  font-family: "EB Garamond", serif;
+  font-family: "SkyrimBook", serif;
   color: #0009;
   background: #fff7;
   border-radius: 15px;
