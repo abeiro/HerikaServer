@@ -44,11 +44,12 @@ function print_array_as_table($data)
 
             } elseif ($n == "rowid") {
                 echo "<td class='$colorClass'>
-                    <a class='icon-link' href='cmd/deleteRow.php?table={$_GET["table"]}&rowid=$cell'>
+                    <a class='icon-link' href='#' 
+                       onclick='deleteRowAndRefresh(\"" . $_GET["table"] . "\", $cell)'>
                         " . $cell . "
                         <i class='bi-trash'></i>
                     </a>
-                </td>";
+                </td>";           
             } elseif ($n == "summary" || $n == "content") {
                 echo "<td class='$colorClass'><em>
                     ".nl2br($cell)."</em>
@@ -93,3 +94,29 @@ function print_array_as_table($data)
 
 
 ?>
+
+<script>
+function deleteRowAndRefresh(table, rowId) {
+  // Make a background (AJAX) request to deleteRow.php
+  fetch(`cmd/deleteRow.php?table=${table}&rowid=${rowId}`, {
+    method: 'GET' // or 'POST' if your script expects POST
+  })
+  .then(response => {
+    // Check if the request was successful
+    if (!response.ok) {
+      throw new Error('Network response was not OK, status: ' + response.status);
+    }
+    // Optionally handle response text/data:
+    return response.text();
+  })
+  .then(data => {
+    // Once successful, refresh the page
+    window.location.reload();
+  })
+  .catch(error => {
+    // Handle errors here, e.g.:
+    console.error('Delete error:', error);
+    alert('Failed to delete row!');
+  });
+}
+</script>
