@@ -26,11 +26,223 @@ foreach (glob($configFilepath . '/conf_????????????????????????????????.php') as
 if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
     require_once($_SESSION["PROFILE"]);
 
-} else {
-  echo "Profile in sesssion".$_SESSION["PROFILE"].PHP_EOL;
-  echo "Availabel profiles".PHP_EOL;
-  print_r($GLOBALS["PROFILES"]);
-  die();
+  } else {
+    ?>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>CHIM Diary</title>
+        <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+        <style>
+            /* Updated CSS for Dark Grey Background Theme */
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #2c2c2c; /* Dark grey background */
+                color: #f8f9fa; /* Light grey text for readability */
+            }
+
+            h1, h2 {
+                color: #ffffff; /* White color for headings */
+            }
+
+            form {
+                margin-bottom: 20px;
+                background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
+                padding: 15px;
+                border-radius: 5px;
+                border: 1px solid #4a4a4a; /* Darker border for contrast */
+                max-width: 600px;
+            }
+
+            label {
+                font-weight: bold;
+                color: #f8f9fa; /* Ensure labels are readable */
+            }
+
+            input[type="text"], input[type="file"], textarea {
+                width: 100%;
+                padding: 6px;
+                margin-top: 5px;
+                margin-bottom: 15px;
+                border: 1px solid #4a4a4a; /* Darker borders */
+                border-radius: 3px;
+                background-color: #4a4a4a; /* Dark input backgrounds */
+                color: #f8f9fa; /* Light text inside inputs */
+                resize: vertical; /* Allows users to resize vertically if needed */
+                font-family: Arial, sans-serif; /* Ensures consistent font */
+                font-size: 16px; /* Sets a readable font size */
+            }
+
+            input[type="submit"] {
+                background-color: #007bff;
+                border: none;
+                color: white;
+                border-radius: 5px; /* Slightly larger border radius */
+                cursor: pointer;
+                padding: 5px 15px; /* Increased padding for larger button */
+                font-size: 18px;    /* Increased font size */
+                font-weight: bold;  /* Bold text for better visibility */
+                transition: background-color 0.3s ease; /* Smooth hover transition */
+            }
+
+            input[type="submit"]:hover {
+                background-color: #0056b3; /* Darker shade on hover */
+            }
+
+            .message {
+                background-color: #444444; /* Darker background for messages */
+                padding: 10px;
+                border-radius: 5px;
+                border: 1px solid #4a4a4a;
+                max-width: 600px;
+                margin-bottom: 20px;
+                color: #f8f9fa; /* Light text in messages */
+            }
+
+            .message p {
+                margin: 0;
+            }
+
+            .response-container {
+                margin-top: 20px;
+            }
+
+            .indent {
+                padding-left: 10ch; /* 10 character spaces */
+            }
+
+            .indent5 {
+                padding-left: 5ch; /* 5 character spaces */
+            }
+
+            .button {
+                padding: 8px 16px;
+                margin-top: 10px;
+                cursor: pointer;
+                background-color: #007bff;
+                border: none;
+                color: white;
+                border-radius: 3px;
+            }
+
+            .button:hover {
+                background-color: #0056b3;
+            }
+
+            .filter-buttons {
+                margin: 1em 0;
+            }
+
+            .alphabet-button {
+                display: inline-block;
+                margin-right: 5px;
+                padding: 6px 10px;
+                color: #fff;
+                background-color: #007bff;
+                text-decoration: none;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+
+            .alphabet-button:hover {
+                background-color: #0056b3;
+            }
+
+            .table-container {
+                max-height: 800px;
+                overflow-y: auto;
+                margin-bottom: 20px;
+                max-width: 1600px;
+            }
+
+            .table-container table {
+                width: 100%;
+                border-collapse: collapse;
+                background-color: #3a3a3a; /* Base background color */
+            }
+
+            .table-container th, .table-container td {
+                border: 1px solid #555555; /* Border color */
+                padding: 8px;
+                text-align: left;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                color: #f8f9fa; /* Text color */
+            }
+
+            .table-container th {
+                background-color: #4a4a4a; /* Header background color */
+                font-weight: bold;
+            }
+
+            /* Alternating row colors */
+            .table-container tr:nth-child(even) {
+                background-color: #2c2c2c; /* Dark grey for even rows */
+            }
+
+            .table-container tr:nth-child(odd) {
+                background-color: #3a3a3a; /* Slightly lighter grey for odd rows */
+            }
+
+            /* Specific column widths */
+            .table-container th:nth-child(1),
+            .table-container td:nth-child(1) {
+                width: 150px; /* Small */
+            }
+
+            .table-container th:nth-child(2),
+            .table-container td:nth-child(2) {
+                width: 600px; /* Large */
+            }
+
+            .table-container th:nth-child(3),
+            .table-container td:nth-child(3) {
+                width: 80px; /* Small */
+            }
+
+            .table-container th:nth-child(4),
+            .table-container td:nth-child(4),
+            .table-container th:nth-child(5),
+            .table-container td:nth-child(5) {
+                width: 100px;
+            }
+
+            .table-container th:nth-child(6),
+            .table-container td:nth-child(6) {
+                width: 180px;
+            }
+
+            input[type="submit"].btn-danger {
+                background-color: rgb(200, 53, 69);
+                color: #fff;
+                border: 1px solid rgb(255, 255, 255);
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 16px;
+                border-radius: 4px;
+                transition: background-color 0.3s ease; 
+                font-weight: bold;
+            }
+
+            input[type="submit"].btn-danger:hover {
+                background-color: rgb(200, 35, 51);
+            }
+        </style>
+    </head>
+    <body>
+    <?php
+    if (!isset($_SESSION["PROFILE"])) {
+        echo "<h2>Select a character before opening this page</h2>";
+    } else {
+      echo "<h2>Select a character, that is not The Narrator before opening this page.</h2>";
+      echo "<h2>E.G. Select Hulda to read Hulda's diary, if she has written any entries.</h2>";
+    }
+    ?>
+    </body>
+    </html>
+    <?php
+    die();
 }
   
 
