@@ -260,7 +260,7 @@ class connector
         $request .= $dataJson;
 
         // Open a TCP connection
-        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".print_r($postData,true)."=\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($postData,true)."\n=\n", FILE_APPEND);
 
                 
         //$this->primary_handler = fsockopen('tcp://' . $host, $port, $errno, $errstr, 30);

@@ -103,7 +103,7 @@ class connector
         $GLOBALS["DEBUG_DATA"]["full"] = ($data);
 
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",
-            date(DATE_ATOM)."\n=\n".print_r($data,true)."=\n",
+            date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n",
             FILE_APPEND
         );
 
