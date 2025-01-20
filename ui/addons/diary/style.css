@@ -1170,6 +1170,2207 @@ body {
   transform: translatez(100px) scalex(-1) translatex(100%) rotatey(180deg);
 }
 
+/* ========== PAGE 101 ========== */
+.page:nth-child(101) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-101px);
+  background: #ccc;
+}
+.left-side:nth-child(101) {
+  transform: translatez(101px) rotatey(-180deg);
+}
+
+/* ========== PAGE 102 ========== */
+.page:nth-child(102) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-102px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(102) {
+  transform: translatez(102px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 103 ========== */
+.page:nth-child(103) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-103px);
+  background: #ccc;
+}
+.left-side:nth-child(103) {
+  transform: translatez(103px) rotatey(-180deg);
+}
+
+/* ========== PAGE 104 ========== */
+.page:nth-child(104) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-104px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(104) {
+  transform: translatez(104px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 105 ========== */
+.page:nth-child(105) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-105px);
+  background: #ccc;
+}
+.left-side:nth-child(105) {
+  transform: translatez(105px) rotatey(-180deg);
+}
+
+/* ========== PAGE 106 ========== */
+.page:nth-child(106) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-106px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(106) {
+  transform: translatez(106px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 107 ========== */
+.page:nth-child(107) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-107px);
+  background: #ccc;
+}
+.left-side:nth-child(107) {
+  transform: translatez(107px) rotatey(-180deg);
+}
+
+/* ========== PAGE 108 ========== */
+.page:nth-child(108) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-108px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(108) {
+  transform: translatez(108px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 109 ========== */
+.page:nth-child(109) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-109px);
+  background: #ccc;
+}
+.left-side:nth-child(109) {
+  transform: translatez(109px) rotatey(-180deg);
+}
+
+/* ========== PAGE 110 ========== */
+.page:nth-child(110) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-110px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(110) {
+  transform: translatez(110px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 111 ========== */
+.page:nth-child(111) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-111px);
+  background: #ccc;
+}
+.left-side:nth-child(111) {
+  transform: translatez(111px) rotatey(-180deg);
+}
+
+/* ========== PAGE 112 ========== */
+.page:nth-child(112) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-112px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(112) {
+  transform: translatez(112px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 113 ========== */
+.page:nth-child(113) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-113px);
+  background: #ccc;
+}
+.left-side:nth-child(113) {
+  transform: translatez(113px) rotatey(-180deg);
+}
+
+/* ========== PAGE 114 ========== */
+.page:nth-child(114) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-114px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(114) {
+  transform: translatez(114px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 115 ========== */
+.page:nth-child(115) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-115px);
+  background: #ccc;
+}
+.left-side:nth-child(115) {
+  transform: translatez(115px) rotatey(-180deg);
+}
+
+/* ========== PAGE 116 ========== */
+.page:nth-child(116) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-116px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(116) {
+  transform: translatez(116px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 117 ========== */
+.page:nth-child(117) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-117px);
+  background: #ccc;
+}
+.left-side:nth-child(117) {
+  transform: translatez(117px) rotatey(-180deg);
+}
+
+/* ========== PAGE 118 ========== */
+.page:nth-child(118) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-118px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(118) {
+  transform: translatez(118px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 119 ========== */
+.page:nth-child(119) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-119px);
+  background: #ccc;
+}
+.left-side:nth-child(119) {
+  transform: translatez(119px) rotatey(-180deg);
+}
+
+/* ========== PAGE 120 ========== */
+.page:nth-child(120) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-120px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(120) {
+  transform: translatez(120px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 121 ========== */
+.page:nth-child(121) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-121px);
+  background: #ccc;
+}
+.left-side:nth-child(121) {
+  transform: translatez(121px) rotatey(-180deg);
+}
+
+/* ========== PAGE 122 ========== */
+.page:nth-child(122) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-122px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(122) {
+  transform: translatez(122px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 123 ========== */
+.page:nth-child(123) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-123px);
+  background: #ccc;
+}
+.left-side:nth-child(123) {
+  transform: translatez(123px) rotatey(-180deg);
+}
+
+/* ========== PAGE 124 ========== */
+.page:nth-child(124) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-124px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(124) {
+  transform: translatez(124px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 125 ========== */
+.page:nth-child(125) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-125px);
+  background: #ccc;
+}
+.left-side:nth-child(125) {
+  transform: translatez(125px) rotatey(-180deg);
+}
+
+/* ========== PAGE 126 ========== */
+.page:nth-child(126) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-126px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(126) {
+  transform: translatez(126px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 127 ========== */
+.page:nth-child(127) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-127px);
+  background: #ccc;
+}
+.left-side:nth-child(127) {
+  transform: translatez(127px) rotatey(-180deg);
+}
+
+/* ========== PAGE 128 ========== */
+.page:nth-child(128) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-128px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(128) {
+  transform: translatez(128px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 129 ========== */
+.page:nth-child(129) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-129px);
+  background: #ccc;
+}
+.left-side:nth-child(129) {
+  transform: translatez(129px) rotatey(-180deg);
+}
+
+/* ========== PAGE 130 ========== */
+.page:nth-child(130) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-130px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(130) {
+  transform: translatez(130px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 131 ========== */
+.page:nth-child(131) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-131px);
+  background: #ccc;
+}
+.left-side:nth-child(131) {
+  transform: translatez(131px) rotatey(-180deg);
+}
+
+/* ========== PAGE 132 ========== */
+.page:nth-child(132) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-132px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(132) {
+  transform: translatez(132px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 133 ========== */
+.page:nth-child(133) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-133px);
+  background: #ccc;
+}
+.left-side:nth-child(133) {
+  transform: translatez(133px) rotatey(-180deg);
+}
+
+/* ========== PAGE 134 ========== */
+.page:nth-child(134) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-134px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(134) {
+  transform: translatez(134px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 135 ========== */
+.page:nth-child(135) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-135px);
+  background: #ccc;
+}
+.left-side:nth-child(135) {
+  transform: translatez(135px) rotatey(-180deg);
+}
+
+/* ========== PAGE 136 ========== */
+.page:nth-child(136) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-136px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(136) {
+  transform: translatez(136px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 137 ========== */
+.page:nth-child(137) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-137px);
+  background: #ccc;
+}
+.left-side:nth-child(137) {
+  transform: translatez(137px) rotatey(-180deg);
+}
+
+/* ========== PAGE 138 ========== */
+.page:nth-child(138) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-138px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(138) {
+  transform: translatez(138px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 139 ========== */
+.page:nth-child(139) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-139px);
+  background: #ccc;
+}
+.left-side:nth-child(139) {
+  transform: translatez(139px) rotatey(-180deg);
+}
+
+/* ========== PAGE 140 ========== */
+.page:nth-child(140) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-140px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(140) {
+  transform: translatez(140px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 141 ========== */
+.page:nth-child(141) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-141px);
+  background: #ccc;
+}
+.left-side:nth-child(141) {
+  transform: translatez(141px) rotatey(-180deg);
+}
+
+/* ========== PAGE 142 ========== */
+.page:nth-child(142) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-142px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(142) {
+  transform: translatez(142px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 143 ========== */
+.page:nth-child(143) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-143px);
+  background: #ccc;
+}
+.left-side:nth-child(143) {
+  transform: translatez(143px) rotatey(-180deg);
+}
+
+/* ========== PAGE 144 ========== */
+.page:nth-child(144) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-144px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(144) {
+  transform: translatez(144px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 145 ========== */
+.page:nth-child(145) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-145px);
+  background: #ccc;
+}
+.left-side:nth-child(145) {
+  transform: translatez(145px) rotatey(-180deg);
+}
+
+/* ========== PAGE 146 ========== */
+.page:nth-child(146) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-146px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(146) {
+  transform: translatez(146px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 147 ========== */
+.page:nth-child(147) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-147px);
+  background: #ccc;
+}
+.left-side:nth-child(147) {
+  transform: translatez(147px) rotatey(-180deg);
+}
+
+/* ========== PAGE 148 ========== */
+.page:nth-child(148) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-148px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(148) {
+  transform: translatez(148px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 149 ========== */
+.page:nth-child(149) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-149px);
+  background: #ccc;
+}
+.left-side:nth-child(149) {
+  transform: translatez(149px) rotatey(-180deg);
+}
+
+/* ========== PAGE 150 ========== */
+.page:nth-child(150) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-150px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(150) {
+  transform: translatez(150px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 151 ========== */
+.page:nth-child(151) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-151px);
+  background: #ccc;
+}
+.left-side:nth-child(151) {
+  transform: translatez(151px) rotatey(-180deg);
+}
+
+/* ========== PAGE 152 ========== */
+.page:nth-child(152) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-152px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(152) {
+  transform: translatez(152px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 153 ========== */
+.page:nth-child(153) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-153px);
+  background: #ccc;
+}
+.left-side:nth-child(153) {
+  transform: translatez(153px) rotatey(-180deg);
+}
+
+/* ========== PAGE 154 ========== */
+.page:nth-child(154) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-154px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(154) {
+  transform: translatez(154px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 155 ========== */
+.page:nth-child(155) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-155px);
+  background: #ccc;
+}
+.left-side:nth-child(155) {
+  transform: translatez(155px) rotatey(-180deg);
+}
+
+/* ========== PAGE 156 ========== */
+.page:nth-child(156) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-156px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(156) {
+  transform: translatez(156px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 157 ========== */
+.page:nth-child(157) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-157px);
+  background: #ccc;
+}
+.left-side:nth-child(157) {
+  transform: translatez(157px) rotatey(-180deg);
+}
+
+/* ========== PAGE 158 ========== */
+.page:nth-child(158) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-158px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(158) {
+  transform: translatez(158px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 159 ========== */
+.page:nth-child(159) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-159px);
+  background: #ccc;
+}
+.left-side:nth-child(159) {
+  transform: translatez(159px) rotatey(-180deg);
+}
+
+/* ========== PAGE 160 ========== */
+.page:nth-child(160) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-160px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(160) {
+  transform: translatez(160px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 161 ========== */
+.page:nth-child(161) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-161px);
+  background: #ccc;
+}
+.left-side:nth-child(161) {
+  transform: translatez(161px) rotatey(-180deg);
+}
+
+/* ========== PAGE 162 ========== */
+.page:nth-child(162) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-162px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(162) {
+  transform: translatez(162px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 163 ========== */
+.page:nth-child(163) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-163px);
+  background: #ccc;
+}
+.left-side:nth-child(163) {
+  transform: translatez(163px) rotatey(-180deg);
+}
+
+/* ========== PAGE 164 ========== */
+.page:nth-child(164) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-164px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(164) {
+  transform: translatez(164px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 165 ========== */
+.page:nth-child(165) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-165px);
+  background: #ccc;
+}
+.left-side:nth-child(165) {
+  transform: translatez(165px) rotatey(-180deg);
+}
+
+/* ========== PAGE 166 ========== */
+.page:nth-child(166) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-166px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(166) {
+  transform: translatez(166px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 167 ========== */
+.page:nth-child(167) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-167px);
+  background: #ccc;
+}
+.left-side:nth-child(167) {
+  transform: translatez(167px) rotatey(-180deg);
+}
+
+/* ========== PAGE 168 ========== */
+.page:nth-child(168) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-168px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(168) {
+  transform: translatez(168px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 169 ========== */
+.page:nth-child(169) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-169px);
+  background: #ccc;
+}
+.left-side:nth-child(169) {
+  transform: translatez(169px) rotatey(-180deg);
+}
+
+/* ========== PAGE 170 ========== */
+.page:nth-child(170) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-170px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(170) {
+  transform: translatez(170px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 171 ========== */
+.page:nth-child(171) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-171px);
+  background: #ccc;
+}
+.left-side:nth-child(171) {
+  transform: translatez(171px) rotatey(-180deg);
+}
+
+/* ========== PAGE 172 ========== */
+.page:nth-child(172) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-172px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(172) {
+  transform: translatez(172px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 173 ========== */
+.page:nth-child(173) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-173px);
+  background: #ccc;
+}
+.left-side:nth-child(173) {
+  transform: translatez(173px) rotatey(-180deg);
+}
+
+/* ========== PAGE 174 ========== */
+.page:nth-child(174) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-174px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(174) {
+  transform: translatez(174px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 175 ========== */
+.page:nth-child(175) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-175px);
+  background: #ccc;
+}
+.left-side:nth-child(175) {
+  transform: translatez(175px) rotatey(-180deg);
+}
+
+/* ========== PAGE 176 ========== */
+.page:nth-child(176) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-176px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(176) {
+  transform: translatez(176px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 177 ========== */
+.page:nth-child(177) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-177px);
+  background: #ccc;
+}
+.left-side:nth-child(177) {
+  transform: translatez(177px) rotatey(-180deg);
+}
+
+/* ========== PAGE 178 ========== */
+.page:nth-child(178) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-178px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(178) {
+  transform: translatez(178px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 179 ========== */
+.page:nth-child(179) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-179px);
+  background: #ccc;
+}
+.left-side:nth-child(179) {
+  transform: translatez(179px) rotatey(-180deg);
+}
+
+/* ========== PAGE 180 ========== */
+.page:nth-child(180) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-180px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(180) {
+  transform: translatez(180px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 181 ========== */
+.page:nth-child(181) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-181px);
+  background: #ccc;
+}
+.left-side:nth-child(181) {
+  transform: translatez(181px) rotatey(-180deg);
+}
+
+/* ========== PAGE 182 ========== */
+.page:nth-child(182) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-182px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(182) {
+  transform: translatez(182px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 183 ========== */
+.page:nth-child(183) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-183px);
+  background: #ccc;
+}
+.left-side:nth-child(183) {
+  transform: translatez(183px) rotatey(-180deg);
+}
+
+/* ========== PAGE 184 ========== */
+.page:nth-child(184) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-184px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(184) {
+  transform: translatez(184px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 185 ========== */
+.page:nth-child(185) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-185px);
+  background: #ccc;
+}
+.left-side:nth-child(185) {
+  transform: translatez(185px) rotatey(-180deg);
+}
+
+/* ========== PAGE 186 ========== */
+.page:nth-child(186) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-186px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(186) {
+  transform: translatez(186px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 187 ========== */
+.page:nth-child(187) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-187px);
+  background: #ccc;
+}
+.left-side:nth-child(187) {
+  transform: translatez(187px) rotatey(-180deg);
+}
+
+/* ========== PAGE 188 ========== */
+.page:nth-child(188) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-188px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(188) {
+  transform: translatez(188px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 189 ========== */
+.page:nth-child(189) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-189px);
+  background: #ccc;
+}
+.left-side:nth-child(189) {
+  transform: translatez(189px) rotatey(-180deg);
+}
+
+/* ========== PAGE 190 ========== */
+.page:nth-child(190) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-190px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(190) {
+  transform: translatez(190px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 191 ========== */
+.page:nth-child(191) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-191px);
+  background: #ccc;
+}
+.left-side:nth-child(191) {
+  transform: translatez(191px) rotatey(-180deg);
+}
+
+/* ========== PAGE 192 ========== */
+.page:nth-child(192) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-192px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(192) {
+  transform: translatez(192px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 193 ========== */
+.page:nth-child(193) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-193px);
+  background: #ccc;
+}
+.left-side:nth-child(193) {
+  transform: translatez(193px) rotatey(-180deg);
+}
+
+/* ========== PAGE 194 ========== */
+.page:nth-child(194) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-194px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(194) {
+  transform: translatez(194px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 195 ========== */
+.page:nth-child(195) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-195px);
+  background: #ccc;
+}
+.left-side:nth-child(195) {
+  transform: translatez(195px) rotatey(-180deg);
+}
+
+/* ========== PAGE 196 ========== */
+.page:nth-child(196) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-196px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(196) {
+  transform: translatez(196px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 197 ========== */
+.page:nth-child(197) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-197px);
+  background: #ccc;
+}
+.left-side:nth-child(197) {
+  transform: translatez(197px) rotatey(-180deg);
+}
+
+/* ========== PAGE 198 ========== */
+.page:nth-child(198) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-198px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(198) {
+  transform: translatez(198px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 199 ========== */
+.page:nth-child(199) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-199px);
+  background: #ccc;
+}
+.left-side:nth-child(199) {
+  transform: translatez(199px) rotatey(-180deg);
+}
+
+/* ========== PAGE 200 ========== */
+.page:nth-child(200) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-200px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(200) {
+  transform: translatez(200px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 201 ========== */
+.page:nth-child(201) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-201px);
+  background: #ccc;
+}
+.left-side:nth-child(201) {
+  transform: translatez(201px) rotatey(-180deg);
+}
+
+/* ========== PAGE 202 ========== */
+.page:nth-child(202) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-202px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(202) {
+  transform: translatez(202px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 203 ========== */
+.page:nth-child(203) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-203px);
+  background: #ccc;
+}
+.left-side:nth-child(203) {
+  transform: translatez(203px) rotatey(-180deg);
+}
+
+/* ========== PAGE 204 ========== */
+.page:nth-child(204) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-204px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(204) {
+  transform: translatez(204px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 205 ========== */
+.page:nth-child(205) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-205px);
+  background: #ccc;
+}
+.left-side:nth-child(205) {
+  transform: translatez(205px) rotatey(-180deg);
+}
+
+/* ========== PAGE 206 ========== */
+.page:nth-child(206) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-206px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(206) {
+  transform: translatez(206px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 207 ========== */
+.page:nth-child(207) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-207px);
+  background: #ccc;
+}
+.left-side:nth-child(207) {
+  transform: translatez(207px) rotatey(-180deg);
+}
+
+/* ========== PAGE 208 ========== */
+.page:nth-child(208) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-208px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(208) {
+  transform: translatez(208px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 209 ========== */
+.page:nth-child(209) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-209px);
+  background: #ccc;
+}
+.left-side:nth-child(209) {
+  transform: translatez(209px) rotatey(-180deg);
+}
+
+/* ========== PAGE 210 ========== */
+.page:nth-child(210) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-210px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(210) {
+  transform: translatez(210px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 211 ========== */
+.page:nth-child(211) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-211px);
+  background: #ccc;
+}
+.left-side:nth-child(211) {
+  transform: translatez(211px) rotatey(-180deg);
+}
+
+/* ========== PAGE 212 ========== */
+.page:nth-child(212) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-212px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(212) {
+  transform: translatez(212px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 213 ========== */
+.page:nth-child(213) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-213px);
+  background: #ccc;
+}
+.left-side:nth-child(213) {
+  transform: translatez(213px) rotatey(-180deg);
+}
+
+/* ========== PAGE 214 ========== */
+.page:nth-child(214) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-214px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(214) {
+  transform: translatez(214px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 215 ========== */
+.page:nth-child(215) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-215px);
+  background: #ccc;
+}
+.left-side:nth-child(215) {
+  transform: translatez(215px) rotatey(-180deg);
+}
+
+/* ========== PAGE 216 ========== */
+.page:nth-child(216) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-216px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(216) {
+  transform: translatez(216px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 217 ========== */
+.page:nth-child(217) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-217px);
+  background: #ccc;
+}
+.left-side:nth-child(217) {
+  transform: translatez(217px) rotatey(-180deg);
+}
+
+/* ========== PAGE 218 ========== */
+.page:nth-child(218) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-218px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(218) {
+  transform: translatez(218px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 219 ========== */
+.page:nth-child(219) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-219px);
+  background: #ccc;
+}
+.left-side:nth-child(219) {
+  transform: translatez(219px) rotatey(-180deg);
+}
+
+/* ========== PAGE 220 ========== */
+.page:nth-child(220) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-220px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(220) {
+  transform: translatez(220px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 221 ========== */
+.page:nth-child(221) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-221px);
+  background: #ccc;
+}
+.left-side:nth-child(221) {
+  transform: translatez(221px) rotatey(-180deg);
+}
+
+/* ========== PAGE 222 ========== */
+.page:nth-child(222) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-222px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(222) {
+  transform: translatez(222px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 223 ========== */
+.page:nth-child(223) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-223px);
+  background: #ccc;
+}
+.left-side:nth-child(223) {
+  transform: translatez(223px) rotatey(-180deg);
+}
+
+/* ========== PAGE 224 ========== */
+.page:nth-child(224) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-224px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(224) {
+  transform: translatez(224px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 225 ========== */
+.page:nth-child(225) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-225px);
+  background: #ccc;
+}
+.left-side:nth-child(225) {
+  transform: translatez(225px) rotatey(-180deg);
+}
+
+/* ========== PAGE 226 ========== */
+.page:nth-child(226) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-226px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(226) {
+  transform: translatez(226px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 227 ========== */
+.page:nth-child(227) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-227px);
+  background: #ccc;
+}
+.left-side:nth-child(227) {
+  transform: translatez(227px) rotatey(-180deg);
+}
+
+/* ========== PAGE 228 ========== */
+.page:nth-child(228) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-228px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(228) {
+  transform: translatez(228px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 229 ========== */
+.page:nth-child(229) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-229px);
+  background: #ccc;
+}
+.left-side:nth-child(229) {
+  transform: translatez(229px) rotatey(-180deg);
+}
+
+/* ========== PAGE 230 ========== */
+.page:nth-child(230) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-230px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(230) {
+  transform: translatez(230px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 231 ========== */
+.page:nth-child(231) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-231px);
+  background: #ccc;
+}
+.left-side:nth-child(231) {
+  transform: translatez(231px) rotatey(-180deg);
+}
+
+/* ========== PAGE 232 ========== */
+.page:nth-child(232) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-232px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(232) {
+  transform: translatez(232px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 233 ========== */
+.page:nth-child(233) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-233px);
+  background: #ccc;
+}
+.left-side:nth-child(233) {
+  transform: translatez(233px) rotatey(-180deg);
+}
+
+/* ========== PAGE 234 ========== */
+.page:nth-child(234) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-234px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(234) {
+  transform: translatez(234px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 235 ========== */
+.page:nth-child(235) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-235px);
+  background: #ccc;
+}
+.left-side:nth-child(235) {
+  transform: translatez(235px) rotatey(-180deg);
+}
+
+/* ========== PAGE 236 ========== */
+.page:nth-child(236) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-236px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(236) {
+  transform: translatez(236px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 237 ========== */
+.page:nth-child(237) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-237px);
+  background: #ccc;
+}
+.left-side:nth-child(237) {
+  transform: translatez(237px) rotatey(-180deg);
+}
+
+/* ========== PAGE 238 ========== */
+.page:nth-child(238) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-238px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(238) {
+  transform: translatez(238px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 239 ========== */
+.page:nth-child(239) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-239px);
+  background: #ccc;
+}
+.left-side:nth-child(239) {
+  transform: translatez(239px) rotatey(-180deg);
+}
+
+/* ========== PAGE 240 ========== */
+.page:nth-child(240) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-240px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(240) {
+  transform: translatez(240px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 241 ========== */
+.page:nth-child(241) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-241px);
+  background: #ccc;
+}
+.left-side:nth-child(241) {
+  transform: translatez(241px) rotatey(-180deg);
+}
+
+/* ========== PAGE 242 ========== */
+.page:nth-child(242) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-242px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(242) {
+  transform: translatez(242px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 243 ========== */
+.page:nth-child(243) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-243px);
+  background: #ccc;
+}
+.left-side:nth-child(243) {
+  transform: translatez(243px) rotatey(-180deg);
+}
+
+/* ========== PAGE 244 ========== */
+.page:nth-child(244) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-244px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(244) {
+  transform: translatez(244px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 245 ========== */
+.page:nth-child(245) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-245px);
+  background: #ccc;
+}
+.left-side:nth-child(245) {
+  transform: translatez(245px) rotatey(-180deg);
+}
+
+/* ========== PAGE 246 ========== */
+.page:nth-child(246) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-246px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(246) {
+  transform: translatez(246px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 247 ========== */
+.page:nth-child(247) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-247px);
+  background: #ccc;
+}
+.left-side:nth-child(247) {
+  transform: translatez(247px) rotatey(-180deg);
+}
+
+/* ========== PAGE 248 ========== */
+.page:nth-child(248) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-248px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(248) {
+  transform: translatez(248px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 249 ========== */
+.page:nth-child(249) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-249px);
+  background: #ccc;
+}
+.left-side:nth-child(249) {
+  transform: translatez(249px) rotatey(-180deg);
+}
+
+/* ========== PAGE 250 ========== */
+.page:nth-child(250) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-250px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(250) {
+  transform: translatez(250px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 251 ========== */
+.page:nth-child(251) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-251px);
+  background: #ccc;
+}
+.left-side:nth-child(251) {
+  transform: translatez(251px) rotatey(-180deg);
+}
+
+/* ========== PAGE 252 ========== */
+.page:nth-child(252) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-252px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(252) {
+  transform: translatez(252px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 253 ========== */
+.page:nth-child(253) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-253px);
+  background: #ccc;
+}
+.left-side:nth-child(253) {
+  transform: translatez(253px) rotatey(-180deg);
+}
+
+/* ========== PAGE 254 ========== */
+.page:nth-child(254) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-254px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(254) {
+  transform: translatez(254px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 255 ========== */
+.page:nth-child(255) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-255px);
+  background: #ccc;
+}
+.left-side:nth-child(255) {
+  transform: translatez(255px) rotatey(-180deg);
+}
+
+/* ========== PAGE 256 ========== */
+.page:nth-child(256) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-256px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(256) {
+  transform: translatez(256px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 257 ========== */
+.page:nth-child(257) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-257px);
+  background: #ccc;
+}
+.left-side:nth-child(257) {
+  transform: translatez(257px) rotatey(-180deg);
+}
+
+/* ========== PAGE 258 ========== */
+.page:nth-child(258) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-258px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(258) {
+  transform: translatez(258px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 259 ========== */
+.page:nth-child(259) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-259px);
+  background: #ccc;
+}
+.left-side:nth-child(259) {
+  transform: translatez(259px) rotatey(-180deg);
+}
+
+/* ========== PAGE 260 ========== */
+.page:nth-child(260) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-260px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(260) {
+  transform: translatez(260px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 261 ========== */
+.page:nth-child(261) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-261px);
+  background: #ccc;
+}
+.left-side:nth-child(261) {
+  transform: translatez(261px) rotatey(-180deg);
+}
+
+/* ========== PAGE 262 ========== */
+.page:nth-child(262) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-262px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(262) {
+  transform: translatez(262px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 263 ========== */
+.page:nth-child(263) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-263px);
+  background: #ccc;
+}
+.left-side:nth-child(263) {
+  transform: translatez(263px) rotatey(-180deg);
+}
+
+/* ========== PAGE 264 ========== */
+.page:nth-child(264) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-264px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(264) {
+  transform: translatez(264px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 265 ========== */
+.page:nth-child(265) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-265px);
+  background: #ccc;
+}
+.left-side:nth-child(265) {
+  transform: translatez(265px) rotatey(-180deg);
+}
+
+/* ========== PAGE 266 ========== */
+.page:nth-child(266) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-266px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(266) {
+  transform: translatez(266px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 267 ========== */
+.page:nth-child(267) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-267px);
+  background: #ccc;
+}
+.left-side:nth-child(267) {
+  transform: translatez(267px) rotatey(-180deg);
+}
+
+/* ========== PAGE 268 ========== */
+.page:nth-child(268) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-268px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(268) {
+  transform: translatez(268px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 269 ========== */
+.page:nth-child(269) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-269px);
+  background: #ccc;
+}
+.left-side:nth-child(269) {
+  transform: translatez(269px) rotatey(-180deg);
+}
+
+/* ========== PAGE 270 ========== */
+.page:nth-child(270) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-270px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(270) {
+  transform: translatez(270px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 271 ========== */
+.page:nth-child(271) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-271px);
+  background: #ccc;
+}
+.left-side:nth-child(271) {
+  transform: translatez(271px) rotatey(-180deg);
+}
+
+/* ========== PAGE 272 ========== */
+.page:nth-child(272) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-272px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(272) {
+  transform: translatez(272px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 273 ========== */
+.page:nth-child(273) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-273px);
+  background: #ccc;
+}
+.left-side:nth-child(273) {
+  transform: translatez(273px) rotatey(-180deg);
+}
+
+/* ========== PAGE 274 ========== */
+.page:nth-child(274) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-274px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(274) {
+  transform: translatez(274px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 275 ========== */
+.page:nth-child(275) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-275px);
+  background: #ccc;
+}
+.left-side:nth-child(275) {
+  transform: translatez(275px) rotatey(-180deg);
+}
+
+/* ========== PAGE 276 ========== */
+.page:nth-child(276) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-276px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(276) {
+  transform: translatez(276px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 277 ========== */
+.page:nth-child(277) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-277px);
+  background: #ccc;
+}
+.left-side:nth-child(277) {
+  transform: translatez(277px) rotatey(-180deg);
+}
+
+/* ========== PAGE 278 ========== */
+.page:nth-child(278) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-278px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(278) {
+  transform: translatez(278px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 279 ========== */
+.page:nth-child(279) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-279px);
+  background: #ccc;
+}
+.left-side:nth-child(279) {
+  transform: translatez(279px) rotatey(-180deg);
+}
+
+/* ========== PAGE 280 ========== */
+.page:nth-child(280) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-280px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(280) {
+  transform: translatez(280px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 281 ========== */
+.page:nth-child(281) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-281px);
+  background: #ccc;
+}
+.left-side:nth-child(281) {
+  transform: translatez(281px) rotatey(-180deg);
+}
+
+/* ========== PAGE 282 ========== */
+.page:nth-child(282) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-282px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(282) {
+  transform: translatez(282px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 283 ========== */
+.page:nth-child(283) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-283px);
+  background: #ccc;
+}
+.left-side:nth-child(283) {
+  transform: translatez(283px) rotatey(-180deg);
+}
+
+/* ========== PAGE 284 ========== */
+.page:nth-child(284) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-284px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(284) {
+  transform: translatez(284px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 285 ========== */
+.page:nth-child(285) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-285px);
+  background: #ccc;
+}
+.left-side:nth-child(285) {
+  transform: translatez(285px) rotatey(-180deg);
+}
+
+/* ========== PAGE 286 ========== */
+.page:nth-child(286) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-286px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(286) {
+  transform: translatez(286px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 287 ========== */
+.page:nth-child(287) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-287px);
+  background: #ccc;
+}
+.left-side:nth-child(287) {
+  transform: translatez(287px) rotatey(-180deg);
+}
+
+/* ========== PAGE 288 ========== */
+.page:nth-child(288) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-288px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(288) {
+  transform: translatez(288px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 289 ========== */
+.page:nth-child(289) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-289px);
+  background: #ccc;
+}
+.left-side:nth-child(289) {
+  transform: translatez(289px) rotatey(-180deg);
+}
+
+/* ========== PAGE 290 ========== */
+.page:nth-child(290) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-290px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(290) {
+  transform: translatez(290px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 291 ========== */
+.page:nth-child(291) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-291px);
+  background: #ccc;
+}
+.left-side:nth-child(291) {
+  transform: translatez(291px) rotatey(-180deg);
+}
+
+/* ========== PAGE 292 ========== */
+.page:nth-child(292) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-292px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(292) {
+  transform: translatez(292px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 293 ========== */
+.page:nth-child(293) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-293px);
+  background: #ccc;
+}
+.left-side:nth-child(293) {
+  transform: translatez(293px) rotatey(-180deg);
+}
+
+/* ========== PAGE 294 ========== */
+.page:nth-child(294) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-294px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(294) {
+  transform: translatez(294px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 295 ========== */
+.page:nth-child(295) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-295px);
+  background: #ccc;
+}
+.left-side:nth-child(295) {
+  transform: translatez(295px) rotatey(-180deg);
+}
+
+/* ========== PAGE 296 ========== */
+.page:nth-child(296) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-296px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(296) {
+  transform: translatez(296px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 297 ========== */
+.page:nth-child(297) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-297px);
+  background: #ccc;
+}
+.left-side:nth-child(297) {
+  transform: translatez(297px) rotatey(-180deg);
+}
+
+/* ========== PAGE 298 ========== */
+.page:nth-child(298) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-298px) scalex(-1) translatex(100%);
+  background: #ccc;
+}
+.left-side:nth-child(298) {
+  transform: translatez(298px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+/* ========== PAGE 299 ========== */
+.page:nth-child(299) {
+  padding: 5% 4% 4% 5%;
+  transform-origin: 0% 50%;
+  transform: translatez(-299px);
+  background: #ccc;
+}
+.left-side:nth-child(299) {
+  transform: translatez(299px) rotatey(-180deg);
+}
+
+/* ========== PAGE 300 ========== */
+.page:nth-child(300) {
+  padding: 5% 5% 4% 4%;
+  transform-origin: 100% 50%;
+  transform: translatez(-300px) scalex(-1) translatex(100%);
+  background: #f5f5f5;
+}
+.left-side:nth-child(300) {
+  transform: translatez(300px) scalex(-1) translatex(100%) rotatey(180deg);
+}
+
+
 .cover-front:nth-child(1) {
   text-align: center;
   background: linear-gradient(#afd2dd, #a1d5e5) 50% 50%/80% 86% no-repeat, linear-gradient(#ffffff, #ffffff) 50% 50%/90% 93% no-repeat, linear-gradient(#9bc8d6, #9bc8d6) no-repeat;
