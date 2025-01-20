@@ -1260,7 +1260,10 @@ body > div.book > div.text-page {
 }
 
 body {
-    background: black;
+  background: url('images/diarybackground.jpg') no-repeat center center fixed;
+  background-size: cover; 
+  margin: 0; 
+  padding: 0; 
 }
 
 span.readbutton {
