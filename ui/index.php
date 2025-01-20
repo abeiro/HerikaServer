@@ -210,22 +210,104 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "eventlog") {
-        $results = $db->fetchAll("select type,data,gamets,localts,ts,ROWID FROM eventlog a where type not in ('prechat','rechat','infonpc','request','infonpc_close') order by gamets desc,ts  desc,localts desc,rowid desc LIMIT 50");
+        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100; // Items per page (default 100)
+        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1; // Current page (default 1)
+        $offset = ($page - 1) * $limit; // Calculate the offset
+    
+        $results = $db->fetchAll(
+            "SELECT type, data, gamets, localts, ts, ROWID 
+             FROM eventlog a 
+             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close') 
+             ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC 
+             LIMIT $limit OFFSET $offset"
+        );
+    
+        $columnHeaders = [
+            'type' => 'Event',
+            'data' => 'Data',
+            'gamets' => 'GameTS',
+            'localts' => 'LocalTS',
+            'ts' => 'TS',
+        ];
+    
+        $mappedResults = array_map(function ($row) use ($columnHeaders) {
+            $mappedRow = [];
+            foreach ($row as $key => $value) {
+                $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+            }
+            return $mappedRow;
+        }, $results);
+    
         echo "<h3 class='my-2'>Event Log</h3>";
-        print_array_as_table($results);
+    
+        // Generate navigation buttons under the title
+        $prevPage = max(1, $page - 1); // Ensure we don't go below page 1
+        $nextPage = $page + 1;
+    
+        echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
+        if ($page > 1) {
+            echo "<a href='?table=eventlog&page=$prevPage&limit=$limit' class='btn btn-primary'>Previous</a> ";
+        }
+        echo "<a href='?table=eventlog&page=$nextPage&limit=$limit' class='btn btn-primary'>Next</a>";
+        echo "</div>";
+    
+        // Print the table using the modified headers
+        print_array_as_table($mappedResults);
+    
         if ($_GET["autorefresh"]) {
             header("Refresh:5");
         }
     }
+    
     if ($_GET["table"] == "cache") {
         $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a order by ts  desc");
         echo "<h3 class='my-2'>Event Log</h3>";
         print_array_as_table($results);
     }
     if ($_GET["table"] == "log") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM log a order by localts desc,rowid desc  LIMIT 50");
-        echo "<h3 class='my-2'>AI Log</h3>";
-        print_array_as_table($results);
+        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50; // Items per page (default 50)
+        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1; // Current page (default 1)
+        $offset = ($page - 1) * $limit; // Calculate the offset
+    
+        // Fetch results with pagination
+        $results = $db->fetchAll(
+            "SELECT A.*, ROWID 
+             FROM log a 
+             ORDER BY localts DESC, rowid DESC 
+             LIMIT $limit OFFSET $offset"
+        );
+    
+        // Map original column names to new display names
+        $columnHeaders = [
+            'localts' => 'LocalTS',
+            'response' => 'AI Response'
+
+        ];
+    
+        // Change keys in the result array to match the new column names
+        $mappedResults = array_map(function ($row) use ($columnHeaders) {
+            $mappedRow = [];
+            foreach ($row as $key => $value) {
+                $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+            }
+            return $mappedRow;
+        }, $results);
+    
+        echo "<h3 class='my-2'>Response Log</h3>";
+    
+        // Generate navigation buttons under the title
+        $prevPage = max(1, $page - 1); // Ensure we don't go below page 1
+        $nextPage = $page + 1;
+    
+        echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
+        if ($page > 1) {
+            echo "<a href='?table=log&page=$prevPage&limit=$limit' class='btn btn-primary'>Previous</a> ";
+        }
+        echo "<a href='?table=log&page=$nextPage&limit=$limit' class='btn btn-primary'>Next</a>";
+        echo "</div>";
+    
+        // Print the table using the modified headers
+        print_array_as_table($mappedResults);
     }
 
     if ($_GET["table"] == "quests") {
