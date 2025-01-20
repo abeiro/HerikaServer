@@ -291,7 +291,7 @@
                     <li><a class="dropdown-item" href='index.php?plugins_show=true'>Plugin Manager</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Debugging</h6></li>
-                    <li><a class="dropdown-item" href="index.php?table=responselog" title="">Responses</a></li>
+                    <li><a class="dropdown-item" href="index.php?table=responselog" title="">Response Queue</a></li>
                     <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Request Logs</a></li>
                     <div style="
                     display: flex; 

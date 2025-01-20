@@ -1,3 +1,28 @@
+<style>
+    .icon-link {
+        color: yellow !important; 
+        text-decoration: none !important; 
+        background: none !important; 
+        border: none !important; 
+        padding: 0 !important; 
+        transition: color 0.3s ease; 
+    }
+    
+    .icon-link:hover {
+        color: #FFD700 !important; 
+        text-decoration: underline !important; 
+    }
+    
+    .icon-link i {
+        color: inherit !important; 
+        transition: color 0.3s ease; 
+    }
+    
+    .icon-link:hover i {
+        color: #FFD700 !important; 
+    }
+
+</style>
 <div class="container-fluid">
     <div class="row">
         <div class="col">
@@ -104,7 +129,7 @@
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">Error Phrases</div>
-                        Your AI NPCs will say certain phrases for when there is an error with the AI generation. It is a good idea to check the "AI Log" page for more information.
+                        Your AI NPCs will say certain phrases for when there is an error with the AI generation. It is a good idea to check the "Response Log" page for more information.
                         <ul>
                             <li>"Didn't hear you, can you repeat?" = There is an error connecting to your LLM service.</li>
                             <li>"Be quiet, I'm having a flashback, give me a minute" = To many request being sent to your LLM service.</li>
@@ -116,12 +141,11 @@
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">Other Useful Tips</div>
                         <ul>
-                            <li>You can manually edit events, diaries and memories under <b>Server Actions</b> - <b>Database Manager</b> <b><a class="icon-link" href="https://www.nexusmods.com/skyrimspecialedition/articles/7439" target="_blank">Quick Guide</a></b></li>
                             <li>You can easily upload custom NPC profiles with our <b><a class="icon-link" href="/HerikaServer/ui/npc_upload.php" target="_blank">NPC Biography Upload</a></b></li>
                             <li>Use the <b>Troubleshooting</b> menu to test LLM/TTS/STT/ITT services before using them ingame</li>
                             <li>You can make advanced edits to how NPC's respond with our <b><a class="icon-link" href="/HerikaServer/ui/customprompteditor.php" target="_blank">Custom Prompt Editor</a></b></li>
                             <li>You can easily download plugin extensions that add more features to CHIM at <b><a class="icon-link" href="/HerikaServer/ui/index.php?plugins_show=true" target="_blank">Server Plugins - Plugin Manager</a></b></li>
-                            <li><b>Loading older or new saves can delete memories and events!</b> This is to prevent time paradoxes. <b><a class="icon-link" href="https://www.nexusmods.com/skyrimspecialedition/articles/7548" target="_blank">Here</a></b> is a guide for profile backups</b>.
+                            <li><b>Loading older or new saves can delete memories and events!</b> This is to prevent time paradoxes. <b><a class="icon-link" href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.t2b8isuq2jzw" target="_blank">Here</a></b> is a guide for profile backups</b>.
                         </ul>
                     </div>
                 </li>
@@ -152,7 +176,7 @@
         <br>
         PLEASE READ THE MANUAL:
         <a class="icon-link" href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">
-            CHIM Manual
+            <h4>CHIM Manual</h4>
         </a>
 
 
