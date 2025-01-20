@@ -42,10 +42,8 @@ abstract class DatabaseTestCase extends TestCase
         pg_close($mainConnection);
 
         // Connect to the new test database
-        $testConnection = pg_connect("host=localhost dbname=".self::$testDatabaseName." user=dwemer password=dwemer");
-        if (!$testConnection) {
-            $this->fail("Failed to connect to test database: " . pg_last_error($mainConnection)); // Use main connection to get the error, as test connection failed
-        }
+		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."phpunit.class.php");
+        $testConnection = new sql();
 
         // Run migrations/seeders
         // Path to SQL file to import
@@ -63,19 +61,19 @@ abstract class DatabaseTestCase extends TestCase
 
         // if minAI is installed then create its database tables as well, to avoid errors
         if (file_exists($path.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR."minai_plugin")) {
-            require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."phpunit.class.php");
-            $GLOBALS["db"] = new sql();
-
             require_once($path.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR."minai_plugin".DIRECTORY_SEPARATOR."importDataToDB.php");
             require_once($path.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR."minai_plugin".DIRECTORY_SEPARATOR."customintegrations.php");
+            $GLOBALS["db"] = $testConnection;
+
             CreateThreadsTableIfNotExists();
             CreateActionsTableIfNotExists();
             CreateContextTableIfNotExists();
             importXPersonalities();
             importScenesDescriptions();
+			unset($GLOBALS["db"]);
         }
 
-        pg_close($testConnection);
+        $testConnection->close();
     }
 
     public function setUpDefaultMinimeMocks() {
@@ -113,6 +111,10 @@ abstract class DatabaseTestCase extends TestCase
 
     public function tearDownDB(): void
     {
+		if (isset($GLOBALS["db"])) {
+			$GLOBALS["db"]->close();
+			unset($GLOBALS["db"]);
+		}
         // Connect back to main to drop the database
         $connString = "host=localhost dbname=dwemer user=dwemer password=dwemer";
         $mainConnection = pg_connect($connString);
