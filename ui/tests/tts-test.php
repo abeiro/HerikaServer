@@ -26,6 +26,10 @@ error_reporting(E_ALL);
 
 $testString = "In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
 
+if ($_POST["customstring"]) {
+    $testString = $_POST["customstring"];
+
+}
 $db = new sql();
 
 require_once($enginePath . "prompt.includes.php");
@@ -51,6 +55,7 @@ if ($b_melotts) {
         $cleanString = adjust_pronunciation($testString); // clean English mispronunciations.
     }
 }
+
 
 $soundFile=returnLines([$cleanString], false); 
 
@@ -200,6 +205,7 @@ $ts = time();
         echo '<source src="../../soundcache/' . htmlspecialchars($file) . '?ts=' . htmlspecialchars($ts) . '" type="audio/wav">';
         echo 'Your browser does not support the audio element.';
         echo '</audio>';
+        echo '<p>Debug Info:<pre>'.print_r($GLOBALS["DEBUG_DATA"],true).'</pre></p>';
     } else {
         echo '<div class="error-message"><strong>Error:</strong><br/>';
         $errorFilePath = $enginePath . 'soundcache' . DIRECTORY_SEPARATOR . md5(trim($testString)) . '.err';
@@ -214,6 +220,10 @@ $ts = time();
 </div>
 
 <br>
+<form action="" method="POST">
+    <textarea name="customstring" placeholder="Write your own text" style="width:500px"><?=$_POST["customstring"]?></textarea><br/>
+    <input type="submit" />
+</form>
 <div class="status">
     <span class="label" style="font-weight: bold; color: yellow; background-color: black; padding: 5px; display: inline-block;">
         TROUBLESHOOTING FIXES
