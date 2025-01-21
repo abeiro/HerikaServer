@@ -5,6 +5,8 @@ function parse_log_to_csv($log_file, $csv_file) {
     if ($log_content === false) {
         die("Error reading log file: " . $log_file);
     }
+	// Replace incorrectly escaped single quotes with properly escaped ones
+	$log_content = str_replace("\\\\\'", "\\'", $log_content);
 
     $entries = preg_split("/\n(?=\d{4}-\d{2}-\d{2}T)/", $log_content); // Split by timestamps
     $csv_data = [];
@@ -25,8 +27,8 @@ function parse_log_to_csv($log_file, $csv_file) {
             // Attempt to parse the object.
             try {
                 $object = eval("return " . $object_string . ";");
-                if (is_array($object)) {
-                    $json_string = json_encode($object, JSON_PRETTY_PRINT);
+                if (is_array($object) && $object["messages"]) {
+                    $json_string = json_encode($object["messages"], JSON_PRETTY_PRINT);
                     if ($json_string === false) {
                         $json_string = "JSON Encoding Error"; // Or handle the error differently
                     }
@@ -48,7 +50,7 @@ function parse_log_to_csv($log_file, $csv_file) {
 
     fputcsv($fp, array_keys($csv_data[0])); // Header row
     foreach ($csv_data as $row) {
-        fputcsv($fp, $row);
+        fputcsv($fp, $row, ",", "'"); // enclosing with single quotes to avoid problems with json inside json
     }
 
     fclose($fp);
