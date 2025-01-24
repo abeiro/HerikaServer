@@ -44,7 +44,7 @@ if ($method === 'POST') {
             }
 
             $value=$jsonDataInput["value"];
-            error_log(print_r($jsonDataInput,true));
+            error_log("copying {$jsonDataInput["name"]} to all profiles");
             $new_php_code="";
             if (!is_array($value))
                 if ($value=='false')
