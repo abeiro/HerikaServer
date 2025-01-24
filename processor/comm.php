@@ -493,38 +493,17 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         $partyConf=DataGetCurrentPartyConf();
 		$partyConfA=json_decode($partyConf,true);
 		error_log($partyConf);
-		if (isset($partyConfA["{$GLOBALS["HERIKA_NAME"]}"])) {
-			$charDesc=print_r($partyConfA["{$GLOBALS["HERIKA_NAME"]}"],true).PHP_EOL.$GLOBALS["HERIKA_DYNAMIC"];
-			$currentProfile=$charDesc;
-		} else
-            $currentProfile=$GLOBALS["HERIKA_DYNAMIC"];
+		// Use the global DYNAMIC_PROMPT
+        $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
 
-        $updateProfilePrompt = "Use Dialogue history to update and summarize character profile. 
-Mandatory Format:
-
-* Current goal ($SHORTER)
-* Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORT).
-* Likes ($SHORTER).
-* Fears ($SHORTER, pay attention to dramatic past events).
-* Dislikes ($SHORTER).
-* Current mood ($SHORTER, use last events to determine). 
-* Relation with other characters if any.
-
-*DO NOT WRITE HOW MANY KEYWORDS YOU HAVE USED!
-
-First sentence must start with: '{$jsonDataInput["HERIKA_NAME"]}\r\n'.";
-        if(isset($GLOBALS["UPDATE_PERSONALITY_PROMPT"])) {
-            $updateProfilePrompt = $GLOBALS["UPDATE_PERSONALITY_PROMPT"];
-        }
-
-		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
+		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a dynamic character profile based on that dialogue. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n$currentProfile", ];
+		$prompt[] = ["role" => "user", "content" => "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_PERS"] . "\n" . $jsonDataInput["HERIKA_DYNAMIC"]];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
-        
-		$connectionHandler->open($contextData, ["max_tokens"=>500]);
+        $GLOBALS["FORCE_MAX_TOKENS"]=1200;
+		$connectionHandler->open($contextData, ["max_tokens"=>1200]);
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;

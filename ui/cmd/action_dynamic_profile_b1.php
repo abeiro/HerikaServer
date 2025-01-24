@@ -1,122 +1,88 @@
 <?php
-$method        = $_SERVER["REQUEST_METHOD"];
+$method = $_SERVER["REQUEST_METHOD"];
 
 if ($method === "POST") {
-	// Read JSON data from the request
-	$jsonDataInput = json_decode(file_get_contents("php://input") , true);
-	$profile       = $jsonDataInput["profile"];
-	error_reporting(0);
-	ini_set("display_errors", 0);
-	$enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . "../../" . DIRECTORY_SEPARATOR;
-	require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-	require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-	require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
-	require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
-	$FEATURES["MEMORY_EMBEDDING"]["ENABLED"] = false;
-	
-	if (isset($profile)) {
-		$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"] = $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
-		
-		if (file_exists($profile)) {
-			// error_log("PROFILE: {$_GET["profile"]}");
-			require_once $profile;
-		}
+    // Read JSON data from the request
+    $jsonDataInput = json_decode(file_get_contents("php://input"), true);
+    $profile = $jsonDataInput["profile"];
+    error_reporting(0);
+    ini_set("display_errors", 0);
+    $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . "../../" . DIRECTORY_SEPARATOR;
+    require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
+    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
+    $FEATURES["MEMORY_EMBEDDING"]["ENABLED"] = false;
 
-		else {
-			error_log(__FILE__ . ". Using default profile because GET PROFILE NOT EXISTS");
-		}
-		$GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
-		$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] = $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
-	}
+    if (isset($profile)) {
+        $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"] = $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
 
-	else {
-		error_log(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
-		$GLOBALS["USING_DEFAULT_PROFILE"]    = true;
-	}
-	$db = new sql();
-	
-	if (!$db) {
-		die("DB error");
-	}
-
-	$FUNCTIONS_ARE_ENABLED = false;
-	
-	if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists($enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
-		die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector." . PHP_EOL);
-	}
-
-	else {
-		require $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
-        
-        $historyData="";
-        $lastPlace="";
-        $lastListener="";
-        foreach (json_decode(DataSpeechJournal($jsonDataInput["HERIKA_NAME"],100),true) as $element) {
-          if ($lastListener!=$element["listener"]) {
-            $listener=" (talking to {$element["listener"]})";
-            $lastListener=$element["listener"];
-          }
-          else
-            $listener="";
-      
-          if ($lastPlace!=$element["location"]){
-            $place=" (at {$element["location"]})";
-            $lastPlace=$element["location"];
-          }
-          else
-            $place="";
-      
-          $historyData.=trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place").PHP_EOL;
-          
+        if (file_exists($profile)) {
+            require_once $profile;
+        } else {
+            error_log(__FILE__ . ". Using default profile because GET PROFILE NOT EXISTS");
         }
-        if ($_GET["short"]=="yes") {
-			$SHORT="25 keywords";
-			$SHORTER="5 keywords";
-			$REMINDER="SHORT";
-			$SUMMARIZE=",AND SUMMARIZE INTO 250 TOKENS,";
-		} else {
-			$SHORT="75 words";
-			$SHORTER="15 keywords";
-			//$SHORTER="use keywords, short description";
-			$REMINDER="";
-			$SUMMARIZE=" and summarize";
-		}
-        
-		$partyConf=DataGetCurrentPartyConf();
-		$partyConfA=json_decode($partyConf,true);
-		error_log($partyConf);
-		if (isset($partyConfA["{$jsonDataInput["HERIKA_NAME"]}"])) {
-			$charDesc=print_r($partyConfA["{$jsonDataInput["HERIKA_NAME"]}"],true).PHP_EOL.$jsonDataInput["HERIKA_DYNAMIC"];
-			$jsonDataInput["HERIKA_DYNAMIC"]=$charDesc;
-		}
+        $GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
+        $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] = $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
+    } else {
+        error_log(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
+        $GLOBALS["USING_DEFAULT_PROFILE"] = true;
+    }
+    $db = new sql();
 
-		requireFilesRecursively($path . "ext".DIRECTORY_SEPARATOR,"globals.php");
+    if (!$db) {
+        die("DB error");
+    }
 
-		$updateProfilePrompt = "Use Dialogue history to update $SUMMARIZE character profile.
-Mandatory Format:
+    $FUNCTIONS_ARE_ENABLED = false;
 
-* Current goal ($SHORTER)
-* Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORT).
-* Likes ($SHORTER).
-* Fears ($SHORTER, pay attention to dramatic past events).
-* Dislikes ($SHORTER).
-* Current mood ($SHORTER, use last events to determine). 
-* Relation with other characters if any.
+    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists($enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+        die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector." . PHP_EOL);
+    } else {
+        require $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
 
-*DO NOT WRITE HOW MANY KEYWORDS YOU HAVE USED!
+        $historyData = "";
+        $lastPlace = "";
+        $lastListener = "";
+        foreach (json_decode(DataSpeechJournal($jsonDataInput["HERIKA_NAME"], 100), true) as $element) {
+            if ($lastListener != $element["listener"]) {
+                $listener = " (talking to {$element["listener"]})";
+                $lastListener = $element["listener"];
+            } else {
+                $listener = "";
+            }
 
-First sentence must start with: '{$jsonDataInput["HERIKA_NAME"]}\r\n'.";
+            if ($lastPlace != $element["location"]) {
+                $place = " (at {$element["location"]})";
+                $lastPlace = $element["location"];
+            } else {
+                $place = "";
+            }
 
-		// override update profile prompt from plugins
-        if(isset($GLOBALS["UPDATE_PERSONALITY_PROMPT"])) {
-            $updateProfilePrompt = $GLOBALS["UPDATE_PERSONALITY_PROMPT"];
+            $historyData .= trim("{$element["speaker"]}:" . trim($element["speech"]) . " $listener $place") . PHP_EOL;
+        }
+        if ($_GET["short"] == "yes") {
+            $SHORT = "25 keywords";
+            $SHORTER = "5 keywords";
+            $REMINDER = "SHORT";
+            $SUMMARIZE = ",AND SUMMARIZE INTO 250 TOKENS,";
+        } else {
+            $SHORT = "75 words";
+            $SHORTER = "15 keywords";
+            $REMINDER = "";
+            $SUMMARIZE = " and summarize";
         }
 
-		error_log($updateProfilePrompt);
+        $partyConf = DataGetCurrentPartyConf();
+        $partyConfA = json_decode($partyConf, true);
+        error_log($partyConf);
+
+		// Use the global DYNAMIC_PROMPT
+        $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
 
 		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a dynamic character profile based on that dialogue. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_DYNAMIC"], ];
+		$prompt[] = ["role" => "user", "content" => "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_PERS"] . "\n" . $jsonDataInput["HERIKA_DYNAMIC"]];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
@@ -125,35 +91,30 @@ First sentence must start with: '{$jsonDataInput["HERIKA_NAME"]}\r\n'.";
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;
-		while (true) {
-			
-			if ($breakFlag) {
-				break;
-			}
-			
-			if ($connectionHandler->isDone()) {
-				$breakFlag = true;
-			}
-			
-			$buffer.= $connectionHandler->process();
-			$totalBuffer.= $buffer;
-			//$bugBuffer[]=$buffer;
-			
-			
-		}
-		$connectionHandler->close();
-		
-		$actions = $connectionHandler->processActions();
-		
-		
-		$responseParsed["HERIKA_DYNAMIC"]=$buffer;
+        while (true) {
+            if ($breakFlag) {
+                break;
+            }
 
-		// custom function to process LLM output
-		if(array_key_exists("CustomUpdateProfileFunction", $GLOBALS) && is_callable($GLOBALS["CustomUpdateProfileFunction"])) {
-			$responseParsed["HERIKA_DYNAMIC"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
-		}
-		
+            if ($connectionHandler->isDone()) {
+                $breakFlag = true;
+            }
+
+            $buffer .= $connectionHandler->process();
+            $totalBuffer .= $buffer;
+        }
+        $connectionHandler->close();
+
+        $actions = $connectionHandler->processActions();
+
+        $responseParsed["HERIKA_DYNAMIC"] = $buffer;
+
+        // Custom function to process LLM output
+        if (array_key_exists("CustomUpdateProfileFunction", $GLOBALS) && is_callable($GLOBALS["CustomUpdateProfileFunction"])) {
+            $responseParsed["HERIKA_DYNAMIC"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
+        }
+
         echo json_encode($responseParsed);
-	}
+    }
 }
 ?>
