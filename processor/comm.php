@@ -496,9 +496,9 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 		// Use the global DYNAMIC_PROMPT
         $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
 
-		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided.", ];
+		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role" => "user", "content" => "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_PERS"] . "\n" . $jsonDataInput["HERIKA_DYNAMIC"]];
+		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $jsonDataInput["HERIKA_NAME"] . "Character static biography:\n" . $jsonDataInput["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $jsonDataInput["HERIKA_DYNAMIC"]];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
