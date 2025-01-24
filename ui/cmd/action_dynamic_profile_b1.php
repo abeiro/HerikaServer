@@ -86,8 +86,8 @@ if ($method === "POST") {
 		$partyConfA=json_decode($partyConf,true);
 		error_log($partyConf);
 		if (isset($partyConfA["{$jsonDataInput["HERIKA_NAME"]}"])) {
-			$charDesc=print_r($partyConfA["{$jsonDataInput["HERIKA_NAME"]}"],true).PHP_EOL.$jsonDataInput["HERIKA_PERS"];
-			$jsonDataInput["HERIKA_PERS"]=$charDesc;
+			$charDesc=print_r($partyConfA["{$jsonDataInput["HERIKA_NAME"]}"],true).PHP_EOL.$jsonDataInput["HERIKA_DYNAMIC"];
+			$jsonDataInput["HERIKA_DYNAMIC"]=$charDesc;
 		}
 
 		requireFilesRecursively($path . "ext".DIRECTORY_SEPARATOR,"globals.php");
@@ -95,9 +95,6 @@ if ($method === "POST") {
 		$updateProfilePrompt = "Use Dialogue history to update $SUMMARIZE character profile.
 Mandatory Format:
 
-* Personality,($REMINDER description, $SHORT).
-* Bio: (birthplace, gender, race $SHORTER).
-* Speech style ($SHORTER).
 * Current goal ($SHORTER)
 * Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORT).
 * Likes ($SHORTER).
@@ -108,7 +105,7 @@ Mandatory Format:
 
 *DO NOT WRITE HOW MANY KEYWORDS YOU HAVE USED!
 
-Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}\r\n'.";
+First sentence must start with: '{$jsonDataInput["HERIKA_NAME"]}\r\n'.";
 
 		// override update profile prompt from plugins
         if(isset($GLOBALS["UPDATE_PERSONALITY_PROMPT"])) {
@@ -117,9 +114,9 @@ Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}\
 
 		error_log($updateProfilePrompt);
 
-		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a character profile based on that dialogue. ", ];
+		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Will analyze a dialogue and then you will update a dynamic character profile based on that dialogue. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_PERS"], ];
+		$prompt[] = ["role"	=> "user", "content"	=> "Current character profile, for reference.:\n" . $jsonDataInput["HERIKA_DYNAMIC"], ];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
@@ -149,11 +146,11 @@ Profile must start with the title: 'Roleplay as {$jsonDataInput["HERIKA_NAME"]}\
 		$actions = $connectionHandler->processActions();
 		
 		
-		$responseParsed["HERIKA_PERS"]=$buffer;
+		$responseParsed["HERIKA_DYNAMIC"]=$buffer;
 
 		// custom function to process LLM output
 		if(array_key_exists("CustomUpdateProfileFunction", $GLOBALS) && is_callable($GLOBALS["CustomUpdateProfileFunction"])) {
-			$responseParsed["HERIKA_PERS"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
+			$responseParsed["HERIKA_DYNAMIC"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
 		}
 		
         echo json_encode($responseParsed);

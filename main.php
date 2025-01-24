@@ -613,7 +613,7 @@ if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
 }
 
 $head[] = array('role' => 'system', 'content' =>  
-    strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] ."\n". $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
+    strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n". $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
 );
 
 

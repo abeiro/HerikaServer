@@ -494,26 +494,25 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 		$partyConfA=json_decode($partyConf,true);
 		error_log($partyConf);
 		if (isset($partyConfA["{$GLOBALS["HERIKA_NAME"]}"])) {
-			$charDesc=print_r($partyConfA["{$GLOBALS["HERIKA_NAME"]}"],true).PHP_EOL.$GLOBALS["HERIKA_PERS"];
+			$charDesc=print_r($partyConfA["{$GLOBALS["HERIKA_NAME"]}"],true).PHP_EOL.$GLOBALS["HERIKA_DYNAMIC"];
 			$currentProfile=$charDesc;
 		} else
-            $currentProfile=$GLOBALS["HERIKA_PERS"];
+            $currentProfile=$GLOBALS["HERIKA_DYNAMIC"];
 
         $updateProfilePrompt = "Use Dialogue history to update and summarize character profile. 
 Mandatory Format:
 
-* Personality,(concise description, 75 words).
-* Bio: (birthplace, gender, race $SHORTER).
-* Speech style (15 keywords).
-* Current goal (15 keywords).
-* Relation with {$GLOBALS["PLAYER_NAME"]} (75 words).
-* Likes (15 keywords).
-* Fears 15 keywords, pay atention to dramatic past events).
-* Dislikes (15 keywords).
-* Current mood (15 keywords, use last events to determine). 
-* Relation with other followers if any.
+* Current goal ($SHORTER)
+* Relation with {$jsonDataInput["PLAYER_NAME"]} ($SHORT).
+* Likes ($SHORTER).
+* Fears ($SHORTER, pay attention to dramatic past events).
+* Dislikes ($SHORTER).
+* Current mood ($SHORTER, use last events to determine). 
+* Relation with other characters if any.
 
-Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.";
+*DO NOT WRITE HOW MANY KEYWORDS YOU HAVE USED!
+
+First sentence must start with: '{$jsonDataInput["HERIKA_NAME"]}\r\n'.";
         if(isset($GLOBALS["UPDATE_PERSONALITY_PROMPT"])) {
             $updateProfilePrompt = $GLOBALS["UPDATE_PERSONALITY_PROMPT"];
         }
@@ -550,7 +549,7 @@ Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.";
 		$actions = $connectionHandler->processActions();
 		
 		
-		$responseParsed["HERIKA_PERS"]=$buffer;
+		$responseParsed["HERIKA_DYNAMIC"]=$buffer;
         
         $newConfFile=$_GET["profile"];
 
@@ -593,17 +592,17 @@ Profile must start with the title: 'Roleplay as {$GLOBALS["HERIKA_NAME"]}'.";
             }
 
             if(array_key_exists("CustomUpdateProfileFunction", $GLOBALS) && is_callable($GLOBALS["CustomUpdateProfileFunction"])) {
-                $responseParsed["HERIKA_PERS"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
+                $responseParsed["HERIKA_DYNAMIC"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
             }
 
             file_put_contents($newFile, implode('', $file_lines));
-            file_put_contents($newFile, PHP_EOL.'$HERIKA_PERS=\''.addslashes($responseParsed["HERIKA_PERS"]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+            file_put_contents($newFile, PHP_EOL.'$HERIKA_DYNAMIC=\''.addslashes($responseParsed["HERIKA_DYNAMIC"]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
             
         }
     
         //print_r($contextData);
-        //print_r($responseParsed["HERIKA_PERS"]);
+        //print_r($responseParsed["HERIKA_DYNAMIC"]);
         $MUST_END=true;
     
     }
