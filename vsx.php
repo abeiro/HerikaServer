@@ -17,10 +17,12 @@ $db=new sql();
 $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"]; 
 
 if ($voicelogic === 'voicetype') {
+  
   // Extract the voicetype from the 'value' path
   $voicetype = explode("\\", $_GET["oname"]); // Split the path
   if (isset($voicetype[3])) {
       $codename = strtolower($voicetype[3]); // Use the 4th part of the path
+      $codename = npcNameToCodename($_GET["codename"]);
   } else {
       error_log("Invalid 'oname' path structure: " . $_GET["oname"]);
       die("Invalid 'oname' path structure.");
