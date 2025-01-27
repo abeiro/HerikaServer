@@ -458,11 +458,11 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     }
     
     
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists($enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
             ;
 	}
 	 else {
-		require_once $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
+		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php");
         
         $historyData="";
         $lastPlace="";
@@ -498,7 +498,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 
 		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $jsonDataInput["HERIKA_NAME"] . "Character static biography:\n" . $jsonDataInput["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $jsonDataInput["HERIKA_DYNAMIC"]];
+		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "Character static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $GLOBALS["HERIKA_DYNAMIC"]];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new connector();
@@ -575,7 +575,11 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             }
 
             file_put_contents($newFile, implode('', $file_lines));
-            file_put_contents($newFile, PHP_EOL.'$HERIKA_DYNAMIC=\''.addslashes($responseParsed["HERIKA_DYNAMIC"]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+			$escapedDynamic = var_export($responseParsed["HERIKA_DYNAMIC"], true);
+			if (!is_string($responseParsed["HERIKA_DYNAMIC"]) || !$escapedDynamic) {
+				$escapedDynamic = '';
+			}
+            file_put_contents($newFile, PHP_EOL.'$HERIKA_DYNAMIC='.$escapedDynamic.';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
             
         }
