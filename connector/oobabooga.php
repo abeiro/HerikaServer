@@ -8,7 +8,7 @@
  *
  */
 
-class connector
+class oobabooga
 {
     public $primary_handler;
     public $name;

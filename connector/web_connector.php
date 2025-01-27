@@ -1,6 +1,6 @@
 <?php
 
-class connector
+class web_connector
 {
     public $name;
     private $conn;

@@ -85,7 +85,7 @@ if ($method === "POST") {
 		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $jsonDataInput["HERIKA_NAME"] . "Character static biography:\n" . $jsonDataInput["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $jsonDataInput["HERIKA_DYNAMIC"]];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
-		$connectionHandler = new connector();
+		$connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
         $GLOBALS["FORCE_MAX_TOKENS"]=1500;
 		$connectionHandler->open($contextData, ["max_tokens"=>1500]);
 		$buffer      = "";

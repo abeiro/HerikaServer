@@ -136,7 +136,7 @@ else {
 
     error_log(__LINE__." " .(microtime(true) - $startTime));    
     
-    $connectionHandler=new connector();
+    $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
     $connectionHandler->open($contextData,[]);
     
     error_log(__LINE__." " .(microtime(true) - $startTime));

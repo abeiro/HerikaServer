@@ -512,7 +512,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "Character static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $GLOBALS["HERIKA_DYNAMIC"]];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
-		$connectionHandler = new connector();
+        $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
         $GLOBALS["FORCE_MAX_TOKENS"]=1500;
 		$connectionHandler->open($contextData, ["max_tokens"=>1500]);
 		$buffer      = "";

@@ -2,7 +2,7 @@
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-class connector
+class openrouter
 {
     public $primary_handler;
     public $name;
@@ -128,7 +128,7 @@ class connector
         
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
-        $this->primary_handler = fopen($url, 'r', false, $context);
+        $this->primary_handler = $this->send($url, $context);
 
         //tokenizePrompt(json_encode($data));
 
@@ -137,6 +137,12 @@ class connector
 
     }
 
+    public function send($url, $context) {
+        if (isset($GLOBALS['mockConnectorSend'])) {
+            return call_user_func($GLOBALS['mockConnectorSend'], $url, $context);
+        }
+        return fopen($url, 'r', false, $context);
+    }
 
     public function process()
     {

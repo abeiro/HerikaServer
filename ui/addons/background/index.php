@@ -33,7 +33,7 @@ if ($_POST["doit"]) {
   
 	require_once $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
   
-    $connectionHandler=new connector();
+    $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
     $GLOBALS["gameRequest"][0]="diary"; // HAck to force diary grammar
     $connectionHandler->open($parms,["MAX_TOKENS"=>$_POST["MAX_TOKENS"]]);
 
