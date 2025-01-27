@@ -28,6 +28,7 @@ $db->insert(
 $db->close();
 
 
+
 if (strpos($_GET["oname"],".fuz"))  {
     $ext="fuz";
 } else if (strpos($_GET["oname"],".xwm")) {
