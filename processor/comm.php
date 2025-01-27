@@ -575,10 +575,10 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             }
 
             file_put_contents($newFile, implode('', $file_lines));
-			$escapedDynamic = var_export($responseParsed["HERIKA_DYNAMIC"], true);
-			if (!is_string($responseParsed["HERIKA_DYNAMIC"]) || !$escapedDynamic) {
-				$escapedDynamic = '';
-			}
+            $escapedDynamic = var_export($responseParsed["HERIKA_DYNAMIC"], true);
+            if (!is_string($responseParsed["HERIKA_DYNAMIC"]) || !$escapedDynamic) {
+                $escapedDynamic = '';
+            }
             file_put_contents($newFile, PHP_EOL.'$HERIKA_DYNAMIC='.$escapedDynamic.';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
             
