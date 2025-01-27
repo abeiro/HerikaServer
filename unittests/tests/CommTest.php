@@ -337,8 +337,6 @@ final class CommTest extends DatabaseTestCase
         // default test config
         require("conf.php");
 
-        //print_r($GLOBALS);
-
         // comm.php?data=inputtext|100|200|Hey Narrator, attack that monster! (base64 encoded)
         $encodedData = base64_encode("inputtext|100|200|Hey Narrator, attack that monster!");
         $_SERVER["QUERY_STRING"] = "data={$encodedData}";

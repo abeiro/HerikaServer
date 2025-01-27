@@ -5,17 +5,20 @@ use PHPUnit\Framework\TestCase;
 abstract class DatabaseTestCase extends TestCase
 {
     protected static string $testDatabaseName = "testdb";
+    protected string $testNPCName = "Unit Test";
 
     public function setUp(): void
     {
         $this->setUpDB();
         $this->setUpDefaultMinimeMocks();
         $this->setUpDefaultConnectorMocks();
+        $this->setUpConfFile();
     }
 
     public function tearDown(): void
     {
         $this->tearDownDB();
+        $this->tearDownConfFile();
     }
 
     public function setUpDB(): void
@@ -42,7 +45,7 @@ abstract class DatabaseTestCase extends TestCase
         pg_close($mainConnection);
 
         // Connect to the new test database
-		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."phpunit.class.php");
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."phpunit.class.php");
         $testConnection = new sql();
 
         // Run migrations/seeders
@@ -70,7 +73,7 @@ abstract class DatabaseTestCase extends TestCase
             CreateContextTableIfNotExists();
             importXPersonalities();
             importScenesDescriptions();
-			unset($GLOBALS["db"]);
+            unset($GLOBALS["db"]);
         }
 
         $testConnection->close();
@@ -109,12 +112,18 @@ abstract class DatabaseTestCase extends TestCase
         };
     }
 
+    public function setUpConfFile() {
+        $md5name = md5($this->testNPCName);
+        $this->tearDownConfFile();
+        copy(__DIR__.DIRECTORY_SEPARATOR."conf_empty.php", __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR."conf_{$md5name}.php");
+    }
+
     public function tearDownDB(): void
     {
-		if (isset($GLOBALS["db"])) {
-			$GLOBALS["db"]->close();
-			unset($GLOBALS["db"]);
-		}
+        if (isset($GLOBALS["db"])) {
+            $GLOBALS["db"]->close();
+            unset($GLOBALS["db"]);
+        }
         // Connect back to main to drop the database
         $connString = "host=localhost dbname=dwemer user=dwemer password=dwemer";
         $mainConnection = pg_connect($connString);
@@ -130,6 +139,14 @@ abstract class DatabaseTestCase extends TestCase
         }
 
         pg_close($mainConnection);
+    }
+
+    public function tearDownConfFile() {
+        $md5name = md5($this->testNPCName);
+        @unlink(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR."conf_{$md5name}.php");
+        foreach (glob(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . ".conf_{$md5name}*") as $file) {
+            @unlink($file);
+        }
     }
 
 }

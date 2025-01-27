@@ -11,7 +11,7 @@ $GLOBALS["HERIKA_PERS"]="You are The Narrator in a Skyrim adventure. You will on
     . "Only #PLAYER_NAME# can hear you. "
     . "Your goal is to comment on #PLAYER_NAME#'s playthrough, and occasionally give hints. NO SPOILERS. " 
     . "Talk about quests and last events."; //NPC personality.
-$GLOBALS["DYNAMIC_PROFILE"]=false; //Dynamic profile updates during certain ingame events.
+$GLOBALS["DYNAMIC_PROFILE"]=true; //Dynamic profile updates during certain ingame events.
 $GLOBALS["MINIME_T5"]=true; //Assists smaller weight LLMs with action and memory functions.
 
 //[Advanced Configuration]
@@ -51,7 +51,11 @@ $GLOBALS["SUMMARY_PROMPT"]=''; //Instructions added when generating summaries fo
 
 //[AI/LLM Service Selection]
 $GLOBALS["CONNECTORS"]=["openrouterjson"]; //AI Service(s).
-$GLOBALS["CONNECTORS_DIARY"]=["openrouter","openai","google_openaijson","koboldcpp"]; //Creates diary entries and memories.
+$GLOBALS["CONNECTORS_DIARY"]='openrouter';
+
+$GLOBALS["HERIKA_DYNAMIC"]='';
+$GLOBALS["DYNAMIC_PROMPT"]='Dynamic prompt here';
+$GLOBALS["DYNAMIC_PROFILE"]=true;
 
 //[AI/LLM Connectors]
 //OpenRouter JSON
@@ -86,7 +90,7 @@ $GLOBALS["CONNECTOR"]["openrouter"]["top_p"]=1; //LLM parameter top_p.
 $GLOBALS["CONNECTOR"]["openrouter"]["min_p"]=0.1; //LLM parameter min_p.
 $GLOBALS["CONNECTOR"]["openrouter"]["top_a"]=0; //LLM parameter top_a.
 $GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]="1024"; //Maximum tokens to generate when summarizing.
-$GLOBALS["CONNECTOR"]["openrouter"]["API_KEY"]=""; //API key.
+$GLOBALS["CONNECTOR"]["openrouter"]["API_KEY"]="openrouter_key"; //API key.
 $GLOBALS["CONNECTOR"]["openrouter"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $GLOBALS["CONNECTOR"]["openrouter"]["xtitle"]="Skyrim AI Follower Framework"; //Stub needed header.
 //OpenAI JSON
@@ -331,6 +335,7 @@ global $contextDataFull;
 global $gameRequest;
 global $request;
 global $talkedSoFar;
+global $enginePath;
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."phpunit.class.php");
 $GLOBALS["db"] = new sql();
