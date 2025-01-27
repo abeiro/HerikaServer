@@ -25,6 +25,8 @@ requireFilesRecursively($path . "ext".DIRECTORY_SEPARATOR,"globals.php");
 
 
 // PARSE GET RESPONSE into $gameRequest
+$cooldownPeriod = 600;
+
 
 if (php_sapi_name()=="cli") {
     // You can run this script directly with php: main.php "Player text"
@@ -282,14 +284,41 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
     die();
 }
 
-if (in_array($gameRequest[0],["playerinfo","newgame"])) {
+// Check if the gameRequest matches specific types
+if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
     if (!$GLOBALS["NARRATOR_WELCOME"]) {
         logEvent($gameRequest);
         die();
     } else {
-        $FUNCTIONS_ARE_ENABLED=false;
+        // Fetch the last trigger timestamp from the database
+        $narratorRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='NARRATOR_WELCOME_TIMESTAMP'");
+        
+        // Check if the timestamp exists in the database
+        if (!empty($narratorRecord)) {
+            $lastTrigger = (int) $narratorRecord[0]['value'];
+            $timeElapsed = time() - $lastTrigger;
+
+            if ($timeElapsed < $cooldownPeriod) {
+                // Cooldown is still active, exit
+                die("NARRATOR_WELCOME is on cooldown. Try again in " . ($cooldownPeriod - $timeElapsed) . " seconds.");
+            }
+        }
+
+        // Update the timestamp in the database to the current time
+        $currentTimestamp = time();
+        $GLOBALS["db"]->delete("conf_opts", "id='NARRATOR_WELCOME_TIMESTAMP'");
+        $GLOBALS["db"]->insert(
+            "conf_opts",
+            array(
+                "id"    => "NARRATOR_WELCOME_TIMESTAMP",
+                "value" => $currentTimestamp
+            )
+        );
+
+        // If cooldown has passed, allow execution and disable functions
+        $FUNCTIONS_ARE_ENABLED = false;
     }
-} 
+}
 
 
 // Fake entry to mark time passing when borded event
