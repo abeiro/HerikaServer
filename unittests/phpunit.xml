@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit bootstrap="unittests/vendor/autoload.php"
+<phpunit bootstrap="vendor/autoload.php"
     cacheResult="false"
 >
 
     <testsuites>
         <testsuite name="CHIM Unit Tests">
-            <directory>unittests/tests</directory>
+            <directory>tests</directory>
         </testsuite>
     </testsuites>
 
@@ -19,7 +19,7 @@
         </include>
         <exclude>
             <directory suffix=".php">***/vendor</directory>
-            <directory suffix=".php">unittests</directory>
+            <directory suffix=".php">tests</directory>
         </exclude>
     </source>
 
