@@ -239,6 +239,9 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
                 'localts' => time()
             )
         );
+    } else {
+        error_log(__FILE__." data was not an array");
+
     }
     $MUST_END=true;
 
