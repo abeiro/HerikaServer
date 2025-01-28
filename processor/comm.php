@@ -338,10 +338,18 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         if ($GLOBALS["FEATURES"]["MISC"]["QUEST_COMMENT"]===false)
             $MUST_END=true;
     */
-    if (isset($GLOBALS["QUEST_COMMENT"])) 
-        if ($GLOBALS["QUEST_COMMENT"]===false)
-            $MUST_END=true;
-
+    if (isset($GLOBALS["QUEST_COMMENT"])) {
+        // Remove the '%' from the value and convert it to an integer
+        $questCommentChance = (int)str_replace('%', '', $GLOBALS["QUEST_COMMENT_CHANCE"]);
+    
+        // Generate a random integer between 1 and 100 (inclusive).
+        $randomChance = random_int(1, 100);
+    
+        // Adjust the logic to reverse the chance
+        if ($randomChance > $questCommentChance || $GLOBALS["QUEST_COMMENT"] === false) {
+            $MUST_END = true;
+        }
+    }
 } elseif ($gameRequest[0] == "location") {
     logEvent($gameRequest);
     $MUST_END=true;
