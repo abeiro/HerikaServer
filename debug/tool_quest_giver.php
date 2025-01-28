@@ -5,6 +5,8 @@ define("SECOND_GAMETS_MULT",2000);  // Timestamp multiplier
 
 $TALK_SPEED=1;
 
+$DEBUG_MODE=false;
+
 $file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel.json';
 $enginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
@@ -206,7 +208,7 @@ if ($allDone) {
 }
 
 
-// Silence detector
+// Silence detector. Should detected when no NPC are talking.
 
 if ((isset($quest["GLOBAL_LAST_LLM_CALL"])&&$quest["GLOBAL_LAST_LLM_CALL"]!=0)&&(time()-$quest["GLOBAL_LAST_LLM_CALL"]>15)) {
     $lastChat=$db->fetchAll("select max(localts) as m from speech");
@@ -249,7 +251,7 @@ if (!$MUST_END) {
         }
 
         // First stage, First run
-        if ($n==0) {
+        if ($n==0 && $DEBUG_MODE) {
             if (!isset($stage["status"])) {
                 $db->insert(
                     'responselog',
@@ -280,7 +282,8 @@ if (!$MUST_END) {
                 $pclass=$character["class"];
 
                 // This will spawn character
-                npcProfileBase($character["name"],$pclass,$cn_race,$cn_gender,$cn_location,$taskId);
+                if (!isset($characters[$stage["char_ref"]]["use_existing"]) || !$characters[$stage["char_ref"]]["use_existing"])
+                    npcProfileBase($character["name"],$pclass,$cn_race,$cn_gender,$cn_location,$taskId);
                 
                 $namedKey="{$character["name"]}_is_rolemastered";
                 $db->delete("conf_opts", "id='".$db->escape($namedKey)."'");
@@ -353,8 +356,8 @@ if (!$MUST_END) {
                     }
 
                     
-
-                    createProfile($character["name"],$PARMS,true);
+                    if (!isset($characters[$stage["char_ref"]]["use_existing"]) || !$characters[$stage["char_ref"]]["use_existing"])
+                        createProfile($character["name"],$PARMS,true);
 
                     // Dependant items:
                     if (isset($delayedItems[$stage["char_ref"]])) {
@@ -1381,8 +1384,8 @@ if ($UPDATE_PROFILE ) {
         } else if (in_array($character["disposition"],["high"])) {
             $PARMS["EMOTEMOODS"]="high";
         }
-    
-        createProfile($character["name"],$PARMS,true);
+        if (!isset($characters[$stage["char_ref"]]["use_existing"]) || !$characters[$stage["char_ref"]]["use_existing"])
+            createProfile($character["name"],$PARMS,true);
 
     }
     
@@ -1422,7 +1425,7 @@ if ($allDone) {
         $namedKey="{$character["name"]}_is_rolemastered";
         $db->delete("conf_opts", "id='".$db->escape($namedKey)."'");
     }
-    if (!$failed) {
+    if (!$failed && $DEBUG_MODE) {
         $db->insert(
             'responselog',
             array(

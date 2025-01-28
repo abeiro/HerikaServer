@@ -187,6 +187,7 @@
                             t=document.querySelector("input[name='"+key+"']")
                             if (t) {
                                 t.value=data[key]
+                                syncInputs(key+"_range", key+"_number", "range");// TO actually show updated values
                                 t.animate(
                                     [
                                         // fotogramas clave
@@ -201,19 +202,21 @@
                                 );
                             } else {
                                 t=document.querySelector("textarea[name='"+key+"']")
-                                t.value=data[key]
-                                t.animate(
-                                    [
-                                        // fotogramas clave
-                                        { color: "white" },
-                                        { color: "red" }
-                                    ],
-                                    {
-                                        // opciones de sincronización
-                                        duration: 1000,
-                                        iterations: 3
-                                    }
-                                );
+                                if (t) {
+                                    t.value=data[key]
+                                    t.animate(
+                                        [
+                                            // fotogramas clave
+                                            { color: "white" },
+                                            { color: "red" }
+                                        ],
+                                        {
+                                            // opciones de sincronización
+                                            duration: 1000,
+                                            iterations: 3
+                                        }
+                                    );
+                                }
                             
                             }
                         }
