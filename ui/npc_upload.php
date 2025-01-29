@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 
@@ -63,46 +62,74 @@ if (!$conn) {
     exit;
 }
 
+//
+// ────────────────────────────────────────────────────────────────────
+//   INDIVIDUAL UPLOAD
+// ────────────────────────────────────────────────────────────────────
+//
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual'])) {
-    $npc_name = strtolower(trim($_POST['npc_name'] ?? ''));
-    $npc_pers = $_POST['npc_pers'] ?? '';
+    $npc_name   = strtolower(trim($_POST['npc_name'] ?? ''));
+    $npc_pers   = $_POST['npc_pers'] ?? '';
+
+    // Optional npc_dynamic field
+    $npc_dynamic = (isset($_POST['npc_dynamic']) && trim($_POST['npc_dynamic']) !== '')
+        ? trim($_POST['npc_dynamic'])
+        : null;
+
+    // npc_misc comes from user input; default to '' if empty
+    $npc_misc = (isset($_POST['npc_misc']) && trim($_POST['npc_misc']) !== '')
+        ? trim($_POST['npc_misc'])
+        : '';
 
     // Handle voice IDs: if field is empty, set to NULL, otherwise use the trimmed value.
-    $melotts_voiceid = (isset($_POST['melotts_voiceid']) && trim($_POST['melotts_voiceid']) !== '') ? trim($_POST['melotts_voiceid']) : null;
-    $xtts_voiceid = (isset($_POST['xtts_voiceid']) && trim($_POST['xtts_voiceid']) !== '') ? trim($_POST['xtts_voiceid']) : null;
-    $xvasynth_voiceid = (isset($_POST['xvasynth_voiceid']) && trim($_POST['xvasynth_voiceid']) !== '') ? trim($_POST['xvasynth_voiceid']) : null;
+    $melotts_voiceid   = (!empty($_POST['melotts_voiceid']))   ? trim($_POST['melotts_voiceid'])   : null;
+    $xtts_voiceid      = (!empty($_POST['xtts_voiceid']))      ? trim($_POST['xtts_voiceid'])      : null;
+    $xvasynth_voiceid  = (!empty($_POST['xvasynth_voiceid']))  ? trim($_POST['xvasynth_voiceid'])  : null;
 
+    // Validate required fields
     if (!empty($npc_name) && !empty($npc_pers)) {
-        // Set npc_misc to an empty string to avoid NULL
-        $npc_misc = '';
-
         // Prepare and execute the INSERT statement with ON CONFLICT
         $query = "
-            INSERT INTO $schema.npc_templates_custom (npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO {$schema}.npc_templates_custom
+                (npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (npc_name)
             DO UPDATE SET
-                npc_pers = EXCLUDED.npc_pers,
-                npc_misc = EXCLUDED.npc_misc,
-                melotts_voiceid = EXCLUDED.melotts_voiceid,
-                xtts_voiceid = EXCLUDED.xtts_voiceid,
-                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid;
+                npc_dynamic       = EXCLUDED.npc_dynamic,
+                npc_pers          = EXCLUDED.npc_pers,
+                npc_misc          = EXCLUDED.npc_misc,
+                melotts_voiceid   = EXCLUDED.melotts_voiceid,
+                xtts_voiceid      = EXCLUDED.xtts_voiceid,
+                xvasynth_voiceid  = EXCLUDED.xvasynth_voiceid
         ";
 
-        $params = array($npc_name, $npc_pers, $npc_misc, $melotts_voiceid, $xtts_voiceid, $xvasynth_voiceid);
+        $params = [
+            $npc_name,
+            $npc_dynamic,
+            $npc_pers,
+            $npc_misc,
+            $melotts_voiceid,
+            $xtts_voiceid,
+            $xvasynth_voiceid
+        ];
+
         $result = pg_query_params($conn, $query, $params);
 
         if ($result) {
-            $message .= "<p>Data inserted successfully!</p>";
+            $message .= "<p>Data inserted/updated successfully!</p>";
         } else {
             $message .= "<p>An error occurred while inserting or updating data: " . pg_last_error($conn) . "</p>";
         }
     } else {
-        $message .= '<p>Please fill in all required fields.</p>';
+        $message .= '<p>Please fill in all required fields: NPC Name and NPC Personality.</p>';
     }
 }
 
-// Check if the CSV upload form has been submitted
+//
+// ────────────────────────────────────────────────────────────────────
+//   CSV UPLOAD
+// ────────────────────────────────────────────────────────────────────
+//
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
     // Check if a file was uploaded without errors
     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] === UPLOAD_ERR_OK) {
@@ -116,77 +143,144 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
         $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
 
         if (in_array($fileExtension, $allowedfileExtensions)) {
-            // Get file encoding
+            // Try to detect file encoding
             $encoding = mb_detect_encoding(file_get_contents($fileTmpPath), 'UTF-8', true);
 
-            // Open the file for reading
             if (($handle = fopen($fileTmpPath, 'r')) !== false) {
-                // Skip the header row
-                fgetcsv($handle, 1000, ',');
-
-                // Process each row in the CSV
-                $rowCount = 0;
-                while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                    // Assuming CSV columns are:
-                    // npc_name, npc_pers, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
-                    $npc_name = isset($data[0]) ? strtolower(trim($data[0])) : '';
-                    $npc_pers = isset($data[1]) ? trim($data[1]) : '';
-                    $npc_misc = '';
-
-                    // Handle voice IDs: if cell not empty, set value; else null
-                    $melotts_voiceid = (isset($data[3]) && trim($data[3]) !== '') ? trim($data[3]) : null;
-                    $xtts_voiceid = (isset($data[4]) && trim($data[4]) !== '') ? trim($data[4]) : null;
-                    $xvasynth_voiceid = (isset($data[5]) && trim($data[5]) !== '') ? trim($data[5]) : null;
-
-                    // Convert to UTF-8 to avoid invalid byte sequences, if not already UTF-8
-                    if ($encoding !== 'UTF-8') {
-                        $npc_name = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
-                        $npc_pers = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_pers);
-                        $npc_misc = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_misc);
-
-                        if ($melotts_voiceid !== null) {
-                            $melotts_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $melotts_voiceid);
-                        }
-
-                        if ($xtts_voiceid !== null) {
-                            $xtts_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $xtts_voiceid);
-                        }
-
-                        if ($xvasynth_voiceid !== null) {
-                            $xvasynth_voiceid = iconv('Windows-1252', 'UTF-8//IGNORE', $xvasynth_voiceid);
-                        }
+                //
+                // ──────────────────────────────────────────────────────────────────
+                //   Read header row to map columns
+                // ──────────────────────────────────────────────────────────────────
+                //
+                $header = fgetcsv($handle, 1000, ',');
+                if (!$header) {
+                    $message .= '<p>Could not read the header row from the CSV.</p>';
+                    fclose($handle);
+                } else {
+                    // Normalize header labels (lowercase, trim, etc.)
+                    $headerMap = [];
+                    foreach ($header as $i => $colName) {
+                        $normalized = strtolower(trim($colName));
+                        $headerMap[$normalized] = $i;
                     }
 
-                    if (!empty($npc_name) && !empty($npc_pers)) {
-                        // Prepare and execute the INSERT statement with ON CONFLICT
+                    // Check relevant columns by name
+                    //
+                    // * npc_name (required)
+                    // * npc_dynamic (optional)
+                    // * npc_pers (required)
+                    // * npc_misc (optional if you want to skip it, set it to "")
+                    // * melotts_voiceid, xtts_voiceid, xvasynth_voiceid (optional)
+                    //
+
+                    $rowCount = 0;
+                    while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                        // Use null or empty string if column does not exist or row data is missing
+                        $npc_name = '';
+                        if (isset($headerMap['npc_name']) && isset($data[$headerMap['npc_name']])) {
+                            $npc_name = strtolower(trim($data[$headerMap['npc_name']]));
+                        }
+
+                        $npc_pers = '';
+                        if (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) {
+                            $npc_pers = trim($data[$headerMap['npc_pers']]);
+                        }
+
+                        // npc_dynamic is optional
+                        $npc_dynamic = null;
+                        if (isset($headerMap['npc_dynamic']) && isset($data[$headerMap['npc_dynamic']])) {
+                            $temp = trim($data[$headerMap['npc_dynamic']]);
+                            $npc_dynamic = ($temp !== '') ? $temp : null;
+                        }
+
+                        // npc_misc is not used, but we can store it or default to ''
+                        $npc_misc = '';
+                        if (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) {
+                            $npc_misc = trim($data[$headerMap['npc_misc']]);
+                        }
+
+                        // Voice IDs are optional, so store null if missing/empty
+                        $melotts_voiceid = null;
+                        if (isset($headerMap['melotts_voiceid']) && isset($data[$headerMap['melotts_voiceid']])) {
+                            $temp = trim($data[$headerMap['melotts_voiceid']]);
+                            $melotts_voiceid = ($temp !== '') ? $temp : null;
+                        }
+
+                        $xtts_voiceid = null;
+                        if (isset($headerMap['xtts_voiceid']) && isset($data[$headerMap['xtts_voiceid']])) {
+                            $temp = trim($data[$headerMap['xtts_voiceid']]);
+                            $xtts_voiceid = ($temp !== '') ? $temp : null;
+                        }
+
+                        $xvasynth_voiceid = null;
+                        if (isset($headerMap['xvasynth_voiceid']) && isset($data[$headerMap['xvasynth_voiceid']])) {
+                            $temp = trim($data[$headerMap['xvasynth_voiceid']]);
+                            $xvasynth_voiceid = ($temp !== '') ? $temp : null;
+                        }
+
+                        // Convert to UTF-8 if not already
+                        if ($encoding !== 'UTF-8') {
+                            $npc_name           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
+                            $npc_pers           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_pers);
+                            $npc_dynamic        = ($npc_dynamic !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_dynamic)
+                                                    : null;
+                            $npc_misc           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_misc);
+                            $melotts_voiceid    = ($melotts_voiceid !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $melotts_voiceid)
+                                                    : null;
+                            $xtts_voiceid       = ($xtts_voiceid !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $xtts_voiceid)
+                                                    : null;
+                            $xvasynth_voiceid   = ($xvasynth_voiceid !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $xvasynth_voiceid)
+                                                    : null;
+                        }
+
+                        // Skip if either required field is empty
+                        if (empty($npc_name) || empty($npc_pers)) {
+                            $message .= "<p>Skipping row with missing npc_name or npc_pers.</p>";
+                            continue;
+                        }
+
+                        // Insert or Update
                         $query = "
                             INSERT INTO $schema.npc_templates_custom 
-                            (npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
-                            VALUES ($1, $2, $3, $4, $5, $6)
+                                (npc_name, npc_dynamic, npc_pers, npc_misc, 
+                                 melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7)
                             ON CONFLICT (npc_name)
                             DO UPDATE SET
-                                npc_pers = EXCLUDED.npc_pers,
-                                npc_misc = EXCLUDED.npc_misc,
-                                melotts_voiceid = EXCLUDED.melotts_voiceid,
-                                xtts_voiceid = EXCLUDED.xtts_voiceid,
-                                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid;
+                                npc_dynamic       = EXCLUDED.npc_dynamic,
+                                npc_pers          = EXCLUDED.npc_pers,
+                                npc_misc          = EXCLUDED.npc_misc,
+                                melotts_voiceid   = EXCLUDED.melotts_voiceid,
+                                xtts_voiceid      = EXCLUDED.xtts_voiceid,
+                                xvasynth_voiceid  = EXCLUDED.xvasynth_voiceid
                         ";
 
-                        $params = array($npc_name, $npc_pers, $npc_misc, $melotts_voiceid, $xtts_voiceid, $xvasynth_voiceid);
+                        $params = [
+                            $npc_name,
+                            $npc_dynamic,
+                            $npc_pers,
+                            $npc_misc,
+                            $melotts_voiceid,
+                            $xtts_voiceid,
+                            $xvasynth_voiceid
+                        ];
+
                         $result = pg_query_params($conn, $query, $params);
 
                         if ($result) {
                             $rowCount++;
                         } else {
-                            $message .= "<p>Error processing row with npc_name '$npc_name': " . pg_last_error($conn) . "</p>";
+                            $message .= "<p>Error processing row (npc_name: '$npc_name'): " . pg_last_error($conn) . "</p>";
                         }
-                    } else {
-                        $message .= "<p>Skipping empty or invalid row in CSV.</p>";
-                    }
-                }
-                fclose($handle);
+                    } // end while
 
-                $message .= "<p>$rowCount records inserted or updated successfully from the CSV file.</p>";
+                    fclose($handle);
+                    $message .= "<p>$rowCount records inserted or updated successfully from the CSV file.</p>";
+                }
             } else {
                 $message .= '<p>Error opening the CSV file.</p>';
             }
@@ -198,6 +292,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
     }
 }
 
+//
+// ────────────────────────────────────────────────────────────────────
+//   TRUNCATE NPC TABLE
+// ────────────────────────────────────────────────────────────────────
+//
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['truncate_npc'])) {
     $truncateQuery = "TRUNCATE TABLE $schema.npc_templates_custom RESTART IDENTITY CASCADE";
     $truncateResult = pg_query($conn, $truncateQuery);
@@ -209,13 +308,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['truncate_npc'])) {
     }
 }
 
-// Handle the download request for the example CSV
+//
+// ────────────────────────────────────────────────────────────────────
+//   DOWNLOAD EXAMPLE
+// ────────────────────────────────────────────────────────────────────
+//
 if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
     // Define the path to the example CSV file
     $filePath = realpath(__DIR__ . '/../data/example_bios_format.csv');
 
     if (file_exists($filePath)) {
-        // Set headers to initiate file download
         header('Content-Description: File Transfer');
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="example.csv"');
@@ -223,12 +325,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         header('Cache-Control: must-revalidate');
         header('Pragma: public');
         header('Content-Length: ' . filesize($filePath));
-
-        // Clear output buffering to avoid any additional output
         ob_end_clean();
         flush();
-
-        // Read the file and send it to the output buffer
         readfile($filePath);
         exit;
     } else {
@@ -312,10 +410,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
             margin: 0;
         }
 
-        .response-container {
-            margin-top: 20px;
-        }
-
         .indent {
             padding-left: 10ch; /* 10 character spaces */
         }
@@ -361,7 +455,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
             max-height: 800px;
             overflow-y: auto;
             margin-bottom: 20px;
-            max-width: 1600px;
+            max-width: 1700px;
         }
 
         .table-container table {
@@ -396,47 +490,48 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         /* Specific column widths */
         .table-container th:nth-child(1),
         .table-container td:nth-child(1) {
-            width: 150px; /* Small */
+            width: 150px; /* e.g., for npc_name */
         }
 
         .table-container th:nth-child(2),
         .table-container td:nth-child(2) {
-            width: 600px; /* Large */
+            width: 600px; /* e.g., for npc_pers */
         }
 
         .table-container th:nth-child(3),
         .table-container td:nth-child(3) {
-            width: 80px; /* Small */
+            width: 600px; /* small or adjust as needed */
         }
 
         .table-container th:nth-child(4),
         .table-container td:nth-child(4),
         .table-container th:nth-child(5),
-        .table-container td:nth-child(5) {
+        .table-container td:nth-child(5),
+        .table-container th:nth-child(6),
+        .table-container td:nth-child(6) {
             width: 100px; 
         }
 
-        .table-container th:nth-child(6),
-        .table-container td:nth-child(6) {
-            width: 180px; 
+        .table-container th:nth-child(7),
+        .table-container td:nth-child(7) {
+            width: 120px; 
         }
 
         input[type="submit"].btn-danger {
-        background-color: rgb(200, 53, 69); 
-        color: #fff;
-        border: 1px solid rgb(255, 255, 255);
-        padding: 10px 20px;
-        cursor: pointer;
-        font-size: 16px;
-        border-radius: 4px;
-        transition: background-color 0.3s ease; 
-        font-weight: bold;
+            background-color: rgb(200, 53, 69); 
+            color: #fff;
+            border: 1px solid rgb(255, 255, 255);
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease; 
+            font-weight: bold;
         }
 
         input[type="submit"].btn-danger:hover {
-        background-color: rgb(200, 35, 51); 
+            background-color: rgb(200, 35, 51); 
         }
-
     </style>
 </head>
 <body>
@@ -462,6 +557,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         <label for="npc_pers">NPC Personality:</label>
         <textarea name="npc_pers" id="npc_pers" rows="5" required></textarea>
 
+        <label for="npc_dynamic">NPC Dynamic Info (optional):</label>
+        <textarea name="npc_dynamic" id="npc_dynamic" rows="5"></textarea>
+
+        <label for="npc_misc">NPC Misc (optional, not in use yet):</label>
+        <input type="text" name="npc_misc" id="npc_misc">
+
         <label for="melotts_voiceid">Melotts Voice ID (optional):</label>
         <input type="text" name="melotts_voiceid" id="melotts_voiceid">
 
@@ -473,7 +574,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 
         <input type="submit" name="submit_individual" value="Submit">
     </form>
-    <p>You do not need to fill in the Voice ID fields. To understand the logic of how they work, read <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" style="color:yellow;" target="_blank">the manual page here</a>.</p>
+    <p>You do not need to fill in the Voice ID fields. To understand the logic of how they work, read 
+       <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" 
+          style="color:yellow;" target="_blank">the manual page here</a>.
+    </p>
 
     <h2>Batch Upload</h2>
     <form action="" method="post" enctype="multipart/form-data">
@@ -481,31 +585,41 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
         <input type="submit" name="submit_csv" value="Upload CSV">
     </form>
-    <p>Do not change the CSV column format. You can ignore the npc_misc column, it does not do anything currently.</p>
+    <p>
+        Make sure your CSV has headers labeled 
+        <code>npc_name</code>, <code>npc_dynamic</code> (optional), <code>npc_pers</code>, 
+        <code>npc_misc</code> (optional), <code>melotts_voiceid</code>, <code>xtts_voiceid</code>, 
+        <code>xvasynth_voiceid</code>. The order does not matter, only the header names matter.
+    </p>
     <form action="" method="get">
         <input type="hidden" name="action" value="download_example">
         <input type="submit" value="Download Example CSV">
     </form>
 </div>
+
 <p>You can verify that NPC data has been uploaded successfully by going to 
-   <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b></p>
+   <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b>.</p>
 <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
 <p>Also you can check the merged table at 
-   <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combind_npc_templates</b>
+   <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.
 </p>
 <br>
 <div class="indent5">
-<h2>Delete All Custom Character Entries</h2>
-<p>You can download a backup of the full character database in the<a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
-<form action="" method="post">
-    <input 
-        type="submit" 
-        name="truncate_npc" 
-        value="Factory Reset NPC Overide Table"
-        class="btn-danger"
-        onclick="return confirm('Are you absolutely sure you want to DELETE ALL ENTRIES the npc_templates_custom table? This action is IRREVERSIBLE!');"
-    >
-</form>
+    <h2>Delete All Custom Character Entries</h2>
+    <p>You can download a backup of the full character database in the 
+       <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener">
+          csv files channel in our discord
+       </a>.
+    </p>
+    <form action="" method="post">
+        <input 
+            type="submit" 
+            name="truncate_npc" 
+            value="Factory Reset NPC Override Table"
+            class="btn-danger"
+            onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in npc_templates_custom? This action is IRREVERSIBLE!');"
+        >
+    </form>
 </div>
 <br>
 <?php
@@ -515,7 +629,7 @@ $letter = isset($_GET['letter']) ? strtoupper($_GET['letter']) : '';
 if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
     // Filter by first letter
     $query_combined = "
-        SELECT npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
+        SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
         FROM {$schema}.combined_npc_templates
         WHERE npc_name ILIKE $1
         ORDER BY npc_name ASC
@@ -525,22 +639,21 @@ if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
 } else {
     // No filter: show all
     $query_combined = "
-        SELECT npc_name, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
+        SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
         FROM {$schema}.combined_npc_templates
         ORDER BY npc_name ASC
     ";
     $result_combined = pg_query($conn, $query_combined);
 }
 
-// ----------------------------------------------
-// Display the filter buttons + Table
-// ----------------------------------------------
 echo '<h2>NPC Templates Database</h2>';
-echo '<p>These are the current biographies in the CHIM database that will be pulled when a new profile is created for a character.</p>';
+echo '<p>These are the current biographies in the CHIM database that will be used when a new profile is created.</p>';
 echo '<p>Once a character has been activated, use their profile in the Configuration Wizard to make further changes.</p>';
-echo '<p><b>It is OK that melotts_voiceid and xtts_voiceid columns are empty!</b> They are just for custom voice overrides as we use code to automatically assign them a voice if it is empty. <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" style="color:yellow;" target="_blank">Read this to learn how voice IDs are assigned.</a></p>';
+echo '<p><b>It is OK that melotts_voiceid and xtts_voiceid columns are empty!</b> They are just for custom voice overrides. 
+      See <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" 
+      style="color:yellow;" target="_blank">the manual</a> for how voice IDs are assigned automatically.</p>';
 
-
+// Alphabetic filter
 echo '<div class="filter-buttons">';
 echo '<a href="?" class="alphabet-button">All</a>';
 foreach (range('A', 'Z') as $char) {
@@ -548,13 +661,13 @@ foreach (range('A', 'Z') as $char) {
 }
 echo '</div>';
 
-// Start table container
 if ($result_combined) {
     echo '<div class="table-container">';
     echo '<table>';
     echo '<tr>';
     echo '  <th>npc_name</th>';
     echo '  <th>npc_pers</th>';
+    echo '  <th>npc_dynamic</th>';
     echo '  <th>npc_misc</th>';
     echo '  <th>melotts_voiceid</th>';
     echo '  <th>xtts_voiceid</th>';
@@ -564,9 +677,9 @@ if ($result_combined) {
     $rowCountCombined = 0;
     while ($row = pg_fetch_assoc($result_combined)) {
         echo '<tr>';
-        // Use ?? '' to avoid passing null to htmlspecialchars
         echo '  <td>' . htmlspecialchars($row['npc_name'] ?? '') . '</td>';
         echo '  <td>' . nl2br(htmlspecialchars($row['npc_pers'] ?? '')) . '</td>';
+        echo '  <td>' . nl2br(htmlspecialchars($row['npc_dynamic'] ?? '')) . '</td>';
         echo '  <td>' . nl2br(htmlspecialchars($row['npc_misc'] ?? '')) . '</td>';
         echo '  <td>' . htmlspecialchars($row['melotts_voiceid'] ?? '') . '</td>';
         echo '  <td>' . htmlspecialchars($row['xtts_voiceid'] ?? '') . '</td>';
@@ -585,9 +698,6 @@ if ($result_combined) {
     echo '<p>Error fetching combined NPC templates: ' . pg_last_error($conn) . '</p>';
 }
 
-echo '</div>'; 
-
-// Close the database connection
 pg_close($conn);
 ?>
 
