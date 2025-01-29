@@ -585,12 +585,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
         <input type="submit" name="submit_csv" value="Upload CSV">
     </form>
-    <p>
-        Make sure your CSV has headers labeled 
-        <code>npc_name</code>, <code>npc_dynamic</code> (optional), <code>npc_pers</code>, 
-        <code>npc_misc</code> (optional), <code>melotts_voiceid</code>, <code>xtts_voiceid</code>, 
-        <code>xvasynth_voiceid</code>. The order does not matter, only the header names matter.
-    </p>
     <form action="" method="get">
         <input type="hidden" name="action" value="download_example">
         <input type="submit" value="Download Example CSV">
@@ -649,7 +643,7 @@ if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
 echo '<h2>NPC Templates Database</h2>';
 echo '<p>These are the current biographies in the CHIM database that will be used when a new profile is created.</p>';
 echo '<p>Once a character has been activated, use their profile in the Configuration Wizard to make further changes.</p>';
-echo '<p><b>It is OK that melotts_voiceid and xtts_voiceid columns are empty!</b> They are just for custom voice overrides. 
+echo '<p><b>It is OK if any voiceid fields are empty!</b> They are just for custom voice overrides. 
       See <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" 
       style="color:yellow;" target="_blank">the manual</a> for how voice IDs are assigned automatically.</p>';
 
