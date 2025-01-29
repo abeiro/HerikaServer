@@ -554,10 +554,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         <label for="npc_name">NPC Name:</label>
         <input type="text" name="npc_name" id="npc_name" required>
 
-        <label for="npc_pers">NPC Personality:</label>
+        <label for="npc_pers">NPC Static Bio:</label>
         <textarea name="npc_pers" id="npc_pers" rows="5" required></textarea>
 
-        <label for="npc_dynamic">NPC Dynamic Info (optional):</label>
+        <label for="npc_dynamic">NPC Dynamic Bio (optional):</label>
         <textarea name="npc_dynamic" id="npc_dynamic" rows="5"></textarea>
 
         <label for="npc_misc">NPC Misc (optional, not in use yet):</label>
