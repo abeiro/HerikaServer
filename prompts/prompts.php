@@ -90,8 +90,7 @@ $PROMPTS=array(
 
         ]
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
-        ,"extra" => ["dontuse" => false]   //50% chance
-        //,"extra"=>["dontuse"=>true]   //50% chance
+        ,"extra"=>["dontuse"=>(time()%($GLOBALS["BORED_EVENT"]+1)==0)]   // ignore 1/x+1 events
     ],
 
     "goodmorning"=>[
