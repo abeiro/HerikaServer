@@ -68,8 +68,8 @@
                     </a>
                     </li>
                     <li>-->
-                    <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Will clear the current short term context log." onclick="return confirm('This will clear the short term context buffer of events. ARE YOU SURE?')">
-                        Clear Current Context Events
+                    <a class="dropdown-item" href="index.php?sendclean=true&table=response" title="Will clear the current short term context log." onclick="return confirm('This will clear the short term context buffer of events that will be sent with the AI prompt (CONTEXT_HISTORY). Will not delete events from the event log. ARE YOU SURE?')">
+                        Clear Current Context Events Buffer
                     </a>
                     </li>
                     <li>
