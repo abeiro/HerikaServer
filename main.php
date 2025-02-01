@@ -380,11 +380,13 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         die();
     }
     
-    $rndNumber=rand(1,100);
-    if ($rndNumber>($GLOBALS["RECHAT_P"]+0)) {              
-        //die();
-    } else
+    $rndNumber = rand(1, 100);
+    if ($rndNumber <= $GLOBALS["RECHAT_P"]) {
+        
+    }
+    else{
         die();
+    }
     
     
     if (sizeof($rechatHistory)>1) {

@@ -69,7 +69,7 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} hace un comentario vago sobre algo que no puede explicar bien) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} hace un comentario casual sobre el último encuentro de combate) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
-        ,"extra"=>["dontuse"=>(time()%($GLOBALS["BORED_EVENT"]+1)==0)]   //50% probabilidad
+        ,"extra" => ["dontuse" => (rand(0, 99) >= $GLOBALS["BORED_EVENT"])] 
     ],
 
     "goodmorning"=>[
