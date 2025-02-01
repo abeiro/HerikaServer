@@ -133,7 +133,7 @@ class connector
         if ($b_groq) { // --- exception made for groq.com
             // this sequence send only content for chat completion
             
-            $data = array( // different: max_tokens
+            $data = array( 
                 'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'llama-3.3-70b-versatile', // short lifespan
                 'messages' => $contextData, 
                 'stream' => true, // required for CHIM
@@ -143,6 +143,15 @@ class connector
                 'presence_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0, 
                 'frequency_penalty' => ($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0 
             );
+                
+            if (!(stripos($data["model"],"deepseek-r1") === false)) { 
+            /*  deepseek r1 need "reasoning_format" parameter: 
+                parsed  - Separates reasoning into a dedicated field while keeping the response concise.
+                raw     - Includes reasoning within <think> tags in the content.
+                hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
+                $data['reasoning_format'] = "hidden";  
+                //error_log(" deepseek-r1: " . print_r($data,false));
+            }
             
             if (isset($customParms["MAX_TOKENS"])) {
                 if ($customParms["MAX_TOKENS"]==0) {
