@@ -199,6 +199,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || !file_exists($enginePath . "connect
     $contextData = array_merge($head, $prompt);
 
     $connectionHandler = new connector();
+    $startTimeTrans = microtime(true);
     $connectionHandler->open($contextData, []);
 
     $buffer = "";
@@ -219,6 +220,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || !file_exists($enginePath . "connect
     }
 
     $connectionHandler->close();
+    $endTimeTrans = microtime(true)-$startTimeTrans;
 
     $actions = $connectionHandler->processActions();
     if (is_array($actions) && count($actions) > 0) {
@@ -236,11 +238,35 @@ echo '</pre>';
 echo '</div>'; // End of section
 
 echo '<div class="section">';
+echo '<div class="status"><span class="label">Processing request...</span></div>';
+
+echo '<div class="section">';
 echo '<div class="divider"></div>';
 echo '<div class="status">
         <span class="label" style="font-weight: bold;">LLM Response:</span>
         <div class="response">' . nl2br(htmlspecialchars($buffer)) . '</div>
     </div>';
+echo '<br>';
+
+
+echo '<div class="status"><span class="label">Response time</span></div>';
+echo '<pre>';
+$endTimeTrans=$endTimeTrans;
+echo "$endTimeTrans secs. ";
+if ($endTimeTrans<2 )
+    echo "<span style='color:purple;background-color:black;font-weight:bold'>FAST!</span>";
+else if ($endTimeTrans<5)
+    echo "<span style='color:green;background-color:black;font-weight:bold'>GOOD</span>";
+else if ($endTimeTrans<10)
+    echo "<span style='color:blue;background-color:black;font-weight:bold'>NORMAL</span>";
+else if ($endTimeTrans<30) 
+    echo "<span style='color:orange;background-color:black;font-weight:bold'>SLOW</span>";
+else 
+    echo "<span style='color:red;background-color:black;font-weight:bold'>TOO SLOW</span>";
+
+echo '</pre>';
+echo '</div>'; // End of section
+
 echo '<br>';
 echo '<div class="status">
         <span class="label" style="font-weight: bold; color: yellow; background-color: black; padding: 5px; display: inline-block;">
