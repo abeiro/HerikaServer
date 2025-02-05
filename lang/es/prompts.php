@@ -23,7 +23,11 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre el tipo de enemigos que fueron derrotados) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} nota algo peculiar sobre el último enemigo derrotado) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
-        "extra"=>["force_tokens_max"=>"50","dontuse"=>(time()%10!=0)]   //10% probabilidad
+        "extra" => [
+            "dontuse" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("combat_end", $GLOBALS["RPG_COMMENTS"]))
+                ? (time() % 10 != 0)
+                : true
+        ],
     ],
     "combatendmighty"=>[
         "cue"=>[
@@ -34,7 +38,8 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} hace una broma sobre los enemigos derrotados) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre el tipo de enemigos que fueron derrotados) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} nota algo peculiar sobre el último enemigo derrotado) {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ]
+        ],
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("combat_end", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "quest"=>[
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
@@ -42,7 +47,8 @@ $PROMPTS=array(
     ],
 
     "bleedout"=>[
-        "cue"=>["{$GLOBALS["HERIKA_NAME"]} se queja de casi haber sido derrotado en batalla, {$GLOBALS["TEMPLATE_DIALOG"]}"]
+        "cue"=>["{$GLOBALS["HERIKA_NAME"]} se queja de casi haber sido derrotado en batalla, {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("bleedout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
 
     "bored"=>[
@@ -74,7 +80,8 @@ $PROMPTS=array(
 
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} comenta sobre la siesta de {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
-        "player_request"=>["(despertando después de dormir). ahhhh  "]
+        "player_request"=>["(despertando después de dormir). ahhhh  "],
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("sleep", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
 
     "inputtext"=>[
@@ -112,7 +119,7 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} pide a {$GLOBALS["PLAYER_NAME"]} que comparta lo que encontró) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
         "player_request"=>["({$GLOBALS["PLAYER_NAME"]} ha desbloqueado) {$gameRequest[3]})"],
-        "extra"=>["mood"=>"susurrando"]
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("lockpick", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "afterattack"=>[
         "cue"=>["(interpreta como {$GLOBALS["HERIKA_NAME"]}, grita una frase de combate EN MAYÚSCULAS) {$GLOBALS["TEMPLATE_DIALOG"]}"]
@@ -164,15 +171,19 @@ $PROMPTS=array(
     ],
     "rpg_lvlup"=>[ 
         "cue"=>["Comenta algo sobre que {$GLOBALS["PLAYER_NAME"]} parece mas poderoso. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("levelup", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "rpg_shout"=>[ 
         "cue"=>["Comenta/pregunta sobre el nuevo grito aprendido por {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_shout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "rpg_soul"=>[ 
         "cue"=>["Comenta/pregunta sobre el alma absorbida por {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("absorb_soul", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "rpg_word"=>[ 
         "cue"=>["Comenta/pregunta sobre la nueva palabra aprendida por {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "instruction"=>[ 
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
