@@ -1,7 +1,7 @@
 <?php
 require_once("util.php");
 
-if (!$GLOBALS["FEATURES"]["MISC"]["LIFE_LINK_PLUGIN"]) {
+if (isset($GLOBALS["FEATURES"]["MISC"]["LIFE_LINK_PLUGIN"])) {
     return;
 }
 

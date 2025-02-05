@@ -1,6 +1,6 @@
 <?php
 
-if (!$GLOBALS["FEATURES"]["MISC"]["LIFE_LINK_PLUGIN"]) {
+if (isset($GLOBALS["FEATURES"]["MISC"]["LIFE_LINK_PLUGIN"])) {
     return;
 }
 
@@ -47,5 +47,5 @@ Footnote:
  */
 $GLOBALS["CustomUpdateProfileFunction"] = function($content) {
     $data = parseUpdate($GLOBALS["HERIKA_NAME"], $content);
-    return buildPersonality($data, $GLOBALS["HERIKA_PERS_STATIC"]);
+    return buildPersonality($data, $GLOBALS["HERIKA_PERS_DYNAMIC"]);
 };
