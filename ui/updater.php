@@ -24,7 +24,7 @@ echo $lastCommit;
             https://discord.com/invite/NDn9qud2ug <i class='bi-discord'></i>
         </a>
         <br>
-        AI-FF Server Codebase: <a href="https://github.com/abeiro/HerikaServer">https://github.com/abeiro/HerikaServer</a>
+        CHIM Server Codebase: <a href="https://github.com/abeiro/HerikaServer">https://github.com/abeiro/HerikaServer</a>
     </h4>
 
 </div>
