@@ -403,9 +403,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <h2>Sync Voices to Cloud CHIM XTTS</h2>
-    <label for="file">If you are using a cloud based solution for CHIM XTTS, such as vast.ai, you will need to press the [Sync Voice Cache] button.</label>
+    <label for="file">ONLY NEEDED IF YOU ARE USING AN ONLINE INSTANCE OF CHIM XTTS.</label>
     <br>
-    <label for="file">You only need to Sync once you have setup the CHIM XTTS server. You do not need to press it again until you build a new instance.</label>
+    <label for="file">You only need to Sync a single time once you have setup the CHIM XTTS server. You do not need to press it again until you build a new instance.</label>
     <br>
     <label for="file" style="color: yellow;">If you have no voices in your cache, that is fine! Any new NPC's will have their voice cached in the future.</label>    <br>
     <br>
