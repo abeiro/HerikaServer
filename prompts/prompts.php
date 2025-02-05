@@ -93,7 +93,6 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about whether they like to revisit this place in the future) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they overheard earlier in the journey) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about their hopes for the rest of the journey) {$GLOBALS["TEMPLATE_DIALOG"]}"
-
         ]
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
         ,"extra" => ["dontuse" => (rand(0, 99) >= $GLOBALS["BORED_EVENT"])]
@@ -208,8 +207,8 @@ $PROMPTS=array(
         "player_request"=>["The Narrator: The party reaches destination)"]
     ],
     "rpg_lvlup"=> [
-    "cue"   => ["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
-    "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("levelup", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "cue"   => ["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("levelup", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "rpg_shout"=>[ 
         "cue"=>["Comment/ask about the the new shout learned by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
