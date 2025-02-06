@@ -281,7 +281,7 @@ class connector
         );
         
         
-         $data["temperature"]=$GLOBALS["CONNECTOR"][$this->name]["temperature"]+0;
+        $data["temperature"]=floatval($GLOBALS["CONNECTOR"][$this->name]["temperature"]+0);
          $data["frequency_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]+0);
          $data["presence_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]+0);
          $data["repetition_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]+0);
