@@ -272,13 +272,31 @@ final class CommTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = [
-                    "role"=>"user",
-                    "content"=>"Choose coherent ACTION to obey Prisoner..  Use this JSON object to give your answer: {\"character\":\"The Narrator\",\"listener\":\"specify who The Narrator is talking to\",\"mood\":\"sassy|assertive|sexy|smug|kindly|lovely|seductive|sarcastic|sardonic|smirking|amused|default|assisting|irritated|playful|neutral|teasing|mocking\",\"action\":\"\",\"target\":\"action's target|destination name\",\"message\":\"lines of dialogue\"}"
-                ];
-                $this->expectPromptInContext($streamContext, $expectedPrompt);
-                
-                return true;
+                $options = stream_context_get_options($streamContext);
+                $content = json_decode($options['http']['content']);
+                foreach ($content->messages as $actual) {
+                    if (isset($actual->role) && $actual->role === "user" && isset($actual->content) && strpos($actual->content, "Choose coherent ACTION to obey Prisoner..  Use this JSON object to give your answer: ") === 0)
+                    {
+                        $jsonString = preg_match('/\{(.*)\}/', $actual->content, $matches);
+                        $jsonString = $matches[0];
+                        $data = json_decode($jsonString, true);
+                        $moodString = $data['mood'];
+                        $moodArray = explode('|', $moodString);
+                        sort($moodArray);
+                        $data['mood'] = implode('|', $moodArray);
+                        $jsonString = json_encode($data);
+
+                        $actual->content = "Choose coherent ACTION to obey Prisoner..  Use this JSON object to give your answer: {$jsonString}";
+                        $expected = [
+                            "role"=>"user",
+                            "content"=>"Choose coherent ACTION to obey Prisoner..  Use this JSON object to give your answer: {\"character\":\"The Narrator\",\"listener\":\"specify who The Narrator is talking to\",\"mood\":\"amused|assertive|assisting|default|irritated|kindly|lovely|mocking|neutral|playful|sarcastic|sardonic|sassy|seductive|sexy|smirking|smug|teasing\",\"action\":\"\",\"target\":\"action's target|destination name\",\"message\":\"lines of dialogue\"}"
+                        ];
+                        $this->assertEquals(json_encode($expected), json_encode($actual));
+                        return true;
+                    }
+                }
+
+                return false;
             })
         )
         ->willReturnCallback(function($url, $context) {

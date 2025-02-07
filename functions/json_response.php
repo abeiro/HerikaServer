@@ -40,18 +40,14 @@
 
             $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk";
             $GLOBALS["FUNC_LIST"][]="Talk";
-            if (!getenv('PHPUNIT_TEST')) {
-                shuffle($GLOBALS["FUNC_LIST"]);
-            }
+            shuffle($GLOBALS["FUNC_LIST"]);
         }
     }
 
     // specify the json object that will be requested from the LLM (via prompt, not enforced)
     Function setResponseTemplate() {
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
-        if (!getenv('PHPUNIT_TEST')) {
-            shuffle($moods);
-        }
+        shuffle($moods);
     
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
@@ -101,9 +97,7 @@
     // for use with openai and openrouter providers that support structured outputs to enforce a json schema
     Function setStructuredOutputTemplate() {
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
-        if (!getenv('PHPUNIT_TEST')) {
-            shuffle($moods);
-        }
+        shuffle($moods);
 
         $GLOBALS["structuredOutputTemplate"] = array(
             "type" => "json_schema",
@@ -169,9 +163,7 @@
         // build the string for moods
         // should look like: ("\"playful\"" | "\"default\"" | ...)
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
-        if (!getenv('PHPUNIT_TEST')) {
-            shuffle($moods);
-        }
+        shuffle($moods);
 
         $moods_quoted = [];
         foreach ($moods as $n=>$mood) {
