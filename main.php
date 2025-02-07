@@ -732,10 +732,11 @@ CALL INITIALIZATION
 
         require(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
     }
-    function call_llm() {
-        $outputWasValid = true;
-        $connectionHandler=new connector();
-        $connectionHandler->open($contextData,$overrideParameters);
+function call_llm() {
+    global $contextData;
+    $outputWasValid = true;
+    $connectionHandler=new connector();
+    $connectionHandler->open($contextData,$overrideParameters);
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
 
     if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
