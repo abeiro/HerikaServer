@@ -733,11 +733,15 @@ CALL INITIALIZATION
         require(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
     }
 function call_llm() {
-    global $contextData;
+    global $contextData, $gameRequest, $receivedData, $startTime, $db;
+    global $ERROR_TRIGGERED, $talkedSoFar, $alreadysent, $FUNCTIONS_ARE_ENABLED;
+    global $overrideParameters, $request;
+    
     $outputWasValid = true;
     $connectionHandler=new connector();
     $connectionHandler->open($contextData,$overrideParameters);
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
+
 
     if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
         $gameRequestCopy=$gameRequest;
@@ -830,10 +834,10 @@ function call_llm() {
                 $totalProcessedData.=$extractedData;
                 $extractedData="";
                 $buffer=$remainingData;
-                $db = new sql();
-                $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
+                $user_input_after=$GLOBALS["db"]->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
                 if (isset($user_input_after[0]))
                     if (isset($user_input_after[0]["N"]))
+
                         if ($user_input_after[0]["N"]>0) {
                             die('X-CUSTOM-CLOSE');
                             error_log("Generation stopped because user_input. ".__LINE__);
