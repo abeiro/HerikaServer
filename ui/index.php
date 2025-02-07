@@ -484,7 +484,7 @@ include("tmpl/navbar.php");
                 echo '</td>';
                 // Add delete button conditionally
                 echo '<td>';
-                if ($folder !== 'herika_heal') {
+                if ($folder !== 'herika_heal' && $folder !== 'xLifeLink_plugin') {
                     echo '<form method="post" style="margin:0;" onsubmit="return confirm(\'Are you sure you want to delete the ' . htmlspecialchars($name) . ' plugin?\');">
                             <input type="hidden" name="delete_plugin" value="' . htmlspecialchars($folder) . '">
                             <button type="submit" class="delete-plugin-btn">Delete Plugin</button>
