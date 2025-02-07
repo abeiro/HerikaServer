@@ -455,10 +455,15 @@ class connector
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
                 $buffer.=$data["choices"][0]["delta"]["content"];
                 $this->_buffer.=$data["choices"][0]["delta"]["content"];
-                $this->_numOutputTokens += 1;
+                // Check to see if we've received something that looks like it starts with a JSON object
+                if (strlen($this->_buffer)>10 && strpos($this->_buffer, '{') === false) {
+                    return -1;
+                }
 
             }
+
             $totalBuffer.=$data["choices"][0]["delta"]["content"];
+
 
         }
         
