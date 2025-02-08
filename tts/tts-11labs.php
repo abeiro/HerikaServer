@@ -41,7 +41,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash) 
 			'model_id' => $GLOBALS["TTS"]["ELEVEN_LABS"]["model_id"],
 			'voice_settings' => array(
 				'stability' => $GLOBALS["TTS"]["ELEVEN_LABS"]["stability"]+0.0,
-				'similarity_boost' => $GLOBALS["TTS"]["ELEVEN_LABS"]["similarity_boost"]+0.0
+				'similarity_boost' => $GLOBALS["TTS"]["ELEVEN_LABS"]["similarity_boost"]+0.0,
+				'style' => $GLOBALS["TTS"]["ELEVEN_LABS"]["style"]+0.0
 			)
 		);
 
