@@ -180,7 +180,11 @@ final class DynamicProfileTest extends DatabaseTestCase
             })
         )
         ->willReturnCallback(function($url, $context) {
-            return $this->defaultConnectorResponse($url, $context);
+            $response = 'data: {"choices":[{"delta":{"content": "{\"character\": \"Unit Test\", \"listener\": \"Prisoner\", \"message\": \"Unit test message\", \"mood\": \"default\", \"action\": \"Talk\", \"target\": \"Prisoner\"}"}}]}';
+            $resourceMock = fopen('php://temp', 'r+');
+            fwrite($resourceMock, $response);
+            rewind($resourceMock);
+            return $resourceMock;
         });
 
         // comm.php?data=inputtext|100|200|Hey Unit Test, attack that monster! (base64 encoded)
@@ -210,7 +214,11 @@ final class DynamicProfileTest extends DatabaseTestCase
             })
         )
         ->willReturnCallback(function($url, $context) {
-            return $this->defaultConnectorResponse($url, $context);
+            $response = 'data: {"choices":[{"delta":{"content": "{\"character\": \"Unit Test\", \"listener\": \"Prisoner\", \"message\": \"Unit test message\", \"mood\": \"default\", \"action\": \"Talk\", \"target\": \"Prisoner\"}"}}]}';
+            $resourceMock = fopen('php://temp', 'r+');
+            fwrite($resourceMock, $response);
+            rewind($resourceMock);
+            return $resourceMock;
         });
 
         // comm.php?data=inputtext|100|200|Hey Unit Test, attack that monster! (base64 encoded)
