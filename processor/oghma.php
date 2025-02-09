@@ -1,146 +1,198 @@
-<?php 
+<?php
 
-/*
-
-We use 4 sources for ranking:
-
-* Subject from the user's current input – This is given the highest weight: 10.
-* Topic inferred from recent context – This topic is derived after the LLM processes the input. It attempts to extract the main topic from the last 5 dialogue sentences spoken by the player and NPC. Weight: 5.
-* Location context – Information about the current location or setting. Weight: 2.
-* Names extracted from recent dialogues – Relevant names mentioned in the recent conversation. Weight: 1.
-    
-For example:
-    
-If you mention "Akatosh" in your input, it will likely match the Akatosh entry in Oghma (source 1). If the next sentence is "Is he good or bad?", source 1 loses value because it lacks new information for the search. However, Akatosh remains in source 2 (inferred topic) and probably source 4 (recently mentioned names). As a result, the search will still return Akatosh, but with a lower ranking.
-    
-This system allows the main topic to persist in subsequent requests, even if it isn’t explicitly mentioned.
-    
-If the user changes the subject (e.g., "And what do you know about Mara?"), Mara becomes the primary focus in source 1 with the highest weight. The search then becomes a mix of Mara and Akatosh, but Mara will take precedence due to its higher weight
-
-*/
-
-$GLOBALS["OGHMA_HINT"]="";
+$GLOBALS["OGHMA_HINT"] = "";
 
 if ($GLOBALS["MINIME_T5"]) {
-    if (isset($GLOBALS["OGHMA_INFINIUM"])&&($GLOBALS["OGHMA_INFINIUM"])) {
-        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+    if (isset($GLOBALS["OGHMA_INFINIUM"]) && ($GLOBALS["OGHMA_INFINIUM"])) {
+        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
 
-            $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+            $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
             $replacement = "";
-            $INPUT_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); 
-            
+            $INPUT_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]);
+
             $pattern = '/\(talking to [^()]+\)/i';
             $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
-            $INPUT_TEXT=strtr($INPUT_TEXT,["."=>" ","{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-            
-            //$INPUT_TEXT=lastSpeech($GLOBALS["HERIKA_NAME"]);
-            
-            $currentOghmaTopic_req=$db->fetchOne("select value from conf_opts where id='current_oghma_topic'");
-            $currentOghmaTopic=getArrayKey($currentOghmaTopic_req,"value");
-           
-            $topic_req=file_get_contents("http://127.0.0.1:8082/topic?text=".urlencode($INPUT_TEXT));
-            
+            $INPUT_TEXT = strtr($INPUT_TEXT, ["."=>" ", "{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+
+            // $INPUT_TEXT=lastSpeech($GLOBALS["HERIKA_NAME"]);
+
+            $currentOghmaTopic_req = $db->fetchOne("SELECT value FROM conf_opts WHERE id='current_oghma_topic'");
+            $currentOghmaTopic     = getArrayKey($currentOghmaTopic_req, "value");
+
+            $topic_req = file_get_contents("http://127.0.0.1:8082/topic?text=".urlencode($INPUT_TEXT));
             if ($topic_req) {
-                $topic_res=json_decode($topic_req,true);
-                $currentInputTopic=getArrayKey($topic_res,"generated_tags");
+                $topic_res         = json_decode($topic_req, true);
+                $currentInputTopic = getArrayKey($topic_res, "generated_tags");
             } else {
-                $currentInputTopic="";
+                $currentInputTopic = "";
             }
 
-            $locationCtx=DataLastKnownLocationHuman(true);
-               
-            $contextKeywords=implode(" ",lastKeyWordsContext(5,$GLOBALS["HERIKA_NAME"]));
+            $locationCtx      = DataLastKnownLocationHuman(true);
+            $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
 
-                    
             // Helper function to convert a string to tsquery format
             function prepareTsQuery($string, $operator = '|') {
-                // Remove all non-alphanumeric characters except spaces
+                // Remove all non-alphanumeric chars except spaces
                 $cleanedString = preg_replace('/[^a-zA-Z0-9\s]/', '', $string);
                 // Split words by whitespace
                 $words = preg_split('/\s+/', $cleanedString);
-                // Remove empty elements (in case of multiple spaces)
+                // Remove empty elements
                 $words = array_filter($words);
                 // Join words with the specified operator
                 return implode(" $operator ", $words);
             }
-            
+
             // Prepare tsquery strings
             $currentInputTopicQuery = prepareTsQuery($currentInputTopic);
             $currentOghmaTopicQuery = prepareTsQuery($currentOghmaTopic);
-            $locationCtxQuery = prepareTsQuery($locationCtx);
-            $contextKeywordsQuery = prepareTsQuery($contextKeywords);
-            
-            // Build the query
+            $locationCtxQuery       = prepareTsQuery($locationCtx);
+            $contextKeywordsQuery   = prepareTsQuery($contextKeywords);
+
+            // --------------------------------------------------
+            // Build the user’s knowledge array
+            // --------------------------------------------------
+            // 1. Fetch the global string
+            $oghmaKnowledgeString = isset($GLOBALS["OGHMA_KNOWLEDGE"])
+                ? $GLOBALS["OGHMA_KNOWLEDGE"]
+                : '';
+
+            // 2. Convert the comma-separated string into an array and trim each element
+            $oghmaKnowledgeArray = array_map('trim', explode(',', $oghmaKnowledgeString));
+
+            // 3. Remove any empty elements
+            $oghmaKnowledgeArray = array_filter($oghmaKnowledgeArray);
+
+            // 4. Append HERIKA_NAME to the end of that array
+            $oghmaKnowledgeArray[] = $GLOBALS["HERIKA_NAME"];
+
+            // --------------------------------------------------
+            // Query to find the top matching Oghma entry
+            // --------------------------------------------------
             $query = "
                 SELECT 
                     topic_desc,
                     topic,
-                    ts_rank(native_vector, to_tsquery('$currentInputTopicQuery')) * 
+                    knowledge_class,
+                    knowledge_class_basic,
+                    topic_desc_basic,
+                    ts_rank(native_vector, to_tsquery('$currentInputTopicQuery')) *
                         CASE WHEN native_vector @@ to_tsquery('$currentInputTopicQuery') THEN 10.0 ELSE 1.0 END +
-                    ts_rank(native_vector, to_tsquery('$currentOghmaTopicQuery')) * 
+                    ts_rank(native_vector, to_tsquery('$currentOghmaTopicQuery')) *
                         CASE WHEN native_vector @@ to_tsquery('$currentOghmaTopicQuery') THEN 5.0 ELSE 1.0 END +
-                    ts_rank(native_vector, to_tsquery('$locationCtxQuery')) * 
+                    ts_rank(native_vector, to_tsquery('$locationCtxQuery')) *
                         CASE WHEN native_vector @@ to_tsquery('$locationCtxQuery') THEN 2.0 ELSE 1.0 END +
-                    ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) * 
+                    ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) *
                         CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END 
                     AS combined_rank
                 FROM oghma
-                WHERE 
+                WHERE
                     native_vector @@ to_tsquery('$currentInputTopicQuery') OR
                     native_vector @@ to_tsquery('$currentOghmaTopicQuery') OR
                     native_vector @@ to_tsquery('$locationCtxQuery') OR
                     native_vector @@ to_tsquery('$contextKeywordsQuery')
                 ORDER BY combined_rank DESC;
             ";
-            
-            // error_log($query);
 
+            $oghmaTopics = $GLOBALS["db"]->fetchAll($query);
 
-            $oghmaTopics=$GLOBALS["db"]->fetchAll($query);
-            $msg='oghma keyword offered';
+            if (!empty($oghmaTopics)) {
+                // We'll demonstrate logic using the top-ranked item
+                $topTopic = $oghmaTopics[0];
+                $msg = 'oghma keyword offered';
 
-            if (isset($oghmaTopics[0]) && isset($oghmaTopics[0]["topic_desc"])) {
+                // If rank is good enough, we try to see if user can access advanced or basic lore
+                if ($topTopic["combined_rank"] > 3.5) {
+                    // -----------------------------
+                    // 1) Check advanced article
+                    // -----------------------------
+                    $advancedAllowed = false;
+                    $advClassesStr   = trim($topTopic["knowledge_class"] ?? '');
+                    if ($advClassesStr === '') {
+                        // Empty => no restriction
+                        $advancedAllowed = true;
+                    } else {
+                        // Convert advanced classes to array
+                        $advClassesArr   = array_map('trim', explode(',', $advClassesStr));
+                        $advClassesArr   = array_filter($advClassesArr);
 
-                if ($oghmaTopics[0]["combined_rank"] > 3.5 ) {
-                    $GLOBALS["OGHMA_HINT"].="#Lore related info: {$oghmaTopics[0]["topic_desc"]}";
+                        // Intersect with user's known classes
+                        $hasAdvancedKnowledge = array_intersect($advClassesArr, $oghmaKnowledgeArray);
+                        if (!empty($hasAdvancedKnowledge)) {
+                            $advancedAllowed = true;
+                        }
+                    }
 
-                    // Search with location matched all. Use it.
+                    // -----------------------------------------------
+                    // ADD knowall OVERRIDE HERE
+                    // -----------------------------------------------
+                    // If 'knowall' is in the user's knowledge array, 
+                    // automatically allow advanced article.
+                    if (in_array('knowall', array_map('strtolower', $oghmaKnowledgeArray))) {
+                        $advancedAllowed = true;
+                    }
+
+                    if ($advancedAllowed) {
+                        // The user can access advanced lore
+                        $GLOBALS["OGHMA_HINT"] .= "#Lore (You have advanced knowledge on this subject): {$topTopic["topic_desc"]}";
+                    } else {
+                        // -----------------------------
+                        // 2) Check basic article
+                        // -----------------------------
+                        $basicAllowed = false;
+                        $basicClassesStr = trim($topTopic["knowledge_class_basic"] ?? '');
+                        if ($basicClassesStr === '') {
+                            // Empty => no restriction
+                            $basicAllowed = true;
+                        } else {
+                            // Convert basic classes to array
+                            $basicClassesArr = array_map('trim', explode(',', $basicClassesStr));
+                            $basicClassesArr = array_filter($basicClassesArr);
+
+                            // Intersect with user's known classes
+                            $hasBasicKnowledge = array_intersect($basicClassesArr, $oghmaKnowledgeArray);
+                            if (!empty($hasBasicKnowledge)) {
+                                $basicAllowed = true;
+                            }
+                        }
+
+                        if ($basicAllowed) {
+                            $GLOBALS["OGHMA_HINT"] .= "#Lore (You only have basic knowledge on this subject): {$topTopic["topic_desc_basic"]}";
+                        } else {
+                            $GLOBALS["OGHMA_HINT"] .= "You do not know ANYTHING about {$topTopic["topic"]}";
+                        }
+                    }
                 } else {
-                    // Dont offer
-                    
-                    $msg="oghma keyword NOT offered (not good results in  search)";
+                    // Not a good match
+                    $msg = "oghma keyword NOT offered (no good results in search)";
                 }
 
+                // Logging to audit_memory
                 $GLOBALS["db"]->insert(
                     'audit_memory',
-                    array(
-                        'input' => $INPUT_TEXT,
-                        'keywords' =>$msg,
-                        'rank_any'=> $oghmaTopics[0]["combined_rank"],
-                        'rank_all'=>$oghmaTopics[0]["combined_rank"],
-                        'memory'=>"$currentInputTopic / $currentOghmaTopic / $locationCtxQuery / $contextKeywordsQuery => {$oghmaTopics[0]["topic"]}",
-                        'time'=>$topic_res["elapsed_time"]
-                    )
+                    [
+                        'input'    => $INPUT_TEXT,
+                        'keywords' => $msg,
+                        'rank_any' => $topTopic["combined_rank"],
+                        'rank_all' => $topTopic["combined_rank"],
+                        'memory'   => "$currentInputTopic / $currentOghmaTopic / $locationCtxQuery / $contextKeywordsQuery => {$topTopic["topic"]}",
+                        'time'     => $topic_res["elapsed_time"]
+                    ]
                 );
-                
-                
             } else {
-                $msg='oghma keyword not offered, no results';
+                // No results
+                $msg = 'oghma keyword not offered, no results';
                 $GLOBALS["db"]->insert(
                     'audit_memory',
-                    array(
-                        'input' => $INPUT_TEXT,
-                        'keywords' =>$msg,
-                        'rank_any'=> -1,
-                        'rank_all'=>-1,
-                        'memory'=>"$currentInputTopic / $currentOghmaTopic / $locationCtxQuery / $contextKeywordsQuery => ",
-                        'time'=>$topic_res["elapsed_time"]
-                    )
+                    [
+                        'input'    => $INPUT_TEXT,
+                        'keywords' => $msg,
+                        'rank_any' => -1,
+                        'rank_all' => -1,
+                        'memory'   => "$currentInputTopic / $currentOghmaTopic / $locationCtxQuery / $contextKeywordsQuery => ",
+                        'time'     => $topic_res["elapsed_time"]
+                    ]
                 );
             }
-                
-
-            
         }
     }
 }
