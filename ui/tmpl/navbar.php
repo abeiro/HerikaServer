@@ -18,9 +18,9 @@
                 <ul class="dropdown-menu">
 
                 <!-- Events Category -->
-                <li><h6 class="dropdown-header">Event Log</h6></li>
+                <li><h6 class="dropdown-header">Events and Objectives</h6></li>
                 <li>
-                    <a class="dropdown-item" href="index.php?table=eventlog">Events</a>
+                    <a class="dropdown-item" href="index.php?table=eventlog">Event Log</a>
                 </li>
                 <li>
                     <a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor Events</a>
