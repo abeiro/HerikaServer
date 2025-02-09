@@ -684,6 +684,7 @@ if (!$result) {
 <body>
     <h1>📆CHIM Adventure Log</h1>
     <h2>All time and dates are in UTC. Tamrelic Time may be inconsistent.</h2>
+    <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
 
     <?php
     // Render Combined CSV Download Buttons at the Top
