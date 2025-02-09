@@ -67,11 +67,11 @@
                         Clean Sent Events
                     </a>
                     </li>
-                    <li>-->
+                    <li>
                     <a class="dropdown-item" href="index.php?clean=true&table=response" title="This will clear the short term context buffer of events that will be sent with the AI prompt (CONTEXT_HISTORY). Will not delete events from the event log." onclick="return confirm('This will clear the short term context buffer of events that will be sent with the AI prompt (CONTEXT_HISTORY). Will not delete events from the event log. ARE YOU SURE?')">
                         Clear Current Context Events Buffer
                     </a>
-                    </li>
+                    </li>-->
                     <li>
                     <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG! ARE YOU SURE???')">
                         Delete All Events

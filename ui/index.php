@@ -210,18 +210,44 @@ include("tmpl/navbar.php");
     }
 
     if ($_GET["table"] == "eventlog") {
+    
+        // 1) Handle the "Delete Last X" logic
+        if (isset($_GET['delete_last'])) {
+            // Sanitize the input to allow only 20, 50, or 100.
+            $delCount = (int)$_GET['delete_last'];
+            if (in_array($delCount, [20, 50, 100])) {
+                // Delete the last X entries based on your defined ordering
+                // (In this example, we assume "last" means top rows by the same ORDER BY used for listing.)
+                $db->query("
+                    DELETE FROM eventlog
+                    WHERE rowid IN (
+                        SELECT rowid
+                        FROM eventlog
+                        WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close')
+                        ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
+                        LIMIT $delCount
+                    )
+                ");
+                
+                // Redirect to refresh the page (avoid resubmission)
+                header("Location: ?table=eventlog");
+                exit;
+            }
+        }
+    
+        // 2) Continue with your regular fetch/display logic
         $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100; // Items per page (default 100)
         $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1; // Current page (default 1)
         $offset = ($page - 1) * $limit; // Calculate the offset
-    
+        
         $results = $db->fetchAll(
-            "SELECT type, data, gamets, localts, ts, ROWID 
-             FROM eventlog a 
-             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close') 
-             ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC 
+            "SELECT type, data, gamets, localts, ts, ROWID
+             FROM eventlog a
+             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close')
+             ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
              LIMIT $limit OFFSET $offset"
         );
-    
+        
         $columnHeaders = [
             'type' => 'Event',
             'data' => 'Data',
@@ -229,7 +255,7 @@ include("tmpl/navbar.php");
             'localts' => 'LocalTS',
             'ts' => 'TS',
         ];
-    
+        
         $mappedResults = array_map(function ($row) use ($columnHeaders) {
             $mappedRow = [];
             foreach ($row as $key => $value) {
@@ -237,24 +263,44 @@ include("tmpl/navbar.php");
             }
             return $mappedRow;
         }, $results);
-    
+        
         echo "<h3 class='my-2'>Event Log</h3>";
-    
-        // Generate navigation buttons under the title
-        $prevPage = max(1, $page - 1); // Ensure we don't go below page 1
+        
+        // 3) Generate pagination buttons
+        $prevPage = max(1, $page - 1);
         $nextPage = $page + 1;
-    
+        
         echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
         if ($page > 1) {
             echo "<a href='?table=eventlog&page=$prevPage&limit=$limit' class='btn btn-primary'>Previous</a> ";
         }
         echo "<a href='?table=eventlog&page=$nextPage&limit=$limit' class='btn btn-primary'>Next</a>";
         echo "</div>";
-    
-        // Print the table using the modified headers
+        
+        // 4) Display the "Delete Last X" buttons
+        echo "<div style='margin: 10px 0;'>";
+        echo "<a href='?table=eventlog&delete_last=20' 
+                class='btn btn-danger'
+                onclick=\"return confirm('Are you sure you want to delete the last 20 events?');\">
+                Delete Last 20
+            </a> ";
+        echo "<a href='?table=eventlog&delete_last=50' 
+                class='btn btn-danger'
+                onclick=\"return confirm('Are you sure you want to delete the last 50 events?');\">
+                Delete Last 50
+            </a> ";
+        echo "<a href='?table=eventlog&delete_last=100' 
+                class='btn btn-danger'
+                onclick=\"return confirm('Are you sure you want to delete the last 100 events?');\">
+                Delete Last 100
+            </a>";
+        echo "</div>";
+        
+        // 5) Print the table using the modified headers
         print_array_as_table($mappedResults);
-    
-        if ($_GET["autorefresh"]) {
+        
+        // 6) Optional auto-refresh
+        if (isset($_GET["autorefresh"]) && $_GET["autorefresh"]) {
             header("Refresh:5");
         }
     }
