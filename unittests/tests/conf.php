@@ -16,8 +16,8 @@ $GLOBALS["MINIME_T5"]=true; //Assists smaller weight LLMs with action and memory
 
 //[Advanced Configuration]
 $GLOBALS["RECHAT_H"]=2; //Rechat Rounds. Higher values will increase the amount of rounds NPC's will talk amongst themselves.
-$GLOBALS["RECHAT_P"]=50; //Rechat Probability.
-$GLOBALS["BORED_EVENT"]=5; //Bored Event Probability. Chance of an NPC starting a random conversation after a set period of time.
+$GLOBALS["RECHAT_P"]=100; //Rechat Probability.
+$GLOBALS["BORED_EVENT"]=100; //Bored Event Probability. Chance of an NPC starting a random conversation after a set period of time.
 $GLOBALS["CONTEXT_HISTORY"]="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
 $GLOBALS["HTTP_TIMEOUT"]=15; //Timeout for AI requests.
 $GLOBALS["CORE_LANG"]=""; //Custom languages. - language folder
