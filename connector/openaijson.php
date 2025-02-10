@@ -17,6 +17,7 @@ class connector
     private $_fid;
     private $_buffer;
     private $_stopProc;
+    private $_is_groq_com;
     public $_extractedbuffer;
 
     public function __construct()
@@ -32,6 +33,7 @@ class connector
     public function open($contextData, $customParms)
     {
         $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
+        $this->_is_groq_com = (strpos($url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
 
@@ -76,11 +78,25 @@ class connector
         ];
 
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
+            // there is a double inclusion, part of command_prompt is already included in content from main.php
+            if (isset($GLOBALS["COMMAND_PROMPT_FUNCTIONS"])) {
+                $s_mark = $GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+                $s_cprompt = $GLOBALS["COMMAND_PROMPT"];
+                $s_ctx = $contextData[0]["content"];
+                if (!(stripos($s_ctx, $s_mark) === false)) {
+                    $i_pos = stripos($s_cprompt, $s_mark); 
+                    if ((!($i_pos === false)) && ($i_pos > 0)) {
+                        $i_len = strlen($s_mark);
+                        $s_cprompt = substr($GLOBALS["COMMAND_PROMPT"], $i_pos + $i_len );
+                    }
+                }
+            }
+            $contextData[0]["content"].=$s_cprompt;
         }
 
         $pb=[];
         $pb["user"]="";
+        $pb["system"]=""; 
         
         $contextDataOrig=array_values($contextData);
         $lastrole="";
@@ -227,35 +243,77 @@ class connector
             $contextDataCopy[]=$element;
         $contextData=$contextDataCopy;
         
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 1.0);
+        if ($temperature < 0.0) $temperature = 0.0;
+        else if ($temperature > 2.0) $temperature = 2.0; 
+
+        $presence_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ? : 0.0);
+        if ($presence_penalty < -2.0) $presence_penalty = -2.0;
+        else if ($presence_penalty > 2.0) $presence_penalty = 2.0; 
+
+
+        $frequency_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ? : 0.0); 
+        if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
+        else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
+
+        $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
+        if ($top_p > 1) $top_p = 1.0;
+        else if ($top_p < 0.0) $top_p = 0.0; 
 
         // Forcing JSON output
-        
-        
-        
-        $data = array(
-            'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini',
-            'messages' =>
-                $contextData
-            ,
-            'stream' => true,
-            'max_completion_tokens'=>$MAX_TOKENS,
-            'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
-            'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
-            'response_format'=>["type"=>"json_object"]
 
-        );
+        if ($this->_is_groq_com) { // --- exception made for groq.com
 
+            if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
+
+            $data = array(
+                'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'llama-3.3-70b-versatile',
+                'messages' => $contextData,
+                'stream' => false, // groq can't stream for JSON
+                'max_completion_tokens' => $MAX_TOKENS,
+                'temperature' => $temperature,
+                'top_p' => $top_p,
+                'presence_penalty' => $presence_penalty, 
+                'frequency_penalty' => $frequency_penalty, 
+                'response_format'=>["type"=>"json_object"]
+            );
+
+            if (!(stripos($data["model"],"deepseek-r1") === false)) { 
+            /*  deepseek r1 need "reasoning_format" parameter: 
+                parsed  - Separates reasoning into a dedicated field while keeping the response concise.
+                raw     - Includes reasoning within <think> tags in the content.
+                hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
+                $data['reasoning_format'] = "hidden";  
+                //error_log(" deepseek-r1: " . print_r($data,false));
+            }
         
-        if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
-            $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
-        }
+        } else { // --- normal flow (not groq)
+        
+            $data = array(
+                'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini',
+                'messages' =>
+                    $contextData
+                ,
+                'stream' => true,
+                'max_completion_tokens'=>$MAX_TOKENS,
+                'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
+                'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
+                'response_format'=>["type"=>"json_object"]
 
-        // Mistral AI API does not support penalty params
-        if (strpos($url, "mistral") === false) {
-            $data["presence_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0;
-            $data["frequency_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0;
-        }
-  
+            );
+
+            
+            if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
+                $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
+            }
+
+            // Mistral AI API does not support penalty params
+            if (strpos($url, "mistral") === false) {
+                $data["presence_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0;
+                $data["frequency_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0;
+            }
+      
+        } // --- endif groq
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
@@ -272,8 +330,6 @@ class connector
                 $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
             
         }
-
-       
 
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
@@ -354,7 +410,6 @@ class connector
         
         return true;
 
-
     }
 
 
@@ -369,6 +424,7 @@ class connector
         } else {
             $line = fgets($this->primary_handler);
         }
+
         $buffer="";
         $totalBuffer="";
         $finalData="";
@@ -376,19 +432,37 @@ class connector
         
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
 
-        $data=json_decode(substr($line, 6), true);
-        if (isset($data["choices"][0]["delta"]["content"])) {
-            if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
-                $buffer.=$data["choices"][0]["delta"]["content"];
-                $this->_buffer.=$data["choices"][0]["delta"]["content"];
-                $this->_numOutputTokens += 1;
+        if ($this->_is_groq_com) { // --- exception for groq.com
 
+            $data=json_decode($line, true);
+
+            if (isset($data["choices"][0]["message"]["content"])) {
+                $msg = trim($data["choices"][0]["message"]["content"]); 
+                if (strlen($msg) > 0) {
+                    $buffer .= $msg;
+                    $this->_buffer .= $msg;
+                    $this->_numOutputTokens += 1;
+                }
+                $totalBuffer .= $msg;
             }
-            $totalBuffer.=$data["choices"][0]["delta"]["content"];
+     
+        } else { // --- normal flow not groq.com
 
-        }
-        
+            $data=json_decode(substr($line, 6), true);
+
+            if (isset($data["choices"][0]["delta"]["content"])) {
+                if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
+                    $buffer.=$data["choices"][0]["delta"]["content"];
+                    $this->_buffer.=$data["choices"][0]["delta"]["content"];
+                    $this->_numOutputTokens += 1;
+
+                }
+                $totalBuffer.=$data["choices"][0]["delta"]["content"];
+            }
+        } // --- endif groq.com
+
         $buffer="";
+
         if (!empty($this->_buffer))
             $finalData=__jpd_decode_lazy($this->_buffer, true);
             if (is_array($finalData)) {
