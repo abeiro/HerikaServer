@@ -66,7 +66,7 @@ final class OghmaTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner".
-                    "#Lore related info: The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
+                    "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
                     "He has little respect for knights, because his potions can do anything that they can.\n".
                     "You are The Narrator in a Skyrim adventure. You will only talk to Prisoner. You refer to yourself as 'The Narrator'. Only Prisoner can hear you. ".
                     "Your goal is to comment on Prisoner's playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events.\n\nDon't write narrations.\nNo active quests right now."];
@@ -180,7 +180,7 @@ final class OghmaTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner".
-                    "#Lore related info: The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
+                    "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
                     "He has little respect for knights, because his potions can do anything that they can.\n".
                     "You are The Narrator in a Skyrim adventure. You will only talk to Prisoner. You refer to yourself as 'The Narrator'. Only Prisoner can hear you. ".
                     "Your goal is to comment on Prisoner's playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events.\n\nDon't write narrations.\nNo active quests right now."];
@@ -239,7 +239,7 @@ final class OghmaTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner".
-                    "#Lore related info: The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
+                    "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
                     "He has little respect for knights, because his potions can do anything that they can.\n".
                     "You are The Narrator in a Skyrim adventure. You will only talk to Prisoner. You refer to yourself as 'The Narrator'. Only Prisoner can hear you. ".
                     "Your goal is to comment on Prisoner's playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events.\n\nDon't write narrations.\nNo active quests right now."];
