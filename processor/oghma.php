@@ -32,16 +32,25 @@ if ($GLOBALS["MINIME_T5"]) {
 
             // Helper function to convert a string to tsquery format
             function prepareTsQuery($string, $operator = '|') {
-                // Remove all non-alphanumeric chars except spaces
+                // 1) Convert underscores to spaces and remove apostrophes
+                $string = str_replace('_', ' ', $string);
+                $string = preg_replace('/[\'’]/u', '', $string);
+            
+                // 2) Remove all other non-alphanumeric or space characters
                 $cleanedString = preg_replace('/[^a-zA-Z0-9\s]/', '', $string);
-                // Split words by whitespace
+                $cleanedString = strtolower($cleanedString);
+            
+                // 3) Split into tokens
                 $words = preg_split('/\s+/', $cleanedString);
-                // Remove empty elements
-                $words = array_filter($words);
-                // Join words with the specified operator
+                $words = array_filter($words); // remove empty
+            
+                // 4) Append :* for prefix-based partial matches
+                $words = array_map(fn($w) => $w . ':*', $words);
+            
+                // 5) Join with | (OR) or & (AND) as needed
                 return implode(" $operator ", $words);
             }
-
+        
             // Prepare tsquery strings
             $currentInputTopicQuery = prepareTsQuery($currentInputTopic);
             $currentOghmaTopicQuery = prepareTsQuery($currentOghmaTopic);
@@ -101,7 +110,7 @@ if ($GLOBALS["MINIME_T5"]) {
                 $msg = 'oghma keyword offered';
 
                 // If rank is good enough, we try to see if user can access advanced or basic lore
-                if ($topTopic["combined_rank"] > 3.5) {
+                if ($topTopic["combined_rank"] > 2.1) {
                     // -----------------------------
                     // 1) Check advanced article
                     // -----------------------------
