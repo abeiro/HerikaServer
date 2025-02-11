@@ -66,7 +66,7 @@ class connector
         }
         
         if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
-            $speechReinforcement="Use #SpeechStyle.";
+            $speechReinforcement="Check reference #SpeechStyle.";
         } else
             $speechReinforcement="";
 
