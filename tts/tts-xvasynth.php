@@ -14,7 +14,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash)
 
         $jsonData = array(
             "outputs" => "",
-            "model" =>   "resources/app/models/skyrim/{$GLOBALS["TTS"]["XVASYNTH"]["model"]}",
+            "model" =>   "resources/app/models/{$GLOBALS["TTS"]["XVASYNTH"]["game"]}/{$GLOBALS["TTS"]["XVASYNTH"]["model"]}",
             "modelType" =>  $GLOBALS["TTS"]["XVASYNTH"]["modelType"],
             "version" => "3.0",
             "base_lang" => $GLOBALS["TTS"]["XVASYNTH"]["base_lang"],
