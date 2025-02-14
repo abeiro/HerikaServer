@@ -800,6 +800,8 @@ echo '<div style="margin-left: 3em;" id="table">'; // Add id="table" here
 echo '<h2>NPC Templates Database</h2>';
 echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
 echo '<h3>Note: This is just for editing an NPC entry before they are activated ingame. Any further edits should be done in the configuration wizard.</h3>';
+echo '<p>Also due to complexity you can not delete an NPC entry. You can simply make another one with the correct name if you make a mistake.</p>';
+
 echo '<br>';
 
 // Alphabetic filter
