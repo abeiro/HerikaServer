@@ -366,6 +366,7 @@ include("tmpl/navbar.php");
                 $finalRow[$row["id_quest"]] = $row;
         }
         echo "<h3 class='my-2'>Current Active Quests</h3>";
+        echo "<p>Note: These quests are only known by your followers.</p>";
 
         print_array_as_table(array_values($finalRow));
     }
