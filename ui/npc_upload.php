@@ -70,37 +70,29 @@ if (!$conn) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual'])) {
     $npc_name   = strtolower(trim($_POST['npc_name'] ?? ''));
     $npc_pers   = $_POST['npc_pers'] ?? '';
-
-    // Optional npc_dynamic field
     $npc_dynamic = (isset($_POST['npc_dynamic']) && trim($_POST['npc_dynamic']) !== '')
         ? trim($_POST['npc_dynamic'])
         : null;
-
-    // npc_misc comes from user input; default to '' if empty
     $npc_misc = (isset($_POST['npc_misc']) && trim($_POST['npc_misc']) !== '')
         ? trim($_POST['npc_misc'])
         : '';
-
-    // Handle voice IDs: if field is empty, set to NULL, otherwise use the trimmed value.
     $melotts_voiceid   = (!empty($_POST['melotts_voiceid']))   ? trim($_POST['melotts_voiceid'])   : null;
     $xtts_voiceid      = (!empty($_POST['xtts_voiceid']))      ? trim($_POST['xtts_voiceid'])      : null;
     $xvasynth_voiceid  = (!empty($_POST['xvasynth_voiceid']))  ? trim($_POST['xvasynth_voiceid'])  : null;
 
-    // Validate required fields
     if (!empty($npc_name) && !empty($npc_pers)) {
-        // Prepare and execute the INSERT statement with ON CONFLICT
         $query = "
             INSERT INTO {$schema}.npc_templates_custom
                 (npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (npc_name)
             DO UPDATE SET
-                npc_dynamic       = EXCLUDED.npc_dynamic,
-                npc_pers          = EXCLUDED.npc_pers,
-                npc_misc          = EXCLUDED.npc_misc,
-                melotts_voiceid   = EXCLUDED.melotts_voiceid,
-                xtts_voiceid      = EXCLUDED.xtts_voiceid,
-                xvasynth_voiceid  = EXCLUDED.xvasynth_voiceid
+                npc_dynamic = EXCLUDED.npc_dynamic,
+                npc_pers = EXCLUDED.npc_pers,
+                npc_misc = EXCLUDED.npc_misc,
+                melotts_voiceid = EXCLUDED.melotts_voiceid,
+                xtts_voiceid = EXCLUDED.xtts_voiceid,
+                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid
         ";
 
         $params = [
@@ -116,12 +108,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
         $result = pg_query_params($conn, $query, $params);
 
         if ($result) {
-            $message .= "<p>Data inserted/updated successfully!</p>";
+            $message .= "<p>NPC data inserted/updated successfully!</p>";
         } else {
-            $message .= "<p>An error occurred while inserting or updating data: " . pg_last_error($conn) . "</p>";
+            $message .= "<p>Error inserting/updating NPC data: " . pg_last_error($conn) . "</p>";
         }
     } else {
-        $message .= '<p>Please fill in all required fields: NPC Name and NPC Personality.</p>';
+        $message .= "<p>Please fill in all required fields: NPC Name and NPC Static Bio.</p>";
     }
 }
 
@@ -333,6 +325,62 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         $message .= '<p>Example CSV file not found.</p>';
     }
 }
+
+// 1. Update the edit modal form to match the Oghma styling:
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_single') {
+    $npc_name_original = $_POST['npc_name_original'] ?? '';
+    $npc_name = strtolower(trim($_POST['npc_name'] ?? ''));
+    $npc_pers = $_POST['npc_pers'] ?? '';
+    $npc_dynamic = (isset($_POST['npc_dynamic']) && trim($_POST['npc_dynamic']) !== '') 
+        ? trim($_POST['npc_dynamic']) 
+        : null;
+    $npc_misc = (isset($_POST['npc_misc']) && trim($_POST['npc_misc']) !== '') 
+        ? trim($_POST['npc_misc']) 
+        : '';
+    $melotts_voiceid = (!empty($_POST['melotts_voiceid'])) ? trim($_POST['melotts_voiceid']) : null;
+    $xtts_voiceid = (!empty($_POST['xtts_voiceid'])) ? trim($_POST['xtts_voiceid']) : null;
+    $xvasynth_voiceid = (!empty($_POST['xvasynth_voiceid'])) ? trim($_POST['xvasynth_voiceid']) : null;
+
+    if (!empty($npc_name) && !empty($npc_pers)) {
+        $query = "
+            UPDATE {$schema}.npc_templates_custom 
+            SET 
+                npc_name = $1,
+                npc_pers = $2,
+                npc_dynamic = $3,
+                npc_misc = $4,
+                melotts_voiceid = $5,
+                xtts_voiceid = $6,
+                xvasynth_voiceid = $7
+            WHERE npc_name = $8
+        ";
+
+        $params = [
+            $npc_name,
+            $npc_pers,
+            $npc_dynamic,
+            $npc_misc,
+            $melotts_voiceid,
+            $xtts_voiceid,
+            $xvasynth_voiceid,
+            $npc_name_original
+        ];
+
+        $result = pg_query_params($conn, $query, $params);
+
+        if ($result) {
+            $message .= "<p>NPC data updated successfully!</p>";
+        } else {
+            $message .= "<p>Error updating NPC data: " . pg_last_error($conn) . "</p>";
+        }
+    } else {
+        $message .= "<p>Please fill in all required fields: NPC Name and NPC Static Bio.</p>";
+    }
+}
+
+// 1. Update the edit modal form action to include the current letter:
+$currentLetter = isset($_GET['letter']) ? htmlspecialchars($_GET['letter']) : '';
+$formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 ?>
 
 <!DOCTYPE html>
@@ -452,25 +500,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         }
 
         .table-container {
-            max-height: 800px;
+            max-height: 900px;
             overflow-y: auto;
+            overflow-x: auto;
             margin-bottom: 20px;
-            max-width: 1700px;
+            max-width: 100%;
         }
 
         .table-container table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: collapse; /* Ensure borders collapse into a single border */
             background-color: #3a3a3a; /* Base background color */
         }
 
         .table-container th, .table-container td {
-            border: 1px solid #555555; /* Border color */
             padding: 8px;
             text-align: left;
             word-wrap: break-word;
             overflow-wrap: break-word;
             color: #f8f9fa; /* Text color */
+            border: 1px solid #555555; /* Border color for cells */
         }
 
         .table-container th {
@@ -500,11 +549,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 
         .table-container th:nth-child(3),
         .table-container td:nth-child(3) {
-            width: 600px; /* small or adjust as needed */
+            width: 400px; /* small or adjust as needed */
         }
 
         .table-container th:nth-child(4),
-        .table-container td:nth-child(4),
+        .table-container td:nth-child(4) {
+            width: 120px; /* e.g., for npc_misc */
+        }
         .table-container th:nth-child(5),
         .table-container td:nth-child(5),
         .table-container th:nth-child(6),
@@ -515,6 +566,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
         .table-container th:nth-child(7),
         .table-container td:nth-child(7) {
             width: 120px; 
+        }
+
+        .table-container th:nth-child(8),
+        .table-container td:nth-child(8) {
+            width: 100px; 
         }
 
         input[type="submit"].btn-danger {
@@ -531,6 +587,112 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 
         input[type="submit"].btn-danger:hover {
             background-color: rgb(200, 35, 51); 
+        }
+
+        /* Modal styles */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #3a3a3a;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            width: 60%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 1001;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            margin: 0;
+            color: #fff;
+            font-size: 1.5em;
+        }
+
+        .modal-body form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #4a4a4a;
+        }
+
+        /* Button styles */
+        .action-button {
+            display: inline-block;
+            padding: 8px 12px;
+            color: #fff;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border: none;
+        }
+
+        .action-button.add-new {
+            background-color: #28a745;
+        }
+        .action-button.add-new:hover {
+            background-color: #218838;
+        }
+
+        .action-button.edit {
+            background-color: #17a2b8;
+        }
+        .action-button.edit:hover {
+            background-color: #138496;
+        }
+
+        /* Form field styles */
+        .modal-body small {
+            display: block;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .modal-body input[type="text"],
+        .modal-body textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #4a4a4a;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .modal-body textarea {
+            resize: vertical;
         }
     </style>
 </head>
@@ -549,72 +711,65 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
     }
     ?>
 
-    <h2>Single NPC Upload</h2>
-    <form action="" method="post">
-        <label for="npc_name">NPC Name:</label>
-        <input type="text" name="npc_name" id="npc_name" required>
-
-        <label for="npc_pers">NPC Static Bio:</label>
-        <textarea name="npc_pers" id="npc_pers" rows="5" required></textarea>
-
-        <label for="npc_dynamic">NPC Dynamic Bio (optional):</label>
-        <textarea name="npc_dynamic" id="npc_dynamic" rows="5"></textarea>
-
-        <label for="npc_misc">NPC Misc (optional, not in use yet):</label>
-        <input type="text" name="npc_misc" id="npc_misc">
-
-        <label for="melotts_voiceid">Melotts Voice ID (optional):</label>
-        <input type="text" name="melotts_voiceid" id="melotts_voiceid">
-
-        <label for="xtts_voiceid">XTTS Voice ID (optional):</label>
-        <input type="text" name="xtts_voiceid" id="xtts_voiceid">
-
-        <label for="xvasynth_voiceid">xVASynth Voice ID (optional):</label>
-        <input type="text" name="xvasynth_voiceid" id="xvasynth_voiceid">
-
-        <input type="submit" name="submit_individual" value="Submit">
-    </form>
-    <p>You do not need to fill in the Voice ID fields. To understand the logic of how they work, read 
-       <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" 
-          style="color:yellow;" target="_blank">the manual page here</a>.
-    </p>
-
     <h2>Batch Upload</h2>
-    <form action="" method="post" enctype="multipart/form-data">
-        <label for="csv_file">Select .csv file to upload:</label>
-        <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
-        <input type="submit" name="submit_csv" value="Upload CSV">
-    </form>
-    <form action="" method="get">
-        <input type="hidden" name="action" value="download_example">
-        <input type="submit" value="Download Example CSV">
-    </form>
+    <div style="
+        background-color: #3a3a3a;
+        padding: 15px;
+        border-radius: 5px;
+        border: 1px solid #4a4a4a;
+        max-width: 600px;
+    ">
+        <form action="" method="post" enctype="multipart/form-data" style="
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 0;
+            padding: 0;
+            background: none;
+            border: none;
+        ">
+            <div>
+                <label for="csv_file" style="display: block; margin-bottom: 5px; font-weight: bold;">Select .csv file to upload:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required style="
+                    width: 100%;
+                    padding: 6px;
+                    margin-bottom: 10px;
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    background-color: #4a4a4a;
+                    color: #f8f9fa;
+                ">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <input type="submit" name="submit_csv" value="Upload CSV" class="action-button" style="background-color: #28a745; color: white;">
+                <a href="?action=download_example" class="action-button" style="background-color: #007bff; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none;">Download Example CSV</a>
+            </div>
+                <p>You can verify that NPC data has been uploaded successfully by going to 
+                <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b>.</p>
+                <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
+                <p>Also you can check the merged table at 
+                <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.</p>
+        </form>
+        <form action="" method="post" style="
+            border: none; /* Remove border */
+        ">
+            <input 
+                type="submit" 
+                name="truncate_npc" 
+                value="Factory Reset NPC Override Table"
+                class="btn-danger"
+                onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in npc_templates_custom? This action is IRREVERSIBLE!');"
+            >
+        </form>
+        <p>This will just delete any custom NPC entires you have uploaded.</p>
+        <p>You can download a backup of the full character database in the 
+        <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener">
+            csv files channel in our discord
+        </a>.
+    </div>
 </div>
 
-<p>You can verify that NPC data has been uploaded successfully by going to 
-   <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b>.</p>
-<p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
-<p>Also you can check the merged table at 
-   <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.
-</p>
-<br>
-<div class="indent5">
-    <h2>Delete All Custom Character Entries</h2>
-    <p>You can download a backup of the full character database in the 
-       <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener">
-          csv files channel in our discord
-       </a>.
-    </p>
-    <form action="" method="post">
-        <input 
-            type="submit" 
-            name="truncate_npc" 
-            value="Factory Reset NPC Override Table"
-            class="btn-danger"
-            onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in npc_templates_custom? This action is IRREVERSIBLE!');"
-        >
-    </form>
-</div>
+
 <br>
 <?php
 $letter = isset($_GET['letter']) ? strtoupper($_GET['letter']) : '';
@@ -640,18 +795,18 @@ if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
     $result_combined = pg_query($conn, $query_combined);
 }
 
+// Wrap the NPC Templates Database section in a div for indentation
+echo '<div style="margin-left: 3em;" id="table">'; // Add id="table" here
 echo '<h2>NPC Templates Database</h2>';
-echo '<p>These are the current biographies in the CHIM database that will be used when a new profile is created.</p>';
-echo '<p>Once a character has been activated, use their profile in the Configuration Wizard to make further changes.</p>';
-echo '<p><b>It is OK if any voiceid fields are empty!</b> They are just for custom voice overrides. 
-      See <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.dg9vyldrq648" 
-      style="color:yellow;" target="_blank">the manual</a> for how voice IDs are assigned automatically.</p>';
+echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
+echo '<h3>Note: This is just for editing an NPC entry before they are activated ingame. Any further edits should be done in the configuration wizard.</h3>';
+echo '<br>';
 
 // Alphabetic filter
 echo '<div class="filter-buttons">';
-echo '<a href="?" class="alphabet-button">All</a>';
+echo '<a href="?#table" class="alphabet-button">All</a>'; // Add #table to the All link
 foreach (range('A', 'Z') as $char) {
-    echo '<a href="?letter=' . $char . '" class="alphabet-button">' . $char . '</a>';
+    echo '<a href="?letter=' . $char . '#table" class="alphabet-button">' . $char . '</a>'; // Add #table to each letter link
 }
 echo '</div>';
 
@@ -666,6 +821,7 @@ if ($result_combined) {
     echo '  <th>melotts_voiceid</th>';
     echo '  <th>xtts_voiceid</th>';
     echo '  <th>xvasynth_voiceid</th>';
+    echo '  <th>Actions</th>';
     echo '</tr>';
 
     $rowCountCombined = 0;
@@ -673,11 +829,33 @@ if ($result_combined) {
         echo '<tr>';
         echo '  <td>' . htmlspecialchars($row['npc_name'] ?? '') . '</td>';
         echo '  <td>' . nl2br(htmlspecialchars($row['npc_pers'] ?? '')) . '</td>';
-        echo '  <td>' . nl2br(htmlspecialchars($row['npc_dynamic'] ?? '')) . '</td>';
-        echo '  <td>' . nl2br(htmlspecialchars($row['npc_misc'] ?? '')) . '</td>';
+        echo '  <td>' . ($row['npc_dynamic'] !== null ? nl2br(htmlspecialchars($row['npc_dynamic'])) : '') . '</td>';
+        echo '  <td>' . ($row['npc_misc'] !== null ? nl2br(htmlspecialchars($row['npc_misc'])) : '') . '</td>';
         echo '  <td>' . htmlspecialchars($row['melotts_voiceid'] ?? '') . '</td>';
         echo '  <td>' . htmlspecialchars($row['xtts_voiceid'] ?? '') . '</td>';
         echo '  <td>' . htmlspecialchars($row['xvasynth_voiceid'] ?? '') . '</td>';
+        
+        // Add Edit button
+        echo '<td style="white-space: nowrap;">';
+        echo '<div style="display: flex; gap: 4px;">';
+        $jsData = [
+            'npc_name' => $row['npc_name'],
+            'npc_pers' => $row['npc_pers'],
+            'npc_dynamic' => $row['npc_dynamic'] ?? '',
+            'npc_misc' => $row['npc_misc'] ?? '',
+            'melotts_voiceid' => $row['melotts_voiceid'] ?? '',
+            'xtts_voiceid' => $row['xtts_voiceid'] ?? '',
+            'xvasynth_voiceid' => $row['xvasynth_voiceid'] ?? ''
+        ];
+        echo '<button onclick="openEditModal(' . 
+            htmlspecialchars(str_replace(
+                ["\r", "\n", "'"],
+                [' ', ' ', "\\'"],
+                json_encode($jsData)
+            ), ENT_QUOTES, 'UTF-8') . 
+            ')" class="action-button edit">Edit</button>';
+        echo '</div>';
+        echo '</td>';
         echo '</tr>';
         
         $rowCountCombined++;
@@ -692,8 +870,161 @@ if ($result_combined) {
     echo '<p>Error fetching combined NPC templates: ' . pg_last_error($conn) . '</p>';
 }
 
+echo '</div>'; // Close the indentation div
+
 pg_close($conn);
 ?>
+
+<div id="editModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit NPC Entry</h2>
+        </div>
+        <div class="modal-body">
+            <form action="<?php echo $formAction; ?>" method="post">
+                <input type="hidden" name="action" value="update_single">
+                <input type="hidden" name="npc_name_original" id="edit_npc_name_original">
+
+                <label for="edit_npc_name">NPC Name:</label>
+                <small>Make sure name is lowercase with underscores instead of spaces.</small>
+                <input type="text" name="npc_name" id="edit_npc_name" required>
+
+                <label for="edit_npc_pers">NPC Static Bio:</label>
+                <small>Static tratits and background of the NPC.</small>
+                <textarea name="npc_pers" id="edit_npc_pers" rows="8" required></textarea>
+
+                <label for="edit_npc_dynamic">NPC Dynamic Bio:</label>
+                <small>Optional: Dynamic personality traits.</small>
+                <textarea name="npc_dynamic" id="edit_npc_dynamic" rows="8"></textarea>
+
+                <label for="edit_npc_misc">NPC Misc:</label>
+                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener" style="color: yellow;"> Read more here !</a></small>
+                <input type="text" name="npc_misc" id="edit_npc_misc">
+
+                <label for="edit_melotts_voiceid">Melotts Voice ID:</label>
+                <small>Optional: Custom voice override for Melotts.</small>
+                <input type="text" name="melotts_voiceid" id="edit_melotts_voiceid">
+
+                <label for="edit_xtts_voiceid">XTTS Voice ID:</label>
+                <small>Optional: Custom voice override for XTTS.</small>
+                <input type="text" name="xtts_voiceid" id="edit_xtts_voiceid">
+
+                <label for="edit_xvasynth_voiceid">xVASynth Voice ID:</label>
+                <small>Optional: Custom voice override for xVASynth.</small>
+                <input type="text" name="xvasynth_voiceid" id="edit_xvasynth_voiceid">
+
+                <div class="modal-footer">
+                    <button type="submit" name="submit_individual" value="1" class="action-button" style="background-color: #28a745;">Save Changes</button>
+                    <button type="button" onclick="closeEditModal()" class="action-button" style="background-color: #6c757d;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="newEntryModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2 class="modal-title">Add New NPC Entry</h2>
+        </div>
+        <div class="modal-body">
+            <form action="<?php echo $formAction; ?>" method="post">
+                <input type="hidden" name="submit_individual" value="1">
+
+                <label for="new_npc_name">NPC Name:</label>
+                <small>Make sure name is lowercase with underscores instead of spaces.</small>
+                <input type="text" name="npc_name" id="new_npc_name" required>
+
+                <label for="new_npc_pers">NPC Static Bio:</label>
+                <small>Static tratits and background of the NPC.</small> 
+                <textarea name="npc_pers" id="new_npc_pers" rows="8" required></textarea>
+
+                <label for="new_npc_dynamic">NPC Dynamic Bio:</label>
+                <small>Optional: Dynamic personality traits.</small>
+                <textarea name="npc_dynamic" id="new_npc_dynamic" rows="8"></textarea>
+
+                <label for="new_npc_misc">NPC Misc:</label>
+                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener" style="color: yellow;"> Read more here !</a></small>
+                <input type="text" name="npc_misc" id="new_npc_misc">
+
+                <label for="new_melotts_voiceid">Melotts Voice ID:</label>
+                <small>Optional: Custom voice override for Melotts.</small>
+                <input type="text" name="melotts_voiceid" id="new_melotts_voiceid">
+
+                <label for="new_xtts_voiceid">XTTS Voice ID:</label>
+                <small>Optional: Custom voice override for XTTS.</small>
+                <input type="text" name="xtts_voiceid" id="new_xtts_voiceid">
+
+                <label for="new_xvasynth_voiceid">xVASynth Voice ID:</label>
+                <small>Optional: Custom voice override for xVASynth.</small>
+                <input type="text" name="xvasynth_voiceid" id="new_xvasynth_voiceid">
+
+                <div class="modal-footer">
+                    <button type="submit" name="submit_individual" value="1" class="action-button" style="background-color: #28a745;">Save</button>
+                    <button type="button" onclick="closeNewEntryModal()" class="action-button" style="background-color: #6c757d;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openEditModal(data) {
+    try {
+        const decodeHTML = (html) => {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        };
+
+        document.getElementById("edit_npc_name_original").value = decodeHTML(data.npc_name);
+        document.getElementById("edit_npc_name").value = decodeHTML(data.npc_name);
+        document.getElementById("edit_npc_pers").value = decodeHTML(data.npc_pers);
+        document.getElementById("edit_npc_dynamic").value = decodeHTML(data.npc_dynamic);
+        document.getElementById("edit_npc_misc").value = decodeHTML(data.npc_misc);
+        document.getElementById("edit_melotts_voiceid").value = decodeHTML(data.melotts_voiceid);
+        document.getElementById("edit_xtts_voiceid").value = decodeHTML(data.xtts_voiceid);
+        document.getElementById("edit_xvasynth_voiceid").value = decodeHTML(data.xvasynth_voiceid);
+        
+        document.getElementById("editModal").style.display = "block";
+        document.body.style.overflow = "hidden";
+    } catch (error) {
+        console.error("Error in openEditModal:", error);
+        alert("There was an error opening the edit form. Please try again.");
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("editModal").style.display = "none";
+    document.body.style.overflow = "auto";
+}
+
+function deleteEntry() {
+    const npcName = document.getElementById("edit_npc_name_original").value;
+    if (confirm("Are you sure you want to delete: " + npcName + "?")) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        const currentLetter = new URLSearchParams(window.location.search).get('letter');
+        form.action = currentLetter ? `?letter=${currentLetter}#table` : '?#table';
+        form.innerHTML = `
+            <input type="hidden" name="action" value="delete_single">
+            <input type="hidden" name="npc_name" value="${npcName}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function openNewEntryModal() {
+    document.getElementById("newEntryModal").style.display = "block";
+    document.body.style.overflow = "hidden";
+}
+
+function closeNewEntryModal() {
+    document.getElementById("newEntryModal").style.display = "none";
+    document.body.style.overflow = "auto";
+}
+</script>
 
 </body>
 </html>

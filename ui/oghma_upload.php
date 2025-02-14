@@ -256,11 +256,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
  *  4) DELETE ALL
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all') {
-    $delete_query = "DELETE FROM $schema.oghma";
-    $delete_result = pg_query($conn, $delete_query);
+    $truncateQuery = "TRUNCATE TABLE {$schema}.oghma RESTART IDENTITY";
+    $truncateResult = pg_query($conn, $truncateQuery);
 
-    if ($delete_result) {
-        $message .= "<p>All entries have been deleted successfully.</p>";
+    if ($truncateResult) {
+        $message .= "<p style='color: #ff6464; font-weight: bold;'>All Oghma entries have been deleted successfully.</p>";
     } else {
         $message .= "<p>Error deleting entries: " . pg_last_error($conn) . "</p>";
     }
@@ -270,15 +270,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
  *  4.5) DELETE SINGLE TOPIC
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_single') {
-    if (!empty($_POST['topic'])) {
-        $topicToDelete = trim($_POST['topic']);
-        $delete_query = "DELETE FROM $schema.oghma WHERE topic = $1";
-        $delete_result = pg_query_params($conn, $delete_query, [$topicToDelete]);
+    $topic = $_POST['topic'] ?? '';
+    
+    if (!empty($topic)) {
+        $query = "DELETE FROM {$schema}.oghma WHERE topic = $1";
+        $result = pg_query_params($conn, $query, [$topic]);
 
-        if ($delete_result) {
-            $message .= "<p>Topic <strong>$topicToDelete</strong> has been deleted successfully.</p>";
+        if ($result) {
+            $message .= "<p>Entry '$topic' has been deleted successfully.</p>";
+            
+            // Redirect to maintain filters
+            $redirectUrl = '?' . http_build_query([
+                'cat' => $_GET['cat'] ?? '',
+                'letter' => $_GET['letter'] ?? '',
+                'order' => $_GET['order'] ?? 'asc'
+            ]) . '#entries';
+            header('Location: ' . $redirectUrl);
+            exit;
         } else {
-            $message .= "<p>Error deleting <strong>$topicToDelete</strong>: " . pg_last_error($conn) . "</p>";
+            $message .= "<p>Error deleting entry: " . pg_last_error($conn) . "</p>";
         }
     } else {
         $message .= "<p>No topic specified for deletion.</p>";
@@ -291,13 +301,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_single') {
     // Sanitize and read posted fields - use htmlspecialchars_decode to convert HTML entities back
     $topic_original       = $_POST['topic_original'] ?? '';
-    $topic_new           = htmlspecialchars_decode($_POST['topic_new']            ?? '');
-    $topic_desc_new      = htmlspecialchars_decode($_POST['topic_desc_new']       ?? '');
-    $knowledge_class_new = htmlspecialchars_decode($_POST['knowledge_class_new']  ?? '');
-    $topic_basic_new     = htmlspecialchars_decode($_POST['topic_basic_new']      ?? '');
-    $class_basic_new     = htmlspecialchars_decode($_POST['class_basic_new']      ?? '');
-    $tags_new            = htmlspecialchars_decode($_POST['tags_new']             ?? '');
-    $category_new        = htmlspecialchars_decode($_POST['category_new']         ?? '');
+    $topic_new           = htmlspecialchars_decode($_POST['topic_new'] ?? '');
+    $topic_desc_new      = htmlspecialchars_decode($_POST['topic_desc_new'] ?? '');
+    $knowledge_class_new = htmlspecialchars_decode($_POST['knowledge_class_new'] ?? '');
+    $topic_desc_basic_new = htmlspecialchars_decode($_POST['topic_desc_basic_new'] ?? '');
+    $knowledge_class_basic_new = htmlspecialchars_decode($_POST['knowledge_class_basic_new'] ?? '');
+    $tags_new            = htmlspecialchars_decode($_POST['tags_new'] ?? '');
+    $category_new        = htmlspecialchars_decode($_POST['category_new'] ?? '');
 
     if (!empty($topic_new) && !empty($topic_desc_new)) {
         // Perform the update
@@ -318,8 +328,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $topic_new,
             $topic_desc_new,
             $knowledge_class_new,
-            $topic_basic_new,
-            $class_basic_new,
+            $topic_desc_basic_new,
+            $knowledge_class_basic_new,
             $tags_new,
             $category_new,
             $topic_original
@@ -348,7 +358,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'cat' => $_GET['cat'] ?? '',
                 'letter' => $_GET['letter'] ?? '',
                 'order' => $_GET['order'] ?? 'asc'
-            ]) . '#table';
+            ]) . '#entries';
             header('Location: ' . $redirectUrl);
             exit;
         } else {
@@ -458,7 +468,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         .filter-buttons {
             margin-bottom: 20px;
-            max-width: 1600px;
+            width: 100%;
         }
         .filter-buttons form {
             display: inline-block;
@@ -478,30 +488,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             background-color: #0056b3;
         }
         .table-container {
-            max-height: 800px;
+            max-height: 900px;
             overflow-y: auto;
+            overflow-x: auto;
             margin-bottom: 20px;
-            max-width: 1600px;
+            width: 100%;
         }
+
+        .table-container table {
+            width: 100%;
+            min-width: 100%;
+            border-collapse: collapse;
+            background-color: #3a3a3a;
+        }
+
         .table-container th, .table-container td {
-            border: 1px solid #555;
             padding: 8px;
             text-align: left;
             word-wrap: break-word;
             overflow-wrap: break-word;
+            color: #f8f9fa;
+            border: 1px solid #555555;
         }
-        .table-container th:nth-child(1),
+
+        .table-container th {
+            background-color: #4a4a4a;
+            font-weight: bold;
+        }
+
+        /* Alternating row colors */
+        .table-container tr:nth-child(even) {
+            background-color: #2c2c2c;
+        }
+
+        .table-container tr:nth-child(odd) {
+            background-color: #3a3a3a;
+        }
+        /* Set specific widths for columns if needed */
+        .table-container th:nth-child(1), /* Topic */
         .table-container td:nth-child(1) {
-            width: 150px;
+            width: 20%;
         }
-        /* 2nd Column: Large */
-        .table-container th:nth-child(2),
+        .table-container th:nth-child(2), /* Topic Description */
         .table-container td:nth-child(2) {
-            width: 600px;
+            width: 30%;
         }
-        .table-container th:nth-child(4),
+        .table-container th:nth-child(3), /* Knowledge Class */
+        .table-container td:nth-child(3) {
+            width: 15%;
+        }
+        .table-container th:nth-child(4), /* Topic Description (Basic) */
         .table-container td:nth-child(4) {
-            width: 600px;
+            width: 15%;
+        }
+        .table-container th:nth-child(5), /* Knowledge Class (Basic) */
+        .table-container td:nth-child(5) {
+            width: 10%;
+        }
+        .table-container th:nth-child(6), /* Tags */
+        .table-container td:nth-child(6) {
+            width: 10%;
+        }
+        .table-container th:nth-child(7), /* Category */
+        .table-container td:nth-child(7) {
+            width: 10%;
+        }
+        .table-container th:nth-child(8), /* Action */
+        .table-container td:nth-child(8) {
+            width: 10%;
         }
         input[type="submit"].btn-danger {
             background-color: rgb(200, 53, 69);
@@ -559,7 +613,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            width: 60%; /* Reduced width */
+            width: 60%;
             max-width: 700px;
             max-height: 90vh;
             overflow-y: auto;
@@ -593,7 +647,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: #dc3545;
         }
 
-        .modal-body form {
+        .modal-body {
             display: flex;
             flex-direction: column;
             gap: 15px;
@@ -780,14 +834,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <p>You can see how it picks a relevant article during conversation by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
     <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
     <form action="" method="post" style="
-        border: none; /* Remove border */
-        padding: 0; /* Remove padding */
-        margin: 0; /* Remove margin */
-    " onsubmit="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
-    <input type="hidden" name="action" value="delete_all">
-    <input type="submit" class="btn-danger" value="Delete All Oghma Entries">
+        border: none;
+        padding: 0;
+        margin: 0;
+        background: none;
+    ">
+        <input type="hidden" name="action" value="delete_all">
+        <input type="submit" class="btn-danger" value="Delete All Oghma Entries" 
+               onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
+    </form>
     <p>You can download a backup of the full Oghma database in the <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
-</form>
 </div>
 
 <br>
@@ -821,18 +877,18 @@ if (isset($_GET['order'])) {
 }
 
 // Category buttons
-echo '<h2>Oghma Infinium Entries</h2>';
-echo  '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
+echo '<div style="width: 100%; padding-right: 5ch;">';
+echo '<h2 id="entries">Oghma Infinium Entries</h2>';
+echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
 echo '<br>';
 echo '<br>';
 echo '<div class="filter-buttons">';
-echo '<a class="alphabet-button" href="?#table">All Categories</a>';
+echo '<a class="alphabet-button" href="?#entries">All Categories</a>';
 foreach ($categories as $cat) {
     $catEncoded = urlencode($cat);
     $style = ($selectedCategory === $cat) ? 'style="background-color:#0056b3;"' : '';
-    echo "<a class=\"alphabet-button\" $style href=\"?cat=$catEncoded#table\">" . htmlspecialchars($cat) . "</a>";
+    echo "<a class=\"alphabet-button\" $style href=\"?cat=$catEncoded#entries\">" . htmlspecialchars($cat) . "</a>";
 }
-echo '</div>';
 
 // Sorting links
 $baseUrl = '?';
@@ -840,8 +896,8 @@ if ($selectedCategory) $baseUrl .= 'cat=' . urlencode($selectedCategory) . '&';
 if ($letter) $baseUrl .= 'letter=' . urlencode($letter) . '&';
 
 echo '<div class="filter-buttons">';
-echo '<a class="alphabet-button" href="' . $baseUrl . 'order=asc#table">Sort Ascending</a>';
-echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#table">Sort Descending</a>';
+echo '<a class="alphabet-button" href="' . $baseUrl . 'order=asc#entries">Sort Ascending</a>';
+echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#entries">Sort Descending</a>';
 echo '</div>';
 
 // Build query
@@ -885,7 +941,7 @@ if ($selectedCategory && $letter) {
 
 $result = pg_query_params($conn, $query, $params);
 
-echo '<a id="table"></a>';
+echo '<a id="entries"></a>';
 echo '<div class="table-container">';
 echo '<table>';
 echo '<tr>
@@ -984,12 +1040,12 @@ pg_close($conn);
 
                 <label for="edit_topic_desc_basic">Topic Description (Basic):</label>
                 <small>Who should have basic information on the subject.</small>
-                <textarea name="topic_basic_new" id="edit_topic_desc_basic" rows="8"></textarea>
+                <textarea name="topic_desc_basic_new" id="edit_topic_desc_basic" rows="8"></textarea>
                 
 
                 <label for="edit_knowledge_class_basic">Knowledge Class (Basic):</label>
                 <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this, is recommended for most basic articles. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
-                <input type="text" name="class_basic_new" id="edit_knowledge_class_basic">
+                <input type="text" name="knowledge_class_basic_new" id="edit_knowledge_class_basic">
 
                 <label for="edit_tags">Tags:</label>
                 <small>Not currently in use.</small>
@@ -1000,9 +1056,9 @@ pg_close($conn);
                 <input type="text" name="category_new" id="edit_category">
 
                 <div class="modal-footer">
-                    <button type="submit" style="background-color: #28a745;">Save Changes</button>
-                    <button type="button" onclick="deleteEntry()" style="background-color: #dc3545;">Delete</button>
-                    <button type="button" onclick="closeEditModal()" style="background-color: #6c757d;">Cancel</button>
+                    <button type="submit" name="submit" value="update" class="action-button" style="background-color: #28a745;">Save Changes</button>
+                    <button type="button" onclick="deleteEntry()" class="action-button" style="background-color: #dc3545;">Delete</button>
+                    <button type="button" onclick="closeEditModal()" class="action-button" style="background-color: #6c757d;">Cancel</button>
                 </div>
             </form>
         </div>
@@ -1087,20 +1143,6 @@ function closeEditModal() {
     document.body.style.overflow = "auto";
 }
 
-function deleteEntry() {
-    const topic = document.getElementById('edit_topic_original').value;
-    if (confirm("Are you sure you want to delete: " + topic + "?")) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="delete_single">
-            <input type="hidden" name="topic" value="${topic}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-
 function openNewEntryModal() {
     document.getElementById("newEntryModal").style.display = "block";
     document.body.style.overflow = "hidden";
@@ -1109,6 +1151,22 @@ function openNewEntryModal() {
 function closeNewEntryModal() {
     document.getElementById("newEntryModal").style.display = "none";
     document.body.style.overflow = "auto";
+}
+
+function deleteEntry() {
+    const topic = document.getElementById('edit_topic_original').value;
+    if (confirm("Are you sure you want to delete: " + topic + "?")) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        const currentCategory = new URLSearchParams(window.location.search).get('cat');
+        form.action = currentCategory ? `?cat=${currentCategory}#entries` : '?#entries';
+        form.innerHTML = `
+            <input type="hidden" name="action" value="delete_single">
+            <input type="hidden" name="topic" value="${topic}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 </script>
 </body>
