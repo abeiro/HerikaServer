@@ -373,6 +373,7 @@ include("tmpl/navbar.php");
     if ($_GET["table"] == "currentmission") {
         $results = $db->fetchAll("select  A.*,ROWID FROM currentmission A order by gamets desc,localts desc,rowid desc limit 150 offset 0");
         echo "<h3 class='my-2'>Current AI Task/Goal</h3>";
+        echo "<p>Note: This task/goal is only known by your followers.</p>";
         print_array_as_table($results);
     }
 
