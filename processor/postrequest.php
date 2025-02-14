@@ -56,7 +56,7 @@ if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) {
 
     if (($gameRequest[2]-$maxRow)>($pfi)) {
         
-        error_log(shell_exec("php ".__DIR__."/../debug/util_memory_subsystem.php compact noembed 2"));
+        error_log(shell_exec("php ".__DIR__."/../debug/util_memory_subsystem.php compact noembed 2 &"));
         
     } else {
         
