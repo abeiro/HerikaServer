@@ -29,7 +29,7 @@ final class OghmaTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $options = stream_context_get_options($streamContext);
-                $this->assertStringNotContainsString("#Lore related info", $options['http']['content']);
+                $this->assertStringNotContainsString("Lore Information", $options['http']['content']);
                 return true;
             })
         )
@@ -84,7 +84,7 @@ final class OghmaTest extends DatabaseTestCase
         require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
     }
 
-    public function testOghma_WhenInsufficientOghmaTopicKeywordsFound_ContextShouldNotContainLore(): void
+    public function testOghma_WhenOghmaTopicKeywordsFound_ContextShouldContainLore(): void
     {
         // default test config
         require("conf.php");
@@ -105,73 +105,6 @@ final class OghmaTest extends DatabaseTestCase
         // oghma topic = 3.4
         // location = 0
         // context = 0
-
-        $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
-        $GLOBALS["mockConnectorSend"]->expects($this->once())
-        ->method('__invoke')
-        ->with(
-            $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
-            $this->callback(function ($streamContext) {
-                $options = stream_context_get_options($streamContext);
-                $this->assertStringNotContainsString("#Lore related info", $options['http']['content']);
-                return true;
-            })
-        )
-        ->willReturnCallback(function($url, $context) {
-            return $this->defaultConnectorResponse($url, $context);
-        });
-
-        // comm.php?data=inputtext|100|200|Tell me about the potion seller. (base64 encoded)
-        $encodedData = base64_encode("inputtext|100|200|I am the Dragonborn. Surely I must be worthy.");
-        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
-        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
-    }
-
-    public function testOghma_WhenOghmaTopicPlusContextKeywordsFound_ContextShouldContainLore(): void
-    {
-        // default test config
-        require("conf.php");
-
-        $this->insertPotionLore();
-        $testDb = new sql();
-        $testDb->insert(
-            'conf_opts',
-            array(
-                'id' => 'current_oghma_topic',
-                'value' => 'Potion Seller'
-            )
-        );
-        $testDb->insert(
-            'speech',
-            array(
-                'sess' => 'pending',
-                'speaker' => 'Prisoner',
-                'speech' => "Tell me about the potion seller.",
-                'location' => "Riften ,Hold: The Rift",
-                'listener' => "The Narrator",
-                'localts' => 0,
-                'gamets' => 0
-            )
-        );
-        // Knights is the helpful keyword
-        $testDb->insert(
-            'speech',
-            array(
-                'sess' => 'pending',
-                'speaker' => 'The Narrator',
-                'speech' => "Ah, an enigmatic figure indeed. You may acquire potions from him - but only if he deems you worthy. Knights need not apply, for he respects them not.",
-                'location' => "Riften ,Hold: The Rift",
-                'listener' => "Prisoner",
-                'localts' => 10,
-                'gamets' => 10
-            )
-        );
-        $testDb->close();
-        
-        // input topic = 0
-        // oghma topic = 3.4
-        // location = 0
-        // context = 0.1
 
         $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
         $GLOBALS["mockConnectorSend"]->expects($this->once())
@@ -198,6 +131,49 @@ final class OghmaTest extends DatabaseTestCase
         require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
     }
 
+    public function testOghma_WhenInsufficientOghmaTopicKeywordsFound_ContextShouldNotContainLore(): void
+    {
+        // default test config
+        require("conf.php");
+
+        $this->insertPotionLore();
+
+        $testDb = new sql();
+        $testDb->insert(
+            'conf_opts',
+            array(
+                'id' => 'current_oghma_topic',
+                'value' => 'Alchemist'
+            )
+        );
+        $testDb->close();
+        
+        // input topic = 0
+        // oghma topic = 1.2
+        // location = 0
+        // context = 0
+
+        $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
+        $GLOBALS["mockConnectorSend"]->expects($this->once())
+        ->method('__invoke')
+        ->with(
+            $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
+            $this->callback(function ($streamContext) {
+                $options = stream_context_get_options($streamContext);
+                $this->assertStringNotContainsString("Lore Information", $options['http']['content']);
+                return true;
+            })
+        )
+        ->willReturnCallback(function($url, $context) {
+            return $this->defaultConnectorResponse($url, $context);
+        });
+
+        // comm.php?data=inputtext|100|200|Tell me about the potion seller. (base64 encoded)
+        $encodedData = base64_encode("inputtext|100|200|I am the Dragonborn. Surely I must be worthy.");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+    }
+
     public function testOghma_WhenOghmaTopicPlusLocationKeywordsFound_ContextShouldContainLore(): void
     {
         // default test config
@@ -209,7 +185,7 @@ final class OghmaTest extends DatabaseTestCase
             'conf_opts',
             array(
                 'id' => 'current_oghma_topic',
-                'value' => 'Potion Seller'
+                'value' => 'Alchemist'
             )
         );
         // Hold regex breaks on spaces, so only the Potion keyword is used
@@ -228,9 +204,92 @@ final class OghmaTest extends DatabaseTestCase
         $testDb->close();
         
         // input topic = 0
-        // oghma topic = 3.4
-        // location = 0.7
+        // oghma topic = 1.2
+        // location = 1.4
         // context = 0
+
+        $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
+        $GLOBALS["mockConnectorSend"]->expects($this->once())
+        ->method('__invoke')
+        ->with(
+            $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
+            $this->callback(function ($streamContext) {
+                $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner".
+                    "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
+                    "He has little respect for knights, because his potions can do anything that they can.\n".
+                    "You are The Narrator in a Skyrim adventure. You will only talk to Prisoner. You refer to yourself as 'The Narrator'. Only Prisoner can hear you. ".
+                    "Your goal is to comment on Prisoner's playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events.\n\nDon't write narrations.\nNo active quests right now."];
+                $this->expectPromptInContext($streamContext, $expectedPrompt);
+                return true;
+            })
+        )
+        ->willReturnCallback(function($url, $context) {
+            return $this->defaultConnectorResponse($url, $context);
+        });
+
+        // comm.php?data=inputtext|100|200|Tell me about the potion seller. (base64 encoded)
+        $encodedData = base64_encode("inputtext|100|200|I am the Dragonborn. Surely I must be worthy.");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+    }
+
+    public function testOghma_WhenOghmaTopicPlusLocationPlusContextKeywordsFound_ContextShouldContainLore(): void
+    {
+        // default test config
+        require("conf.php");
+
+        $this->insertPotionLore();
+        $testDb = new sql();
+        $testDb->insert(
+            'conf_opts',
+            array(
+                'id' => 'current_oghma_topic',
+                'value' => 'Alchemist'
+            )
+        );
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "0",
+                'gamets' => "0",
+                'type' => "infoloc",
+                'data' => "(Context location: Lair of the Potion Seller ,Hold: Strongest Alchemist, Buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:20 PM, 18th of Frostfall, 4E 201)",
+                'sess' => 'pending',
+                'localts' => 0,
+                'location'=> "(Context location: Lair of the Potion Seller ,Hold: Strongest Alchemist, buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:18 PM, 18th of Frostfall, 4E 201)"
+            )
+        );
+        $testDb->insert(
+            'speech',
+            array(
+                'sess' => 'pending',
+                'speaker' => 'Prisoner',
+                'speech' => "tell me about the potion seller.",
+                'location' => "Riften ,Hold: The Rift",
+                'listener' => "The Narrator",
+                'localts' => 0,
+                'gamets' => 0
+            )
+        );
+        $testDb->insert(
+            'speech',
+            array(
+                'sess' => 'pending',
+                'speaker' => 'The Narrator',
+                // manipulating the speech so that the tags are scored highly enough to pull in the oghma topic
+                'speech' => "Alchemist Anyth Be Brew Howev Knight Littl Potion Refus Respect Sell Seller Strongest",
+                'location' => "Riften ,Hold: The Rift",
+                'listener' => "Prisoner",
+                'localts' => 10,
+                'gamets' => 10
+            )
+        );
+        $testDb->close();
+        
+        // input topic = 0
+        // oghma topic = 1.2
+        // location = 0.6
+        // context = 0.4
 
         $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
         $GLOBALS["mockConnectorSend"]->expects($this->once())
@@ -262,6 +321,7 @@ final class OghmaTest extends DatabaseTestCase
         $content = json_decode($options['http']['content']);
         $found=false;
         foreach ($content->messages as $message) {
+            print_r($message);
             if (json_encode($message) === json_encode($expectedPrompt)) {
                 $found = true;
                 break;
