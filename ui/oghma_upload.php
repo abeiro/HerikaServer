@@ -708,8 +708,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <p>
     <b>Logic for searching articles:</b> <br>
     1. NPC will search for oghma article based on most relevant keyword. <br>
-    2. Check knowledge_class to see if they access to the advanced article. <br>
-    3. Check knowledge_class_basic to see if they access to the basic article. <br>
+    2. Check knowledge_class to see if they access to the advanced article (topic_desc). <br>
+    3. Check knowledge_class_basic to see if they access to the basic article (topic_desc_basic). <br>
     4. If all above fails, send "You do not know about X" to the prompt.
 </p>
     <?php
@@ -892,7 +892,7 @@ echo '<tr>
         <th>Topic</th>
         <th>Topic Description</th>
         <th>Knowledge Class</th>
-        <th>Topic Desc (Basic)</th>
+        <th>Topic Description (Basic)</th>
         <th>Knowledge Class (Basic)</th>
         <th>Tags</th>
         <th>Category</th>
