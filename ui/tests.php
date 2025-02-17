@@ -251,18 +251,20 @@ echo '<br>';
 
 echo '<div class="status"><span class="label">Response time</span></div>';
 echo '<pre>';
-$endTimeTrans=$endTimeTrans;
+$endTimeTrans = $endTimeTrans;
 echo "$endTimeTrans secs. ";
-if ($endTimeTrans<2 )
-    echo "<span style='color:purple;background-color:black;font-weight:bold'>FAST!</span>";
-else if ($endTimeTrans<5)
-    echo "<span style='color:green;background-color:black;font-weight:bold'>GOOD</span>";
-else if ($endTimeTrans<10)
-    echo "<span style='color:blue;background-color:black;font-weight:bold'>NORMAL</span>";
-else if ($endTimeTrans<30) 
-    echo "<span style='color:orange;background-color:black;font-weight:bold'>SLOW</span>";
-else 
-    echo "<span style='color:red;background-color:black;font-weight:bold'>TOO SLOW</span>";
+
+if ($endTimeTrans < 2) {
+    echo "<span style='color: #28a745; font-weight: bold; font-size: 1.2em;'>FAST! RESPONSE TIME/span>"; // Green
+} else if ($endTimeTrans < 5) {
+    echo "<span style='color: #007bff; font-weight: bold; font-size: 1.2em;'>GOOD RESPONSE TIME</span>"; // Blue
+} else if ($endTimeTrans < 10) {
+    echo "<span style='color: #ffc107; font-weight: bold; font-size: 1.2em;'>NORMAL RESPONSE TIME</span>"; // Yellow
+} else if ($endTimeTrans < 30) {
+    echo "<span style='color: #fd7e14; font-weight: bold; font-size: 1.2em;'>SLOW RESPONSE TIME</span>"; // Orange
+} else {
+    echo "<span style='color: #dc3545; font-weight: bold; font-size: 1.2em;'>TOO SLOW RESPONSE TIME</span>"; // Red
+}
 
 echo '</pre>';
 echo '</div>'; // End of section
