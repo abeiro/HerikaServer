@@ -4,10 +4,10 @@
 /* Definitions and main includes */
 error_reporting(E_ALL);
 
-define("STOPALL_MAGIC_WORD", "/halt/i");
+@define("STOPALL_MAGIC_WORD", "/halt/i");
 
-define("MAXIMUM_SENTENCE_SIZE", 125);
-define("MINIMUM_SENTENCE_SIZE", 50);
+@define("MAXIMUM_SENTENCE_SIZE", 125);
+@define("MINIMUM_SENTENCE_SIZE", 50);
 
 date_default_timezone_set('Europe/Madrid');
 
@@ -18,6 +18,7 @@ require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
@@ -28,7 +29,7 @@ requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"g
 $cooldownPeriod = 600;
 
 
-if (php_sapi_name()=="cli") {
+if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     // You can run this script directly with php: main.php "Player text"
     $GLOBALS["db"] = new sql();
 
@@ -69,7 +70,7 @@ if (!isset($FUNCTIONS_ARE_ENABLED)) {
 
 
 
-while (@ob_end_clean())	;
+while (!getenv('PHPUNIT_TEST') && @ob_end_clean())	;
 ignore_user_abort(true);
 set_time_limit(1200);
 
@@ -419,8 +420,8 @@ if (in_array($gameRequest[0],["rechat"]) ) {
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 if ($MUST_END) {  // Shorthand for non LLM processing
-    die('X-CUSTOM-CLOSE');
-    
+    echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+    return;
 }
 
 
@@ -471,7 +472,7 @@ if ($gameRequest[0] != "diary") {
             'gamets' => $gameRequest[2],
             'type' => $gameRequest[0],
             'data' => ($gameRequest[3]),
-            'sess' => (php_sapi_name()=="cli")?'cli':'web',
+            'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
             'localts' => time(),
             'people'=> $GLOBALS["CACHE_PEOPLE"],
             'location'=>$GLOBALS["CACHE_LOCATION"],
@@ -582,7 +583,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
         
 
         $TEST_TEXT=strtr($TEST_TEXT,["."=>" ","{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $command=file_get_contents("http://127.0.0.1:8082/command?text=".urlencode($TEST_TEXT));
+        $command=minimeCommand($TEST_TEXT);
         if ($command && $command !== "null") {
             $preCommand=json_decode($command,true);
             if ($preCommand["is_command"]!="Talk") {
@@ -725,183 +726,11 @@ if ($gameRequest[0] == "funcret") {
 CALL INITIALIZATION
 ***********************/
 
-    if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
-        die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector.".PHP_EOL);
+if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
+	die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector.".PHP_EOL);
+} else {
 
-    } else {
-
-        require(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
-    }
-function call_llm() {
-    global $contextData, $gameRequest, $receivedData, $startTime, $db;
-    global $ERROR_TRIGGERED, $talkedSoFar, $alreadysent, $FUNCTIONS_ARE_ENABLED;
-    global $overrideParameters, $request;
-    
-    $outputWasValid = true;
-    $connectionHandler=new connector();
-    $connectionHandler->open($contextData,$overrideParameters);
-    ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
-
-
-    if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
-        $gameRequestCopy=$gameRequest;
-        $gameRequestCopy[0]="infoaction";
-        $gameRequestCopy[3]=$GLOBALS["PATCH_STORE_FUNC_RES"];
-        logEvent($gameRequestCopy);
-    }
-
-    ///// PATCH
-
-    if ($connectionHandler->primary_handler === false) {
-
-        $db->insert(
-            'log',
-            array(
-                'localts' => time(),
-                'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
-                'response' => ((print_r(error_get_last(), true))),
-                'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
-
-
-            )
-        );
-        returnLines([$GLOBALS["ERROR_OPENAI"]]);
-        
-        $ERROR_TRIGGERED=true;
-        @ob_end_flush();
-
-        error_log(print_r(error_get_last(), true));
-        $outputWasValid = false;
-
-    } else {
-
-        // Read and process the response line by line
-        $buffer="";
-        $totalBuffer="";
-        $breakFlag=false;
-        $lineCounter=0;
-        $fullContent="";
-        $totalProcessedData="";
-        $numOutputTokens = 0;
-
-        while (true) {
-
-            if ($breakFlag) {
-                break;
-            }
-
-            $tmpData=$connectionHandler->process();
-            if ($tmpData==-1) {
-                error_log("Invalid JSON Output.");
-                $outputWasValid=false;
-                $breakFlag=true;
-            }
-            else {
-                $buffer.= $tmpData;
-                $totalBuffer.=$buffer; 
-            }
-
-
-
-
-            if ($connectionHandler->isDone()) {
-                $breakFlag=true;
-            }
-
-            $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
-
-            if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
-                continue;
-            }
-
-            $position = findDotPosition($buffer);
-
-            //echo "<$buffer>".PHP_EOL;
-            if ($position !== false && $position>MINIMUM_SENTENCE_SIZE ) {
-                $extractedData = substr($buffer, 0, $position + 1);
-                $remainingData = substr($buffer, $position + 1);
-                $sentences=split_sentences_stream(cleanResponse($extractedData));
-                $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
-                $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
-
-                if ($gameRequest[0] != "diary") {
-                    returnLines($sentences);
-                } else {
-                    $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
-                }
-
-                //echo "$extractedData  # ".(microtime(true)-$startTime)."\t".strlen($finalData)."\t".PHP_EOL;  // Output
-                $totalProcessedData.=$extractedData;
-                $extractedData="";
-                $buffer=$remainingData;
-                $user_input_after=$GLOBALS["db"]->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
-                if (isset($user_input_after[0]))
-                    if (isset($user_input_after[0]["N"]))
-
-                        if ($user_input_after[0]["N"]>0) {
-                            die('X-CUSTOM-CLOSE');
-                            error_log("Generation stopped because user_input. ".__LINE__);
-                            // Abort , user input detected
-                        }
-
-            }
-
-        }
-        
-        
-        if (trim($buffer)) {
-            error_log("REMAINING DATA <$buffer>");
-            $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
-            $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
-            $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
-            if ($gameRequest[0] != "diary") {
-                returnLines($sentences);
-            } else {
-                $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
-            }
-            $totalBuffer.=trim($buffer);
-            $totalProcessedData.=trim($buffer);
-        }
-
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  {
-            $actions=$connectionHandler->processActions();
-
-            if (is_array($actions) && (sizeof($actions)>0)) {
-                
-                // ACTION POST-FILTER
-                
-                if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-                    
-                    foreach ($actions as $n=>$action) {
-                        $actionParts=explode("|",$action);
-                        $actionParts2=explode("@",$actionParts[2]);
-                        
-                        if (isset($actionParts2[1])) {
-                            // Parameter part 
-                            if ($actionParts2[0]=="Attack") {
-                                // Lets polish the parammeters
-                                $localtarget=$actionParts2[1];
-                                $mang1=explode(",",$localtarget);
-                                $mang2=explode(" and ",$mang1[0]);
-                                $mang3=explode("(",$mang2[0]);
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
-                            }
-                        }
-                    }
-                }
-
-                $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
-                echo implode("\r\n", $actions).PHP_EOL;
-                file_put_contents(__DIR__."/log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
-
-            }
-        }
-        $connectionHandler->close();
-        //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE
-
-
-    }
-    return $outputWasValid;
+	require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 }
 
 $outputWasValid = call_llm();
@@ -997,14 +826,14 @@ if (sizeof($talkedSoFar) == 0) {
             );
             */
             // Log Memory also.
-            if ((php_sapi_name()!="cli"))	
+            if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
 	            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
             returnLines([$RESPONSE_OK_NOTED]);
 
         } else {
             
             $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 1 offset 0");
-            if (php_sapi_name()!="cli")	{
+            if (php_sapi_name()!="cli" || getenv('PHPUNIT_TEST'))	{
                 if (in_array($gameRequest[0],["inputtext","inputtext_s"]))
                     // logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"], "{$lastPlayerLine[0]["data"]} \n\r {$GLOBALS["HERIKA_NAME"]}:".implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[1]);
                     ;
@@ -1022,7 +851,7 @@ if (sizeof($talkedSoFar) == 0) {
 
 echo 'X-CUSTOM-CLOSE'.PHP_EOL;
 
-if (php_sapi_name()=="cli") {
+if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     echo PHP_EOL;
     file_put_contents("log/debug_comm_".basename(__FILE__).".log", print_r($GLOBALS["DEBUG_DATA"], true));
 
@@ -1035,7 +864,7 @@ if (php_sapi_name()=="cli") {
 if ($semaphore) 
     sem_release($semaphore);
 
-while(@ob_end_clean());
+while(!getenv("PHPUNIT_TEST") && @ob_end_clean());
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 
 

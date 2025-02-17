@@ -21,7 +21,7 @@ function DMgetCurrentModel() {
     $lprof=isset($GLOBALS["active_profile"])?$GLOBALS["active_profile"]:"";
     
     $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
-    if (!file_exists($file)) {
+    if (!file_exists($file) || getenv("PHPUNIT_TEST")) {
         DMsetCurrentModel($GLOBALS["CONNECTORS"][0]);
     }
 

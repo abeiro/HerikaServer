@@ -4,7 +4,7 @@ $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_functions.php");
 
 
-class connector
+class openrouterjson
 {
     public $primary_handler;
     public $name;
@@ -49,7 +49,7 @@ class connector
         
         if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] && isset($GLOBALS["MEMORY_STATEMENT"]) ) {
             foreach ($contextData as $n=>$contextline)  {
-                if (is_array($contextline)) {
+                if (is_array($contextline) && isset($contextline["content"])) {
                     if (strpos($contextline["content"],"#MEMORY")===0) {
                         $contextData[$n]["content"]=str_replace("#MEMORY","##\nMEMORY\n",$contextline["content"]."\n##\n");
                     } else if (strpos($contextline["content"],$GLOBALS["MEMORY_STATEMENT"])!==false) {
@@ -356,7 +356,7 @@ class connector
 
         $context = stream_context_create($options);
         
-        $this->primary_handler = fopen($url, 'r', false, $context);
+        $this->primary_handler = $this->send($url, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
             error_log(print_r($error,true));
@@ -371,13 +371,7 @@ class connector
             }
             return null;
         } else {
-            // Get HTTP response code
-            $response_info = stream_get_meta_data($this->primary_handler);
-            $status_line = $response_info['wrapper_data'][0];
-            preg_match('/\d{3}/', $status_line, $matches); // get three digits (200, 300, 404, etc)
-            $status_code = isset($matches[0]) ? intval($matches[0]) : null;
-
-            if ($status_code >= 300) {
+            if ($this->getHttpStatusCode() >= 300) {
                 $response = stream_get_contents($this->primary_handler);
                 $error_message = "Request to openrouterjson connector failed: {$status_line}.\nResponse body: {$response}";
                 trigger_error($error_message, E_USER_WARNING);
@@ -414,6 +408,24 @@ class connector
 
     }
 
+    public function send($url, $context) {
+        if (isset($GLOBALS['mockConnectorSend'])) {
+            return call_user_func($GLOBALS['mockConnectorSend'], $url, $context);
+        }
+        return fopen($url, 'r', false, $context);
+    }
+
+    public function getHttpStatusCode() {
+        if (isset($GLOBALS['mockConnectorResponseMetaData'])) {
+            $responseInfo = call_user_func($GLOBALS['mockConnectorResponseMetaData']);
+        } else {
+            $responseInfo = stream_get_meta_data($this->primary_handler);
+        }
+
+        $statusLine = $responseInfo['wrapper_data'][0];
+        preg_match('/\d{3}/', $statusLine, $matches); // get three digits (200, 300, 404, etc)
+        return isset($matches[0]) ? intval($matches[0]) : null;
+    }
     
 
     public function process()

@@ -11,7 +11,7 @@ require_once($localPath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php"
 
 function stt($file)
 {
-    if (!$GLOBALS["db"])
+    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"])
         $GLOBALS["db"] = new sql();
     
     $filePath = $file;

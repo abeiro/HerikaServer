@@ -14,7 +14,7 @@ if (in_array($gameRequest[0],["ginputtext_s"])) {
     $GLOBALS["OVERRIDE_DIALOGUE_TARGET"]=true;
 }
 
-require_once(__DIR__ . DIRECTORY_SEPARATOR . "prompts/prompts.php");
+require(__DIR__ . DIRECTORY_SEPARATOR . "prompts/prompts.php");
 $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s roleplay in the Universe of Skyrim. I\'m {$GLOBALS["PLAYER_NAME"]} ";
 
 /* 
@@ -33,7 +33,7 @@ if (!isset($FUNCTION_PARM_INSPECT))
 $FUNCTION_PARM_INSPECT[]=$GLOBALS["PLAYER_NAME"];
 
 
-require_once(__DIR__.DIRECTORY_SEPARATOR."prompts".DIRECTORY_SEPARATOR."command_prompt.php");
+require(__DIR__.DIRECTORY_SEPARATOR."prompts".DIRECTORY_SEPARATOR."command_prompt.php");
 
 if ($GLOBALS["OVERRIDE_DIALOGUE_TARGET"]) {
     if (isset($GLOBALS["USING_DEFAULT_PROFILE"])&&($GLOBALS["USING_DEFAULT_PROFILE"]))
