@@ -26,10 +26,10 @@
                     <a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor Events</a>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="index.php?table=quests">Current Active Quests</a>
+                    <a class="dropdown-item" href="index.php?table=quests">Active Quests</a>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="index.php?table=currentmission">Current AI Objective</a>
+                    <a class="dropdown-item" href="index.php?table=currentmission">Dynamic AI Objective</a>
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <!-- Logs Category -->
