@@ -653,11 +653,16 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS[
     require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
 }
 
+/* 
+ * It is important that radiant, rechat, im_alive, inputtext, inputtext_s, minai_force_rechat are not overwritten in custom prompt for this to work. 
+ */
+if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/time_awareness_prompt.php") && !empty($GLOBALS['TIME_AWARENESS'])) {
+    require_once(__DIR__.DIRECTORY_SEPARATOR."../prompts/time_awareness_prompt.php");
+}
+
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
     require(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php");
 }
-
-
 
 // Delete non wanted functions    
 
