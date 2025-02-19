@@ -1624,7 +1624,7 @@ function call_llm() {
             }
 
             $tmpData=$connectionHandler->process();
-            if ($tmpData==-1) {
+            if ($tmpData==-1 || (isset($GLOBALS["VALIDATE_LLM_OUTPUT_FNCT"]) && !$GLOBALS["VALIDATE_LLM_OUTPUT_FNCT"]($tmpData))) {
                 error_log("Invalid JSON Output.");
                 $outputWasValid=false;
                 $breakFlag=true;
