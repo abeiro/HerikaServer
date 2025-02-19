@@ -107,11 +107,11 @@ $getTimeText = function($inGameSeconds, $inGameDays) {
  * @return string The prompt text or an empty string if the request type is not supported.
  */
 $getInteractionPrompts = function($npc, $player, $timeText) {
-	if (in_array($gameRequest[0],["radiant","im_alive"])) {
+	if (in_array($GLOBALS["gameRequest"][0],["radiant","im_alive"])) {
 		return "$npc sees $player. $timeText";
 	}
 
-	if (in_array($gameRequest[0],["inputtext","inputtext_s"])) {
+	if (in_array($GLOBALS["gameRequest"][0],["inputtext","inputtext_s"])) {
 		return "$npc recognizes $player. $timeText";
 	}
 
@@ -126,7 +126,7 @@ $getInteractionPrompts = function($npc, $player, $timeText) {
  * @return string The prompt text or an empty string if the request type is not supported.
  */
 $getFirstTimePrompts = function($npc, $player) {
-	if (in_array($gameRequest[0],["radiant","im_alive","inputtext","inputtext_s"])) {
+	if (in_array($GLOBALS["gameRequest"][0],["radiant","im_alive","inputtext","inputtext_s"])) {
 		return "$npc talks to $player for the first time. They haven't yet been acquainted.";
 	}
 
