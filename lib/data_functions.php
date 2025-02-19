@@ -1378,7 +1378,7 @@ function DataBeingsInCloseRange()
     }
     
     $beings=strtr($lastLoc[0]["data"],["beings in range:"=>""]);
-    $beingsArray=explode(",",$beings);
+    $beingsArray=explode("/",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
         if (strpos($v,")")===false) 
@@ -1725,7 +1725,7 @@ function call_llm() {
 
                 $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
                 echo implode("\r\n", $actions).PHP_EOL;
-                file_put_contents(__DIR__."/log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
+                file_put_contents(__DIR__."/../log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
 
             }
         }
@@ -1985,7 +1985,7 @@ function profile_exists($npcname) {
     return file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
 }
 
-function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
+function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile='') {
    
     global $db; 
 
@@ -1996,13 +1996,14 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
     $newConfFile=md5($npcname);
 
     $codename = npcNameToCodename($npcname);
+    $baseprofileName = npcNameToCodename($baseprofile);
     
    
 
     if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
         
-        error_log("Overwritting conf");
-        sleep (1);
+        //error_log("Overwritting conf");
+        //sleep (1);
         $cn=$db->escape("Voicetype/$codename");
         $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
         $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
@@ -2028,6 +2029,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
             unset($file_lines[$i]);
         }
         
+
         if (empty($GLOBALS["CORE_LANG"])) {
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
@@ -2042,8 +2044,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
                 $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
             }
         }
-        
-
+                
         $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
         //use the Nametype conf opts to latch onto the character name while still being able to pull the correct voicetype[3]
         if ($voicelogic === "voicetype") {
@@ -2151,6 +2152,9 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json")) {
             
             $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
+            if (!$characterMap)
+                $characterMap=[];
+
             error_log("Loading character map: ".sizeof($characterMap));
         }
 
@@ -2190,6 +2194,7 @@ function requireFilesRecursively($dir,$name) {
         } 
     }
 }
+
 
 ?>
 
