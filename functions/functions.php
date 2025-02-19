@@ -625,7 +625,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'TravelTo',
         //'Follow',
         'CheckInventory',
-        //'SheatheWeapon',
+        'SheatheWeapon',
         'Relax',
         //'LeadTheWayTo',
         'TakeASeat',
@@ -648,7 +648,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
 $folderPath = __DIR__.DIRECTORY_SEPARATOR."../ext/";
 requireFunctionFilesRecursively($folderPath);
 
-
+// Why is this here?
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) {
     require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
 }
