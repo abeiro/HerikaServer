@@ -903,14 +903,14 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
 
 }
 
-function DataSpeechJournal($topic,$limit=50)
+function DataSpeechJournal($topic,$limit=50) 
 {
 
     global $db;
 
     $lastDialogFull = [];
     $tn=$db->escape($topic);
-    $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest FROM speech
+    $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest, convert_gamets2skyrim_date(gamets) AS sk_date, gamets FROM speech
       where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  companions like '%$tn%' or  companions like '%$tn%') 
       and listener<>'unknown' 
       order by rowid desc");
@@ -1125,24 +1125,37 @@ function DataLastRetFunc($actor, $lastNelements = -2)
 
 }
 
-function DataLastKnowDate()
+function DataLastKnowDate() 
 {
 
     global $db;
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
+    // try first with conversion from gamets in SQL 
+    $lastLoc=$db->fetchAll("SELECT convert_gamets2skyrim_long_date(a.gamets) AS data FROM eventlog a  WHERE (type in ('infoloc')) ORDER BY gamets desc, ts desc LIMIT 1");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        return "";
+        // no dice, try old way
+        $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
+        if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+            return "";
+        }
+        $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
+        if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
+            return $matches[0][0];
+        } else {
+            error_log("DataLastKnowDate: NO match found");
+            return "";
+        }
+    } else { // ok, db is updated with new dts functions
+        if (isset($lastLoc[0]["data"]) && (strlen($lastLoc[0]["data"])>0)) {
+            error_log(" dbg DataLastKnowDate: {$lastLoc[0]["data"]} ");
+            return $lastLoc[0]["data"];
+        } else {
+            error_log(" ERROR in DataLastKnowDate: NO match found");
+        }
     }
-    $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
-    if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
-        return $matches[0][0];
-    } else {
-        error_log("DataLastKnowDate: NO match found");
-        return "";
-    }
-
+    return "";
 }
+
 
 function DataLastKnownLocation()
 {
