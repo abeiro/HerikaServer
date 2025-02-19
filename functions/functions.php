@@ -128,8 +128,8 @@ $F_NAMES["FollowPlayer"]="FollowPlayer";
 
 
 if (isset($GLOBALS["CORE_LANG"]))
-	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
-		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php");
+    if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php");
     
     
     
@@ -644,24 +644,22 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
 
 }
 
+require_once(__DIR__.DIRECTORY_SEPARATOR."../prompts/time_awareness_prompt.php");
 
 $folderPath = __DIR__.DIRECTORY_SEPARATOR."../ext/";
 requireFunctionFilesRecursively($folderPath);
-
 
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) {
     require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
 }
 
-/* 
- * It is important that radiant, rechat, im_alive, inputtext, inputtext_s, minai_force_rechat are not overwritten in custom prompt for this to work. 
- */
-if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/time_awareness_prompt.php") && !empty($GLOBALS['TIME_AWARENESS'])) {
-    require_once(__DIR__.DIRECTORY_SEPARATOR."../prompts/time_awareness_prompt.php");
-}
-
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
     require(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php");
+}
+
+// overwrite prompt on first meeting or if time has passed since the last conversation (if not talking to the narrator)
+if (isset($GLOBALS["TIME_AWARENESS"]) && $GLOBALS["TIME_AWARENESS"] && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
+    injectTimePrompt();
 }
 
 // Delete non wanted functions    
