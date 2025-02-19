@@ -1,6 +1,6 @@
 <?php 
 
-function checkVersion($tablename) {
+$checkVersion = function($tablename) {
     global $db;
     $query = "
     SELECT version 
@@ -14,14 +14,14 @@ function checkVersion($tablename) {
         return -1;
     else
         return $existsColumn[0]["version"]+0;
-}
+};
 
-function updateVersion($tablename,$version) {
+$updateVersion = function($tablename,$version) {
     global $db;
     $db->execQuery("INSERT INTO public.database_versioning SELECT '$tablename',$version where not exists (SELECT 1 from public.database_versioning where tablename='$tablename')");
     $db->execQuery("UPDATE public.database_versioning set version=$version WHERE tablename='$tablename'");
     error_log("TABLE $tablename updated to version $version");
-}
+};
 
 /////////////////////////
 
@@ -422,7 +422,7 @@ if (!$existsColumn[0]["version"] || $existsColumn[0]["version"]<20250120001) {
 // Oghma npc table 20250129
 
 
-if (checkVersion("npc_templates")<20250129001) {
+if ($checkVersion("npc_templates")<20250129001) {
     $query = "
     ALTER TABLE npc_templates 
     ADD COLUMN IF NOT EXISTS npc_dynamic TEXT;
@@ -434,10 +434,10 @@ if (checkVersion("npc_templates")<20250129001) {
     ADD COLUMN IF NOT EXISTS xvasynth_voiceid TEXT;
     ";
     $db->execQuery($query);
-    updateVersion("npc_templates",20250129001);
+    $updateVersion("npc_templates",20250129001);
 }
 
-if (checkVersion("npc_templates_custom")<20250129001) {
+if ($checkVersion("npc_templates_custom")<20250129001) {
     $query = "
     ALTER TABLE npc_templates_custom 
     ADD COLUMN IF NOT EXISTS npc_dynamic TEXT;
@@ -449,10 +449,10 @@ if (checkVersion("npc_templates_custom")<20250129001) {
     ADD COLUMN IF NOT EXISTS xvasynth_voiceid TEXT;
     ";
     $db->execQuery($query);
-    updateVersion("npc_templates_custom",20250129001);
+    $updateVersion("npc_templates_custom",20250129001);
 }
 
-if (checkVersion("combined_npc_templates")<20250129001) {
+if ($checkVersion("combined_npc_templates")<20250129001) {
     $query="
     DROP VIEW public.combined_npc_templates;
     CREATE VIEW public.combined_npc_templates AS
@@ -477,10 +477,10 @@ if (checkVersion("combined_npc_templates")<20250129001) {
       WHERE (c.npc_name IS NULL);";
     
     $db->execQuery($query);
-    updateVersion("combined_npc_templates",20250129001);
+    $updateVersion("combined_npc_templates",20250129001);
 }
 
-if (checkVersion("oghma")<20250902001) {
+if ($checkVersion("oghma")<20250902001) {
     $query = "
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS knowledge_class TEXT;
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS topic_desc_basic TEXT;
@@ -490,13 +490,13 @@ if (checkVersion("oghma")<20250902001) {
    
     ";
     $db->execQuery($query);
-    updateVersion("oghma",20250902001);
+    $updateVersion("oghma",20250902001);
 }
 
 
 // Pfff
 
-if (checkVersion("npc_templates_custom")<20250211001) {
+if ($checkVersion("npc_templates_custom")<20250211001) {
     $query="DROP VIEW public.combined_npc_templates;";
    
     $db->execQuery($query);
@@ -537,8 +537,8 @@ if (checkVersion("npc_templates_custom")<20250211001) {
     
     $db->execQuery($query);
 
-    updateVersion("npc_templates_custom",20250211001);
-    updateVersion("combined_npc_templates",20250211001);
+    $updateVersion("npc_templates_custom",20250211001);
+    $updateVersion("combined_npc_templates",20250211001);
     error_log("Applied patch 20250211001");
 }
 
@@ -547,7 +547,7 @@ if (checkVersion("npc_templates_custom")<20250211001) {
 //  sql_gamets_convert_functions 20250218001
 //----------------------------------------------------
 
-if (checkVersion("sql_gamets_convert_functions")<20250218001) {
+if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
     error_log(" try patch: sql_gamets_convert_functions 20250218001 - dbg -");
 
     $db->execQuery("DROP VIEW IF EXISTS public.speech_view;");
@@ -709,8 +709,8 @@ if (checkVersion("sql_gamets_convert_functions")<20250218001) {
             public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
           FROM public.speech s; ");
     
-    updateVersion("sql_gamets_convert_functions",20250218001);
-    updateVersion("sql_gamets_convert_functions",20250218001);
+    $updateVersion("sql_gamets_convert_functions",20250218001);
+    $updateVersion("sql_gamets_convert_functions",20250218001);
     error_log("Applied patch: sql_gamets_convert_functions 20250218001 - dbg -");
 }
 
