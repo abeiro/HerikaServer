@@ -24,7 +24,7 @@ $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that wi
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=true; //Leave as is - read only
-$TIME_AWARENESS=true; //Leave as is - read only
+$TIME_AWARENESS=false; //Overwrites the prompt to the AI to make it more aware of the passage of time
 $MAX_WORDS_LIMIT=0; //Enforce a word limit for AI's responses. 0 = unlimited.
 $BOOK_EVENT_FULL=true; //Sends full contents of books to the AI
 $BOOK_EVENT_ALWAYS_NARRATOR=false; //Only The Narrator summarizes books.
