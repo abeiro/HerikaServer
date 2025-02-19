@@ -14,7 +14,7 @@ if ($GLOBALS["MINIME_T5"]) {
             //$TEST_TEXT="{$GLOBALS["HERIKA_NAME"]}:".implode(" ",$GLOBALS["talkedSoFar"]);
             $TEST_TEXT=implode(" ",$GLOBALS["talkedSoFar"]);
 
-            $topic=json_decode(file_get_contents("http://127.0.0.1:8082/posttopic?text=".urlencode($TEST_TEXT)),true);
+            $topic=json_decode(minimePostTopic($TEST_TEXT),true);
             if (is_array($topic) && isset($topic["generated_tags"])) {
                 error_log("[OGMHA] Current Topic: {$topic["generated_tags"]}");
                 $db->delete("conf_opts", "id='current_oghma_topic'");
@@ -77,7 +77,7 @@ if ($GLOBALS["MINIME_T5"]) {
         $pattern = '/\(talking to [^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
             
-        $command=json_decode(file_get_contents("http://127.0.0.1:8082/task?text=".urlencode($TEST_TEXT)),true);
+        $command=json_decode(minimeTask($TEST_TEXT),true);
         if (isset($command["is_command"])) {
             $prCmd=explode("@",$command["is_command"]);
             if ($prCmd[0]=="SetCurrentTask") {

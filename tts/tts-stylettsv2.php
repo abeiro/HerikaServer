@@ -102,7 +102,7 @@ function tts($textString, $mood , $stringforhash) {
 }
 
 
-if (true &&  (php_sapi_name()=="cli") ) {
+if (true &&  (php_sapi_name()=="cli") && !getenv('PHPUNIT_TEST') ) {
 	 $GLOBALS["DATA_PATH"]="/var/www/html/AIConnectX/data/";
 	 echo tts($argv[1], "" , $argv[1]);
 	
