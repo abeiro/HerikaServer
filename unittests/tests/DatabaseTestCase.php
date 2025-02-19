@@ -61,6 +61,13 @@ abstract class DatabaseTestCase extends TestCase
         $returnVar = 0;
         exec($psqlCommand, $output, $returnVar);
 
+		// apply database updates
+		$db = new sql();
+		$GLOBALS["db"]=$db;
+		require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."debug".DIRECTORY_SEPARATOR."db_updates.php");
+		$db->close();
+		unset($db);
+		unset($GLOBALS["db"]);
 
         // if minAI is installed then create its database tables as well, to avoid errors
         if (file_exists($path.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR."minai_plugin")) {
