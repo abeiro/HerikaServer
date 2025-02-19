@@ -78,7 +78,7 @@ function computeInGameTime($lastGamets, $currentGamets) {
  * @param float $inGameDays The number of in-game days elapsed.
  * @return string The contextual time text or an empty string if too little time has passed.
  */
-function getTimeText($inGameSeconds, $inGameDays) {
+$getTimeText = function($inGameSeconds, $inGameDays) {
     // If less than 12 in-game hours (43,200 seconds) have passed, no text is added.
     if ($inGameSeconds < 43200) {
         return "";
@@ -95,7 +95,7 @@ function getTimeText($inGameSeconds, $inGameDays) {
         $years = floor($inGameDays / 365);
         return "It has been $years year" . ($years > 1 ? "s" : "") . " since they last interacted.";
     }
-}
+};
 
 /**
  * Sets the global PROMPTS for an interaction (when previous interactions exist)
@@ -105,7 +105,7 @@ function getTimeText($inGameSeconds, $inGameDays) {
  * @param string $player The player's name.
  * @param string $timeText The time context text.
  */
-function setInteractionPrompts($npc, $player, $timeText) {
+$setInteractionPrompts = function($npc, $player, $timeText) {
     $templateDialog = $GLOBALS["TEMPLATE_DIALOG"];
     $maxWords       = $GLOBALS["MAXIMUM_WORDS"];
 
@@ -120,17 +120,6 @@ function setInteractionPrompts($npc, $player, $timeText) {
     
     $GLOBALS["PROMPTS"]["im_alive"] = $GLOBALS["PROMPTS"]["radiant"];
     
-    $GLOBALS["PROMPTS"]["rechat"] = [
-        "cue" => [
-            "$npc recognizes $player. $timeText $npc responds accordingly. $templateDialog"
-        ],
-        "player_request" => [
-            "The Narrator: $npc responds to $player about the ongoing conversation. $timeText"
-        ]
-    ];
-    
-    $GLOBALS["PROMPTS"]["minai_force_rechat"] = $GLOBALS["PROMPTS"]["rechat"];
-    
     $GLOBALS["PROMPTS"]["inputtext"] = [
         "cue" => [
             "$npc recognizes $player. $timeText $npc responds accordingly. $templateDialog $maxWords"
@@ -138,7 +127,7 @@ function setInteractionPrompts($npc, $player, $timeText) {
     ];
     
     $GLOBALS["PROMPTS"]["inputtext_s"] = $GLOBALS["PROMPTS"]["inputtext"];
-}
+};
 
 /**
  * Sets the global PROMPTS for a first-time interaction.
@@ -146,7 +135,7 @@ function setInteractionPrompts($npc, $player, $timeText) {
  * @param string $npc The NPC's name.
  * @param string $player The player's name.
  */
-function setFirstTimePrompts($npc, $player) {
+$setFirstTimePrompts = function($npc, $player) {
     $templateDialog = $GLOBALS["TEMPLATE_DIALOG"];
     $maxWords       = $GLOBALS["MAXIMUM_WORDS"];
     
@@ -161,17 +150,6 @@ function setFirstTimePrompts($npc, $player) {
     
     $GLOBALS["PROMPTS"]["im_alive"] = $GLOBALS["PROMPTS"]["radiant"];
     
-    $GLOBALS["PROMPTS"]["rechat"] = [
-        "cue" => [
-            "$npc talks to $player for the first time. They haven't yet been acquainted. $templateDialog"
-        ],
-        "player_request" => [
-            "The Narrator: $npc responds to $player about the ongoing conversation."
-        ]
-    ];
-    
-    $GLOBALS["PROMPTS"]["minai_force_rechat"] = $GLOBALS["PROMPTS"]["rechat"];
-    
     $GLOBALS["PROMPTS"]["inputtext"] = [
         "cue" => [
             "$npc talks to $player for the first time. They haven't yet been acquainted. $templateDialog $maxWords"
@@ -179,23 +157,30 @@ function setFirstTimePrompts($npc, $player) {
     ];
     
     $GLOBALS["PROMPTS"]["inputtext_s"] = $GLOBALS["PROMPTS"]["inputtext"];
-}
+};
 
-// === Main Flow ===
+/**
+ * === Main Flow ===
+ * Overrides the prompt if time has passed since the last conversation with the NPC
+ */
+function injectTimePrompt() {
+    global $getTimeText, $setInteractionPrompts, $setFirstTimePrompts;
 
-$interaction = getLastInteractionTime();
-$npc    = $GLOBALS["HERIKA_NAME"];
-$player = $GLOBALS["PLAYER_NAME"];
-
-if ($interaction) {
-    $timeData = computeInGameTime($interaction['last_gamets'], $interaction['current_gamets']);
-    $timeText = getTimeText($timeData['seconds'], $timeData['days']);
+    $interaction = getLastInteractionTime();
+    $npc    = $GLOBALS["HERIKA_NAME"];
+    $player = $GLOBALS["PLAYER_NAME"];
     
-    // Only update the prompts if there's a meaningful time difference.
-    if (!empty($timeText)) {
-        setInteractionPrompts($npc, $player, $timeText);
+    if ($interaction) {
+        $timeData = computeInGameTime($interaction['last_gamets'], $interaction['current_gamets']);
+        $timeText = $getTimeText($timeData['seconds'], $timeData['days']);
+        
+        // Only update the prompts if there's a meaningful time difference.
+        if (!empty($timeText)) {
+            $setInteractionPrompts($npc, $player, $timeText);
+        }
+    } else {
+        $setFirstTimePrompts($npc, $player);
     }
-} else {
-    setFirstTimePrompts($npc, $player);
 }
+
 ?>
