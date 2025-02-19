@@ -98,74 +98,45 @@ $getTimeText = function($inGameSeconds, $inGameDays) {
 };
 
 /**
- * Sets the global PROMPTS for an interaction (when previous interactions exist)
+ * Returns a text prompt for an interaction (when previous interactions exist)
  * using the provided time context.
  *
  * @param string $npc The NPC's name.
  * @param string $player The player's name.
  * @param string $timeText The time context text.
+ * @return string The prompt text or an empty string if the request type is not supported.
  */
-$setInteractionPrompts = function($npc, $player, $timeText) {
-    $templateDialog = $GLOBALS["TEMPLATE_DIALOG"];
-    $maxWords       = $GLOBALS["MAXIMUM_WORDS"];
+$getInteractionPrompts = function($npc, $player, $timeText) {
+	if (in_array($gameRequest[0],["radiant","im_alive"])) {
+		return "$npc sees $player. $timeText";
+	}
 
-    $GLOBALS["PROMPTS"]["radiant"] = [
-        "cue" => [
-            "$npc sees $player. $timeText $npc responds accordingly. $templateDialog"
-        ],
-        "player_request" => [
-            "The Narrator: $npc starts a dialogue with $player about a relevant topic. $timeText"
-        ]
-    ];
-    
-    $GLOBALS["PROMPTS"]["im_alive"] = $GLOBALS["PROMPTS"]["radiant"];
-    
-    $GLOBALS["PROMPTS"]["inputtext"] = [
-        "cue" => [
-            "$npc recognizes $player. $timeText $npc responds accordingly. $templateDialog $maxWords"
-        ]
-    ];
-    
-    $GLOBALS["PROMPTS"]["inputtext_s"] = $GLOBALS["PROMPTS"]["inputtext"];
+	if (in_array($gameRequest[0],["inputtext","inputtext_s"])) {
+		return "$npc recognizes $player. $timeText";
+	}
+
+	return "";
 };
 
 /**
- * Sets the global PROMPTS for a first-time interaction.
+ * Returns a text prompt for a first-time interaction.
  *
  * @param string $npc The NPC's name.
  * @param string $player The player's name.
+ * @return string The prompt text or an empty string if the request type is not supported.
  */
-$setFirstTimePrompts = function($npc, $player) {
-    $templateDialog = $GLOBALS["TEMPLATE_DIALOG"];
-    $maxWords       = $GLOBALS["MAXIMUM_WORDS"];
-    
-    $GLOBALS["PROMPTS"]["radiant"] = [
-        "cue" => [
-            "$npc talks to $player for the first time. They haven't yet been acquainted. $npc responds accordingly. $templateDialog"
-        ],
-        "player_request" => [
-            "The Narrator: $npc starts a dialogue with $player about a relevant topic."
-        ]
-    ];
-    
-    $GLOBALS["PROMPTS"]["im_alive"] = $GLOBALS["PROMPTS"]["radiant"];
-    
-    $GLOBALS["PROMPTS"]["inputtext"] = [
-        "cue" => [
-            "$npc talks to $player for the first time. They haven't yet been acquainted. $templateDialog $maxWords"
-        ]
-    ];
-    
-    $GLOBALS["PROMPTS"]["inputtext_s"] = $GLOBALS["PROMPTS"]["inputtext"];
+$getFirstTimePrompts = function($npc, $player) {
+	if (in_array($gameRequest[0],["radiant","im_alive","inputtext","inputtext_s"])) {
+		return "$npc talks to $player for the first time. They haven't yet been acquainted.";
+	}
+
+	return "";
 };
 
 /**
- * === Main Flow ===
- * Overrides the prompt if time has passed since the last conversation with the NPC
+ * Add time awareness to the prompt if time has passed since the last conversation with the NPC
  */
-function injectTimePrompt() {
-    global $getTimeText, $setInteractionPrompts, $setFirstTimePrompts;
-
+function getTimePrompt($getTimeText, $getInteractionPrompts, $getFirstTimePrompts) {
     $interaction = getLastInteractionTime();
     $npc    = $GLOBALS["HERIKA_NAME"];
     $player = $GLOBALS["PLAYER_NAME"];
@@ -176,11 +147,28 @@ function injectTimePrompt() {
         
         // Only update the prompts if there's a meaningful time difference.
         if (!empty($timeText)) {
-            $setInteractionPrompts($npc, $player, $timeText);
+            return $getInteractionPrompts($npc, $player, $timeText);
         }
+
+		return "";
     } else {
-        $setFirstTimePrompts($npc, $player);
+        return $getFirstTimePrompts($npc, $player);
     }
+}
+
+// === Main Flow ===
+
+// override with language-specific functions if available
+if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS['CORE_LANG'].DIRECTORY_SEPARATOR."prompts.php")) {
+    require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS['CORE_LANG'].DIRECTORY_SEPARATOR."prompts.php");
+}
+
+// add prompt to help the AI become more aware of time (if enabled and not talking to the narrator)
+if (isset($GLOBALS["TIME_AWARENESS"]) && $GLOBALS["TIME_AWARENESS"] && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
+    $additionalPrompt = getTimePrompt($getTimeText, $getInteractionPrompts, $getFirstTimePrompts);
+	if ($additionalPrompt) {
+		$GLOBALS["request"]="$additionalPrompt {$GLOBALS['request']}";
+	}
 }
 
 ?>

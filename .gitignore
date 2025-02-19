@@ -1,6 +1,7 @@
 
 /ext/*
 !/ext/herika_heal
+!/ext/time_awareness
 !/ext/xLifeLink_plugin
 /log
 /soundcache
