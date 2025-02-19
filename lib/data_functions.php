@@ -900,7 +900,7 @@ function DataSpeechJournal($topic,$limit=50)
 
     $lastDialogFull = [];
     $tn=$db->escape($topic);
-    $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest FROM speech
+    $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest, convert_gamets2skyrim_date(gamets) AS sk_date, gamets FROM speech
       where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  companions like '%$tn%' or  companions like '%$tn%') 
       and listener<>'unknown' 
       order by rowid desc");

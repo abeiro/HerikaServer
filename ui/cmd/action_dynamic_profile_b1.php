@@ -12,6 +12,8 @@ if ($method === "POST") {
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
+    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
+
     $FEATURES["MEMORY_EMBEDDING"]["ENABLED"] = false;
 
     if (isset($profile)) {
@@ -44,6 +46,8 @@ if ($method === "POST") {
         $historyData = "";
         $lastPlace = "";
         $lastListener = "";
+        $lastDateTime = "";
+ 
         foreach (json_decode(DataSpeechJournal($jsonDataInput["HERIKA_NAME"], 100), true) as $element) {
             if ($lastListener != $element["listener"]) {
                 $listener = " (talking to {$element["listener"]})";
@@ -59,7 +63,16 @@ if ($method === "POST") {
                 $place = "";
             }
 
-            $historyData .= trim("{$element["speaker"]}:" . trim($element["speech"]) . " $listener $place") . PHP_EOL;
+            if ($lastDateTime != substr($element["sk_date"], 0, 15)) {
+                $date = substr($element["sk_date"], 0, 10);
+                $time = substr($element["sk_date"], 11);
+                $dateTime = "(on date {$date} at {$time})";
+                $lastDateTime = substr($element["sk_date"], 0, 15); //0201-11-23 16:29:43
+            } else {
+                $dateTime = "";
+            }
+
+            $historyData .= trim("{$element["speaker"]}:" . trim($element["speech"]) . " $listener $place $dateTime") . PHP_EOL;
         }
         if ($_GET["short"] == "yes") {
             $SHORT = "25 keywords";
