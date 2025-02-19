@@ -31,6 +31,7 @@ $NARRATOR_TALKS=true; //Enables the Narrator.
 $NARRATOR_WELCOME=true;
 $QUEST_COMMENT = false;
 $QUEST_COMMENT_CHANCE= "10%";
+$CURRENT_TASK=true; //Sends current plan/quest to the AI
  //The Narrator will recap previous events after a save is loaded.
 $LANG_LLM_XTTS=false; //XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language.
 $HERIKA_ANIMATIONS=true; //Issues animations to AI driven NPCs.

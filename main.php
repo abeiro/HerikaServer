@@ -514,7 +514,7 @@ else if ($GLOBALS["IS_NPC"]) {
 $contextDataWorld = DataLastInfoFor("", -2);
 
 // Add current motto to COMMAND_PROMPT
-if ($gameRequest[0] != "diary")
+if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[0] != "diary") {
     if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator")) {
         $task=DataGetCurrentTask();
         if (empty($task)) {
@@ -524,6 +524,7 @@ if ($gameRequest[0] != "diary")
     } else {
         error_log("Task avoided {$GLOBALS["IS_NPC"]} ");
     }
+}
 
 // Offer memory in CONTEXT 
 /*
