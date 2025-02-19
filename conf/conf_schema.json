@@ -16,12 +16,14 @@
   "BORED_EVENT": {"userlvl":"basic","type":"integer","description":"Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.<br>0 = Never | 50 = 50% | 100 = Always"},
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.<br>Higher Context = more tokens used and slower response time.<br><b>We recommend you do not go over 100</b>"},
   "ALIVE_MESSAGE": {"userlvl":"basic","type":"boolean","description":"Whether the <i>I am alive..</i> response will trigger whenever you activate an AI NPC."},
+  "TIME_AWARENESS": {"userlvl":"wip","type":"boolean","description":"Whether the NPC will be aware of how long it has been since you last talked to them, or if you are talking for the first time."},
   "BOOK_EVENT_FULL": {"userlvl":"pro","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.<br><strong>SET THIS ON default profile to apply to all NPCs.</strong>","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game. Has a 10 minute IRL cooldown so its not annoying.","scope":"global"},
   "QUEST_COMMENT":{"type":"boolean","userlvl":"basic","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
   "QUEST_COMMENT_CHANCE":{"type":"select","userlvl":"basic","values":["10%","25%","50%","75%","100%"],"description":"Chance that an AI Quest Comment will happen every time a quest updates."},
+  "CURRENT_TASK": {"userlvl":"basic","type":"boolean","description":"Include the current Dynamic AI Objective to the AI NPC's prompt. Disable this if the AI NPC becomes fixated on the task."},
   "RPG_COMMENTS": {"type":"selectmultiple","values":["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"],"description":"Pick which comments you want a chance to trigger when one of these ingame events happens."},
   "HERIKA_ANIMATIONS": {"userlvl":"basic","type":"boolean","description":"Will issue animations for the NPC to play", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.q88yv4qigyw7","_title":"Advanced Configuration"},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
@@ -185,6 +187,7 @@
       "url":{"type":"url","description":"xVASynth should be running on the same machine as DwemerDistro!<br>Must use your computers IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008<br>Click the <b>help/doc</b> link for more info.","helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.3tf6myep6rmw"},
       "base_lang":{"type":"string","description":"Base language"},
       "modelType":{"type":"string","description":"Model Type"},
+      "version":{"type":"string","description":"xVASynth version (e.g. 3.0 is default. Older models are 1.0 or 2.0)"},
       "game":{"type":"string","description":"xVASynth gameID (e.g. skyrim)"},
       "model":{"type":"string","description":"xVASynth voiceID (e.g. sk_femaleeventoned)"},
       "pace":{"type":"number","description":"Pace"},
@@ -248,7 +251,7 @@
       "voice": {"type":"string","description":"Voice to use"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai","kokoro"],"description":"Text-to-Speech service options. Used to generate your voice. Currently bugged for xVASynth.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai","kokoro"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 

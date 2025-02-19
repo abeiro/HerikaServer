@@ -4,7 +4,7 @@ $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_functions.php");
 
 
-class connector
+class openai
 {
     public $primary_handler;
     public $name;

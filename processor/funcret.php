@@ -1,6 +1,9 @@
 <?php
-
-	$lastCallId=file_get_contents(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".last_tool_call_openai.id.txt");
+	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".last_tool_call_openai.id.txt")) {
+		$lastCallId=file_get_contents(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".last_tool_call_openai.id.txt");
+	} else {
+        $lastCallId="";
+    }
 
 	$returnFunction = explode("@", $gameRequest[3]); // Function returns here
 

@@ -33,7 +33,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
 
     
-    $connectionHandler=new connector();
+    $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
     $connectionHandler->open($prompt,["MAX_TOKENS"=>32]);
 
     print_r($GLOBALS["DEBUG_DATA"]["full"]);

@@ -625,7 +625,7 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
     $contextData       = array_merge($head, $prompt);
 
     print_r($contextData);
-    $connectionHandler = new connector();
+    $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
 
     $connectionHandler->open($contextData, ["max_tokens"=>500]);
     $buffer      = "";
@@ -940,7 +940,7 @@ function createQuestFromTemplate($template,$notes) {
     $contextData       = array_merge($head, $prompt);
 
     //print_r($contextData);
-    $connectionHandler = new connector();
+    $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
     $GLOBALS["FORCE_MAX_TOKENS"]=2048;
     $connectionHandler->open($contextData, ["MAX_TOKENS"=>2048]);
     $buffer      = "";

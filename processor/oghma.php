@@ -19,7 +19,7 @@ if ($GLOBALS["MINIME_T5"]) {
             $currentOghmaTopic_req = $db->fetchOne("SELECT value FROM conf_opts WHERE id='current_oghma_topic'");
             $currentOghmaTopic     = getArrayKey($currentOghmaTopic_req, "value");
 
-            $topic_req = file_get_contents("http://127.0.0.1:8082/topic?text=".urlencode($INPUT_TEXT));
+            $topic_req = minimeTopic($INPUT_TEXT);
             if ($topic_req) {
                 $topic_res         = json_decode($topic_req, true);
                 $currentInputTopic = getArrayKey($topic_res, "generated_tags");
@@ -31,7 +31,7 @@ if ($GLOBALS["MINIME_T5"]) {
             $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
 
             // Helper function to convert a string to tsquery format
-            function prepareTsQuery($string, $operator = '|') {
+            $prepareTsQuery = function ($string, $operator = '|') {
                 // 1) Convert underscores to spaces and remove apostrophes
                 $string = str_replace('_', ' ', $string);
                 $string = preg_replace('/[\'’]/u', '', $string);
@@ -49,13 +49,13 @@ if ($GLOBALS["MINIME_T5"]) {
             
                 // 5) Join with | (OR) or & (AND) as needed
                 return implode(" $operator ", $words);
-            }
-        
+            };
+
             // Prepare tsquery strings
-            $currentInputTopicQuery = prepareTsQuery($currentInputTopic);
-            $currentOghmaTopicQuery = prepareTsQuery($currentOghmaTopic);
-            $locationCtxQuery       = prepareTsQuery($locationCtx);
-            $contextKeywordsQuery   = prepareTsQuery($contextKeywords);
+            $currentInputTopicQuery = $prepareTsQuery($currentInputTopic);
+            $currentOghmaTopicQuery = $prepareTsQuery($currentOghmaTopic);
+            $locationCtxQuery       = $prepareTsQuery($locationCtx);
+            $contextKeywordsQuery   = $prepareTsQuery($contextKeywords);
 
             // --------------------------------------------------
             // Build the user’s knowledge array

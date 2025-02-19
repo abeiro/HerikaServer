@@ -177,7 +177,7 @@ $FUNCTIONS_ARE_ENABLED = true;
 if ($FUNCTIONS_ARE_ENABLED) {
     $GLOBALS["TEMPLATE_DIALOG"] = "";
     $FUNCTION_PARM_MOVETO = [$GLOBALS["PLAYER_NAME"]];
-    $FUNCTION_PARM_INSPECT = [$GLOBALS["PLAYER_NAME"]];
+    $FUNCTION_PARM_INSPECT = [$GLOBALS["PLAYER_NAME"], "monster"];
 
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "../prompts" . DIRECTORY_SEPARATOR . "command_prompt.php");
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "../functions" . DIRECTORY_SEPARATOR . "functions.php");
@@ -198,7 +198,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || !file_exists($enginePath . "connect
     ];
     $contextData = array_merge($head, $prompt);
 
-    $connectionHandler = new connector();
+    $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
     $startTimeTrans = microtime(true);
     $connectionHandler->open($contextData, []);
 
@@ -238,82 +238,77 @@ echo '</pre>';
 echo '</div>'; // End of section
 
 echo '<div class="section">';
-echo '<div class="status"><span class="label">Processing request...</span></div>';
-
-echo '<div class="section">';
 echo '<div class="divider"></div>';
-echo '<div class="status">
-        <span class="label" style="font-weight: bold;">LLM Response:</span>
-        <div class="response">' . nl2br(htmlspecialchars($buffer)) . '</div>
-    </div>';
-echo '<br>';
+echo '<div class="status" style="border: 2px solid #ffc107; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+        <span class="label" style="font-weight: bold; color: #ffffff; font-size: 1.5em;">LLM Response:</span>
+        <div class="response" style="font-size: 1.2em; color: #ffffff;">' . nl2br(htmlspecialchars($buffer)) . '</div>
+        <pre>';
+$endTimeTrans = $endTimeTrans;
+echo "<b>Response time:</b> $endTimeTrans secs. ";
 
-
-echo '<div class="status"><span class="label">Response time</span></div>';
-echo '<pre>';
-$endTimeTrans=$endTimeTrans;
-echo "$endTimeTrans secs. ";
-if ($endTimeTrans<2 )
-    echo "<span style='color:purple;background-color:black;font-weight:bold'>FAST!</span>";
-else if ($endTimeTrans<5)
-    echo "<span style='color:green;background-color:black;font-weight:bold'>GOOD</span>";
-else if ($endTimeTrans<10)
-    echo "<span style='color:blue;background-color:black;font-weight:bold'>NORMAL</span>";
-else if ($endTimeTrans<30) 
-    echo "<span style='color:orange;background-color:black;font-weight:bold'>SLOW</span>";
-else 
-    echo "<span style='color:red;background-color:black;font-weight:bold'>TOO SLOW</span>";
+if ($endTimeTrans < 2) {
+    echo "<span style='color: #28a745; font-weight: bold; font-size: 1.2em;'>FAST!</span>"; // Green
+} else if ($endTimeTrans < 5) {
+    echo "<span style='color: #007bff; font-weight: bold; font-size: 1.2em;'>GOOD/span>"; // Blue
+} else if ($endTimeTrans < 10) {
+    echo "<span style='color: #ffc107; font-weight: bold; font-size: 1.2em;'>NORMAL </span>"; // Yellow
+} else if ($endTimeTrans < 30) {
+    echo "<span style='color: #fd7e14; font-weight: bold; font-size: 1.2em;'>SLOW</span>"; // Orange
+} else {
+    echo "<span style='color: #dc3545; font-weight: bold; font-size: 1.2em;'>TOO CHIMMING SLOW</span>"; // Red
+}
 
 echo '</pre>';
+echo '</div>'; // End of status div
 echo '</div>'; // End of section
 
 echo '<br>';
 echo '<div class="status">
-        <span class="label" style="font-weight: bold; color: yellow; background-color: black; padding: 5px; display: inline-block;">
+        <span class="label" style="font-weight: bold; color: yellow; padding: 5px; display: inline-block;">
             TROUBLESHOOTING FIXES
         </span>
         <ul class="error-list" style="margin-top: 15px; list-style-type: none; padding-left: 0;">
             <li style="margin-bottom: 20px;">
                 <strong>401 = Unauthorized</strong>
                 <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                    <li>Check your API key is correct</li>
-                    <li>Make sure you have credits on your account</li>
+                    <li>Check your API key.</li>
+                    <li>Ensure you have enough credits on your account.</li>
                 </ul>
             </li>
             <li style="margin-bottom: 20px;">
                 <strong>402 = Payment Required</strong>
                 <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                    <li>Make sure you have credits on your account</li>
+                    <li>Make sure your account has credits.</li>
                 </ul>
             </li>
             <li style="margin-bottom: 20px;">
                 <strong>403 = Forbidden</strong>
                 <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                    <li>Your prompt may have been flagged for content moderation</li>
+                    <li>Your prompt may be flagged for moderation.</li>
                 </ul>
             </li>
             <li style="margin-bottom: 20px;">
                 <strong>404 = Not Found</strong>
                 <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                    <li>Your connector URL has been changed or is incorrect</li>
+                    <li>Check if your connector URL is correct.</li>
                 </ul>
             </li>
             <li style="margin-bottom: 20px;">
                 <strong>500 = Internal Server Error</strong>
                 <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                    <li>The server is experiencing technical difficulties</li>
+                    <li>The server is experiencing issues.</li>
                 </ul>
             </li>
             <li style="margin-bottom: 20px;">
                 <strong>LLM Response is Empty</strong>
                 <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                    <li>You need to put credits in your account</li>
+                    <li>Ensure your account has credits.</li>
                 </ul>
             </li>
             <li style="margin-bottom: 20px;">
-                <strong>If you get a response but it fails ingame (array) </strong>
+                <strong>Response fails in-game</strong>
                 <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                    <li>Check Server Plugins - Request Logs, you most likely have a token credit limit on your API.</li>
+                    <li>Check server logs for token limits.</li>
                 </ul>
             </li>
         </ul>

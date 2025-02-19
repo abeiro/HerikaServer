@@ -143,7 +143,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 				
                 $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"];
 
-                $connectionHandler=new connector();
+                $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
                 $connectionHandler->open($prompt, []);
 
                 $buffer="";

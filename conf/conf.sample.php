@@ -24,6 +24,7 @@ $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that wi
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=true; //Leave as is - read only
+$TIME_AWARENESS=false; //Overwrites the prompt to the AI to make it more aware of the passage of time
 $MAX_WORDS_LIMIT=0; //Enforce a word limit for AI's responses. 0 = unlimited.
 $BOOK_EVENT_FULL=true; //Sends full contents of books to the AI
 $BOOK_EVENT_ALWAYS_NARRATOR=false; //Only The Narrator summarizes books.
@@ -31,6 +32,7 @@ $NARRATOR_TALKS=true; //Enables the Narrator.
 $NARRATOR_WELCOME=true;
 $QUEST_COMMENT = false;
 $QUEST_COMMENT_CHANCE= "10%";
+$CURRENT_TASK=true; //Sends current plan/quest to the AI
  //The Narrator will recap previous events after a save is loaded.
 $LANG_LLM_XTTS=false; //XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language.
 $HERIKA_ANIMATIONS=true; //Issues animations to AI driven NPCs.
@@ -64,7 +66,7 @@ $DYNAMIC_PROMPT = "Use the recent Dialogue history to update the dynamic charact
     . " Relation with other characters if any: "
     . "DO NOT WRITE HOW MANY KEYWORDS YOU HAVE USED OR OTHER META DATA!";
 
-$RPG_COMMENT=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep"]; //AI Service(s).
+$RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
 
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).
@@ -204,6 +206,7 @@ $TTS["MIMIC3"]["volume"]="60"; //Speech volume.
 $TTS["XVASYNTH"]["url"]='http://192.168.0.1:8008';	//xVASynth must be run in same machine as DwemerDistro, so this must be http://your-local-ip:8008
 $TTS["XVASYNTH"]["base_lang"]='en';	//Base language.
 $TTS["XVASYNTH"]["modelType"]='xVAPitch'; //ModelType.
+$TTS["XVASYNTH"]["version"]='3.0'; //Version.
 $TTS["XVASYNTH"]["game"]='skyrim'; //Game.
 $TTS["XVASYNTH"]["model"]='sk_malenord'; //Model.
 $TTS["XVASYNTH"]["pace"]=1.0; //Pace.

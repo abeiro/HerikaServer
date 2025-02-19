@@ -10,7 +10,8 @@ require_once($localPath . "lib/chat_helper_functions.php");
 
 function stt($filePath)
 {
-    if (!array_key_exists('db', $GLOBALS))
+
+    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"])
         $GLOBALS["db"] = new sql();
 
     $fileContent = file_get_contents($filePath);

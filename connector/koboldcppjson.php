@@ -2,7 +2,7 @@
 
 /* kolboldcpp connector */
 
-class connector
+class koboldcppjson
 {
     public $primary_handler;
     public $name;
