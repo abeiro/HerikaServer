@@ -1725,7 +1725,7 @@ function call_llm() {
 
                 $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
                 echo implode("\r\n", $actions).PHP_EOL;
-                file_put_contents(__DIR__."/log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
+                file_put_contents(__DIR__."/../log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
 
             }
         }
