@@ -321,7 +321,6 @@ final class OghmaTest extends DatabaseTestCase
         $content = json_decode($options['http']['content']);
         $found=false;
         foreach ($content->messages as $message) {
-            print_r($message);
             if (json_encode($message) === json_encode($expectedPrompt)) {
                 $found = true;
                 break;
