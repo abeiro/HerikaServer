@@ -1028,7 +1028,7 @@ if (php_sapi_name()=="cli") {
 
 
 // POST PROCESS TASKS
-if ($semaphore) 
+if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
 while(@ob_end_clean());
