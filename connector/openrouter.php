@@ -44,7 +44,16 @@ class openrouter
                 }
             }
         }
+
+        // Remove context elements with empty content
+        $contextDataCopy=[];
+        foreach ($contextData as $n=>$element) {
+            if (!empty($element["content"])) {
+                $contextDataCopy[]=$element;
+            }
+        }
         
+        $contextData=$contextDataCopy;
 
         $data = array(
             'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-3.5-turbo-0613',
