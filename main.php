@@ -862,7 +862,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 
 
 // POST PROCESS TASKS
-if ($semaphore) 
+if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
 while(!getenv("PHPUNIT_TEST") && @ob_end_clean());
