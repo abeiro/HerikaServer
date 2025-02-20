@@ -330,7 +330,7 @@ function returnLines($lines,$writeOutput=true)
             }
         }
         else {
-            $output = preg_replace('/\*(\w+\s+\w+.*)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+            $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
         }
         $sentence=$output;
         $output = strtr($sentence,[
