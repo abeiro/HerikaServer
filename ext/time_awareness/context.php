@@ -84,13 +84,13 @@ $getTimeText = function($inGameSeconds, $inGameDays) {
         return "";
     }
     if ($inGameDays < 1) {
-        return "It's been a few hours since they last met.";
+        return "It's been a few hours since they last interacted.";
     } elseif ($inGameDays < 7) {
-        return "It's been a few days since they last met.";
+        return "It's been a few days since they last interacted.";
     } elseif ($inGameDays < 30) {
-        return "It has been weeks since they last met.";
+        return "It has been weeks since they last interacted.";
     } elseif ($inGameDays < 365) {
-        return "It has been months since they last met.";
+        return "It has been months since they last interacted.";
     } else {
         $years = floor($inGameDays / 365);
         return "It has been $years year" . ($years > 1 ? "s" : "") . " since they last interacted.";
