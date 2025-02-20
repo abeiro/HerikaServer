@@ -41,7 +41,7 @@ $getInteractionPrompts = function($npc, $player, $timeText) {
         return "$npc ve a $player. $timeText";
     }
 
-    if (in_array($GLOBALS["gameRequest"][0],["inputtext","inputtext_s"])) {
+    if (in_array($GLOBALS["gameRequest"][0],["inputtext","inputtext_s", "ginputtext", "ginputtext_s"])) {
         return "$npc reconoce a $player. $timeText";
     }
 
@@ -56,7 +56,7 @@ $getInteractionPrompts = function($npc, $player, $timeText) {
  * @return string The prompt text or an empty string if the request type is not supported.
  */
 $getFirstTimePrompts = function($npc, $player) {
-    if (in_array($GLOBALS["gameRequest"][0],["radiant","im_alive","inputtext","inputtext_s"])) {
+    if (in_array($GLOBALS["gameRequest"][0],["radiant","im_alive","inputtext","inputtext_s", "ginputtext", "ginputtext_s"])) {
         return "$npc habla con $player por primera vez. Aún no se conocen.";
     }
 
