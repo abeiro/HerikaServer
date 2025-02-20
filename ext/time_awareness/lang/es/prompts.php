@@ -13,16 +13,16 @@ $getTimeText = function($inGameSeconds, $inGameDays) {
         return "";
     }
     if ($inGameDays < 1) {
-        return "Han pasado unas horas desde la última vez que se vieron.";
+        return "Han pasado unas horas desde su última interacción.";
     } elseif ($inGameDays < 7) {
-        return "Han pasado unos días desde la última vez que se vieron.";
+        return "Han pasado unos días desde su última interacción.";
     } elseif ($inGameDays < 30) {
-        return "Han pasado semanas desde la última vez que se vieron.";
+        return "Han pasado semanas desde su última interacción.";
     } elseif ($inGameDays < 365) {
-        return "Han pasado meses desde la última vez que se vieron.";
+        return "Han pasado meses desde su última interacción.";
     } else {
         $years = floor($inGameDays / 365);
-        return "Ha pasado $years año" . ($years > 1 ? "s" : "") . " desde la última vez que interactuaron.";
+        return "Ha pasado $years año" . ($years > 1 ? "s" : "") . " desde su última interacción.";
     }
 };
 

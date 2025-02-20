@@ -13,13 +13,13 @@ $getTimeText = function($inGameSeconds, $inGameDays) {
         return "";
     }
     if ($inGameDays < 1) {
-        return "Minęło kilka godzin od ich ostatniego spotkania.";
+        return "Minęło kilka godzin od ich ostatniej interakcji.";
     } elseif ($inGameDays < 7) {
-        return "Minęło kilka dni od ich ostatniego spotkania.";
+        return "Minęło kilka dni od ich ostatniej interakcji.";
     } elseif ($inGameDays < 30) {
-        return "Minęło kilka tygodni od ich ostatniego spotkania.";
+        return "Minęło kilka tygodni od ich ostatniej interakcji.";
     } elseif ($inGameDays < 365) {
-        return "Minęło kilka miesięcy od ich ostatniego spotkania.";
+        return "Minęło kilka miesięcy od ich ostatniej interakcji.";
     } else {
         $years = floor($inGameDays / 365);
         return "Minęło $years rok" . ($years > 1 ? "ów" : "") . " od ich ostatniej interakcji.";
