@@ -10,8 +10,9 @@ $enginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
 
-$GLOBALS["DBDRIVER"]="postgresql";
-
+if (!isset($GLOBALS["DBDRIVER"])) {
+    $GLOBALS["DBDRIVER"]="postgresql";
+}
 
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
@@ -87,7 +88,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
         echo "Creating memories".PHP_EOL;
         $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
-		require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
+        require_once($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 		
 		error_log("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
         $results = $db->query("select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where 
