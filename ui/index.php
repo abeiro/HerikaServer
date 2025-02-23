@@ -21,7 +21,7 @@ $configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
 
 // Profile selection
 $GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
+foreach (glob($configFilepath . 'conf_????????????????????????????????????????????????.php') as $mconf ) {
     if (file_exists($mconf)) {
         $filename=basename($mconf);
         $pattern = '/conf_([a-f0-9]+)\.php/';
@@ -576,9 +576,14 @@ include("tmpl/navbar.php");
     if ($_GET["plugins_show"]) {
         $pluginFoldersRoot = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "ext" . DIRECTORY_SEPARATOR;
         $pluginFolders = scandir($pluginFoldersRoot);
-        foreach ($pluginFolders as $n => $folder)
-            if (!is_dir($pluginFoldersRoot . $folder) || substr($folder, 0, 1) === '.')
+        foreach ($pluginFolders as $n => $folder) {
+            // Skip hidden folders, non-directories, and xLifeLink_plugin
+            if (!is_dir($pluginFoldersRoot . $folder) || 
+                substr($folder, 0, 1) === '.' || 
+                $folder === 'xLifeLink_plugin') {
                 unset($pluginFolders[$n]);
+            }
+        }
     
         // Add custom styles
         echo '<style>
@@ -665,6 +670,20 @@ include("tmpl/navbar.php");
                 <th>Plugin Menu</th>
                 <th>Delete Plugin</th>
             </tr>';
+
+        // Add function to handle delete button display
+        function renderDeleteButton($folder, $name = null) {
+            if ($folder !== 'herika_heal' && $folder !== 'time_awareness') {
+                $displayName = $name ?? $folder;
+                return '<form method="post" style="margin:0;" onsubmit="return confirm(\'Are you sure you want to delete the ' . htmlspecialchars($displayName) . ' plugin?\');">
+                            <input type="hidden" name="delete_plugin" value="' . htmlspecialchars($folder) . '">
+                            <button type="submit" class="delete-plugin-btn">Delete Plugin</button>
+                        </form>';
+            }
+            return 'Cannot be deleted';
+        }
+
+        // In the manifest.json exists case
         foreach ($pluginFolders as $folder) {
             $manifestPath = $pluginFoldersRoot . $folder . '/manifest.json';
             if (file_exists($manifestPath)) {
@@ -683,33 +702,13 @@ include("tmpl/navbar.php");
                     echo 'No Plugin Page';
                 }
                 echo '</td>';
-                // Add delete button conditionally
-                echo '<td>';
-                if ($folder !== 'herika_heal' && $folder !== 'xLifeLink_plugin') {
-                    echo '<form method="post" style="margin:0;" onsubmit="return confirm(\'Are you sure you want to delete the ' . htmlspecialchars($name) . ' plugin?\');">
-                            <input type="hidden" name="delete_plugin" value="' . htmlspecialchars($folder) . '">
-                            <button type="submit" class="delete-plugin-btn">Delete Plugin</button>
-                          </form>';
-                } else {
-                    echo 'Cannot be deleted';
-                }
-                echo '</td>';
+                echo '<td>' . renderDeleteButton($folder, $name) . '</td>';
                 echo '</tr>';
             } else {
                 echo '<tr>';
                 echo '<td>' . htmlspecialchars($folder) . '</td>';
                 echo '<td colspan="2">No manifest.json found</td>';
-                // Add delete button conditionally
-                echo '<td>';
-                if ($folder !== 'herika_heal') {
-                    echo '<form method="post" style="margin:0;" onsubmit="return confirm(\'Are you sure you want to delete the ' . htmlspecialchars($folder) . ' plugin?\');">
-                            <input type="hidden" name="delete_plugin" value="' . htmlspecialchars($folder) . '">
-                            <button type="submit" class="delete-plugin-btn">Delete Plugin</button>
-                          </form>';
-                } else {
-                    echo 'Protected';
-                }
-                echo '</td>';
+                echo '<td>' . renderDeleteButton($folder) . '</td>';
                 echo '</tr>';
             }
         }
