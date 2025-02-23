@@ -444,7 +444,7 @@ include("tmpl/navbar.php");
             echo "<div class='alert alert-success'>Memory summary updated successfully!</div>";
         }
 
-        $results = $db->fetchAll("select gamets_truncated,n,packed_message,summary,companions,classifier,tags,uid,ROWID as rowid FROM memory_summary A order by gamets_truncated desc,rowid desc limit 150 offset 0");
+        $results = $db->fetchAll("select gamets_truncated,n,summary,companions,classifier,tags,uid,ROWID as rowid, packed_message FROM memory_summary A order by gamets_truncated desc,rowid desc limit 150 offset 0");
         
         // Map original column names to new display names
         $columnHeaders = [
@@ -459,12 +459,10 @@ include("tmpl/navbar.php");
         // Change keys in the result array to match the new column names
         $mappedResults = array_map(function ($row) use ($columnHeaders) {
             $mappedRow = [];
-            foreach ($row as $key => $value) {
-                if ($key != 'packed_message') { // Skip the memory contents from display columns
-                    $mappedRow[$columnHeaders[$key] ?? $key] = $value;
-                }
+            foreach ($columnHeaders as $key => $display) {
+                $mappedRow[$display] = $value = $row[$key];
             }
-            // Preserve packed_message for modal display
+            // Store packed_message for use in the display, but don't show as column
             $mappedRow['packed_message'] = $row['packed_message'];
             return $mappedRow;
         }, $results);
@@ -495,9 +493,23 @@ include("tmpl/navbar.php");
                 margin-bottom: 5px;
             }
             .memory-content {
-                max-height: 100px;
+                height: 100%;
+                min-height: 150px;
                 overflow-y: auto;
                 padding: 5px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                font-family: monospace;
+                border: 1px solid #ddd;
+                background: var(--bs-body-bg);
+                display: block;
+                width: 100%;
+            }
+            .memory-cell {
+                height: 100%;
+                position: relative;
+                min-height: 150px;
+                padding: 0 !important;
             }
             .summary-section {
                 margin-bottom: 8px;
@@ -547,6 +559,12 @@ include("tmpl/navbar.php");
                     <span class='summary-content'>" . htmlspecialchars($row['companions']) . "</span>
                 </div>
                 <button class='edit-btn btn btn-primary btn-sm' onclick='toggleEdit({$row['rowid']})'>Edit</button>
+                <div class='mt-2'>
+                    <span class='summary-label'>Packed Memory Content:</span>
+                </div>
+                <div class='memory-cell'>
+                    <textarea readonly class='memory-content'>" . htmlspecialchars($row['packed_message']) . "</textarea>
+                </div>
             </div>";
             
             $summaryHtml .= "<form id='edit-form-{$row['rowid']}' class='edit-form' method='post'>
@@ -564,6 +582,7 @@ include("tmpl/navbar.php");
             $row['Summary Contents'] = $summaryHtml;
             unset($row['tags']);
             unset($row['companions']);
+            unset($row['packed_message']);
         }
 
         print_array_as_table($mappedResults);
