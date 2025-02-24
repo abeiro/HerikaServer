@@ -31,7 +31,7 @@ Event HerikaHealTarget(String  command, String parameter)
 EndEvent
 
 
-***/
+
 
 
 // Name of the function. This is what will be offered to LLM. Can be overwrited by LANG. 
@@ -114,3 +114,4 @@ $GLOBALS["FUNCRET"]["ExtCmdHeal"]=function($gameRequest) {
 };
 
 ?>
+***/
