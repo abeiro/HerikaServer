@@ -75,9 +75,7 @@ abstract class DatabaseTestCase extends TestCase
             require_once($path.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR."minai_plugin".DIRECTORY_SEPARATOR."customintegrations.php");
             $GLOBALS["db"] = $testConnection;
 
-            CreateThreadsTableIfNotExists();
-            CreateActionsTableIfNotExists();
-            CreateContextTableIfNotExists();
+            InitiateDBTables();
             importXPersonalities();
             importScenesDescriptions();
             unset($GLOBALS["db"]);

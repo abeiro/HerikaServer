@@ -100,6 +100,7 @@ if ($method === "POST") {
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
         $GLOBALS["FORCE_MAX_TOKENS"]=1500;
+		$gameRequest=["updateprofile"];	// Fake an updateprofile call.
 		$connectionHandler->open($contextData, ["max_tokens"=>1500]);
 		$buffer      = "";
 		$totalBuffer = "";
