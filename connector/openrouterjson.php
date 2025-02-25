@@ -425,9 +425,14 @@ class openrouterjson
         if (!isset($GLOBALS["patch_openrouter_timeout"]))
             $GLOBALS["patch_openrouter_timeout"]=time();
 
+        $buffer = "";
+        $totalBuffer = "";
+        $mangledBuffer = "";
+        $finalData = "";
+
         if ($this->isDone()) {
             if (!$this->_buffer || empty(trim($this->_buffer))) {
-                $line="";    
+                $line = "";    
                 error_log("LLM didn't output anything");
             }
         } else {
