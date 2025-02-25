@@ -1616,7 +1616,7 @@ function call_llm() {
     }
 
     // Check for error response code
-    $statusCode = $connectionHandler->getHttpStatusCode();
+    $statusCode = method_exists($connectionHandler, 'getHttpStatusCode') ? $connectionHandler->getHttpStatusCode() : 200;
     if ($statusCode >= 300) {
         error_log("LLM provider error response code: $statusCode");
         return false;
