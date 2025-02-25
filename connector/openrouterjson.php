@@ -425,7 +425,7 @@ class openrouterjson
         if (!isset($GLOBALS["patch_openrouter_timeout"]))
             $GLOBALS["patch_openrouter_timeout"]=time();
 
-        if ($this->isDone()) {//  Didn't output anything?
+        if ($this->isDone()) {
             if (!$this->_buffer || empty(trim($this->_buffer))) {
                 $line="";    
                 error_log("LLM didn't output anything");
@@ -435,21 +435,20 @@ class openrouterjson
                 $this->_rawbuffer.="Error, timeout when receiving data from LLM";
                 error_log("Error, timeout when receiving data from LLM");
                 $this->_forcedClose=true;
-                
-                return;
+                return -1;
             }
-            //error_log("Performing fgets(this->primary_handler) START {$GLOBALS["patch_openrouter_timeout"]}");
             $line = fgets($this->primary_handler);
-            //error_log("Performing fgets(this->primary_handler) DONE {$GLOBALS["patch_openrouter_timeout"]}");
         }
-        
-        $buffer="";
-        $totalBuffer="";
-        $finalData="";
-        $mangledBuffer="";
         
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
         $this->_rawbuffer.=$line;
+        
+        // Check for error response
+        if (strpos($line, '"error"') !== false) {
+            error_log("Error response from LLM: $line");
+            return -1;
+        }
+        
         $data=json_decode(substr($line, 6), true);
         if (isset($data["choices"][0]["delta"]["content"])) {
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
