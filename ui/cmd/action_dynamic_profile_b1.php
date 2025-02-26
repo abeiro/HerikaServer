@@ -104,12 +104,12 @@ if ($method === "POST") {
 		$maxTokens = 1000; // Default fallback
 		switch($GLOBALS["CONNECTORS_DIARY"]) {
 			case "openrouter":
-				$maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["max_tokens"]) ? 
-					$GLOBALS["CONNECTOR"]["openrouter"]["max_tokens"] : $maxTokens;
+				$maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
+					$GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"] : $maxTokens;
 				break;
 			case "openai":
-				$maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["max_tokens"]) ? 
-					$GLOBALS["CONNECTOR"]["openai"]["max_tokens"] : $maxTokens;
+				$maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
+					$GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"] : $maxTokens;
 				break;
 			case "google_openaijson":
 				$maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
