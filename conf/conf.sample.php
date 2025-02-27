@@ -55,13 +55,13 @@ $EMOTEMOODS="sassy,"
     . "teasing,"
     . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
-$DYNAMIC_PROMPT = "(MANDATORY FORMAT  DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA COMMENTARY I.E. NPC NAME. NO META-DATA, or DISCLAIMERS OF TASK! I.E. UPDATING NPC PROFILE.) "
-    . "Last in-game date/time found: [date or No date] "
-    . "1. RECENT HIGHLIGHTS (3 to 5 bullet points) "
+$DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA COMMENTARY I.E. NPC NAME. NO META-DATA, or DISCLAIMERS OF TASK! I.E. \"UPDATING NPC PROFILE\". Use concise, fragmented prose for the following output.) "
+    . "Last in-game date/time found: [date or \"No date\"] "
+    . "1. RECENT HIGHLIGHTS (3–5 bullet points) "
     . "   - Write one sentence per bullet with objective facts (locations, quest progress, important decisions). Re-list older relevant events DO NOT REMOVE ENTRIES that are still important. "
-    . "2. EMOTIONAL/RELATIONAL UPDATES (1 to 2 lines per key person/faction) "
+    . "2. EMOTIONAL/RELATIONAL UPDATES (1–2 lines per key person/faction) "
     . "   - Describe the NPC's evolving feelings or stance toward the dragonborn, key individuals or groups. Always re-list unchanged but relevant relationships. "
-    . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2 to 3 bullet points) "
+    . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2–3 bullet points) "
     . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
