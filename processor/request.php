@@ -3,6 +3,8 @@
  Request creation and player_request overriding
 */
 
+$sk_date = convert_gamets2skyrim_date($gameRequest[2]); //skyrim date 
+
 if ($gameRequest[0] == "funcret") { // Take out the functions part
 
 	$returnFunction = explode("@", $gameRequest[3]); // Function returns here
@@ -117,7 +119,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	$GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];
 
 	logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["HERIKA_NAME"],
-        "(Important note: Something important happened here for {$GLOBALS["PLAYER_NAME"]}. You should use the tag #PlotRelevantEvent)",
+        "(Important note: Something important happened here for {$GLOBALS["PLAYER_NAME"]} on {$sk_date}. You should use the tag #PlotRelevantEvent)",
         $momentum, $gameRequest[2],'diary_intent',$gameRequest[1]);
 
 } else {

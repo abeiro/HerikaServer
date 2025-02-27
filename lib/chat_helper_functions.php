@@ -1023,7 +1023,7 @@ function offerMemoryOld($gameRequest, $DIALOGUE_TARGET)
                         // Memory fuzz
                         $fuzzMemoryElement="".randomReplaceShortWordsWithPoints($singleMemory["briefing"], $singleMemory["distance"])."";
 
-                        $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["timestamp"])/ (60*60*24*20), 0)." days ago. {$fuzzMemoryElement}";
+                        $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["timestamp"]) * 0.0000001, 0)." days ago. {$fuzzMemoryElement}";
 
                     }
                     $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
@@ -1083,7 +1083,7 @@ function offerMemoryOld($gameRequest, $DIALOGUE_TARGET)
                         // Memory fuzz
                         $fuzzMemoryElement="".randomReplaceShortWordsWithPoints($singleMemory["briefing"], $singleMemory["distance"])."";
 
-                        $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["timestamp"])/ (60*60*24*20), 0)." days ago. {$fuzzMemoryElement}";
+                        $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["timestamp"]) * 0.0000001, 0)." days ago. {$fuzzMemoryElement}";
 
                     }
                     $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
@@ -1223,11 +1223,11 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
         return "";
     
     if (!empty($memory)) {
-        $hoursAgo=round(($gameRequest[2]-$memories[0]["gamets_truncated"])/ (60 * 60 * 40 * 24), 0);
+        $hoursAgo=round(($gameRequest[2]-$memories[0]["gamets_truncated"]) * 0.0000024, 0);
         $pattern = '/#Tags:.*/';
         $replacement = '';
         $output = preg_replace($pattern, $replacement, $memory);
-        $memory="$hoursAgo days ago ....  $output";
+        $memory="$hoursAgo hours ago ....  $output";
     }
     // print_r($memories);
     return ($memory);
@@ -1321,7 +1321,7 @@ function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
                 // Memory fuzz
                 $fuzzMemoryElement="".randomReplaceShortWordsWithPoints($singleMemory["content"], current($mostRelevantMemoryResult))."";
 
-                $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["gamets_truncated"])/ (60*60*24*20), 0)." days ago. {$fuzzMemoryElement}";
+                $outLocalBuffer.=round(($gameRequest[2]-$singleMemory["gamets_truncated"]) * 0.0000001, 0)." days ago. {$fuzzMemoryElement}";
 
             }
             $GLOBALS["DEBUG_DATA"]["memories"][]=$textToEmbedFinal;
