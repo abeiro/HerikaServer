@@ -1224,10 +1224,17 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     
     if (!empty($memory)) {
         $hoursAgo=round(($gameRequest[2]-$memories[0]["gamets_truncated"]) * 0.0000024, 0);
+        if($hoursAgo > 72) {
+            $daysAgo = floor(($gameRequest[2]-$memories[0]["gamets_truncated"]) * 0.0000001);
+            $sk_date = gamets2str_format_date($memories[0]["gamets_truncated"], 'Y-m-d');    
+            $s_prefix = "{$daysAgo} days ago, on {$sk_date} ... ";
+        } else {
+            $s_prefix = "{$hoursAgo} hours ago ... ";
+        }
         $pattern = '/#Tags:.*/';
         $replacement = '';
         $output = preg_replace($pattern, $replacement, $memory);
-        $memory="$hoursAgo hours ago ....  $output";
+        $memory = $s_prefix . $output;
     }
     // print_r($memories);
     return ($memory);
