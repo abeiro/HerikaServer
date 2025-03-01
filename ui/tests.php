@@ -249,9 +249,9 @@ echo "<b>Response time:</b> $endTimeTrans secs. ";
 if ($endTimeTrans < 2) {
     echo "<span style='color: #28a745; font-weight: bold; font-size: 1.2em;'>FAST!</span>"; // Green
 } else if ($endTimeTrans < 5) {
-    echo "<span style='color: #007bff; font-weight: bold; font-size: 1.2em;'>GOOD/span>"; // Blue
+    echo "<span style='color: #007bff; font-weight: bold; font-size: 1.2em;'>GOOD</span>"; // Blue
 } else if ($endTimeTrans < 10) {
-    echo "<span style='color: #ffc107; font-weight: bold; font-size: 1.2em;'>NORMAL </span>"; // Yellow
+    echo "<span style='color: #ffc107; font-weight: bold; font-size: 1.2em;'>NORMAL</span>"; // Yellow
 } else if ($endTimeTrans < 30) {
     echo "<span style='color: #fd7e14; font-weight: bold; font-size: 1.2em;'>SLOW</span>"; // Orange
 } else {
