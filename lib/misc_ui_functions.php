@@ -93,6 +93,7 @@ function print_array_as_table($data)
 
 
 
+// Move below javascript code elsewhere
 ?>
 
 <script>

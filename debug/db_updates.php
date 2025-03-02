@@ -716,4 +716,25 @@ if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
 
 //----------------------------------------------------
 
+
+
+//----------------------------------------------------
+// npc_template and oghma table. 1.1.0 update
+// 
+//----------------------------------------------------
+                                          
+if ($checkVersion("npc_templates")<20250302001) {
+    $query="TRUNCATE TABLE public.npc_templates";
+    $db->execQuery($query);
+    $db->execQuery(file_get_contents(__DIR__."/../data/npc_templates_20250302001.sql"));
+
+    $query="TRUNCATE TABLE public.oghma";
+    $db->execQuery($query);
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_20250302001.sql"));
+    
+    $updateVersion("npc_templates",20250302001);
+    $updateVersion("oghma",20250302001);
+    error_log("Applied patch 20250302001");
+}
+
 ?>
