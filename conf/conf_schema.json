@@ -1,6 +1,7 @@
 {
   "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"Your current character name.","_title":"Biography Management"},
   "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change."},
+  "LOCK_PROFILE": {"userlvl":"basic","type":"boolean","description":"When enabled, this profile will be skipped when using 'Copy to All Profiles' functionality. Can not be toggled for the default profile."},
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!<br>If you are in the default profile <b>YOU MUST</b> leave it as <i>The Narrator</i>!<br><b>You can change profiles by clicking the blue button in the top left.</b>"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
