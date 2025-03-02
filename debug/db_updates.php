@@ -4,7 +4,7 @@ $checkVersion = function($tablename) {
     global $db;
     $query = "
     SELECT version 
-    FROM database_versioning
+    FROM public.database_versioning
     WHERE tablename = '$tablename'
     ";
 
@@ -727,14 +727,18 @@ if ($checkVersion("npc_templates")<20250302001) {
     $query="TRUNCATE TABLE public.npc_templates";
     $db->execQuery($query);
     $db->execQuery(file_get_contents(__DIR__."/../data/npc_templates_20250302001.sql"));
+    $updateVersion("npc_templates",20250302001);
+    error_log("Applied patch npc_templates 20250302001");
+}
+
+if ($checkVersion("oghma")<20250902002) {
 
     $query="TRUNCATE TABLE public.oghma";
     $db->execQuery($query);
     $db->execQuery(file_get_contents(__DIR__."/../data/oghma_20250302001.sql"));
     
-    $updateVersion("npc_templates",20250302001);
-    $updateVersion("oghma",20250302001);
-    error_log("Applied patch 20250302001");
+    $updateVersion("oghma",20250902002);
+    error_log("Applied patch oghma 20250902002");
 }
 
 ?>
