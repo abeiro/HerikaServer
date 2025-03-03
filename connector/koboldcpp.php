@@ -52,7 +52,11 @@ class koboldcpp
             }
         }
 
-        $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###","```"];
+        if (in_array($GLOBALS["gameRequest"][0],["diary", "summary", "updateprofile"])) {
+            $stop_sequence=["Author's notes","###","```"];
+        } else {
+            $stop_sequence=["{$GLOBALS["PLAYER_NAME"]}:","\n{$GLOBALS["PLAYER_NAME"]} ","Author's notes","###","```"];
+        }
 
 
         if ($GLOBALS["CONNECTOR"][$this->name]["template"]=="alpaca") {
@@ -132,12 +136,17 @@ class koboldcpp
         }
 
         if (isset($GLOBALS["more_stopseq"])) {
-            foreach ($GLOBALS["more_stopseq"] as $stopseq)
-                $stop_sequence[]=$stopseq;
+            foreach ($GLOBALS["more_stopseq"] as $stopseq) {
+                if (!in_array($stopseq, $stop_sequence)) {
+                    $stop_sequence[]=$stopseq;
+                }
+            }
         }
 
         ///
-        $stop_sequence[]=$GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"];
+        if (!in_array($GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"], $stop_sequence)) {
+            $stop_sequence[]=$GLOBALS["CONNECTOR"]["koboldcpp"]["eos_token"];
+        }
         ///
         $postData = array(
 
@@ -169,8 +178,6 @@ class koboldcpp
 
         // Grammar Sampling.
         if ($GLOBALS["gameRequest"][0]=="diary"){
-
-            $postData["stop_sequence"]=["Author's notes","###","```"];
             
             $postData["grammar"]='
 root ::= fullanswer
@@ -181,7 +188,7 @@ keywords ::= char keywords | char
 ANYTEXT ::= [a-zA-Z0-9.,?!\' \n]
 ';
 
-        } else if ($GLOBALS["gameRequest"][0]=="summary") {
+        } else if (in_array($GLOBALS["gameRequest"][0],["summary", "updateprofile"])) {
             /*$eos_token_allow_grammar='';
             $postData["grammar"]='
 root ::= fullanswer
@@ -300,8 +307,29 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
         $request .= "Connection: close\r\n\r\n";
         $request .= $dataJson;
 
-        // Open a TCP connection
-        //$this->primary_handler = fsockopen('tcp://' . $host, $port, $errno, $errstr, 30);
+        // Open a TCP connection and send the HTTP request
+        if (!$this->send($scheme, $host, $port, $request)) {
+            return false;
+        }
+        
+        // Initialize variables for response
+        $responseHeaders = '';
+        $responseBody = '';
+        
+        $this->_jsonBuffer="";
+        
+        return true;
+
+    }
+
+    public function send($scheme, $host, $port, $request) {
+        $errno = null;
+        $errstr = null;
+        if (isset($GLOBALS['mockConnectorSend'])) {
+            $this->primary_handler = call_user_func($GLOBALS['mockConnectorSend'], $host, $port, $errno, $errstr, 30, $request);
+            return true;
+        }
+
         if ($scheme=="https")
             $this->primary_handler = fsockopen('ssl://' . $host, 443, $errno, $errstr, 30);
         else
@@ -316,17 +344,8 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
             return false;
         }
 
-        
-        // Initialize variables for response
-        $responseHeaders = '';
-        $responseBody = '';
-        
-        $this->_jsonBuffer="";
-        
         return true;
-
     }
-
 
     public function process()
     {

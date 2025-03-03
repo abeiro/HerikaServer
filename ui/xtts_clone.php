@@ -409,7 +409,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <br>
     <label for="file" style="color: yellow;">If you have no voices in your cache, that is fine! Any new NPC's will have their voice cached in the future.</label>    <br>
     <br>
-    <label for="file"><a href="https://www.nexusmods.com/skyrimspecialedition/articles/7673" target="_blank">Here is a guide for running CHIM XTTS on the cloud.</a></label>
+    <label for="file"><a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.jl2x2nswa7az" target="_blank">Here is a guide for running CHIM XTTS on the cloud.</a></label>
         <br>
     <label for="file">Cached voices are saved in the server under data/voices. <a class="dropdown-item" href="../data/voices" target="_blank">View CHIM XTTS Cache</a></label>
     <form action="xtts_clone.php" method="post" onsubmit="showLoadingMessage();">

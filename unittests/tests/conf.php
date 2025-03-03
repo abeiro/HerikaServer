@@ -21,6 +21,7 @@ $GLOBALS["BORED_EVENT"]=100; //Bored Event Probability. Chance of an NPC startin
 $GLOBALS["CONTEXT_HISTORY"]="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
 $GLOBALS["HTTP_TIMEOUT"]=15; //Timeout for AI requests.
 $GLOBALS["CORE_LANG"]=""; //Custom languages. - language folder
+$GLOBALS["CURRENT_TASK"]=true; //Sends current plan/quest to the AI
 $GLOBALS["NEWQUEUE"]=true; //Leave as is - read only
 $GLOBALS["MAX_WORDS_LIMIT"]=0; //Enforce a word limit for AI's responses. 0 = unlimited.
 $GLOBALS["BOOK_EVENT_FULL"]=true; //Sends full contents of books to the AI
@@ -325,6 +326,7 @@ global $TEMPLATE_ACTION;
 global $MAXIMUM_WORDS;
 global $FUNCTION_PARM_INSPECT;
 global $COMMAND_PROMPT;
+global $COMMAND_PROMPT_FUNCTIONS;
 global $COMMAND_PROMPT_ENFORCE_ACTIONS;
 global $F_NAMES;
 global $F_RETURNMESSAGES;
@@ -345,6 +347,7 @@ $GLOBALS["contextDataWorld"]=[];
 $GLOBALS["contextDataFull"]=[];
 $GLOBALS["request"]="";
 $GLOBALS["COMMAND_PROMPT"]="";
+$GLOBALS["COMMAND_PROMPT_FUNCTIONS"]="Use # ACTIONS if your character needs to perfom an action.";
 $GLOBALS["CACHE_PEOPLE"]="";
 $GLOBALS["CACHE_LOCATION"]="";
 $GLOBALS["CACHE_PARTY"]="";

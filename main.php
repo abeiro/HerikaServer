@@ -443,7 +443,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
 /*
  Safe stop
 */
-if (preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {  
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"]) && preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {
     echo "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
     @ob_flush();
     $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
@@ -516,7 +516,7 @@ else if ($GLOBALS["IS_NPC"]) {
 $contextDataWorld = DataLastInfoFor("", -2);
 
 // Add current motto to COMMAND_PROMPT
-if ($gameRequest[0] != "diary")
+if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[0] != "diary") {
     if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator")) {
         $task=DataGetCurrentTask();
         if (empty($task)) {
@@ -526,6 +526,7 @@ if ($gameRequest[0] != "diary")
     } else {
         error_log("Task avoided {$GLOBALS["IS_NPC"]} ");
     }
+}
 
 // Offer memory in CONTEXT 
 /*
@@ -856,7 +857,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 
 
 // POST PROCESS TASKS
-if ($semaphore) 
+if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
 while(!getenv("PHPUNIT_TEST") && @ob_end_clean());

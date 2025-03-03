@@ -906,14 +906,14 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
 
 }
 
-function DataSpeechJournal($topic,$limit=50)
+function DataSpeechJournal($topic,$limit=50) 
 {
 
     global $db;
 
     $lastDialogFull = [];
     $tn=$db->escape($topic);
-    $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest FROM speech
+    $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest, convert_gamets2skyrim_date(gamets) AS sk_date, gamets FROM speech
       where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  companions like '%$tn%' or  companions like '%$tn%') 
       and listener<>'unknown' 
       order by rowid desc");
@@ -1128,24 +1128,37 @@ function DataLastRetFunc($actor, $lastNelements = -2)
 
 }
 
-function DataLastKnowDate()
+function DataLastKnowDate() 
 {
 
     global $db;
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
+    // try first with conversion from gamets in SQL 
+    $lastLoc=$db->fetchAll("SELECT convert_gamets2skyrim_long_date(a.gamets) AS data FROM eventlog a  WHERE (type in ('infoloc')) ORDER BY gamets desc, ts desc LIMIT 1");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        return "";
+        // no dice, try old way
+        $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
+        if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+            return "";
+        }
+        $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
+        if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
+            return $matches[0][0];
+        } else {
+            error_log("DataLastKnowDate: NO match found");
+            return "";
+        }
+    } else { // ok, db is updated with new dts functions
+        if (isset($lastLoc[0]["data"]) && (strlen($lastLoc[0]["data"])>0)) {
+            error_log(" dbg DataLastKnowDate: {$lastLoc[0]["data"]} ");
+            return $lastLoc[0]["data"];
+        } else {
+            error_log(" ERROR in DataLastKnowDate: NO match found");
+        }
     }
-    $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
-    if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
-        return $matches[0][0];
-    } else {
-        error_log("DataLastKnowDate: NO match found");
-        return "";
-    }
-
+    return "";
 }
+
 
 function DataLastKnownLocation()
 {
@@ -1583,20 +1596,17 @@ function call_llm() {
     $outputWasValid = true;
     $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
     $connectionHandler->open($contextData,$overrideParameters);
+
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
-
-
     if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
         $gameRequestCopy=$gameRequest;
         $gameRequestCopy[0]="infoaction";
         $gameRequestCopy[3]=$GLOBALS["PATCH_STORE_FUNC_RES"];
         logEvent($gameRequestCopy);
     }
-
     ///// PATCH
 
     if ($connectionHandler->primary_handler === false) {
-
         $db->insert(
             'log',
             array(
@@ -1604,8 +1614,6 @@ function call_llm() {
                 'prompt' => nl2br((json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
                 'response' => ((print_r(error_get_last(), true))),
                 'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
-
-
             )
         );
         returnLines([$GLOBALS["ERROR_OPENAI"]]);
@@ -1614,136 +1622,137 @@ function call_llm() {
         @ob_end_flush();
 
         error_log(print_r(error_get_last(), true));
-        $outputWasValid = false;
+        return false;
+    }
 
-    } else {
+    // Check for error response code
+    $statusCode = method_exists($connectionHandler, 'getHttpStatusCode') ? $connectionHandler->getHttpStatusCode() : 200;
+    if ($statusCode >= 300) {
+        error_log("LLM provider error response code: $statusCode");
+        return false;
+    }
 
-        // Read and process the response line by line
-        $buffer="";
-        $totalBuffer="";
-        $breakFlag=false;
-        $lineCounter=0;
-        $fullContent="";
-        $totalProcessedData="";
-        $numOutputTokens = 0;
+    // Read and process the response line by line
+    $buffer="";
+    $totalBuffer="";
+    $breakFlag=false;
+    $lineCounter=0;
+    $fullContent="";
+    $totalProcessedData="";
+    $numOutputTokens = 0;
 
-        while (true) {
+    while (true) {
+        if ($breakFlag) {
+            break;
+        }
 
-            if ($breakFlag) {
-                break;
-            }
+        $tmpData=$connectionHandler->process();
+        if ($tmpData==-1 || (isset($GLOBALS["VALIDATE_LLM_OUTPUT_FNCT"]) && !$GLOBALS["VALIDATE_LLM_OUTPUT_FNCT"]($tmpData))) {
+            error_log("Invalid JSON Output.");
+            $outputWasValid=false;
+            $breakFlag=true;
+        }
+        else {
+            $buffer.= $tmpData;
+            $totalBuffer.=$buffer; 
+        }
 
-            $tmpData=$connectionHandler->process();
-            if ($tmpData==-1) {
-                error_log("Invalid JSON Output.");
-                $outputWasValid=false;
-                $breakFlag=true;
-            }
-            else {
-                $buffer.= $tmpData;
-                $totalBuffer.=$buffer; 
-            }
+        if ($connectionHandler->isDone()) {
+            $breakFlag=true;
+        }
 
+        $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
-
-
-            if ($connectionHandler->isDone()) {
-                $breakFlag=true;
-            }
-
-            $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
-
-            if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
+        if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
                 continue;
             }
 
-            $position = findDotPosition($buffer);
+        $position = findDotPosition($buffer);
 
-            //echo "<$buffer>".PHP_EOL;
-            if ($position !== false && $position>MINIMUM_SENTENCE_SIZE ) {
-                $extractedData = substr($buffer, 0, $position + 1);
-                $remainingData = substr($buffer, $position + 1);
-                $sentences=split_sentences_stream(cleanResponse($extractedData));
-                $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
-                $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
-
-                if ($gameRequest[0] != "diary") {
-                    returnLines($sentences);
-                } else {
-                    $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
-                }
-
-                //echo "$extractedData  # ".(microtime(true)-$startTime)."\t".strlen($finalData)."\t".PHP_EOL;  // Output
-                $totalProcessedData.=$extractedData;
-                $extractedData="";
-                $buffer=$remainingData;
-                $user_input_after=$GLOBALS["db"]->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
-                if (isset($user_input_after[0]))
-                    if (isset($user_input_after[0]["N"]))
-
-                        if ($user_input_after[0]["N"]>0) {
-                            die('X-CUSTOM-CLOSE');
-                            error_log("Generation stopped because user_input. ".__LINE__);
-                            // Abort , user input detected
-                        }
-
-            }
-
-        }
-        
-        
-        if (trim($buffer)) {
-            error_log("REMAINING DATA <$buffer>");
-            $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
+        //echo "<$buffer>".PHP_EOL;
+        if ($position !== false && $position>MINIMUM_SENTENCE_SIZE ) {
+            $extractedData = substr($buffer, 0, $position + 1);
+            $remainingData = substr($buffer, $position + 1);
+            $sentences=split_sentences_stream(cleanResponse($extractedData));
             $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
             $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
+
             if ($gameRequest[0] != "diary") {
                 returnLines($sentences);
             } else {
                 $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
             }
-            $totalBuffer.=trim($buffer);
-            $totalProcessedData.=trim($buffer);
+
+            //echo "$extractedData  # ".(microtime(true)-$startTime)."\t".strlen($finalData)."\t".PHP_EOL;  // Output
+            $totalProcessedData.=$extractedData;
+            $extractedData="";
+            $buffer=$remainingData;
+            $user_input_after=$GLOBALS["db"]->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
+            if (isset($user_input_after[0]))
+                if (isset($user_input_after[0]["N"]))
+
+                    if ($user_input_after[0]["N"]>0) {
+                        die('X-CUSTOM-CLOSE');
+                        error_log("Generation stopped because user_input. ".__LINE__);
+                        // Abort , user input detected
+                    }
+
         }
 
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  {
-            $actions=$connectionHandler->processActions();
+    }
+    
+    
+    if (trim($buffer)) {
+        error_log("REMAINING DATA <$buffer>");
+        $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
+        $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
+        $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
+        if ($gameRequest[0] != "diary") {
+            returnLines($sentences);
+        } else {
+            $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
+        }
+        $totalBuffer.=trim($buffer);
+        $totalProcessedData.=trim($buffer);
+    }
 
-            if (is_array($actions) && (sizeof($actions)>0)) {
+    if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  {
+        $actions=$connectionHandler->processActions();
+
+        if (is_array($actions) && (sizeof($actions)>0)) {
+            
+            // ACTION POST-FILTER
+            
+            if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                 
-                // ACTION POST-FILTER
-                
-                if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+                foreach ($actions as $n=>$action) {
+                    $actionParts=explode("|",$action);
+                    $actionParts2=explode("@",$actionParts[2]);
                     
-                    foreach ($actions as $n=>$action) {
-                        $actionParts=explode("|",$action);
-                        $actionParts2=explode("@",$actionParts[2]);
-                        
-                        if (isset($actionParts2[1])) {
-                            // Parameter part 
-                            if ($actionParts2[0]=="Attack") {
-                                // Lets polish the parammeters
-                                $localtarget=$actionParts2[1];
-                                $mang1=explode(",",$localtarget);
-                                $mang2=explode(" and ",$mang1[0]);
-                                $mang3=explode("(",$mang2[0]);
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
-                            }
+                    if (isset($actionParts2[1])) {
+                        // Parameter part 
+                        if ($actionParts2[0]=="Attack") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
                         }
                     }
                 }
+            }
 
                 $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
                 echo implode("\r\n", $actions).PHP_EOL;
                 file_put_contents(__DIR__."/../log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
 
-            }
         }
-        $connectionHandler->close();
-        //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE
-
-
     }
+    $connectionHandler->close();
+    //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE
+
+
     return $outputWasValid;
 }
 
