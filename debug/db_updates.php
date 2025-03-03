@@ -282,7 +282,7 @@ $db->execQuery("update public.oghma SET native_vector = setweight(to_tsvector(co
 $query = "SELECT 1 as bad_syntax_exists  FROM public.npc_templates WHERE  npc_name LIKE '%' || CHR(39) || '%'";
 
 $existsColumn=$db->fetchAll($query);
-if ($existsColumn[0]["bad_syntax_exists"]) {
+if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
     $data = $db->fetchAll("SELECT npc_name FROM public.npc_templates WHERE npc_name LIKE '%' || CHR(39) || '%'");
     $n=0;    
     require_once(__DIR__."/../lib/utils.php");
@@ -302,7 +302,7 @@ if ($existsColumn[0]["bad_syntax_exists"]) {
 $query = "SELECT 1 as bad_syntax_exists  FROM npc_templates_custom WHERE  npc_name LIKE '%' || CHR(39) || '%'";
 
 $existsColumn=$db->fetchAll($query);
-if ($existsColumn[0]["bad_syntax_exists"]) {
+if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
     $data = $db->fetchAll("SELECT npc_name FROM npc_templates_custom WHERE npc_name LIKE '%' || CHR(39) || '%'");
         
     foreach ($data as $n=>$element) {
