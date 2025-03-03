@@ -618,8 +618,11 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             if ($printLocation) {
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
-                        //$timeStampBuffer[$hoursAgo]="set";// Disabled
-                        $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: SCENARIO CHANGE, $currentLocation, timeline mark: $hoursAgo hours ago  ");
+                        if (DataLastKnownLocationHuman(false,true)==$currentLocation)   // Enforce current location.
+                            $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: LOCATION CHANGE, THIS IS THE CURRENT LOCATION: $currentLocation");
+                        
+                        else
+                            $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: LOCATION CHANGE to $currentLocation, timeline mark: $hoursAgo hours ago  ");
                     }
                 }
             }
@@ -1161,10 +1164,13 @@ function DataLastKnownLocation()
 
 }
 
-function DataLastKnownLocationHuman($hold=false)
+function DataLastKnownLocationHuman($hold=false,$cached=false)
 {
 
     global $db;
+
+    if ($cached && isset($GLOBALS["LAST_KNOW_LOCATION_HUMAN"]))
+        return $GLOBALS["LAST_KNOW_LOCATION_HUMAN"];
 
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
@@ -1174,13 +1180,17 @@ function DataLastKnownLocationHuman($hold=false)
     if (!$hold) {
         $re = '/Context location: ([\w\ \']*)/';
         preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
+        $GLOBALS["LAST_KNOW_LOCATION_HUMAN"]=$matches[1][0];
         return $matches[1][0];
     } else {
         preg_match('/Hold:\s*(\w+)/', $lastLoc[0]["data"], $matches);
-        if (isset($matches[1]))
+        if (isset($matches[1])) {
             $hold = $matches[1];
+            $GLOBALS["LAST_KNOW_LOCATION_HUMAN"]=$matches[1];
+        }
         else 
             $hold = "";
+        
         return $hold;
     }
 

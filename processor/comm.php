@@ -441,14 +441,14 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
     $MUST_END=true;
     
-} elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever commands
+} elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever requests
 
     logEvent($gameRequest);
 
     $MUST_END=true;
 
     
-} elseif (strpos($gameRequest[0], "addnpc")===0) {    // info_whatever commands
+} elseif (strpos($gameRequest[0], "addnpc")===0) {    // addnpc 
     logEvent($gameRequest);
     
     $splitNameBase=explode("@",$gameRequest[3]);

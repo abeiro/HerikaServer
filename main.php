@@ -450,7 +450,7 @@ if (preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {
 }
 
 if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-    $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+    $GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange();
 } 
 if (!isset($GLOBALS["CACHE_LOCATION"])) {
     $GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
