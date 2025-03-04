@@ -982,13 +982,13 @@ if ($result) {
         
         // Edit button only
         echo '<a href="#" onclick="openEditModal(`' . 
-            addslashes($topic) . '`,`' . 
-            addslashes($topic_desc) . '`,`' . 
-            addslashes($knowledge_class) . '`,`' . 
-            addslashes($topic_desc_basic) . '`,`' . 
-            addslashes($knowledge_class_basic) . '`,`' . 
-            addslashes($tags) . '`,`' . 
-            addslashes($category) . 
+            str_replace(['\\', '`'], ['\\\\', '\\`'], $topic) . '`,`' . 
+            str_replace(['\\', '`'], ['\\\\', '\\`'], $topic_desc) . '`,`' . 
+            str_replace(['\\', '`'], ['\\\\', '\\`'], $knowledge_class) . '`,`' . 
+            str_replace(['\\', '`'], ['\\\\', '\\`'], $topic_desc_basic) . '`,`' . 
+            str_replace(['\\', '`'], ['\\\\', '\\`'], $knowledge_class_basic) . '`,`' . 
+            str_replace(['\\', '`'], ['\\\\', '\\`'], $tags) . '`,`' . 
+            str_replace(['\\', '`'], ['\\\\', '\\`'], $category) . 
             '`);return false;" 
             class="action-button edit">
             Edit
@@ -1117,7 +1117,7 @@ function openEditModal(topic, desc, klass, basicDesc, basicKlass, tags, category
         // Decode HTML entities in the data
         const decodeHTML = (html) => {
             const txt = document.createElement('textarea');
-            txt.innerHTML = html;
+            txt.innerHTML = html.replace(/\\'/g, "'").replace(/\\/g, "");
             return txt.value;
         };
 
