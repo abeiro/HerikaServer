@@ -335,7 +335,7 @@ function returnLines($lines,$writeOutput=true)
         $sentence=$output;
         $output = strtr($sentence,[
                         "*Smirks*"=>"","*smirks*"=>"",
-                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*laughs*"=>"",
+                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*Giggles*"=>"","*laughs*"=>"",
                         "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
                         "*pant*"=>"",
                         "*cough*"=>"",
@@ -517,12 +517,12 @@ function returnLines($lines,$writeOutput=true)
        
 
         if ($writeOutput) {
-            //if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"]) {
+            
             if (true) {
                  if (isset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) && $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) 
                      $GLOBALS["SCRIPTLINE_ANIMATION"]="";
                 else {
-                    if ((rand(0,4)!==0) ){ // Will disable animations, 20% chance to trigger
+                    if ((rand(0,4)!==0)){ // Will disable animations, 20% chance to trigger
                         $GLOBALS["SCRIPTLINE_ANIMATION"]="IdleDialogueExpressiveStart";
                     }
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
