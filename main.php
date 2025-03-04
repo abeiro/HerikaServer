@@ -138,7 +138,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close","infoaction",
-        "status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset"])) {
+        "status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat"])) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     
