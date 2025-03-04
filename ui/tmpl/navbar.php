@@ -117,7 +117,7 @@
                     </a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="delete_conf.php" target="_blank" title="Deletes all character profiles apart from the default." onclick="return confirm('This will delete ALL CHARACTER PROFILES. You can not reverse this operation. ARE YOU SURE???')">
+                    <a class="dropdown-item" href="delete_conf.php" target="_blank" title="Deletes all character profiles apart from the default." onclick="return confirm('This will delete ALL profiles. LOCKED ONES WILL NOT BE DELETED! You can not reverse this operation. ARE YOU SURE???')">
                         Delete All Character Profiles
                     </a>
                     </li>
