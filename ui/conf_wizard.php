@@ -559,6 +559,19 @@ echo '<input
 
 echo ' :: ';
 
+// Check if profile is locked or is default profile
+$isDefaultProfile = basename($_SESSION["PROFILE"]) === "conf.php";
+$isLocked = (isset($LOCK_PROFILE) && $LOCK_PROFILE === true) || $isDefaultProfile;
+$disabledStyle = $isLocked ? 'opacity: 0.5; cursor: not-allowed;' : '';
+$onclickEvent = $isLocked ? 
+    'onclick="alert(\'' . ($isDefaultProfile ? 'The default profile cannot be deleted.' : 'This profile is locked and cannot be deleted.') . '\');"' : 
+    'onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
+        formSubmitting = true;
+        document.getElementById("top").target = "_self";
+        document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
+        document.getElementById("top").submit();
+    }\'';
+
 echo '<input
     type="button"
     name="delete"
@@ -576,14 +589,10 @@ echo '<input
         background-color: #dc3545;
         color: white;
         transition: background-color 0.3s, color 0.3s;
+        ' . $disabledStyle . '
     "
-    onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
-        formSubmitting = true;
-        document.getElementById("top").target = "_self";
-        document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
-        document.getElementById("top").submit();
-    }\' 
-    onmouseover=\'this.style.backgroundColor="#c82333";\'
+    ' . $onclickEvent . ' 
+    onmouseover=\'this.style.backgroundColor="' . ($isLocked ? "#dc3545" : "#c82333") . '";\'
     onmouseout=\'this.style.backgroundColor="#dc3545";\'
 /></p>';
 
