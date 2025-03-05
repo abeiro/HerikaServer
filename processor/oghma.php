@@ -4,22 +4,27 @@ $GLOBALS["OGHMA_HINT"] = "";
 
 if ($GLOBALS["MINIME_T5"]) {
     if (isset($GLOBALS["OGHMA_INFINIUM"]) && ($GLOBALS["OGHMA_INFINIUM"])) {
-        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s"]) || $gameRequest[0] == "rechat") {
+        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"])) {
 
-            $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
-            $replacement = "";
-            $INPUT_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]);
+
+            if ($gameRequest[0] === "rechat") {
+                $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
+                $replacement = "";
+                // Get last chat event for rechat context
+                $lastChat = $db->fetchOne("SELECT data FROM eventlog WHERE type IN ('chat') ORDER BY gamets DESC LIMIT 1");
+                $INPUT_TEXT = $lastChat ? preg_replace($pattern, $replacement, $lastChat["data"]) : "";
+                
+            } else {
+                $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
+                $replacement = "";
+                $INPUT_TEXT = preg_replace($pattern, $replacement, $INPUT_TEXT);
+            }
 
             $pattern = '/\(talking to [^()]+\)/i';
             $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
-            
-            // Handle both player and NPC dialogue formats
-            if (strpos($INPUT_TEXT, "{$GLOBALS["PLAYER_NAME"]}:") !== false) {
-                $INPUT_TEXT = strtr($INPUT_TEXT, ["."=>" ", "{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-            } else {
-                // For NPC dialogue, just clean up periods
-                $INPUT_TEXT = strtr($INPUT_TEXT, ["."=>" "]);
-            }
+            $INPUT_TEXT = strtr($INPUT_TEXT, ["."=>" ", "{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+
+            // $INPUT_TEXT=lastSpeech($GLOBALS["HERIKA_NAME"]);
 
             $currentOghmaTopic_req = $db->fetchOne("SELECT value FROM conf_opts WHERE id='current_oghma_topic'");
             $currentOghmaTopic     = getArrayKey($currentOghmaTopic_req, "value");
@@ -89,37 +94,21 @@ if ($GLOBALS["MINIME_T5"]) {
                     knowledge_class,
                     knowledge_class_basic,
                     topic_desc_basic,
-                    CASE 
-                        WHEN '$gameRequest[0]' = 'rechat' THEN
-                            ts_rank(native_vector, to_tsquery('$currentOghmaTopicQuery')) *
-                                CASE WHEN native_vector @@ to_tsquery('$currentOghmaTopicQuery') THEN 10.0 ELSE 1.0 END +
-                            ts_rank(native_vector, to_tsquery('$locationCtxQuery')) *
-                                CASE WHEN native_vector @@ to_tsquery('$locationCtxQuery') THEN 2.0 ELSE 1.0 END +
-                            ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) *
-                                CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END
-                        ELSE
-                            ts_rank(native_vector, to_tsquery('$currentInputTopicQuery')) *
-                                CASE WHEN native_vector @@ to_tsquery('$currentInputTopicQuery') THEN 10.0 ELSE 1.0 END +
-                            ts_rank(native_vector, to_tsquery('$currentOghmaTopicQuery')) *
-                                CASE WHEN native_vector @@ to_tsquery('$currentOghmaTopicQuery') THEN 5.0 ELSE 1.0 END +
-                            ts_rank(native_vector, to_tsquery('$locationCtxQuery')) *
-                                CASE WHEN native_vector @@ to_tsquery('$locationCtxQuery') THEN 2.0 ELSE 1.0 END +
-                            ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) *
-                                CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END
-                    END AS combined_rank
+                    ts_rank(native_vector, to_tsquery('$currentInputTopicQuery')) *
+                        CASE WHEN native_vector @@ to_tsquery('$currentInputTopicQuery') THEN 10.0 ELSE 1.0 END +
+                    ts_rank(native_vector, to_tsquery('$currentOghmaTopicQuery')) *
+                        CASE WHEN native_vector @@ to_tsquery('$currentOghmaTopicQuery') THEN 5.0 ELSE 1.0 END +
+                    ts_rank(native_vector, to_tsquery('$locationCtxQuery')) *
+                        CASE WHEN native_vector @@ to_tsquery('$locationCtxQuery') THEN 2.0 ELSE 1.0 END +
+                    ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) *
+                        CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END 
+                    AS combined_rank
                 FROM oghma
                 WHERE
-                    CASE 
-                        WHEN '$gameRequest[0]' = 'rechat' THEN
-                            native_vector @@ to_tsquery('$currentOghmaTopicQuery') OR
-                            native_vector @@ to_tsquery('$locationCtxQuery') OR
-                            native_vector @@ to_tsquery('$contextKeywordsQuery')
-                        ELSE
-                            native_vector @@ to_tsquery('$currentInputTopicQuery') OR
-                            native_vector @@ to_tsquery('$currentOghmaTopicQuery') OR
-                            native_vector @@ to_tsquery('$locationCtxQuery') OR
-                            native_vector @@ to_tsquery('$contextKeywordsQuery')
-                    END
+                    native_vector @@ to_tsquery('$currentInputTopicQuery') OR
+                    native_vector @@ to_tsquery('$currentOghmaTopicQuery') OR
+                    native_vector @@ to_tsquery('$locationCtxQuery') OR
+                    native_vector @@ to_tsquery('$contextKeywordsQuery')
                 ORDER BY combined_rank DESC;
             ";
 
