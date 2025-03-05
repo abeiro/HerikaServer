@@ -2128,8 +2128,10 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         } else {
             if ($voicelogic === "voicetype") {
                 file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . strtolower($voicetype[3]) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
+                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . strtolower($voicetype[3]) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
             } else {
                 file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
+                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
             }
         }
         // MeloTTS voiceid override from table, if fails then generated normally.

@@ -270,6 +270,12 @@ $TTS["KOKORO"]["endpoint"]='http://127.0.0.1:8880'; //API endpoint.
 $TTS["KOKORO"]["voiceid"]='af_bella'; //Voice ID.
 $TTS["KOKORO"]["speed"]=1.0; //Speech speed.
 
+// ZONOS_GRADIO TTS
+$TTS["ZONOS_GRADIO"]["endpoint"]='http://127.0.0.1:7860';	//Endpoint URL
+$TTS["ZONOS_GRADIO"]["language"]='en-us';	//Language
+$TTS["ZONOS_GRADIO"]["model"]='Zyphra/Zonos-v0.1-transformer';	//Zonos model type
+$TTS["ZONOS_GRADIO"]["voiceid"]='TheNarrator';	//Voice id
+
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";

@@ -481,8 +481,15 @@ function returnLines($lines,$writeOutput=true)
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "koboldcpp") {
+
                 require_once(__DIR__."/../tts/tts-koboldcpp.php");
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+
+            } else if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
+
+                require_once(__DIR__."/../tts/tts-zonos_gradio.php");
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+
             } 
             else {
                 if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
