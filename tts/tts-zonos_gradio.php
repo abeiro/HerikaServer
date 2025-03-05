@@ -29,7 +29,7 @@ function uploadFileToGradio($filePath, $gradioApiUrl) {
 }
 
 
-$GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
+$GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         
         if (isset($GLOBALS["AVOID_TTS_CACHE"]) && $GLOBALS["AVOID_TTS_CACHE"]===false )
             if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
@@ -69,7 +69,155 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
             return false;
         }
 
-        // TODO: the emotion values should be set dynamically based on the mood that the LLM selected
+        // Extract emotion values from the response if available
+        $emotions = array(
+            "response_tone_happiness" => 0.05,
+            "response_tone_sadness" => 0.05,
+            "response_tone_disgust" => 0.05,
+            "response_tone_fear" => 0.05,
+            "response_tone_surprise" => 0.05,
+            "response_tone_anger" => 0.05,
+            "response_tone_other" => 0.05,
+            "response_tone_neutral" => 1.0
+        );
+
+        // First check if we have emotion values in the LAST_LLM_RESPONSE global variable
+        if (isset($GLOBALS["LAST_LLM_RESPONSE"])) {
+            foreach ($emotions as $emotion => $default) {
+                if (isset($GLOBALS["LAST_LLM_RESPONSE"][$emotion])) {
+                    // Ensure the value is between 0 and 1
+                    $value = floatval($GLOBALS["LAST_LLM_RESPONSE"][$emotion]);
+                    $emotions[$emotion] = max(0, min(1, $value));
+                }
+            }
+        }
+
+        // Adjust emotions based on the mood parameter if provided
+        if (!empty($mood) && $mood !== "default") {
+            // Handle multiple moods separated by pipe character
+            $moodArray = explode('|', $mood);
+            $primaryMood = trim($moodArray[0]); // Use the first mood as primary
+            
+            // Simple mapping of moods to emotion adjustments
+            switch (strtolower($primaryMood)) {
+                case "happy":
+                case "cheerful":
+                case "joyful":
+                case "excited":
+                case "playful":
+                case "amused":
+                    $emotions["response_tone_happiness"] = 0.8;
+                    $emotions["response_tone_neutral"] = 0.2;
+                    break;
+                    
+                case "sad":
+                case "melancholy":
+                case "depressed":
+                case "gloomy":
+                case "sorrowful":
+                    $emotions["response_tone_sadness"] = 0.8;
+                    $emotions["response_tone_neutral"] = 0.2;
+                    break;
+                    
+                case "angry":
+                case "furious":
+                case "irritated":
+                case "annoyed":
+                case "enraged":
+                    $emotions["response_tone_anger"] = 0.8;
+                    $emotions["response_tone_neutral"] = 0.2;
+                    break;
+                    
+                case "fearful":
+                case "scared":
+                case "terrified":
+                case "anxious":
+                case "nervous":
+                    $emotions["response_tone_fear"] = 0.8;
+                    $emotions["response_tone_neutral"] = 0.2;
+                    break;
+                    
+                case "surprised":
+                case "shocked":
+                case "astonished":
+                case "amazed":
+                    $emotions["response_tone_surprise"] = 0.8;
+                    $emotions["response_tone_neutral"] = 0.2;
+                    break;
+                    
+                case "disgusted":
+                case "repulsed":
+                case "revolted":
+                    $emotions["response_tone_disgust"] = 0.8;
+                    $emotions["response_tone_neutral"] = 0.2;
+                    break;
+                    
+                case "sarcastic":
+                case "sardonic":
+                case "mocking":
+                case "teasing":
+                case "smug":
+                case "smirking":
+                    $emotions["response_tone_happiness"] = 0.4;
+                    $emotions["response_tone_other"] = 0.4;
+                    $emotions["response_tone_neutral"] = 0.2;
+                    break;
+                    
+                case "whispering":
+                case "quiet":
+                    // For whispering, we don't change emotions but this will be handled by the mood parameter
+                    break;
+                    
+                case "neutral":
+                case "default":
+                case "calm":
+                    $emotions["response_tone_neutral"] = 1.0;
+                    $emotions["response_tone_happiness"] = 0.0;
+                    $emotions["response_tone_sadness"] = 0.0;
+                    $emotions["response_tone_disgust"] = 0.0;
+                    $emotions["response_tone_fear"] = 0.0;
+                    $emotions["response_tone_surprise"] = 0.0;
+                    $emotions["response_tone_anger"] = 0.0;
+                    $emotions["response_tone_other"] = 0.0;
+                    break;
+                    
+                case "seductive":
+                case "sexy":
+                case "flirtatious":
+                case "lovely":
+                    $emotions["response_tone_happiness"] = 0.5;
+                    $emotions["response_tone_other"] = 0.3;
+                    $emotions["response_tone_neutral"] = 0.2;
+                    break;
+                    
+                case "assertive":
+                case "confident":
+                case "determined":
+                    $emotions["response_tone_neutral"] = 0.6;
+                    $emotions["response_tone_other"] = 0.4;
+                    break;
+                    
+                case "kindly":
+                case "gentle":
+                case "compassionate":
+                    $emotions["response_tone_happiness"] = 0.4;
+                    $emotions["response_tone_neutral"] = 0.6;
+                    break;
+                    
+                // Default case - use neutral if no specific mapping
+                default:
+                    // Keep default emotions
+                    break;
+            }
+        }
+        
+        // Log the emotion values being used
+        error_log("Using emotions for TTS generation (mood: $mood):");
+        foreach ($emotions as $emotion => $value) {
+            $emotion_name = str_replace("response_tone_", "", $emotion);
+            error_log("Emotion: $emotion_name: $value");
+        }
+
         $data = array(
             'data' => [
                 $GLOBALS["TTS"]["ZONOS_GRADIO"]["model"], // Zyphra/Zonos-v0.1-transformer or Zyphra/Zonos-v0.1-hybrid
@@ -85,14 +233,14 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
                     "url" => "{$baseURL}/file={$filePath}"
                 ),
                 null, // prefix audio (could use a 100ms silence wav for example)
-                0.05, // happiness
-                0.05, // sadness
-                0.05, // disgust
-                0.05, // fear
-                0.05, // surprise
-                0.05, // anger
-                0.05, // other
-                1, // neutral
+                $emotions["response_tone_happiness"],
+                $emotions["response_tone_sadness"],
+                $emotions["response_tone_disgust"],
+                $emotions["response_tone_fear"],
+                $emotions["response_tone_surprise"],
+                $emotions["response_tone_anger"],
+                $emotions["response_tone_other"],
+                $emotions["response_tone_neutral"],
                 0.78, // vq score
                 24000, // fmax (hz)
                 45, // pitch std
