@@ -78,7 +78,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
             "response_tone_surprise" => 0.05,
             "response_tone_anger" => 0.05,
             "response_tone_other" => 0.05,
-            "response_tone_neutral" => 1.0
+            "response_tone_neutral" => 0.05
         );
 
         // First check if we have emotion values in the LAST_LLM_RESPONSE global variable
@@ -244,7 +244,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
                 0.7, // vq score
                 24000, // fmax (hz)
                 45, // pitch std
-                14, // speaking rate
+                14.6, // speaking rate
                 4, // dnsmos overall slider
                 false, // denoise speaker?
                 4.5, // cfg scale
