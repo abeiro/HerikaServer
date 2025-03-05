@@ -59,14 +59,14 @@
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
                     "lang"=>"en|es",
-                    "response_tone_happiness"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_sadness"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_disgust"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_fear"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_surprise"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_anger"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_other"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_neutral"=>"Value from 0-1 (Default 1.0)"
+                    "response_tone_happiness"=>"Value from 0-1",
+                    "response_tone_sadness"=>"Value from 0-1",
+                    "response_tone_disgust"=>"Value from 0-1",
+                    "response_tone_fear"=>"Value from 0-1",
+                    "response_tone_surprise"=>"Value from 0-1",
+                    "response_tone_anger"=>"Value from 0-1",
+                    "response_tone_other"=>"Value from 0-1",
+                    "response_tone_neutral"=>"Value from 0-1"
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -76,14 +76,14 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
-                    "response_tone_happiness"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_sadness"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_disgust"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_fear"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_surprise"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_anger"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_other"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_neutral"=>"Value from 0-1 (Default 1.0)"
+                    "response_tone_happiness"=>"Value from 0-1",
+                    "response_tone_sadness"=>"Value from 0-1",
+                    "response_tone_disgust"=>"Value from 0-1",
+                    "response_tone_fear"=>"Value from 0-1",
+                    "response_tone_surprise"=>"Value from 0-1",
+                    "response_tone_anger"=>"Value from 0-1",
+                    "response_tone_other"=>"Value from 0-1",
+                    "response_tone_neutral"=>"Value from 0-1"
                 ];
             }
         } else {
@@ -96,14 +96,14 @@
                     "target"=>"action's target|destination name",
                     "lang"=>"en|es",
                     "message"=>"lines of dialogue",
-                    "response_tone_happiness"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_sadness"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_disgust"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_fear"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_surprise"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_anger"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_other"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_neutral"=>"Value from 0-1 (Default 1.0)"
+                    "response_tone_happiness"=>"Value from 0-1",
+                    "response_tone_sadness"=>"Value from 0-1",
+                    "response_tone_disgust"=>"Value from 0-1",
+                    "response_tone_fear"=>"Value from 0-1",
+                    "response_tone_surprise"=>"Value from 0-1",
+                    "response_tone_anger"=>"Value from 0-1",
+                    "response_tone_other"=>"Value from 0-1",
+                    "response_tone_neutral"=>"Value from 0-1"
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -113,14 +113,14 @@
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
                     "message"=>"lines of dialogue",
-                    "response_tone_happiness"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_sadness"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_disgust"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_fear"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_surprise"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_anger"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_other"=>"Value from 0-1 (Default 0.05)",
-                    "response_tone_neutral"=>"Value from 0-1 (Default 1.0)"
+                    "response_tone_happiness"=>"Value from 0-1",
+                    "response_tone_sadness"=>"Value from 0-1",
+                    "response_tone_disgust"=>"Value from 0-1",
+                    "response_tone_fear"=>"Value from 0-1",
+                    "response_tone_surprise"=>"Value from 0-1",
+                    "response_tone_anger"=>"Value from 0-1",
+                    "response_tone_other"=>"Value from 0-1",
+                    "response_tone_neutral"=>"Value from 0-1"
                 ];
             }
         }
