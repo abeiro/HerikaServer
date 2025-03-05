@@ -1374,7 +1374,7 @@ function DataBeingsInRange()
         return "";
     }
     
-    $beings=strtr($lastLoc[0]["data"],["(beings in range:"=>""]);
+    $beings=strtr($lastLoc[0]["data"],["beings in range:"=>""]);
     $beingsArray=explode(",",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
@@ -1400,8 +1400,8 @@ function DataBeingsInCloseRange()
         return "";
     }
     
-    $beings=strtr($lastLoc[0]["data"],["(beings in range:"=>""]);
-    $beingsArray=explode(",",$beings);
+    $beings=strtr($lastLoc[0]["data"],["beings in range:"=>""]);
+    $beingsArray=explode("/",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
         if (strpos($v,")")===false) 
