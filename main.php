@@ -383,7 +383,16 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     
     $rndNumber = rand(1, 100);
     if ($rndNumber <= $GLOBALS["RECHAT_P"]) {
-        
+        // Process Oghma for rechat events using NPC's last dialogue
+        if ($GLOBALS["MINIME_T5"] && isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
+            $lastNPCDialogue = $db->fetchAll("SELECT data FROM eventlog WHERE type IN ('chat', 'chatme') ORDER BY gamets DESC LIMIT 1");
+            if (!empty($lastNPCDialogue)) {
+                $gameRequest[3] = $lastNPCDialogue[0]["data"]; = "inputtext"; // Temporarily change type to trigger Oghma
+                $gameRequest[3] = $lastNPCDialogue[0]["data"]; // Use NPC's dialogue as context
+                require(__DIR__."/processor/oghma.php"); // Process Oghma
+                $gameRequest[0] = "rechat"; // Restore original type
+            }
+        }
     }
     else{
         die();
