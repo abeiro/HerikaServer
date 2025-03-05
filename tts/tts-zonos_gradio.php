@@ -113,7 +113,6 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
                 ]
             ]
         );
-        error_log(print_r($data, true));
 
         // call to /generate_audio
         $options = array(
