@@ -74,9 +74,9 @@ $CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp"]; //Cre
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.1-70b-instruct"; //LLM model.
+$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.3-70b-instruct"; //LLM model.
 $CONNECTOR["openrouterjson"]["max_tokens"]='512'; //Maximum tokens to generate.
-$CONNECTOR["openrouterjson"]["temperature"]=0.8; //LLM parameter temperature.
+$CONNECTOR["openrouterjson"]["temperature"]=0.6; //LLM parameter temperature.
 $CONNECTOR["openrouterjson"]["presence_penalty"]=0; //LLM parameter presence_penalty.
 $CONNECTOR["openrouterjson"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
 $CONNECTOR["openrouterjson"]["repetition_penalty"]=1.1;	//LLM parameter repetition_penalty.
