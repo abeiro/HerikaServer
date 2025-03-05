@@ -11,55 +11,71 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.ph
 require_once($path . "lib".DIRECTORY_SEPARATOR."fuz_convert.php"); // API KEY must be there
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 
+$GLOBALS["AUDIT_RUNID_REQUEST"]="vsx";
 
 // Put info into DB asap
 $db=new sql();
 $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"]; 
 
+// Lock
+$semaphoreKey2 =abs(crc32(__FILE__));
+$semaphore = sem_get($semaphoreKey2);
+while (sem_acquire($semaphore,true)!=true)  {
+    usleep(10);
+}
 
 if ($voicelogic === 'voicetype') {
 
-  //db insert for name entry for data_functions.
-  $codename = npcNameToCodename($_GET["codename"]);
-  $db->delete("conf_opts", "id='" . $db->escape("Nametype/$codename") . "'");
-  $db->insert(
-      'conf_opts',
-      array(
-          'id' => $db->escape("Nametype/$codename"),
-          'value' => $_GET["oname"]
-      )
-  );
+    //db insert for name entry for data_functions.
+    $codename = npcNameToCodename($_GET["codename"]);
+    
+    $db->upsertRowTrx(
+        'conf_opts',
+        array(
+            'value' => $_GET["oname"],
+            "id"=>"Nametype/$codename"
+        ),
+        ["id"=>"Nametype/$codename"]
+    );
 
-  // new logic so codename is set to voicetype so it generates voicetype sample
-  $voicetype = explode("\\", $_GET["oname"]); // Split the path
-  $codename = strtolower($voicetype[3]); // Use the 4th part of the path
-  // Delete and insert the database entry
-  $db->delete("conf_opts", "id='" . $db->escape("Voicetype/$codename") . "'");
-  $db->insert(
-      'conf_opts',
-      array(
-          'id' => $db->escape("Voicetype/$codename"),
-          'value' => $_GET["oname"]
-      )
-  );
+    // new logic so codename is set to voicetype so it generates voicetype sample
+    $voicetype = explode("\\", $_GET["oname"]); // Split the path
+    $codename = strtolower($voicetype[3]); // Use the 4th part of the path
+    // Delete and insert the database entry
 
-  $db->close();
+    $db->upsertRowTrx(
+        'conf_opts',
+        array(
+            'value' => $_GET["oname"],
+            "id"=>"Voicetype/$codename"
+        ),
+        ["id"=>"Voicetype/$codename"]
+    );
+
+    $db->close();
 
 } else {
   $codename = npcNameToCodename($_GET["codename"]);
     // Old name logic
-  $db->delete("conf_opts", "id='" . $db->escape("Voicetype/$codename") . "'");
-  $db->insert(
+  
+  $db->upsertRowTrx(
       'conf_opts',
       array(
-          'id' => $db->escape("Voicetype/$codename"),
-          'value' => $_GET["oname"]
-      )
+          'value' => $_GET["oname"],
+          "id"=>"Voicetype/$codename"
+      ),
+      ["id"=>"Voicetype/$codename"]
+
   );
   $db->close();
 }
 
+// Release lock, this is the time consuming part, we have the needed data into the database
 
+audit_log("vsx.php data available for $codename");
+
+if ($semaphore) 
+    sem_release($semaphore);
 
 if (strpos($_GET["oname"],".fuz"))  {
     $ext="fuz";
@@ -68,6 +84,7 @@ if (strpos($_GET["oname"],".fuz"))  {
 } else if (strpos($_GET["oname"],".wav")) {
   $ext="wav";
 }
+
 
 
 $already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
@@ -143,5 +160,5 @@ curl_setopt_array($curl, array(
 // Execute cURL request and get response
 $response = curl_exec($curl);
 
-  
+audit_log("vsx.php voice available for {$_GET["codename"]}");
 ?>

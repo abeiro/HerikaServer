@@ -1091,6 +1091,9 @@ if (!$MUST_END) {
                         'tag' => ""
                     )
                 );
+
+                $quest["stages"][$n]["last_llm_call"]=$GLOBALS["gameRequest"][2];// Dont make LLM call on next round
+
                 break;
             }
 
@@ -1107,13 +1110,13 @@ if (!$MUST_END) {
                     echo "Dialogue is no too small ".(($contextDataHistoric)).PHP_EOL;
 
 
-                    if (isset($quest["stages"][$n]["last_llm_call"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_llm_call"])>= 120  * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS * $TALK_SPEED)
+                    if (isset($quest["stages"][$n]["last_llm_call"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_llm_call"])>= 240  * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS * $TALK_SPEED)
                         $quest["stages"][$n]["last_llm_call"]=$GLOBALS["gameRequest"][2];
                     
                     else  if (!isset($quest["stages"][$n]["last_llm_call"])) {
                         $quest["stages"][$n]["last_llm_call"]=isset($quest["GLOBAL_LAST_LLM_CALL_GAMETS"])?$quest["GLOBAL_LAST_LLM_CALL_GAMETS"]:0;// Last GAMETS 
                     } else {
-                        echo "Will check later ".($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_llm_call"])." -> ".(120  * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS * $TALK_SPEED).PHP_EOL;    
+                        echo "Will check later ".($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_llm_call"])." -> ".(240  * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS * $TALK_SPEED).PHP_EOL;    
                         break;
                     }
 
@@ -1154,7 +1157,7 @@ if (!$MUST_END) {
 
                             $quest["stages"][$n]["sub_status"]=1;
                             break;
-                        } else if (($quest["stages"][$n]["sub_status"]+0)<=2) {
+                        }/* else if (($quest["stages"][$n]["sub_status"]+0)<=2) {
 
                             echo "Enforcing by altering profile".PHP_EOL;
                             $db->insert(
@@ -1172,7 +1175,7 @@ if (!$MUST_END) {
                             $quest["stages"][$n]["sub_status"]++;
                             break;
 
-                        } else if (($quest["stages"][$n]["sub_status"]+0)>2) {
+                        }*/ else if (($quest["stages"][$n]["sub_status"]+0)>2) {
 
                             echo "Not accomplished".PHP_EOL;
                             $quest["stages"][$n]["sub_status"]++;

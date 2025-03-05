@@ -138,7 +138,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close","infoaction",
-        "status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset"])) {
+        "status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat"])) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     
@@ -322,13 +322,13 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 }
 
 
-// Fake entry to mark time passing when borded event
+// Fake entry to mark time passing when bored event
 if (in_array($gameRequest[0],["bored"])) {
     $localGameRequest=$gameRequest;
     $localGameRequest[0]="infoaction";
     $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
     logEvent($localGameRequest);
-    
+    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 }
 
 
@@ -373,7 +373,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     $rechatHistory=DataRechatHistory();
     
     if (sizeof($rechatHistory)>($GLOBALS["RECHAT_H"]))    {   // TOO MUCH RECHAT
-        error_log("Rechat discarded");
+        error_log("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
         sem_release($semaphore);
         while(@ob_end_clean());
@@ -410,6 +410,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
 
     $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
+    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 
 } else
     $sqlfilter=" and type<>'prechat' "; // Will dismiss prechat entries by default. prechat are LLM responses still not displayed in-game
@@ -449,7 +450,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-    $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+    $GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange();
 } 
 if (!isset($GLOBALS["CACHE_LOCATION"])) {
     $GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
@@ -563,7 +564,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         
     } else {
         $memoryInjectionCtx=[];
-        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);//Cleans the memory statement.
             
     }
 } else
@@ -741,12 +742,6 @@ if (!$outputWasValid) {
         $GLOBALS["LLM_RETRY_FNCT"]();
     }
 }
-
-
-
-
-
-
 
 
 if (sizeof($talkedSoFar) == 0) {
