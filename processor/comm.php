@@ -478,6 +478,8 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         $historyData="";
         $lastPlace="";
         $lastListener="";
+        $lastDateTime = "";
+
         foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"],50),true) as $element) {
           if ($element["listener"]=="The Narrator") {
                 continue;
@@ -496,8 +498,17 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
           }
           else
             $place="";
+
+            if ($lastDateTime != substr($element["sk_date"], 0, 15)) {
+                $date = substr($element["sk_date"], 0, 10);
+                $time = substr($element["sk_date"], 11);
+                $dateTime = "(on date {$date} at {$time})";
+                $lastDateTime = substr($element["sk_date"], 0, 15); 
+            } else {
+                $dateTime = "";
+            }
       
-          $historyData.=trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place").PHP_EOL;
+          $historyData.=trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place $dateTime").PHP_EOL;
           
         }
         
