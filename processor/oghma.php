@@ -5,26 +5,25 @@ $GLOBALS["OGHMA_HINT"] = "";
 if ($GLOBALS["MINIME_T5"]) {
     if (isset($GLOBALS["OGHMA_INFINIUM"]) && ($GLOBALS["OGHMA_INFINIUM"])) {
         if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"])) {
-
-
+            
             if ($gameRequest[0] === "rechat") {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
                 $replacement = "";
                 // Get last chat event for rechat context
                 $lastChat = $db->fetchOne("SELECT data FROM eventlog WHERE type IN ('chat') ORDER BY gamets DESC LIMIT 1");
                 $INPUT_TEXT = $lastChat ? preg_replace($pattern, $replacement, $lastChat["data"]) : "";
+                // Remove NPC name prefix pattern (e.g., "Irileth: ")
+                $INPUT_TEXT = preg_replace('/^[^:]+:\s*/', '', $INPUT_TEXT);
                 
             } else {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
                 $replacement = "";
-                $INPUT_TEXT = preg_replace($pattern, $replacement, $INPUT_TEXT);
+                $INPUT_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]);
+                $pattern = '/\(talking to [^()]+\)/i';
+                $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
+                $INPUT_TEXT = strtr($INPUT_TEXT, ["."=>" ", "{$GLOBALS["PLAYER_NAME"]}:"=>""]);
             }
 
-            $pattern = '/\(talking to [^()]+\)/i';
-            $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
-            $INPUT_TEXT = strtr($INPUT_TEXT, ["."=>" ", "{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-
-            // $INPUT_TEXT=lastSpeech($GLOBALS["HERIKA_NAME"]);
 
             $currentOghmaTopic_req = $db->fetchOne("SELECT value FROM conf_opts WHERE id='current_oghma_topic'");
             $currentOghmaTopic     = getArrayKey($currentOghmaTopic_req, "value");

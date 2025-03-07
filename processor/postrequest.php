@@ -7,7 +7,7 @@ Post tasks.
 
 if ($GLOBALS["MINIME_T5"]) {
     if (isset($FEATURES["MISC"]["OGHMA_INFINIUM"])&&($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
-        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"])) {
 
             
             //$TEST_TEXT=lastSpeech($GLOBALS["HERIKA_NAME"]);
@@ -16,7 +16,7 @@ if ($GLOBALS["MINIME_T5"]) {
 
             $topic=json_decode(file_get_contents("http://127.0.0.1:8082/posttopic?text=".urlencode($TEST_TEXT)),true);
             if (is_array($topic) && isset($topic["generated_tags"])) {
-                error_log("[OGMHA] Current Topic: {$topic["generated_tags"]}");
+                error_log("[OGHMA] Current Topic: {$topic["generated_tags"]}");
                 $db->delete("conf_opts", "id='current_oghma_topic'");
                 $db->insert(
                 'conf_opts',
