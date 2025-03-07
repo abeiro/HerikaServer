@@ -15,17 +15,6 @@ if ($GLOBALS["MINIME_T5"]) {
             $TEST_TEXT=implode(" ",$GLOBALS["talkedSoFar"]);
 
             $topic=json_decode(minimePostTopic($TEST_TEXT),true);
-            if (is_array($topic) && isset($topic["generated_tags"])) {
-                error_log("[OGHMA] Current Topic: {$topic["generated_tags"]}");
-                $db->delete("conf_opts", "id='current_oghma_topic'");
-                $db->insert(
-                'conf_opts',
-                    array(
-                            'id' =>'current_oghma_topic',
-                            'value' => $topic["generated_tags"]
-                        )
-                    );
-            }
 
         }
     }

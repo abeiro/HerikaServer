@@ -14,6 +14,9 @@ if ($GLOBALS["MINIME_T5"]) {
                 $INPUT_TEXT = $lastChat ? preg_replace($pattern, $replacement, $lastChat["data"]) : "";
                 // Remove NPC name prefix pattern (e.g., "Irileth: ")
                 $INPUT_TEXT = preg_replace('/^[^:]+:\s*/', '', $INPUT_TEXT);
+                // Remove talking to pattern
+                $pattern = '/\(talking to [^()]+\)/i';
+                $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
                 
             } else {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
@@ -196,6 +199,19 @@ if ($GLOBALS["MINIME_T5"]) {
                         'time'     => $topic_res["elapsed_time"]
                     ]
                 );
+
+                // Update current Oghma topic in database
+                if (isset($topic_res["generated_tags"])) {
+                    error_log("[OGHMA] Current Topic: {$topic_res["generated_tags"]}");
+                    $GLOBALS["db"]->delete("conf_opts", "id='current_oghma_topic'");
+                    $GLOBALS["db"]->insert(
+                        'conf_opts',
+                        array(
+                            'id' => 'current_oghma_topic',
+                            'value' => $topic_res["generated_tags"]
+                        )
+                    );
+                }
             } else {
                 // No results
                 $msg = 'oghma keyword not offered, no results';
