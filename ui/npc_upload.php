@@ -388,313 +388,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>📝CHIM - NPC Biography Management</title>
-    <style>
-        /* Updated CSS for Dark Grey Background Theme */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c; /* Dark grey background */
-            color: #f8f9fa; /* Light grey text for readability */
-        }
-
-        h1, h2 {
-            color: #ffffff; /* White color for headings */
-        }
-
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #4a4a4a; /* Darker border for contrast */
-            max-width: 600px;
-        }
-
-        label {
-            font-weight: bold;
-            color: #f8f9fa; /* Ensure labels are readable */
-        }
-
-        input[type="text"], input[type="file"], textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #4a4a4a; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            resize: vertical; /* Allows users to resize vertically if needed */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 16px; /* Sets a readable font size */
-        }
-
-        input[type="submit"] {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px; /* Slightly larger border radius */
-            cursor: pointer;
-            padding: 5px 15px; /* Increased padding for larger button */
-            font-size: 18px;    /* Increased font size */
-            font-weight: bold;  /* Bold text for better visibility */
-            transition: background-color 0.3s ease; /* Smooth hover transition */
-        }
-
-        input[type="submit"]:hover {
-            background-color: #0056b3; /* Darker shade on hover */
-        }
-
-        .message {
-            background-color: #444444; /* Darker background for messages */
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #4a4a4a;
-            max-width: 600px;
-            margin-bottom: 20px;
-            color: #f8f9fa; /* Light text in messages */
-        }
-
-        .message p {
-            margin: 0;
-        }
-
-        .indent {
-            padding-left: 10ch; /* 10 character spaces */
-        }
-
-        .indent5 {
-            padding-left: 5ch; /* 5 character spaces */
-        }
-
-        .button {
-            padding: 8px 16px;
-            margin-top: 10px;
-            cursor: pointer;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 3px;
-        }
-
-        .button:hover {
-            background-color: #0056b3;
-        }
-
-        .filter-buttons {
-            margin: 1em 0;
-        }
-
-        .alphabet-button {
-            display: inline-block;
-            margin-right: 5px;
-            padding: 6px 10px;
-            color: #fff;
-            background-color: #007bff;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        .alphabet-button:hover {
-            background-color: #0056b3;
-        }
-
-        .table-container {
-            max-height: 900px;
-            overflow-y: auto;
-            overflow-x: auto;
-            margin-bottom: 20px;
-            max-width: 100%;
-        }
-
-        .table-container table {
-            width: 100%;
-            border-collapse: collapse; /* Ensure borders collapse into a single border */
-            background-color: #3a3a3a; /* Base background color */
-        }
-
-        .table-container th, .table-container td {
-            padding: 8px;
-            text-align: left;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            color: #f8f9fa; /* Text color */
-            border: 1px solid #555555; /* Border color for cells */
-        }
-
-        .table-container th {
-            background-color: #4a4a4a; /* Header background color */
-            font-weight: bold;
-        }
-
-        /* Alternating row colors */
-        .table-container tr:nth-child(even) {
-            background-color: #2c2c2c; /* Dark grey for even rows */
-        }
-
-        .table-container tr:nth-child(odd) {
-            background-color: #3a3a3a; /* Slightly lighter grey for odd rows */
-        }
-
-        /* Specific column widths */
-        .table-container th:nth-child(1),
-        .table-container td:nth-child(1) {
-            width: 150px; /* e.g., for npc_name */
-        }
-
-        .table-container th:nth-child(2),
-        .table-container td:nth-child(2) {
-            width: 600px; /* e.g., for npc_pers */
-        }
-
-        .table-container th:nth-child(3),
-        .table-container td:nth-child(3) {
-            width: 400px; /* small or adjust as needed */
-        }
-
-        .table-container th:nth-child(4),
-        .table-container td:nth-child(4) {
-            width: 120px; /* e.g., for npc_misc */
-        }
-        .table-container th:nth-child(5),
-        .table-container td:nth-child(5),
-        .table-container th:nth-child(6),
-        .table-container td:nth-child(6) {
-            width: 100px; 
-        }
-
-        .table-container th:nth-child(7),
-        .table-container td:nth-child(7) {
-            width: 120px; 
-        }
-
-        .table-container th:nth-child(8),
-        .table-container td:nth-child(8) {
-            width: 100px; 
-        }
-
-        input[type="submit"].btn-danger {
-            background-color: rgb(200, 53, 69); 
-            color: #fff;
-            border: 1px solid rgb(255, 255, 255);
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            border-radius: 4px;
-            transition: background-color 0.3s ease; 
-            font-weight: bold;
-        }
-
-        input[type="submit"].btn-danger:hover {
-            background-color: rgb(200, 35, 51); 
-        }
-
-        /* Modal styles */
-        .modal-backdrop {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-        }
-
-        .modal-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #3a3a3a;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            width: 60%;
-            max-width: 700px;
-            max-height: 90vh;
-            overflow-y: auto;
-            z-index: 1001;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            margin: 0;
-            color: #fff;
-            font-size: 1.5em;
-        }
-
-        .modal-body form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #4a4a4a;
-        }
-
-        /* Button styles */
-        .action-button {
-            display: inline-block;
-            padding: 8px 12px;
-            color: #fff;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            border: none;
-        }
-
-        .action-button.add-new {
-            background-color: #28a745;
-        }
-        .action-button.add-new:hover {
-            background-color: #218838;
-        }
-
-        .action-button.edit {
-            background-color: #17a2b8;
-        }
-        .action-button.edit:hover {
-            background-color: #138496;
-        }
-
-        /* Form field styles */
-        .modal-body small {
-            display: block;
-            color: #aaa;
-            margin-bottom: 5px;
-        }
-
-        .modal-body input[type="text"],
-        .modal-body textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #555;
-            border-radius: 4px;
-            background-color: #4a4a4a;
-            color: #fff;
-            margin-bottom: 10px;
-        }
-
-        .modal-body textarea {
-            resize: vertical;
-        }
-    </style>
+    <link rel="stylesheet" href="css/management.css">
 </head>
 <body>
 
@@ -712,60 +406,33 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     ?>
 
     <h2>Batch Upload</h2>
-    <div style="
-        background-color: #3a3a3a;
-        padding: 15px;
-        border-radius: 5px;
-        border: 1px solid #4a4a4a;
-        max-width: 600px;
-    ">
-        <form action="" method="post" enctype="multipart/form-data" style="
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin: 0;
-            padding: 0;
-            background: none;
-            border: none;
-        ">
+    <div class="form-container">
             <div>
-                <label for="csv_file" style="display: block; margin-bottom: 5px; font-weight: bold;">Select .csv file to upload:</label>
-                <input type="file" name="csv_file" id="csv_file" accept=".csv" required style="
-                    width: 100%;
-                    padding: 6px;
-                    margin-bottom: 10px;
-                    border: 1px solid #555555;
-                    border-radius: 3px;
-                    background-color: #4a4a4a;
-                    color: #f8f9fa;
-                ">
+                <label for="csv_file">Select .csv file to upload:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <input type="submit" name="submit_csv" value="Upload CSV" class="action-button" style="background-color: #28a745; color: white;">
-                <a href="?action=download_example" class="action-button" style="background-color: #007bff; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none;">Download Example CSV</a>
+            <div class="button-group">
+                <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
+                <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
             </div>
                 <p>You can verify that NPC data has been uploaded successfully by going to 
                 <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b>.</p>
                 <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
                 <p>Also you can check the merged table at 
                 <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.</p>
-        </form>
-        <form action="" method="post" style="
-            border: none; /* Remove border */
-        ">
-            <input 
+            <br>
+                <input 
                 type="submit" 
                 name="truncate_npc" 
                 value="Factory Reset NPC Override Table"
                 class="btn-danger"
                 onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in npc_templates_custom? This action is IRREVERSIBLE!');"
             >
-        </form>
-        <p>This will just delete any custom NPC entires you have uploaded.</p>
+            <p>This will just delete any custom NPC entires you have uploaded.</p>
         <p>You can download a backup of the full character database in the 
         <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener">
             csv files channel in our discord
-        </a>.
+        </a>.</p>
     </div>
 </div>
 
@@ -773,10 +440,20 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 <br>
 <?php
 $letter = isset($_GET['letter']) ? strtoupper($_GET['letter']) : '';
+$searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
 
-// Build query based on optional filter
-if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
-    // Filter by first letter
+// Build query based on filters
+if (!empty($letter) && !empty($searchTerm)) {
+    // Filter by both letter and search term
+    $query_combined = "
+        SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
+        FROM {$schema}.combined_npc_templates
+        WHERE npc_name ILIKE $1 AND npc_name ILIKE $2
+        ORDER BY npc_name ASC
+    ";
+    $params_combined = [$letter . '%', '%' . $searchTerm . '%'];
+} elseif (!empty($letter)) {
+    // Filter by letter only
     $query_combined = "
         SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
         FROM {$schema}.combined_npc_templates
@@ -784,21 +461,39 @@ if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
         ORDER BY npc_name ASC
     ";
     $params_combined = [$letter . '%'];
-    $result_combined = pg_query_params($conn, $query_combined, $params_combined);
+} elseif (!empty($searchTerm)) {
+    // Filter by search term only
+    $query_combined = "
+        SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
+        FROM {$schema}.combined_npc_templates
+        WHERE npc_name ILIKE $1
+        ORDER BY npc_name ASC
+    ";
+    $params_combined = ['%' . $searchTerm . '%'];
 } else {
-    // No filter: show all
+    // No filters
     $query_combined = "
         SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
         FROM {$schema}.combined_npc_templates
         ORDER BY npc_name ASC
     ";
-    $result_combined = pg_query($conn, $query_combined);
+    $params_combined = [];
 }
 
+$result_combined = !empty($params_combined) 
+    ? pg_query_params($conn, $query_combined, $params_combined)
+    : pg_query($conn, $query_combined);
+
 // Wrap the NPC Templates Database section in a div for indentation
-echo '<div style="margin-left: 3em;" id="table">'; // Add id="table" here
+echo '<div class="indent5" id="table">';
 echo '<h2>NPC Templates Database</h2>';
+echo '<div class="action-container">';
 echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
+echo '<div class="search-container">';
+echo '<input type="text" id="searchBox" placeholder="Search NPC names...">';
+echo '<button onclick="applySearch()" class="action-button">Search</button>';
+echo '</div>';
+echo '</div>';
 echo '<h3>Note: This is just for editing an NPC entry before they are activated ingame. Any further edits should be done in the configuration wizard.</h3>';
 echo '<p>Also due to complexity you can not delete an NPC entry. You can simply make another one with the correct name if you make a mistake.</p>';
 
@@ -806,9 +501,9 @@ echo '<br>';
 
 // Alphabetic filter
 echo '<div class="filter-buttons">';
-echo '<a href="?#table" class="alphabet-button">All</a>'; // Add #table to the All link
+echo '<a href="?#table" class="alphabet-button">All</a>';
 foreach (range('A', 'Z') as $char) {
-    echo '<a href="?letter=' . $char . '#table" class="alphabet-button">' . $char . '</a>'; // Add #table to each letter link
+    echo '<a href="?letter=' . $char . '#table" class="alphabet-button">' . $char . '</a>';
 }
 echo '</div>';
 
@@ -866,7 +561,7 @@ if ($result_combined) {
     echo '</div>';
 
     if ($rowCountCombined === 0) {
-        echo '<p>No combined NPC templates found.</p>';
+        echo '<p>No entries found.</p>';
     }
 } else {
     echo '<p>Error fetching combined NPC templates: ' . pg_last_error($conn) . '</p>';
@@ -1026,6 +721,46 @@ function closeNewEntryModal() {
     document.getElementById("newEntryModal").style.display = "none";
     document.body.style.overflow = "auto";
 }
+
+function applySearch() {
+    const searchTerm = document.getElementById("searchBox").value.trim();
+    let url = new URL(window.location.href);
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Update or add search parameter
+    if (searchTerm) {
+        urlParams.set("search", searchTerm);
+    } else {
+        urlParams.delete("search");
+    }
+    
+    // Preserve letter parameter if it exists
+    const currentLetter = urlParams.get("letter");
+    if (currentLetter) urlParams.set("letter", currentLetter);
+    
+    // Add the table anchor
+    url.hash = "table";
+    
+    // Create the new URL
+    window.location.href = "?" + urlParams.toString() + "#table";
+}
+
+// Add enter key support for the search box
+document.getElementById("searchBox").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        applySearch();
+    }
+});
+
+// Set initial search box value from URL
+window.addEventListener("load", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchTerm = urlParams.get("search");
+    if (searchTerm) {
+        document.getElementById("searchBox").value = searchTerm;
+    }
+});
 </script>
 
 </body>
