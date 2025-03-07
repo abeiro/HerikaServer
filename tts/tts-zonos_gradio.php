@@ -220,9 +220,9 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
 
         $data = array(
             'data' => [
-                $GLOBALS["TTS"]["ZONOS_GRADIO"]["model"], // Zyphra/Zonos-v0.1-transformer or Zyphra/Zonos-v0.1-hybrid
+                $GLOBALS["TTS"]["ZONOS_GRADIO"]["model"] ??= "Zyphra/Zonos-v0.1-hybrid", // Zyphra/Zonos-v0.1-transformer or Zyphra/Zonos-v0.1-hybrid
                 $textString, // the dialogue to be generated
-                $GLOBALS["TTS"]["ZONOS_GRADIO"]["language"], // en-us, ja, de, etc
+                $GLOBALS["TTS"]["ZONOS_GRADIO"]["language"] ??= "en-us", // en-us, ja, de, etc
                 array( // speaker audio
                     "meta" => array (
                         "_type" => "gradio.FileData"
@@ -243,11 +243,11 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
                 $emotions["response_tone_neutral"],
                 0.7, // vq score
                 24000, // fmax (hz)
-                $GLOBALS["TTS"]["ZONOS_GRADIO"]["pitch_std"], // pitch std
-                $GLOBALS["TTS"]["ZONOS_GRADIO"]["speaking_rate"], // speaking rate
+                $GLOBALS["TTS"]["ZONOS_GRADIO"]["pitch_std"] ??= 45 , // pitch std
+                $GLOBALS["TTS"]["ZONOS_GRADIO"]["speaking_rate"] ??= 14.6, // speaking rate
                 4, // dnsmos overall slider
                 false, // denoise speaker?
-                $GLOBALS["TTS"]["ZONOS_GRADIO"]["cfg_scale"], // cfg scale
+                $GLOBALS["TTS"]["ZONOS_GRADIO"]["cfg_scale"] ??= 4.5, // cfg scale
                 0, // top p
                 0, // min k
                 0, // min p
