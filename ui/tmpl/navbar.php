@@ -228,6 +228,11 @@
                         Mimic3 Management
                     </a>
                     </li>
+                    <li>
+                    <a class="dropdown-item" href="<?= htmlspecialchars($GLOBALS["TTS"]["ZONOS_GRADIO"]["endpoint"]) ?>" title="Test Zonos Settings" target="_blank">
+                        Zonos Gradio Management
+                    </a>
+                    </li>
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Web Extensions</h6></li>
                     <li>
