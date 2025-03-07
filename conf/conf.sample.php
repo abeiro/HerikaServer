@@ -16,6 +16,7 @@ $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically.
 $DYNAMIC_PROFILE=false; //Dynamic profile updates during certain ingame events.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
+$OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
 
 //[Advanced Configuration]
 $RECHAT_H=2; //Rechat Rounds. Higher values will increase the amount of rounds NPC's will talk amongst themselves.
@@ -74,9 +75,9 @@ $CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp"]; //Cre
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.1-70b-instruct"; //LLM model.
+$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.3-70b-instruct"; //LLM model.
 $CONNECTOR["openrouterjson"]["max_tokens"]='512'; //Maximum tokens to generate.
-$CONNECTOR["openrouterjson"]["temperature"]=0.8; //LLM parameter temperature.
+$CONNECTOR["openrouterjson"]["temperature"]=0.6; //LLM parameter temperature.
 $CONNECTOR["openrouterjson"]["presence_penalty"]=0; //LLM parameter presence_penalty.
 $CONNECTOR["openrouterjson"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
 $CONNECTOR["openrouterjson"]["repetition_penalty"]=1.1;	//LLM parameter repetition_penalty.
