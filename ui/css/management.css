@@ -505,4 +505,120 @@ input[type="submit"].btn-danger:hover,
 button.btn-danger:hover,
 .btn-danger:hover {
     background-color: rgb(200, 35, 51) !important;
+}
+
+/* Voice list styling */
+.voice-list-container {
+    background-color: #2c2c2c;
+    border: 1px solid #4a4a4a;
+    border-radius: 5px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.voice-list-header {
+    margin-bottom: 15px;
+    padding: 0 10px;
+}
+
+.voice-list-header h3 {
+    color: #fff;
+    font-size: 1.2em;
+    margin: 0;
+}
+
+.voice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    padding: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.voice-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    color: #fff;
+    transition: background-color 0.2s ease;
+}
+
+.voice-item:hover {
+    background-color: #333;
+}
+
+.copy-btn {
+    opacity: 0.4;
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.voice-item:hover .copy-btn {
+    opacity: 0.8;
+}
+
+.copy-btn:hover {
+    opacity: 1 !important;
+    transform: scale(1.1);
+}
+
+.copy-btn:active {
+    transform: scale(0.95);
+}
+
+/* Scrollbar styling */
+.voice-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.voice-grid::-webkit-scrollbar-track {
+    background: #2c2c2c;
+    border-radius: 4px;
+}
+
+.voice-grid::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.voice-grid::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toast-notification.show {
+    opacity: 1;
+}
+
+.toast-notification .check-icon {
+    color: #4CAF50;
 } 
