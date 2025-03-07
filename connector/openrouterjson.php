@@ -75,9 +75,10 @@ class openrouterjson
         } else
             $speechReinforcement="";
 
+        $zonosTones = $GLOBALS["TTSFUNCTION"] == "zonos_gradio" ? " (Response tones are mandatory in the response)" : "";
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer (Response tones are mandatory in the response): ".json_encode($GLOBALS["responseTemplate"])
+            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
         ];
         $pb=[];
         $pb["user"]="";

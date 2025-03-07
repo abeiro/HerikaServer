@@ -58,15 +58,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
-                    "lang"=>"en|es",
-                    "response_tone_happiness"=>"Value from 0-1",
-                    "response_tone_sadness"=>"Value from 0-1",
-                    "response_tone_disgust"=>"Value from 0-1",
-                    "response_tone_fear"=>"Value from 0-1",
-                    "response_tone_surprise"=>"Value from 0-1",
-                    "response_tone_anger"=>"Value from 0-1",
-                    "response_tone_other"=>"Value from 0-1",
-                    "response_tone_neutral"=>"Value from 0-1"
+                    "lang"=>"en|es"
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -75,15 +67,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target|destination name",
-                    "response_tone_happiness"=>"Value from 0-1",
-                    "response_tone_sadness"=>"Value from 0-1",
-                    "response_tone_disgust"=>"Value from 0-1",
-                    "response_tone_fear"=>"Value from 0-1",
-                    "response_tone_surprise"=>"Value from 0-1",
-                    "response_tone_anger"=>"Value from 0-1",
-                    "response_tone_other"=>"Value from 0-1",
-                    "response_tone_neutral"=>"Value from 0-1"
+                    "target"=>"action's target|destination name"
                 ];
             }
         } else {
@@ -95,15 +79,7 @@
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
                     "lang"=>"en|es",
-                    "message"=>"lines of dialogue",
-                    "response_tone_happiness"=>"Value from 0-1",
-                    "response_tone_sadness"=>"Value from 0-1",
-                    "response_tone_disgust"=>"Value from 0-1",
-                    "response_tone_fear"=>"Value from 0-1",
-                    "response_tone_surprise"=>"Value from 0-1",
-                    "response_tone_anger"=>"Value from 0-1",
-                    "response_tone_other"=>"Value from 0-1",
-                    "response_tone_neutral"=>"Value from 0-1"
+                    "message"=>"lines of dialogue"
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -112,17 +88,23 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
-                    "message"=>"lines of dialogue",
-                    "response_tone_happiness"=>"Value from 0-1",
-                    "response_tone_sadness"=>"Value from 0-1",
-                    "response_tone_disgust"=>"Value from 0-1",
-                    "response_tone_fear"=>"Value from 0-1",
-                    "response_tone_surprise"=>"Value from 0-1",
-                    "response_tone_anger"=>"Value from 0-1",
-                    "response_tone_other"=>"Value from 0-1",
-                    "response_tone_neutral"=>"Value from 0-1"
+                    "message"=>"lines of dialogue"
                 ];
             }
+        }
+
+        // request speaking tones from the LLM when using zonos TTS
+        if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
+            $GLOBALS["responseTemplate"] = array_merge($GLOBALS["responseTemplate"], [
+                "response_tone_happiness"=>"Value from 0-1",
+                "response_tone_sadness"=>"Value from 0-1",
+                "response_tone_disgust"=>"Value from 0-1",
+                "response_tone_fear"=>"Value from 0-1",
+                "response_tone_surprise"=>"Value from 0-1",
+                "response_tone_anger"=>"Value from 0-1",
+                "response_tone_other"=>"Value from 0-1",
+                "response_tone_neutral"=>"Value from 0-1"
+            ]);
         }
     }
     
@@ -173,46 +155,6 @@
                         "target" => array(
                             "type" => "string",
                             "description" => "action's target|destination name"
-                        ),
-                        "response_tone_happiness" => array(
-                            "type" => "number",
-                            "description" => "Value from 0-1 (Default 0.05)",
-                            "default" => 0.05
-                        ),
-                        "response_tone_sadness" => array(
-                            "type" => "number",
-                            "description" => "Value from 0-1 (Default 0.05)",
-                            "default" => 0.05
-                        ),
-                        "response_tone_disgust" => array(
-                            "type" => "number",
-                            "description" => "Value from 0-1 (Default 0.05)",
-                            "default" => 0.05
-                        ),
-                        "response_tone_fear" => array(
-                            "type" => "number",
-                            "description" => "Value from 0-1 (Default 0.05)",
-                            "default" => 0.05
-                        ),
-                        "response_tone_surprise" => array(
-                            "type" => "number",
-                            "description" => "Value from 0-1 (Default 0.05)",
-                            "default" => 0.05
-                        ),
-                        "response_tone_anger" => array(
-                            "type" => "number",
-                            "description" => "Value from 0-1 (Default 0.05)",
-                            "default" => 0.05
-                        ),
-                        "response_tone_other" => array(
-                            "type" => "number",
-                            "description" => "Value from 0-1 (Default 0.05)",
-                            "default" => 0.05
-                        ),
-                        "response_tone_neutral" => array(
-                            "type" => "number",
-                            "description" => "Value from 0-1 (Default 1.0)",
-                            "default" => 1.0
                         )
                     ),
                     "required" => [
@@ -221,21 +163,73 @@
                         "message",
                         "mood",
                         "action",
-                        "target",
-                        "response_tone_happiness",
-                        "response_tone_sadness",
-                        "response_tone_disgust",
-                        "response_tone_fear",
-                        "response_tone_surprise",
-                        "response_tone_anger",
-                        "response_tone_other",
-                        "response_tone_neutral"
+                        "target"
                     ],
                     "additionalProperties" => false
                 ),
                 "strict" => true
             )
         );
+
+        // request speaking tones from the LLM when using zonos TTS
+        if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                    "response_tone_happiness" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_sadness" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_disgust" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_fear" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_surprise" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_anger" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_other" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_neutral" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 1.0
+                    )
+                )
+            );
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"] = array_merge(
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"], [
+                    "response_tone_happiness",
+                    "response_tone_sadness",
+                    "response_tone_disgust",
+                    "response_tone_fear",
+                    "response_tone_surprise",
+                    "response_tone_anger",
+                    "response_tone_other",
+                    "response_tone_neutral"
+                ]
+            );
+        }
     }
 
     // sets the grammar used by koboldcpp
@@ -267,9 +261,15 @@
             $actions_str = "string";
         }
 
+        // build the string for zonos tts moods
+        $zonos_tones_str = $GLOBALS["TTSFUNCTION"] == "zonos_gradio"
+            ? '"," ws root-response_tone_happiness "," ws root-response_tone_sadness "," ws root-response_tone_disgust "," ws root-response_tone_fear ","'.
+              ' ws root-response_tone_surprise "," ws root-response_tone_anger "," ws root-response_tone_other "," ws root-response_tone_neutral '
+            : "";
+
         // using a quoted heredoc to avoid having to escape everything
         $GLOBALS["grammar"] = <<<'EOD'
-        root ::= "{" ws root-character "," ws root-listener "," ws root-message "," ws root-mood "," ws root-action "," ws root-target "," ws root-response_tone_happiness "," ws root-response_tone_sadness "," ws root-response_tone_disgust "," ws root-response_tone_fear "," ws root-response_tone_surprise "," ws root-response_tone_anger "," ws root-response_tone_other "," ws root-response_tone_neutral "}" ws
+        root ::= "{" ws root-character "," ws root-listener "," ws root-message "," ws root-mood "," ws root-action "," ws root-target {$ZONOS}"}" ws
         root-character ::= "\"character\"" ":" ws string
         root-listener ::= "\"listener\"" ":" ws string
         root-message ::= "\"message\"" ":" ws string
@@ -298,6 +298,7 @@
         EOD;
 
         // replace the mood and action templates with the strings built earlier
+        $GLOBALS["grammar"]=str_replace('{$ZONOS}', $zonos_tones_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$MOODS}', $moods_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$ACTIONS}', $actions_str, $GLOBALS["grammar"]);
     }
