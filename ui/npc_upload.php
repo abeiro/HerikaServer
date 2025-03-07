@@ -406,29 +406,56 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     ?>
 
     <h2>Batch Upload</h2>
-    <div class="form-container">
+    <div style="
+        background-color: #3a3a3a;
+        padding: 15px;
+        border-radius: 5px;
+        border: 1px solid #4a4a4a;
+        max-width: 600px;
+    ">
+        <form action="" method="post" enctype="multipart/form-data" style="
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 0;
+            padding: 0;
+            background: none;
+            border: none;
+        ">
             <div>
-                <label for="csv_file">Select .csv file to upload:</label>
-                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+                <label for="csv_file" style="display: block; margin-bottom: 5px; font-weight: bold;">Select .csv file to upload:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required style="
+                    width: 100%;
+                    padding: 6px;
+                    margin-bottom: 10px;
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    background-color: #4a4a4a;
+                    color: #f8f9fa;
+                ">
             </div>
-            <div class="button-group">
+            <div style="display: flex; gap: 10px;">
                 <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
                 <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
             </div>
-                <p>You can verify that NPC data has been uploaded successfully by going to 
-                <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b>.</p>
-                <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
-                <p>Also you can check the merged table at 
-                <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.</p>
-            <br>
-                <input 
-                type="submit" 
-                name="truncate_npc" 
-                value="Factory Reset NPC Override Table"
-                class="btn-danger"
-                onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in npc_templates_custom? This action is IRREVERSIBLE!');"
-            >
-            <p>This will just delete any custom NPC entires you have uploaded.</p>
+        </form>
+        <p>You can verify that NPC data has been uploaded successfully by going to 
+        <b>Server Actions -> Database Manager -> database -> public -> npc_templates_custom</b>.</p>
+        <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
+        <p>Also you can check the merged table at 
+        <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.</p>
+        <br>
+        <form action="" method="post" style="
+            border: none;
+            padding: 0;
+            margin: 0;
+            background: none;
+        ">
+            <input type="hidden" name="truncate_npc" value="1">
+            <input type="submit" class="btn-danger" value="Factory Reset NPC Override Table" 
+                   onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in npc_templates_custom? This action is IRREVERSIBLE!');">
+        </form>
+        <p>This will just delete any custom NPC entires you have uploaded.</p>
         <p>You can download a backup of the full character database in the 
         <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener">
             csv files channel in our discord
@@ -694,22 +721,6 @@ function openEditModal(data) {
 function closeEditModal() {
     document.getElementById("editModal").style.display = "none";
     document.body.style.overflow = "auto";
-}
-
-function deleteEntry() {
-    const npcName = document.getElementById("edit_npc_name_original").value;
-    if (confirm("Are you sure you want to delete: " + npcName + "?")) {
-        const form = document.createElement("form");
-        form.method = "POST";
-        const currentLetter = new URLSearchParams(window.location.search).get('letter');
-        form.action = currentLetter ? `?letter=${currentLetter}#table` : '?#table';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="delete_single">
-            <input type="hidden" name="npc_name" value="${npcName}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
 }
 
 function openNewEntryModal() {
