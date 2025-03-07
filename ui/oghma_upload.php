@@ -402,7 +402,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             width: 100%;
             padding: 6px;
             margin-top: 5px;
-            margin-bottom: 15px;
             border: 1px solid #555555; /* Darker borders */
             border-radius: 3px;
             background-color: #4a4a4a; /* Dark input backgrounds */
@@ -425,7 +424,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             font-size: 18px;
             font-weight: bold;
             transition: background-color 0.3s ease;
-            margin-top: 10px;
         }
         input[type="submit"]:hover, button:hover {
             background-color: #0056b3;
@@ -843,6 +841,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <input type="submit" class="btn-danger" value="Delete All Oghma Entries" 
                onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
     </form>
+    <br>
+    <form action="oghma_reset.php" method="post" style="
+        border: none;
+        padding: 0;
+        margin: 0;
+        background: none;
+    ">
+        <input type="submit" class="btn-danger" value="Factory Reset Oghma Database" 
+               onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
+    </form>
     <p>You can download a backup of the full Oghma database in the <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
 </div>
 
@@ -879,9 +887,16 @@ if (isset($_GET['order'])) {
 // Category buttons
 echo '<div style="width: 100%; padding-right: 5ch;">';
 echo '<h2 id="entries">Oghma Infinium Entries</h2>';
+echo '<div style="display: flex; gap: 10px; margin-bottom: 15px;">';
 echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
+echo '<div style="flex-grow: 1; max-width: 400px; display: flex; gap: 10px;">';
+echo '<input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">';
+echo '<button onclick="applySearch()" class="action-button" style="background-color: #007bff;">Search</button>';
+echo '</div>';
+echo '</div>';
 echo '<br>';
-echo '<br>';
+
+// Filter buttons
 echo '<div class="filter-buttons">';
 echo '<a class="alphabet-button" href="?#entries">All Categories</a>';
 foreach ($categories as $cat) {
@@ -901,7 +916,20 @@ echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#entries">Sort 
 echo '</div>';
 
 // Build query
-if ($selectedCategory && $letter) {
+$searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
+
+if ($selectedCategory && $letter && $searchTerm) {
+    $query = "
+        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+               knowledge_class_basic, tags, category
+        FROM $schema.oghma
+        WHERE category = $1
+          AND topic ILIKE $2
+          AND topic ILIKE $3
+        ORDER BY topic $order
+    ";
+    $params = [$selectedCategory, $letter . '%', '%' . $searchTerm . '%'];
+} elseif ($selectedCategory && $searchTerm) {
     $query = "
         SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
                knowledge_class_basic, tags, category
@@ -910,8 +938,27 @@ if ($selectedCategory && $letter) {
           AND topic ILIKE $2
         ORDER BY topic $order
     ";
-    $params = [$selectedCategory, $letter . '%'];
-} elseif ($selectedCategory) {
+    $params = [$selectedCategory, '%' . $searchTerm . '%'];
+} elseif ($letter && $searchTerm) {
+    $query = "
+        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+               knowledge_class_basic, tags, category
+        FROM $schema.oghma
+        WHERE topic ILIKE $1
+          AND topic ILIKE $2
+        ORDER BY topic $order
+    ";
+    $params = [$letter . '%', '%' . $searchTerm . '%'];
+} elseif ($searchTerm) {
+    $query = "
+        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+               knowledge_class_basic, tags, category
+        FROM $schema.oghma
+        WHERE topic ILIKE $1
+        ORDER BY topic $order
+    ";
+    $params = ['%' . $searchTerm . '%'];
+} elseif ($selectedCategory && $letter) {
     $query = "
         SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
                knowledge_class_basic, tags, category
@@ -1168,6 +1215,48 @@ function deleteEntry() {
         form.submit();
     }
 }
+
+function applySearch() {
+    const searchTerm = document.getElementById("searchBox").value.trim();
+    let url = new URL(window.location.href);
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Update or add search parameter
+    if (searchTerm) {
+        urlParams.set("search", searchTerm);
+    } else {
+        urlParams.delete("search");
+    }
+    
+    // Preserve existing parameters if they exist
+    const currentCategory = urlParams.get("cat");
+    const currentLetter = urlParams.get("letter");
+    const currentOrder = urlParams.get("order");
+    
+    if (currentCategory) urlParams.set("cat", currentCategory);
+    if (currentLetter) urlParams.set("letter", currentLetter);
+    if (currentOrder) urlParams.set("order", currentOrder);
+    
+    // Create the new URL
+    window.location.href = "?" + urlParams.toString() + "#entries";
+}
+
+// Add enter key support for the search box
+document.getElementById("searchBox").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        applySearch();
+    }
+});
+
+// Set initial search box value from URL
+window.addEventListener("load", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchTerm = urlParams.get("search");
+    if (searchTerm) {
+        document.getElementById("searchBox").value = searchTerm;
+    }
+});
 </script>
 </body>
 </html>
