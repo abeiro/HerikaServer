@@ -243,11 +243,11 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
                 $emotions["response_tone_neutral"],
                 0.7, // vq score
                 24000, // fmax (hz)
-                45, // pitch std
-                14.6, // speaking rate
+                $GLOBALS["TTS"]["ZONOS_GRADIO"]["pitch_std"], // pitch std
+                $GLOBALS["TTS"]["ZONOS_GRADIO"]["speaking_rate"], // speaking rate
                 4, // dnsmos overall slider
                 false, // denoise speaker?
-                4.5, // cfg scale
+                $GLOBALS["TTS"]["ZONOS_GRADIO"]["cfg_scale"], // cfg scale
                 0, // top p
                 0, // min k
                 0, // min p
