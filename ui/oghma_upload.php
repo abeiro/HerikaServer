@@ -499,7 +499,7 @@ echo '<div style="display: flex; gap: 10px; margin-bottom: 15px;">';
 echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
 echo '<div style="flex-grow: 1; max-width: 400px; display: flex; gap: 10px;">';
 echo '<input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">';
-echo '<button onclick="applySearch()" class="action-button" style="background-color: #007bff;">Search</button>';
+echo '<button onclick="applySearch()" class="action-button">Search</button>';
 echo '</div>';
 echo '</div>';
 echo '<br>';
