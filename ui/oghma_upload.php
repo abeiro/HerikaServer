@@ -374,379 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>📙CHIM - Oghma Infinium Management</title>
-    <style>
-        /* Updated CSS for Dark Grey Background Theme */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c; /* Dark grey background */
-            color: #f8f9fa; /* Light grey text for readability */
-        }
-        h1, h2 {
-            color: #ffffff; /* White color for headings */
-        }
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #4a4a4a;
-            max-width: 600px;
-        }
-        label {
-            font-weight: bold;
-            color: #f8f9fa; /* Ensure labels are readable */
-        }
-        input[type="text"],
-        input[type="file"],
-        textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            border: 1px solid #555555; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 16px; /* Sets a readable font size */
-        }
-        textarea {
-            resize: vertical;
-            height: 120px;
-
-        }
-        input[type="submit"], button {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            padding: 5px 15px;
-            font-size: 18px;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-        }
-        input[type="submit"]:hover, button:hover {
-            background-color: #0056b3;
-        }
-        .message {
-            background-color: #444444;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #555555;
-            max-width: 600px;
-            margin-bottom: 20px;
-            color: #f8f9fa;
-        }
-        .message p {
-            margin: 0;
-        }
-        .indent5 {
-            padding-left: 5ch;
-        }
-        table {
-            width: 100%;
-            max-width: 1600px;
-            border-collapse: collapse;
-            background-color: #3a3a3a;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #555555;
-            padding: 8px;
-            text-align: left;
-            vertical-align: top;
-            color: #f8f9fa;
-        }
-        th {
-            background-color: #4a4a4a;
-            font-weight: bold;
-        }
-        tr:nth-child(even) {
-            background-color: #2c2c2c;
-        }
-        .filter-buttons {
-            margin-bottom: 20px;
-            width: 100%;
-        }
-        .filter-buttons form {
-            display: inline-block;
-            margin: 2px;
-        }
-        .filter-buttons button {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            padding: 6px 10px;
-            margin: 0;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .filter-buttons button:hover {
-            background-color: #0056b3;
-        }
-        .table-container {
-            max-height: 900px;
-            overflow-y: auto;
-            overflow-x: auto;
-            margin-bottom: 20px;
-            width: 100%;
-        }
-
-        .table-container table {
-            width: 100%;
-            min-width: 100%;
-            border-collapse: collapse;
-            background-color: #3a3a3a;
-        }
-
-        .table-container th, .table-container td {
-            padding: 8px;
-            text-align: left;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            color: #f8f9fa;
-            border: 1px solid #555555;
-        }
-
-        .table-container th {
-            background-color: #4a4a4a;
-            font-weight: bold;
-        }
-
-        /* Alternating row colors */
-        .table-container tr:nth-child(even) {
-            background-color: #2c2c2c;
-        }
-
-        .table-container tr:nth-child(odd) {
-            background-color: #3a3a3a;
-        }
-        /* Set specific widths for columns if needed */
-        .table-container th:nth-child(1), /* Topic */
-        .table-container td:nth-child(1) {
-            width: 20%;
-        }
-        .table-container th:nth-child(2), /* Topic Description */
-        .table-container td:nth-child(2) {
-            width: 30%;
-        }
-        .table-container th:nth-child(3), /* Knowledge Class */
-        .table-container td:nth-child(3) {
-            width: 15%;
-        }
-        .table-container th:nth-child(4), /* Topic Description (Basic) */
-        .table-container td:nth-child(4) {
-            width: 15%;
-        }
-        .table-container th:nth-child(5), /* Knowledge Class (Basic) */
-        .table-container td:nth-child(5) {
-            width: 10%;
-        }
-        .table-container th:nth-child(6), /* Tags */
-        .table-container td:nth-child(6) {
-            width: 10%;
-        }
-        .table-container th:nth-child(7), /* Category */
-        .table-container td:nth-child(7) {
-            width: 10%;
-        }
-        .table-container th:nth-child(8), /* Action */
-        .table-container td:nth-child(8) {
-            width: 10%;
-        }
-        input[type="submit"].btn-danger {
-            background-color: rgb(200, 53, 69);
-            color: #fff;
-            border: 1px solid rgb(255, 255, 255);
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-            font-weight: bold;
-        }
-        input[type="submit"].btn-danger:hover {
-            background-color: rgb(200, 35, 51);
-        }
-        .alphabet-button {
-            display: inline-block;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            padding: 6px 10px;
-            color: #fff;
-            background-color: #007bff;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        .alphabet-button:hover {
-            background-color: #0056b3;
-        }
-        /* Extra styling for inline forms in the Action column */
-        .action-form {
-            display: inline-block;
-            margin: 0 2px;
-        }
-
-        /* Modal styles */
-        .modal-backdrop {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-        }
-
-        .modal-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #3a3a3a;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            width: 60%;
-            max-width: 700px;
-            max-height: 90vh;
-            overflow-y: auto;
-            z-index: 1001;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            margin: 0;
-            color: #fff;
-            font-size: 1.5em;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 1.5em;
-            cursor: pointer;
-            padding: 0;
-            margin: 0;
-        }
-
-        .modal-close:hover {
-            color: #dc3545;
-        }
-
-        .modal-body {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #4a4a4a;
-        }
-
-        .modal-footer button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .modal-footer button[type="submit"] {
-            background-color: #28a745;
-        }
-        .modal-footer button[type="submit"]:hover {
-            background-color: #218838;
-        }
-
-        .modal-footer button[onclick*="delete"] {
-            background-color: #dc3545;
-        }
-        .modal-footer button[onclick*="delete"]:hover {
-            background-color: #c82333;
-        }
-
-        .modal-footer button[onclick*="close"] {
-            background-color: #6c757d;
-        }
-        .modal-footer button[onclick*="close"]:hover {
-            background-color: #5a6268;
-        }
-
-        /* Common button styles */
-        .action-button {
-            display: inline-block;
-            padding: 8px 12px;
-            color: #fff;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        /* Edit button */
-        .action-button.edit {
-            background-color: #17a2b8;
-        }
-        .action-button.edit:hover {
-            background-color: #138496;
-        }
-
-        /* Add new entry button */
-        .action-button.add-new {
-            background-color: #28a745;
-            border: none;
-        }
-        .action-button.add-new:hover {
-            background-color: #218838;
-        }
-
-        /* Save button */
-        button[type="submit"] {
-            background-color: #28a745;
-            transition: background-color 0.3s ease;
-        }
-        button[type="submit"]:hover {
-            background-color: #218838;
-        }
-
-        /* Delete button */
-        button[onclick*="delete"] {
-            background-color: #dc3545;
-            transition: background-color 0.3s ease;
-        }
-        button[onclick*="delete"]:hover {
-            background-color: #c82333;
-        }
-
-        /* Cancel button */
-        button[onclick*="close"] {
-            background-color: #6c757d;
-            transition: background-color 0.3s ease;
-        }
-        button[onclick*="close"]:hover {
-            background-color: #5a6268;
-        }
-    </style>
+    <link rel="stylesheet" href="css/management.css">
 </head>
 <body>
 <div class="indent5">
@@ -803,34 +431,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             ">
         </div>
         <div style="display: flex; gap: 10px;">
-            <input type="submit" name="submit_csv" value="Upload CSV" style="
-                background-color: #28a745;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 12px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: background-color 0.3s ease;
-            " onmouseover="this.style.backgroundColor='#218838';" onmouseout="this.style.backgroundColor='#28a745';">
-            <a href="?action=download_example" style="
-                background-color: #007bff; /* Change to blue */
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 12px; /* Match padding */
-                cursor: pointer;
-                font-weight: bold;
-                text-decoration: none;
-                transition: background-color 0.3s ease;
-                display: inline-block; /* Ensure it behaves like a button */
-                margin-top: 10px; /* Add margin for spacing */
-            " onmouseover="this.style.backgroundColor='#0056b3';" onmouseout="this.style.backgroundColor='#007bff';">Download Example CSV</a>
+            <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
+            <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
         </div>
     </form>
     <p>You can verify that the entry has been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
     <p>You can see how it picks a relevant article during conversation by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
     <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+    <br>
     <form action="" method="post" style="
         border: none;
         padding: 0;
@@ -1052,7 +660,7 @@ if ($result) {
     echo '</div>';
 
     if ($rowCount === 0) {
-        echo '<p>No entries found for the selected filter.</p>';
+        echo '<p>No entries found.</p>';
     }
 } else {
     echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
@@ -1091,7 +699,7 @@ pg_close($conn);
                 
 
                 <label for="edit_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this, is recommended for most basic articles. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. It is recommended for most basic articles to leave it blank. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic_new" id="edit_knowledge_class_basic">
 
                 <label for="edit_tags">Tags:</label>
@@ -1138,7 +746,7 @@ pg_close($conn);
                 <textarea name="topic_desc_basic" id="topic_desc_basic" rows="5"></textarea>
 
                 <label for="knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this, is recommended for most basic articles. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. It is recommended for most basic articles to leave it blank. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic" id="knowledge_class_basic">
 
                 <label for="tags">Tags:</label>
