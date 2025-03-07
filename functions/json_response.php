@@ -261,7 +261,7 @@
             $actions_str = "string";
         }
 
-        // build the string for zonos tts moods
+        // build the string for zonos tts tones
         $zonos_tones_str = $GLOBALS["TTSFUNCTION"] == "zonos_gradio"
             ? '"," ws root-response_tone_happiness "," ws root-response_tone_sadness "," ws root-response_tone_disgust "," ws root-response_tone_fear ","'.
               ' ws root-response_tone_surprise "," ws root-response_tone_anger "," ws root-response_tone_other "," ws root-response_tone_neutral '
