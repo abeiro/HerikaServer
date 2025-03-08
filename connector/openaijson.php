@@ -18,6 +18,7 @@ class openaijson
     private $_buffer;
     private $_stopProc;
     private $_is_groq_com;
+    private $_is_reasoning;
     public $_extractedbuffer;
 
     public function __construct()
@@ -26,9 +27,19 @@ class openaijson
         $this->_commandBuffer=[];
         $this->_stopProc=false;
         $this->_extractedbuffer="";
+        $this->_is_groq_com=false;
+        $this->_is_reasoning=false;
         require_once(__DIR__."/__jpd.php");
     }
 
+    private function isReasoningModel($s_model) {
+        if (strlen($s_model) > 0) {
+            $i_pos = stripos($s_model, "deepseek-r");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen-qwq-32b");
+        }
+        return (!($i_pos === false));
+    }
 
     public function open($contextData, $customParms)
     {
@@ -72,11 +83,18 @@ class openaijson
         } else
             $speechReinforcement="";
 
-        $contextData[]=[
-            'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"])
-        ];
-
+        if ($this->_is_groq_com) { // --- exception made for groq.com - JSON need pretty print
+            $contextData[]=[
+                'role' => 'user',
+                'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) 
+            ];
+        } else {
+            $contextData[]=[
+                'role' => 'user',
+                'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"])
+            ];
+        }
+    
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             // there is a double inclusion, part of command_prompt is already included in content from main.php
             if (isset($GLOBALS["COMMAND_PROMPT_FUNCTIONS"])) {
@@ -92,7 +110,7 @@ class openaijson
                 }
             }
             $contextData[0]["content"].=$s_cprompt;
-        }
+        } 
 
         $pb=[];
         $pb["user"]="";
@@ -251,7 +269,6 @@ class openaijson
         if ($presence_penalty < -2.0) $presence_penalty = -2.0;
         else if ($presence_penalty > 2.0) $presence_penalty = 2.0; 
 
-
         $frequency_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ? : 0.0); 
         if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
         else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
@@ -278,30 +295,30 @@ class openaijson
                 'response_format'=>["type"=>"json_object"]
             );
 
-            if (!(stripos($data["model"],"deepseek-r1") === false)) { 
-            /*  deepseek r1 need "reasoning_format" parameter: 
+
+            $this->_is_reasoning = $this->isReasoningModel($data["model"]); // check if resoning model
+
+            if ($this->_is_reasoning) { 
+            /*  a reasoning model need "reasoning_format" parameter: 
                 parsed  - Separates reasoning into a dedicated field while keeping the response concise.
                 raw     - Includes reasoning within <think> tags in the content.
                 hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
                 $data['reasoning_format'] = "hidden";  
-                //error_log(" deepseek-r1: " . print_r($data,false));
             }
+            //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
         
         } else { // --- normal flow (not groq)
         
             $data = array(
                 'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini',
-                'messages' =>
-                    $contextData
-                ,
+                'messages' => $contextData,
                 'stream' => true,
                 'max_completion_tokens'=>$MAX_TOKENS,
-                'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
-                'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
+                'temperature' => $temperature,
+                'top_p' => $top_p,
                 'response_format'=>["type"=>"json_object"]
 
             );
-
             
             if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
                 $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
@@ -309,8 +326,8 @@ class openaijson
 
             // Mistral AI API does not support penalty params
             if (strpos($url, "mistral") === false) {
-                $data["presence_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0;
-                $data["frequency_penalty"]=($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0;
+                $data["presence_penalty"]=$presence_penalty;
+                $data["frequency_penalty"]=$frequency_penalty;
             }
       
         } // --- endif groq
