@@ -1,15 +1,29 @@
 <?php
+// Define base paths if not already defined
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', dirname(dirname(__DIR__)));
+}
+if (!defined('UI_PATH')) {
+    define('UI_PATH', dirname(__DIR__));
+}
+
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname(dirname($scriptPath))); // Go up three levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
 // Add link to navbar CSS
-echo '<link rel="stylesheet" href="css/navbar.css">';
+echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
 ?>
 <div class="chim-navbar-wrapper">
     <nav class="navbar navbar-expand-lg chim-navbar">
         <div class="container-fluid mx-1">
             <!-- PLEASE LEAVE THIS LINK TO index.php, as database update checks are being made there -->
             <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="CHIM Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> CHIM</a> -->
-            <a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/index.php" title="Go to Home Page">
-                <img src="images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
-                <img src="images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+            <a class="navbar-brand mr-2 Title" href="<?php echo $webRoot; ?>/ui/index.php" title="Go to Home Page">
+                <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+                <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
             </a> 
             
             <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector" style="display:none">
@@ -25,38 +39,38 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                     <!-- Events Category -->
                     <li><h6 class="dropdown-header">Events and Objectives</h6></li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=eventlog">Event Log</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=eventlog">Event Log</a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=eventlog&autorefresh=true">Monitor Events</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=eventlog&autorefresh=true">Monitor Events</a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=quests">Active Quests</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=quests">Active Quests</a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=currentmission">Dynamic AI Objective</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=currentmission">Dynamic AI Objective</a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <!-- Logs Category -->
                     <li><h6 class="dropdown-header">Logs</h6></li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=log">Response Log</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=log">Response Log</a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=diarylog">Diary Log</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=diarylog">Diary Log</a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=books">Book Log</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=books">Book Log</a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Memories Category -->
                     <li><h6 class="dropdown-header">Memories</h6></li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=memory">Memories (WIP)</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=memory">Memories (WIP)</a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?table=memory_summary">Memory Summaries</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=memory_summary">Memory Summaries</a>
                     </li>
 
                     </ul>
@@ -78,7 +92,7 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                         </a>
                         </li>-->
                         <li>
-                        <a class="dropdown-item" href="index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG! ARE YOU SURE???')">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG! ARE YOU SURE???')">
                             Delete All Events
                         </a>
                         </li>
@@ -87,12 +101,12 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                         <!-- Second Category Header -->
                         <li><h6 class="dropdown-header">Response Log Management</h6></li>
                         <li>
-                        <a class="dropdown-item" href="index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('This will clear all the entries in the AI Log. ARE YOU SURE?')">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('This will clear all the entries in the AI Log. ARE YOU SURE?')">
                             Clean Response Log
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
                             Export Response Log
                         </a>
                         </li>
@@ -100,11 +114,11 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Memory Management</h6></li>
                         <li>
-                        <a class="dropdown-item" href="tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
                             Sync & Create Memory Summaries
                         </a>
                         </li><li>
-                        <a class="dropdown-item" href="tests/vector-delete-memory_summary.php" title="Compact and Sync Memories." onclick="return confirm('Will delete all summarized memories. ARE YOU SURE?')">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/vector-delete-memory_summary.php" title="Compact and Sync Memories." onclick="return confirm('Will delete all summarized memories. ARE YOU SURE?')">
                             Delete All Memory Summaries
                         </a>
                         </li>
@@ -112,22 +126,22 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Character Profiles</h6></li>
                         <li>
-                        <a class="dropdown-item" href="export_conf.php" target="_blank" title="Exports current character profiles into a ZIP file.">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_conf.php" target="_blank" title="Exports current character profiles into a ZIP file.">
                             Backup Character Profiles
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="import_conf.php" target="_blank" title="Imports character profiles from a ZIP file.">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_conf.php" target="_blank" title="Imports character profiles from a ZIP file.">
                             Restore Character Profiles
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="delete_conf.php" target="_blank" title="Deletes all character profiles apart from the default." onclick="return confirm('This will delete ALL profiles. LOCKED ONES WILL NOT BE DELETED! You can not reverse this operation. ARE YOU SURE???')">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/delete_conf.php" target="_blank" title="Deletes all character profiles apart from the default." onclick="return confirm('This will delete ALL profiles. LOCKED ONES WILL NOT BE DELETED! You can not reverse this operation. ARE YOU SURE???')">
                             Delete All Character Profiles
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">
                             Regenerate Character Map
                         </a>
                         </li>
@@ -181,7 +195,7 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                             " 
                             onmouseover="this.style.backgroundColor='#e6ac00';"
                             onmouseout="this.style.backgroundColor='#ffc107';"
-                            onclick="window.open('tests/ai_agent_ini.php', '_blank')" 
+                            onclick="window.open('<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php', '_blank')" 
                             title="Generate AIAgent.ini file for the mod file.">
                                 <strong>Create AIAgent.ini<br>(Place in mod folder under SKSE\Plugins)</strong>
                             </button>
@@ -197,25 +211,25 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                         
                         <li><h6 class="dropdown-header">Configuration Tools</h6></li>
                         <li>
-                        <a class="dropdown-item" href="conf_wizard.php">Configuration Wizard</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/conf_wizard.php">Configuration Wizard</a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="npc_upload.php" title="Edit NPC biographies entries" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/npc_upload.php" title="Edit NPC biographies entries" target="_blank">
                             NPC Biography Management
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="oghma_upload.php" title="Edit Oghma Infinium entries" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/oghma_upload.php" title="Edit Oghma Infinium entries" target="_blank">
                             Oghma Infinium Management
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="customprompteditor.php" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/customprompteditor.php" target="_blank">
                         Custom Prompt Editor
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="quickstart.php" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/quickstart.php" target="_blank">
                             Quickstart Menu
                         </a>
                         </li>
@@ -224,7 +238,7 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">TTS Voice Management</h6></li>
                         <li>
-                        <a class="dropdown-item" href="xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
                             CHIM XTTS Management
                         </a>
                         </li>
@@ -236,10 +250,10 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Web Extensions</h6></li>
                         <li>
-                        <a class="dropdown-item" href="addons/pmstt" target="_blank">Chrome Free Speech-to-Text</a>
+                        <a class="dropdown-item" href="#" onclick="window.open('/HerikaServer/ui/addons/pmstt', 'ChromeSTT', 'width=800,height=600,resizable=yes,scrollbars=yes'); return false;">Chrome Free Speech-to-Text</a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="addons/websocket" target="_blank">Websocket Configuration (WIP)</a>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/websocket" target="_blank">Websocket Configuration (WIP)</a>
                         </li>
                     </ul>
                 </li>
@@ -251,25 +265,25 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                     <!-- Connection Tests -->
                     <li><h6 class="dropdown-header">Connection Tests</h6></li>
                     <li>
-                    <a class="dropdown-item" href="tests.php" target="_blank">Current LLM/AI Connection Test</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests.php" target="_blank">Current LLM/AI Connection Test</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="tests/tts-test.php" target="_blank">Current TTS Connection Test</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/tts-test.php" target="_blank">Current TTS Connection Test</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="../debug/simple_stt_test.php" target="_blank">Current STT Connection Test</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/stt-test.php" target="_blank">Current STT Connection Test</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="tests/itt-test.php" target="_blank">Current ITT Connection Test</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/itt-test.php" target="_blank">Current ITT Connection Test</a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <!-- Logs & Cache -->
                     <li><h6 class="dropdown-header">Logs & Cache</h6></li>
                     <li>
-                    <a class="dropdown-item" href="tests/apache2err.php" target="_blank">Server Error Logs</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php" target="_blank">Server Error Logs</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="../soundcache/" target="_blank">Audio & Image Cache</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
                     </li>
                     <!--<li>
                     <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
@@ -281,9 +295,9 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
                     <ul class="dropdown-menu">
                         <li><h6 class="dropdown-header">Immersion Tools</h6></li>
-                        <li><a class="dropdown-item" href="addons/diary" target="_blank">AI Diary</a></li>
-                        <li><a class="dropdown-item" href="addons/adventurelog" target="_blank">Adventure Log</a></li>
-                        <li><a class="dropdown-item" href="addons/chatsim" target="_blank">Chat Testing</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/diary" target="_blank">AI Diary</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/adventurelog" target="_blank">Adventure Log</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/chatsim" target="_blank">Chat Testing</a></li>
                         <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
                         <!--<li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>-->
                     </ul>
@@ -293,11 +307,11 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Plugins</a>
                     <ul class="dropdown-menu">
                         <li><h6 class="dropdown-header">CHIM Extensions</h6></li>
-                        <li><a class="dropdown-item" href='index.php?plugins_show=true'>Plugin Manager</a></li>
+                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'>Plugin Manager</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Debugging</h6></li>
-                        <li><a class="dropdown-item" href="index.php?table=responselog" title="">Response Queue</a></li>
-                        <li><a class="dropdown-item" href="index.php?table=audit_request" title="">Request Logs</a></li>
+                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>
+                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=audit_request' title="">Request Logs</a></li>
                         <div style="
                         display: flex; 
                         justify-content: center; 
@@ -318,7 +332,7 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                         " 
                         onmouseover="this.style.backgroundColor='#c82333';"
                         onmouseout="this.style.backgroundColor='#dc3545';"
-                        onclick="if (confirm('This will wipe and reinstall the entire database!!! ARE YOU SURE?')) { window.location.href = 'index.php?reinstall=true&delete=true'; }"
+                        onclick="if (confirm('This will wipe and reinstall the entire database!!! ARE YOU SURE?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }"
                         title="Fully reinstalls the CHIM Database.">
                             <strong>Factory Reset Server Database</strong>
                         </button>
@@ -330,7 +344,7 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Guides</a>
                     <ul class="dropdown-menu">
                         <li><h6 class="dropdown-header">PLEASE READ!</h6></li>
-                        <li><a class="dropdown-item" href='index.php?notes=true'>CHIM 101 Quick Guide</a></li>
+                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?notes=true'>CHIM 101 Quick Guide</a></li>
                         <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">CHIM Manual</a></li>
                         <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">AI/LLM Supported Models List</a></li>
                         <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1yhMcH9BgwNWsUjz0r_CzJblZzc_ud8qmyJnAYpbfxMA/edit?gid=0#gid=0" target="_blank">AI/LLM Tier List</a></li>    
@@ -342,13 +356,13 @@ echo '<link rel="stylesheet" href="css/navbar.css">';
 
 
         <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" style="padding-right: 5px;">
-        <img src="images/youtube.png" alt="Checkout our Youtube Channel">
+        <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="Checkout our Youtube Channel">
         </a>
         <a href="https://discord.gg/NDn9qud2ug" target="_blank" style="padding-right: 5px;">
-        <img src="images/discord.png" alt="Join us on Discord">
+        <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Join us on Discord">
         </a>
         <a href="https://patreon.com/DwemerDynamics" target="_blank" style="padding-right: 10px;">
-        <img src="images/patreon.png" alt="Join our Patreon">
+        <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Join our Patreon">
     </a>
 
     </nav>
@@ -371,8 +385,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Update the session with the selected profile
         $_SESSION['PROFILE'] = $_POST['profileSelector'];
 
-        // Redirect to conf_wizard.php
-        header("Location: conf_wizard.php");
+        // Redirect back to the current page
+        header("Location: " . $_SERVER['REQUEST_URI']);
         exit();
     }
 
@@ -833,7 +847,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     transition: background-color 0.3s, color 0.3s;
                     <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'basic') ? 'border: 2px solid black;' : ''; ?>
                 "
-                onclick="location.href='set_option_conf.php?c=basic'"
+                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=basic'"
                 onmouseover="this.style.backgroundColor='#e0a800';" /* Darker Yellow */
                 onmouseout="this.style.backgroundColor='#ffc107';">
                 Basic
@@ -853,7 +867,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     transition: background-color 0.3s, color 0.3s;
                     <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'pro') ? 'border: 2px solid black;' : ''; ?>
                 "
-                onclick="location.href='set_option_conf.php?c=pro'"
+                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=pro'"
                 onmouseover="this.style.backgroundColor='#e06b0d';" /* Darker Orange */
                 onmouseout="this.style.backgroundColor='#fd7e14';">
                 Advanced
@@ -873,7 +887,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     transition: background-color 0.3s, color 0.3s;
                     <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'wip') ? 'border: 2px solid black;' : ''; ?>
                 "
-                onclick="location.href='set_option_conf.php?c=wip'"
+                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=wip'"
                 onmouseover="this.style.backgroundColor='#c82333';" /* Darker Red */
                 onmouseout="this.style.backgroundColor='#dc3545';">
                 Experimental
@@ -883,10 +897,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div style="display:inline-block; max-width:900px; font-size:small; height:50px; padding-right:10px; vertical-align: top;">
 
         <?php 
-
-        $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."../";
-        require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-        require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+        // Update engine path to use BASE_PATH
+        require_once(BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
+        require_once(BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 
         if (isset($_SESSION["PROFILE"])) {
             require_once($_SESSION["PROFILE"]);
