@@ -459,9 +459,9 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
     // Alphabetic filter
     echo '<div class="filter-buttons">';
-    echo '<button onclick="filterByLetter(\'\')" class="alphabet-button">All</button>';
+    echo '<a href="?#table" class="alphabet-button">All</a>';
     foreach (range('A', 'Z') as $char) {
-        echo '<button onclick="filterByLetter(\'' . $char . '\')" class="alphabet-button">' . $char . '</button>';
+        echo '<a href="?letter=' . $char . '#table" class="alphabet-button">' . $char . '</a>';
     }
     echo '</div>';
 
