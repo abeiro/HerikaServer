@@ -1,5 +1,15 @@
 <?php
-session_start();
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$TITLE = "📙CHIM - Oghma Infinium Management";
+
+ob_start();
+
+include("tmpl/head.html");
+
+$debugPaneLink = false;
+include("tmpl/navbar.php");
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -18,38 +28,6 @@ $schema = 'public';
 $username = 'dwemer';
 $password = 'dwemer';
 
-// Profile selection
-$GLOBALS["PROFILES"] = []; // Initialize the PROFILES array
-foreach (glob($configFilepath . 'conf_????????????????????????????????????????????????.php') as $mconf) {
-    if (file_exists($mconf)) {
-        $filename = basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        if (preg_match($pattern, $filename, $matches)) {
-            $hash = $matches[1];
-            $GLOBALS["PROFILES"][$hash] = $mconf;
-        }
-    }
-}
-
-// Function to compare modification dates
-function compareFileModificationDate($a, $b) {
-    return filemtime($b) - filemtime($a);
-}
-
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"])) {
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-} else {
-    $GLOBALS["PROFILES"] = [];
-}
-
-$GLOBALS["PROFILES"] = array_merge(["default" => "$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
-} else {
-    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
-}
 
 // Initialize message variable
 $message = '';
@@ -368,17 +346,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $message .= '<p>Topic and Topic Description cannot be empty when saving.</p>';
     }
 }
+
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>📙CHIM - Oghma Infinium Management</title>
-    <link rel="stylesheet" href="css/management.css">
-</head>
-<body>
+
+<link rel="stylesheet" href="css/main.css">
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 160px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
+    }
+</style>
+
+<main>
 <div class="indent5">
 <h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Management</h1>
+
+    <div id="toast" class="toast-notification">
+        <span class="message"></span>
+    </div>
+
     <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
     <p>This is done by detecting topics during conversations, and injecting the appropiate information into the AI's prompt.</p>
     <p>To use it you must have [MINIME_T5] and [OGHMA_INFINIUM] enabled in the default profile. You also need Minime-T5 installed and running.</p>
@@ -393,76 +391,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     4. If all above fails, send "You do not know about X" to the prompt.
 </p>
     <?php
-    // Display messages
-    if (!empty($message)) {
+    // Display messages - REMOVING THIS BLOCK
+    /*if (!empty($message)) {
         echo '<div class="message">';
         echo $message;
         echo '</div>';
-    }
+    }*/
     ?>
 
     <h2>Batch Upload</h2>
-<div style="
-    background-color: #3a3a3a;
-    padding: 15px;
-    border-radius: 5px;
-    border: 1px solid #4a4a4a;
-    max-width: 600px;
-">
-    <form action="" method="post" enctype="multipart/form-data" style="
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        margin: 0;
-        padding: 0;
-        background: none;
-        border: none;
-    ">
-        <div>
-            <label for="csv_file" style="display: block; margin-bottom: 5px; font-weight: bold;">Select .csv file to upload:</label>
-            <input type="file" name="csv_file" id="csv_file" accept=".csv" required style="
-                width: 100%;
-                padding: 6px;
-                margin-bottom: 10px;
-                border: 1px solid #555555;
-                border-radius: 3px;
-                background-color: #4a4a4a;
-                color: #f8f9fa;
-            ">
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
-            <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
-        </div>
-    </form>
-    <p>You can verify that the entry has been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
-    <p>You can see how it picks a relevant article during conversation by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
-    <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
-    <br>
-    <form action="" method="post" style="
-        border: none;
-        padding: 0;
-        margin: 0;
-        background: none;
-    ">
-        <input type="hidden" name="action" value="delete_all">
-        <input type="submit" class="btn-danger" value="Delete All Oghma Entries" 
-               onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
-    </form>
-    <br>
-    <form action="oghma_reset.php" method="post" style="
-        border: none;
-        padding: 0;
-        margin: 0;
-        background: none;
-    ">
-        <input type="submit" class="btn-danger" value="Factory Reset Oghma Database" 
-               onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
-    </form>
-    <p>You can download a backup of the full Oghma database in the <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
-</div>
+    <div class="form-container">
+        <form action="" method="post" enctype="multipart/form-data">
+            <div>
+                <label for="csv_file">Select .csv file to upload:</label>
+                <br>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+            </div>
+            <div class="button-group">
+                <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
+                <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
+            </div>
+        </form>
 
-<br>
+        <p>You can verify that the entry has been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
+        <p>You can see how it picks a relevant article during conversation by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
+        <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+        <br>
+
+        <form action="" method="post">
+            <input type="hidden" name="action" value="delete_all">
+            <input type="submit" class="btn-danger" value="Delete All Oghma Entries" 
+                   onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
+        </form>
+        <br>
+        <form action="oghma_reset.php" method="post">
+            <input type="submit" class="btn-danger" value="Factory Reset Oghma Database" 
+                   onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
+        </form>
+        <p>You can download a backup of the full Oghma database in the <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener">csv files channel in our discord</a>.</p>
+    </div>
+
+    <br>
 
 
 <?php
@@ -495,11 +464,11 @@ if (isset($_GET['order'])) {
 // Category buttons
 echo '<div style="width: 100%; padding-right: 5ch;">';
 echo '<h2 id="entries">Oghma Infinium Entries</h2>';
-echo '<div style="display: flex; gap: 10px; margin-bottom: 15px;">';
+echo '<div class="action-container">';
 echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
-echo '<div style="flex-grow: 1; max-width: 400px; display: flex; gap: 10px;">';
+echo '<div class="search-container">';
 echo '<input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">';
-echo '<button onclick="applySearch()" class="action-button">Search</button>';
+echo '<button onclick="applySearch()" class="action-button edit ">Search</button>';
 echo '</div>';
 echo '</div>';
 echo '<br>';
@@ -519,8 +488,8 @@ if ($selectedCategory) $baseUrl .= 'cat=' . urlencode($selectedCategory) . '&';
 if ($letter) $baseUrl .= 'letter=' . urlencode($letter) . '&';
 
 echo '<div class="filter-buttons">';
-echo '<a class="alphabet-button" href="' . $baseUrl . 'order=asc#entries">Sort Ascending</a>';
-echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#entries">Sort Descending</a>';
+echo '<a class="alphabet-button" href="' . $baseUrl . 'order=asc#entries">🔼 Ascending</a>';
+echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#entries">🔽 Descending</a>';
 echo '</div>';
 
 // Build query
@@ -636,18 +605,17 @@ if ($result) {
         echo '<div style="display: flex; gap: 4px;">';
         
         // Edit button only
-        echo '<a href="#" onclick="openEditModal(`' . 
-            str_replace(['\\', '`'], ['\\\\', '\\`'], $topic) . '`,`' . 
-            str_replace(['\\', '`'], ['\\\\', '\\`'], $topic_desc) . '`,`' . 
-            str_replace(['\\', '`'], ['\\\\', '\\`'], $knowledge_class) . '`,`' . 
-            str_replace(['\\', '`'], ['\\\\', '\\`'], $topic_desc_basic) . '`,`' . 
-            str_replace(['\\', '`'], ['\\\\', '\\`'], $knowledge_class_basic) . '`,`' . 
-            str_replace(['\\', '`'], ['\\\\', '\\`'], $tags) . '`,`' . 
-            str_replace(['\\', '`'], ['\\\\', '\\`'], $category) . 
-            '`);return false;" 
-            class="action-button edit">
-            Edit
-        </a>';
+        echo '<button onclick="openEditModal(' . 
+            htmlspecialchars(json_encode([
+                'topic' => $topic,
+                'topic_desc' => $topic_desc,
+                'knowledge_class' => $knowledge_class,
+                'topic_desc_basic' => $topic_desc_basic,
+                'knowledge_class_basic' => $knowledge_class_basic,
+                'tags' => $tags,
+                'category' => $category
+            ]), ENT_QUOTES, 'UTF-8') . 
+            ')" class="action-button edit">Edit</button>';
         
         echo '</div>';
         echo '</td>';
@@ -711,9 +679,9 @@ pg_close($conn);
                 <input type="text" name="category_new" id="edit_category">
 
                 <div class="modal-footer">
-                    <button type="submit" name="submit" value="update" class="action-button" style="background-color: #28a745;">Save Changes</button>
-                    <button type="button" onclick="deleteEntry()" class="action-button" style="background-color: #dc3545;">Delete</button>
-                    <button type="button" onclick="closeEditModal()" class="action-button" style="background-color: #6c757d;">Cancel</button>
+                    <button type="submit" name="submit" value="update" class="btn-save">Save Changes</button>
+                    <button type="button" onclick="deleteEntry()" class="btn-danger">Delete</button>
+                    <button type="button" onclick="closeEditModal()" class="btn-primary">Cancel</button>
                 </div>
             </form>
         </div>
@@ -758,8 +726,8 @@ pg_close($conn);
                 <input type="text" name="category" id="category">
 
                 <div class="modal-footer">
-                    <button type="submit" style="background-color: #28a745;">Save</button>
-                    <button type="button" onclick="closeNewEntryModal()" style="background-color: #6c757d;">Cancel</button>
+                    <button type="submit" class="btn-save">Save</button>
+                    <button type="button" onclick="closeNewEntryModal()" class="btn-danger">Cancel</button>
                 </div>
             </form>
         </div>
@@ -767,23 +735,22 @@ pg_close($conn);
 </div>
 
 <script>
-function openEditModal(topic, desc, klass, basicDesc, basicKlass, tags, category) {
+function openEditModal(data) {
     try {
-        // Decode HTML entities in the data
         const decodeHTML = (html) => {
             const txt = document.createElement('textarea');
-            txt.innerHTML = html.replace(/\\'/g, "'").replace(/\\/g, "");
+            txt.innerHTML = html;
             return txt.value;
         };
 
-        document.getElementById("edit_topic_original").value = decodeHTML(topic);
-        document.getElementById("edit_topic").value = decodeHTML(topic);
-        document.getElementById("edit_topic_desc").value = decodeHTML(desc);
-        document.getElementById("edit_knowledge_class").value = decodeHTML(klass);
-        document.getElementById("edit_topic_desc_basic").value = decodeHTML(basicDesc);
-        document.getElementById("edit_knowledge_class_basic").value = decodeHTML(basicKlass);
-        document.getElementById("edit_tags").value = decodeHTML(tags);
-        document.getElementById("edit_category").value = decodeHTML(category);
+        document.getElementById("edit_topic_original").value = decodeHTML(data.topic);
+        document.getElementById("edit_topic").value = decodeHTML(data.topic);
+        document.getElementById("edit_topic_desc").value = decodeHTML(data.topic_desc);
+        document.getElementById("edit_knowledge_class").value = decodeHTML(data.knowledge_class);
+        document.getElementById("edit_topic_desc_basic").value = decodeHTML(data.topic_desc_basic);
+        document.getElementById("edit_knowledge_class_basic").value = decodeHTML(data.knowledge_class_basic);
+        document.getElementById("edit_tags").value = decodeHTML(data.tags);
+        document.getElementById("edit_category").value = decodeHTML(data.category);
         
         document.getElementById("editModal").style.display = "block";
         document.body.style.overflow = "hidden";
@@ -865,6 +832,34 @@ window.addEventListener("load", function() {
         document.getElementById("searchBox").value = searchTerm;
     }
 });
+
+// Add toast notification JavaScript function
+function showToast(message, duration = 5000) {
+    const toast = document.getElementById('toast');
+    const messageSpan = toast.querySelector('.message');
+    messageSpan.textContent = message;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, duration);
+}
+
+// Update PHP message handling
+<?php if (!empty($message)): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    showToast(<?php echo json_encode(strip_tags($message)); ?>);
+});
+<?php endif; ?>
 </script>
-</body>
-</html>
+</main>
+
+<?php
+include("tmpl/footer.html");
+
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>
