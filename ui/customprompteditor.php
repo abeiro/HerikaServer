@@ -109,189 +109,126 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>📝CHIM - Custom Prompts</title>
+    <link rel="stylesheet" href="css/management.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c; /* Dark grey background */
-            color: #f8f9fa; /* Light grey text for readability */
+        /* ACE Editor specific styles */
+        #editor {
+            height: 700px;
+            background-color: #1e1e1e;
+            margin-top: 10px;
+            border: 1px solid #555555;
+            border-radius: 5px;
         }
 
-        h1, h2 {
-            color: #ffffff; /* White color for headings */
-        }
-
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
+        /* Code block styling */
+        pre {
+            background-color: #1e1e1e;
+            border: 1px solid #555555;
             padding: 15px;
             border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
-            max-width: 800px;
-        }
-
-        label {
-            font-weight: bold;
-            color: #f8f9fa; /* Ensure labels are readable */
-        }
-
-        input[type="text"], input[type="file"], textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #555555; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            resize: vertical; /* Allows users to resize vertically if needed */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 14px; /* Sets a readable font size */
-        }
-
-        input[type="submit"], .button {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px; /* Slightly larger border radius */
-            cursor: pointer;
-            padding: 8px 16px; /* Increased padding for a larger button */
-            font-size: 18px;   /* Increased font size */
-            font-weight: bold; /* Bold text for better visibility */
-            transition: background-color 0.3s ease; /* Smooth hover transition */
-            margin-right: 10px;
-        }
-
-        input[type="submit"]:hover, .button:hover {
-            background-color: #0056b3; /* Darker shade on hover */
-        }
-
-        .message {
-            background-color: #444444; /* Darker background for messages */
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #555555;
-            max-width: 800px;
+            overflow-x: auto;
             margin-bottom: 20px;
-            color: #f8f9fa; /* Light text in messages */
-        }
-
-        .message p {
-            margin: 0;
-        }
-
-        .response-container {
-            margin-top: 20px;
-        }
-
-        .indent {
-            padding-left: 10ch; /* 10 character spaces */
-        }
-
-        .indent5 {
-            padding-left: 5ch; /* 5 character spaces */
-        }
-
-        .button {
-            padding: 8px 16px;
-            margin-top: 10px;
-            cursor: pointer;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 3px;
-        }
-
-        .button:hover {
-            background-color: #0056b3;
-        }
-
-        textarea[readonly] {
-            background-color: #4a4a4a;
-            color: #f8f9fa;
-            border: 1px solid #555555;
-        }
-
-        /* Code blocks styling */
-        pre {
-            background-color: #1e1e1e; /* Distinct dark background for code blocks */
-            border: 1px solid #555555; /* Border to make it stand out */
-            padding: 15px; /* Padding inside the code block */
-            border-radius: 5px; /* Rounded corners */
-            overflow-x: auto; /* Horizontal scroll if content overflows */
-            margin-bottom: 20px; /* Space below code blocks */
         }
 
         pre code {
             border: none;
             padding: 0;
-            color: #f8f9fa; /* Ensure code text is readable */
-            font-family: 'Courier New', Courier, monospace; /* Monospace font for code */
-            font-size: 14px; /* Consistent font size */
+            color: #f8f9fa;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
         }
 
-        /* ACE Editor container */
-        #editor {
-            width: 100%;
-            height: 700px; /* Force the main textbox to be large */
-            background-color: #1e1e1e; /* Dark background for Ace Editor */
-            margin-top: 10px;
-            border: 1px solid #555555;
+        /* Example section styling */
+        .example-section {
+            background-color: #3a3a3a;
+            padding: 20px;
             border-radius: 5px;
+            border: 1px solid #4a4a4a;
+            margin: 20px 0;
+        }
+
+        /* Success message styling */
+        .success-message {
+            color: #32CD32;
+            font-weight: bold;
+        }
+
+        /* Error message styling */
+        .error-message {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* Form container width */
+
+
+        /* Readonly textarea for prompts.php view */
+        textarea[readonly] {
+            height: 500px;
+            background-color: #1e1e1e;
+            color: #f8f9fa;
+            border: 1px solid #555555;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            margin-top: 20px;
+            display: none; /* Hidden by default */
         }
     </style>
 </head>
 <body>
-    <h1>📝CHIM Custom Prompt Editor</h1>
-    <p>
-        By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.
-        For example, you can adjust how AI NPCs write their diary entries, what they say during bored events, and more!
-    </p>
-    <p>
-        The contents of this file overwrites whatever is in the standard <code>prompts.php</code>, meaning you can safely make edits to it without breaking it when CHIM updates.
-    </p>
-    <p>
-        <b>The file must be in valid PHP format!</b> Make sure it starts with <code>&lt;?php</code> and ends with <code>?&gt;</code>.
-    </p>
+    <div class="indent5">
+        <h1>📝CHIM Custom Prompt Editor</h1>
+        <p>
+            By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.
+            For example, you can adjust how AI NPCs write their diary entries, what they say during bored events, and more!
+        </p>
+        <p>
+            The contents of this file overwrites whatever is in the standard <code>prompts.php</code>, meaning you can safely make edits to it without breaking it when CHIM updates.
+        </p>
+        <p>
+            <b>The file must be in valid PHP format!</b> Make sure it starts with <code>&lt;?php</code> and ends with <code>?&gt;</code>.
+        </p>
 
-    <?php if (!empty($message)): ?>
-        <div class="message"><p><?php echo nl2br($message); ?></p></div>
-    <?php endif; ?>
+        <?php if (!empty($message)): ?>
+            <div class="message"><?php echo $message; ?></div>
+        <?php endif; ?>
 
-    <!-- Main form for editing and saving the prompts_custom.php file -->
-    <form method="post" onsubmit="return syncAceContent()">
-        <label for="editor">prompts_custom.php Editor:</label>
+        <!-- Main form for editing and saving the prompts_custom.php file -->
+        <form method="post" onsubmit="return syncAceContent()">
+            <label for="editor">prompts_custom.php Editor:</label>
+            <div id="editor"></div>
+            <textarea name="content" id="hiddenContent" style="display:none;"></textarea>
+            <br>
+            <div class="button-group">
+                <input type="submit" name="save" value="Save" class="action-button">
+                <input type="submit" name="validate" value="Validate" class="action-button">
+            </div>
+            <p>
+            Click the <b>Validate</b> button to confirm the file is in proper format. Then click <b>Save</b>. 
+        </p>
+        <p>
+            <i>Use an LLM chatbot if you need help fixing syntax errors.</i>
+        </p>
+        </form>
 
-        <!-- Ace Editor replaces the traditional <textarea> -->
-        <div id="editor"></div>
-        <!-- Hidden textarea to store final text from Ace Editor -->
-        <textarea name="content" id="hiddenContent" style="display:none;"></textarea>
-        
-        <br>
-        <input type="submit" name="save" value="Save">
-        <input type="submit" name="validate" value="Validate">
-    </form>
+        <!-- Form to view prompts.php -->
+        <form method="post" id="viewPromptsForm">
+            <input type="submit" name="view_prompts" value="View prompts.php file" class="action-button" id="viewPromptsBtn">
+        </form>
 
-    <p>
-        Click the <b>Validate</b> button to confirm the file is in proper format. Then click <b>Save</b>. 
-    </p>
-    <p>
-        <i>Use an LLM chatbot if you need help fixing syntax errors.</i>
-    </p>
+        <!-- Container for prompts.php content -->
+        <div id="promptsContainer" style="max-width: 1200px;">
+            <?php if (isset($prompts_content) && !empty($prompts_content)): ?>
+                <textarea readonly id="promptsViewer"><?php echo htmlspecialchars($prompts_content); ?></textarea>
+            <?php endif; ?>
+        </div>
 
-    <!-- Form to view prompts.php -->
-    <form method="post">
-        <input type="submit" name="view_prompts" value="View prompts.php file">
-    </form>
-
-    <!-- If user clicked "View prompts" and found content, show it -->
-    <?php if (isset($prompts_content) && !empty($prompts_content)): ?>
-        <textarea rows="30" readonly><?php echo htmlspecialchars($prompts_content); ?></textarea>
-    <?php endif; ?>
-
-    <div class="ms-2 me-auto">
-        <h3 class="fw-bold">How to Adjust the AI Prompts</h3>
-        <p>We have this in <b>prompts.php</b></p>
-        <pre><code class="language-php">
+        <div class="example-section">
+            <h3>How to Adjust the AI Prompts</h3>
+            <p>We have this in <b>prompts.php</b></p>
+            <pre><code class="language-php">
     "combatend" => [
         "cue" => [
             "({$GLOBALS["HERIKA_NAME"]} comments about the last combat encounter) $TEMPLATE_DIALOG",
@@ -304,11 +241,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             "force_tokens_max" => "50",
             "dontuse" => (time() % 5 != 0) // 20% chance
         ]
-    ],
-        </code></pre>
+    ],</code></pre>
 
-        <p>We can edit the <b>prompts_custom.php</b> with this new definition:</p>
-        <pre><code class="language-php">
+            <p>We can edit the <b>prompts_custom.php</b> with this new definition:</p>
+            <pre><code class="language-php">
 // These are comments, you do not need to add them to the custom prompt file.
 // $TEMPLATE_DIALOG is in prompts.php and is the standard cue.
 // Cue is the last instruction sent to the LLM.
@@ -330,27 +266,27 @@ $PROMPTS["combatend"] = [
         "force_tokens_max" => "50",
         "dontuse" => (time() % 5 != 0) // 20% chance
     ]
-],
-        </code></pre>
-    </div>
-    <br>
-    <h3>Custom Prompt Examples:</h3>
-    
-    <p><b>Make diary entries more emotional and private (credit to Larrek)</b></p>
-    <pre><code class="language-php">
+],</code></pre>
+        </div>
+
+        <h3>Custom Prompt Examples:</h3>
+        <div class="example-section">
+            <p><b>Make diary entries more emotional and private (credit to Larrek)</b></p>
+            <pre><code class="language-php">
 $PROMPTS["diary"]=[ 
     "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}'s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}'s diary, add {$GLOBALS["HERIKA_NAME"]}'s emotions and private thoughts on people and events . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
     "extra"=>["force_tokens_max"=>0]
-];
-    </code></pre>
+];</code></pre>
+        </div>
+    </div>
 
-    <!-- Include Ace Editor scripts from jsDelivr -->
+    <!-- Include Ace Editor scripts -->
     <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.5.0/src-min-noconflict/ace.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.5.0/src-min-noconflict/ext-language_tools.js"></script>
     <script>
     let editor;
+    let isPromptsVisible = <?php echo isset($prompts_content) ? 'true' : 'false' ?>;
 
-    // Initialize Ace Editor after DOM is loaded
     window.addEventListener('DOMContentLoaded', function() {
         editor = ace.edit("editor", {
             mode: "ace/mode/php",
@@ -360,25 +296,49 @@ $PROMPTS["diary"]=[
         });
 
         editor.setValue(<?php echo json_encode($content); ?>, -1);
+
+        // Initialize prompts viewer state
+        const promptsViewer = document.getElementById('promptsViewer');
+        const viewPromptsBtn = document.getElementById('viewPromptsBtn');
+        const viewPromptsForm = document.getElementById('viewPromptsForm');
+
+        if (promptsViewer) {
+            promptsViewer.style.display = isPromptsVisible ? 'block' : 'none';
+            if (viewPromptsBtn) {
+                viewPromptsBtn.value = isPromptsVisible ? 'Hide prompts.php file' : 'View prompts.php file';
+            }
+        }
+
+        // Add event listener to the form
+        if (viewPromptsForm) {
+            viewPromptsForm.addEventListener('submit', function(e) {
+                if (promptsViewer && promptsViewer.textContent) {
+                    // If we already have content, just toggle visibility
+                    e.preventDefault();
+                    isPromptsVisible = !isPromptsVisible;
+                    promptsViewer.style.display = isPromptsVisible ? 'block' : 'none';
+                    viewPromptsBtn.value = isPromptsVisible ? 'Hide prompts.php file' : 'View prompts.php file';
+                }
+                // Otherwise, let the form submit to load content
+            });
+        }
     });
 
-    // On form submission, copy Ace Editor content to hidden textarea
     function syncAceContent() {
-    const code = editor.getValue().trim();
+        const code = editor.getValue().trim();
 
-    // Quick check for start/end tags:
-    if (!code.startsWith('<' + '?php')) {
-        alert('Error: File must start with "<php?"');
-        return false;
-    }
-    if (!code.endsWith('?' + '>')) {
-        alert('Error: File must end with "?>"');
-        return false;
-    }
+        if (!code.startsWith("<?php")) {
+            alert("Error: File must start with \"<?php\"");
+            return false;
+        }
+        if (!code.endsWith("?>")) {
+            alert("Error: File must end with \"?>\"");
+            return false;
+        }
 
-    document.getElementById('hiddenContent').value = code;
-    return true; // Allow form submission
-}
-</script>
+        document.getElementById('hiddenContent').value = code;
+        return true;
+    }
+    </script>
 </body>
 </html>
