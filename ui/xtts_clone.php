@@ -1,17 +1,63 @@
 <?php
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$TITLE = "XTTS Voice Management";
+
+ob_start();
+
+include("tmpl/head.html");
+
+$debugPaneLink = false;
+include("tmpl/navbar.php");
+
 // Enable error reporting (for development purposes)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // Define the endpoint for the XTTS API
-require_once(__DIR__."/../conf/conf.php");
 if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]))
     $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = 'http://127.0.0.1:8020';
 
 // Initialize message variables
 $message = '';
 $speakersMessage = '';
+
+// Get initial speakers list without form submission
+if (empty($speakersMessage) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/speakers_list';
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('accept: application/json'));
+    $response = curl_exec($ch);
+    
+    if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
+        $speakersList = json_decode($response, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            sort($speakersList);
+            $totalVoices = count($speakersList);
+            
+            $speakersMessage = '<div class="voice-list-container">';
+            $speakersMessage .= '<div class="voice-list-header">';
+            $speakersMessage .= '<h3 style="color: #fff; margin: 0 0 15px 0;">Available Voices (' . $totalVoices . ' total)</h3>';
+            $speakersMessage .= '</div>';
+            $speakersMessage .= '<div class="voice-grid">';
+            foreach ($speakersList as $speaker) {
+                $displayName = basename($speaker, '.wav');
+                $speakersMessage .= '<div class="voice-item">' . 
+                    '<span title="' . htmlspecialchars($speaker) . '">' . htmlspecialchars($displayName) . '</span>' .
+                    '<button onclick="copyToClipboard(\'' . htmlspecialchars($displayName) . '\')" ' .
+                    'class="copy-btn" title="Copy voice name">⎘</button>' .
+                '</div>';
+            }
+            $speakersMessage .= '</div>';
+            $speakersMessage .= '</div>';
+        }
+    }
+    curl_close($ch);
+}
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -186,82 +232,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message .= "<p>$numUploaded out of $numFiles voice files have been uploaded. </p>";
     }
 }
-?>
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>🔊 CHIM - XTTS Voice Management</title>
-    <link rel="stylesheet" href="css/management.css">
-    <script>
-        function showLoadingMessage() {
-            document.getElementById('loading-overlay').style.display = 'block';
-            animateEllipsis();
-        }
 
-        function animateEllipsis() {
-            var ellipsis = document.getElementById('ellipsis');
-            var dots = 0;
-            window.ellipsisInterval = setInterval(function() {
-                dots = (dots + 1) % 4;
-                var dotStr = '';
-                for (var i = 0; i < dots; i++) {
-                    dotStr += '.';
-                }
-                ellipsis.innerHTML = dotStr;
-            }, 500);
-        }
+// Add the JavaScript functions
+echo "<script>
+    function showLoadingMessage() {
+        document.getElementById('loading-overlay').style.display = 'block';
+        animateEllipsis();
+    }
 
-        function toggleVoiceList() {
-            const voiceList = document.getElementById('voiceList');
-            const toggleBtn = document.getElementById('toggleVoices');
-            if (voiceList.style.display === 'none') {
-                voiceList.style.display = 'block';
-                toggleBtn.textContent = 'Hide Available Voices';
-            } else {
-                voiceList.style.display = 'none';
-                toggleBtn.textContent = 'Show Available Voices';
+    function animateEllipsis() {
+        var ellipsis = document.getElementById('ellipsis');
+        var dots = 0;
+        window.ellipsisInterval = setInterval(function() {
+            dots = (dots + 1) % 4;
+            var dotStr = '';
+            for (var i = 0; i < dots; i++) {
+                dotStr += '.';
             }
+            ellipsis.innerHTML = dotStr;
+        }, 500);
+    }
+
+    function toggleVoiceList() {
+        const voiceList = document.getElementById('voiceList');
+        const toggleBtn = document.getElementById('toggleVoices');
+        if (voiceList.style.display === 'none') {
+            voiceList.style.display = 'block';
+            toggleBtn.textContent = 'Hide Available Voices';
+        } else {
+            voiceList.style.display = 'none';
+            toggleBtn.textContent = 'Show Available Voices';
         }
+    }
 
-        // If we have voice data and it came from a form submission, show the list
-        <?php if (!empty($speakersMessage) && isset($_POST['get_speakers'])) { ?>
-            document.getElementById('voiceList').style.display = 'block';
-            document.getElementById('toggleVoices').textContent = 'Hide Available Voices';
-        <?php } ?>
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get initial voice list
-            <?php if (empty($speakersMessage)) { ?>
-                document.querySelector('form').submit();
-            <?php } ?>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            // Visual feedback for the button
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✓';
+            btn.style.opacity = '1';
+            
+            // Show toast notification
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            
+            // Hide toast and reset button after delay
+            setTimeout(() => {
+                toast.classList.remove('show');
+                btn.textContent = originalText;
+                btn.style.opacity = '';
+            }, 1500);
+        }).catch(function(err) {
+            console.error('Failed to copy text: ', err);
         });
+    }
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                // Visual feedback for the button
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '✓';
-                btn.style.opacity = '1';
-                
-                // Show toast notification
-                const toast = document.getElementById('toast');
-                toast.classList.add('show');
-                
-                // Hide toast and reset button after delay
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    btn.textContent = originalText;
-                    btn.style.opacity = '';
-                }, 1500);
-            }).catch(function(err) {
-                console.error('Failed to copy text: ', err);
-            });
-        }
-    </script>
-</head>
-<body>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show voice list by default
+        document.getElementById('voiceList').style.display = 'block';
+        document.getElementById('toggleVoices').textContent = 'Hide Available Voices';
+    });
+</script>";
+
+?>
 
 <div id="loading-overlay">
     <p>Syncing voice cache to CHIM XTTS server, this can take a couple minutes. <br><b>Do not refresh the page<span id="ellipsis"></span></b></p>
@@ -337,42 +371,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div id="voiceList" style="display: none; margin-top: 15px;">
             <?php
-            // Get the voice list on initial page load
-            if (empty($speakersMessage)) {
-                $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/speakers_list';
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array('accept: application/json'));
-                $response = curl_exec($ch);
-                
-                if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
-                    $speakersList = json_decode($response, true);
-                    if (json_last_error() === JSON_ERROR_NONE) {
-                        sort($speakersList);
-                        $totalVoices = count($speakersList);
-                        
-                        echo '<div class="voice-list-container">';
-                        echo '<div class="voice-list-header">';
-                        echo '<h3 style="color: #fff; margin: 0 0 15px 0;">Available Voices (' . $totalVoices . ' total)</h3>';
-                        echo '</div>';
-                        echo '<div class="voice-grid">';
-                        foreach ($speakersList as $speaker) {
-                            $displayName = basename($speaker, '.wav');
-                            echo '<div class="voice-item">' . 
-                                '<span title="' . htmlspecialchars($speaker) . '">' . htmlspecialchars($displayName) . '</span>' .
-                                '<button onclick="copyToClipboard(\'' . htmlspecialchars($displayName) . '\')" ' .
-                                'class="copy-btn" title="Copy voice name">⎘</button>' .
-                            '</div>';
-                        }
-                        echo '</div>';
-                        echo '</div>';
-                    }
-                }
-                curl_close($ch);
-            } else {
-                echo $speakersMessage;
-            }
+            echo $speakersMessage;
             ?>
         </div>
         <br>
@@ -397,5 +396,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </div>
 
-</body>
-</html>
+<?php
+include("tmpl/footer.html");
+
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;  // Use the title we set at the beginning
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>
