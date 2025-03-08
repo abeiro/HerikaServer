@@ -1,14 +1,19 @@
 <?php
-session_start();
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$TITLE = "📝CHIM - NPC Biography Management";
+
+ob_start();
+
+include("tmpl/head.html");
+
+$debugPaneLink = false;
+include("tmpl/navbar.php");
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
-
-// Paths
-$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$enginePath = $rootPath . ".." . DIRECTORY_SEPARATOR;
-$configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
 
 // Database connection details
 $host = 'localhost';
@@ -17,39 +22,6 @@ $dbname = 'dwemer';
 $schema = 'public';
 $username = 'dwemer';
 $password = 'dwemer';
-
-// Profile selection
-$GLOBALS["PROFILES"] = []; // Initialize the PROFILES array
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf) {
-    if (file_exists($mconf)) {
-        $filename = basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        if (preg_match($pattern, $filename, $matches)) {
-            $hash = $matches[1];
-            $GLOBALS["PROFILES"][$hash] = $mconf;
-        }
-    }
-}
-
-// Function to compare modification dates
-function compareFileModificationDate($a, $b) {
-    return filemtime($b) - filemtime($a);
-}
-
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"])) {
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-} else {
-    $GLOBALS["PROFILES"] = [];
-}
-
-$GLOBALS["PROFILES"] = array_merge(["default" => "$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
-} else {
-    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
-}
 
 // Initialize message variable
 $message = '';
@@ -383,223 +355,181 @@ $currentLetter = isset($_GET['letter']) ? htmlspecialchars($_GET['letter']) : ''
 $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>📝CHIM - NPC Biography Management</title>
-    <link rel="stylesheet" href="css/management.css">
-</head>
-<body>
-
-<div class="indent5">
-    <h1>📝NPC Biography Management</h1>
-    <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
-    <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
-
-    <?php
-    if (!empty($message)) {
-        echo '<div class="message">';
-        echo $message;
-        echo '</div>';
+<link rel="stylesheet" href="css/main.css">
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 160px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
     }
-    ?>
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
+    }
+</style>
 
-    <h2>Batch Upload</h2>
-    <div style="
-        background-color: #3a3a3a;
-        padding: 15px;
-        border-radius: 5px;
-        border: 1px solid #4a4a4a;
-        max-width: 600px;
-    ">
-        <form action="" method="post" enctype="multipart/form-data" style="
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin: 0;
-            padding: 0;
-            background: none;
-            border: none;
-        ">
-            <div>
-                <label for="csv_file" style="display: block; margin-bottom: 5px; font-weight: bold;">Select .csv file to upload:</label>
-                <input type="file" name="csv_file" id="csv_file" accept=".csv" required style="
-                    width: 100%;
-                    padding: 6px;
-                    margin-bottom: 10px;
-                    border: 1px solid #555555;
-                    border-radius: 3px;
-                    background-color: #4a4a4a;
-                    color: #f8f9fa;
-                ">
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
-                <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
-            </div>
-        </form>
-        <p>You can verify that NPC data has been uploaded successfully by going to 
-        <b>Server Actions -> Database Manager -> database -> public -> npc_templates_custom</b>.</p>
-        <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
-        <p>Also you can check the merged table at 
-        <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.</p>
-        <br>
-        <form action="" method="post" style="
-            border: none;
-            padding: 0;
-            margin: 0;
-            background: none;
-        ">
-            <input type="hidden" name="truncate_npc" value="1">
-            <input type="submit" class="btn-danger" value="Factory Reset NPC Override Table" 
-                   onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in npc_templates_custom? This action is IRREVERSIBLE!');">
-        </form>
-        <p>This will just delete any custom NPC entires you have uploaded.</p>
-        <p>You can download a backup of the full character database in the 
-        <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener">
-            csv files channel in our discord
-        </a>.</p>
+<main>
+    <div class="indent5">
+        <h1>📝NPC Biography Management</h1>
+        <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
+        <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
+
+        <div id="toast" class="toast-notification">
+            <span class="message"></span>
+        </div>
+
+        <h2>Batch Upload</h2>
+        <div class="form-container">
+            <form action="" method="post" enctype="multipart/form-data">
+                <div>
+                    <label for="csv_file">Select .csv file to upload:</label>
+                    <br>
+                    <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+                </div>
+                <div class="button-group">
+                    <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
+                    <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
+                </div>
+                <p>You can verify that NPC data has been uploaded successfully by going to 
+                <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b>.</p>
+                <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
+                <p>Also you can check the merged table at 
+                <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.</p>
+            </form>
+            <form action="" method="post">
+                <input 
+                    type="submit" 
+                    name="truncate_npc" 
+                    value="Factory Reset NPC Override Table"
+                    class="btn-danger"
+                    onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in npc_templates_custom? This action is IRREVERSIBLE!');"
+                >
+            </form>
+            <p>This will just delete any custom NPC entires you have uploaded.</p>
+            <p>You can download a backup of the full character database in the 
+            <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener">
+                csv files channel in our discord
+            </a>.
+            </p>
+        </div>
     </div>
-</div>
 
+    <br>
+    <?php
+    $letter = isset($_GET['letter']) ? strtoupper($_GET['letter']) : '';
 
-<br>
-<?php
-$letter = isset($_GET['letter']) ? strtoupper($_GET['letter']) : '';
-$searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
-
-// Build query based on filters
-if (!empty($letter) && !empty($searchTerm)) {
-    // Filter by both letter and search term
-    $query_combined = "
-        SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
-        FROM {$schema}.combined_npc_templates
-        WHERE npc_name ILIKE $1 AND npc_name ILIKE $2
-        ORDER BY npc_name ASC
-    ";
-    $params_combined = [$letter . '%', '%' . $searchTerm . '%'];
-} elseif (!empty($letter)) {
-    // Filter by letter only
-    $query_combined = "
-        SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
-        FROM {$schema}.combined_npc_templates
-        WHERE npc_name ILIKE $1
-        ORDER BY npc_name ASC
-    ";
-    $params_combined = [$letter . '%'];
-} elseif (!empty($searchTerm)) {
-    // Filter by search term only
-    $query_combined = "
-        SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
-        FROM {$schema}.combined_npc_templates
-        WHERE npc_name ILIKE $1
-        ORDER BY npc_name ASC
-    ";
-    $params_combined = ['%' . $searchTerm . '%'];
-} else {
-    // No filters
-    $query_combined = "
-        SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
-        FROM {$schema}.combined_npc_templates
-        ORDER BY npc_name ASC
-    ";
-    $params_combined = [];
-}
-
-$result_combined = !empty($params_combined) 
-    ? pg_query_params($conn, $query_combined, $params_combined)
-    : pg_query($conn, $query_combined);
-
-// Wrap the NPC Templates Database section in a div for indentation
-echo '<div class="indent5" id="table">';
-echo '<h2>NPC Templates Database</h2>';
-echo '<div class="action-container">';
-echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
-echo '<div class="search-container">';
-echo '<input type="text" id="searchBox" placeholder="Search NPC names...">';
-echo '<button onclick="applySearch()" class="action-button">Search</button>';
-echo '</div>';
-echo '</div>';
-echo '<h3>Note: This is just for editing an NPC entry before they are activated ingame. Any further edits should be done in the configuration wizard.</h3>';
-echo '<p>Also due to complexity you can not delete an NPC entry. You can simply make another one with the correct name if you make a mistake.</p>';
-
-echo '<br>';
-
-// Alphabetic filter
-echo '<div class="filter-buttons">';
-echo '<a href="?#table" class="alphabet-button">All</a>';
-foreach (range('A', 'Z') as $char) {
-    echo '<a href="?letter=' . $char . '#table" class="alphabet-button">' . $char . '</a>';
-}
-echo '</div>';
-
-if ($result_combined) {
-    echo '<div class="table-container">';
-    echo '<table>';
-    echo '<tr>';
-    echo '  <th>npc_name</th>';
-    echo '  <th>npc_pers</th>';
-    echo '  <th>npc_dynamic</th>';
-    echo '  <th>npc_misc</th>';
-    echo '  <th>melotts_voiceid</th>';
-    echo '  <th>xtts_voiceid</th>';
-    echo '  <th>xvasynth_voiceid</th>';
-    echo '  <th>Actions</th>';
-    echo '</tr>';
-
-    $rowCountCombined = 0;
-    while ($row = pg_fetch_assoc($result_combined)) {
-        echo '<tr>';
-        echo '  <td>' . htmlspecialchars($row['npc_name'] ?? '') . '</td>';
-        echo '  <td>' . nl2br(htmlspecialchars($row['npc_pers'] ?? '')) . '</td>';
-        echo '  <td>' . ($row['npc_dynamic'] !== null ? nl2br(htmlspecialchars($row['npc_dynamic'])) : '') . '</td>';
-        echo '  <td>' . ($row['npc_misc'] !== null ? nl2br(htmlspecialchars($row['npc_misc'])) : '') . '</td>';
-        echo '  <td>' . htmlspecialchars($row['melotts_voiceid'] ?? '') . '</td>';
-        echo '  <td>' . htmlspecialchars($row['xtts_voiceid'] ?? '') . '</td>';
-        echo '  <td>' . htmlspecialchars($row['xvasynth_voiceid'] ?? '') . '</td>';
-        
-        // Add Edit button
-        echo '<td style="white-space: nowrap;">';
-        echo '<div style="display: flex; gap: 4px;">';
-        $jsData = [
-            'npc_name' => $row['npc_name'],
-            'npc_pers' => $row['npc_pers'],
-            'npc_dynamic' => $row['npc_dynamic'] ?? '',
-            'npc_misc' => $row['npc_misc'] ?? '',
-            'melotts_voiceid' => $row['melotts_voiceid'] ?? '',
-            'xtts_voiceid' => $row['xtts_voiceid'] ?? '',
-            'xvasynth_voiceid' => $row['xvasynth_voiceid'] ?? ''
-        ];
-        echo '<button onclick="openEditModal(' . 
-            htmlspecialchars(str_replace(
-                ["\r", "\n", "'"],
-                [' ', ' ', "\\'"],
-                json_encode($jsData)
-            ), ENT_QUOTES, 'UTF-8') . 
-            ')" class="action-button edit">Edit</button>';
-        echo '</div>';
-        echo '</td>';
-        echo '</tr>';
-        
-        $rowCountCombined++;
+    // Build query based on optional filter
+    if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
+        // Filter by first letter
+        $query_combined = "
+            SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
+            FROM {$schema}.combined_npc_templates
+            WHERE npc_name ILIKE $1
+            ORDER BY npc_name ASC
+        ";
+        $params_combined = [$letter . '%'];
+        $result_combined = pg_query_params($conn, $query_combined, $params_combined);
+    } else {
+        // No filter: show all
+        $query_combined = "
+            SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
+            FROM {$schema}.combined_npc_templates
+            ORDER BY npc_name ASC
+        ";
+        $result_combined = pg_query($conn, $query_combined);
     }
-    echo '</table>';
+
+    // Wrap the NPC Templates Database section in a div for indentation
+    echo '<div class="indent5" id="table">';
+    echo '<h2>NPC Templates Database</h2>';
+    echo '<div class="action-container">';
+    echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
+    echo '</div>';
+    echo '<h3>Note: This is just for editing an NPC entry before they are activated ingame. Any further edits should be done in the configuration wizard.</h3>';
+    echo '<p>Also due to complexity you can not delete an NPC entry. You can simply make another one with the correct name if you make a mistake.</p>';
+
+    echo '<br>';
+
+    // Alphabetic filter
+    echo '<div class="filter-buttons">';
+    echo '<button onclick="filterByLetter(\'\')" class="alphabet-button">All</button>';
+    foreach (range('A', 'Z') as $char) {
+        echo '<button onclick="filterByLetter(\'' . $char . '\')" class="alphabet-button">' . $char . '</button>';
+    }
     echo '</div>';
 
-    if ($rowCountCombined === 0) {
-        echo '<p>No entries found.</p>';
+    if ($result_combined) {
+        echo '<div id="npc-table-container" class="table-container">';
+        echo '<table>';
+        echo '<tr>';
+        echo '  <th>npc_name</th>';
+        echo '  <th>npc_pers</th>';
+        echo '  <th>npc_dynamic</th>';
+        echo '  <th>npc_misc</th>';
+        echo '  <th>melotts_voiceid</th>';
+        echo '  <th>xtts_voiceid</th>';
+        echo '  <th>xvasynth_voiceid</th>';
+        echo '  <th>Actions</th>';
+        echo '</tr>';
+
+        $rowCountCombined = 0;
+        while ($row = pg_fetch_assoc($result_combined)) {
+            echo '<tr>';
+            echo '  <td>' . htmlspecialchars($row['npc_name'] ?? '') . '</td>';
+            echo '  <td>' . nl2br(htmlspecialchars($row['npc_pers'] ?? '')) . '</td>';
+            echo '  <td>' . ($row['npc_dynamic'] !== null ? nl2br(htmlspecialchars($row['npc_dynamic'])) : '') . '</td>';
+            echo '  <td>' . ($row['npc_misc'] !== null ? nl2br(htmlspecialchars($row['npc_misc'])) : '') . '</td>';
+            echo '  <td>' . htmlspecialchars($row['melotts_voiceid'] ?? '') . '</td>';
+            echo '  <td>' . htmlspecialchars($row['xtts_voiceid'] ?? '') . '</td>';
+            echo '  <td>' . htmlspecialchars($row['xvasynth_voiceid'] ?? '') . '</td>';
+            
+            // Add Edit button
+            echo '<td>';
+            echo '<div class="button-group">';
+            $jsData = [
+                'npc_name' => $row['npc_name'],
+                'npc_pers' => $row['npc_pers'],
+                'npc_dynamic' => $row['npc_dynamic'] ?? '',
+                'npc_misc' => $row['npc_misc'] ?? '',
+                'melotts_voiceid' => $row['melotts_voiceid'] ?? '',
+                'xtts_voiceid' => $row['xtts_voiceid'] ?? '',
+                'xvasynth_voiceid' => $row['xvasynth_voiceid'] ?? ''
+            ];
+            echo '<button onclick="openEditModal(' . 
+                htmlspecialchars(str_replace(
+                    ["\r", "\n", "'"],
+                    [' ', ' ', "\\'"],
+                    json_encode($jsData)
+                ), ENT_QUOTES, 'UTF-8') . 
+                ')" class="action-button edit">Edit</button>';
+            echo '</div>';
+            echo '</td>';
+            echo '</tr>';
+            
+            $rowCountCombined++;
+        }
+        echo '</table>';
+        echo '</div>';
+
+        if ($rowCountCombined === 0) {
+            echo '<p>No combined NPC templates found.</p>';
+        }
+    } else {
+        echo '<p>Error fetching combined NPC templates: ' . pg_last_error($conn) . '</p>';
     }
-} else {
-    echo '<p>Error fetching combined NPC templates: ' . pg_last_error($conn) . '</p>';
-}
 
-echo '</div>'; // Close the indentation div
+    echo '</div>';
+    ?>
+</main>
 
-pg_close($conn);
-?>
-
-<div id="editModal" class="modal-backdrop">
+<div id="editModal" class="modal-backdrop" style="display: none;">
     <div class="modal-container">
         <div class="modal-header">
             <h2 class="modal-title">Edit NPC Entry</h2>
@@ -622,7 +552,7 @@ pg_close($conn);
                 <textarea name="npc_dynamic" id="edit_npc_dynamic" rows="8"></textarea>
 
                 <label for="edit_npc_misc">NPC Misc:</label>
-                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener" style="color: yellow;"> Read more here !</a></small>
+                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here !</a></small>
                 <input type="text" name="npc_misc" id="edit_npc_misc">
 
                 <label for="edit_melotts_voiceid">Melotts Voice ID:</label>
@@ -638,15 +568,15 @@ pg_close($conn);
                 <input type="text" name="xvasynth_voiceid" id="edit_xvasynth_voiceid">
 
                 <div class="modal-footer">
-                    <button type="submit" name="submit_individual" value="1" class="action-button" style="background-color: #28a745;">Save Changes</button>
-                    <button type="button" onclick="closeEditModal()" class="action-button" style="background-color: #6c757d;">Cancel</button>
+                    <button type="submit" name="submit_individual" value="1" class="btn-save">Save Changes</button>
+                    <button type="button" onclick="closeEditModal()" class="btn-danger">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<div id="newEntryModal" class="modal-backdrop">
+<div id="newEntryModal" class="modal-backdrop" style="display: none;">
     <div class="modal-container">
         <div class="modal-header">
             <h2 class="modal-title">Add New NPC Entry</h2>
@@ -668,7 +598,7 @@ pg_close($conn);
                 <textarea name="npc_dynamic" id="new_npc_dynamic" rows="8"></textarea>
 
                 <label for="new_npc_misc">NPC Misc:</label>
-                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener" style="color: yellow;"> Read more here !</a></small>
+                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here !</a></small>
                 <input type="text" name="npc_misc" id="new_npc_misc">
 
                 <label for="new_melotts_voiceid">Melotts Voice ID:</label>
@@ -684,8 +614,8 @@ pg_close($conn);
                 <input type="text" name="xvasynth_voiceid" id="new_xvasynth_voiceid">
 
                 <div class="modal-footer">
-                    <button type="submit" name="submit_individual" value="1" class="action-button" style="background-color: #28a745;">Save</button>
-                    <button type="button" onclick="closeNewEntryModal()" class="action-button" style="background-color: #6c757d;">Cancel</button>
+                    <button type="submit" name="submit_individual" value="1" class="btn-save">Save</button>
+                    <button type="button" onclick="closeNewEntryModal()" class="btn-danger">Cancel</button>
                 </div>
             </form>
         </div>
@@ -693,6 +623,17 @@ pg_close($conn);
 </div>
 
 <script>
+function showToast(message, duration = 5000) {
+    const toast = document.getElementById('toast');
+    const messageSpan = toast.querySelector('.message');
+    messageSpan.textContent = message;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, duration);
+}
+
 function openEditModal(data) {
     try {
         const decodeHTML = (html) => {
@@ -733,46 +674,33 @@ function closeNewEntryModal() {
     document.body.style.overflow = "auto";
 }
 
-function applySearch() {
-    const searchTerm = document.getElementById("searchBox").value.trim();
-    let url = new URL(window.location.href);
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // Update or add search parameter
-    if (searchTerm) {
-        urlParams.set("search", searchTerm);
-    } else {
-        urlParams.delete("search");
-    }
-    
-    // Preserve letter parameter if it exists
-    const currentLetter = urlParams.get("letter");
-    if (currentLetter) urlParams.set("letter", currentLetter);
-    
-    // Add the table anchor
-    url.hash = "table";
-    
-    // Create the new URL
-    window.location.href = "?" + urlParams.toString() + "#table";
+// Update PHP message handling
+<?php if (!empty($message)): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    showToast(<?php echo json_encode(strip_tags($message)); ?>);
+});
+<?php endif; ?>
+
+// Add new AJAX filtering function
+function filterByLetter(letter) {
+    fetch(`npc_table.php?letter=${letter}`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('npc-table-container').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error loading data. Please try again.');
+        });
 }
-
-// Add enter key support for the search box
-document.getElementById("searchBox").addEventListener("keypress", function(e) {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        applySearch();
-    }
-});
-
-// Set initial search box value from URL
-window.addEventListener("load", function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const searchTerm = urlParams.get("search");
-    if (searchTerm) {
-        document.getElementById("searchBox").value = searchTerm;
-    }
-});
 </script>
 
-</body>
-</html>
+<?php
+include("tmpl/footer.html");
+
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>
