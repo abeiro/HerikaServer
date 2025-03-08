@@ -1,4 +1,20 @@
 <?php
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$TITLE = "📝CHIM - Custom Prompts";
+
+ob_start();
+
+include("tmpl/head.html");
+
+$debugPaneLink = false;
+include("tmpl/navbar.php");
+
+// Enable error reporting (for development purposes)
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
 // Prevent browser caching
 header("Cache-Control: no-cache, must-revalidate");
 header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
@@ -35,9 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['save'])) {
         // Save the new content back to the file
         if (file_put_contents($file_path, $content) !== false) {
-            $message = 'File saved successfully.';
+            $message = '<div class="success-message">File saved successfully.</div>';
         } else {
-            $message = 'Error saving the file.';
+            $message = '<div class="error-message">Error saving the file.</div>';
         }
     }
     // Validate button
@@ -80,14 +96,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         if (empty($errors)) {
-            $message = '<div style="color: #32CD32; font-weight: bold;">Validation successful. The following checks passed:<br></div>' . 
-            '<div style="color: #32CD32;">' . implode('<br>', $validation_steps) . '</div>';
- 
-
+            $message = '<div class="success-message">Validation successful. The following checks passed:<br>' . 
+                      implode('<br>', $validation_steps) . '</div>';
         } else {
-            $message = '<div style="color: red; font-weight: bold;">Validation failed:<br></div>' . 
-            '<div style="color: red;">' . implode('<br>', $errors) . '</div>';
-
+            $message = '<div class="error-message">Validation failed:<br>' . 
+                      implode('<br>', $errors) . '</div>';
         }
     }
     // View prompts button
@@ -97,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (file_exists($prompts_file_path)) {
             $prompts_content = file_get_contents($prompts_file_path);
         } else {
-            $message = 'prompts.php file not found.';
+            $message = '<div class="error-message">prompts.php file not found.</div>';
         }
     }
 
@@ -109,8 +122,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>📝CHIM - Custom Prompts</title>
-    <link rel="stylesheet" href="css/management.css">
+    <link rel="stylesheet" href="css/main.css">
     <style>
+        /* Override main container styles */
+        main {
+            padding-top: 160px; /* Space for navbar */
+            padding-bottom: 40px; /* Reduced space for footer */
+            padding-left: 10px;
+        }
+        
+        /* Override footer styles */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 20px; /* Reduced footer height */
+            background: #031633;
+            z-index: 100;
+        }
+
         /* ACE Editor specific styles */
         #editor {
             height: 700px;
@@ -118,6 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             margin-top: 10px;
             border: 1px solid #555555;
             border-radius: 5px;
+            width: 600px;
         }
 
         /* Code block styling */
@@ -145,6 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 5px;
             border: 1px solid #4a4a4a;
             margin: 20px 0;
+            width: 1200px;
         }
 
         /* Success message styling */
@@ -177,9 +209,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     </style>
 </head>
+<main> 
 <body>
     <div class="indent5">
         <h1>📝CHIM Custom Prompt Editor</h1>
+
+        <div id="toast" class="toast-notification">
+            <span class="message"></span>
+        </div>
+
         <p>
             By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.
             For example, you can adjust how AI NPCs write their diary entries, what they say during bored events, and more!
@@ -191,10 +229,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <b>The file must be in valid PHP format!</b> Make sure it starts with <code>&lt;?php</code> and ends with <code>?&gt;</code>.
         </p>
 
-        <?php if (!empty($message)): ?>
-            <div class="message"><?php echo $message; ?></div>
-        <?php endif; ?>
-
         <!-- Main form for editing and saving the prompts_custom.php file -->
         <form method="post" onsubmit="return syncAceContent()">
             <label for="editor">prompts_custom.php Editor:</label>
@@ -202,8 +236,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <textarea name="content" id="hiddenContent" style="display:none;"></textarea>
             <br>
             <div class="button-group">
-                <input type="submit" name="save" value="Save" class="action-button">
-                <input type="submit" name="validate" value="Validate" class="action-button">
+                <input type="submit" name="save" value="Save" class="action-button upload-csv">
+                <input type="submit" name="validate" value="Validate" class="action-button edit">
             </div>
             <p>
             Click the <b>Validate</b> button to confirm the file is in proper format. Then click <b>Save</b>. 
@@ -215,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         <!-- Form to view prompts.php -->
         <form method="post" id="viewPromptsForm">
-            <input type="submit" name="view_prompts" value="View prompts.php file" class="action-button" id="viewPromptsBtn">
+            <input type="submit" name="view_prompts" value="View prompts.php file" class="action-button download-csv" id="viewPromptsBtn">
         </form>
 
         <!-- Container for prompts.php content -->
@@ -287,6 +321,18 @@ $PROMPTS["diary"]=[
     let editor;
     let isPromptsVisible = <?php echo isset($prompts_content) ? 'true' : 'false' ?>;
 
+    // Toast notification function
+    function showToast(message, duration = 5000) {
+        const toast = document.getElementById('toast');
+        const messageSpan = toast.querySelector('.message');
+        messageSpan.innerHTML = message; // Using innerHTML to support HTML in messages
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
+    }
+
     window.addEventListener('DOMContentLoaded', function() {
         editor = ace.edit("editor", {
             mode: "ace/mode/php",
@@ -309,6 +355,11 @@ $PROMPTS["diary"]=[
             }
         }
 
+        // Show toast message if there is one
+        <?php if (!empty($message)): ?>
+        showToast(<?php echo json_encode($message); ?>);
+        <?php endif; ?>
+
         // Add event listener to the form
         if (viewPromptsForm) {
             viewPromptsForm.addEventListener('submit', function(e) {
@@ -328,11 +379,11 @@ $PROMPTS["diary"]=[
         const code = editor.getValue().trim();
 
         if (!code.startsWith("<?php")) {
-            alert("Error: File must start with \"<?php\"");
+            showToast('<div class="error-message">Error: File must start with <?php</div>', 3000);
             return false;
         }
         if (!code.endsWith("?>")) {
-            alert("Error: File must end with \"?>\"");
+            showToast('<div class="error-message">Error: File must end with ?></div>', 3000);
             return false;
         }
 
@@ -341,4 +392,15 @@ $PROMPTS["diary"]=[
     }
     </script>
 </body>
+</main>
 </html>
+
+<?php
+include("tmpl/footer.html");
+
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>

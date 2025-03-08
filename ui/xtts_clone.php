@@ -2,11 +2,14 @@
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "XTTS Voice Management";
+$TITLE = "🔊 CHIM XTTS Voice Management";
 
 ob_start();
 
 include("tmpl/head.html");
+
+// Add meta tag for API endpoint
+echo '<meta name="api-endpoint" content="' . htmlspecialchars($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '">';
 
 $debugPaneLink = false;
 include("tmpl/navbar.php");
@@ -24,39 +27,10 @@ if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]))
 $message = '';
 $speakersMessage = '';
 
-// Get initial speakers list without form submission
-if (empty($speakersMessage) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-    $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/speakers_list';
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array('accept: application/json'));
-    $response = curl_exec($ch);
-    
-    if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
-        $speakersList = json_decode($response, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
-            sort($speakersList);
-            $totalVoices = count($speakersList);
-            
-            $speakersMessage = '<div class="voice-list-container">';
-            $speakersMessage .= '<div class="voice-list-header">';
-            $speakersMessage .= '<h3 style="color: #fff; margin: 0 0 15px 0;">Available Voices (' . $totalVoices . ' total)</h3>';
-            $speakersMessage .= '</div>';
-            $speakersMessage .= '<div class="voice-grid">';
-            foreach ($speakersList as $speaker) {
-                $displayName = basename($speaker, '.wav');
-                $speakersMessage .= '<div class="voice-item">' . 
-                    '<span title="' . htmlspecialchars($speaker) . '">' . htmlspecialchars($displayName) . '</span>' .
-                    '<button onclick="copyToClipboard(\'' . htmlspecialchars($displayName) . '\')" ' .
-                    'class="copy-btn" title="Copy voice name">⎘</button>' .
-                '</div>';
-            }
-            $speakersMessage .= '</div>';
-            $speakersMessage .= '</div>';
-        }
-    }
-    curl_close($ch);
+// Get speakers list for POST request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST["get_speakers"])) {
+    // Remove this entire first handler as it's duplicated
+    $speakersMessage = '';
 }
 
 // Handle form submissions
@@ -168,8 +142,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $displayName = basename($speaker, '.wav');
                         $speakersMessage .= '<div class="voice-item">' . 
                             '<span title="' . htmlspecialchars($speaker) . '">' . htmlspecialchars($displayName) . '</span>' .
+                            '<div class="button-container">' .
                             '<button onclick="copyToClipboard(\'' . htmlspecialchars($displayName) . '\')" ' .
                             'class="copy-btn" title="Copy voice name">⎘</button>' .
+                            '<button onclick="testVoice(\'' . htmlspecialchars($displayName) . '\')" ' .
+                            'class="play-btn" title="Test voice">▶</button>' .
+                            '</div>' .
                         '</div>';
                     }
                     $speakersMessage .= '</div>';
@@ -221,7 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     if ($httpCode == 200) {
                         $numUploaded++;
-                        $message .= "<p>$fileName has been uploaded to the XTTS server</p>";
                     } else {
                         $message .= '<p>Error uploading ' . htmlspecialchars($fileName) . ' (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
                     }
@@ -229,12 +206,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 curl_close($ch);
             }
         }
-        $message .= "<p>$numUploaded out of $numFiles voice files have been uploaded. </p>";
+        $message .= "<p><h3 style='color:rgb(247, 231, 16);'>$numUploaded out of $numFiles voice files have been uploaded.</h3></p>";
     }
 }
 
+
 // Add the JavaScript functions
-echo "<script>
+?>
+<script>
+    const API_ENDPOINT = <?php echo json_encode($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>;
+
     function showLoadingMessage() {
         document.getElementById('loading-overlay').style.display = 'block';
         animateEllipsis();
@@ -256,152 +237,269 @@ echo "<script>
     function toggleVoiceList() {
         const voiceList = document.getElementById('voiceList');
         const toggleBtn = document.getElementById('toggleVoices');
-        if (voiceList.style.display === 'none') {
-            voiceList.style.display = 'block';
-            toggleBtn.textContent = 'Hide Available Voices';
+        const isHidden = voiceList.style.display === 'none' || !voiceList.style.display;
+        
+        if (isHidden) {
+            // Create and submit form to get speakers
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'xtts_clone.php#voiceList';
+            
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'get_speakers';
+            input.value = '1';
+            
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
         } else {
             voiceList.style.display = 'none';
             toggleBtn.textContent = 'Show Available Voices';
         }
     }
 
+    function showToast(message, duration = 1500) {
+        const toast = document.getElementById('toast');
+        const messageSpan = toast.querySelector('.message');
+        messageSpan.textContent = message;
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
+    }
+
     function copyToClipboard(text) {
         navigator.clipboard.writeText(text).then(function() {
-            // Visual feedback for the button
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = '✓';
-            btn.style.opacity = '1';
-            
-            // Show toast notification
-            const toast = document.getElementById('toast');
-            toast.classList.add('show');
-            
-            // Hide toast and reset button after delay
-            setTimeout(() => {
-                toast.classList.remove('show');
-                btn.textContent = originalText;
-                btn.style.opacity = '';
-            }, 1500);
+            showToast('Copied to clipboard');
         }).catch(function(err) {
             console.error('Failed to copy text: ', err);
         });
     }
 
+    function testVoice(voiceName) {
+        const url = `${API_ENDPOINT}/tts_to_audio/`;
+        const data = {
+            text: 'CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis',
+            speaker_wav: voiceName,
+            language: 'en'
+        };
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'audio/wav'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const audio = new Audio(URL.createObjectURL(blob));
+            audio.play();
+        })
+        .catch(error => {
+            console.error('Error testing voice:', error);
+            alert('Error testing voice. Please check the console for details.');
+        });
+    }
+
+    // Initialize voice list state
     document.addEventListener('DOMContentLoaded', function() {
-        // Show voice list by default
-        document.getElementById('voiceList').style.display = 'block';
-        document.getElementById('toggleVoices').textContent = 'Hide Available Voices';
+        const voiceList = document.getElementById('voiceList');
+        const toggleBtn = document.getElementById('toggleVoices');
+        
+        // Set initial state
+        if (!voiceList.innerHTML.trim()) {
+            voiceList.style.display = 'none';
+            toggleBtn.textContent = 'Show Available Voices';
+        } else {
+            voiceList.style.display = 'block';
+            toggleBtn.textContent = 'Hide Available Voices';
+        }
     });
-</script>";
+</script>
+<?php
 
 ?>
-
-<div id="loading-overlay">
-    <p>Syncing voice cache to CHIM XTTS server, this can take a couple minutes. <br><b>Do not refresh the page<span id="ellipsis"></span></b></p>
-</div>
-
-<div class="toast-notification" id="toast">
-    <span class="check-icon">✓</span>
-    <span>Copied to clipboard</span>
-</div>
-
-<div class="indent5">
-    <h1><alt="Voice" style="vertical-align:bottom;" width="32" height="32">🔊 XTTS Voice Management</h1>
-    <p>The <b>XTTS Voice Management</b> system allows you to manage custom voice samples for NPCs using the CHIM XTTS Server.</p>
-    <p>This works differently from other TTS services - it requires voice samples to be uploaded and cached on the server.</p>
-    <p>For detailed information on how it works, please read our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.ojs1hcgp0qwl" style="color: yellow;" target="_blank" rel="noopener noreferrer">XTTS Voice Guide</a>.</p>
-    <h3><strong>Ensure all voice sample filenames are lowercase and spaces are replaced with underscores (_).</strong></h3>
-    <h4>Example: "Mjoll the Lioness" becomes "mjoll_the_lioness.wav"</h4>
-
-    <?php
-    if (!empty($message)) {
-        echo '<div class="message">';
-        echo $message;
-        echo '</div>';
+<link rel="stylesheet" href="css/main.css">
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 160px;
+        padding-bottom: 40px;
+        padding-left: 10px;
     }
-    ?>
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px;
+        background: #031633;
+        z-index: 100;
+    }
 
-    <h2>Voice Sample Upload</h2>
-    <div style="
-        background-color: #3a3a3a;
+    /* Voice list styling */
+    .response-container {
+        margin-top: 15px;
         padding: 15px;
-        border-radius: 5px;
+        background-color: #2c2c2c;
         border: 1px solid #4a4a4a;
-        max-width: 600px;
-    ">
-        <form action="xtts_clone.php" method="post" enctype="multipart/form-data" style="
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin: 0;
-            padding: 0;
-            background: none;
-            border: none;
-        ">
-            <div>
-                <label for="file" style="display: block; margin-bottom: 5px; font-weight: bold;">Select .wav file(s) to upload:</label>
-                <input type="file" name="file[]" id="file" accept=".wav" multiple="multiple" required style="
-                    width: 100%;
-                    padding: 6px;
-                    margin-bottom: 10px;
-                    border: 1px solid #555555;
-                    border-radius: 3px;
-                    background-color: #4a4a4a;
-                    color: #f8f9fa;
-                ">
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <input type="submit" name="submit" value="Upload Voice Sample" class="action-button upload-csv">
-            </div>
-        </form>
-        <p>Voice samples will be cached in the CHIM server and uploaded to the running CHIM XTTS server.</p>
-        <p><b>Note: If you are replacing an existing voice, you will need to restart the CHIM XTTS server.</b></p>
-        <p>Recommended .wav file specifications:</p>
-        <ul>
-            <li>Format: WAV (PCM)</li>
-            <li>Bit Depth: 16-bit</li>
-            <li>Channels: Mono</li>
-            <li>Sample Rate: 20500Hz</li>
-        </ul>
-        <br>
-        <h3>Current Voice List</h3>
-        <div style="display: flex; gap: 10px;">
-            <button onclick="toggleVoiceList()" id="toggleVoices" class="action-button" style="background-color: var(--blue-base);">Show Available Voices</button>
-        </div>
-        <div id="voiceList" style="display: none; margin-top: 15px;">
-            <?php
-            echo $speakersMessage;
-            ?>
-        </div>
-        <br>
-        <br>
-        <h3>Cloud XTTS Sync</h3>
-        <form action="xtts_clone.php" method="post" onsubmit="showLoadingMessage();" style="
-            border: none;
-            padding: 0;
-            margin: 0;
-            background: none;
-        ">
-            <p><strong>Only required for online CHIM XTTS instances.</strong></p>
-            <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
-            <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
-            <p>For cloud setup instructions, see our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.jl2x2nswa7az" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
-            <p>Cached voices are stored in <code>data/voices</code>. <a href="../data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
-            <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button">
-        </form>
+        border-radius: 5px;
+    }
+
+    .speakers-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .speaker-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background-color: #3a3a3a;
+        border: 1px solid #555555;
+        border-radius: 4px;
+        color: #f8f9fa;
+    }
+
+    .copy-btn {
+        opacity: 0.4;
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        padding: 4px;
+        font-size: 12px;
+        transition: all 0.2s ease;
+        margin-left: 8px;
+    }
+
+    .speaker-item:hover .copy-btn {
+        opacity: 0.8;
+    }
+
+    .copy-btn:hover {
+        opacity: 1 !important;
+        transform: scale(1.1);
+    }
+
+    .button-container {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .play-btn {
+        opacity: 0.4;
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        padding: 4px;
+        font-size: 10px;
+        transition: all 0.2s ease;
+    }
+
+    .speaker-item:hover .play-btn {
+        opacity: 0.8;
+    }
+
+    .play-btn:hover {
+        opacity: 1 !important;
+        transform: scale(1.1);
+    }
+</style>
+
+<main>
+    <div id="loading-overlay">
+        <p>Syncing voice cache to CHIM XTTS server, this can take a couple minutes. <br><b>Do not refresh the page<span id="ellipsis"></span></b></p>
     </div>
 
-    <p>Advanced XTTS configuration: <a href="<?php echo $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]; ?>/docs#" style="color: yellow;" target="_blank"><?php echo $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]; ?>/docs#</a></p>
+    <div id="toast" class="toast-notification">
+        <span class="message"></span>
+    </div>
 
-</div>
+    <div class="indent5">
+        <h1>🔊 CHIM XTTS Voice Management</h1>
+        
+        <p>The <b>CHIM XTTS Voice Management</b> system allows you to manage custom voice samples for NPCs using the CHIM XTTS Server.</p>
+        <p>This works differently from other TTS services - it requires voice samples to be uploaded and cached on the server.</p>
+        <p>For detailed information on how it works, please read our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.ojs1hcgp0qwl" style="color: yellow;" target="_blank" rel="noopener noreferrer">CHIM XTTS Voice Guide</a>.</p>
+        <h3><strong>Ensure all voice sample filenames are lowercase and spaces are replaced with underscores (_).</strong></h3>
+        <h4>Example: "Mjoll the Lioness" becomes "mjoll_the_lioness.wav"</h4>
+
+        <?php if (!empty($message)): ?>
+            <div class="message"><?php echo $message; ?></div>
+        <?php endif; ?>
+
+        
+        <div class="form-container">
+            <form action="xtts_clone.php" method="post" enctype="multipart/form-data">
+                <div>
+                <h2>Voice Sample Upload</h2>
+                    <label for="file">Select .wav file(s) to upload:</label>
+                    <br>
+                    
+                    <input type="file" name="file[]" id="file" accept=".wav" multiple="multiple" required>
+                </div>
+                <div class="button-group">
+                    <input type="submit" name="submit" value="Upload Voice Sample" class="action-button upload-csv">
+                </div>
+            </form>
+            <p>Voice samples will be cached in the CHIM server and uploaded to the running CHIM XTTS server.</p>
+            <p><b>Note: If you are replacing an existing voice, you will need to restart the CHIM XTTS server.</b></p>
+            <p>Recommended .wav file specifications:</p>
+            <ul>
+                <li>Format: WAV (PCM)</li>
+                <li>Bit Depth: 16-bit</li>
+                <li>Channels: Mono</li>
+                <li>Sample Rate: 20500Hz</li>
+            </ul>
+            <br>
+            <h3>Current Voice List</h3>
+            <div class="button-group">
+                <button onclick="toggleVoiceList()" id="toggleVoices" class="action-button download-csv">Show Available Voices</button>
+            </div>
+            <div id="voiceList" style="display: none; margin-top: 15px;">
+                <?php echo $speakersMessage; ?>
+            </div>
+            <br>
+            <br>
+            <h3>Cloud XTTS Sync</h3>
+            <form action="xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
+                <p><strong>Only required for online CHIM XTTS instances.</strong></p>
+                <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
+                <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
+                <p>For cloud setup instructions, see our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.jl2x2nswa7az" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>Cached voices are stored in <code>data/voices</code>. <a href="../data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
+                <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
+            </form>
+            <br>
+            <p>Advanced XTTS configuration: <a href="<?php echo $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]; ?>/docs#" style="color: yellow;" target="_blank"><?php echo $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]; ?>/docs#</a></p>
+
+        </div>
+
+    </div>
+</main>
 
 <?php
 include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = $TITLE;  // Use the title we set at the beginning
+$title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
