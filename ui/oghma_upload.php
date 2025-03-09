@@ -743,7 +743,7 @@ pg_close($conn);
                 <div class="modal-footer">
                     <button type="submit" name="submit" value="update" class="btn-save">Save Changes</button>
                     <button type="button" onclick="deleteEntry()" class="btn-danger">Delete</button>
-                    <button type="button" onclick="closeEditModal()" class="btn-primary">Cancel</button>
+                    <button type="button" onclick="closeEditModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>
@@ -789,7 +789,7 @@ pg_close($conn);
 
                 <div class="modal-footer">
                     <button type="submit" class="btn-save">Save</button>
-                    <button type="button" onclick="closeNewEntryModal()" class="btn-danger">Cancel</button>
+                    <button type="button" onclick="closeNewEntryModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>

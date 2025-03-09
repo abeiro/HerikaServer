@@ -630,7 +630,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
                 <div class="modal-footer">
                     <button type="submit" name="submit_individual" value="1" class="btn-save">Save Changes</button>
-                    <button type="button" onclick="closeEditModal()" class="btn-danger">Cancel</button>
+                    <button type="button" onclick="closeEditModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>
@@ -676,7 +676,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
                 <div class="modal-footer">
                     <button type="submit" name="submit_individual" value="1" class="btn-save">Save</button>
-                    <button type="button" onclick="closeNewEntryModal()" class="btn-danger">Cancel</button>
+                    <button type="button" onclick="closeNewEntryModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>

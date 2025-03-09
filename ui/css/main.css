@@ -811,6 +811,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 /* Standardized Button System */
 .btn-base,
 .btn-danger,
+.btm-cancel,
 .btn-save,
 .btn-primary {
     padding: 10px 20px;
@@ -840,6 +841,14 @@ input[type="file"]::-moz-file-upload-button:hover {
 
 .btn-save:hover {
     background-color: rgb(34, 146, 58);
+}
+
+.btn-cancel {
+    background-color: rgb(85, 85, 85);
+}
+
+.btn-cancel:hover {
+    background-color: rgb(46, 46, 46);
 }
 
 .btn-primary {
