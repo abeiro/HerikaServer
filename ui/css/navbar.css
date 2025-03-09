@@ -26,6 +26,12 @@
     }
 }
 
+/* Disable animation when auto-refresh is enabled */
+body.auto-refresh .chim-navbar-wrapper,
+body.auto-refresh .chim-status-nav {
+    animation: none !important;
+}
+
 .chim-navbar-wrapper {
     position: fixed;
     top: 0;

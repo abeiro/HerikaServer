@@ -268,6 +268,7 @@ $debugPaneLink = true;
     <!-- auto info -->
     <?php
     if ($_GET["autorefresh"]) {
+        echo '<script>document.body.classList.add("auto-refresh");</script>';
     ?>
     <p class="my-2">
         <small class='text-body-secondary fs-5'>Autorefreshes every 5 secs</small>
