@@ -14,6 +14,9 @@ $schema = 'public';
 $username = 'dwemer';
 $password = 'dwemer';
 
+// Include game timestamp utilities
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/utils_game_timestamp.php");
+
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
@@ -64,7 +67,7 @@ function process_event_row($row, $for_csv = false) {
         // Using DateTime for better control
         $dt = new DateTime("@$timestamp"); // The @ symbol tells DateTime to interpret as Unix timestamp
         $dt->setTimezone(new DateTimeZone('UTC'));
-        $timeDisplay = $dt->format('H:i:s - d-m-Y');
+        $timeDisplay = $dt->format('d-m-Y H:i:s');
     } else {
         $timeDisplay = $row['localts'];
     }
@@ -499,8 +502,8 @@ if (!$result) {
         /* Column widths for event table */
         .col-context { width: 50%; }
         .col-people { width: 25%; }
-        .col-location { width: 19%; }
-        .col-time { width: 6%; }
+        .col-gamets { width: 15%; }
+        .col-time { width: 10%; }
 
         /* Main container padding */
         main.container {
@@ -592,14 +595,14 @@ if (!$result) {
             <colgroup>
                 <col class="col-context">
                 <col class="col-people">
-                <col class="col-location">
+                <col class="col-gamets">
                 <col class="col-time">
             </colgroup>
             <tr>
                 <th>Context</th>
                 <th>Nearby People</th>
-                <th>Location & <a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a></th>
-                <th>Time(UTC)</th>
+                <th><a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a></th>
+                <th>Time (UTC)</th>
             </tr>
             <?php
             // Reset the result pointer to the beginning for table rendering
@@ -615,11 +618,16 @@ if (!$result) {
                 // Extract processed data
                 $data = $processed_row['Context'];
                 $people = $processed_row['Nearby People'];
-                $location = $processed_row['Location & Tamrelic Time'];
                 $timeDisplay = $processed_row['Time(UTC)'];
+                
+                // Convert timestamp to game time
+                $gameTimeDisplay = "";
+                if (isset($row['localts']) && $row['localts'] > 0) {
+                    $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['localts']);
+                }
 
                 // **Output the table row**
-                echo "<tr><td>{$data}</td><td>{$people}</td><td>{$location}</td><td>{$timeDisplay}</td></tr>";
+                echo "<tr><td>{$data}</td><td>{$people}</td><td>{$gameTimeDisplay}</td><td>{$timeDisplay}</td></tr>";
             }
             ?>
         </table>
