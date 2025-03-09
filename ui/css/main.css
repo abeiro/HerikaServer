@@ -419,28 +419,69 @@ nav {
 table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #3a3a3a;
+    background-color: #1a1a1a;
     margin-bottom: 20px;
     font-size: small;
 }
 
 th, td {
-    border: 1px solid #555555;
+    border: 1px solid #333333;
     padding: 8px;
     text-align: left;
-    color: #f8f9fa;
+    color: #e0e0e0;
 }
 
 th {
-    background-color: #4a4a4a;
+    background-color: #2d2d2d;
     font-weight: bold;
 }
 
 tr:nth-child(even) {
-    background-color: #2c2c2c;
+    background-color: #1f1f1f;
+}
+
+/* Table Color Variants */
+.table-primary-dark {
+    background-color: #2c3440 !important; /* Deep slate blue-gray */
+    color: #e0e0e0 !important;
+}
+
+.table-success-dark {
+    background-color: #374151 !important; /* Cool gray */
+    color: #e0e0e0 !important;
+}
+
+.table-info-dark {
+    background-color: #283344 !important; /* Navy slate */
+    color: #e0e0e0 !important;
+}
+
+.table-warning-dark {
+    background-color: #2d3748 !important; /* Steel blue-gray */
+    color: #e0e0e0 !important;
+}
+
+.table-danger-dark {
+    background-color: #3a2d48 !important; /* Darker purple */
+    color: #e0e0e0 !important;
 }
 
 
+/* Ensure text remains readable in colored cells */
+td[class*="-dark"] {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Add subtle transition for hover effects */
+td[class*="-dark"] {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Add subtle inner shadow for depth */
+td[class*="-dark"] {
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
 
 /* ==========================================================================
    Utility Classes
@@ -770,6 +811,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 /* Standardized Button System */
 .btn-base,
 .btn-danger,
+.btm-cancel,
 .btn-save,
 .btn-primary {
     padding: 10px 20px;
@@ -801,6 +843,14 @@ input[type="file"]::-moz-file-upload-button:hover {
     background-color: rgb(34, 146, 58);
 }
 
+.btn-cancel {
+    background-color: rgb(85, 85, 85);
+}
+
+.btn-cancel:hover {
+    background-color: rgb(46, 46, 46);
+}
+
 .btn-primary {
     background-color: rgb(0, 48, 176);
 }
@@ -821,7 +871,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 
 /* Code Block */
 code {
-    background-color: #4a4a4a;
+    background-color: #000000;
     padding: 2px 4px;
     border-radius: 3px;
     color: #f8f9fa;

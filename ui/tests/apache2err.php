@@ -279,6 +279,40 @@ function sanitizeId($name) {
         .grid-container.loaded {
             opacity: 1;
         }
+
+        /* Refresh button styles */
+        .refresh-button {
+            display: inline-flex;
+            align-items: center;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            margin-left: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .refresh-button:hover {
+            background-color: #138496;
+        }
+
+        .refresh-button svg {
+            margin-right: 8px;
+        }
+
+        .refresh-button.refreshing {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Title container for flex layout */
+        .title-container {
+            display: flex;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -292,8 +326,16 @@ function sanitizeId($name) {
     </div>
 
 <div class="indent5">
-    <h1>🌲 CHIM Server Logs</h1>
-    <h2>Logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log">Click here to view the log folder.</a></h2>
+    <div class="title-container">
+        <h1>🌲 CHIM Server Logs</h1>
+        <button class="refresh-button" id="refreshLogs">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 3a5 5 0 0 0-5 5H1l3.5 3.5L8 8H6a2 2 0 1 1 2 2v2a4 4 0 1 0-4-4H2a6 6 0 1 1 6 6v-2a4 4 0 0 0 0-8z"/>
+            </svg>
+            Refresh Logs
+        </button>
+    </div>
+    <h2>Logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">Click here to view the log folder.</a></h2>
 
     <div class="grid-container" id="logGrid">
         <div class="log-section">
@@ -336,6 +378,52 @@ window.addEventListener('load', function() {
         document.getElementById('logGrid').classList.add('loaded');
     }, 500);
 });
+
+// Function to refresh logs via AJAX
+function refreshLogs() {
+    const refreshButton = document.getElementById('refreshLogs');
+    const logContainers = document.querySelectorAll('.log-container');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    
+    // Prevent multiple refreshes
+    if (refreshButton.classList.contains('refreshing')) {
+        return;
+    }
+    
+    // Add refreshing state and show loading overlay
+    refreshButton.classList.add('refreshing');
+    loadingOverlay.style.display = 'flex';
+    
+    // Make AJAX request to current page
+    fetch(window.location.href)
+        .then(response => response.text())
+        .then(html => {
+            // Create a temporary element to parse the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Update each log container
+            logContainers.forEach(container => {
+                const containerId = container.id;
+                const newContainer = doc.getElementById(containerId);
+                if (newContainer) {
+                    container.innerHTML = newContainer.innerHTML;
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error refreshing logs:', error);
+            alert('Failed to refresh logs. Please try again.');
+        })
+        .finally(() => {
+            // Remove refreshing state and hide loading overlay
+            refreshButton.classList.remove('refreshing');
+            loadingOverlay.style.display = 'none';
+        });
+}
+
+// Add click event listener to refresh button
+document.getElementById('refreshLogs').addEventListener('click', refreshLogs);
 </script>
 
 <?php

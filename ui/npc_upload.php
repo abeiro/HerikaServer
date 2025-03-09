@@ -530,13 +530,13 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         echo '<div id="npc-table-container" class="table-container">';
         echo '<table>';
         echo '<tr>';
-        echo '  <th>npc_name</th>';
-        echo '  <th>npc_pers</th>';
-        echo '  <th>npc_dynamic</th>';
-        echo '  <th>npc_misc</th>';
-        echo '  <th>melotts_voiceid</th>';
-        echo '  <th>xtts_voiceid</th>';
-        echo '  <th>xvasynth_voiceid</th>';
+        echo '  <th>Name</th>';
+        echo '  <th>Static Bio</th>';
+        echo '  <th>Dynamic Bio</th>';
+        echo '  <th>Misc</th>';
+        echo '  <th>MeloTTS Override</th>';
+        echo '  <th>XTTS Override</th>';
+        echo '  <th>xVASynth Override</th>';
         echo '  <th>Actions</th>';
         echo '</tr>';
 
@@ -630,7 +630,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
                 <div class="modal-footer">
                     <button type="submit" name="submit_individual" value="1" class="btn-save">Save Changes</button>
-                    <button type="button" onclick="closeEditModal()" class="btn-danger">Cancel</button>
+                    <button type="button" onclick="closeEditModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>
@@ -676,7 +676,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
                 <div class="modal-footer">
                     <button type="submit" name="submit_individual" value="1" class="btn-save">Save</button>
-                    <button type="button" onclick="closeNewEntryModal()" class="btn-danger">Cancel</button>
+                    <button type="button" onclick="closeNewEntryModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>
