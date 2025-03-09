@@ -282,7 +282,7 @@ $db->execQuery("update public.oghma SET native_vector = setweight(to_tsvector(co
 $query = "SELECT 1 as bad_syntax_exists  FROM public.npc_templates WHERE  npc_name LIKE '%' || CHR(39) || '%'";
 
 $existsColumn=$db->fetchAll($query);
-if ($existsColumn[0]["bad_syntax_exists"]) {
+if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
     $data = $db->fetchAll("SELECT npc_name FROM public.npc_templates WHERE npc_name LIKE '%' || CHR(39) || '%'");
     $n=0;    
     require_once(__DIR__."/../lib/utils.php");
@@ -302,7 +302,7 @@ if ($existsColumn[0]["bad_syntax_exists"]) {
 $query = "SELECT 1 as bad_syntax_exists  FROM npc_templates_custom WHERE  npc_name LIKE '%' || CHR(39) || '%'";
 
 $existsColumn=$db->fetchAll($query);
-if ($existsColumn[0]["bad_syntax_exists"]) {
+if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
     $data = $db->fetchAll("SELECT npc_name FROM npc_templates_custom WHERE npc_name LIKE '%' || CHR(39) || '%'");
         
     foreach ($data as $n=>$element) {
@@ -424,6 +424,12 @@ if (!$existsColumn[0]["version"] || $existsColumn[0]["version"]<20250120001) {
 
 if ($checkVersion("npc_templates")<20250129001) {
     $query = "
+	SET schema 'public';
+	CREATE TABLE IF NOT EXISTS npc_templates (
+		npc_name character varying(128) NOT NULL,
+		npc_pers text NOT NULL,
+		npc_misc text
+	);
     ALTER TABLE npc_templates 
     ADD COLUMN IF NOT EXISTS npc_dynamic TEXT;
     ALTER TABLE npc_templates 
@@ -439,6 +445,12 @@ if ($checkVersion("npc_templates")<20250129001) {
 
 if ($checkVersion("npc_templates_custom")<20250129001) {
     $query = "
+	SET schema 'public';
+	CREATE TABLE IF NOT EXISTS npc_templates_custom (
+		npc_name character varying(128) NOT NULL,
+		npc_pers text NOT NULL,
+		npc_misc text
+	);
     ALTER TABLE npc_templates_custom 
     ADD COLUMN IF NOT EXISTS npc_dynamic TEXT;
     ALTER TABLE npc_templates_custom 
@@ -482,6 +494,12 @@ if ($checkVersion("combined_npc_templates")<20250129001) {
 
 if ($checkVersion("oghma")<20250902001) {
     $query = "
+	SET schema 'public';
+	CREATE TABLE IF NOT EXISTS oghma (
+		topic character varying NOT NULL,
+		topic_desc character varying NOT NULL,
+		native_vector tsvector
+	);
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS knowledge_class TEXT;
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS topic_desc_basic TEXT;
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS knowledge_class_basic TEXT;

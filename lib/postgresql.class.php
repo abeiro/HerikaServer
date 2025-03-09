@@ -139,57 +139,139 @@ class sql
         }
     }
 
-    public function upsertRow($table, $data, $where) {
-        // Check if the row exists
-        $checkQuery = "SELECT 1 FROM $table WHERE $where LIMIT 1";
-        $checkResult = pg_query(self::$link, $checkQuery);
+        public function upsertRow($table, $data, $where) {
+            // Check if the row exists
+            $checkQuery = "SELECT 1 FROM $table WHERE $where LIMIT 1";
+            $checkResult = pg_query(self::$link, $checkQuery);
 
-        if (!$checkResult) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
-            return false;
-        }
-
-        if (pg_num_rows($checkResult) > 0) {
-            // Row exists, perform an update
-            $setClauses = [];
-            $params = [];
-            $i = 0;
-
-            foreach ($data as $column => $value) {
-                $setClauses[] = "$column = $" . (++$i);
-                $params[] = $value;
+            if (!$checkResult) {
+                error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+                return false;
             }
 
-            $set = implode(', ', $setClauses);
-            $query = "UPDATE $table SET $set WHERE $where";
-        } else {
-            // Row does not exist, perform an insert
-            $columns = array_keys($data);
-            $placeholders = [];
-            $params = [];
-            $i = 0;
+            if (pg_num_rows($checkResult) > 0) {
+                // Row exists, perform an update
+                $setClauses = [];
+                $params = [];
+                $i = 0;
 
-            foreach ($data as $value) {
-                $placeholders[] = '$' . (++$i);
-                $params[] = $value;
+                foreach ($data as $column => $value) {
+                    $setClauses[] = "$column = $" . (++$i);
+                    $params[] = $value;
+                }
+
+                $set = implode(', ', $setClauses);
+                $query = "UPDATE $table SET $set WHERE $where";
+            } else {
+                // Row does not exist, perform an insert
+                $columns = array_keys($data);
+                $placeholders = [];
+                $params = [];
+                $i = 0;
+
+                foreach ($data as $value) {
+                    $placeholders[] = '$' . (++$i);
+                    $params[] = $value;
+                }
+
+                $columnList = implode(', ', $columns);
+                $placeholderList = implode(', ', $placeholders);
+
+                $query = "INSERT INTO $table ($columnList) VALUES ($placeholderList)";
             }
 
-            $columnList = implode(', ', $columns);
-            $placeholderList = implode(', ', $placeholders);
+            // Execute the query
+            $result = pg_query_params(self::$link, $query, $params);
+            if (!$result) {
+                error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+                return false;
+            }
 
-            $query = "INSERT INTO $table ($columnList) VALUES ($placeholderList)";
-        }
+            return true;
+    }
 
-        // Execute the query
-        $result = pg_query_params(self::$link, $query, $params);
-        if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+    public function upsertRowTrx($table, $data, $whereCondition) {
+        // Start a transaction
+        pg_query(self::$link, "BEGIN");
+    
+        try {
+            // Extract WHERE condition keys and values
+            $whereClauses = [];
+            $whereParams = [];
+            $i = 0;
+    
+            foreach ($whereCondition as $column => $value) {
+                $whereClauses[] = "$column = $" . (++$i); // Explicitly cast as TEXT
+                $whereParams[] = (string) $value; // Convert value to string
+            }
+    
+            
+            $whereSql = implode(" AND ", $whereClauses);
+    
+            // Check if the row exists and lock it
+            $checkQuery = "SELECT 1 FROM $table WHERE $whereSql FOR UPDATE";
+            $checkResult = pg_query_params(self::$link, $checkQuery, $whereParams);
+    
+            if (!$checkResult) {
+                throw new Exception(pg_last_error(self::$link));
+            }
+    
+            if (pg_num_rows($checkResult) > 0) {
+                // Row exists, perform an UPDATE (excluding WHERE fields)
+                $setClauses = [];
+                $params = [];
+                foreach ($data as $column => $value) {
+                    if (!array_key_exists($column, $whereCondition)) { // Exclude WHERE fields
+                        $setClauses[] = "$column = $" . (++$i); // Explicitly cast as TEXT
+                        $params[] = (string) $value; // Convert value to string
+                    }
+                }
+    
+                if (empty($setClauses)) {
+                    throw new Exception("No updatable fields provided.");
+                }
+    
+                $setSql = implode(', ', $setClauses);
+                $query = "UPDATE $table SET $setSql WHERE $whereSql";
+    
+                // Merge params: first the update values, then the WHERE values
+                $params = array_merge($params, $whereParams);
+            } else {
+                // Row does not exist, perform an INSERT
+                $i = 0;
+                $columns = array_keys($data);
+                $placeholders = [];
+                $params = [];
+    
+                foreach ($data as $index => $value) {
+                    $placeholders[] = '$' . (++$i) ; // Explicitly cast as TEXT
+                    $params[] = (string) $value; // Convert value to string
+                }
+    
+                $columnList = implode(', ', $columns);
+                $placeholderList = implode(', ', $placeholders);
+                $query = "INSERT INTO $table ($columnList) VALUES ($placeholderList)";
+            }
+    
+            // error_log($query . " " . print_r($params, true));
+    
+            // Execute the query
+            $result = pg_query_params(self::$link, $query, $params);
+            if (!$result) {
+                throw new Exception(pg_last_error(self::$link));
+            }
+    
+            // Commit transaction
+            pg_query(self::$link, "COMMIT");
+    
+            return true;
+        } catch (Exception $e) {
+            // Rollback on error
+            pg_query(self::$link, "ROLLBACK");
+            error_log($e->getMessage() . print_r(debug_backtrace(), true));
             return false;
         }
-
-        return true;
-}
-
+    }
 
 }
 

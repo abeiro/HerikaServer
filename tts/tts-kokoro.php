@@ -39,7 +39,9 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			'voice' => $voice,
 			'response_format' => 'wav',
             'speed' => $GLOBALS["TTS"]["KOKORO"]["speed"],
-            'stream'=>true
+            'stream'=>true,
+			"lang_code"=>"a" // wtf?
+
 
 		);
 		$options = array(
