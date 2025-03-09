@@ -1,4 +1,9 @@
 <?php
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -6,18 +11,18 @@ $TITLE = "📙CHIM - Oghma Infinium Management";
 
 ob_start();
 
-include("tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
 $debugPaneLink = false;
-include("tmpl/navbar.php");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
 // Paths
-$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$enginePath = $rootPath . ".." . DIRECTORY_SEPARATOR;
+$rootPath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
+$enginePath = dirname($rootPath) . DIRECTORY_SEPARATOR;
 $configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
 
 // Database connection details
@@ -212,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
  *  3) DOWNLOAD EXAMPLE CSV
  ********************************************************************/
 if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
-    $filePath = realpath(__DIR__ . '/../data/oghma_example.csv');
+    $filePath = realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'oghma_example.csv');
     if (file_exists($filePath)) {
         header('Content-Description: File Transfer');
         header('Content-Type: text/csv');
@@ -349,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 ?>
 
-<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
     /* Override main container styles */
     main {
@@ -371,7 +376,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 <main>
 <div class="indent5">
-<h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Management</h1>
+<h1><img src="<?php echo $webRoot; ?>/ui/images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Management</h1>
 
     <div id="toast" class="toast-notification">
         <span class="message"></span>
@@ -424,7 +429,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                    onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
         </form>
         <br>
-        <form action="oghma_reset.php" method="post">
+        <form action="' . $webRoot . '/ui/oghma_reset.php" method="post">
             <input type="submit" class="btn-danger" value="Factory Reset Oghma Database" 
                    onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
         </form>
@@ -735,6 +740,9 @@ pg_close($conn);
 </div>
 
 <script>
+// Define webRoot for JavaScript
+var webRoot = '<?php echo $webRoot; ?>';
+
 function openEditModal(data) {
     try {
         const decodeHTML = (html) => {
@@ -855,7 +863,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </main>
 
 <?php
-include("tmpl/footer.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
