@@ -462,8 +462,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         echo '</div>';
     }*/
     ?>
-
-    <h2>Batch Upload</h2>
+    <br>
+    <h1>Batch Upload</h1>
     <div class="form-container">
         <form action="" method="post" enctype="multipart/form-data">
             <div>
@@ -524,10 +524,10 @@ if (isset($_GET['order'])) {
         $order = strtoupper($requestedOrder);
     }
 }
-
+echo '<br>';
 // Category buttons
 echo '<div>';
-echo '<h2 id="entries">Oghma Infinium Entries</h2>';
+echo '<h1 id="entries">Oghma Infinium Entries</h1>';
 echo '<div class="action-container">';
 echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
 echo '<div class="search-container">';

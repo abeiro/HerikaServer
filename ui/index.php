@@ -1005,7 +1005,7 @@ $debugPaneLink = true;
         // Add a title for installed plugins with Refresh button
         echo '<body>';
         echo '<br>';
-        echo '<h2>Installed CHIM Plugins</h2>';
+        echo '<h1>Installed CHIM Plugins</h1>';
         echo '<form method="post" style="margin: 0;">
         <input type="hidden" name="refresh_plugins" value="1">
         <button type="submit" class="btn-primary">Refresh Plugins</button>
@@ -1067,7 +1067,7 @@ $debugPaneLink = true;
         // Add the "CHIM Plugins" title
         echo '<br>';
         echo '<div style="display: flex; align-items: center; margin-top: 20px;">';
-        echo '<h2 style="margin-right: 10px;">CHIM Plugins Repository</h2>';
+        echo '<h1 style="margin-right: 10px;">CHIM Plugins Repository</h1>';
         echo '</div>';
     
         // Add basic information paragraph

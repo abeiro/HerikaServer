@@ -263,7 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <textarea readonly id="promptsViewer"><?php echo htmlspecialchars($prompts_content); ?></textarea>
             <?php endif; ?>
         </div>
-
+        <br>
         <div class="example-section">
             <h3>How to Adjust the AI Prompts</h3>
             <p>We have this in <b>prompts.php</b></p>

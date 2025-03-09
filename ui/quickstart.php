@@ -7,131 +7,68 @@ header("Expires: 0"); // Proxies
 error_reporting(E_ERROR);
 session_start();
 
+ob_start();
+
+$url = 'conf_editor.php';
+$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+$configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
+
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
+// Load configuration files in the correct order
+require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");  // Should contain defaults
+if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
+    require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");  // Should contain current ones
+}
+
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
-$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
-$rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-
 $TITLE = "QUICKSTART MENU";
 
-ob_start();
+require($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
+
+$configFilepath = realpath($configFilepath) . DIRECTORY_SEPARATOR;
+
+// Function to compare modification dates
+function compareFileModificationDate($a, $b) {
+    return filemtime($b) - filemtime($a);
+}
+
+// Profile selection
+foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf) {
+    if (file_exists($mconf)) {
+        $filename = basename($mconf);
+        $pattern = '/conf_([a-f0-9]+)\.php/';
+        preg_match($pattern, $filename, $matches);
+        $hash = $matches[1];
+        $GLOBALS["PROFILES"][$hash] = $mconf;
+    }
+}
+
+// Sort the profiles by modification date descending
+if (is_array($GLOBALS["PROFILES"])) {
+    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
+} else {
+    $GLOBALS["PROFILES"] = [];
+}
+
+$GLOBALS["PROFILES"] = array_merge(["default" => "$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
+
+if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
+    require_once($_SESSION["PROFILE"]);
+} else {
+    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
+    require_once($_SESSION["PROFILE"]);
+}
+// End of profile selection
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
-?>
-
-<style>
-    /* Override main container styles */
-    main {
-        padding-top: 160px; /* Space for navbar */
-        padding-bottom: 40px; /* Reduced space for footer */
-        padding-left: 10px;
-    }
-    
-    /* Override footer styles */
-    footer {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        height: 20px; /* Reduced footer height */
-        background: #031633;
-        z-index: 100;
-    }
-
-    /* Additional quickstart-specific styles */
-    .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    .confwizard {
-        background-color: #1e1e1e;
-        padding: 30px;
-        border-radius: 8px;
-        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    }
-
-    .conf-item label {
-        color: #e0e0e0;
-        font-weight: 500;
-    }
-
-    .form-control, .form-control:focus, .custom-select, .custom-select:focus, textarea.form-control {
-        background-color: #2c2c2c;
-        color: #e0e0e0;
-        border: 1px solid #444;
-    }
-
-    .form-control::placeholder {
-        color: #888;
-    }
-
-    .form-text {
-        color: #bbb;
-    }
-
-    /* Warning Text Styling */
-    .warning-text {
-        color: #ffcc00;
-        font-weight: bold;
-        margin-bottom: 15px;
-    }
-
-    .warning-text2 {
-        color: #28a745;
-        font-weight: bold;
-        margin-bottom: 15px;
-    }
-
-    /* Button Styles */
-    .custom-button {
-        margin-top: 10px;
-        font-weight: bold;
-        border: 1px solid;
-        padding: 10px 20px;
-        cursor: pointer;
-        border-radius: 4px;
-        font-size: 16px;
-        display: inline-block;
-        text-align: center;
-        text-decoration: none;
-        transition: background-color 0.3s, color 0.3s;
-    }
-
-    .btn-save {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-save:hover {
-        background-color: #218838;
-    }
-
-    .btn-download {
-        background-color: #ffc107;
-        color: black;
-    }
-
-    .btn-download:hover {
-        background-color: #e0a800;
-    }
-
-    .btn-lg {
-        padding: 12px 24px;
-        font-size: 18px;
-    }
-</style>
-<?php
 
 $debugPaneLink = false;
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
-
-$url = 'conf_editor.php';
 
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
@@ -153,39 +90,6 @@ $db = new sql();
 /* Check for database updates */
 require_once(__DIR__."/../debug/db_updates.php");
 /* END of check database for updates */
-
-// Profile selection
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf) {
-    if (file_exists($mconf)) {
-        $filename = basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        preg_match($pattern, $filename, $matches);
-        $hash = $matches[1];
-        $GLOBALS["PROFILES"][$hash] = $mconf;
-    }
-}
-
-// Function to compare modification dates
-function compareFileModificationDate($a, $b) {
-    return filemtime($b) - filemtime($a);
-}
-
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"])) {
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-} else {
-    $GLOBALS["PROFILES"] = [];
-}
-
-$GLOBALS["PROFILES"] = array_merge(["default" => "$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
-} else {
-    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
-    require_once($_SESSION["PROFILE"]);
-}
-// End of profile selection
 
 // Load current configurations
 $currentConf = conf_loader_load();
@@ -325,12 +229,12 @@ foreach ($quickstartConf as $pname => $parms) {
         } elseif ($pname == "CONNECTOR openrouterjson API_KEY") {
             $parms["description"] = "Copy and Paste your OpenRouter API Key. <br><a href='https://openrouter.ai/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
         } elseif ($pname == "STT WHISPER API_KEY") {
-        $parms["description"] = "Copy and Paste your OpenAI API Key. If you do not plan to use your microphone you can skip this. <br><a href='https://platform.openai.com/docs/overview/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
+            $parms["description"] = "Copy and Paste your OpenAI API Key. If you do not plan to use your microphone you can skip this. <br><a href='https://platform.openai.com/docs/overview/' target='_blank'>SETUP ACCOUNT HERE</a> <b>YOU MUST PUT AT LEAST $5 ON IT!</b>";
         }
         echo "<div class='input-group'>";
         echo "<input type='text' class='form-control' id='$jsid' name='" . htmlspecialchars($fieldName) . "' value='" . htmlspecialchars($fieldValue) . "' style='filter: blur(3px);' $FORCE_DISABLED>";
         echo "<div class='input-group-append'>";
-        echo "<button class='btn btn-outline-secondary' type='button' onclick=\"document.getElementById('$jsid').style.filter='blur(0px)'\">Unhide</button>";
+        echo "<button class='btn-primary' type='button' onclick=\"document.getElementById('$jsid').style.filter='blur(0px)'\">Unhide</button>";
         echo "</div></div>";
     }
     // Add other input types as needed
@@ -345,53 +249,54 @@ foreach ($quickstartConf as $pname => $parms) {
 
 echo '<div class="btn-group-custom text-center">
         <p class="warning-text">
-    Click "Download AIAgent.ini" and place it in the AIAgent Skyrim mod folder under SKSE/Plugins 
-    <a href="https://www.nexusmods.com/skyrimspecialedition/mods/126330?tab=files/" target="_blank"> Download CHIM Mod</a>
-</p>
-<div class="btn-group-custom text-center">
-        <p class="warning-text2">
-    After you click <b>Save</b> we <b>HIGHLY RECOMMEND</b> to open the Troubleshooting menu and run the LLM/AI, TTS and STT tests to verify everything is setup correctly.
-</p>
-<div class="btn-group-custom text-center">
-    <h3 class="warning-text3">
-        PLEASE READ the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank">CHIM 101</a> guide and the 
-        <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">CHIM Manual</a> 
-        to learn how to make the most out of this mod!
-    </h3>
-</div>
+            Click "Download AIAgent.ini" and place it in the AIAgent Skyrim mod folder under SKSE/Plugins 
+            <a href="https://www.nexusmods.com/skyrimspecialedition/mods/126330?tab=files/" target="_blank" class="btn-primary">Download CHIM Mod</a>
+        </p>
+        <div class="btn-group-custom text-center">
+            <p class="warning-text2">
+                After you click <b>Save</b> we <b>HIGHLY RECOMMEND</b> to open the Troubleshooting menu and run the LLM/AI, TTS and STT tests to verify everything is setup correctly.
+            </p>
+            <div class="btn-group-custom text-center">
+                <h3 class="warning-text3">
+                    PLEASE READ the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM 101</a> guide and the 
+                    <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Manual</a> 
+                    to learn how to make the most out of this mod!
+                </h3>
+            </div>
 
+            <button
+                type="button"
+                class="btn-primary"
+                name="aiagentdownload"
+                value="aiagentdownload"
+                style="background-color: #ffcc00 !important; color: #000000 !important;"
+                onclick=\'
+                    formSubmitting = true;
+                    document.getElementById("top").target = "_self";
+                    document.getElementById("top").action = "tests/ai_agent_ini.php";
+                    document.getElementById("top").submit();
+                \'
+            >
+                Download AIAgent.ini
+            </button>
 
-
-<button
-    type="button"
-    class="custom-button btn-download btn-lg"
-    name="aiagentdownload"
-    value="aiagentdownload"
-    onclick=\'
-        formSubmitting = true;
-        document.getElementById("top").target = "_self"; /* Ensures submission in the same tab */
-        document.getElementById("top").action = "tests/ai_agent_ini.php";
-        document.getElementById("top").submit();
-    \'
->
-    Download AIAgent.ini
-</button>
-
-<button
-    type="button"
-    class="custom-button btn-save btn-lg mr-2"
-    name="save"
-    value="Save"
-    onclick=\'
-        formSubmitting = true;
-        document.getElementById("top").target = "_self"; /* Ensures submission in the same tab */
-        document.getElementById("top").action = "tools/conf_writer.php?save=true&incomplete=true&sc=" + getAnchorNH();
-        document.getElementById("top").submit();
-    \'
->
-    Save
-</button>
-</div>';
+            <button
+                type="button"
+                class="btn-primary"
+                name="save"
+                value="Save"
+                style="background-color: #28a745 !important;"
+                onclick=\'
+                    formSubmitting = true;
+                    document.getElementById("top").target = "_self";
+                    document.getElementById("top").action = "tools/conf_writer.php?save=true&incomplete=true&sc=" + getAnchorNH();
+                    document.getElementById("top").submit();
+                \'
+            >
+                Save
+            </button>
+        </div>
+    </div>';
 
 echo '</form>
       </div>'; // End of container
@@ -403,5 +308,111 @@ ob_end_clean();
 $title = "CHIM";
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
+
+echo '<style>
+    /* Override main container styles */
+    main {
+        padding-top: 160px;
+        padding-bottom: 40px;
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px;
+        background: #031633;
+        z-index: 100;
+    }
+
+    /* Additional quickstart-specific styles */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .confwizard {
+        background-color: #1e1e1e;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Button overrides */
+    .confwizard .btn-primary,
+    .confwizard button.btn-primary,
+    .confwizard a.btn-primary {
+        padding: 10px 20px !important;
+        color: #ffffff !important;
+        border: 2px solid rgba(255, 255, 255, 0.65) !important;
+        border-radius: 6px !important;
+        cursor: pointer !important;
+        font-size: 16px !important;
+        text-decoration: none !important;
+        display: inline-block !important;
+        transition: background-color 0.3s, color 0.3s !important;
+        margin: 5px !important;
+        font-weight: bold !important;
+        background-color: rgb(0, 48, 176) !important;
+    }
+
+    .confwizard .btn-primary:hover,
+    .confwizard button.btn-primary:hover,
+    .confwizard a.btn-primary:hover {
+        background-color: rgb(0, 38, 156) !important;
+        color: #ffffff !important;
+    }
+
+    .conf-item label {
+        color: #e0e0e0;
+        font-weight: 500;
+    }
+
+    .form-control, .form-control:focus, .custom-select, .custom-select:focus, textarea.form-control {
+        background-color: #2c2c2c;
+        color: #e0e0e0;
+        border: 1px solid #444;
+    }
+
+    .form-control::placeholder {
+        color: #888;
+    }
+
+    .form-text {
+        color: #bbb;
+    }
+
+    /* Warning Text Styling */
+    .warning-text {
+        color: #ffcc00;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    .warning-text2 {
+        color: #28a745;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    /* Manual and Guide Links */
+    .warning-text3 a {
+        color: #ffcc00 !important;
+        text-decoration: underline !important;
+        background: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-weight: normal !important;
+        display: inline !important;
+    }
+
+    .warning-text3 a:hover {
+        color: #ffd700 !important;
+    }
+</style>';
 
 ?>
