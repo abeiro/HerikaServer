@@ -496,6 +496,7 @@ $debugPaneLink = true;
             word-wrap: break-word;
             line-height: 1.6;
             padding: 10px 0;
+            font-size: 12px;
         }
 
         /* Prevent background interaction when modal is open */
