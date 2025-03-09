@@ -1,33 +1,6 @@
 <?php 
 session_start();
 
-// Define base paths if not already defined
-if (!defined('BASE_PATH')) {
-    define('BASE_PATH', dirname(dirname(dirname(__DIR__))));
-}
-if (!defined('UI_PATH')) {
-    define('UI_PATH', dirname(dirname(__DIR__)));
-}
-
-// Get the relative web path from document root to our application if not already defined
-if (!isset($webRoot)) {
-    $scriptPath = $_SERVER['SCRIPT_NAME'];
-    $webRoot = dirname(dirname(dirname($scriptPath))); // Go up three levels from the script location
-    if ($webRoot == '/') $webRoot = '';
-    $webRoot = rtrim($webRoot, '/');
-}
-
-require_once(UI_PATH.DIRECTORY_SEPARATOR."profile_loader.php");
-
-$TITLE = "📆CHIM Adventure Log";
-
-ob_start();
-
-include(UI_PATH.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
-
-$debugPaneLink = false;
-include(UI_PATH.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
-
 date_default_timezone_set('UTC');
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -40,6 +13,27 @@ $dbname = 'dwemer';
 $schema = 'public';
 $username = 'dwemer';
 $password = 'dwemer';
+
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$TITLE = "📆CHIM Adventure Log";
+
+ob_start();
+
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
+<!-- Ensure main.css is loaded after any reboot.css -->
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<?php
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -294,42 +288,6 @@ if ($allDatesResult) {
     echo "<div class='message'>Error fetching event dates: " . pg_last_error($conn) . "</div>";
 }
 
-// Modified renderHeader function to remove day navigation and date selection
-function renderHeader() {
-    // Start the header container
-    echo "<div class='csv-buttons'>";
-
-    // Build the current query parameters for current date CSV download
-    $currentCsvParams = [];
-    if (isset($_GET['date'])) {
-        $currentCsvParams['date'] = $_GET['date'];
-    }
-    $currentCsvParams['export'] = 'csv';
-    // Preserve month and year if they exist
-    if (isset($_GET['month'])) {
-        $currentCsvParams['month'] = $_GET['month'];
-    }
-    if (isset($_GET['year'])) {
-        $currentCsvParams['year'] = $_GET['year'];
-    }
-    $currentCsvQuery = http_build_query($currentCsvParams);
-    echo "<a href='?" . htmlspecialchars($currentCsvQuery) . "' class='button'>Download Current Date</a>";
-
-    // Build the current query parameters for all data CSV download
-    $allCsvParams = ['export' => 'all_csv'];
-    // Optionally preserve month and year
-    if (isset($_GET['month'])) {
-        $allCsvParams['month'] = $_GET['month'];
-    }
-    if (isset($_GET['year'])) {
-        $allCsvParams['year'] = $_GET['year'];
-    }
-    $allCsvQuery = http_build_query($allCsvParams);
-    echo "<a href='?" . htmlspecialchars($allCsvQuery) . "' class='button'>Download Entire Adventure Log</a>";
-
-    echo "</div>"; // Close csv-buttons
-}
-
 /**
  * Function to render a calendar for a given month and year, highlighting dates with events.
  *
@@ -437,152 +395,205 @@ if (!$result) {
     echo "<div class='message'>Query error: " . pg_last_error($conn) . "</div>";
     exit;
 }
+?> 
 
-// Start the HTML output
-?>
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<style>
-    /* Only keep calendar-specific styles that aren't in main.css */
-    .calendar {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-    }
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
+    <title>📆CHIM Adventure Log</title>
+    <style>
+        /* Adventure Log specific styles */
+        .calendar {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
 
-    .calendar th, .calendar td {
-        border: 1px solid #555555;
-        padding: 10px;
-        text-align: center;
-        vertical-align: middle;
-        position: relative;
-    }
+        .calendar th, .calendar td {
+            border: 1px solid #555555;
+            padding: 10px;
+            text-align: center;
+            vertical-align: middle;
+            position: relative;
+        }
 
-    .calendar td.has-event {
-        background-color: #007bff;
-    }
+        .calendar th {
+            background-color: #3a3a3a;
+            color: #f8f9fa;
+        }
 
-    .calendar td a {
-        color: #ffffff;
-        text-decoration: none;
-        display: block;
-        width: 100%;
-        height: 100%;
-    }
+        .calendar td.has-event {
+            color: #ffffff;
+        }
 
-    .calendar td.has-event a:hover {
-        background-color: #0056b3;
-        color: #ffcc00;
-    }
+        .calendar td a {
+            color: inherit;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            padding: 5px;
+        }
 
-    .calendar-navigation {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 20px 0;
-        gap: 15px;
-    }
+        .calendar td.has-event a {
+            background-color: #007bff;
+            color: white;
+            border: 2px solid white;
+            border-radius: 5px;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease-in-out;
+        }
 
-    .calendar-navigation a {
-        padding: 8px 16px;
-        color: #ffffff;
-        text-decoration: none;
-        background-color: #007bff;
-        border-radius: 4px;
-        transition: background-color 0.3s;
-    }
+        .calendar td.has-event a:hover {
+            background-color: #0056b3;
+            color: #ffcc00;
+        }
 
-    .calendar-navigation a:hover {
-        background-color: #0056b3;
-        text-decoration: none;
-    }
+        .calendar-navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
 
-    .calendar-navigation span {
-        color: #ffffff;
-    }
+        .calendar-navigation span {
+            padding: 0 15px;
+            color: #f8f9fa;
+            font-size: 1.5em;
+        }
 
-    /* Override specific styles for this page */
-    main {
-        padding-top: 160px;
-        padding-bottom: 40px;
-        padding-left: 10px;
-    }
+        /* CSV Buttons Container */
+        .csv-buttons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            gap: 10px;
+        }
 
-    .csv-buttons {
-        display: flex;
-        gap: 10px;
-        margin: 20px 0;
-        justify-content: center;
-    }
+        /* Event table specific styles */
+        .event-table {
+            width: 100%;
+            margin-top: 20px;
+        }
 
-    .csv-buttons .button {
-        margin: 0;
-    }
+        .event-table th {
+            background-color: #3a3a3a;
+            color: #f8f9fa;
+            padding: 12px;
+        }
 
-    /* Table specific overrides */
-    .table-container {
-        margin-top: 20px;
-        overflow-x: auto;
-    }
+        .event-table td {
+            padding: 12px;
+            word-wrap: break-word;
+        }
 
-    table {
-        font-size: 14px;
-    }
+        .event-table tr:nth-child(even) {
+            background-color: #3a3a3a;
+        }
 
-    th a {
-        color: yellow;
-    }
-</style>
+        /* Column widths for event table */
+        .col-context { width: 50%; }
+        .col-people { width: 25%; }
+        .col-location { width: 19%; }
+        .col-time { width: 6%; }
 
-<main>
-    <div class="indent5">
+        /* Main container padding */
+        main.container {
+            padding-bottom: 40px; /* Reduced space for footer */
+            padding-left: 10px;
+            max-width: 1600px;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
         <h1>📆CHIM Adventure Log</h1>
         <h2>All time and dates are in UTC. Tamrelic Time may be inconsistent.</h2>
         <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
 
         <?php
+        // Modified renderHeader function to use btn-save class
+        function renderHeader() {
+            echo "<div class='csv-buttons'>";
+            
+            $currentCsvParams = [];
+            if (isset($_GET['date'])) {
+                $currentCsvParams['date'] = $_GET['date'];
+            }
+            $currentCsvParams['export'] = 'csv';
+            if (isset($_GET['month'])) {
+                $currentCsvParams['month'] = $_GET['month'];
+            }
+            if (isset($_GET['year'])) {
+                $currentCsvParams['year'] = $_GET['year'];
+            }
+            $currentCsvQuery = http_build_query($currentCsvParams);
+            echo "<a href='?" . htmlspecialchars($currentCsvQuery) . "' class='btn-base btn-save'>Download Current Date</a>";
+
+            $allCsvParams = ['export' => 'all_csv'];
+            if (isset($_GET['month'])) {
+                $allCsvParams['month'] = $_GET['month'];
+            }
+            if (isset($_GET['year'])) {
+                $allCsvParams['year'] = $_GET['year'];
+            }
+            $allCsvQuery = http_build_query($allCsvParams);
+            echo "<a href='?" . htmlspecialchars($allCsvQuery) . "' class='btn-base btn-save'>Download Entire Adventure Log</a>";
+
+            echo "</div>";
+        }
+
         // Render Combined CSV Download Buttons at the Top
         renderHeader();
-
-        // Calendar Navigation
-        echo '<div class="calendar-navigation">';
-        
-        // Calculate previous and next month and year
-        $prevMonth = $month - 1;
-        $prevYear = $year;
-        if ($prevMonth < 1) {
-            $prevMonth = 12;
-            $prevYear--;
-        }
-
-        $nextMonth = $month + 1;
-        $nextYear = $year;
-        if ($nextMonth > 12) {
-            $nextMonth = 1;
-            $nextYear++;
-        }
-
-        // Link to previous month
-        echo "<a href='?month={$prevMonth}&year={$prevYear}'>&laquo; <b>Previous Month</b></a>";
-
-        // Display current month and year
-        $monthName = date('F', strtotime("$year-$month-01 UTC"));
-        echo "<span style='padding: 0 15px; color: #f8f9fa; font-size: 1.5em;'><b>{$monthName} {$year}</b></span>";
-
-        // Link to next month
-        echo "<a href='?month={$nextMonth}&year={$nextYear}'><b>Next Month</b> &raquo;</a>";
-        echo '</div>';
-
-        // Render the Calendar
-        echo renderCalendar($month, $year, $allEventDates);
-
-        // Event Table
         ?>
-        <table>
+
+        <!-- Calendar Navigation -->
+        <div class="calendar-navigation">
+            <?php
+            // Calculate previous and next month and year
+            $prevMonth = $month - 1;
+            $prevYear = $year;
+            if ($prevMonth < 1) {
+                $prevMonth = 12;
+                $prevYear--;
+            }
+
+            $nextMonth = $month + 1;
+            $nextYear = $year;
+            if ($nextMonth > 12) {
+                $nextMonth = 1;
+                $nextYear++;
+            }
+
+            // Link to previous month with btn-primary class
+            echo "<a href='?month={$prevMonth}&year={$prevYear}' class='btn-primary'>&laquo; Previous Month</a>";
+
+            // Display current month and year
+            $monthName = date('F', strtotime("$year-$month-01 UTC"));
+            echo "<span><b>{$monthName} {$year}</b></span>";
+
+            // Link to next month with btn-primary class
+            echo "<a href='?month={$nextMonth}&year={$nextYear}' class='btn-primary'>Next Month &raquo;</a>";
+            ?>
+        </div>
+
+        <!-- Render the Calendar -->
+        <?php
+        echo renderCalendar($month, $year, $allEventDates);
+        ?>
+
+        <!-- Event Table -->
+        <table class="event-table">
             <colgroup>
-                <col style="width: 50%;">
-                <col style="width: 25%;">
-                <col style="width: 19%;">
-                <col style="width: 6%;">
+                <col class="col-context">
+                <col class="col-people">
+                <col class="col-location">
+                <col class="col-time">
             </colgroup>
             <tr>
                 <th>Context</th>
@@ -596,33 +607,31 @@ if (!$result) {
 
             // Fetch and display each row in the table
             while ($row = pg_fetch_assoc($result)) {
-                $processed_row = process_event_row($row, false);
+                $processed_row = process_event_row($row, false); // false indicates HTML context
                 if ($processed_row === null) {
-                    continue;
+                    continue; // Skip rows with types not in the allowed list
                 }
 
-                echo "<tr>";
-                echo "<td>{$processed_row['Context']}</td>";
-                echo "<td>{$processed_row['Nearby People']}</td>";
-                echo "<td>{$processed_row['Location & Tamrelic Time']}</td>";
-                echo "<td>{$processed_row['Time(UTC)']}</td>";
-                echo "</tr>";
+                // Extract processed data
+                $data = $processed_row['Context'];
+                $people = $processed_row['Nearby People'];
+                $location = $processed_row['Location & Tamrelic Time'];
+                $timeDisplay = $processed_row['Time(UTC)'];
+
+                // **Output the table row**
+                echo "<tr><td>{$data}</td><td>{$people}</td><td>{$location}</td><td>{$timeDisplay}</td></tr>";
             }
             ?>
         </table>
 
         <?php
-        // Render Combined CSV Download Buttons at the Bottom
-        renderHeader();
-
-        // Close Database Connection
+        // **Close Database Connection**
         pg_close($conn);
         ?>
-    </div>
-</main>
-
+    </main>
+</body>
 <?php
-include(UI_PATH.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."footer.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
@@ -630,3 +639,4 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+</html>

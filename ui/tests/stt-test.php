@@ -2,18 +2,18 @@
 session_start();
 error_reporting(E_ALL);
 
-require_once(__DIR__.DIRECTORY_SEPARATOR."../ui/profile_loader.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
 
 $TITLE = "🎤CHIM - STT Test - CHIM Server";
 
 ob_start();
 
-include(__DIR__.DIRECTORY_SEPARATOR."../ui/tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."../ui/tmpl/navbar.php");
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 
-$enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+$enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "$DBDRIVER.class.php");
 
@@ -42,8 +42,8 @@ if (php_sapi_name() != "cli") {
     <html>
     <head>
         <title><?php echo $TITLE; ?></title>
-        <link rel="icon" type="image/x-icon" href="../ui/images/favicon.ico">
-        <link rel="stylesheet" href="../ui/css/main.css">
+        <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
+        <link rel="stylesheet" href="../css/main.css">
         <style>
             /* Override main container styles */
             main {
@@ -167,7 +167,7 @@ if (php_sapi_name() != "cli") {
         <?php
         echo '<div class="status"><span class="label">Sending test audio file...</span></div>';
 
-        $testFile = __DIR__ . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav";
+        $testFile = $enginePath . "debug" . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav";
         echo '<div class="message">Sending <code>' . htmlspecialchars($testFile) . '</code></div>';
 
         // Define the expected transcription
@@ -217,7 +217,7 @@ if (php_sapi_name() != "cli") {
     </div>
     </main>
     <?php
-    include(__DIR__.DIRECTORY_SEPARATOR."../ui/tmpl/footer.html");
+    include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/footer.html");
 
     $buffer = ob_get_contents();
     ob_end_clean();

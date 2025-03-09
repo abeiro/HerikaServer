@@ -2,59 +2,140 @@
 error_reporting(E_ERROR);
 session_start();
 
-$configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
-$rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
+// Define base paths
+define('BASE_PATH', dirname(__DIR__));
+define('CONFIG_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'conf');
+define('LIB_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'lib');
+
+$configFilepath = CONFIG_PATH . DIRECTORY_SEPARATOR;
 
 if (!file_exists($configFilepath."conf.php")) {
     @copy($configFilepath."conf.sample.php", $configFilepath."conf.php");   // Defaults
-    /*if (!file_exists($rootEnginePath."data".DIRECTORY_SEPARATOR."mysqlitedb.db")) {
-        require($rootEnginePath."ui".DIRECTORY_SEPARATOR."cmd".DIRECTORY_SEPARATOR."install-db.php");
-        
-    }*/
     die(header("Location: quickstart.php"));
 }
 
+require_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 
-require_once($rootEnginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
+// Load profiles through the centralized profile loader
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
-
-// Profile selection
-$GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
-    if (file_exists($mconf)) {
-        $filename=basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        preg_match($pattern, $filename, $matches);
-        $hash = $matches[1];
-        $GLOBALS["PROFILES"][$hash]=$mconf;
-    }
-}
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
-    if (file_exists($_SESSION["PROFILE"]))
-        require_once($_SESSION["PROFILE"]);
-    else {
-        $_SESSION["PROFILE"]="$configFilepath/conf.php";
-        
-    }
-
-} else
-    $_SESSION["PROFILE"]="$configFilepath/conf.php";
-// End of profile selection
-
-
-
-
-require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."misc_ui_functions.php");
-require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-
+$TITLE = "CHIM";
 
 ob_start();
-include("tmpl/head.html");
-$db = new sql();
 
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 160px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
+    }
+
+    /* Additional index-specific styles */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Table Container Styles */
+    .table-container {
+        background-color: #2a2a2a;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Table Styles */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #3a3a3a;
+        margin-bottom: 20px;
+        font-size: small;
+    }
+
+    /* Header Cells */
+    th {
+        background-color: #1a1a1a;
+        color: #fff;
+        font-weight: bold;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #444;
+    }
+
+    /* Data Cells */
+    td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #444;
+        color: #f8f9fa;
+    }
+
+    /* Row Alternating Colors */
+    tr:nth-child(even) {
+        background-color: #2c2c2c;
+    }
+
+    /* Row Hover Effect */
+    tr:hover {
+        background-color: #404040;
+    }
+
+    /* Button Cell Alignment */
+    td:has(button), td:has(.btn-base) {
+        text-align: center;
+    }
+
+    /* Responsive Table */
+    @media (max-width: 768px) {
+        .table-container {
+            margin: 10px -15px;
+            border-radius: 0;
+        }
+        
+        table {
+            font-size: smaller;
+        }
+        
+        th, td {
+            padding: 8px;
+        }
+    }
+</style>
+<?php
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+
+// Remove redundant profile loading code here and go straight to lib loading
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."misc_ui_functions.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+
+$db = new sql();
 
 /* Check for database updates only in index.php with no parms*/
 if (sizeof($_GET)==0) {
@@ -177,7 +258,6 @@ if ($_POST["animation"]) {
 <!-- navbar -->
 <?php
 $debugPaneLink = true;
-include("tmpl/navbar.php");
 ?>
 <!--<a href='index.php?openai=true'  >OpenAI API Usage</a> -->
 
@@ -205,7 +285,7 @@ include("tmpl/navbar.php");
     /* Actions */
     if ($_GET["table"] == "responselog") {
         $results = $db->fetchAll("select  A.*,ROWID FROM responselog a order by ROWID asc");
-        echo "<h3 class='my-2'>Response Queue</h3>";
+        echo "<h1 class='my-2'>Response Queue</h1>";
         print_array_as_table($results);
     }
 
@@ -259,12 +339,18 @@ include("tmpl/navbar.php");
         $mappedResults = array_map(function ($row) use ($columnHeaders) {
             $mappedRow = [];
             foreach ($row as $key => $value) {
+                // Special handling for chat events - make both type and data yellow
+                if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
+                    $value = '<span style="color: yellow;">' . htmlspecialchars($value) . '</span>';
+                } else {
+                    $value = htmlspecialchars($value);
+                }
                 $mappedRow[$columnHeaders[$key] ?? $key] = $value;
             }
             return $mappedRow;
         }, $results);
         
-        echo "<h3 class='my-2'>Event Log</h3>";
+        echo "<h1 class='my-2'>Event Log</h1>";
         
         // 3) Generate pagination buttons
         $prevPage = max(1, $page - 1);
@@ -272,28 +358,28 @@ include("tmpl/navbar.php");
         
         echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
         if ($page > 1) {
-            echo "<a href='?table=eventlog&page=$prevPage&limit=$limit' class='btn btn-primary'>Previous</a> ";
+            echo "<button onclick=\"window.location.href='?table=eventlog&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
         }
-        echo "<a href='?table=eventlog&page=$nextPage&limit=$limit' class='btn btn-primary'>Next</a>";
+        echo "<button onclick=\"window.location.href='?table=eventlog&page=$nextPage&limit=$limit'\" class='btn-base btn-primary'>Next</button>";
         echo "</div>";
         
         // 4) Display the "Delete Last X" buttons
         echo "<div style='margin: 10px 0;'>";
-        echo "<a href='?table=eventlog&delete_last=20' 
-                class='btn btn-danger'
-                onclick=\"return confirm('Are you sure you want to delete the last 20 events?');\">
+        echo "<button 
+                onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='?table=eventlog&delete_last=20'\" 
+                class='btn-base btn-danger'>
                 Delete Last 20
-            </a> ";
-        echo "<a href='?table=eventlog&delete_last=50' 
-                class='btn btn-danger'
-                onclick=\"return confirm('Are you sure you want to delete the last 50 events?');\">
+            </button> ";
+        echo "<button 
+                onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='?table=eventlog&delete_last=50'\" 
+                class='btn-base btn-danger'>
                 Delete Last 50
-            </a> ";
-        echo "<a href='?table=eventlog&delete_last=100' 
-                class='btn btn-danger'
-                onclick=\"return confirm('Are you sure you want to delete the last 100 events?');\">
+            </button> ";
+        echo "<button 
+                onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='?table=eventlog&delete_last=100'\" 
+                class='btn-base btn-danger'>
                 Delete Last 100
-            </a>";
+            </button>";
         echo "</div>";
         
         // 5) Print the table using the modified headers
@@ -307,15 +393,142 @@ include("tmpl/navbar.php");
     
     if ($_GET["table"] == "cache") {
         $results = $db->fetchAll("select  A.*,ROWID FROM eventlog a order by ts  desc");
-        echo "<h3 class='my-2'>Event Log</h3>";
+        echo "<h1 class='my-2'>Event Log</h1>";
         print_array_as_table($results);
     }
     if ($_GET["table"] == "log") {
-        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50; // Items per page (default 50)
-        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1; // Current page (default 1)
-        $offset = ($page - 1) * $limit; // Calculate the offset
+        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50;
+        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
+        $offset = ($page - 1) * $limit;
+
+        // Add modal HTML structure at the top
+        echo '
+        <div id="contentModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="modalText"></div>
+            </div>
+        </div>
+        
+        <style>
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #2a2a2a;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            width: 80%;
+            max-width: 1200px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 5px;
+            color: #fff;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: sticky;
+            z-index: 1;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        /* View Contents Button Style */
+        .view-contents-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color:rgb(0, 48, 176);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            text-align: center;
+            width: auto;
+            margin: 4px 0;
+        }
+
+        .view-contents-btn:hover {
+            background-color:rgb(0, 38, 156);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .view-contents-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        #modalText {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.6;
+            padding: 10px 0;
+            font-size: 12px;
+        }
+
+        /* Prevent background interaction when modal is open */
+        body.modal-open {
+            overflow: hidden;
+        }
+        </style>
+
+        <script>
+        // Modal functionality
+        document.addEventListener("DOMContentLoaded", function() {
+            var modal = document.getElementById("contentModal");
+            var modalText = document.getElementById("modalText");
+            var span = document.getElementsByClassName("close")[0];
+
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+                modal.style.display = "none";
+                document.body.classList.remove("modal-open");
+            };
+
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                    document.body.classList.remove("modal-open");
+                }
+            };
+
+            // Add click handlers to all cell contents
+            document.querySelectorAll(".view-contents-btn").forEach(function(element) {
+                element.addEventListener("click", function() {
+                    modalText.innerHTML = this.getAttribute("data-full-content");
+                    modal.style.display = "block";
+                    document.body.classList.add("modal-open");
+                });
+            });
+        });
+        </script>';
     
-        // Fetch results with pagination
         $results = $db->fetchAll(
             "SELECT A.*, ROWID 
              FROM log a 
@@ -323,36 +536,41 @@ include("tmpl/navbar.php");
              LIMIT $limit OFFSET $offset"
         );
     
-        // Map original column names to new display names
         $columnHeaders = [
             'localts' => 'LocalTS',
-            'response' => 'AI Response'
-
+            'response' => 'AI Response',
+            'prompt' => 'Prompt'
         ];
     
-        // Change keys in the result array to match the new column names
         $mappedResults = array_map(function ($row) use ($columnHeaders) {
             $mappedRow = [];
             foreach ($row as $key => $value) {
-                $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                if ($key === 'prompt') {
+                    // For prompt column, show as a button
+                    $escapedContent = htmlspecialchars($value, ENT_QUOTES);
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">View Contents</button>';
+                } else if ($key === 'response') {
+                    // For response column, show full content directly
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value)) . '</div>';
+                } else {
+                    $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                }
             }
             return $mappedRow;
         }, $results);
     
-        echo "<h3 class='my-2'>Response Log</h3>";
+        echo "<h1 class='my-2'>Response Log</h1>";
     
-        // Generate navigation buttons under the title
-        $prevPage = max(1, $page - 1); // Ensure we don't go below page 1
+        $prevPage = max(1, $page - 1);
         $nextPage = $page + 1;
     
         echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
         if ($page > 1) {
-            echo "<a href='?table=log&page=$prevPage&limit=$limit' class='btn btn-primary'>Previous</a> ";
+            echo "<button onclick=\"window.location.href='?table=log&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
         }
-        echo "<a href='?table=log&page=$nextPage&limit=$limit' class='btn btn-primary'>Next</a>";
+        echo "<button onclick=\"window.location.href='?table=log&page=$nextPage&limit=$limit'\" class='btn-base btn-primary'>Next</button>";
         echo "</div>";
     
-        // Print the table using the modified headers
         print_array_as_table($mappedResults);
     }
 
@@ -365,7 +583,7 @@ include("tmpl/navbar.php");
             else
                 $finalRow[$row["id_quest"]] = $row;
         }
-        echo "<h3 class='my-2'>Current Active Quests</h3>";
+        echo "<h1 class='my-2'>Current Active Quests</h1>";
         echo "<p>Note: These quests are only known by your followers. We only track quests which you have active in your journal.</p>";
 
         print_array_as_table(array_values($finalRow));
@@ -373,7 +591,7 @@ include("tmpl/navbar.php");
 
     if ($_GET["table"] == "currentmission") {
         $results = $db->fetchAll("select  A.*,ROWID FROM currentmission A order by gamets desc,localts desc,rowid desc limit 150 offset 0");
-        echo "<h3 class='my-2'>Dynamic AI Objective</h3>";
+        echo "<h1 class='my-2'>Dynamic AI Objective</h1>";
         echo "<p>Note: These dynamic objectives are only known by your followers. They are generated by the AI NPCs automatically. You can toggle this with CURRENT_TASK.</p>";
         print_array_as_table($results);
     }
@@ -381,174 +599,86 @@ include("tmpl/navbar.php");
     if ($_GET["table"] == "diarylog") {
 
         $results = $db->fetchAll("select  A.*,ROWID FROM diarylog A order by gamets desc,rowid desc limit 150 offset 0");
-        echo "<h3 class='my-2'>Diary Entries</h3>";
+        echo "<h1 class='my-2'>Diary Entries</h1>";
         print_array_as_table($results);
     }
 
     if ($_GET["table"] == "books") {
         $results = $db->fetchAll("select  A.*,ROWID FROM books A order by gamets desc,rowid desc limit 150 offset 0");
-        echo "<h3 class='my-2'>Book Log</h3>";
+        echo "<h1 class='my-2'>Book Log</h1>";
         print_array_as_table($results);
     } 
 
     if ($_GET["table"] == "audit_request") {
         $results = $db->fetchAll("select  SUBSTRING(request,1,150) as request,result,created_at,rowid FROM audit_request A order by created_at desc limit 50 offset 0");
-        echo "<h3 class='my-2'>Request to LLM services Log</h3><span>Go to database manager, table audit_request for full detail</span>";
+        echo "<h1 class='my-2'>Request to LLM services Log</h1><span>Go to database manager, table audit_request for full detail</span>";
         print_array_as_table($results);
     } 
 
     if ($_GET["table"] == "openai_token_count") {
         $results = $db->fetchAll("select  A.*,ROWID FROM openai_token_count A order by rowid desc limit 150 offset 0");
-        echo "<h3 class='my-2'>OpenAI Token Pricing</h3>";
+        echo "<h1 class='my-2'>OpenAI Token Pricing</h1>";
         echo ($results);
     }
 
     
     if ($_GET["table"] == "memory") {
         $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory A order by gamets desc,rowid desc limit 150 offset 0");
-        echo "<h3 class='my-2'>Memories Log</h3>";
+        echo "<h1 class='my-2'>Memories Log</h1>";
         print_array_as_table($results);
     }
     
     if ($_GET["table"] == "memory_summary") {
-        // Handle save edits via POST
+        // 1. Handle save edits via POST
         if (isset($_POST['save_memory_edit'])) {
             $rowid = intval($_POST['rowid']);
-            $summary = trim($_POST['summary']);
-            $tags = trim($_POST['tags']);
-            $companions = trim($_POST['companions']);
+            $summary = $_POST['summary'];
+            $tags = $_POST['tags'];
+            $companions = $_POST['companions'];
             
-            try {
-                // Update using the correct format for the database class
-                $result = $db->update(
-                    'memory_summary',
-                    "summary = '" . $db->escape($summary) . "', 
-                     tags = '" . $db->escape($tags) . "',
-                     companions = '" . $db->escape($companions) . "'",
-                    "rowid = " . $rowid
-                );
-                
-                if ($result !== false) {
-                    header("Location: ?table=memory_summary&updated=1");
-                    exit;
-                } else {
-                    echo "<div class='alert alert-danger'>Failed to update memory summary.</div>";
-                }
-            } catch (Exception $e) {
-                echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
-            }
+            // Update the database
+            $db->update(
+                'memory_summary',
+                "summary = '" . $db->escape($summary) . "', 
+                 tags = '" . $db->escape($tags) . "',
+                 companions = '" . $db->escape($companions) . "'",
+                "rowid = " . $rowid
+            );
+            
+            // Redirect to refresh the page
+            header("Location: ?table=memory_summary&updated=1");
+            exit;
         }
 
-        // Show success message if update was successful
+        // Handle delete
+        if (isset($_GET['delete_memory']) && !empty($_GET['delete_memory'])) {
+            $rowid = intval($_GET['delete_memory']);
+            $db->delete('memory_summary', "rowid = " . $rowid);
+            header("Location: ?table=memory_summary&deleted=1");
+            exit;
+        }
+
+        // Show success/delete messages
         if (isset($_GET['updated'])) {
             echo "<div class='alert alert-success'>Memory summary updated successfully!</div>";
         }
+        if (isset($_GET['deleted'])) {
+            echo "<div class='alert alert-danger'>Memory summary deleted successfully!</div>";
+        }
 
-        $results = $db->fetchAll("select gamets_truncated,n,summary,companions,classifier,tags,uid,ROWID as rowid, packed_message FROM memory_summary A order by gamets_truncated desc,rowid desc limit 150 offset 0");
-        
-        // Map original column names to new display names
-        $columnHeaders = [
-            'gamets_truncated' => 'GameTS',
-            'n' => 'ID',
-            'summary' => 'Summary Contents',
-            'classifier' => 'Classifier',
-            'uid' => 'UID',
-            'rowid' => 'rowid'
-        ];
-        
-        // Change keys in the result array to match the new column names
-        $mappedResults = array_map(function ($row) use ($columnHeaders) {
-            $mappedRow = [];
-            foreach ($columnHeaders as $key => $display) {
-                $mappedRow[$display] = $value = $row[$key];
-            }
-            // Store packed_message for use in the display, but don't show as column
-            $mappedRow['packed_message'] = $row['packed_message'];
-            return $mappedRow;
-        }, $results);
-        
-        echo "<h3 class='my-2'>Summarized Memories Log (Enable AUTO_CREATE_SUMMARYS in the default profile) </h3>";
-        
-        // Add CSS for edit functionality
-        echo "<style>
-            .edit-btn, .save-btn, .cancel-btn {
-                padding: 2px 8px;
-                margin: 0 2px;
-                cursor: pointer;
-            }
-            .edit-form {
-                display: none;
-                padding: 15px;
-                border-radius: 5px;
-                margin: 10px 0;
-            }
-            .edit-textarea {
-                width: 100%;
-                min-height: 100px;
-                margin-bottom: 5px;
-                height: 300px;
-            }
-            .edit-input {
-                width: 100%;
-                margin-bottom: 5px;
-            }
-            .memory-content {
-                height: 100%;
-                min-height: 150px;
-                overflow-y: auto;
-                padding: 5px;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                font-family: monospace;
-                border: 1px solid #ddd;
-                background: var(--bs-body-bg);
-                display: block;
-                width: 100%;
-            }
-            .memory-cell {
-                height: 100%;
-                position: relative;
-                min-height: 150px;
-                padding: 0 !important;
-            }
-            .summary-section {
-                margin-bottom: 8px;
-                padding: 5px;
-                border-bottom: 1px solid #eee;
-            }
-            .summary-section:last-child {
-                border-bottom: none;
-            }
-            .summary-label {
-                font-weight: bold;
-                margin-right: 5px;
-            }
-        </style>";
+        // 3. Fetch data from database
+        $results = $db->fetchAll("SELECT gamets_truncated, n, summary, companions, tags, classifier, uid, ROWID as rowid, packed_message 
+                                FROM memory_summary 
+                                ORDER BY gamets_truncated DESC, rowid DESC 
+                                LIMIT 150");
 
-        // Add JavaScript for edit functionality (remove modal-related functions)
-        echo "<script>
-            function toggleEdit(rowid) {
-                const displayDiv = document.getElementById('display-' + rowid);
-                const editForm = document.getElementById('edit-form-' + rowid);
-                
-                displayDiv.style.display = 'none';
-                editForm.style.display = 'block';
-            }
-            
-            function cancelEdit(rowid) {
-                const displayDiv = document.getElementById('display-' + rowid);
-                const editForm = document.getElementById('edit-form-' + rowid);
-                
-                displayDiv.style.display = 'block';
-                editForm.style.display = 'none';
-            }
-        </script>";
-
-        // Modify how results are displayed
-        foreach ($mappedResults as &$row) {
-            $summaryHtml = "<div id='display-{$row['rowid']}'>
+        // 4. Process each row for display
+        $processedResults = [];
+        foreach ($results as $row) {
+            // Create the display HTML
+            $displayHtml = "<div id='display-{$row['rowid']}'>
                 <div class='summary-section'>
-                    <span class='summary-content'>" . nl2br(htmlspecialchars($row['Summary Contents'])) . "</span>
+                    <span class='summary-content'>" . nl2br(htmlspecialchars($row['summary'])) . "</span>
                 </div>
                 <div class='summary-section'>
                     <span class='summary-label'>Tags:</span>
@@ -558,7 +688,10 @@ include("tmpl/navbar.php");
                     <span class='summary-label'>Companions:</span>
                     <span class='summary-content'>" . htmlspecialchars($row['companions']) . "</span>
                 </div>
-                <button class='edit-btn btn btn-primary btn-sm' onclick='toggleEdit({$row['rowid']})'>Edit</button>
+                <div class='button-group' style='margin-top: 10px;'>
+                    <button class='btn-base action-button edit' onclick='toggleEdit({$row['rowid']})'>Edit</button>
+                    <button class='btn-base btn-danger' onclick=\"if(confirm('Are you sure you want to delete this memory summary?')) window.location.href='?table=memory_summary&delete_memory={$row['rowid']}'\">Delete</button>
+                </div>
                 <div class='mt-2'>
                     <span class='summary-label'>Packed Memory Content:</span>
                 </div>
@@ -567,25 +700,111 @@ include("tmpl/navbar.php");
                 </div>
             </div>";
             
-            $summaryHtml .= "<form id='edit-form-{$row['rowid']}' class='edit-form' method='post'>
+            // Create the edit form HTML
+            $displayHtml .= "<form id='edit-form-{$row['rowid']}' class='edit-form' method='post' action='?table=memory_summary'>
                 <input type='hidden' name='rowid' value='{$row['rowid']}'>
+                <input type='hidden' name='save_memory_edit' value='1'>
                 <label>Summary:</label>
-                <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['Summary Contents']) . "</textarea>
+                <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['summary']) . "</textarea>
                 <label>Tags:</label>
                 <input type='text' name='tags' class='edit-input form-control' value='" . htmlspecialchars($row['tags']) . "'>
                 <label>Companions:</label>
                 <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions']) . "'>
-                <button type='submit' name='save_memory_edit' class='save-btn btn btn-success btn-sm'>Save</button>
-                <button type='button' class='cancel-btn btn btn-secondary btn-sm' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
+                <div class='button-group' style='margin-top: 10px;'>
+                    <button type='submit' class='btn-base action-button add-new'>Save</button>
+                    <button type='button' class='btn-base btn-danger' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
+                </div>
             </form>";
+
+            // Create the processed row with rowid included
+            $processedRow = [
+                'RowID' => $row['rowid'],
+                'GameTS' => $row['gamets_truncated'],
+                'ID' => $row['n'],
+                'Classifier' => $row['classifier'],
+                'Summary' => $displayHtml
+
+            ];
             
-            $row['Summary Contents'] = $summaryHtml;
-            unset($row['tags']);
-            unset($row['companions']);
-            unset($row['packed_message']);
+            $processedResults[] = $processedRow;
         }
 
-        print_array_as_table($mappedResults);
+        // 5. Output the page header
+        echo "<h1 class='my-2'>Summarized Memories Log</h1>";
+        echo "<h3>(Enable AUTO_CREATE_SUMMARYS in the default profile)</h3>";
+        
+        // 6. Add the necessary styles
+        echo "<style>
+            .edit-form {
+                display: none;
+                padding: 15px;
+                border-radius: 5px;
+                margin: 10px 0;
+                background-color: #2a2a2a;
+            }
+            .edit-textarea {
+                width: 100%;
+                min-height: 100px;
+                margin-bottom: 5px;
+                height: 300px;
+                background-color: #333;
+                color: #fff;
+                border: 1px solid #444;
+            }
+            .edit-input {
+                width: 100%;
+                margin-bottom: 5px;
+                background-color: #333;
+                color: #fff;
+                border: 1px solid #444;
+                padding: 5px;
+            }
+            .memory-content {
+                height: 100%;
+                min-height: 150px;
+                overflow-y: auto;
+                padding: 5px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                border: 1px solid #444;
+                background-color: #333;
+                color: #fff;
+                width: 100%;
+            }
+            .summary-section {
+                margin-bottom: 8px;
+                padding: 5px;
+                border-bottom: 1px solid #444;
+            }
+            .summary-label {
+                font-weight: bold;
+                margin-right: 5px;
+                color: #fff;
+            }
+            .summary-content {
+                color: #fff;
+            }
+        </style>";
+
+        // 7. Add the JavaScript for edit functionality
+        echo "<script>
+            function toggleEdit(rowid) {
+                const displayDiv = document.getElementById('display-' + rowid);
+                const editForm = document.getElementById('edit-form-' + rowid);
+                displayDiv.style.display = 'none';
+                editForm.style.display = 'block';
+            }
+            
+            function cancelEdit(rowid) {
+                const displayDiv = document.getElementById('display-' + rowid);
+                const editForm = document.getElementById('edit-form-' + rowid);
+                displayDiv.style.display = 'block';
+                editForm.style.display = 'none';
+            }
+        </script>";
+
+        // 8. Display the table
+        print_array_as_table($processedResults);
     }
       
     if ($_GET["notes"]) {
@@ -606,60 +825,24 @@ include("tmpl/navbar.php");
     
         // Add custom styles
         echo '<style>
-        .open-overlay-btn {
-            padding: 10px 20px;
-            background-color: rgb(0, 48, 176);
-            color: #ffffff;
-            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            text-decoration: none;
-            text-align: center;
-            display: inline-block;
-            transition: background-color 0.3s, color 0.3s;
-            margin: 5px;
-            font-weight: bold;
-        }
-        .delete-plugin-btn {
-            padding: 10px 20px;
-            background-color: rgb(176, 0, 0);
-            color: #ffffff;
-            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            text-decoration: none;
-            text-align: center;
-            display: inline-block;
-            transition: background-color 0.3s, color 0.3s;
-            margin: 5px;
-            font-weight: bold;
-        }
-        .configure-plugin-btn {
-            padding: 10px 20px;
-            background-color: rgb(0, 176, 80);
-            color: #ffffff;
-            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            text-decoration: none;
-            text-align: center;
-            display: inline-block;
-            transition: background-color 0.3s, color 0.3s;
-            margin: 5px;
-            font-weight: bold;
+        body {
+            padding-bottom: 40px; /* Reduced space for footer */
+            padding-left: 10px;
         }
         table {
             border-collapse: collapse;
             margin-top: 10px;
+            width: 60%;
         }
         table th, table td {
             padding: 10px;
         }
         table th {
             background-color: var(--bs-primary-bg-subtle) !important;
+        }
+
+        table-td {
+            border: 1px solid var(--bs-border-color);
         }
         .title-with-button {
             display: flex;
@@ -672,12 +855,12 @@ include("tmpl/navbar.php");
         </style>';
     
         // Add a title for installed plugins with Refresh button
+        echo '<body>';
         echo '<br>';
-        echo '<div class="title-with-button">';
         echo '<h2>Installed CHIM Plugins</h2>';
         echo '<form method="post" style="margin: 0;">
         <input type="hidden" name="refresh_plugins" value="1">
-        <button type="submit" class="open-overlay-btn">Refresh Plugins</button>
+        <button type="submit" class="btn-primary">Refresh Plugins</button>
         </form>';
         echo '</div>';
     
@@ -696,7 +879,7 @@ include("tmpl/navbar.php");
                 $displayName = $name ?? $folder;
                 return '<form method="post" style="margin:0;" onsubmit="return confirm(\'Are you sure you want to delete the ' . htmlspecialchars($displayName) . ' plugin?\');">
                             <input type="hidden" name="delete_plugin" value="' . htmlspecialchars($folder) . '">
-                            <button type="submit" class="delete-plugin-btn">Delete Plugin</button>
+                            <button type="submit" class="btn-danger">Delete Plugin</button>
                         </form>';
             }
             return 'Cannot be deleted';
@@ -716,7 +899,7 @@ include("tmpl/navbar.php");
                 echo '<td>' . htmlspecialchars($description) . '</td>';
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<a href="' . htmlspecialchars($configUrl) . '" class="configure-plugin-btn">Configure Plugin</a>';
+                    echo '<button onclick="window.location.href=\'' . htmlspecialchars($configUrl) . '\'" class="btn-base btn-save">Configure Plugin</button>';
                 } else {
                     echo 'No Plugin Page';
                 }
@@ -766,7 +949,7 @@ include("tmpl/navbar.php");
         echo '<td style="text-align: center;">';
         if ($minaiInstalled) {
             // Show that plugin is already installed
-            echo '<button class="open-overlay-btn" disabled>MinAI Installed</button>';
+            echo '<button class="btn-primary" disabled>MinAI Installed</button>';
         } else {
             echo '<form method="post" style="margin:0;">
                     <input type="hidden" name="download_minai" value="1">
@@ -779,10 +962,10 @@ include("tmpl/navbar.php");
         echo '<td>Extension for CHIM that expands its capabilities and optionally adds NSFW integrations.<br>Requirements: <a href="https://www.nexusmods.com/skyrimspecialedition/mods/16495" target="_blank">JContainers</a>, <a href="https://www.nexusmods.com/skyrimspecialedition/mods/22854" target="_blank">Papyrus Extender</a>, <a href="https://www.nexusmods.com/skyrimspecialedition/mods/36869" target="_blank">SPID</a></td>';
     
         // More Info cell with button
-        echo '<td><a href="https://github.com/MinLL/MinAI" target="_blank" class="configure-plugin-btn">More Info</a></td>';
+        echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI\', \'_blank\')" class="btn-base btn-primary">More Info</button></td>';
     
         // Skyrim Mod Download cell with button
-        echo '<td><a href="https://github.com/MinLL/MinAI/releases" target="_blank" class="configure-plugin-btn">Mod Download</a></td>';
+        echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI/releases\', \'_blank\')" class="btn-base btn-primary">Mod Download</button></td>';
     
         echo '</tr></table>';
         echo '<br>';
@@ -792,8 +975,8 @@ include("tmpl/navbar.php");
         echo '';
         echo '<p>The herika_heal plugin provides an example of how our API works. Open Server Folder, under /ext.</p>';
         echo '<p>Here is a link to the <a href="https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files" target="_blank">herika_heal example .ESP file (Optional Files)</a></p>';
-        echo '<button type="button" class="open-overlay-btn" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
-            
+        echo '<button type="button" class="btn-primary" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
+        echo '</body>';
     }
 
     if (isset($_POST['download_minai'])) {
@@ -954,12 +1137,11 @@ include("tmpl/navbar.php");
 </div> <!-- close main container -->
 <?php
 
-include("tmpl/footer.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "CHIM";
-$title .= (($_GET["autorefresh"]) ? " (autorefreshes every 5 secs)" : "");
+$title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 
