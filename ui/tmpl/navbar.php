@@ -216,22 +216,22 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/conf_wizard.php">Configuration Wizard</a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/npc_upload.php" title="Edit NPC biographies entries" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/npc_upload.php" title="Edit NPC biographies entries">
                             NPC Biography Management
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/oghma_upload.php" title="Edit Oghma Infinium entries" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/oghma_upload.php" title="Edit Oghma Infinium entries">
                             Oghma Infinium Management
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/customprompteditor.php" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/customprompteditor.php">
                         Custom Prompt Editor
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/quickstart.php" target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/quickstart.php">
                             Quickstart Menu
                         </a>
                         </li>
@@ -240,7 +240,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">TTS Voice Management</h6></li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS FastAPI voices" target="_blank" rel="noopener noreferrer">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS FastAPI voices"rel="noopener noreferrer">
                             CHIM XTTS Management
                         </a>
                         </li>
@@ -267,22 +267,22 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <!-- Connection Tests -->
                     <li><h6 class="dropdown-header">Connection Tests</h6></li>
                     <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests.php" target="_blank">Current LLM/AI Connection Test</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests.php">Current LLM/AI Connection Test</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/tts-test.php" target="_blank">Current TTS Connection Test</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/tts-test.php">Current TTS Connection Test</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/stt-test.php" target="_blank">Current STT Connection Test</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/stt-test.php">Current STT Connection Test</a>
                     </li>
                     <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/itt-test.php" target="_blank">Current ITT Connection Test</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/itt-test.php">Current ITT Connection Test</a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <!-- Logs & Cache -->
                     <li><h6 class="dropdown-header">Logs & Cache</h6></li>
                     <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php" target="_blank">Server Error Logs</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php">Server Error Logs</a>
                     </li>
                     <li>
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
@@ -298,8 +298,8 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <ul class="dropdown-menu">
                         <li><h6 class="dropdown-header">Immersion Tools</h6></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/diary" target="_blank">AI Diary</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/adventurelog.php" target="_blank">Adventure Log</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/chat-testing.php" target="_blank">Chat Testing</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/adventurelog.php">Adventure Log</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/chat-testing.php">Chat Testing</a></li>
                         <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
                         <!--<li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>-->
                     </ul>
@@ -707,9 +707,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </head>
     <body>
         <!-- Trigger Link to Open Overlay -->
-        <a href="#overlay" class="open-overlay-btn">
+        <button id="profileSelectorBtn" class="btn-primary">
             <?php echo isset($GLOBALS["CURRENT_PROFILE_CHAR"]) ? htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"], ENT_QUOTES, 'UTF-8') : 'Select Profile'; ?>
-        </a>
+        </button>
         <!-- The Overlay -->
         <div id="overlay" class="overlay">
             <!-- Overlay Content -->
@@ -763,69 +763,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const filterButtons = document.querySelectorAll('.filter-button');
-                const profileContainers = document.querySelectorAll('.dropdown-option');
-
-                filterButtons.forEach(button => {
-                    button.addEventListener('click', function(event) {
-                        event.preventDefault();
-                        // Remove 'active' class from all buttons
-                        filterButtons.forEach(btn => btn.classList.remove('active'));
-                        // Add 'active' class to the clicked button
-                        this.classList.add('active');
-
-                        const filter = this.getAttribute('data-filter');
-
-                        profileContainers.forEach(container => {
-                            if (filter === 'all') {
-                                container.style.display = 'block';
-                            } else if (filter === 'favorites') {
-                                // Show only favorited profiles
-                                if (container.getAttribute('data-filter-letter') === 'favorites') {
-                                    container.style.display = 'block';
-                                } else {
-                                    container.style.display = 'none';
-                                }
-                            } 
-                            // ADD THIS PART
-                            else if (filter === 'latest') {
-                                // Sort the .dropdown-option elements by data-import-order ASC
-                                const sortedContainers = Array.from(profileContainers).sort((a, b) => {
-                                    const aIndex = parseInt(a.getAttribute('data-import-order'), 10);
-                                    const bIndex = parseInt(b.getAttribute('data-import-order'), 10);
-                                    return aIndex - bIndex; // ascending
-                                });
-
-                                // Append them in the new order & show them, unless they start with '*'
-                                const parent = profileContainers[0].parentNode;
-                                sortedContainers.forEach(container => {
-                                    const profileText = container.textContent.trim(); // Get the text content of the profile
-                                    if (profileText.startsWith('*')) {
-                                        container.style.display = 'none'; // Hide profiles starting with '*'
-                                    } else {
-                                        container.style.display = 'block'; // Show other profiles
-                                        parent.appendChild(container);
-                                    }
-                                });
-                            }
-                            else {
-                                const containerLetter = container.getAttribute('data-filter-letter');
-                                if (containerLetter === filter) {
-                                    container.style.display = 'block';
-                                } else {
-                                    container.style.display = 'none';
-                                }
-                            }
-                        });
-                    });
-                });
-
-
-                // Optionally, activate 'All' filter by default
-                const allFilterBtn = document.querySelector('.filter-button[data-filter="all"]');
-                if (allFilterBtn) {
-                    allFilterBtn.click();
+            document.getElementById('profileSelectorBtn').addEventListener('click', function() {
+                document.getElementById('overlay').style.display = 'block';
+            });
+            
+            // Close overlay when clicking outside content
+            document.getElementById('overlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.style.display = 'none';
                 }
             });
         </script>

@@ -20,6 +20,11 @@ require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.sample.php");	// Should 
 if (file_exists($rootPath."conf".DIRECTORY_SEPARATOR."conf.php"))
     require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.php");	// Should contain current ones
 
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
 $TITLE = "Config Wizard";
 
 require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
@@ -59,53 +64,72 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
     $_SESSION["PROFILE"]="$configFilepath/conf.php";
 // End of profile selection
 
-include("tmpl/head.html");
-// Config wizard styles
-echo "
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
 <style>
-    label{
-        color: #ff00c6;
-
+    /* Override main container styles */
+    main {
+        padding-top: 160px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
     }
 
-    p.conf-item{
-        color: #ff00c6;
-
+    /* Additional index-specific styles */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
     }
 
+    label {
+        color: #ff00c6;
+    }
+
+    p.conf-item {
+        color: #ff00c6;
+    }
 
     p.conf-item input[type=radio] + label {
         color: white;
-
     }
+
     span {
         color: white;
-
     }
 
     button {
-    padding: 5px 10px;
-    background-color: rgb(0, 48, 176);
-    color: #ffffff;
-    border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.3s, color 0.3s;
-    margin: 2px;
-    font-weight: bold;
+        padding: 5px 10px;
+        background-color: rgb(0, 48, 176);
+        color: #ffffff;
+        border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s, color 0.3s;
+        margin: 2px;
+        font-weight: bold;
     }
 
     button:hover {
-        background-color: rgb(0, 38, 156); /* Darker shade for hover */
+        background-color: rgb(0, 38, 156);
     }
-
 </style>
-";
+<?php
+
 $debugPaneLink = false;
-include("tmpl/navbar.php");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 echo ' <form action="" method="post" name="mainC" class="confwizard" id="top">
 <input type="hidden" name="profile" value="'.$_SESSION["PROFILE"].'" />
@@ -524,7 +548,7 @@ echo str_repeat("</fieldset>", $lvl2);
 
 echo '</form>';
 
-echo "<div style='position:fixed;top:0px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'>
+echo "<div style='position:fixed;top:70px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'>
 <span><strong>Quick Access for <span style='color:yellow'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br><span style='font-size:11px'>You must click save before using 'Copy to All Profiles'</span><br/><span style='font-size:7px'>".
     basename($_SESSION["PROFILE"])
 ."</span></strong></span><ul>";

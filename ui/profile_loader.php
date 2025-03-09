@@ -38,8 +38,10 @@ require_once($sampleConfigFile);	// Should contain defaults
 require_once($mainConfigFile);	// Should contain current ones
 require(CONFIG_PATH . DIRECTORY_SEPARATOR . 'conf_loader.php');
 
-// Profile selection
+// Profile selection - first set the default profile
 $GLOBALS["PROFILES"]["default"] = $mainConfigFile;
+
+// Then scan for additional profiles
 foreach (glob(CONFIG_PATH . DIRECTORY_SEPARATOR . 'conf_????????????????????????????????.php') as $mconf) {
     if (file_exists($mconf)) {
         $filename = basename($mconf);
@@ -56,19 +58,26 @@ function compareFileModificationDate($a, $b) {
 }
 
 // Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"]))
+if (is_array($GLOBALS["PROFILES"])) {
     usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-else
+} else {
     $GLOBALS["PROFILES"] = [];
+}
 
+// Ensure default profile is always first
+$GLOBALS["PROFILES"] = array_merge(["default" => $mainConfigFile], $GLOBALS["PROFILES"]);
+
+// Load the appropriate profile
 if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
     if (file_exists($_SESSION["PROFILE"])) {
         require_once($_SESSION["PROFILE"]);
     } else {
         $_SESSION["PROFILE"] = $mainConfigFile;
+        require_once($mainConfigFile);
     }
 } else {
     $_SESSION["PROFILE"] = $mainConfigFile;
+    require_once($mainConfigFile);
 }
 
 

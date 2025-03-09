@@ -785,31 +785,6 @@ input[type="file"]::-moz-file-upload-button:hover {
     width: 100%;
 }
 
-/* Filter Buttons */
-.filter-buttons {
-    margin-bottom: 20px;
-    width: 100%;
-}
-
-.filter-buttons form {
-    display: inline-block;
-    margin: 2px;
-}
-
-.filter-buttons > button {
-    background-color: #007bff;
-    border: none;
-    color: white;
-    padding: 6px 10px;
-    margin: 0;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-.filter-buttons > button:hover {
-    background-color: #0056b3;
-}
 
 /* Code Block */
 code {
