@@ -378,6 +378,62 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         background: #031633;
         z-index: 100;
     }
+
+        /* Modal specific overrides */
+        .modal-backdrop {
+        overflow-y: auto !important;
+        padding: 20px 0;
+    }
+
+    .modal-container {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        margin: 160px auto 40px auto !important;
+        max-width: 800px !important;
+        width: 90% !important;
+    }
+
+    .modal-body {
+        max-height: calc(100vh - 300px);
+        overflow-y: auto;
+        padding-right: 15px;
+    }
+
+    /* Form field spacing */
+    .modal-body label {
+        display: block;
+        margin-top: 15px;
+        color: #ff00c6;
+        font-weight: bold;
+    }
+
+    .modal-body small {
+        display: block;
+        color: #888;
+        margin-bottom: 5px;
+    }
+
+    .modal-body input[type="text"],
+    .modal-body textarea {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    .modal-footer {
+        position: sticky;
+        bottom: 0;
+        background: #3a3a3a;
+        padding: 15px 0;
+        margin-top: 20px;
+        border-top: 1px solid #4a4a4a;
+    }
+
+    /* Table container height adjustment */
+    .table-container {
+        max-height: calc(100vh - 400px) !important;
+    }
 </style>
 
 <main>
@@ -557,7 +613,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <textarea name="npc_dynamic" id="edit_npc_dynamic" rows="8"></textarea>
 
                 <label for="edit_npc_misc">NPC Misc:</label>
-                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here !</a></small>
+                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="edit_npc_misc">
 
                 <label for="edit_melotts_voiceid">Melotts Voice ID:</label>
@@ -603,7 +659,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <textarea name="npc_dynamic" id="new_npc_dynamic" rows="8"></textarea>
 
                 <label for="new_npc_misc">NPC Misc:</label>
-                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here !</a></small>
+                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="new_npc_misc">
 
                 <label for="new_melotts_voiceid">Melotts Voice ID:</label>

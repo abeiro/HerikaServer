@@ -397,11 +397,145 @@ $debugPaneLink = true;
         print_array_as_table($results);
     }
     if ($_GET["table"] == "log") {
-        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50; // Items per page (default 50)
-        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1; // Current page (default 1)
-        $offset = ($page - 1) * $limit; // Calculate the offset
+        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50;
+        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
+        $offset = ($page - 1) * $limit;
+
+        // Add modal HTML structure at the top
+        echo '
+        <div id="contentModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="modalText"></div>
+            </div>
+        </div>
+        
+        <style>
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #2a2a2a;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            width: 80%;
+            max-width: 1200px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 5px;
+            color: #fff;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: sticky;
+            z-index: 1;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        /* View Contents Button Style */
+        .view-contents-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #2c3e50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            text-align: center;
+            width: auto;
+            margin: 4px 0;
+        }
+
+        .view-contents-btn:hover {
+            background-color: #34495e;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .view-contents-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        /* Full content display */
+        .full-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            padding: 10px;
+            line-height: 1.5;
+        }
+
+        #modalText {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.6;
+            padding: 10px 0;
+        }
+
+        /* Prevent background interaction when modal is open */
+        body.modal-open {
+            overflow: hidden;
+        }
+        </style>
+
+        <script>
+        // Modal functionality
+        document.addEventListener("DOMContentLoaded", function() {
+            var modal = document.getElementById("contentModal");
+            var modalText = document.getElementById("modalText");
+            var span = document.getElementsByClassName("close")[0];
+
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+                modal.style.display = "none";
+                document.body.classList.remove("modal-open");
+            };
+
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                    document.body.classList.remove("modal-open");
+                }
+            };
+
+            // Add click handlers to all cell contents
+            document.querySelectorAll(".view-contents-btn").forEach(function(element) {
+                element.addEventListener("click", function() {
+                    modalText.innerHTML = this.getAttribute("data-full-content");
+                    modal.style.display = "block";
+                    document.body.classList.add("modal-open");
+                });
+            });
+        });
+        </script>';
     
-        // Fetch results with pagination
         $results = $db->fetchAll(
             "SELECT A.*, ROWID 
              FROM log a 
@@ -409,26 +543,32 @@ $debugPaneLink = true;
              LIMIT $limit OFFSET $offset"
         );
     
-        // Map original column names to new display names
         $columnHeaders = [
             'localts' => 'LocalTS',
-            'response' => 'AI Response'
-
+            'response' => 'AI Response',
+            'prompt' => 'Prompt'
         ];
     
-        // Change keys in the result array to match the new column names
         $mappedResults = array_map(function ($row) use ($columnHeaders) {
             $mappedRow = [];
             foreach ($row as $key => $value) {
-                $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                if ($key === 'prompt') {
+                    // For prompt column, show as a button
+                    $escapedContent = htmlspecialchars($value, ENT_QUOTES);
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">View Contents</button>';
+                } else if ($key === 'response') {
+                    // For response column, show full content directly
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value)) . '</div>';
+                } else {
+                    $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                }
             }
             return $mappedRow;
         }, $results);
     
         echo "<h1 class='my-2'>Response Log</h1>";
     
-        // Generate navigation buttons under the title
-        $prevPage = max(1, $page - 1); // Ensure we don't go below page 1
+        $prevPage = max(1, $page - 1);
         $nextPage = $page + 1;
     
         echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
@@ -438,7 +578,6 @@ $debugPaneLink = true;
         echo "<a href='?table=log&page=$nextPage&limit=$limit' class='btn btn-primary'>Next</a>";
         echo "</div>";
     
-        // Print the table using the modified headers
         print_array_as_table($mappedResults);
     }
 

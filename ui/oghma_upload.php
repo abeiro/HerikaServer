@@ -372,6 +372,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         background: #031633;
         z-index: 100;
     }
+
+    /* Modal specific overrides */
+    .modal-backdrop {
+        overflow-y: auto !important;
+        padding: 20px 0;
+    }
+
+    .modal-container {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        margin: 160px auto 40px auto !important;
+        max-width: 800px !important;
+        width: 90% !important;
+    }
+
+    .modal-body {
+        max-height: calc(100vh - 300px);
+        overflow-y: auto;
+        padding-right: 15px;
+    }
+
+    /* Form field spacing */
+    .modal-body label {
+        display: block;
+        margin-top: 15px;
+        color: #ff00c6;
+        font-weight: bold;
+    }
+
+    .modal-body small {
+        display: block;
+        color: #888;
+        margin-bottom: 5px;
+    }
+
+    .modal-body input[type="text"],
+    .modal-body textarea {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    .modal-footer {
+        position: sticky;
+        bottom: 0;
+        background: #3a3a3a;
+        padding: 15px 0;
+        margin-top: 20px;
+        border-top: 1px solid #4a4a4a;
+    }
+
+    /* Table container height adjustment */
+    .table-container {
+        max-height: calc(100vh - 400px) !important;
+    }
 </style>
 
 <main>
@@ -384,10 +440,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
     <p>This is done by detecting topics during conversations, and injecting the appropiate information into the AI's prompt.</p>
-    <p>To use it you must have [MINIME_T5] and [OGHMA_INFINIUM] enabled in the default profile. You also need Minime-T5 installed and running.</p>
+    <p>To use it you must have <b>[MINIME_T5]</b> and <b></b>[OGHMA_INFINIUM]</b> enabled in the default profile. You also need Minime-T5 installed and running.</p>
+    <br>
     <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
     <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
     <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
+    <br>
     <p>
     <b>Logic for searching articles:</b> <br>
     1. NPC will search for oghma article based on most relevant keyword. <br>
@@ -467,7 +525,7 @@ if (isset($_GET['order'])) {
 }
 
 // Category buttons
-echo '<div style="width: 100%; padding-right: 5ch;">';
+echo '<div>';
 echo '<h2 id="entries">Oghma Infinium Entries</h2>';
 echo '<div class="action-container">';
 echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
@@ -486,17 +544,15 @@ foreach ($categories as $cat) {
     $style = ($selectedCategory === $cat) ? 'style="background-color:#0056b3;"' : '';
     echo "<a class=\"alphabet-button\" $style href=\"?cat=$catEncoded#entries\">" . htmlspecialchars($cat) . "</a>";
 }
-
+echo '<br>';
 // Sorting links
 $baseUrl = '?';
 if ($selectedCategory) $baseUrl .= 'cat=' . urlencode($selectedCategory) . '&';
 if ($letter) $baseUrl .= 'letter=' . urlencode($letter) . '&';
 
-echo '<div class="filter-buttons">';
+echo '</div>';
 echo '<a class="alphabet-button" href="' . $baseUrl . 'order=asc#entries">🔼 Ascending</a>';
 echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#entries">🔽 Descending</a>';
-echo '</div>';
-
 // Build query
 $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
 
