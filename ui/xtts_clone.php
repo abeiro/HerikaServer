@@ -454,7 +454,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-container">
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" enctype="multipart/form-data">
                 <div>
-                <h2>Voice Sample Upload</h2>
+                <h1>Voice Sample Upload</h1>
                     <label for="file">Select .wav file(s) to upload:</label>
                     <br>
                     
@@ -474,7 +474,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <li>Sample Rate: 20500Hz</li>
             </ul>
             <br>
-            <h3>Current Voice List</h3>
+            <h1>Current Voice List</h1>
             <div class="button-group">
                 <button onclick="toggleVoiceList()" id="toggleVoices" class="action-button download-csv">Show Available Voices</button>
             </div>
@@ -483,7 +483,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <br>
             <br>
-            <h3>Cloud XTTS Sync</h3>
+            <h1>Cloud XTTS Sync</h1>
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
                 <p><strong>Only required for online CHIM XTTS instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
