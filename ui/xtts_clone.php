@@ -1,4 +1,9 @@
 <?php
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -6,13 +11,13 @@ $TITLE = "🔊 CHIM XTTS Voice Management";
 
 ob_start();
 
-include("tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
 // Add meta tag for API endpoint
 echo '<meta name="api-endpoint" content="' . htmlspecialchars($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '">';
 
 $debugPaneLink = false;
-include("tmpl/navbar.php");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Enable error reporting (for development purposes)
 ini_set('display_errors', 1);
@@ -215,6 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <script>
     const API_ENDPOINT = <?php echo json_encode($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>;
+    const WEB_ROOT = <?php echo json_encode($webRoot); ?>;
 
     function showLoadingMessage() {
         document.getElementById('loading-overlay').style.display = 'block';
@@ -243,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Create and submit form to get speakers
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = 'xtts_clone.php#voiceList';
+            form.action = WEB_ROOT + '/ui/xtts_clone.php#voiceList';
             
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -328,7 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php
 
 ?>
-<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
     /* Override main container styles */
     main {
@@ -446,7 +452,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         
         <div class="form-container">
-            <form action="xtts_clone.php" method="post" enctype="multipart/form-data">
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" enctype="multipart/form-data">
                 <div>
                 <h2>Voice Sample Upload</h2>
                     <label for="file">Select .wav file(s) to upload:</label>
@@ -478,12 +484,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <br>
             <br>
             <h3>Cloud XTTS Sync</h3>
-            <form action="xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
                 <p><strong>Only required for online CHIM XTTS instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
                 <p>For cloud setup instructions, see our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.jl2x2nswa7az" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
-                <p>Cached voices are stored in <code>data/voices</code>. <a href="../data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
+                <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
                 <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
             </form>
             <br>
@@ -495,7 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </main>
 
 <?php
-include("tmpl/footer.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();

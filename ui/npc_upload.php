@@ -1,4 +1,9 @@
 <?php
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -6,10 +11,10 @@ $TITLE = "📝CHIM - NPC Biography Management";
 
 ob_start();
 
-include("tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
 $debugPaneLink = false;
-include("tmpl/navbar.php");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -355,7 +360,7 @@ $currentLetter = isset($_GET['letter']) ? htmlspecialchars($_GET['letter']) : ''
 $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 ?>
 
-<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
     /* Override main container styles */
     main {
@@ -696,7 +701,7 @@ function filterByLetter(letter) {
 </script>
 
 <?php
-include("tmpl/footer.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();

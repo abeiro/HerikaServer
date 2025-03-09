@@ -1,4 +1,9 @@
 <?php
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -6,10 +11,10 @@ $TITLE = "📝CHIM - Custom Prompts";
 
 ob_start();
 
-include("tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
 $debugPaneLink = false;
-include("tmpl/navbar.php");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -20,7 +25,7 @@ header("Cache-Control: no-cache, must-revalidate");
 header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
 
 // Define the file path
-$file_path = '../prompts/prompts_custom.php';
+$file_path = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'prompts' . DIRECTORY_SEPARATOR . 'prompts_custom.php';
 
 // Initialize content variable
 $content = '';
@@ -106,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // View prompts button
     elseif (isset($_POST['view_prompts'])) {
         // Handle view_prompts
-        $prompts_file_path = '../prompts/prompts.php';
+        $prompts_file_path = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'prompts' . DIRECTORY_SEPARATOR . 'prompts.php';
         if (file_exists($prompts_file_path)) {
             $prompts_content = file_get_contents($prompts_file_path);
         } else {
@@ -120,9 +125,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
     <title>📝CHIM - Custom Prompts</title>
-    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
     <style>
         /* Override main container styles */
         main {
@@ -325,7 +330,7 @@ $PROMPTS["diary"]=[
     function showToast(message, duration = 5000) {
         const toast = document.getElementById('toast');
         const messageSpan = toast.querySelector('.message');
-        messageSpan.innerHTML = message; // Using innerHTML to support HTML in messages
+        messageSpan.innerHTML = message;
         toast.classList.add('show');
         
         setTimeout(() => {
@@ -377,13 +382,15 @@ $PROMPTS["diary"]=[
 
     function syncAceContent() {
         const code = editor.getValue().trim();
+        const phpStartTag = "<?php echo '<?php'; ?>";
+        const phpEndTag = "<?php echo '?>'; ?>";
 
-        if (!code.startsWith("<?php")) {
-            showToast('<div class="error-message">Error: File must start with <?php</div>', 3000);
+        if (!code.startsWith(phpStartTag)) {
+            showToast('<div class="error-message">Error: File must start with &lt;?php</div>', 3000);
             return false;
         }
-        if (!code.endsWith("?>")) {
-            showToast('<div class="error-message">Error: File must end with ?></div>', 3000);
+        if (!code.endsWith(phpEndTag)) {
+            showToast('<div class="error-message">Error: File must end with ?&gt;</div>', 3000);
             return false;
         }
 
@@ -396,7 +403,7 @@ $PROMPTS["diary"]=[
 </html>
 
 <?php
-include("tmpl/footer.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();

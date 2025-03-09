@@ -7,11 +7,13 @@ if (!defined('UI_PATH')) {
     define('UI_PATH', dirname(__DIR__));
 }
 
-// Get the relative web path from document root to our application
-$scriptPath = $_SERVER['SCRIPT_NAME'];
-$webRoot = dirname(dirname(dirname($scriptPath))); // Go up three levels from the script location
-if ($webRoot == '/') $webRoot = '';
-$webRoot = rtrim($webRoot, '/');
+// Get the relative web path from document root to our application if not already defined
+if (!isset($webRoot)) {
+    $scriptPath = $_SERVER['SCRIPT_NAME'];
+    $webRoot = dirname(dirname(dirname($scriptPath))); // Go up three levels from the script location
+    if ($webRoot == '/') $webRoot = '';
+    $webRoot = rtrim($webRoot, '/');
+}
 
 // Add link to navbar CSS
 echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
@@ -26,7 +28,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                 <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
             </a> 
             
-            <a class="navbar-brand mr-2 button" href="./index.php?togglemodel=true" title="Click to change active connector" style="display:none">
+            <a class="navbar-brand mr-2 button" href="<?php echo $webRoot; ?>/ui/index.php?togglemodel=true" title="Click to change active connector" style="display:none">
             <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>-->
             </a>
             
@@ -154,12 +156,12 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="export_db.php" target="_blank" title="Exports current database into a file.">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_db.php" target="_blank" title="Exports current database into a file.">
                             Backup Current Database
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="import_db.php" target="_blank" title="Reimport an exported database file.">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" target="_blank" title="Reimport an exported database file.">
                             Restore Current Database 
                         </a>
                         </li>
@@ -296,8 +298,8 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <ul class="dropdown-menu">
                         <li><h6 class="dropdown-header">Immersion Tools</h6></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/diary" target="_blank">AI Diary</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/adventurelog" target="_blank">Adventure Log</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/chatsim" target="_blank">Chat Testing</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/adventurelog.php" target="_blank">Adventure Log</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/chat-testing.php" target="_blank">Chat Testing</a></li>
                         <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
                         <!--<li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>-->
                     </ul>

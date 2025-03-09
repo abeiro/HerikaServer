@@ -1,4 +1,9 @@
 <?php
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -6,13 +11,13 @@ $TITLE = "🔧CHIM - AI/LLM Test";
 
 ob_start();
 
-include("tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
 $debugPaneLink = false;
-include("tmpl/navbar.php");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 ?>
 <title>🔧CHIM - AI/LLM Test </title>
-<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
     /* Override main container styles */
     main {
@@ -37,7 +42,7 @@ include("tmpl/navbar.php");
         <h1>🔧CHIM AI/LLM Test</h1>
 
         <?php
-        $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+        $enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
         ini_set('display_errors', 1);
         error_reporting(E_ALL);
 
@@ -106,8 +111,8 @@ include("tmpl/navbar.php");
             $FUNCTION_PARM_MOVETO = [$GLOBALS["PLAYER_NAME"]];
             $FUNCTION_PARM_INSPECT = [$GLOBALS["PLAYER_NAME"], "monster"];
 
-            require_once(__DIR__ . DIRECTORY_SEPARATOR . "../prompts" . DIRECTORY_SEPARATOR . "command_prompt.php");
-            require_once(__DIR__ . DIRECTORY_SEPARATOR . "../functions" . DIRECTORY_SEPARATOR . "functions.php");
+            require_once($enginePath . "prompts" . DIRECTORY_SEPARATOR . "command_prompt.php");
+            require_once($enginePath . "functions" . DIRECTORY_SEPARATOR . "functions.php");
         }
 
         $gameRequest = ["inputtext"];
@@ -246,7 +251,7 @@ include("tmpl/navbar.php");
 </main>
 
 <?php
-include("tmpl/footer.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
