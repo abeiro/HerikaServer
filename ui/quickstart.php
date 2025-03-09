@@ -4,121 +4,138 @@ header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
 header("Pragma: no-cache"); // HTTP 1.0
 header("Expires: 0"); // Proxies
 
-?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>CHIM</title>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        /* Dark Mode Styles */
-        body {
-            background-color: #121212;
-            color: #e0e0e0;
-        }
-        .confwizard {
-            background-color: #1e1e1e;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-        }
-        .conf-item label {
-            color: #e0e0e0;
-            font-weight: 500;
-        }
-        .form-control, .form-control:focus, .custom-select, .custom-select:focus, textarea.form-control {
-            background-color: #2c2c2c;
-            color: #e0e0e0;
-            border: 1px solid #444;
-        }
-        .form-control::placeholder {
-            color: #888;
-        }
-        .form-text {
-            color: #bbb;
-        }
-        /* Common Styles for All Buttons */
-        .custom-button {
-            margin-top: 10px;
-            font-weight: bold;
-            border: 1px solid;
-            padding: 10px 20px;
-            cursor: pointer; /* Changes cursor to pointer on hover */
-            transition: background-color 0.3s, color 0.3s; /* Smooth transition for hover effects */
-            border-radius: 4px; /* Rounded corners */
-            font-size: 16px; /* Increased font size for better readability */
-            display: inline-block; /* Aligns buttons properly */
-            text-align: center; /* Centers text within the button */
-            text-decoration: none; /* Removes underline from text */
-        }
-
-        /* Save Button Styles */
-        .btn-save {
-            background-color: #28a745; /* Green background */
-            color: white; /* White text */
-        }
-
-        .btn-save:hover {
-            background-color: #218838; /* Darker green on hover */
-        }
-
-        /* Delete Button Styles */
-        .btn-delete {
-            background-color: #dc3545; /* Red background */
-            color: white; /* White text */
-        }
-
-        .btn-delete:hover {
-            background-color: #c82333; /* Darker red on hover */
-        }
-
-        /* Download Button Styles */
-        .btn-download {
-            background-color: #ffc107; /* Yellow background */
-            color: black; /* Black text for contrast */
-        }
-
-        .btn-download:hover {
-            background-color: #e0a800; /* Darker yellow/orange on hover */
-        }
-
-        /* Optional: Additional Classes for Consistent Sizing */
-        .btn-lg {
-            padding: 12px 24px;
-            font-size: 18px;
-        }
-        /* Warning Text Styling */
-        .warning-text {
-            color: #ffcc00; /* Amber color for visibility */
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-                .warning-text2 {
-            color: #28a745; /* Amber color for visibility */
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-    </style>
-</head>
-<body>
-    
-<?php
-
 error_reporting(E_ERROR);
 session_start();
 
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
+$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+$configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
+$rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+
+$TITLE = "QUICKSTART MENU";
+
 ob_start();
+
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
+
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 160px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
+    }
+
+    /* Additional quickstart-specific styles */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .confwizard {
+        background-color: #1e1e1e;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .conf-item label {
+        color: #e0e0e0;
+        font-weight: 500;
+    }
+
+    .form-control, .form-control:focus, .custom-select, .custom-select:focus, textarea.form-control {
+        background-color: #2c2c2c;
+        color: #e0e0e0;
+        border: 1px solid #444;
+    }
+
+    .form-control::placeholder {
+        color: #888;
+    }
+
+    .form-text {
+        color: #bbb;
+    }
+
+    /* Warning Text Styling */
+    .warning-text {
+        color: #ffcc00;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    .warning-text2 {
+        color: #28a745;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    /* Button Styles */
+    .custom-button {
+        margin-top: 10px;
+        font-weight: bold;
+        border: 1px solid;
+        padding: 10px 20px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 16px;
+        display: inline-block;
+        text-align: center;
+        text-decoration: none;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .btn-save {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-save:hover {
+        background-color: #218838;
+    }
+
+    .btn-download {
+        background-color: #ffc107;
+        color: black;
+    }
+
+    .btn-download:hover {
+        background-color: #e0a800;
+    }
+
+    .btn-lg {
+        padding: 12px 24px;
+        font-size: 18px;
+    }
+</style>
+<?php
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 $url = 'conf_editor.php';
 
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
 $rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-
-$TITLE = "QUICKSTART MENU"; // Updated title
 
 $configFilepath = realpath($configFilepath) . DIRECTORY_SEPARATOR;
 
@@ -169,10 +186,6 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROF
     require_once($_SESSION["PROFILE"]);
 }
 // End of profile selection
-
-include("tmpl/head.html");
-$debugPaneLink = false;
-include("tmpl/navbar.php");
 
 // Load current configurations
 $currentConf = conf_loader_load();

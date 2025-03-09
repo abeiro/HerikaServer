@@ -2,6 +2,12 @@
 error_reporting(E_ERROR);
 session_start();
 
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
 $rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
@@ -21,7 +27,7 @@ $configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
 
 // Profile selection
 $GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
+foreach (glob($configFilepath . 'conf_????????????????????????????????????????????????.php') as $mconf ) {
     if (file_exists($mconf)) {
         $filename=basename($mconf);
         $pattern = '/conf_([a-f0-9]+)\.php/';
@@ -30,6 +36,113 @@ foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as 
         $GLOBALS["PROFILES"][$hash]=$mconf;
     }
 }
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$TITLE = "CHIM";
+
+ob_start();
+
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 160px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
+    }
+
+    /* Additional index-specific styles */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Table Container Styles */
+    .table-container {
+        background-color: #2a2a2a;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Table Styles */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #3a3a3a;
+        margin-bottom: 20px;
+        font-size: small;
+    }
+
+    /* Header Cells */
+    th {
+        background-color: #1a1a1a;
+        color: #fff;
+        font-weight: bold;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #444;
+    }
+
+    /* Data Cells */
+    td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #444;
+        color: #f8f9fa;
+    }
+
+    /* Row Alternating Colors */
+    tr:nth-child(even) {
+        background-color: #2c2c2c;
+    }
+
+    /* Row Hover Effect */
+    tr:hover {
+        background-color: #404040;
+    }
+
+    /* Button Cell Alignment */
+    td:has(button), td:has(.btn-base) {
+        text-align: center;
+    }
+
+    /* Responsive Table */
+    @media (max-width: 768px) {
+        .table-container {
+            margin: 10px -15px;
+            border-radius: 0;
+        }
+        
+        table {
+            font-size: smaller;
+        }
+        
+        th, td {
+            padding: 8px;
+        }
+    }
+</style>
+<?php
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
     if (file_exists($_SESSION["PROFILE"]))
@@ -51,8 +164,6 @@ require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."misc_ui_functions.php
 require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 
 
-ob_start();
-include("tmpl/head.html");
 $db = new sql();
 
 
@@ -272,28 +383,28 @@ include("tmpl/navbar.php");
         
         echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
         if ($page > 1) {
-            echo "<a href='?table=eventlog&page=$prevPage&limit=$limit' class='btn btn-primary'>Previous</a> ";
+            echo "<button onclick=\"window.location.href='?table=eventlog&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
         }
-        echo "<a href='?table=eventlog&page=$nextPage&limit=$limit' class='btn btn-primary'>Next</a>";
+        echo "<button onclick=\"window.location.href='?table=eventlog&page=$nextPage&limit=$limit'\" class='btn-base btn-primary'>Next</button>";
         echo "</div>";
         
         // 4) Display the "Delete Last X" buttons
         echo "<div style='margin: 10px 0;'>";
-        echo "<a href='?table=eventlog&delete_last=20' 
-                class='btn btn-danger'
-                onclick=\"return confirm('Are you sure you want to delete the last 20 events?');\">
+        echo "<button 
+                onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='?table=eventlog&delete_last=20'\" 
+                class='btn-base btn-danger'>
                 Delete Last 20
-            </a> ";
-        echo "<a href='?table=eventlog&delete_last=50' 
-                class='btn btn-danger'
-                onclick=\"return confirm('Are you sure you want to delete the last 50 events?');\">
+            </button> ";
+        echo "<button 
+                onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='?table=eventlog&delete_last=50'\" 
+                class='btn-base btn-danger'>
                 Delete Last 50
-            </a> ";
-        echo "<a href='?table=eventlog&delete_last=100' 
-                class='btn btn-danger'
-                onclick=\"return confirm('Are you sure you want to delete the last 100 events?');\">
+            </button> ";
+        echo "<button 
+                onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='?table=eventlog&delete_last=100'\" 
+                class='btn-base btn-danger'>
                 Delete Last 100
-            </a>";
+            </button>";
         echo "</div>";
         
         // 5) Print the table using the modified headers
@@ -499,7 +610,6 @@ include("tmpl/navbar.php");
                 padding: 5px;
                 white-space: pre-wrap;
                 word-wrap: break-word;
-                font-family: monospace;
                 border: 1px solid #ddd;
                 background: var(--bs-body-bg);
                 display: block;
@@ -558,7 +668,7 @@ include("tmpl/navbar.php");
                     <span class='summary-label'>Companions:</span>
                     <span class='summary-content'>" . htmlspecialchars($row['companions']) . "</span>
                 </div>
-                <button class='edit-btn btn btn-primary btn-sm' onclick='toggleEdit({$row['rowid']})'>Edit</button>
+                <button class='action-button edit' onclick='toggleEdit({$row['rowid']})'>Edit</button>
                 <div class='mt-2'>
                     <span class='summary-label'>Packed Memory Content:</span>
                 </div>
@@ -575,8 +685,8 @@ include("tmpl/navbar.php");
                 <input type='text' name='tags' class='edit-input form-control' value='" . htmlspecialchars($row['tags']) . "'>
                 <label>Companions:</label>
                 <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions']) . "'>
-                <button type='submit' name='save_memory_edit' class='save-btn btn btn-success btn-sm'>Save</button>
-                <button type='button' class='cancel-btn btn btn-secondary btn-sm' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
+                <button type='submit' name='save_memory_edit' class='action-button add-new'>Save</button>
+                <button type='button' class='btn-danger' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
             </form>";
             
             $row['Summary Contents'] = $summaryHtml;
@@ -606,54 +716,14 @@ include("tmpl/navbar.php");
     
         // Add custom styles
         echo '<style>
-        .open-overlay-btn {
-            padding: 10px 20px;
-            background-color: rgb(0, 48, 176);
-            color: #ffffff;
-            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            text-decoration: none;
-            text-align: center;
-            display: inline-block;
-            transition: background-color 0.3s, color 0.3s;
-            margin: 5px;
-            font-weight: bold;
-        }
-        .delete-plugin-btn {
-            padding: 10px 20px;
-            background-color: rgb(176, 0, 0);
-            color: #ffffff;
-            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            text-decoration: none;
-            text-align: center;
-            display: inline-block;
-            transition: background-color 0.3s, color 0.3s;
-            margin: 5px;
-            font-weight: bold;
-        }
-        .configure-plugin-btn {
-            padding: 10px 20px;
-            background-color: rgb(0, 176, 80);
-            color: #ffffff;
-            border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            text-decoration: none;
-            text-align: center;
-            display: inline-block;
-            transition: background-color 0.3s, color 0.3s;
-            margin: 5px;
-            font-weight: bold;
+        body {
+            padding-bottom: 40px; /* Reduced space for footer */
+            padding-left: 10px;
         }
         table {
             border-collapse: collapse;
             margin-top: 10px;
+            width: 60%;
         }
         table th, table td {
             padding: 10px;
@@ -672,12 +742,12 @@ include("tmpl/navbar.php");
         </style>';
     
         // Add a title for installed plugins with Refresh button
+        echo '<body>';
         echo '<br>';
-        echo '<div class="title-with-button">';
         echo '<h2>Installed CHIM Plugins</h2>';
         echo '<form method="post" style="margin: 0;">
         <input type="hidden" name="refresh_plugins" value="1">
-        <button type="submit" class="open-overlay-btn">Refresh Plugins</button>
+        <button type="submit" class="btn-primary">Refresh Plugins</button>
         </form>';
         echo '</div>';
     
@@ -696,7 +766,7 @@ include("tmpl/navbar.php");
                 $displayName = $name ?? $folder;
                 return '<form method="post" style="margin:0;" onsubmit="return confirm(\'Are you sure you want to delete the ' . htmlspecialchars($displayName) . ' plugin?\');">
                             <input type="hidden" name="delete_plugin" value="' . htmlspecialchars($folder) . '">
-                            <button type="submit" class="delete-plugin-btn">Delete Plugin</button>
+                            <button type="submit" class="btn-danger">Delete Plugin</button>
                         </form>';
             }
             return 'Cannot be deleted';
@@ -716,7 +786,7 @@ include("tmpl/navbar.php");
                 echo '<td>' . htmlspecialchars($description) . '</td>';
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<a href="' . htmlspecialchars($configUrl) . '" class="configure-plugin-btn">Configure Plugin</a>';
+                    echo '<button onclick="window.location.href=\'' . htmlspecialchars($configUrl) . '\'" class="btn-base btn-save">Configure Plugin</button>';
                 } else {
                     echo 'No Plugin Page';
                 }
@@ -766,7 +836,7 @@ include("tmpl/navbar.php");
         echo '<td style="text-align: center;">';
         if ($minaiInstalled) {
             // Show that plugin is already installed
-            echo '<button class="open-overlay-btn" disabled>MinAI Installed</button>';
+            echo '<button class="btn-primary" disabled>MinAI Installed</button>';
         } else {
             echo '<form method="post" style="margin:0;">
                     <input type="hidden" name="download_minai" value="1">
@@ -779,10 +849,10 @@ include("tmpl/navbar.php");
         echo '<td>Extension for CHIM that expands its capabilities and optionally adds NSFW integrations.<br>Requirements: <a href="https://www.nexusmods.com/skyrimspecialedition/mods/16495" target="_blank">JContainers</a>, <a href="https://www.nexusmods.com/skyrimspecialedition/mods/22854" target="_blank">Papyrus Extender</a>, <a href="https://www.nexusmods.com/skyrimspecialedition/mods/36869" target="_blank">SPID</a></td>';
     
         // More Info cell with button
-        echo '<td><a href="https://github.com/MinLL/MinAI" target="_blank" class="configure-plugin-btn">More Info</a></td>';
+        echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI\', \'_blank\')" class="btn-base btn-primary">More Info</button></td>';
     
         // Skyrim Mod Download cell with button
-        echo '<td><a href="https://github.com/MinLL/MinAI/releases" target="_blank" class="configure-plugin-btn">Mod Download</a></td>';
+        echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI/releases\', \'_blank\')" class="btn-base btn-primary">Mod Download</button></td>';
     
         echo '</tr></table>';
         echo '<br>';
@@ -792,8 +862,8 @@ include("tmpl/navbar.php");
         echo '';
         echo '<p>The herika_heal plugin provides an example of how our API works. Open Server Folder, under /ext.</p>';
         echo '<p>Here is a link to the <a href="https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files" target="_blank">herika_heal example .ESP file (Optional Files)</a></p>';
-        echo '<button type="button" class="open-overlay-btn" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
-            
+        echo '<button type="button" class="btn-primary" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
+        echo '</body>';
     }
 
     if (isset($_POST['download_minai'])) {
@@ -954,12 +1024,11 @@ include("tmpl/navbar.php");
 </div> <!-- close main container -->
 <?php
 
-include("tmpl/footer.html");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "CHIM";
-$title .= (($_GET["autorefresh"]) ? " (autorefreshes every 5 secs)" : "");
+$title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 

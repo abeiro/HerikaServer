@@ -109,31 +109,6 @@ tr:nth-child(even) {
     background-color: #2c2c2c;
 }
 
-.filter-buttons {
-    margin-bottom: 20px;
-    width: 100%;
-}
-
-.filter-buttons form {
-    display: inline-block;
-    margin: 2px;
-}
-
-/* Filter buttons */
-.filter-buttons button {
-    background-color: var(--blue-base);
-    border: none;
-    color: white;
-    padding: 6px 10px;
-    margin: 0;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-.filter-buttons button:hover {
-    background-color: var(--blue-hover);
-}
 
 .table-container {
     max-height: 900px;

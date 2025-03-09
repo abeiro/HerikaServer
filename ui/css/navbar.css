@@ -50,20 +50,20 @@
 
 .overlay-content {
     position: absolute;
-    top: 10%;
+    top: 10%; /* Position closer to the top */
     left: 50%;
-    transform: translate(-50%, 0);
+    transform: translate(-50%, 0); /* Only center horizontally */
     width: 90%;
     max-width: 800px;
-    max-height: 80vh;
-    background-color: rgb(32, 32, 32);
+    max-height: 80vh; /* Adjusted to fit better near the top */
+    background-color: rgb(32, 32, 32); /* Dark Gray for content */
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-    overflow-y: auto;
-    cursor: default;
-    color: #ffffff;
-    font-weight: bold;
+    overflow-y: auto; /* Enable vertical scrolling */
+    cursor: default; /* Prevent cursor pointer inside content */
+    color: #ffffff; /* White text for readability */
+    font-weight: bold; /* Make all text bold */
 }
 
 .close-btn {
@@ -156,6 +156,9 @@
     color: #ffffff;
 }
 
+.nav-item.dropdown.mx-2 {
+    color: #ffffff;
+}
 /* Filter Buttons */
 .filter-buttons {
     display: flex;
