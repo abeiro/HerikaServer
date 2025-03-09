@@ -1,20 +1,30 @@
 /* Navbar Styles */
+@font-face {
+    font-family: 'MagicCards';
+    src: url('font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 .chim-navbar-wrapper {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1030;
-    background-color: #031633;
+    background: url('../images/navbarback.png');
+    background-repeat: repeat;
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
 }
 
 .chim-navbar {
-    background-color: #031633 !important;
+    background: transparent !important;
     padding: 10px 0;
 }
 
 .chim-status-nav {
-    background-color: #031633;
+    background: url('../images/navbarback.png');
+    background-repeat: repeat;
     width: 100%;
     padding: 10px 0;
 }
@@ -27,45 +37,134 @@
     font-weight: bold;
     font-size: 30px;
     text-transform: uppercase;
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+}
+
+/* Main Navbar Items */
+.nav-item.dropdown.mx-2 {
+    font-family: 'MagicCards', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.5px;
+    word-spacing: 6px;
+    color: #ffffff;
+    margin: 0 4px;
+}
+
+.nav-item.dropdown.mx-2 > .nav-link {
+    font-family: 'MagicCards', sans-serif;
+    font-size: 22px;
+    color: #ffffff;
+    padding: 4px 8px;
+}
+
+/* Dropdown Menu Styles */
+.nav-item.dropdown.mx-2 .dropdown-menu {
+    font-family: 'MagicCards', sans-serif;
+    letter-spacing: 0.5px;
+    word-spacing: 4px;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 8px 0;
+    min-width: 220px;
+}
+
+.nav-item.dropdown.mx-2 .dropdown-item {
+    padding: 8px 16px;
+    margin: 2px 0;
+    color: #ffffff;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+    white-space: nowrap;
+    position: relative;
+}
+
+.dropdown-menu {
+    padding: 8px 0;
+    margin: 0;
+    border-radius: 6px;
+}
+
+.dropdown-header {
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+    font-size: 16px;
+    color: #ffc107;
+    text-transform: uppercase;
+    padding: 12px 12px 4px;
+    margin: 0;
+    font-weight: bold;
+}
+
+.dropdown-item {
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+    font-size: 15px;
+    padding: 8px 16px;
+    margin: 2px 0;
+    color: #ffffff;
+}
+
+.dropdown-item:hover {
+    background-color: #2c5282;
+    color: #ffffff;
+}
+
+.dropdown-divider {
+    margin: 8px 0;
+    border-top: 1px solid #333;
+    opacity: 0.5;
 }
 
 /* Profile Selection Overlay */
 .overlay {
     position: fixed;
-    display: none;
+    display: flex;
     width: 100%;
     height: 100%;
     top: 0;
     left: 0;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    z-index: 9999;
+    z-index: 10000;
     cursor: pointer;
-}
-
-#overlay:target {
-    display: block;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
 }
 
 .overlay-content {
-    position: absolute;
-    top: 10%; /* Position closer to the top */
-    left: 50%;
-    transform: translate(-50%, 0); /* Only center horizontally */
-    width: 90%;
-    max-width: 800px;
-    max-height: 80vh; /* Adjusted to fit better near the top */
-    background-color: rgb(32, 32, 32); /* Dark Gray for content */
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-    overflow-y: auto; /* Enable vertical scrolling */
-    cursor: default; /* Prevent cursor pointer inside content */
-    color: #ffffff; /* White text for readability */
-    font-weight: bold; /* Make all text bold */
+    position: relative;
+    background-color: #2c2c2c;
+    padding: 30px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 1200px;
+    min-height: 200px;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 10001;
+    color: white;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    cursor: default;
+    transform-origin: center;
+    transition: all 0.3s ease;
+    margin: auto;
+    margin-top: 50px;
 }
 
+/* Prevent background interaction when overlay is active */
+body.overlay-active {
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.overlay-active .overlay,
+.overlay-active .overlay-content {
+    pointer-events: auto;
+}
+
+/* Close Button */
 .close-btn {
     position: absolute;
     top: 15px;
@@ -135,30 +234,30 @@
     background: #022a6a;
 }
 
-/* Open Overlay Button */
-.open-overlay-btn {
-    padding: 10px 20px;
-    background-color: rgb(0, 48, 176);
-    color: #ffffff;
-    border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-    border-radius: 6px;
+/* Profile Selection Button */
+.profile-select-btn {
+    width: 100%;
+    height: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
     cursor: pointer;
     font-size: 16px;
-    text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.3s, color 0.3s;
-    margin: 5px;
+    color: inherit;
     font-weight: bold;
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
 }
 
-.open-overlay-btn:hover {
-    background-color: #022a6a;
-    color: #ffffff;
+.profile-select-btn:hover {
+    background: #022a6a;
 }
 
-.nav-item.dropdown.mx-2 {
-    color: #ffffff;
+.profile-select-btn:focus {
+    outline: none;
 }
+
 /* Filter Buttons */
 .filter-buttons {
     display: flex;
@@ -178,6 +277,7 @@
     color: #ffffff;
     transition: background-color 0.3s, color 0.3s;
     font-weight: bold;
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
 }
 
 .filter-button[data-filter="all"] {
@@ -196,27 +296,24 @@
     color: #ffffff;
 }
 
-/* Profile Selection Button */
-.profile-select-btn {
-    width: 100%;
-    height: 100%;
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    text-align: center;
+/* NPC Profile Button */
+.btn-npcprofile {
+    background-color: #b81493;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: 2px solid rgba(255, 255, 255, 0.65);
+    border-radius: 6px;
     cursor: pointer;
     font-size: 16px;
-    color: inherit;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s, color 0.3s;
+    margin: 5px;
     font-weight: bold;
 }
 
-.profile-select-btn:hover {
-    background: #022a6a;
-}
-
-.profile-select-btn:focus {
-    outline: none;
+.btn-npcprofile:hover {
+    background-color: #4a1f40;
 }
 
 /* Configuration Depth Section */
@@ -228,44 +325,6 @@
     vertical-align: top;
 }
 
-.config-depth-button {
-    margin-top: 5px;
-    font-weight: bold;
-    border: 1px solid rgb(255, 255, 255);
-    padding: 5px 10px;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 12px;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.config-depth-button.basic {
-    background-color: #ffc107;
-    color: black;
-}
-
-.config-depth-button.basic:hover {
-    background-color: #e0a800;
-}
-
-.config-depth-button.advanced {
-    background-color: #fd7e14;
-    color: black;
-}
-
-.config-depth-button.advanced:hover {
-    background-color: #e06b0d;
-}
-
-.config-depth-button.experimental {
-    background-color: #dc3545;
-    color: black;
-}
-
-.config-depth-button.experimental:hover {
-    background-color: #c82333;
-}
-
 /* Status Section */
 .status-section {
     display: inline-block;
@@ -275,6 +334,11 @@
     padding-right: 10px;
     vertical-align: top;
     background-color: #031633;
+}
+
+/* Add padding to body to prevent content from hiding under fixed navbar */
+body {
+    padding-top: 160px;
 }
 
 /* Responsive Design */
@@ -289,8 +353,3 @@
         grid-template-columns: 1fr;
     }
 }
-
-/* Add padding to body to prevent content from hiding under fixed navbar */
-body {
-    padding-top: 160px; /* Adjust this value based on the combined height of your navbars */
-} 

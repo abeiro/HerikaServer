@@ -8,35 +8,21 @@ $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script lo
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
-$configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
-$rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+// Define base paths
+define('BASE_PATH', dirname(__DIR__));
+define('CONFIG_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'conf');
+define('LIB_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'lib');
+
+$configFilepath = CONFIG_PATH . DIRECTORY_SEPARATOR;
 
 if (!file_exists($configFilepath."conf.php")) {
     @copy($configFilepath."conf.sample.php", $configFilepath."conf.php");   // Defaults
-    /*if (!file_exists($rootEnginePath."data".DIRECTORY_SEPARATOR."mysqlitedb.db")) {
-        require($rootEnginePath."ui".DIRECTORY_SEPARATOR."cmd".DIRECTORY_SEPARATOR."install-db.php");
-        
-    }*/
     die(header("Location: quickstart.php"));
 }
 
+require_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 
-require_once($rootEnginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
-
-$configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
-
-// Profile selection
-$GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
-foreach (glob($configFilepath . 'conf_????????????????????????????????????????????????.php') as $mconf ) {
-    if (file_exists($mconf)) {
-        $filename=basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        preg_match($pattern, $filename, $matches);
-        $hash = $matches[1];
-        $GLOBALS["PROFILES"][$hash]=$mconf;
-    }
-}
-
+// Load profiles through the centralized profile loader
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "CHIM";
@@ -144,28 +130,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 $debugPaneLink = false;
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
-    if (file_exists($_SESSION["PROFILE"]))
-        require_once($_SESSION["PROFILE"]);
-    else {
-        $_SESSION["PROFILE"]="$configFilepath/conf.php";
-        
-    }
-
-} else
-    $_SESSION["PROFILE"]="$configFilepath/conf.php";
-// End of profile selection
-
-
-
-
-require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."misc_ui_functions.php");
-require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-
+// Remove redundant profile loading code here and go straight to lib loading
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."misc_ui_functions.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 
 $db = new sql();
-
 
 /* Check for database updates only in index.php with no parms*/
 if (sizeof($_GET)==0) {
@@ -288,7 +258,6 @@ if ($_POST["animation"]) {
 <!-- navbar -->
 <?php
 $debugPaneLink = true;
-include("tmpl/navbar.php");
 ?>
 <!--<a href='index.php?openai=true'  >OpenAI API Usage</a> -->
 
