@@ -94,12 +94,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     /* Row Alternating Colors */
     tr:nth-child(even) {
-        background-color: #2c2c2c;
-    }
-
-    /* Row Hover Effect */
-    tr:hover {
-        background-color: #404040;
+        background-color:rgb(77, 77, 77);
     }
 
     /* Button Cell Alignment */
@@ -897,7 +892,7 @@ $debugPaneLink = true;
                 echo '<td>' . htmlspecialchars($description) . '</td>';
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<button onclick="window.location.href=\'' . htmlspecialchars($configUrl) . '\'" class="btn-base btn-save">Configure Plugin</button>';
+                    echo '<button onclick="window.location.href=\'' . htmlspecialchars($configUrl) . '\'" class="btn-base btn-save target="_blank">Configure Plugin</button>';
                 } else {
                     echo 'No Plugin Page';
                 }
