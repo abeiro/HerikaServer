@@ -483,14 +483,6 @@ $debugPaneLink = true;
             box-shadow: none;
         }
 
-        /* Full content display */
-        .full-content {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            padding: 10px;
-            line-height: 1.5;
-        }
-
         #modalText {
             white-space: pre-wrap;
             word-wrap: break-word;

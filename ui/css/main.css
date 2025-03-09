@@ -440,52 +440,7 @@ tr:nth-child(even) {
     background-color: #2c2c2c;
 }
 
-/* Dark mode table colors */
-.table-primary-dark {
-    background-color: rgba(13, 110, 253, 0.15) !important;
-    color: #8bb9fe !important;
-}
 
-.table-success-dark {
-    background-color: rgba(25, 135, 84, 0.15) !important;
-    color: #75b798 !important;
-}
-
-.table-info-dark {
-    background-color: rgba(13, 202, 240, 0.15) !important;
-    color: #6edff6 !important;
-}
-
-.table-warning-dark {
-    background-color: rgba(255, 193, 7, 0.15) !important;
-    color: #ffda6a !important;
-}
-
-.table-danger-dark {
-    background-color: rgba(220, 53, 69, 0.15) !important;
-    color: #ea868f !important;
-}
-
-/* Hover effects for dark mode table rows */
-.table-primary-dark:hover {
-    background-color: rgba(13, 110, 253, 0.25) !important;
-}
-
-.table-success-dark:hover {
-    background-color: rgba(25, 135, 84, 0.25) !important;
-}
-
-.table-info-dark:hover {
-    background-color: rgba(13, 202, 240, 0.25) !important;
-}
-
-.table-warning-dark:hover {
-    background-color: rgba(255, 193, 7, 0.25) !important;
-}
-
-.table-danger-dark:hover {
-    background-color: rgba(220, 53, 69, 0.25) !important;
-}
 
 /* ==========================================================================
    Utility Classes

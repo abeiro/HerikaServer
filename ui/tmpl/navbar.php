@@ -133,7 +133,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_conf.php" target="_blank" title="Imports character profiles from a ZIP file.">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_conf.php" title="Imports character profiles from a ZIP file.">
                             Restore Character Profiles
                         </a>
                         </li>
@@ -161,7 +161,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" target="_blank" title="Reimport an exported database file.">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Reimport an exported database file.">
                             Restore Current Database 
                         </a>
                         </li>
