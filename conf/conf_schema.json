@@ -159,7 +159,7 @@
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai","kokoro","koboldcpp"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -251,9 +251,19 @@
       "_title": "KoboldCPP TTS",
       "endpoint":{"type":"url","description":"Endpoint URL"},
       "voice": {"type":"string","description":"Voice to use"}
+    },
+    "ZONOS_GRADIO": {
+      "_title": "Zonos TTS (via Gradio)",
+      "endpoint":{"type":"url","description":"Endpoint URL"},
+      "language":{"type":"select","values":["af", "am", "an", "ar", "as", "az", "ba", "bg", "bn", "bpy", "bs", "ca", "cmn", "cs", "cy", "da", "de", "el", "en-029", "en-gb", "en-gb-scotland", "en-gb-x-gbclan", "en-gb-x-gbcwmd", "en-gb-x-rp", "en-us", "eo", "es", "es-419", "et", "eu", "fa", "fa-latn", "fi", "fr-be", "fr-ch", "fr-fr", "ga", "gd", "gn", "grc", "gu", "hak", "hi", "hr", "ht", "hu", "hy", "hyw", "ia", "id", "is", "it", "ja", "jbo", "ka", "kk", "kl", "kn", "ko", "kok", "ku", "ky", "la", "lfn", "lt", "lv", "mi", "mk", "ml", "mr", "ms", "mt", "my", "nb", "nci", "ne", "nl", "om", "or", "pa", "pap", "pl", "pt", "pt-br", "py", "quc", "ro", "ru", "ru-lv", "sd", "shn", "si", "sk", "sl", "sq", "sr", "sv", "sw", "ta", "te", "tn", "tr", "tt", "ur", "uz", "vi", "vi-vn-x-central", "vi-vn-x-south", "yue"],"description":"Language","helpurl":"https://github.com/Zyphra/Zonos/blob/a09ff4fa50cfa66bf79986e19c191f85f5cb53e8/zonos/conditioning.py#L316"},
+      "model": {"type":"select","values":["Zyphra/Zonos-v0.1-transformer", "Zyphra/Zonos-v0.1-hybrid"],"description":"Default profile only. Model to use.", "scope":"global"},
+      "voiceid": {"type":"string","description":"Generated voice file name. Works the same as XTTSFASTAPI's voiceid and uses its voicelogic setting."},
+      "pitch_std": {"type":"number","description":"Pitch standard deviation [0-300]"},
+      "speaking_rate": {"type":"number","description":"Speaking rate. Higher is faster. [5-30]"},
+      "cfg_scale": {"type":"number","description":"CFG scale. Controls how closely the audio matches the sample voice. Higher numbers will be a closer match. [1.1 - 5]"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai","kokoro"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 

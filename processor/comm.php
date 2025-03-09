@@ -426,7 +426,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
 } elseif ($gameRequest[0] == "setconf") {
     
-    //logEvent($gameRequest);
+    // logEvent($gameRequest);
 
     $vars=explode("@",$gameRequest[3]);
     $db->delete("conf_opts", "id='".$db->escape($vars[0])."'");
@@ -441,21 +441,33 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
     $MUST_END=true;
     
-} elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever commands
+} elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever requests
 
     logEvent($gameRequest);
 
     $MUST_END=true;
 
     
-} elseif (strpos($gameRequest[0], "addnpc")===0) {    // info_whatever commands
+} elseif (strpos($gameRequest[0], "addnpc")===0) {    // addnpc 
     logEvent($gameRequest);
     
-    if (!profile_exists($gameRequest[3]))
-        AddFirstTimeMet($gameRequest[3], $momentum, $gameRequest[2],$gameRequest[1]);
+    $splitNameBase=explode("@",$gameRequest[3]);
+    if (sizeof($splitNameBase)>1) {
+        $localName=$splitNameBase[0];
+        $baseProfile=$splitNameBase[1];
+    } else {
+        $localName=$splitNameBase[0];
+        $baseProfile="";
+    }
 
-    createProfile($gameRequest[3],[],false);
-    
+    if ($localName==$baseProfile)
+        $baseProfile="";
+
+    if (!profile_exists($localName))
+        AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
+
+    createProfile($localName,[],false,$baseProfile);
+    audit_log("comm.php addnpc $localName");
     $MUST_END=true;
     
     
