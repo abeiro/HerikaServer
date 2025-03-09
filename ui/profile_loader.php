@@ -9,40 +9,22 @@ session_start();
 
 ob_start();
 
-// Define base paths
-define('BASE_PATH', dirname(__DIR__));
-define('CONFIG_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'conf');
-define('LIB_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'lib');
-
 $url = 'conf_editor.php';
+$rootPath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+$configFilepath = $rootPath."conf".DIRECTORY_SEPARATOR;
 
-// Ensure config directory exists
-if (!is_dir(CONFIG_PATH)) {
-    die('Configuration directory not found');
-}
+require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 
-require_once(LIB_PATH . DIRECTORY_SEPARATOR . "model_dynmodel.php");
+require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.sample.php");	// Should contain defaults
+if (file_exists($rootPath."conf".DIRECTORY_SEPARATOR."conf.php"))
+    require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.php");	// Should contain current ones
 
-// Check if conf.php exists, if not copy from sample
-$mainConfigFile = CONFIG_PATH . DIRECTORY_SEPARATOR . "conf.php";
-$sampleConfigFile = CONFIG_PATH . DIRECTORY_SEPARATOR . "conf.sample.php";
+require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
 
-if (!file_exists($mainConfigFile)) {
-    if (!file_exists($sampleConfigFile)) {
-        die('Sample configuration file not found');
-    }
-    @copy($sampleConfigFile, $mainConfigFile);   // Defaults
-}
+$configFilepath = realpath($configFilepath).DIRECTORY_SEPARATOR;
 
-require_once($sampleConfigFile);	// Should contain defaults
-require_once($mainConfigFile);	// Should contain current ones
-require(CONFIG_PATH . DIRECTORY_SEPARATOR . 'conf_loader.php');
-
-// Profile selection - first set the default profile
-$GLOBALS["PROFILES"]["default"] = $mainConfigFile;
-
-// Then scan for additional profiles
-foreach (glob(CONFIG_PATH . DIRECTORY_SEPARATOR . 'conf_????????????????????????????????.php') as $mconf) {
+// Profile selection
+foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
     if (file_exists($mconf)) {
         $filename = basename($mconf);
         $pattern = '/conf_([a-f0-9]+)\.php/';
@@ -58,26 +40,19 @@ function compareFileModificationDate($a, $b) {
 }
 
 // Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"])) {
+if (is_array($GLOBALS["PROFILES"]))
     usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-} else {
+else
     $GLOBALS["PROFILES"] = [];
-}
 
-// Ensure default profile is always first
-$GLOBALS["PROFILES"] = array_merge(["default" => $mainConfigFile], $GLOBALS["PROFILES"]);
+$GLOBALS["PROFILES"] = array_merge(["default"=>"$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
 
 // Load the appropriate profile
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
-    if (file_exists($_SESSION["PROFILE"])) {
-        require_once($_SESSION["PROFILE"]);
-    } else {
-        $_SESSION["PROFILE"] = $mainConfigFile;
-        require_once($mainConfigFile);
-    }
+if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
+    require_once($_SESSION["PROFILE"]);
 } else {
-    $_SESSION["PROFILE"] = $mainConfigFile;
-    require_once($mainConfigFile);
+    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
+    require_once($_SESSION["PROFILE"]);
 }
 
 
