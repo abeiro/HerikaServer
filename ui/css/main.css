@@ -41,7 +41,13 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 15px;
 }
 
-h1 { font-size: 32px; }
+h1 {
+    font-size: 32px;
+    font-family: 'MagicCards', sans-serif;
+    font-weight: normal;
+    letter-spacing: 0.5px;
+    word-spacing: 8px;
+}
 h2 { font-size: 26px; }
 h3 { font-size: 22px; }
 h4 { font-size: 18px; }
@@ -51,6 +57,7 @@ h6 { font-size: 14px; }
 p {
     line-height: 150%;
     margin: 0 0 10px;
+    font-size: 18px;
 }
 
 em { font-style: italic; }

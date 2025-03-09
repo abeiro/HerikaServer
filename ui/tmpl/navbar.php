@@ -184,6 +184,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                             margin-top: 20px;">
                             <button style="
                                 font-weight: bold;
+                                font-family: 'Futura CondensedLight', Arial, sans-serif;
                                 border: 1px solid;
                                 transition: background-color 0.3s, color 0.3s;
                                 border-radius: 4px;
@@ -322,6 +323,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <button style="
                             font-weight: bold;
                             border: 1px solid;
+                            font-family: 'Futura CondensedLight', Arial, sans-serif;
                             transition: background-color 0.3s, color 0.3s;
                             border-radius: 4px;
                             text-align: center;
