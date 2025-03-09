@@ -20,8 +20,6 @@ if (!file_exists($configFilepath."conf.php")) {
     die(header("Location: quickstart.php"));
 }
 
-require_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-
 // Load profiles through the centralized profile loader
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -341,7 +339,7 @@ $debugPaneLink = true;
             foreach ($row as $key => $value) {
                 // Special handling for chat events - make both type and data yellow
                 if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
-                    $value = '<span style="color: yellow;">' . htmlspecialchars($value) . '</span>';
+                    $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value) . '</span>';
                 } else {
                     $value = htmlspecialchars($value);
                 }
