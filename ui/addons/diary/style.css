@@ -3432,7 +3432,7 @@ p {
   margin-top: 50px;
   text-transform: uppercase;
   letter-spacing: 5px;
-  word-spacing: 6px;
+
   text-shadow: 
     -1px -1px 1px #000000, /* Top-left shadow for depth */
     1px 1px 1px #ffffff, /* Bottom-right highlight for engraving */

@@ -45,11 +45,12 @@ function print_array_as_table($data)
             } elseif ($n == "rowid") {
                 echo "<td class='$colorClass'>
                     <a class='icon-link' href='#' 
+                       style='color: red !important;' 
                        onclick='deleteRowAndRefresh(\"" . $_GET["table"] . "\", $cell)'>
                         " . $cell . "
-                        <i class='bi-trash'></i>
+                        <i class='bi-trash' style='color: red !important;'></i>
                     </a>
-                </td>";           
+                </td>";
             } elseif ($n == "summary" || $n == "content") {
                 echo "<td class='$colorClass'><em>
                     ".nl2br($cell)."</em>
@@ -74,9 +75,11 @@ function print_array_as_table($data)
                 echo "<td class='$colorClass'>" . $formatted_cell . "</td>";
             } elseif ($n == "rowid") {
                 echo "<td class='$colorClass'>
-                    <a class='icon-link' href='cmd/deleteRow.php?table={$_GET["table"]}&rowid=$cell'>
+                    <a class='icon-link' href='#' 
+                       style='color: red !important;' 
+                       onclick='deleteRowAndRefresh(\"" . $_GET["table"] . "\", $cell)'>
                         " . $cell . "
-                        <i class='bi-trash'></i>
+                        <i class='bi-trash' style='color: red !important;'></i>
                     </a>
                 </td>";
 
