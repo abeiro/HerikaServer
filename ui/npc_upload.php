@@ -445,8 +445,8 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         <div id="toast" class="toast-notification">
             <span class="message"></span>
         </div>
-
-        <h2>Batch Upload</h2>
+        <br>
+        <h1>Batch Upload</h1>
         <div class="form-container">
             <form action="" method="post" enctype="multipart/form-data">
                 <div>
@@ -506,10 +506,10 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         ";
         $result_combined = pg_query($conn, $query_combined);
     }
-
+    echo '<br>';
     // Wrap the NPC Templates Database section in a div for indentation
     echo '<div class="indent5" id="table">';
-    echo '<h2>NPC Templates Database</h2>';
+    echo '<h1>NPC Templates Database</h1>';
     echo '<div class="action-container">';
     echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
     echo '</div>';
