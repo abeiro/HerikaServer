@@ -78,7 +78,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     </ul>
                 </li>
                 <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Actions</a>
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server  Actions</a>
                     <ul class="dropdown-menu">
 
                         <!-- First Category Header -->
@@ -480,241 +480,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <meta charset="UTF-8">
         <title>Profile Selection Overlay</title>
         <style>
-            /* Overlay Background with Blur Effect */
-            .overlay {
-                position: fixed; /* Sit on top of the page content */
-                display: none; /* Hidden by default */
-                width: 100%; /* Full width (cover the whole page) */
-                height: 100%; /* Full height (cover the whole page) */
-                top: 0;
-                left: 0;
-                background: rgba(255, 255, 255, 0.1); /* Semi-transparent for backdrop-filter */
-                backdrop-filter: blur(10px); /* Apply blur effect */
-                -webkit-backdrop-filter: blur(10px); /* Safari support */
-                z-index: 9999; /* Specify a stack order */
-                cursor: pointer; /* Add a pointer on hover */
-            }
 
-            /* When the URL has #overlay, display the overlay */
-            #overlay:target {
-                display: block;
-            }
-
-            /* Overlay Content */
-            .overlay-content {
-                position: absolute;
-                top: 10%; /* Position closer to the top */
-                left: 50%;
-                transform: translate(-50%, 0); /* Only center horizontally */
-                width: 90%;
-                max-width: 800px;
-                max-height: 80vh; /* Adjusted to fit better near the top */
-                background-color: rgb(32, 32, 32); /* Dark Gray for content */
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-                overflow-y: auto; /* Enable vertical scrolling */
-                cursor: default; /* Prevent cursor pointer inside content */
-                color: #ffffff; /* White text for readability */
-                font-weight: bold; /* Make all text bold */
-            }
-
-            /* Close Button */
-            .close-btn {
-                position: absolute;
-                top: 15px;
-                right: 20px;
-                font-size: 30px;
-                font-weight: bold;
-                color: #ffffff; /* White color for visibility */
-                text-decoration: none;
-                cursor: pointer;
-            }
-
-            .close-btn:hover {
-                color: rgb(255, 0, 0); /* Red on hover */
-            }
-
-            /* Grid Layout for Options */
-            .options-container {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 15px;
-                margin-top: 20px; /* Space for the filter buttons */
-            }
-
-            /* Option Buttons */
-            .dropdown-option {
-                position: relative; /* For positioning the favorite button */
-                padding: 15px;
-                background-color: #031633; /* Deep Navy Blue for option backgrounds */
-                border: 2px solid #021b4d; /* Slightly darker navy blue border */
-                border-radius: 6px;
-                cursor: pointer;
-                text-align: center;
-                font-size: 16px;
-                color: #ffffff; /* White text */
-                transition: background-color 0.3s, border-color 0.3s;
-                text-decoration: none;
-                display: block;
-                font-weight: bold; /* Make text bold */
-            }
-
-            .dropdown-option:hover {
-                background-color: #022a6a; /* Slightly lighter navy blue on hover */
-                border-color: #031633; /* Slightly lighter border on hover */
-            }
-
-            /* Favorite Button */
-            .favorite-btn {
-                position: absolute;
-                top: 50%; 
-                right: 1px; 
-                transform: translateY(-50%) scale(0.8); /* Scale the button to 80% of its original size */
-                background: none;
-                border: none;
-                cursor: pointer;
-                font-size: 36px;
-                color: #FFD700; 
-                transition: color 0.3s, transform 0.3s; /* Smooth transition for hover effects */
-                font-weight: bold; 
-                z-index: 1;
-            }
-
-            .favorite-btn.favorited {
-                color: #FFD700; /* Gold color for favorites */
-            }
-
-            .favorite-btn:hover {
-                background:  #022a6a;
-            }
-
-
-            /* Open Overlay Button */
-                        .open-overlay-btn {
-                padding: 10px 20px;
-                background-color: rgb(0, 48, 176); /* Deep Navy Blue */
-                color: #ffffff; /* White text */
-                border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65); /* Border with custom RGBA color */
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 16px;
-                text-decoration: none;
-                display: inline-block;
-                transition: background-color 0.3s, color 0.3s;
-                margin: 5px;
-                font-weight: bold; /* Make text bold */
-            }
-
-
-            .open-overlay-btn:hover {
-                background-color: #022a6a; /* Slightly lighter navy blue on hover */
-                color: #ffffff; /* White text on hover */
-            }
-
-            /* A-Z and Favorites Filter Buttons */
-            .filter-buttons {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 5px;
-                margin-bottom: 20px;
-                justify-content: center;
-            }
-
-            .filter-button {
-                padding: 8px 12px;
-                background-color: #031633; /* Deep Navy Blue */
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 14px;
-                color: #ffffff; /* White text */
-                transition: background-color 0.3s, color 0.3s;
-                font-weight: bold; /* Make text bold */
-            }
-
-            /* Specific Styling for "All" Filter Button */
-            .filter-button[data-filter="all"] {
-                background-color: #28a745; /* Green */
-            }
-
-            .filter-button[data-filter="all"]:hover,
-            .filter-button[data-filter="all"].active {
-                background-color: #218838; /* Darker Green on hover and active */
-                color: #ffffff; /* White text on hover and active */
-            }
-
-            .filter-button:not([data-filter="all"]):hover,
-            .filter-button:not([data-filter="all"]).active {
-                background-color: #022a6a; /* Slightly lighter navy blue on hover and active */
-                color: #ffffff; /* White text on hover and active */
-            }
-
-            /* Responsive Design */
-            @media (max-width: 800px) {
-                .options-container {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-            }
-
-            @media (max-width: 500px) {
-                .options-container {
-                    grid-template-columns: 1fr;
-                }
-            }
-            .profile-select-btn {
-                width: 100%;
-                height: 100%;
-                background: none;
-                border: none;
-                padding: 0;
-                margin: 0;
-                text-align: center;
-                cursor: pointer;
-                font-size: 16px;
-                color: inherit;
-                font-weight: bold; /* Make text bold */
-            }
-
-            .profile-select-btn:hover {
-                background:  #022a6a;
-            }
-
-            .profile-select-btn:focus {
-                outline: none;
-            }
-
-            .icon-link {
-                display: inline-flex;           /* Use flex to center content both vertically and horizontally */
-                align-items: center;           /* Vertical centering */
-                justify-content: center;       /* Horizontal centering */
-                width: 80px;                   /* Fixed width */
-                height: 40px;                  /* Fixed height */
-                background-color: red;         /* Button background color */
-                color: white;                  /* Button text/icon color */
-                text-decoration: none;         /* Remove underline */
-                border: none;                  /* No border */
-                border-radius: 5px;           /* Rounded corners */
-                font-size: 16px;               /* Icon/text size */
-                cursor: pointer;               /* Pointer on hover */
-                transition: background-color 0.3s ease; /* Smooth hover effect */
-            }
-
-            .icon-link:hover {
-            background-color: darkred; /* Darken background on hover */
-            }
+            
         </style>
     </head>
     <body>
         <!-- Trigger Link to Open Overlay -->
-        <button id="profileSelectorBtn" class="btn-primary">
+        <button id="profileSelectorBtn" class="btn-npcprofile" onclick="event.preventDefault(); document.getElementById('overlay').style.display = 'block'; document.body.classList.add('overlay-active');">
             <?php echo isset($GLOBALS["CURRENT_PROFILE_CHAR"]) ? htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"], ENT_QUOTES, 'UTF-8') : 'Select Profile'; ?>
         </button>
         <!-- The Overlay -->
-        <div id="overlay" class="overlay">
+        <div id="overlay" class="overlay" style="display: none;">
             <!-- Overlay Content -->
             <div class="overlay-content">
-                <a href="#" class="close-btn">&times;</a>
+                <a href="#" class="close-btn" onclick="closeOverlay(event)">&times;</a>
                 <h2>Activated Character Profiles</h2>
                 <i><p>Refresh page to see new characters.</p></i>
                 <!-- A-Z and Favorites Filter Buttons -->
@@ -763,15 +542,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <script>
-            document.getElementById('profileSelectorBtn').addEventListener('click', function() {
+            // Function to close the overlay
+            function closeOverlay(e) {
+                if (e) e.preventDefault();
+                document.getElementById('overlay').style.display = 'none';
+                document.body.classList.remove('overlay-active');
+            }
+
+            // Add event listener to handle overlay display
+            document.getElementById('profileSelectorBtn').addEventListener('click', function(e) {
+                e.preventDefault();
                 document.getElementById('overlay').style.display = 'block';
+                document.body.classList.add('overlay-active');
             });
-            
+
             // Close overlay when clicking outside content
             document.getElementById('overlay').addEventListener('click', function(e) {
                 if (e.target === this) {
-                    this.style.display = 'none';
+                    closeOverlay(e);
                 }
+            });
+
+            // Handle form submission
+            document.getElementById('formprofile').addEventListener('submit', function(e) {
+                // Don't prevent default - let the form submit
+                // Close the overlay after a brief delay to ensure form submission
+                setTimeout(closeOverlay, 100);
+            });
+
+            // Add filter functionality
+            document.querySelectorAll('.filter-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const filter = this.dataset.filter;
+                    document.querySelectorAll('.dropdown-option').forEach(option => {
+                        if (filter === 'all') {
+                            option.style.display = 'block';
+                        } else if (filter === 'favorites' && option.dataset.filterLetter === 'favorites') {
+                            option.style.display = 'block';
+                        } else if (option.dataset.filterLetter === filter) {
+                            option.style.display = 'block';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    });
+                });
             });
         </script>
     </body>
@@ -867,11 +681,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 font-size: 12px; /* Reduced font size */
                 border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65); /* Border with custom RGBA color */
                 color: white;
-                background-color: #0030b0; /* Darker Blue */
+                background-color:#b81493;
                 border-radius: 4px;
                 cursor: pointer;
                 transition: background-color 0.3s;
-            " onmouseover="this.style.backgroundColor=\'#0056b3\';" onmouseout="this.style.backgroundColor=\'#0030b0\';">
+            " onmouseover="this.style.backgroundColor=\'#4a1f40\';" onmouseout="this.style.backgroundColor=\'#b81493\';">
                 Current AI Service ➡ <span style="color:yellow;">(' . htmlspecialchars($currentModel, ENT_QUOTES, 'UTF-8') . ')</span>
             </button>
         </form>';
