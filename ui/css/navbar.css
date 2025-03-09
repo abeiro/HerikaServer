@@ -6,6 +6,26 @@
     font-style: normal;
 }
 
+@keyframes scrollBackground {
+    0% {
+        background-position: 0 0;
+        filter: blur(0px);
+    }
+    45% {
+        filter: blur(0px);
+    }
+    50% {
+        filter: blur(0.5px);
+    }
+    55% {
+        filter: blur(0px);
+    }
+    100% {
+        background-position: -1000px 0;
+        filter: blur(0px);
+    }
+}
+
 .chim-navbar-wrapper {
     position: fixed;
     top: 0;
@@ -13,7 +33,8 @@
     right: 0;
     z-index: 1030;
     background: url('../images/navbarback.png');
-    background-repeat: repeat;
+    background-repeat: repeat-x;
+    animation: scrollBackground 150s linear infinite;
     font-family: 'Futura CondensedLight', Arial, sans-serif;
 }
 
@@ -24,7 +45,8 @@
 
 .chim-status-nav {
     background: url('../images/navbarback.png');
-    background-repeat: repeat;
+    background-repeat: repeat-x;
+    animation: scrollBackground 150s linear infinite;
     width: 100%;
     padding: 10px 0;
 }
