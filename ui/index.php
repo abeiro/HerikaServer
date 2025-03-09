@@ -809,7 +809,7 @@ $debugPaneLink = true;
                 <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions']) . "'>
                 <div class='button-group' style='margin-top: 10px;'>
                     <button type='submit' class='btn-base action-button add-new'>Save</button>
-                    <button type='button' class='btn-base btn-danger' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
+                    <button type='button' class='btn-base btn-cancel' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
                 </div>
             </form>";
 
