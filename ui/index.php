@@ -717,9 +717,61 @@ $debugPaneLink = true;
 
     
     if ($_GET["table"] == "memory") {
-        $results = $db->fetchAll("select  A.*,ROWID as rowid FROM memory A order by gamets desc,rowid desc limit 150 offset 0");
+        // Include game timestamp utilities if not already included
+        require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."utils_game_timestamp.php");
+
+        echo "<style>
+            .table-container table td:nth-child(2), /* Tamrelic Time */
+            .table-container table th:nth-child(2) {
+                min-width: 200px;
+            }
+            .table-container table td:nth-child(3), /* Time (UTC) */
+            .table-container table th:nth-child(3) {
+                min-width: 150px;
+            }
+            .table-container table td:nth-child(5), /* Message */
+            .table-container table th:nth-child(5) {
+                min-width: 300px;
+            }
+        </style>";
+
+        $results = $db->fetchAll("select A.*, ROWID as rowid FROM memory A order by gamets desc,rowid desc limit 150 offset 0");
+        
+        // Define column headers mapping
+        $columnHeaders = [
+            'ts' => 'TS',
+            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>',
+            'localts' => 'Time (UTC)',
+            'speaker' => 'Speaker',
+            'message' => 'Message',
+            'listener' => 'Listener',
+            'event' => 'Event',
+            'momentum' => 'Momentum'
+        ];
+        
+        $mappedResults = [];
+        foreach ($results as $row) {
+            $newRow = [];
+            foreach ($columnHeaders as $oldKey => $newKey) {
+                $value = isset($row[$oldKey]) ? $row[$oldKey] : '';
+                
+                // Convert timestamps
+                if ($oldKey === 'localts' && !empty($value)) {
+                    $dt = new DateTime("@".$value);
+                    $dt->setTimezone(new DateTimeZone('UTC'));
+                    $value = $dt->format('d-m-Y H:i:s');
+                }
+                else if ($oldKey === 'gamets' && !empty($value)) {
+                    $value = convert_gamets2skyrim_long_date2($value);
+                }
+                
+                $newRow[$newKey] = $value;
+            }
+            $mappedResults[] = $newRow;
+        }
+
         echo "<h1 class='my-2'>Memories Log</h1>";
-        print_array_as_table($results);
+        print_array_as_table($mappedResults);
     }
     
     if ($_GET["table"] == "memory_summary") {
