@@ -284,13 +284,16 @@ $debugPaneLink = true;
 
     if ($_GET["table"] == "eventlog") {
     
+        // Include game timestamp utilities if not already included
+        require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."utils_game_timestamp.php");
+    
+    
         // 1) Handle the "Delete Last X" logic
         if (isset($_GET['delete_last'])) {
             // Sanitize the input to allow only 20, 50, or 100.
             $delCount = (int)$_GET['delete_last'];
             if (in_array($delCount, [20, 50, 100])) {
                 // Delete the last X entries based on your defined ordering
-                // (In this example, we assume "last" means top rows by the same ORDER BY used for listing.)
                 $db->query("
                     DELETE FROM eventlog
                     WHERE rowid IN (
@@ -302,16 +305,16 @@ $debugPaneLink = true;
                     )
                 ");
                 
-                // Redirect to refresh the page (avoid resubmission)
+                // Redirect to refresh the page
                 header("Location: ?table=eventlog");
                 exit;
             }
         }
     
-        // 2) Continue with your regular fetch/display logic
-        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100; // Items per page (default 100)
-        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1; // Current page (default 1)
-        $offset = ($page - 1) * $limit; // Calculate the offset
+        // 2) Continue with regular fetch/display logic
+        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
+        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
+        $offset = ($page - 1) * $limit;
         
         $results = $db->fetchAll(
             "SELECT type, data, gamets, localts, ts, ROWID
@@ -324,15 +327,26 @@ $debugPaneLink = true;
         $columnHeaders = [
             'type' => 'Event',
             'data' => 'Data',
-            'gamets' => 'GameTS',
-            'localts' => 'LocalTS',
+            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>',
+            'localts' => 'Time (UTC)',
             'ts' => 'TS',
         ];
         
         $mappedResults = array_map(function ($row) use ($columnHeaders) {
             $mappedRow = [];
             foreach ($row as $key => $value) {
-                // Special handling for chat events - make both type and data yellow
+                if ($key === 'gamets' && !empty($value)) {
+                    // Convert gamets to Skyrim date format
+                    $value = convert_gamets2skyrim_long_date2($value);
+                }
+                else if ($key === 'localts' && !empty($value)) {
+                    // Format localts to match adventure log format
+                    $dt = new DateTime("@$value");
+                    $dt->setTimezone(new DateTimeZone('UTC'));
+                    $value = $dt->format('d-m-Y H:i:s');
+                }
+                
+                // Special handling for chat events
                 if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
                     $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value) . '</span>';
                 } else {
@@ -455,7 +469,7 @@ $debugPaneLink = true;
             padding: 8px 16px;
             background-color:rgb(0, 48, 176);
             color: #fff;
-            border: none;
+            border: 1px solid white;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -530,7 +544,7 @@ $debugPaneLink = true;
         );
     
         $columnHeaders = [
-            'localts' => 'LocalTS',
+            'localts' => 'Time (UTC)',
             'response' => 'AI Response',
             'prompt' => 'Prompt'
         ];
@@ -545,6 +559,11 @@ $debugPaneLink = true;
                 } else if ($key === 'response') {
                     // For response column, show full content directly
                     $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value)) . '</div>';
+                } else if ($key === 'localts' && !empty($value)) {
+                    // Format localts to UTC time
+                    $dt = new DateTime("@$value");
+                    $dt->setTimezone(new DateTimeZone('UTC'));
+                    $mappedRow[$columnHeaders[$key]] = $dt->format('d-m-Y H:i:s');
                 } else {
                     $mappedRow[$columnHeaders[$key] ?? $key] = $value;
                 }
@@ -568,14 +587,28 @@ $debugPaneLink = true;
     }
 
     if ($_GET["table"] == "quests") {
-        $results = $db->fetchAll("SElECT  name,id_quest,briefing,briefing2,data from quests");
+        $results = $db->fetchAll("SELECT name, id_quest, briefing, briefing2, data from quests");
+        
+        // Define column headers mapping
+        $columnHeaders = [
+            'name' => 'Name',
+            'id_quest' => 'Quest ID',
+            'briefing' => 'Briefing',
+            'briefing2' => 'Briefing2',
+            'data' => 'Data'
+        ];
+        
         $finalRow = [];
         foreach ($results as $row) {
             if (isset($finalRow[$row["id_quest"]]))
                 continue;
             else
-                $finalRow[$row["id_quest"]] = $row;
+                $finalRow[$row["id_quest"]] = array_combine(
+                    array_values($columnHeaders),
+                    array_values($row)
+                );
         }
+        
         echo "<h1 class='my-2'>Current Active Quests</h1>";
         echo "<p>Note: These quests are only known by your followers. We only track quests which you have active in your journal.</p>";
 
@@ -597,9 +630,42 @@ $debugPaneLink = true;
     }
 
     if ($_GET["table"] == "books") {
-        $results = $db->fetchAll("select  A.*,ROWID FROM books A order by gamets desc,rowid desc limit 150 offset 0");
+        // Include game timestamp utilities if not already included
+        require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."utils_game_timestamp.php");
+
+        $results = $db->fetchAll("SELECT title, content, gamets, localts, ts, ROWID FROM books A ORDER BY gamets DESC, rowid DESC LIMIT 150 OFFSET 0");
+        
+        // Define column headers
+        $columnHeaders = [
+            'title' => 'Title',
+            'content' => 'Content',
+            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>',
+            'localts' => 'Time (UTC)',
+            'ts' => 'TS'
+        ];
+
+        // Map the results to format timestamps and apply headers
+        $mappedResults = array_map(function($row) use ($columnHeaders) {
+            $mappedRow = [];
+            foreach ($row as $key => $value) {
+                if ($key === 'gamets' && !empty($value)) {
+                    $value = convert_gamets2skyrim_long_date2($value);
+                }
+                else if ($key === 'localts' && !empty($value)) {
+                    $dt = new DateTime("@$value");
+                    $dt->setTimezone(new DateTimeZone('UTC'));
+                    $value = $dt->format('d-m-Y H:i:s');
+                }
+                
+                if (isset($columnHeaders[$key])) {
+                    $mappedRow[$columnHeaders[$key]] = htmlspecialchars($value);
+                }
+            }
+            return $mappedRow;
+        }, $results);
+
         echo "<h1 class='my-2'>Book Log</h1>";
-        print_array_as_table($results);
+        print_array_as_table($mappedResults);
     } 
 
     if ($_GET["table"] == "audit_request") {
@@ -622,6 +688,9 @@ $debugPaneLink = true;
     }
     
     if ($_GET["table"] == "memory_summary") {
+        // Include game timestamp utilities if not already included
+        require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."utils_game_timestamp.php");
+
         // 1. Handle save edits via POST
         if (isset($_POST['save_memory_edit'])) {
             $rowid = intval($_POST['rowid']);
@@ -712,11 +781,10 @@ $debugPaneLink = true;
             // Create the processed row with rowid included
             $processedRow = [
                 'RowID' => $row['rowid'],
-                'GameTS' => $row['gamets_truncated'],
+                '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>' => !empty($row['gamets_truncated']) ? convert_gamets2skyrim_long_date2($row['gamets_truncated']) : '',
                 'ID' => $row['n'],
                 'Classifier' => $row['classifier'],
                 'Summary' => $displayHtml
-
             ];
             
             $processedResults[] = $processedRow;
