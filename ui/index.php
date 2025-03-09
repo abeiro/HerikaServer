@@ -460,7 +460,7 @@ $debugPaneLink = true;
         .view-contents-btn {
             display: inline-block;
             padding: 8px 16px;
-            background-color: #2c3e50;
+            background-color:rgb(0, 48, 176);
             color: #fff;
             border: none;
             border-radius: 4px;
@@ -473,7 +473,7 @@ $debugPaneLink = true;
         }
 
         .view-contents-btn:hover {
-            background-color: #34495e;
+            background-color:rgb(0, 38, 156);
             transform: translateY(-1px);
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
@@ -573,9 +573,9 @@ $debugPaneLink = true;
     
         echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
         if ($page > 1) {
-            echo "<a href='?table=log&page=$prevPage&limit=$limit' class='btn btn-primary'>Previous</a> ";
+            echo "<button onclick=\"window.location.href='?table=log&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
         }
-        echo "<a href='?table=log&page=$nextPage&limit=$limit' class='btn btn-primary'>Next</a>";
+        echo "<button onclick=\"window.location.href='?table=log&page=$nextPage&limit=$limit'\" class='btn-base btn-primary'>Next</button>";
         echo "</div>";
     
         print_array_as_table($mappedResults);
@@ -636,144 +636,56 @@ $debugPaneLink = true;
     }
     
     if ($_GET["table"] == "memory_summary") {
-        // Handle save edits via POST
+        // 1. Handle save edits via POST
         if (isset($_POST['save_memory_edit'])) {
             $rowid = intval($_POST['rowid']);
-            $summary = trim($_POST['summary']);
-            $tags = trim($_POST['tags']);
-            $companions = trim($_POST['companions']);
+            $summary = $_POST['summary'];
+            $tags = $_POST['tags'];
+            $companions = $_POST['companions'];
             
-            try {
-                // Update using the correct format for the database class
-                $result = $db->update(
-                    'memory_summary',
-                    "summary = '" . $db->escape($summary) . "', 
-                     tags = '" . $db->escape($tags) . "',
-                     companions = '" . $db->escape($companions) . "'",
-                    "rowid = " . $rowid
-                );
-                
-                if ($result !== false) {
-                    header("Location: ?table=memory_summary&updated=1");
-                    exit;
-                } else {
-                    echo "<div class='alert alert-danger'>Failed to update memory summary.</div>";
-                }
-            } catch (Exception $e) {
-                echo "<div class='alert alert-danger'>Database error: " . htmlspecialchars($e->getMessage()) . "</div>";
-            }
+            // Update the database
+            $db->update(
+                'memory_summary',
+                "summary = '" . $db->escape($summary) . "', 
+                 tags = '" . $db->escape($tags) . "',
+                 companions = '" . $db->escape($companions) . "'",
+                "rowid = " . $rowid
+            );
+            
+            // Redirect to refresh the page
+            header("Location: ?table=memory_summary&updated=1");
+            exit;
         }
 
-        // Show success message if update was successful
+        // Handle delete
+        if (isset($_GET['delete_memory']) && !empty($_GET['delete_memory'])) {
+            $rowid = intval($_GET['delete_memory']);
+            $db->delete('memory_summary', "rowid = " . $rowid);
+            header("Location: ?table=memory_summary&deleted=1");
+            exit;
+        }
+
+        // Show success/delete messages
         if (isset($_GET['updated'])) {
             echo "<div class='alert alert-success'>Memory summary updated successfully!</div>";
         }
+        if (isset($_GET['deleted'])) {
+            echo "<div class='alert alert-danger'>Memory summary deleted successfully!</div>";
+        }
 
-        $results = $db->fetchAll("select gamets_truncated,n,summary,companions,classifier,tags,uid,ROWID as rowid, packed_message FROM memory_summary A order by gamets_truncated desc,rowid desc limit 150 offset 0");
-        
-        // Map original column names to new display names
-        $columnHeaders = [
-            'gamets_truncated' => 'GameTS',
-            'n' => 'ID',
-            'summary' => 'Summary Contents',
-            'classifier' => 'Classifier',
-            'uid' => 'UID',
-            'rowid' => 'rowid'
-        ];
-        
-        // Change keys in the result array to match the new column names
-        $mappedResults = array_map(function ($row) use ($columnHeaders) {
-            $mappedRow = [];
-            foreach ($columnHeaders as $key => $display) {
-                $mappedRow[$display] = $value = $row[$key];
-            }
-            // Store packed_message for use in the display, but don't show as column
-            $mappedRow['packed_message'] = $row['packed_message'];
-            return $mappedRow;
-        }, $results);
-        
-        echo "<h1 class='my-2'>Summarized Memories Log</h1>";
-        echo "<h3>(Enable AUTO_CREATE_SUMMARYS in the default profile) </h3>";
-        
-        // Add CSS for edit functionality
-        echo "<style>
-            .edit-btn, .save-btn, .cancel-btn {
-                padding: 2px 8px;
-                margin: 0 2px;
-                cursor: pointer;
-            }
-            .edit-form {
-                display: none;
-                padding: 15px;
-                border-radius: 5px;
-                margin: 10px 0;
-            }
-            .edit-textarea {
-                width: 100%;
-                min-height: 100px;
-                margin-bottom: 5px;
-                height: 300px;
-            }
-            .edit-input {
-                width: 100%;
-                margin-bottom: 5px;
-            }
-            .memory-content {
-                height: 100%;
-                min-height: 150px;
-                overflow-y: auto;
-                padding: 5px;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                border: 1px solid #ddd;
-                background: var(--bs-body-bg);
-                display: block;
-                width: 100%;
-            }
-            .memory-cell {
-                height: 100%;
-                position: relative;
-                min-height: 150px;
-                padding: 0 !important;
-            }
-            .summary-section {
-                margin-bottom: 8px;
-                padding: 5px;
-                border-bottom: 1px solid #eee;
-            }
-            .summary-section:last-child {
-                border-bottom: none;
-            }
-            .summary-label {
-                font-weight: bold;
-                margin-right: 5px;
-            }
-        </style>";
+        // 3. Fetch data from database
+        $results = $db->fetchAll("SELECT gamets_truncated, n, summary, companions, tags, classifier, uid, ROWID as rowid, packed_message 
+                                FROM memory_summary 
+                                ORDER BY gamets_truncated DESC, rowid DESC 
+                                LIMIT 150");
 
-        // Add JavaScript for edit functionality (remove modal-related functions)
-        echo "<script>
-            function toggleEdit(rowid) {
-                const displayDiv = document.getElementById('display-' + rowid);
-                const editForm = document.getElementById('edit-form-' + rowid);
-                
-                displayDiv.style.display = 'none';
-                editForm.style.display = 'block';
-            }
-            
-            function cancelEdit(rowid) {
-                const displayDiv = document.getElementById('display-' + rowid);
-                const editForm = document.getElementById('edit-form-' + rowid);
-                
-                displayDiv.style.display = 'block';
-                editForm.style.display = 'none';
-            }
-        </script>";
-
-        // Modify how results are displayed
-        foreach ($mappedResults as &$row) {
-            $summaryHtml = "<div id='display-{$row['rowid']}'>
+        // 4. Process each row for display
+        $processedResults = [];
+        foreach ($results as $row) {
+            // Create the display HTML
+            $displayHtml = "<div id='display-{$row['rowid']}'>
                 <div class='summary-section'>
-                    <span class='summary-content'>" . nl2br(htmlspecialchars($row['Summary Contents'])) . "</span>
+                    <span class='summary-content'>" . nl2br(htmlspecialchars($row['summary'])) . "</span>
                 </div>
                 <div class='summary-section'>
                     <span class='summary-label'>Tags:</span>
@@ -783,7 +695,10 @@ $debugPaneLink = true;
                     <span class='summary-label'>Companions:</span>
                     <span class='summary-content'>" . htmlspecialchars($row['companions']) . "</span>
                 </div>
-                <button class='action-button edit' onclick='toggleEdit({$row['rowid']})'>Edit</button>
+                <div class='button-group' style='margin-top: 10px;'>
+                    <button class='btn-base action-button edit' onclick='toggleEdit({$row['rowid']})'>Edit</button>
+                    <button class='btn-base btn-danger' onclick=\"if(confirm('Are you sure you want to delete this memory summary?')) window.location.href='?table=memory_summary&delete_memory={$row['rowid']}'\">Delete</button>
+                </div>
                 <div class='mt-2'>
                     <span class='summary-label'>Packed Memory Content:</span>
                 </div>
@@ -792,25 +707,111 @@ $debugPaneLink = true;
                 </div>
             </div>";
             
-            $summaryHtml .= "<form id='edit-form-{$row['rowid']}' class='edit-form' method='post'>
+            // Create the edit form HTML
+            $displayHtml .= "<form id='edit-form-{$row['rowid']}' class='edit-form' method='post' action='?table=memory_summary'>
                 <input type='hidden' name='rowid' value='{$row['rowid']}'>
+                <input type='hidden' name='save_memory_edit' value='1'>
                 <label>Summary:</label>
-                <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['Summary Contents']) . "</textarea>
+                <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['summary']) . "</textarea>
                 <label>Tags:</label>
                 <input type='text' name='tags' class='edit-input form-control' value='" . htmlspecialchars($row['tags']) . "'>
                 <label>Companions:</label>
                 <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions']) . "'>
-                <button type='submit' name='btn-save' class='action-button add-new'>Save</button>
-                <button type='button' class='btn-danger' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
+                <div class='button-group' style='margin-top: 10px;'>
+                    <button type='submit' class='btn-base action-button add-new'>Save</button>
+                    <button type='button' class='btn-base btn-danger' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
+                </div>
             </form>";
+
+            // Create the processed row with rowid included
+            $processedRow = [
+                'RowID' => $row['rowid'],
+                'GameTS' => $row['gamets_truncated'],
+                'ID' => $row['n'],
+                'Classifier' => $row['classifier'],
+                'Summary' => $displayHtml
+
+            ];
             
-            $row['Summary Contents'] = $summaryHtml;
-            unset($row['tags']);
-            unset($row['companions']);
-            unset($row['packed_message']);
+            $processedResults[] = $processedRow;
         }
 
-        print_array_as_table($mappedResults);
+        // 5. Output the page header
+        echo "<h1 class='my-2'>Summarized Memories Log</h1>";
+        echo "<h3>(Enable AUTO_CREATE_SUMMARYS in the default profile)</h3>";
+        
+        // 6. Add the necessary styles
+        echo "<style>
+            .edit-form {
+                display: none;
+                padding: 15px;
+                border-radius: 5px;
+                margin: 10px 0;
+                background-color: #2a2a2a;
+            }
+            .edit-textarea {
+                width: 100%;
+                min-height: 100px;
+                margin-bottom: 5px;
+                height: 300px;
+                background-color: #333;
+                color: #fff;
+                border: 1px solid #444;
+            }
+            .edit-input {
+                width: 100%;
+                margin-bottom: 5px;
+                background-color: #333;
+                color: #fff;
+                border: 1px solid #444;
+                padding: 5px;
+            }
+            .memory-content {
+                height: 100%;
+                min-height: 150px;
+                overflow-y: auto;
+                padding: 5px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                border: 1px solid #444;
+                background-color: #333;
+                color: #fff;
+                width: 100%;
+            }
+            .summary-section {
+                margin-bottom: 8px;
+                padding: 5px;
+                border-bottom: 1px solid #444;
+            }
+            .summary-label {
+                font-weight: bold;
+                margin-right: 5px;
+                color: #fff;
+            }
+            .summary-content {
+                color: #fff;
+            }
+        </style>";
+
+        // 7. Add the JavaScript for edit functionality
+        echo "<script>
+            function toggleEdit(rowid) {
+                const displayDiv = document.getElementById('display-' + rowid);
+                const editForm = document.getElementById('edit-form-' + rowid);
+                displayDiv.style.display = 'none';
+                editForm.style.display = 'block';
+            }
+            
+            function cancelEdit(rowid) {
+                const displayDiv = document.getElementById('display-' + rowid);
+                const editForm = document.getElementById('edit-form-' + rowid);
+                displayDiv.style.display = 'block';
+                editForm.style.display = 'none';
+            }
+        </script>";
+
+        // 8. Display the table
+        print_array_as_table($processedResults);
     }
       
     if ($_GET["notes"]) {
@@ -845,6 +846,10 @@ $debugPaneLink = true;
         }
         table th {
             background-color: var(--bs-primary-bg-subtle) !important;
+        }
+
+        table-td {
+            border: 1px solid var(--bs-border-color);
         }
         .title-with-button {
             display: flex;
