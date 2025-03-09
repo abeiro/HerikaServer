@@ -45,7 +45,6 @@
     font-family: 'MagicCards', sans-serif;
     font-size: 18px;
     letter-spacing: 0.5px;
-    word-spacing: 6px;
     color: #ffffff;
     margin: 0 4px;
 }
@@ -55,13 +54,13 @@
     font-size: 22px;
     color: #ffffff;
     padding: 4px 8px;
+    word-spacing: 4px;
 }
 
 /* Dropdown Menu Styles */
 .nav-item.dropdown.mx-2 .dropdown-menu {
     font-family: 'MagicCards', sans-serif;
     letter-spacing: 0.5px;
-    word-spacing: 4px;
     background-color: #1a1a1a;
     border: 1px solid #333;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -122,15 +121,24 @@
     height: 100%;
     top: 0;
     left: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
     z-index: 10000;
     cursor: pointer;
     overflow: hidden;
     align-items: center;
     justify-content: center;
     padding: 0;
+    opacity: 0;
+    transition: all 0.2s ease-out;
+}
+
+.overlay[style*="display: block"] {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .overlay-content {
@@ -148,9 +156,16 @@
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     cursor: default;
     transform-origin: center;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease-out;
     margin: auto;
     margin-top: 50px;
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+.overlay[style*="display: block"] .overlay-content {
+    opacity: 1;
+    transform: scale(1);
 }
 
 /* Prevent background interaction when overlay is active */
