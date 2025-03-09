@@ -7,12 +7,12 @@ $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script lo
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-
-require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "💬 CHIM Chat Testing";
 
@@ -60,7 +60,7 @@ $acceptablePattern = '/^(conf_[a-f0-9]{32}\.php|conf\.php|character_map\.json|\.
 // Initialize message variable
 $message = '';
 
-// Define deleteDir() function at the top so it’s always available
+// Define deleteDir() function at the top so it's always available
 function deleteDir($dirPath) {
     if (!is_dir($dirPath)) {
         return;
@@ -214,14 +214,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #ffffff; /* White color for headings */
         }
 
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
-            max-width: 600px;
-        }
 
         label {
             font-weight: bold;
