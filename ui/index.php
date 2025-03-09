@@ -546,7 +546,7 @@ $debugPaneLink = true;
                 if ($key === 'prompt') {
                     // For prompt column, show as a button
                     $escapedContent = htmlspecialchars($value, ENT_QUOTES);
-                    $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">View Contents</button>';
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">🧾</button>';
                 } else if ($key === 'response') {
                     // For response column, show full content directly
                     $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value)) . '</div>';
