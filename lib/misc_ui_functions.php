@@ -25,8 +25,26 @@ function print_array_as_table($data)
 
         // if we have an "url" column, paint the rows different colors
         if (isset($row["url"])) {
-            $colorClasses = ["table-primary", "table-secondary", "table-info", "table-light", "table-dark"];
+            $colorClasses = [
+                "table-primary-dark",   // Deep blue
+                "table-success-dark",   // Deep green
+                "table-info-dark",      // Deep cyan
+                "table-warning-dark",   // Deep gold
+                "table-danger-dark"     // Deep red
+            ];
             $colorIndex = abs(crc32(preg_replace('/in \d+ secs/', '', $row["url"]))) % 5;
+            $colorClass = $colorClasses[$colorIndex];
+        }
+        // Add coloring for response log table
+        else if (isset($row["response"]) || isset($row["AI Response"])) {
+            $colorClasses = [
+                "table-primary-dark",   // Deep blue
+                "table-info-dark",      // Deep cyan
+                "table-success-dark"    // Deep green
+            ];
+            // Use the rowid or timestamp to determine color
+            $seed = $row["rowid"] ?? $row["localts"] ?? $row["LocalTS"] ?? time();
+            $colorIndex = abs(crc32((string)$seed)) % 3;
             $colorClass = $colorClasses[$colorIndex];
         }
 
