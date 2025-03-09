@@ -143,7 +143,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/cmd/action_regen_charmap.php" title="Use only if you deleted character_map.json!" target="_blank">
+                        <a class="dropdown-item" href="#" onclick="regenerateCharacterMap(); return false;" title="Use only if you deleted character_map.json!">
                             Regenerate Character Map
                         </a>
                         </li>
@@ -709,3 +709,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </nav>
 </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-notification" class="toast-notification">
+        <span class="message"></span>
+    </div>
+
+    <script>
+    // Function to show toast notification
+    function showToast(message, duration = 3000) {
+        const toast = document.getElementById('toast-notification');
+        toast.querySelector('.message').textContent = message;
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
+    }
+
+    // Function to regenerate character map
+    function regenerateCharacterMap() {
+        fetch('<?php echo $webRoot; ?>/ui/cmd/action_regen_charmap.php', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message);
+            } else {
+                showToast('Error regenerating character map');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error regenerating character map');
+        });
+    }
+    </script>
