@@ -443,6 +443,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <p>To use it you must have <b>[MINIME_T5]</b> and <b></b>[OGHMA_INFINIUM]</b> enabled in the default profile. You also need Minime-T5 installed and running.</p>
     <br>
     <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
+
     <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
     <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
     <br>

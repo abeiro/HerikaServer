@@ -7,12 +7,12 @@ $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script lo
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-
-require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "💬 CHIM Chat Testing";
 
@@ -175,14 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #ffffff; /* White color for headings */
         }
 
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
-            max-width: 600px;
-        }
 
         label {
             font-weight: bold;
@@ -256,6 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form action="" method="post" enctype="multipart/form-data">
         <label for="sql_file">Select SQL file to upload:</label>
         <input type="file" name="sql_file" id="sql_file" accept=".sql" required>
+        <br>
         <input type="submit" class="btn-save" value="Upload and Restore">
     </form>
 </div>

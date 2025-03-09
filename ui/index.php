@@ -623,10 +623,45 @@ $debugPaneLink = true;
     }
 
     if ($_GET["table"] == "diarylog") {
+        // Include game timestamp utilities if not already included
+        require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."utils_game_timestamp.php");
 
-        $results = $db->fetchAll("select  A.*,ROWID FROM diarylog A order by gamets desc,rowid desc limit 150 offset 0");
+        $results = $db->fetchAll("select A.*, ROWID FROM diarylog A order by gamets desc,rowid desc limit 150 offset 0");
+        
+        // Define column headers mapping
+        $columnHeaders = [
+            'ts' => 'TS',
+            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>',
+            'localts' => 'Time (UTC)',
+            'topic' => 'Topic',
+            'content' => 'Content',
+            'people' => 'People',
+            'location' => 'Locations'
+        ];
+        
+        $mappedResults = [];
+        foreach ($results as $row) {
+            $newRow = [];
+            foreach ($columnHeaders as $oldKey => $newKey) {
+                $value = isset($row[$oldKey]) ? $row[$oldKey] : '';
+                
+                // Convert timestamps
+                if ($oldKey === 'localts' && !empty($value)) {
+                    $dt = new DateTime("@".$value);
+                    $dt->setTimezone(new DateTimeZone('UTC'));
+                    $value = $dt->format('d-m-Y H:i:s');
+                }
+                else if ($oldKey === 'gamets' && !empty($value)) {
+                    $value = convert_gamets2skyrim_long_date2($value);
+                }
+                
+                $newRow[$newKey] = $value;
+            }
+            $mappedResults[] = $newRow;
+        }
+
         echo "<h1 class='my-2'>Diary Entries</h1>";
-        print_array_as_table($results);
+        print_array_as_table($mappedResults);
     }
 
     if ($_GET["table"] == "books") {

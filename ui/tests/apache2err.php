@@ -335,7 +335,7 @@ function sanitizeId($name) {
             Refresh Logs
         </button>
     </div>
-    <h2>Logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log">Click here to view the log folder.</a></h2>
+    <h2>Logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">Click here to view the log folder.</a></h2>
 
     <div class="grid-container" id="logGrid">
         <div class="log-section">
@@ -383,14 +383,16 @@ window.addEventListener('load', function() {
 function refreshLogs() {
     const refreshButton = document.getElementById('refreshLogs');
     const logContainers = document.querySelectorAll('.log-container');
+    const loadingOverlay = document.getElementById('loadingOverlay');
     
     // Prevent multiple refreshes
     if (refreshButton.classList.contains('refreshing')) {
         return;
     }
     
-    // Add refreshing state
+    // Add refreshing state and show loading overlay
     refreshButton.classList.add('refreshing');
+    loadingOverlay.style.display = 'flex';
     
     // Make AJAX request to current page
     fetch(window.location.href)
@@ -414,8 +416,9 @@ function refreshLogs() {
             alert('Failed to refresh logs. Please try again.');
         })
         .finally(() => {
-            // Remove refreshing state
+            // Remove refreshing state and hide loading overlay
             refreshButton.classList.remove('refreshing');
+            loadingOverlay.style.display = 'none';
         });
 }
 
