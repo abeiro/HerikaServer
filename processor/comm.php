@@ -5,6 +5,12 @@ $MUST_END=false;
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
+    // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
+    if ($gameRequest[2] == "10000000") {
+        error_log("Ignoring init with a gamets of 10000000.");
+        $MUST_END=true;
+        return;
+    }
     $now=time();
     $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
