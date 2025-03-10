@@ -6,26 +6,6 @@
     font-style: normal;
 }
 
-@keyframes scrollBackground {
-    0% {
-        background-position: 0 0;
-        filter: blur(0px);
-    }
-    45% {
-        filter: blur(0px);
-    }
-    50% {
-        filter: blur(0.5px);
-    }
-    55% {
-        filter: blur(0px);
-    }
-    100% {
-        background-position: -1000px 0;
-        filter: blur(0px);
-    }
-}
-
 /* Disable animation when auto-refresh is enabled */
 body.auto-refresh .chim-navbar-wrapper,
 body.auto-refresh .chim-status-nav {
@@ -40,7 +20,7 @@ body.auto-refresh .chim-status-nav {
     z-index: 1030;
     background: url('../images/navbarback.png');
     background-repeat: repeat-x;
-    animation: scrollBackground 150s linear infinite;
+    background-position: 0 0;
     font-family: 'Futura CondensedLight', Arial, sans-serif;
 }
 
@@ -52,7 +32,7 @@ body.auto-refresh .chim-status-nav {
 .chim-status-nav {
     background: url('../images/navbarback.png');
     background-repeat: repeat-x;
-    animation: scrollBackground 150s linear infinite;
+    background-position: 0 0;
     width: 100%;
     padding: 10px 0;
 }
@@ -170,7 +150,6 @@ body.auto-refresh .chim-status-nav {
 }
 
 .overlay-content {
-    position: relative;
     background-color: #2c2c2c;
     padding: 30px;
     border-radius: 10px;
