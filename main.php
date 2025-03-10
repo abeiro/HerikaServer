@@ -277,7 +277,7 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
     if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
-        // error_log("Skipping {$gameRequest[0]}");
+        //error_log("Skipping {$gameRequest[0]}");
         die();
     }
     logEvent($gameRequest);

@@ -545,6 +545,7 @@ class openrouterjson
             }
         }
         file_put_contents(__DIR__."/../log/output_from_llm.log","{$this->_buffer}\n\n".date(DATE_ATOM)." END\n==\n", FILE_APPEND);
+        return $this->_buffer;
 
 
     }
