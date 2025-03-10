@@ -1,0 +1,389 @@
+/* Navbar Styles */
+@font-face {
+    font-family: 'MagicCards';
+    src: url('font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Define the scrolling animation */
+@keyframes scrollBackground {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: -1920px 0; /* Adjust this value based on your background image width */
+    }
+}
+
+/* Disable animation when auto-refresh is enabled */
+body.auto-refresh .chim-navbar-wrapper,
+body.auto-refresh .chim-status-nav {
+    animation: none !important;
+}
+
+.chim-navbar-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    background: url('../images/navbarback.png');
+    background-repeat: repeat-x;
+    background-position: 0 0;
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
+}
+
+.chim-navbar {
+    background: transparent !important;
+    padding: 10px 0;
+}
+
+.chim-status-nav {
+    background: url('../images/navbarback.png');
+    background-repeat: repeat-x;
+    background-position: 0 0;
+    width: 100%;
+    padding: 10px 0;
+    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
+}
+
+.chim-status-container {
+    padding: 0 15px;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 30px;
+    text-transform: uppercase;
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+}
+
+/* Main Navbar Items */
+.nav-item.dropdown.mx-2 {
+    font-family: 'MagicCards', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+    margin: 0 4px;
+}
+
+.nav-item.dropdown.mx-2 > .nav-link {
+    font-family: 'MagicCards', sans-serif;
+    font-size: 22px;
+    color: #ffffff;
+    padding: 4px 8px;
+    word-spacing: 4px;
+}
+
+/* Dropdown Menu Styles */
+.nav-item.dropdown.mx-2 .dropdown-menu {
+    font-family: 'MagicCards', sans-serif;
+    letter-spacing: 0.5px;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 8px 0;
+    min-width: 220px;
+}
+
+.nav-item.dropdown.mx-2 .dropdown-item {
+    padding: 8px 16px;
+    margin: 2px 0;
+    color: #ffffff;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+    white-space: nowrap;
+    position: relative;
+}
+
+.dropdown-menu {
+    padding: 8px 0;
+    margin: 0;
+    border-radius: 6px;
+}
+
+.dropdown-header {
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+    font-size: 16px;
+    color: #ffc107;
+    text-transform: uppercase;
+    padding: 12px 12px 4px;
+    margin: 0;
+    font-weight: bold;
+}
+
+.dropdown-item {
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+    font-size: 15px;
+    padding: 8px 16px;
+    margin: 2px 0;
+    color: #ffffff;
+}
+
+.dropdown-item:hover {
+    background-color: #2c5282;
+    color: #ffffff;
+}
+
+.dropdown-divider {
+    margin: 8px 0;
+    border-top: 1px solid #333;
+    opacity: 0.5;
+}
+
+/* Profile Selection Overlay */
+.overlay {
+    position: fixed;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    z-index: 10000;
+    cursor: pointer;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    opacity: 0;
+    transition: all 0.2s ease-out;
+}
+
+.overlay[style*="display: block"] {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.overlay-content {
+    background-color: #2c2c2c;
+    padding: 30px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 1200px;
+    min-height: 200px;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 10001;
+    color: white;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    cursor: default;
+    transform-origin: center;
+    transition: all 0.2s ease-out;
+    margin: auto;
+    margin-top: 50px;
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+.overlay[style*="display: block"] .overlay-content {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Prevent background interaction when overlay is active */
+body.overlay-active {
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.overlay-active .overlay,
+.overlay-active .overlay-content {
+    pointer-events: auto;
+}
+
+/* Close Button */
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 30px;
+    font-weight: bold;
+    color: #ffffff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    color: rgb(255, 0, 0);
+}
+
+/* Grid Layout for Options */
+.options-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Option Buttons */
+.dropdown-option {
+    position: relative;
+    padding: 15px;
+    background-color: #031633;
+    border: 2px solid #021b4d;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 16px;
+    color: #ffffff;
+    transition: background-color 0.3s, border-color 0.3s;
+    text-decoration: none;
+    display: block;
+    font-weight: bold;
+}
+
+.dropdown-option:hover {
+    background-color: #022a6a;
+    border-color: #031633;
+}
+
+/* Favorite Button */
+.favorite-btn {
+    position: absolute;
+    top: 50%;
+    right: 1px;
+    transform: translateY(-50%) scale(0.8);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 36px;
+    color: #FFD700;
+    transition: color 0.3s, transform 0.3s;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.favorite-btn.favorited {
+    color: #FFD700;
+}
+
+.favorite-btn:hover {
+    background: #022a6a;
+}
+
+/* Profile Selection Button */
+.profile-select-btn {
+    width: 100%;
+    height: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+    cursor: pointer;
+    font-size: 16px;
+    color: inherit;
+    font-weight: bold;
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+}
+
+.profile-select-btn:hover {
+    background: #022a6a;
+}
+
+.profile-select-btn:focus {
+    outline: none;
+}
+
+/* Filter Buttons */
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.filter-button {
+    padding: 8px 12px;
+    background-color: #031633;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #ffffff;
+    transition: background-color 0.3s, color 0.3s;
+    font-weight: bold;
+    font-family: 'Futura CondensedLight', Arial, sans-serif;
+}
+
+.filter-button[data-filter="all"] {
+    background-color: #28a745;
+}
+
+.filter-button[data-filter="all"]:hover,
+.filter-button[data-filter="all"].active {
+    background-color: #218838;
+    color: #ffffff;
+}
+
+.filter-button:not([data-filter="all"]):hover,
+.filter-button:not([data-filter="all"]).active {
+    background-color: #022a6a;
+    color: #ffffff;
+}
+
+/* NPC Profile Button */
+.btn-npcprofile {
+    background-color: #b81493;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: 2px solid rgba(255, 255, 255, 0.65);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s, color 0.3s;
+    margin: 5px;
+    font-weight: bold;
+}
+
+.btn-npcprofile:hover {
+    background-color: #4a1f40;
+}
+
+/* Configuration Depth Section */
+.config-depth-section {
+    display: inline-block;
+    font-size: 10px;
+    height: 40px;
+    padding-right: 10px;
+    vertical-align: top;
+}
+
+/* Status Section */
+.status-section {
+    display: inline-block;
+    max-width: 900px;
+    font-size: small;
+    height: 50px;
+    padding-right: 10px;
+    vertical-align: top;
+    background-color: #031633;
+}
+
+/* Add padding to body to prevent content from hiding under fixed navbar */
+body {
+    padding-top: 160px;
+}
+
+/* Responsive Design */
+@media (max-width: 800px) {
+    .options-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 500px) {
+    .options-container {
+        grid-template-columns: 1fr;
+    }
+}

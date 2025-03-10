@@ -4,23 +4,34 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+        <?php
+        // Get the relative web path from document root to our application if not already defined
+        if (!isset($webRoot)) {
+            $scriptPath = $_SERVER['SCRIPT_NAME'];
+            $webRoot = dirname(dirname(dirname($scriptPath))); // Go up three levels from the script location
+            if ($webRoot == '/') $webRoot = '';
+            $webRoot = rtrim($webRoot, '/');
+        }
+        ?>
+        <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
         <!-- bootstrap -->
-        <link href="./lib/ui/bootstrap/bootstrap.min.css" rel="stylesheet" />
+        <link href="<?php echo $webRoot; ?>/ui/lib/ui/bootstrap/bootstrap.min.css" rel="stylesheet" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
-        <script src="./lib/ui/bootstrap/bootstrap.bundle.min.js"></script>
+        <script src="<?php echo $webRoot; ?>/ui/lib/ui/bootstrap/bootstrap.bundle.min.js"></script>
 
         <title>CHIM</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.7.0/styles/default.min.css" />
         <!-- always have a css file to override things -->
-        <link rel="stylesheet" href="css/style_new.css" /> 
+        <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/style_new.css" /> 
 
         <script src="https://unpkg.com/@highlightjs/cdn-assets@11.7.0/highlight.min.js"></script>
         <script src="https://unpkg.com/@highlightjs/cdn-assets@11.7.0/languages/javascript.min.js"></script>
 
         <script>
+            var webRoot = '<?php echo $webRoot; ?>';
+            
             function togglePre(element) {
                 if (element.parentElement.lastChild.className == "") element.parentElement.lastChild.className = "foldable";
                 else element.parentElement.lastChild.className = "";
@@ -50,7 +61,7 @@
                 document.body.style.opacity=0.5;
                 ele=document.querySelector("input[name='"+formFieldName+"']");
                 console.log(ele.value);
-                fetch('tools/check_url.php', {
+                fetch(webRoot + '/ui/tools/check_url.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -59,7 +70,6 @@
                 })
                 .then(response => response.json())
                 .then(json => checkRetVal(json))
-
             }
             
             function getAnchor() {
@@ -92,11 +102,12 @@
                     }
                 }
             }
+            
             function callHelperModel(choicesId,valueElement) {
                document.body.style.cursor="wait";
                let elementValue = document.getElementById(valueElement);
                elementValue.className="";
-               fetch("cmd/action_openrouterjson_get_models.php", {
+               fetch(webRoot + '/ui/cmd/action_openrouterjson_get_models.php', {
                     method: 'POST',
                     headers: {
                     'Content-Type': 'application/json'
@@ -110,14 +121,8 @@
                     return response.json();
                 })
                 .then(data => {
-                    //console.log('Success:', data);
-                   
                     const dataList = document.getElementById(choicesId);
-
-                    // Clear existing options (optional)
                     dataList.innerHTML = '';
-
-                    // Add new options to the datalist
                     data.forEach(optionValue => {
                         const option = document.createElement('option');
                         option.value = optionValue.value;
@@ -127,26 +132,21 @@
                     
                     document.body.style.cursor="";
                     let elementValue = document.getElementById(valueElement);
-
                     elementValue.value="";
                     elementValue.focus();
                     const event = new Event('input', {
                         'bubbles': true,
                         'cancelable': true
                     });
-
                     elementValue.dispatchEvent(event);
                     elementValue.className="model-updated";
-                    const uniqueUrl = 'css/clickme.gif?t=' + new Date().getTime();
+                    const uniqueUrl = webRoot + '/ui/css/clickme.gif?t=' + new Date().getTime();
                     elementValue.style.backgroundImage = 'url(' + uniqueUrl + ')';
-
                 })   
                 .catch(error => {
                     console.error('There has been a problem with your fetch operation:', error);
                     document.body.style.cursor="";
                 });
-      
-            
             }
             
             function callHelper(helper) {
@@ -154,9 +154,7 @@
                 form=document.querySelector(".confwizard")
                 var inputs = form.querySelectorAll('input');
                 const formData = {};
-
-      
-      
+                
                 inputs.forEach(input => {
                     formData[input.name] = input.value;
                 });
@@ -166,7 +164,7 @@
                     formData[input.name] = input.value;
                 });
 
-                fetch("cmd/"+helper, {
+                fetch(webRoot + '/ui/cmd/' + helper, {
                     method: 'POST',
                     headers: {
                     'Content-Type': 'application/json'
@@ -183,19 +181,16 @@
                     console.log('Success:', data);
                     for (let key in data) {
                         if (data.hasOwnProperty(key)) {
-                            //console.log(`${key}: ${data[key]}`);
                             t=document.querySelector("input[name='"+key+"']")
                             if (t) {
                                 t.value=data[key]
-                                syncInputs(key+"_range", key+"_number", "range");// TO actually show updated values
+                                syncInputs(key+"_range", key+"_number", "range");
                                 t.animate(
                                     [
-                                        // fotogramas clave
                                         { color: "white" },
                                         { color: "red" }
                                     ],
                                     {
-                                        // opciones de sincronización
                                         duration: 1000,
                                         iterations: 3
                                     }
@@ -206,34 +201,26 @@
                                     t.value=data[key]
                                     t.animate(
                                         [
-                                            // fotogramas clave
                                             { color: "white" },
                                             { color: "red" }
                                         ],
                                         {
-                                            // opciones de sincronización
                                             duration: 1000,
                                             iterations: 3
                                         }
                                     );
                                 }
-                            
                             }
                         }
                     }
                     document.body.style.cursor="";
-
                 })
                 .catch(error => {
                     console.error('There has been a problem with your fetch operation:', error);
                     document.body.style.cursor="";
                 });
-      
-                
             }
             
-        
-        
             document.addEventListener("DOMContentLoaded", function () {
                 // Helper function to get a cookie value by name
                 function getCookie(name) {
@@ -357,7 +344,7 @@
                     })
                     .then(data => {
                         console.log('Success:', data.length);
-                        alert("Updated "+data.length+" profiles");
+                        alert("Updated all non-locked profiles");
                         let timestamp = new Date().getTime();
                         //window.location.href="?ts="+timestamp;
 

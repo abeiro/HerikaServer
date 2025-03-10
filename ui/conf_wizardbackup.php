@@ -1,173 +1,106 @@
 <?php 
 
-header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
-header("Pragma: no-cache"); // HTTP 1.0
-header("Expires: 0"); // Proxies
-
-
-error_reporting(E_ERROR);
-session_start();
-
-ob_start();
-
-$url = 'conf_editor.php';
-$rootPath=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-$configFilepath =$rootPath."conf".DIRECTORY_SEPARATOR;
-
-require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-
-require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.sample.php");	// Should contain defaults
-if (file_exists($rootPath."conf".DIRECTORY_SEPARATOR."conf.php"))
-    require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.php");	// Should contain current ones
-
-$scriptPath = $_SERVER['SCRIPT_NAME'];
-$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
-if ($webRoot == '/') $webRoot = '';
-$webRoot = rtrim($webRoot, '/');
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "Config Wizard";
 
-require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
+include("tmpl/head.html");
 
-$configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
-
-// Profile selection
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
-    if (file_exists($mconf)) {
-        $filename=basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        preg_match($pattern, $filename, $matches);
-        $hash = $matches[1];
-        $GLOBALS["PROFILES"][$hash]=$mconf;
-    }
-}
-
-
-// Function to compare modification dates
-function compareFileModificationDate($a, $b) {
-    return filemtime($b) - filemtime($a);
-}
-
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"]))
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-else
-    $GLOBALS["PROFILES"]=[];
-
-$GLOBALS["PROFILES"]=array_merge(["default"=>"$configFilepath/conf.php"],$GLOBALS["PROFILES"]);
-
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
-
-} else
-    $_SESSION["PROFILE"]="$configFilepath/conf.php";
-// End of profile selection
-
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
-?>
-<style>
-    /* Override main container styles */
-    main {
-        padding-top: 160px; /* Space for navbar */
-        padding-bottom: 40px; /* Reduced space for footer */
-        padding-left: 10px;
-    }
-    
-    /* Override footer styles */
-    footer {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        height: 20px; /* Reduced footer height */
-        background: #031633;
-        z-index: 100;
-    }
-
-    /* Additional index-specific styles */
-    .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    label {
-        color: #ff00c6;
-    }
-
-    p.conf-item {
-        color: #ff00c6;
-    }
-
-    p.conf-item input[type=radio] + label {
-        color: white;
-    }
-
-    span {
-        color: white;
-    }
-
-    button {
-        padding: 5px 10px;
-        background-color: rgb(0, 48, 176);
-        color: #ffffff;
-        border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 16px;
-        text-decoration: none;
-        display: inline-block;
-        transition: background-color 0.3s, color 0.3s;
-        margin: 2px;
-        font-weight: bold;
-    }
-
-    button:hover {
-        background-color: rgb(0, 38, 156);
-    }
-</style>
-<?php
+// Add link to main CSS if not already included in head.html
+echo '<link rel="stylesheet" href="css/main.css">';
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+include("tmpl/navbar.php");
+
+// Quick Access Bar
+echo '<div class="quick-access-bar">
+    <div class="profile-info">
+        <h3 class="profile-name">' . htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"]) . '</h3>
+        <p class="profile-path">' . basename($_SESSION["PROFILE"]) . '</p>
+        <div class="action-buttons">';
+
+// Save button
+echo '<input
+    type="button"
+    name="save"
+    value="Save"
+    id="saveProfileButton"
+    class="btn-save"
+    onclick=\'if (validateForm()) {
+        formSubmitting=true;
+        document.getElementById("top").target="_self";
+        document.getElementById("top").action="tools/conf_writer.php?save=true&sc=" + getAnchorNH();
+        document.getElementById("top").submit();
+    }\'
+/>';
+
+// Delete button
+$isDefaultProfile = basename($_SESSION["PROFILE"]) === "conf.php";
+$isLocked = (isset($LOCK_PROFILE) && $LOCK_PROFILE === true) || $isDefaultProfile;
+$disabledStyle = $isLocked ? "disabled" : "";
+$onclickEvent = $isLocked ? 
+    'onclick="alert(\'' . ($isDefaultProfile ? "The default profile cannot be deleted." : "This profile is locked and cannot be deleted.") . '\');"' : 
+    'onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
+        formSubmitting = true;
+        document.getElementById("top").target = "_self";
+        document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
+        document.getElementById("top").submit();
+    }\'';
+
+echo '<input
+    type="button"
+    name="delete"
+    value="Delete Profile"
+    id="deleteProfileButton"
+    class="btn-danger ' . $disabledStyle . '"
+    ' . $onclickEvent . '
+/>';
+
+echo '</div></div>';
+
+// Section links
+echo '<div class="section-links"><ul>';
+foreach ($summary as $k=>$item) {
+    echo "<li><a href='#$k'>{$item["main"]}</a>";
+    if (!empty($item["childs"])) {
+        echo "<ul>";
+        foreach ($item["childs"] as $localhash=>$subtitle) {
+            echo "<li class='subchild'><a href='#" . md5($subtitle) . "'>$subtitle</a></li>";
+        }
+        echo "</ul>";
+    }
+    echo "</li>";
+}
+echo '</ul></div></div>';
 
 echo ' <form action="" method="post" name="mainC" class="confwizard" id="top">
 <input type="hidden" name="profile" value="'.$_SESSION["PROFILE"].'" />
 ';
-
 
 if ($_SESSION["PROFILE"]=="$configFilepath/conf.php") {
     $DEFAULT_PROFILE=true;
 } else 
     $DEFAULT_PROFILE=false;
     
- 
 $currentConf=conf_loader_load();
 $currentConfTitles=conf_loader_load_titles();
 
 $currentGroup="";
 $currentSubGroup="";
 $confDepth=0;
-$primaryGroups=[
-
-];
-
-$primarySubGroups=[
-
-];
-
+$primaryGroups=[];
+$primarySubGroups=[];
 $lvl1=0;
 $lvl2=0;
+$summary = [];  // Initialize summary array
 
 function getFilesByExtension($directory, $extension) {
     // Get all files in the directory
     $files = scandir($directory);
-
     // Filter files by extension
     $filteredFiles = array_filter($files, function($file) use ($extension) {
         return pathinfo($file, PATHINFO_EXTENSION) == $extension;
     });
-
     return $filteredFiles;
 }
 
@@ -176,7 +109,6 @@ function syncInputs(rangeId, numberId, source) {
     const rangeInput = document.getElementById(rangeId);
     const numberInput = document.getElementById(numberId);
     
-    // If either input is not found, just bail out
     if (!rangeInput || !numberInput) return;
     
     if (source === 'range') {
@@ -185,6 +117,71 @@ function syncInputs(rangeId, numberId, source) {
         rangeInput.value = numberInput.value;
     }
 }
+
+// Update quick access bar active states
+function updateQuickAccessStates() {
+    const subLinks = document.querySelectorAll('.quick-access-bar .section-links .subchild a');
+    
+    subLinks.forEach(link => {
+        const targetId = link.getAttribute('href').substring(1);
+        const targetFieldset = document.getElementById('f_' + targetId);
+        const parentLi = link.closest('li.subchild');
+        
+        if (targetFieldset && targetFieldset.classList.contains('visible-fieldset')) {
+            link.classList.add('active');
+            link.style.opacity = '1';
+            // Update parent section
+            if (parentLi) {
+                const parentSection = parentLi.parentElement.parentElement.querySelector('a');
+                if (parentSection) {
+                    parentSection.style.opacity = '1';
+                }
+            }
+        } else {
+            link.classList.remove('active');
+            link.style.opacity = '0.6';
+        }
+    });
+}
+
+// Handle fieldset toggle
+function toggleFieldset(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const legend = event.currentTarget;
+    const fieldset = legend.nextElementSibling;
+    
+    if (!fieldset || !fieldset.classList) return;
+    
+    if (fieldset.classList.contains('unvisible-fieldset')) {
+        fieldset.classList.remove('unvisible-fieldset');
+        fieldset.classList.add('visible-fieldset');
+        legend.classList.remove('arrow');
+        legend.classList.add('unarrow');
+    } else {
+        fieldset.classList.remove('visible-fieldset');
+        fieldset.classList.add('unvisible-fieldset');
+        legend.classList.remove('unarrow');
+        legend.classList.add('arrow');
+    }
+    
+    // Force immediate update
+    requestAnimationFrame(() => {
+        updateQuickAccessStates();
+    });
+}
+
+// Initialize legends and fieldsets
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers to legends
+    document.querySelectorAll('.confwizard fieldset fieldset legend').forEach(legend => {
+        legend.addEventListener('click', toggleFieldset);
+    });
+    
+    // Initial state update
+    updateQuickAccessStates();
+});
 </script>";
 
 foreach ($currentConf as $pname=>$parms) {
@@ -245,6 +242,12 @@ foreach ($currentConf as $pname=>$parms) {
     $sSeparator["{$pnameA[0]}{$pnameA[1]}"]=true;
     $pSeparator["{$pnameA[0]}"]=true;
 
+    // Start grid container if it doesn't exist
+    if (!isset($gridStarted)) {
+        echo "<div class='conf-grid'>";
+        $gridStarted = true;
+    }
+
     $fieldName=strtr($pname,array(" "=>"@"));
 
     if (!is_array($parms["currentValue"]))
@@ -279,7 +282,7 @@ foreach ($currentConf as $pname=>$parms) {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><textarea $FORCE_DISABLED name='$fieldName'>".htmlspecialchars($fieldValue,ENT_QUOTES)."</textarea><span>{$parms["description"]}</span></p> ".PHP_EOL;
 
     } else if ($parms["type"]=="url") {
-        $checkButton="<button class='url' type='button' onclick=\"checkUrlFromServer('$fieldName')\">Check</button>";
+        $checkButton="<button class='btn-primary' type='button' onclick=\"checkUrlFromServer('$fieldName')\">Check</button>";
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input  $FORCE_DISABLED class='url' type='url' value='".htmlspecialchars($fieldValue,ENT_QUOTES)."' name='$fieldName'/>$checkButton<span> {$parms["description"]}</span></p>".PHP_EOL;
 
     } else if ($parms["type"]=="select") {
@@ -335,7 +338,7 @@ foreach ($currentConf as $pname=>$parms) {
         
         $id=uniqid();
         $id2=uniqid();
-        echo "<p class='conf-item' $FORCE_DISABLED>$pname<br/>
+        echo "<p class='conf-item' data-type='boolean' $FORCE_DISABLED>$pname<br/>
             <input $FORCE_DISABLED type='radio' name='$fieldName' value='true' $rtrue id='$id'/><label for='$id'>True</label>
             <input $FORCE_DISABLED type='radio' name='$fieldName' value='false' $rfalse id='$id2'/><label for='$id2'>False</label>
             <span $FORCE_DISABLED> {$parms["description"]}</span></p>".PHP_EOL;
@@ -511,7 +514,7 @@ foreach ($currentConf as $pname=>$parms) {
         }
     } else if ($parms["type"]=="apikey") {
         $jsid=strtr($fieldName,["@"=>"_"]);
-        $checkButton="<button class='url' type='button' onclick=\"document.getElementById('$jsid').style.filter=''\">Unhide</button>";
+        $checkButton="<button class='btn-primary' type='button' onclick=\"document.getElementById('$jsid').style.filter=''\">Unhide</button>";
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label>
         <input  style='filter: blur(3px);' $FORCE_DISABLED class='apikey' type='string'  id='$jsid' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' name='$fieldName'>$checkButton<span>{$parms["description"]}</span>
         </p>".PHP_EOL;
@@ -524,12 +527,12 @@ foreach ($currentConf as $pname=>$parms) {
         echo "</select><span>{$parms["description"]}</span></p>";
         
     }  else if ($parms["type"]=="util") {
-        $checkButton="<button class='' type='button' onclick=\"callHelper('{$parms["action"]}')\">{$parms["name"]}</button>";
+        $checkButton="<button class='btn-primary' type='button' onclick=\"callHelper('{$parms["action"]}')\">{$parms["name"]}</button>";
         echo "<p class='conf-item'>$checkButton<span>{$parms["description"]}</span></p>".PHP_EOL;
         
     } else if ($parms["type"]=="ormodellist") {
         $jsid=strtr($fieldName,["@"=>"_"]);
-        $checkButton="<button class='url' type='button' onclick=\"callHelperModel('choices$jsid','$jsid')\">Get Model List</button>";
+        $checkButton="<button class='btn-primary' type='button' onclick=\"callHelperModel('choices$jsid','$jsid')\">Get Model List</button>";
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label>";
         echo "<input list='choices$jsid' style='width:300px' id='$jsid' name='$fieldName' value='".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."' />$checkButton";
         echo "<datalist id='choices$jsid'><option label=\"".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."\" value=\"".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."\"></datalist><span>{$parms["description"]}</span>
@@ -539,56 +542,41 @@ foreach ($currentConf as $pname=>$parms) {
     if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid", "OGHMA_KNOWLEDGE"]))
         if (!in_array($parms["type"],["util"]))
             if (!in_array($parms["scope"],["global","constant"]))
-                echo "<button class='ctapb' title='Copy $fieldName to all profiles' style='color:#FFFFFF; cursor:pointer; font-size:9px; display:block; position:relative; background-color:#444444; border:1px solid #FFFFFF; padding:2px 6px; border-radius:4px; text-decoration:none;' onmouseover=\"this.style.backgroundColor='#666666'; this.style.borderColor='#FFD700';\" onmouseout=\"this.style.backgroundColor='#444444'; this.style.borderColor='#FFFFFF';\" onclick=\"copyToAllprofiles(event,'$fieldName','$jsid')\">Copy to All Profiles</button>";
+                echo "<button class='copy-to-all-btn' title='Copy $fieldName to all profiles' onclick=\"copyToAllprofiles(event,'$fieldName','$jsid')\">Copy to All Profiles</button>";
     echo "</div>";
 
 }
 echo str_repeat("</fieldset>", $lvl1);
 echo str_repeat("</fieldset>", $lvl2);
 
-echo '</form>';
+// Quick Access Bar - moved here after summary is populated
+echo '<div class="quick-access-bar">
+    <div class="profile-info">
+        <h3 class="profile-name">' . htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"]) . '</h3>
+        <p class="profile-path">' . basename($_SESSION["PROFILE"]) . '</p>
+        <div class="action-buttons">';
 
-echo "<div style='position:fixed;top:70px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px; z-index: 100000;'>
-<span><strong>Quick Access for <span style='color:yellow'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br><span style='font-size:11px'>You must click save before using 'Copy to All Profiles'</span><br/><span style='font-size:7px'>".
-    basename($_SESSION["PROFILE"])
-."</span></strong></span><ul>";
-
-// Save and delete buttons
+// Save button
 echo '<input
     type="button"
     name="save"
     value="Save"
     id="saveProfileButton"
-    style="
-        margin-top: 10px;
-        font-weight: bold;
-        border: 1px solid #ffffff;
-        padding: 10px 20px;
-        cursor: pointer;
-        border-radius: 4px;
-        font-size: 16px;
-        background-color: #28a745;
-        color: white;
-        transition: background-color 0.3s, color 0.3s;
-    "
+    class="btn-save"
     onclick=\'if (validateForm()) {
         formSubmitting=true;
         document.getElementById("top").target="_self";
         document.getElementById("top").action="tools/conf_writer.php?save=true&sc=" + getAnchorNH();
         document.getElementById("top").submit();
     }\'
-    onmouseover=\'this.style.backgroundColor="#218838";\'
-    onmouseout=\'this.style.backgroundColor="#28a745";\'
 />';
 
-echo ' :: ';
-
-// Check if profile is locked or is default profile
+// Delete button
 $isDefaultProfile = basename($_SESSION["PROFILE"]) === "conf.php";
 $isLocked = (isset($LOCK_PROFILE) && $LOCK_PROFILE === true) || $isDefaultProfile;
-$disabledStyle = $isLocked ? 'opacity: 0.5; cursor: not-allowed;' : '';
+$disabledStyle = $isLocked ? "disabled" : "";
 $onclickEvent = $isLocked ? 
-    'onclick="alert(\'' . ($isDefaultProfile ? 'The default profile cannot be deleted.' : 'This profile is locked and cannot be deleted.') . '\');"' : 
+    'onclick="alert(\'' . ($isDefaultProfile ? "The default profile cannot be deleted." : "This profile is locked and cannot be deleted.") . '\');"' : 
     'onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
         formSubmitting = true;
         document.getElementById("top").target = "_self";
@@ -601,40 +589,32 @@ echo '<input
     name="delete"
     value="Delete Profile"
     id="deleteProfileButton"
-    aria-label="Delete your profile"
-    style="
-        margin-top: 10px;
-        font-weight: bold;
-        border: 1px solid #ffffff;
-        padding: 10px 20px;
-        cursor: pointer;
-        border-radius: 4px;
-        font-size: 16px;
-        background-color: #dc3545;
-        color: white;
-        transition: background-color 0.3s, color 0.3s;
-        ' . $disabledStyle . '
-    "
-    ' . $onclickEvent . ' 
-    onmouseover=\'this.style.backgroundColor="' . ($isLocked ? "#dc3545" : "#c82333") . '";\'
-    onmouseout=\'this.style.backgroundColor="#dc3545";\'
-/></p>';
+    class="btn-danger ' . $disabledStyle . '"
+    ' . $onclickEvent . '
+/>';
 
-foreach ($summary as $k=>$item) {
-    echo "<li>&nbsp;<a href='#$k'>{$item["main"]}</a></li>";
-    
-    foreach ($item["childs"] as $localhash=>$subtitle) {
-        echo "<li class='subchild' id='mini_f_".md5($subtitle)."'>&nbsp;<a href='#" . md5($subtitle) . "'>$subtitle</a></li>";
+echo '</div></div>';
+
+// Section links
+echo '<div class="section-links"><ul>';
+if (!empty($summary)) {
+    foreach ($summary as $k=>$item) {
+        echo "<li><a href='#$k'>{$item["main"]}</a>";
+        if (!empty($item["childs"])) {
+            echo "<ul>";
+            foreach ($item["childs"] as $subtitle) {
+                echo "<li class='subchild'><a href='#" . md5($subtitle) . "'>$subtitle</a></li>";
+            }
+            echo "</ul>";
+        }
+        echo "</li>";
     }
 }
+echo '</ul></div></div>';
 
-
-
-echo "</ul></div>";
-
+echo '</form>';
 
 include("tmpl/footer.html");
-
 
 $buffer = ob_get_contents();
 ob_end_clean();

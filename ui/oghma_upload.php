@@ -1,13 +1,28 @@
 <?php
-session_start();
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$TITLE = "📙CHIM - Oghma Infinium Management";
+
+ob_start();
+
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
 // Paths
-$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$enginePath = $rootPath . ".." . DIRECTORY_SEPARATOR;
+$rootPath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
+$enginePath = dirname($rootPath) . DIRECTORY_SEPARATOR;
 $configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
 
 // Database connection details
@@ -18,38 +33,6 @@ $schema = 'public';
 $username = 'dwemer';
 $password = 'dwemer';
 
-// Profile selection
-$GLOBALS["PROFILES"] = []; // Initialize the PROFILES array
-foreach (glob($configFilepath . 'conf_????????????????????????????????????????????????.php') as $mconf) {
-    if (file_exists($mconf)) {
-        $filename = basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        if (preg_match($pattern, $filename, $matches)) {
-            $hash = $matches[1];
-            $GLOBALS["PROFILES"][$hash] = $mconf;
-        }
-    }
-}
-
-// Function to compare modification dates
-function compareFileModificationDate($a, $b) {
-    return filemtime($b) - filemtime($a);
-}
-
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"])) {
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-} else {
-    $GLOBALS["PROFILES"] = [];
-}
-
-$GLOBALS["PROFILES"] = array_merge(["default" => "$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
-} else {
-    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
-}
 
 // Initialize message variable
 $message = '';
@@ -234,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
  *  3) DOWNLOAD EXAMPLE CSV
  ********************************************************************/
 if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
-    $filePath = realpath(__DIR__ . '/../data/oghma_example.csv');
+    $filePath = realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'oghma_example.csv');
     if (file_exists($filePath)) {
         header('Content-Description: File Transfer');
         header('Content-Type: text/csv');
@@ -368,397 +351,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $message .= '<p>Topic and Topic Description cannot be empty when saving.</p>';
     }
 }
+
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>📙CHIM - Oghma Infinium Management</title>
-    <style>
-        /* Updated CSS for Dark Grey Background Theme */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c; /* Dark grey background */
-            color: #f8f9fa; /* Light grey text for readability */
-        }
-        h1, h2 {
-            color: #ffffff; /* White color for headings */
-        }
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #4a4a4a;
-            max-width: 600px;
-        }
-        label {
-            font-weight: bold;
-            color: #f8f9fa; /* Ensure labels are readable */
-        }
-        input[type="text"],
-        input[type="file"],
-        textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #555555; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 16px; /* Sets a readable font size */
-        }
-        textarea {
-            resize: vertical;
-            height: 120px;
 
-        }
-        input[type="submit"], button {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            padding: 5px 15px;
-            font-size: 18px;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-            margin-top: 10px;
-        }
-        input[type="submit"]:hover, button:hover {
-            background-color: #0056b3;
-        }
-        .message {
-            background-color: #444444;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #555555;
-            max-width: 600px;
-            margin-bottom: 20px;
-            color: #f8f9fa;
-        }
-        .message p {
-            margin: 0;
-        }
-        .indent5 {
-            padding-left: 5ch;
-        }
-        table {
-            width: 100%;
-            max-width: 1600px;
-            border-collapse: collapse;
-            background-color: #3a3a3a;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #555555;
-            padding: 8px;
-            text-align: left;
-            vertical-align: top;
-            color: #f8f9fa;
-        }
-        th {
-            background-color: #4a4a4a;
-            font-weight: bold;
-        }
-        tr:nth-child(even) {
-            background-color: #2c2c2c;
-        }
-        .filter-buttons {
-            margin-bottom: 20px;
-            width: 100%;
-        }
-        .filter-buttons form {
-            display: inline-block;
-            margin: 2px;
-        }
-        .filter-buttons button {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            padding: 6px 10px;
-            margin: 0;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .filter-buttons button:hover {
-            background-color: #0056b3;
-        }
-        .table-container {
-            max-height: 900px;
-            overflow-y: auto;
-            overflow-x: auto;
-            margin-bottom: 20px;
-            width: 100%;
-        }
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 160px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
+    }
 
-        .table-container table {
-            width: 100%;
-            min-width: 100%;
-            border-collapse: collapse;
-            background-color: #3a3a3a;
-        }
+    /* Modal specific overrides */
+    .modal-backdrop {
+        overflow-y: auto !important;
+        padding: 20px 0;
+    }
 
-        .table-container th, .table-container td {
-            padding: 8px;
-            text-align: left;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            color: #f8f9fa;
-            border: 1px solid #555555;
-        }
+    .modal-container {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        margin: 160px auto 40px auto !important;
+        max-width: 800px !important;
+        width: 90% !important;
+    }
 
-        .table-container th {
-            background-color: #4a4a4a;
-            font-weight: bold;
-        }
+    .modal-body {
+        max-height: calc(100vh - 300px);
+        overflow-y: auto;
+        padding-right: 15px;
+    }
 
-        /* Alternating row colors */
-        .table-container tr:nth-child(even) {
-            background-color: #2c2c2c;
-        }
+    /* Form field spacing */
+    .modal-body label {
+        display: block;
+        margin-top: 15px;
+        color: #ff00c6;
+        font-weight: bold;
+    }
 
-        .table-container tr:nth-child(odd) {
-            background-color: #3a3a3a;
-        }
-        /* Set specific widths for columns if needed */
-        .table-container th:nth-child(1), /* Topic */
-        .table-container td:nth-child(1) {
-            width: 20%;
-        }
-        .table-container th:nth-child(2), /* Topic Description */
-        .table-container td:nth-child(2) {
-            width: 30%;
-        }
-        .table-container th:nth-child(3), /* Knowledge Class */
-        .table-container td:nth-child(3) {
-            width: 15%;
-        }
-        .table-container th:nth-child(4), /* Topic Description (Basic) */
-        .table-container td:nth-child(4) {
-            width: 15%;
-        }
-        .table-container th:nth-child(5), /* Knowledge Class (Basic) */
-        .table-container td:nth-child(5) {
-            width: 10%;
-        }
-        .table-container th:nth-child(6), /* Tags */
-        .table-container td:nth-child(6) {
-            width: 10%;
-        }
-        .table-container th:nth-child(7), /* Category */
-        .table-container td:nth-child(7) {
-            width: 10%;
-        }
-        .table-container th:nth-child(8), /* Action */
-        .table-container td:nth-child(8) {
-            width: 10%;
-        }
-        input[type="submit"].btn-danger {
-            background-color: rgb(200, 53, 69);
-            color: #fff;
-            border: 1px solid rgb(255, 255, 255);
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-            font-weight: bold;
-        }
-        input[type="submit"].btn-danger:hover {
-            background-color: rgb(200, 35, 51);
-        }
-        .alphabet-button {
-            display: inline-block;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            padding: 6px 10px;
-            color: #fff;
-            background-color: #007bff;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        .alphabet-button:hover {
-            background-color: #0056b3;
-        }
-        /* Extra styling for inline forms in the Action column */
-        .action-form {
-            display: inline-block;
-            margin: 0 2px;
-        }
+    .modal-body small {
+        display: block;
+        color: #888;
+        margin-bottom: 5px;
+    }
 
-        /* Modal styles */
-        .modal-backdrop {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-        }
+    .modal-body input[type="text"],
+    .modal-body textarea {
+        width: 100%;
+        margin-bottom: 15px;
+    }
 
-        .modal-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #3a3a3a;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            width: 60%;
-            max-width: 700px;
-            max-height: 90vh;
-            overflow-y: auto;
-            z-index: 1001;
-        }
+    .modal-footer {
+        position: sticky;
+        bottom: 0;
+        background: #3a3a3a;
+        padding: 15px 0;
+        margin-top: 20px;
+        border-top: 1px solid #4a4a4a;
+    }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+    /* Table container height adjustment */
+    .table-container {
+        max-height: calc(100vh - 400px) !important;
+    }
+</style>
 
-        .modal-title {
-            margin: 0;
-            color: #fff;
-            font-size: 1.5em;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 1.5em;
-            cursor: pointer;
-            padding: 0;
-            margin: 0;
-        }
-
-        .modal-close:hover {
-            color: #dc3545;
-        }
-
-        .modal-body {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #4a4a4a;
-        }
-
-        .modal-footer button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .modal-footer button[type="submit"] {
-            background-color: #28a745;
-        }
-        .modal-footer button[type="submit"]:hover {
-            background-color: #218838;
-        }
-
-        .modal-footer button[onclick*="delete"] {
-            background-color: #dc3545;
-        }
-        .modal-footer button[onclick*="delete"]:hover {
-            background-color: #c82333;
-        }
-
-        .modal-footer button[onclick*="close"] {
-            background-color: #6c757d;
-        }
-        .modal-footer button[onclick*="close"]:hover {
-            background-color: #5a6268;
-        }
-
-        /* Common button styles */
-        .action-button {
-            display: inline-block;
-            padding: 8px 12px;
-            color: #fff;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        /* Edit button */
-        .action-button.edit {
-            background-color: #17a2b8;
-        }
-        .action-button.edit:hover {
-            background-color: #138496;
-        }
-
-        /* Add new entry button */
-        .action-button.add-new {
-            background-color: #28a745;
-            border: none;
-        }
-        .action-button.add-new:hover {
-            background-color: #218838;
-        }
-
-        /* Save button */
-        button[type="submit"] {
-            background-color: #28a745;
-            transition: background-color 0.3s ease;
-        }
-        button[type="submit"]:hover {
-            background-color: #218838;
-        }
-
-        /* Delete button */
-        button[onclick*="delete"] {
-            background-color: #dc3545;
-            transition: background-color 0.3s ease;
-        }
-        button[onclick*="delete"]:hover {
-            background-color: #c82333;
-        }
-
-        /* Cancel button */
-        button[onclick*="close"] {
-            background-color: #6c757d;
-            transition: background-color 0.3s ease;
-        }
-        button[onclick*="close"]:hover {
-            background-color: #5a6268;
-        }
-    </style>
-</head>
-<body>
+<main>
 <div class="indent5">
-<h1><img src="images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Management</h1>
+<h1><img src="<?php echo $webRoot; ?>/ui/images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Management</h1>
+
+    <div id="toast" class="toast-notification">
+        <span class="message"></span>
+    </div>
+
     <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
     <p>This is done by detecting topics during conversations, and injecting the appropiate information into the AI's prompt.</p>
-    <p>To use it you must have [MINIME_T5] and [OGHMA_INFINIUM] enabled in the default profile. You also need Minime-T5 installed and running.</p>
+    <p>To use it you must have <b>[MINIME_T5]</b> and <b></b>[OGHMA_INFINIUM]</b> enabled in the default profile. You also need Minime-T5 installed and running.</p>
+    <br>
     <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
+
     <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
     <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
+    <br>
     <p>
     <b>Logic for searching articles:</b> <br>
     1. NPC will search for oghma article based on most relevant keyword. <br>
@@ -767,86 +455,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     4. If all above fails, send "You do not know about X" to the prompt.
 </p>
     <?php
-    // Display messages
-    if (!empty($message)) {
+    // Display messages - REMOVING THIS BLOCK
+    /*if (!empty($message)) {
         echo '<div class="message">';
         echo $message;
         echo '</div>';
-    }
+    }*/
     ?>
+    <br>
+    <h1>Batch Upload</h1>
+    <div class="form-container">
+        <form action="" method="post" enctype="multipart/form-data">
+            <div>
+                <label for="csv_file">Select .csv file to upload:</label>
+                <br>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+            </div>
+            <div class="button-group">
+                <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
+                <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
+            </div>
+        </form>
 
-    <h2>Batch Upload</h2>
-<div style="
-    background-color: #3a3a3a;
-    padding: 15px;
-    border-radius: 5px;
-    border: 1px solid #4a4a4a;
-    max-width: 600px;
-">
-    <form action="" method="post" enctype="multipart/form-data" style="
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        margin: 0;
-        padding: 0;
-        background: none;
-        border: none;
-    ">
-        <div>
-            <label for="csv_file" style="display: block; margin-bottom: 5px; font-weight: bold;">Select .csv file to upload:</label>
-            <input type="file" name="csv_file" id="csv_file" accept=".csv" required style="
-                width: 100%;
-                padding: 6px;
-                margin-bottom: 10px;
-                border: 1px solid #555555;
-                border-radius: 3px;
-                background-color: #4a4a4a;
-                color: #f8f9fa;
-            ">
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <input type="submit" name="submit_csv" value="Upload CSV" style="
-                background-color: #28a745;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 12px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: background-color 0.3s ease;
-            " onmouseover="this.style.backgroundColor='#218838';" onmouseout="this.style.backgroundColor='#28a745';">
-            <a href="?action=download_example" style="
-                background-color: #007bff; /* Change to blue */
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 12px; /* Match padding */
-                cursor: pointer;
-                font-weight: bold;
-                text-decoration: none;
-                transition: background-color 0.3s ease;
-                display: inline-block; /* Ensure it behaves like a button */
-                margin-top: 10px; /* Add margin for spacing */
-            " onmouseover="this.style.backgroundColor='#0056b3';" onmouseout="this.style.backgroundColor='#007bff';">Download Example CSV</a>
-        </div>
-    </form>
-    <p>You can verify that the entry has been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
-    <p>You can see how it picks a relevant article during conversation by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
-    <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
-    <form action="" method="post" style="
-        border: none;
-        padding: 0;
-        margin: 0;
-        background: none;
-    ">
-        <input type="hidden" name="action" value="delete_all">
-        <input type="submit" class="btn-danger" value="Delete All Oghma Entries" 
-               onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
-    </form>
-    <p>You can download a backup of the full Oghma database in the <a href="https://discord.gg/NDn9qud2ug" style="color: yellow;" target="_blank" rel="noopener"> csv files channel in our discord</a>.</p>
-</div>
+        <p>You can verify that the entry has been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
+        <p>You can see how it picks a relevant article during conversation by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
+        <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+        <br>
 
-<br>
+        <form action="" method="post">
+            <input type="hidden" name="action" value="delete_all">
+            <input type="submit" class="btn-danger" value="Delete All Oghma Entries" 
+                   onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
+        </form>
+        <br>
+        <form action="' . $webRoot . '/ui/oghma_reset.php" method="post">
+            <input type="submit" class="btn-danger" value="Factory Reset Oghma Database" 
+                   onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
+        </form>
+        <p>You can download a backup of the full Oghma database in the <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener">csv files channel in our discord</a>.</p>
+    </div>
+
+    <br>
 
 
 <?php
@@ -875,13 +524,20 @@ if (isset($_GET['order'])) {
         $order = strtoupper($requestedOrder);
     }
 }
-
+echo '<br>';
 // Category buttons
-echo '<div style="width: 100%; padding-right: 5ch;">';
-echo '<h2 id="entries">Oghma Infinium Entries</h2>';
+echo '<div>';
+echo '<h1 id="entries">Oghma Infinium Entries</h1>';
+echo '<div class="action-container">';
 echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
+echo '<div class="search-container">';
+echo '<input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">';
+echo '<button onclick="applySearch()" class="action-button edit ">Search</button>';
+echo '</div>';
+echo '</div>';
 echo '<br>';
-echo '<br>';
+
+// Filter buttons
 echo '<div class="filter-buttons">';
 echo '<a class="alphabet-button" href="?#entries">All Categories</a>';
 foreach ($categories as $cat) {
@@ -889,19 +545,30 @@ foreach ($categories as $cat) {
     $style = ($selectedCategory === $cat) ? 'style="background-color:#0056b3;"' : '';
     echo "<a class=\"alphabet-button\" $style href=\"?cat=$catEncoded#entries\">" . htmlspecialchars($cat) . "</a>";
 }
-
+echo '<br>';
 // Sorting links
 $baseUrl = '?';
 if ($selectedCategory) $baseUrl .= 'cat=' . urlencode($selectedCategory) . '&';
 if ($letter) $baseUrl .= 'letter=' . urlencode($letter) . '&';
 
-echo '<div class="filter-buttons">';
-echo '<a class="alphabet-button" href="' . $baseUrl . 'order=asc#entries">Sort Ascending</a>';
-echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#entries">Sort Descending</a>';
 echo '</div>';
-
+echo '<a class="alphabet-button" href="' . $baseUrl . 'order=asc#entries">🔼 Ascending</a>';
+echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#entries">🔽 Descending</a>';
 // Build query
-if ($selectedCategory && $letter) {
+$searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
+
+if ($selectedCategory && $letter && $searchTerm) {
+    $query = "
+        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+               knowledge_class_basic, tags, category
+        FROM $schema.oghma
+        WHERE category = $1
+          AND topic ILIKE $2
+          AND topic ILIKE $3
+        ORDER BY topic $order
+    ";
+    $params = [$selectedCategory, $letter . '%', '%' . $searchTerm . '%'];
+} elseif ($selectedCategory && $searchTerm) {
     $query = "
         SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
                knowledge_class_basic, tags, category
@@ -910,8 +577,27 @@ if ($selectedCategory && $letter) {
           AND topic ILIKE $2
         ORDER BY topic $order
     ";
-    $params = [$selectedCategory, $letter . '%'];
-} elseif ($selectedCategory) {
+    $params = [$selectedCategory, '%' . $searchTerm . '%'];
+} elseif ($letter && $searchTerm) {
+    $query = "
+        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+               knowledge_class_basic, tags, category
+        FROM $schema.oghma
+        WHERE topic ILIKE $1
+          AND topic ILIKE $2
+        ORDER BY topic $order
+    ";
+    $params = [$letter . '%', '%' . $searchTerm . '%'];
+} elseif ($searchTerm) {
+    $query = "
+        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+               knowledge_class_basic, tags, category
+        FROM $schema.oghma
+        WHERE topic ILIKE $1
+        ORDER BY topic $order
+    ";
+    $params = ['%' . $searchTerm . '%'];
+} elseif ($selectedCategory && $letter) {
     $query = "
         SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
                knowledge_class_basic, tags, category
@@ -981,18 +667,17 @@ if ($result) {
         echo '<div style="display: flex; gap: 4px;">';
         
         // Edit button only
-        echo '<a href="#" onclick="openEditModal(`' . 
-            addslashes($topic) . '`,`' . 
-            addslashes($topic_desc) . '`,`' . 
-            addslashes($knowledge_class) . '`,`' . 
-            addslashes($topic_desc_basic) . '`,`' . 
-            addslashes($knowledge_class_basic) . '`,`' . 
-            addslashes($tags) . '`,`' . 
-            addslashes($category) . 
-            '`);return false;" 
-            class="action-button edit">
-            Edit
-        </a>';
+        echo '<button onclick="openEditModal(' . 
+            htmlspecialchars(json_encode([
+                'topic' => $topic,
+                'topic_desc' => $topic_desc,
+                'knowledge_class' => $knowledge_class,
+                'topic_desc_basic' => $topic_desc_basic,
+                'knowledge_class_basic' => $knowledge_class_basic,
+                'tags' => $tags,
+                'category' => $category
+            ]), ENT_QUOTES, 'UTF-8') . 
+            ')" class="action-button edit">Edit</button>';
         
         echo '</div>';
         echo '</td>';
@@ -1005,7 +690,7 @@ if ($result) {
     echo '</div>';
 
     if ($rowCount === 0) {
-        echo '<p>No entries found for the selected filter.</p>';
+        echo '<p>No entries found.</p>';
     }
 } else {
     echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
@@ -1044,7 +729,7 @@ pg_close($conn);
                 
 
                 <label for="edit_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this, is recommended for most basic articles. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. It is recommended for most basic articles to leave it blank. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic_new" id="edit_knowledge_class_basic">
 
                 <label for="edit_tags">Tags:</label>
@@ -1056,9 +741,9 @@ pg_close($conn);
                 <input type="text" name="category_new" id="edit_category">
 
                 <div class="modal-footer">
-                    <button type="submit" name="submit" value="update" class="action-button" style="background-color: #28a745;">Save Changes</button>
-                    <button type="button" onclick="deleteEntry()" class="action-button" style="background-color: #dc3545;">Delete</button>
-                    <button type="button" onclick="closeEditModal()" class="action-button" style="background-color: #6c757d;">Cancel</button>
+                    <button type="submit" name="submit" value="update" class="btn-save">Save Changes</button>
+                    <button type="button" onclick="deleteEntry()" class="btn-danger">Delete</button>
+                    <button type="button" onclick="closeEditModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>
@@ -1091,7 +776,7 @@ pg_close($conn);
                 <textarea name="topic_desc_basic" id="topic_desc_basic" rows="5"></textarea>
 
                 <label for="knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this, is recommended for most basic articles. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. It is recommended for most basic articles to leave it blank. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic" id="knowledge_class_basic">
 
                 <label for="tags">Tags:</label>
@@ -1103,8 +788,8 @@ pg_close($conn);
                 <input type="text" name="category" id="category">
 
                 <div class="modal-footer">
-                    <button type="submit" style="background-color: #28a745;">Save</button>
-                    <button type="button" onclick="closeNewEntryModal()" style="background-color: #6c757d;">Cancel</button>
+                    <button type="submit" class="btn-save">Save</button>
+                    <button type="button" onclick="closeNewEntryModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>
@@ -1112,23 +797,25 @@ pg_close($conn);
 </div>
 
 <script>
-function openEditModal(topic, desc, klass, basicDesc, basicKlass, tags, category) {
+// Define webRoot for JavaScript
+var webRoot = '<?php echo $webRoot; ?>';
+
+function openEditModal(data) {
     try {
-        // Decode HTML entities in the data
         const decodeHTML = (html) => {
             const txt = document.createElement('textarea');
             txt.innerHTML = html;
             return txt.value;
         };
 
-        document.getElementById("edit_topic_original").value = decodeHTML(topic);
-        document.getElementById("edit_topic").value = decodeHTML(topic);
-        document.getElementById("edit_topic_desc").value = decodeHTML(desc);
-        document.getElementById("edit_knowledge_class").value = decodeHTML(klass);
-        document.getElementById("edit_topic_desc_basic").value = decodeHTML(basicDesc);
-        document.getElementById("edit_knowledge_class_basic").value = decodeHTML(basicKlass);
-        document.getElementById("edit_tags").value = decodeHTML(tags);
-        document.getElementById("edit_category").value = decodeHTML(category);
+        document.getElementById("edit_topic_original").value = decodeHTML(data.topic);
+        document.getElementById("edit_topic").value = decodeHTML(data.topic);
+        document.getElementById("edit_topic_desc").value = decodeHTML(data.topic_desc);
+        document.getElementById("edit_knowledge_class").value = decodeHTML(data.knowledge_class);
+        document.getElementById("edit_topic_desc_basic").value = decodeHTML(data.topic_desc_basic);
+        document.getElementById("edit_knowledge_class_basic").value = decodeHTML(data.knowledge_class_basic);
+        document.getElementById("edit_tags").value = decodeHTML(data.tags);
+        document.getElementById("edit_category").value = decodeHTML(data.category);
         
         document.getElementById("editModal").style.display = "block";
         document.body.style.overflow = "hidden";
@@ -1168,6 +855,76 @@ function deleteEntry() {
         form.submit();
     }
 }
+
+function applySearch() {
+    const searchTerm = document.getElementById("searchBox").value.trim();
+    let url = new URL(window.location.href);
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Update or add search parameter
+    if (searchTerm) {
+        urlParams.set("search", searchTerm);
+    } else {
+        urlParams.delete("search");
+    }
+    
+    // Preserve existing parameters if they exist
+    const currentCategory = urlParams.get("cat");
+    const currentLetter = urlParams.get("letter");
+    const currentOrder = urlParams.get("order");
+    
+    if (currentCategory) urlParams.set("cat", currentCategory);
+    if (currentLetter) urlParams.set("letter", currentLetter);
+    if (currentOrder) urlParams.set("order", currentOrder);
+    
+    // Create the new URL
+    window.location.href = "?" + urlParams.toString() + "#entries";
+}
+
+// Add enter key support for the search box
+document.getElementById("searchBox").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        applySearch();
+    }
+});
+
+// Set initial search box value from URL
+window.addEventListener("load", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchTerm = urlParams.get("search");
+    if (searchTerm) {
+        document.getElementById("searchBox").value = searchTerm;
+    }
+});
+
+// Add toast notification JavaScript function
+function showToast(message, duration = 5000) {
+    const toast = document.getElementById('toast');
+    const messageSpan = toast.querySelector('.message');
+    messageSpan.textContent = message;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, duration);
+}
+
+// Update PHP message handling
+<?php if (!empty($message)): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    showToast(<?php echo json_encode(strip_tags($message)); ?>);
+});
+<?php endif; ?>
 </script>
-</body>
-</html>
+</main>
+
+<?php
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
+
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>

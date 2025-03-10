@@ -75,9 +75,10 @@ class openrouterjson
         } else
             $speechReinforcement="";
 
+        $zonosTones = $GLOBALS["TTSFUNCTION"] == "zonos_gradio" ? " (Response tones are mandatory in the response)" : "";
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"])
+            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
         ];
         $pb=[];
         $pb["user"]="";
@@ -529,6 +530,8 @@ class openrouterjson
                             $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }
                         
+                        // Store the entire response for TTS systems that need additional data like emotions
+                        $GLOBALS["LAST_LLM_RESPONSE"] = $finalData;
                     }
                 }
                 
