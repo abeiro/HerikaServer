@@ -369,6 +369,108 @@ final class CommTest extends DatabaseTestCase
         $this->assertSame("pending", $rows[0]["sess"]);
     }
 
+    public function testComm_Init_ShouldPurgeNewEvents(): void
+    {
+        // default test config
+        require("conf.php");
+
+        // add chat history in order to create assistant role
+        $testDb = new sql();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "100",
+                'gamets' => "100",
+                'type' => "inputtext",
+                'data' => "Prisoner:Make sure there are no more enemies nearby. (Talking to Lydia)",
+                'sess' => 'pending',
+                'localts' => 0,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "200",
+                'gamets' => "200",
+                'type' => "chat",
+                'data' => "Lydia: Very well my Thane, I'll take a look around. (talking to Prisoner)",
+                'sess' => 'pending',
+                'localts' => 2,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+
+        // comm.php?data=init|150|150| (base64 encoded)
+        $encodedData = base64_encode("init|150|150|");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        // confirm LLM response added to eventlog as chat
+        $rows=$testDb->fetchAll("SELECT * FROM eventlog ORDER BY rowid ASC;");
+        $testDb->close();
+        $this->assertSame(3, sizeof($rows));
+        $this->assertSame("Prisoner:Make sure there are no more enemies nearby. (Talking to Lydia)", $rows[0]["data"]);
+        $this->assertSame("user_input", $rows[1]["type"]);
+        $this->assertSame("init", $rows[1]["data"]);
+        $this->assertSame("init", $rows[2]["type"]);
+    }
+
+    public function testComm_Init_ShouldNotPurgeEventsWhenGametsIs10000000(): void
+    {
+        // default test config
+        require("conf.php");
+
+        // add chat history in order to create assistant role
+        $testDb = new sql();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "100",
+                'gamets' => "100",
+                'type' => "inputtext",
+                'data' => "Prisoner:Make sure there are no more enemies nearby. (Talking to Lydia)",
+                'sess' => 'pending',
+                'localts' => 0,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "200",
+                'gamets' => "200",
+                'type' => "chat",
+                'data' => "Lydia: Very well my Thane, I'll take a look around. (talking to Prisoner)",
+                'sess' => 'pending',
+                'localts' => 2,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+
+        // comm.php?data=init|150|10000000| (base64 encoded)
+        $encodedData = base64_encode("init|150|10000000|");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        // confirm LLM response added to eventlog as chat
+        $rows=$testDb->fetchAll("SELECT * FROM eventlog ORDER BY rowid ASC;");
+        $testDb->close();
+        $this->assertSame(3, sizeof($rows));
+        $this->assertSame("Prisoner:Make sure there are no more enemies nearby. (Talking to Lydia)", $rows[0]["data"]);
+        $this->assertSame("Lydia: Very well my Thane, I'll take a look around. (talking to Prisoner)", $rows[1]["data"]);
+        $this->assertSame("user_input", $rows[2]["type"]);
+        $this->assertSame("init", $rows[2]["data"]);
+    }
+
     private function expectPromptInContext($streamContext, $expectedPrompt) {
         $options = stream_context_get_options($streamContext);
         $content = json_decode($options['http']['content']);
