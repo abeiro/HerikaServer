@@ -741,4 +741,34 @@ if ($checkVersion("oghma")<20250902002) {
     error_log("Applied patch oghma 20250902002");
 }
 
+if ($checkVersion("questlog")<20250310001) {
+
+    $q1="CREATE TABLE IF NOT EXISTS public.questlog (
+    ts text,
+    sess character varying(1024),
+    id_quest character varying(1024),
+    name text,
+    editor_id text,
+    giver_actor_id text,
+    reward text,
+    target_id text,
+    is_unique boolean,
+    mod text,
+    stage integer,
+    briefing text,
+    briefing2 text,
+    localts bigint,
+    gamets bigint,
+    data text,
+    status text,
+    rowid bigint
+    );";
+    $q2="ALTER TABLE public.questlog OWNER TO dwemer;";
+    $db->execQuery($q1);
+    $db->execQuery($q2);
+
+    $updateVersion("questlog",20250310001);
+    error_log("Applied patch questlog 20250310001");
+}
+
 ?>
