@@ -6,24 +6,20 @@
     font-style: normal;
 }
 
+/* Define the scrolling animation */
 @keyframes scrollBackground {
-    0% {
+    from {
         background-position: 0 0;
-        filter: blur(0px);
     }
-    45% {
-        filter: blur(0px);
+    to {
+        background-position: -1920px 0; /* Adjust this value based on your background image width */
     }
-    50% {
-        filter: blur(0.5px);
-    }
-    55% {
-        filter: blur(0px);
-    }
-    100% {
-        background-position: -1000px 0;
-        filter: blur(0px);
-    }
+}
+
+/* Disable animation when auto-refresh is enabled */
+body.auto-refresh .chim-navbar-wrapper,
+body.auto-refresh .chim-status-nav {
+    animation: none !important;
 }
 
 .chim-navbar-wrapper {
@@ -34,8 +30,9 @@
     z-index: 1030;
     background: url('../images/navbarback.png');
     background-repeat: repeat-x;
-    animation: scrollBackground 150s linear infinite;
+    background-position: 0 0;
     font-family: 'Futura CondensedLight', Arial, sans-serif;
+    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
 }
 
 .chim-navbar {
@@ -46,9 +43,10 @@
 .chim-status-nav {
     background: url('../images/navbarback.png');
     background-repeat: repeat-x;
-    animation: scrollBackground 150s linear infinite;
+    background-position: 0 0;
     width: 100%;
     padding: 10px 0;
+    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
 }
 
 .chim-status-container {
@@ -164,7 +162,6 @@
 }
 
 .overlay-content {
-    position: relative;
     background-color: #2c2c2c;
     padding: 30px;
     border-radius: 10px;

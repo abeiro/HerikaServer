@@ -498,7 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Overlay Content -->
             <div class="overlay-content">
                 <a href="#" class="close-btn" onclick="closeOverlay(event)">&times;</a>
-                <h2>Activated Character Profiles</h2>
+                <h1>Activated Character Profiles</h1>
                 <i><p>Refresh page to see new characters.</p></i>
                 <!-- A-Z and Favorites Filter Buttons -->
                 <div class="filter-buttons">
@@ -510,7 +510,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <!-- Profile Selection Form -->
-                <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" id="formprofile">
+                <form action="<?php 
+                    // Check if current page is index.php
+                    $currentPage = basename($_SERVER['PHP_SELF']);
+                    echo htmlspecialchars(($currentPage === 'index.php') ? $webRoot . '/ui/conf_wizard.php' : $_SERVER['PHP_SELF']); 
+                ?>" method="POST" id="formprofile">
                     <div class="options-container">
                         <?php foreach ($OPTIONS as $op): ?>
                             <?php
@@ -594,7 +598,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </script>
     </body>
 </html>
-
             <div style="display: inline-block; font-size: 10px; height: 40px; padding-right: 10px; vertical-align: top;">
             <span style="margin-right: 5px; font-size: 14px; vertical-align: middle; font-weight: bold">Configuration Depth</span>
             
