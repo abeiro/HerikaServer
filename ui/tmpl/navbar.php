@@ -510,7 +510,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <!-- Profile Selection Form -->
-                <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" id="formprofile">
+                <form action="<?php 
+                    // Check if current page is index.php
+                    $currentPage = basename($_SERVER['PHP_SELF']);
+                    echo htmlspecialchars(($currentPage === 'index.php') ? $webRoot . '/ui/conf_wizard.php' : $_SERVER['PHP_SELF']); 
+                ?>" method="POST" id="formprofile">
                     <div class="options-container">
                         <?php foreach ($OPTIONS as $op): ?>
                             <?php
