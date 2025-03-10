@@ -9,10 +9,10 @@
 /* Define the scrolling animation */
 @keyframes scrollBackground {
     from {
-        background-position: 0 0;
+        background-position-x: 0;
     }
     to {
-        background-position: -1920px 0; /* Adjust this value based on your background image width */
+        background-position-x: -7680px;
     }
 }
 
@@ -32,7 +32,7 @@ body.auto-refresh .chim-status-nav {
     background-repeat: repeat-x;
     background-position: 0 0;
     font-family: 'Futura CondensedLight', Arial, sans-serif;
-    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
+    animation: scrollBackground 240s linear infinite;
 }
 
 .chim-navbar {
@@ -46,7 +46,7 @@ body.auto-refresh .chim-status-nav {
     background-position: 0 0;
     width: 100%;
     padding: 10px 0;
-    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
+    animation: scrollBackground 240s linear infinite;
 }
 
 .chim-status-container {
