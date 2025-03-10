@@ -281,6 +281,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
 
 } elseif ($gameRequest[0] == "contentbook") {
+    // This should be deprecated once version 1.2.0 is released
     $db->insert(
         'books',
         array(
