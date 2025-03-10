@@ -279,7 +279,29 @@ foreach ($currentConf as $pname=>$parms) {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><textarea $FORCE_DISABLED name='$fieldName'>".htmlspecialchars($fieldValue,ENT_QUOTES)."</textarea><span>{$parms["description"]}</span></p> ".PHP_EOL;
 
     } else if ($parms["type"]=="url") {
-        $checkButton="<button class='url' type='button' onclick=\"checkUrlFromServer('$fieldName')\">Check</button>";
+        $checkButton="<button class='url' type='button' style='
+            padding: 6px 12px;
+            background-color: rgba(37, 99, 235, 0.8);
+            color: #ffffff;
+            border: 1px solid rgba(138, 155, 182, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease-in-out;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                        inset 0 1px rgba(255, 255, 255, 0.1);
+            margin-left: 5px;'
+            onclick=\"checkUrlFromServer('$fieldName')\"
+            onmouseover=\"this.style.backgroundColor='rgba(47, 109, 245, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';\"
+            onmouseout=\"this.style.backgroundColor='rgba(37, 99, 235, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';\">
+            Check</button>";
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input  $FORCE_DISABLED class='url' type='url' value='".htmlspecialchars($fieldValue,ENT_QUOTES)."' name='$fieldName'/>$checkButton<span> {$parms["description"]}</span></p>".PHP_EOL;
 
     } else if ($parms["type"]=="select") {
@@ -539,7 +561,28 @@ foreach ($currentConf as $pname=>$parms) {
     if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid", "OGHMA_KNOWLEDGE"]))
         if (!in_array($parms["type"],["util"]))
             if (!in_array($parms["scope"],["global","constant"]))
-                echo "<button class='ctapb' title='Copy $fieldName to all profiles' style='color:#FFFFFF; cursor:pointer; font-size:9px; display:block; position:relative; background-color:#444444; border:1px solid #FFFFFF; padding:2px 6px; border-radius:4px; text-decoration:none;' onmouseover=\"this.style.backgroundColor='#666666'; this.style.borderColor='#FFD700';\" onmouseout=\"this.style.backgroundColor='#444444'; this.style.borderColor='#FFFFFF';\" onclick=\"copyToAllprofiles(event,'$fieldName','$jsid')\">Copy to All Profiles</button>";
+                echo "<button class='ctapb' title='Copy $fieldName to all profiles' style='
+                    color: #FFFFFF; 
+                    cursor: pointer; 
+                    font-size: 13px; 
+                    display: block; 
+                    position: relative; 
+                    background-color: rgba(75, 85, 99, 0.8);
+                    border: 1px solid rgba(138, 155, 182, 0.3);
+                    padding: 6px 12px; 
+                    border-radius: 8px;
+                    text-decoration: none;
+                    letter-spacing: 0.3px;
+                    backdrop-filter: blur(5px);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                                inset 0 1px rgba(255, 255, 255, 0.1);
+                    transition: all 0.2s ease-in-out;
+                    margin: 5px 0;
+                    ' 
+                    onclick=\"copyToAllprofiles(event,'$fieldName','$jsid')\"
+                    onmouseover=\"this.style.backgroundColor='rgba(85, 95, 109, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';\"
+                    onmouseout=\"this.style.backgroundColor='rgba(75, 85, 99, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';\">
+                    Copy to All Profiles</button>";
     echo "</div>";
 
 }
@@ -561,15 +604,22 @@ echo '<input
     id="saveProfileButton"
     style="
         margin-top: 10px;
-        font-weight: bold;
-        border: 1px solid #ffffff;
+        font-weight: 500;
+        border: 1px solid rgba(138, 155, 182, 0.3);
         padding: 10px 20px;
         cursor: pointer;
-        border-radius: 4px;
-        font-size: 16px;
-        background-color: #28a745;
+        border-radius: 8px;
+        font-size: 15px;
+        background-color: rgba(32, 122, 74, 0.8);
         color: white;
-        transition: background-color 0.3s, color 0.3s;
+        transition: all 0.2s ease-in-out;
+        letter-spacing: 0.3px;
+        backdrop-filter: blur(5px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255, 255, 255, 0.1);
+        background-image: linear-gradient(180deg, 
+                          rgba(255, 255, 255, 0.08) 0%,
+                          rgba(255, 255, 255, 0) 100%);
     "
     onclick=\'if (validateForm()) {
         formSubmitting=true;
@@ -577,8 +627,8 @@ echo '<input
         document.getElementById("top").action="tools/conf_writer.php?save=true&sc=" + getAnchorNH();
         document.getElementById("top").submit();
     }\'
-    onmouseover=\'this.style.backgroundColor="#218838";\'
-    onmouseout=\'this.style.backgroundColor="#28a745";\'
+    onmouseover=\'this.style.backgroundColor="rgba(42, 142, 94, 0.9)"; this.style.transform="translateY(-1px)"; this.style.boxShadow="0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)";\'
+    onmouseout=\'this.style.backgroundColor="rgba(32, 122, 74, 0.8)"; this.style.transform="none"; this.style.boxShadow="0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)";\'
 />';
 
 echo ' :: ';
@@ -587,6 +637,26 @@ echo ' :: ';
 $isDefaultProfile = basename($_SESSION["PROFILE"]) === "conf.php";
 $isLocked = (isset($LOCK_PROFILE) && $LOCK_PROFILE === true) || $isDefaultProfile;
 $disabledStyle = $isLocked ? 'opacity: 0.5; cursor: not-allowed;' : '';
+$baseStyle = '
+    margin-top: 10px;
+    font-weight: 500;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: rgba(146, 43, 53, 0.8);
+    color: white;
+    transition: all 0.2s ease-in-out;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+    background-image: linear-gradient(180deg, 
+                      rgba(255, 255, 255, 0.08) 0%,
+                      rgba(255, 255, 255, 0) 100%);
+    ' . $disabledStyle;
+
 $onclickEvent = $isLocked ? 
     'onclick="alert(\'' . ($isDefaultProfile ? 'The default profile cannot be deleted.' : 'This profile is locked and cannot be deleted.') . '\');"' : 
     'onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
@@ -602,23 +672,19 @@ echo '<input
     value="Delete Profile"
     id="deleteProfileButton"
     aria-label="Delete your profile"
-    style="
-        margin-top: 10px;
-        font-weight: bold;
-        border: 1px solid #ffffff;
-        padding: 10px 20px;
-        cursor: pointer;
-        border-radius: 4px;
-        font-size: 16px;
-        background-color: #dc3545;
-        color: white;
-        transition: background-color 0.3s, color 0.3s;
-        ' . $disabledStyle . '
-    "
+    style="' . $baseStyle . '"
     ' . $onclickEvent . ' 
-    onmouseover=\'this.style.backgroundColor="' . ($isLocked ? "#dc3545" : "#c82333") . '";\'
-    onmouseout=\'this.style.backgroundColor="#dc3545";\'
-/></p>';
+    onmouseover=\'if (!this.style.opacity || this.style.opacity === "1") { 
+        this.style.backgroundColor="rgba(166, 53, 63, 0.9)"; 
+        this.style.transform="translateY(-1px)"; 
+        this.style.boxShadow="0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)";
+    }\'
+    onmouseout=\'if (!this.style.opacity || this.style.opacity === "1") { 
+        this.style.backgroundColor="rgba(146, 43, 53, 0.8)"; 
+        this.style.transform="none"; 
+        this.style.boxShadow="0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)";
+    }\'
+/>';
 
 foreach ($summary as $k=>$item) {
     echo "<li>&nbsp;<a href='#$k'>{$item["main"]}</a></li>";

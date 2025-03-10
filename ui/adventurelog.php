@@ -536,7 +536,14 @@ if (!$result) {
                 $currentCsvParams['year'] = $_GET['year'];
             }
             $currentCsvQuery = http_build_query($currentCsvParams);
-            echo "<a href='?" . htmlspecialchars($currentCsvQuery) . "' class='btn-base btn-save'>Download Current Date</a>";
+
+            // Form for current date download
+            echo "<form method='get' style='display: inline;'>";
+            foreach ($currentCsvParams as $key => $value) {
+                echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
+            }
+            echo "<button type='submit' class='btn-base btn-save'>Download Current Date</button>";
+            echo "</form>";
 
             $allCsvParams = ['export' => 'all_csv'];
             if (isset($_GET['month'])) {
@@ -546,7 +553,14 @@ if (!$result) {
                 $allCsvParams['year'] = $_GET['year'];
             }
             $allCsvQuery = http_build_query($allCsvParams);
-            echo "<a href='?" . htmlspecialchars($allCsvQuery) . "' class='btn-base btn-save'>Download Entire Adventure Log</a>";
+
+            // Form for all data download
+            echo "<form method='get' style='display: inline;'>";
+            foreach ($allCsvParams as $key => $value) {
+                echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
+            }
+            echo "<button type='submit' class='btn-base btn-save'>Download Entire Adventure Log</button>";
+            echo "</form>";
 
             echo "</div>";
         }

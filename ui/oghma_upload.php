@@ -488,7 +488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                    onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
         </form>
         <br>
-        <form action="' . $webRoot . '/ui/oghma_reset.php" method="post">
+        <form action="<?php echo $webRoot; ?>/ui/oghma_reset.php" method="post">
             <input type="submit" class="btn-danger" value="Factory Reset Oghma Database" 
                    onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
         </form>
