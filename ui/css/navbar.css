@@ -6,6 +6,16 @@
     font-style: normal;
 }
 
+/* Define the scrolling animation */
+@keyframes scrollBackground {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: -1920px 0; /* Adjust this value based on your background image width */
+    }
+}
+
 /* Disable animation when auto-refresh is enabled */
 body.auto-refresh .chim-navbar-wrapper,
 body.auto-refresh .chim-status-nav {
@@ -22,6 +32,7 @@ body.auto-refresh .chim-status-nav {
     background-repeat: repeat-x;
     background-position: 0 0;
     font-family: 'Futura CondensedLight', Arial, sans-serif;
+    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
 }
 
 .chim-navbar {
@@ -35,6 +46,7 @@ body.auto-refresh .chim-status-nav {
     background-position: 0 0;
     width: 100%;
     padding: 10px 0;
+    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
 }
 
 .chim-status-container {
