@@ -759,4 +759,13 @@ if ($checkVersion("oghma")<20250902002) {
     error_log("Applied patch oghma 20250902002");
 }
 
+if ($checkVersion("questlog")<20250310001) {
+
+    $db->execQuery(file_get_contents(__DIR__."/../data/questlog.sql"));
+
+
+    $updateVersion("questlog",20250310001);
+    error_log("Applied patch questlog 20250310001");
+}
+
 ?>

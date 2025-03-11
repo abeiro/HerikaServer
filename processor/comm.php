@@ -184,17 +184,20 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 
 
 } elseif ($gameRequest[0] == "_uquest") {
-    error_reporting(E_ALL);
 
     $questParsedData = explode("@",$gameRequest[3]);
-    print_r($questParsedData);
+    
     if (!empty($questParsedData[0])) {
         $data=array(
-                'briefing' => $questParsedData[2],
-                'data' => $questParsedData[2]
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'localts' => time(),
+            'briefing' => $questParsedData[2],
+            'data' => $questParsedData[2],
+            'id_quest'=>$questParsedData[0]
         );
         
-        $db->updateRow('quests',$data," id_quest='{$questParsedData[0]}' ");
+        $db->insert('questlog',$data);
 
     }
     $MUST_END=true;
@@ -238,7 +241,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
                 'speaker' => $speech["speaker"],
                 'speech' => $speech["speech"],
                 'location' => $speech["location"],
-                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):"",
+                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):DataBeingsInCloseRange(),
                 'sess' => 'pending',
                 'audios' => isset($speech["audios"])?$speech["audios"]:null,
                 'topic' => isset($speech["debug"])?$speech["debug"]:null,
@@ -278,6 +281,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
 
 } elseif ($gameRequest[0] == "contentbook") {
+    // This should be deprecated once version 1.2.0 is released
     $db->insert(
         'books',
         array(
@@ -336,6 +340,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             $MUST_END=true;
         } else {
             logEvent($gameRequest);
+            
         }
     } else
         $MUST_END=true;
