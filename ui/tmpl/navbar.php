@@ -284,7 +284,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <!-- Logs & Cache -->
                     <li><h6 class="dropdown-header">Logs & Cache</h6></li>
                     <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php">Server Error Logs</a>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php">Server Logs</a>
                     </li>
                     <li>
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
@@ -359,17 +359,17 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
         </ul>
     </div>
 
-
-
-        <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" style="padding-right: 5px;">
-        <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="Checkout our Youtube Channel">
+    <div class="social-links">
+        <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
+            <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
         </a>
-        <a href="https://discord.gg/NDn9qud2ug" target="_blank" style="padding-right: 5px;">
-        <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Join us on Discord">
+        <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
+            <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord">
         </a>
-        <a href="https://patreon.com/DwemerDynamics" target="_blank" style="padding-right: 10px;">
-        <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Join our Patreon">
-    </a>
+        <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
+            <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon">
+        </a>
+    </div>
 
     </nav>
 
@@ -602,62 +602,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <span style="margin-right: 5px; font-size: 14px; vertical-align: middle; font-weight: bold">Configuration Depth</span>
             
             <button
-                style="
-                    margin-top: 5px; 
-                    font-weight: bold; 
-                    border: 1px solid rgb(255, 255, 255); 
-                    padding: 5px 10px; 
-                    cursor: pointer; 
-                    border-radius: 4px; 
-                    font-size: 12px; 
-                    background-color: #ffc107; /* Yellow */
-                    color: black; 
-                    transition: background-color 0.3s, color 0.3s;
-                    <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'basic') ? 'border: 2px solid black;' : ''; ?>
-                "
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=basic'"
-                onmouseover="this.style.backgroundColor='#e0a800';" /* Darker Yellow */
-                onmouseout="this.style.backgroundColor='#ffc107';">
+                class="config-depth-btn basic <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'basic') ? 'active' : ''; ?>"
+                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=basic'">
                 Basic
             </button>
             
             <button
-                style="
-                    margin-top: 5px; 
-                    font-weight: bold; 
-                    border: 1px solid rgb(255, 255, 255); 
-                    padding: 5px 10px; 
-                    cursor: pointer; 
-                    border-radius: 4px; 
-                    font-size: 12px; 
-                    background-color: #fd7e14; /* Orange */
-                    color: black; 
-                    transition: background-color 0.3s, color 0.3s;
-                    <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'pro') ? 'border: 2px solid black;' : ''; ?>
-                "
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=pro'"
-                onmouseover="this.style.backgroundColor='#e06b0d';" /* Darker Orange */
-                onmouseout="this.style.backgroundColor='#fd7e14';">
+                class="config-depth-btn advanced <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'pro') ? 'active' : ''; ?>"
+                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=pro'">
                 Advanced
             </button>
             
             <button
-                style="
-                    margin-top: 5px; 
-                    font-weight: bold; 
-                    border: 1px solid rgb(255, 255, 255); 
-                    padding: 5px 10px; 
-                    cursor: pointer; 
-                    border-radius: 4px; 
-                    font-size: 12px; 
-                    background-color: #dc3545; /* Red */
-                    color: black; 
-                    transition: background-color 0.3s, color 0.3s;
-                    <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'wip') ? 'border: 2px solid black;' : ''; ?>
-                "
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=wip'"
-                onmouseover="this.style.backgroundColor='#c82333';" /* Darker Red */
-                onmouseout="this.style.backgroundColor='#dc3545';">
+                class="config-depth-btn experimental <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'wip') ? 'active' : ''; ?>"
+                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=wip'">
                 Experimental
             </button>
         </div>
@@ -682,26 +640,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo '
         <form action="cmd/action_toogle_model.php" method="get" style="display:inline;">
             <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"], ENT_QUOTES, 'UTF-8') . '">
-            <button type="submit" style="
-                padding: 3px 8px; /* Reduced padding for smaller size */
-                font-weight: bold;
-                font-size: 12px; /* Reduced font size */
-                border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65); /* Border with custom RGBA color */
-                color: white;
-                background-color:#b81493;
-                border-radius: 4px;
-                cursor: pointer;
-                transition: background-color 0.3s;
-            " onmouseover="this.style.backgroundColor=\'#4a1f40\';" onmouseout="this.style.backgroundColor=\'#b81493\';">
-                Current AI Service ➡ <span style="color:yellow;">(' . htmlspecialchars($currentModel, ENT_QUOTES, 'UTF-8') . ')</span>
+            <button type="submit" class="ai-service-toggle">
+                Current AI Service ➡ <span class="model-name">(' . htmlspecialchars($currentModel, ENT_QUOTES, 'UTF-8') . ')</span>
             </button>
         </form>';
         echo '
         <form action="cmd/action_copy_connector_to_all.php" method="get" style="display:inline;">
-            <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"], ENT_QUOTES, 'UTF-8') . '">';
-        echo "
-            <button type='submit' title='Copy AI service to all profiles' style='color:#FFFFFF; cursor:pointer; font-size:9px; position:relative; background-color:#444444; border:1px solid #FFFFFF; margin-left:1em; padding:2px 6px; border-radius:4px; text-decoration:none;' onmouseover=\"this.style.backgroundColor='#666666'; this.style.borderColor='#FFD700';\" onmouseout=\"this.style.backgroundColor='#444444'; this.style.borderColor='#FFFFFF';\">Copy to All Profiles</button>
-        </form><br/>";
+            <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"], ENT_QUOTES, 'UTF-8') . '">
+            <button type="submit" class="copy-to-all-profiles-btn">Copy to All Profiles</button>
+        </form><br/>';
         echo " <strong>TTS:</strong> ";
         echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:#ff00c6">' . $TTSFUNCTION . '</strong>'; 
         echo " <strong>STT:</strong> ";

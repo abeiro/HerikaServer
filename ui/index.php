@@ -464,33 +464,6 @@ $debugPaneLink = true;
             text-decoration: none;
         }
 
-        /* View Contents Button Style */
-        .view-contents-btn {
-            display: inline-block;
-            padding: 8px 16px;
-            background-color:rgb(0, 48, 176);
-            color: #fff;
-            border: 1px solid white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9em;
-            text-align: center;
-            width: auto;
-            margin: 4px 0;
-        }
-
-        .view-contents-btn:hover {
-            background-color:rgb(0, 38, 156);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .view-contents-btn:active {
-            transform: translateY(0);
-            box-shadow: none;
-        }
-
         #modalText {
             white-space: pre-wrap;
             word-wrap: break-word;
