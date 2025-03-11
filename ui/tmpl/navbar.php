@@ -359,17 +359,17 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
         </ul>
     </div>
 
-
-
-        <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" style="padding-right: 5px;">
-        <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="Checkout our Youtube Channel">
+    <div class="social-links">
+        <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
+            <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
         </a>
-        <a href="https://discord.gg/NDn9qud2ug" target="_blank" style="padding-right: 5px;">
-        <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Join us on Discord">
+        <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
+            <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord">
         </a>
-        <a href="https://patreon.com/DwemerDynamics" target="_blank" style="padding-right: 10px;">
-        <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Join our Patreon">
-    </a>
+        <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
+            <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon">
+        </a>
+    </div>
 
     </nav>
 
