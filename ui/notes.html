@@ -13,29 +13,31 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col">
-            <h1 class="my-2">CHIM 101 Quick Guide</h1>
+            <h1 class="my-4 text-center">CHIM 101 Quick Guide</h1>
 
             <ol class="list-group list-group-numbered">
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
-                        <div class="fw-bold">The AI's are not deterministic!</div>
-                        <b>The same input does not always produce the same result!</b> Therefore the AI will not always respond as expected.
-                        Different Large Language Models (LLM) will provide different outputs, not all are designed for role-playing. Smaller models will not have as much
-                        accurate information about Tamriel and will often hallucinate.
+                        <div class="fw-bold">The AI is not deterministic!</div>
+                        <p class="mt-2">
+                            <b>The same input does not always produce the same result!</b> Therefore the AI will not always respond as expected.
+                            Different Large Language Models (LLM) will provide different outputs, not all are designed for role-playing. Smaller models will not have as much
+                            accurate information about Tamriel and will often hallucinate.
+                        </p>
                     </div>
                 </li>
 
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
                         <div class="fw-bold">What do the buttons at the top do?</div>
-                        <ul>
-                            <li><b>1. Character Profile:</b> Change current AI NPC profiles (click it!)</li>
-                            <li><b>2. Configuration Depth:</b> Hide or expose advanced options in the Configuration Wizard</li>
-                            <li><b>3. Current AI Service:</b> Currently used AI connector that will be used. For most users just leave it as "openrouterjson".</li>
+                        <ul class="mt-2">
+                            <li class="mb-2"><b>1. Character Profile:</b> Change current AI NPC profiles (click it!)</li>
+                            <li class="mb-2"><b>2. Configuration Depth:</b> Hide or expose advanced options in the Configuration Wizard</li>
+                            <li class="mb-2"><b>3. Current AI Service:</b> Currently used AI connector that will be used. For most users just leave it as "openrouterjson".</li>
                         </ul>
                     </div>
                     <div class="align-self-start">
-                        <img src="images/navbar_tutorial.png" alt="Navbar Tutorial" class="img-fluid ms-3"">
+                        <img src="images/navbar_tutorial.png" alt="Navbar Tutorial" class="img-fluid ms-3 rounded">
                     </div>
                 </li>
                 
@@ -154,21 +156,18 @@
         </div>
     </div>
 
-    <h4 class="my-3">
+    <div class="text-center my-5">
+        <div class="d-flex justify-content-center gap-3">
+            <button class="btn-primary" onclick="window.open('https://discord.com/invite/NDn9qud2ug', '_blank')">
+                <i class='bi-discord me-2'></i> Join our Discord
+            </button>
+            <button class="btn-primary" onclick="window.open('https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm', '_blank')">
+                <i class='bi-book me-2'></i> READ THE MANUAL!
+            </button>
+        </div>
         
-        <a class="icon-link" href="https://discord.com/invite/NDn9qud2ug" target="_blank">
-            <h4>Join our Discord:<i class='bi-discord'></i></h4>
-        </a>
-        <br>
-        <br>
-        
-        <a class="icon-link" href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank">
-            <h4>READ THE MANUAL</h4>
-        </a>
-
-
-    </h4>
-    <a href="https://c0da.es/" target="_blank" style="color: #212529;">"world without wheel, charting zero deaths and echoes singing"</a>
+        <div class="mt-4"><a href="https://c0da.es/" target="_blank" style="color:rgba(44,44,44,.1);font-size:.9em;transition:.5s" onmouseover="this.style.color='rgba(150,150,150,.3)'" onmouseout="this.style.color='rgba(44,44,44,.1)'">"world without wheel, charting zero deaths and echoes singing"</a></div>
+    </div>
 </div>
 
 
