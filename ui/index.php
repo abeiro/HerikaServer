@@ -548,8 +548,13 @@ $debugPaneLink = true;
                     $dt->setTimezone(new DateTimeZone('UTC'));
                     $mappedRow[$columnHeaders[$key]] = $dt->format('d-m-Y H:i:s');
                 } else if ($key === 'url') {
-                    // Process timing info only for non-Array responses
-                    if (strpos($value, '[AI secs]') !== false) {
+                    // Check if response starts with Array and contains "in X secs"
+                    if (strpos($row['response'], 'Array') === 0) {
+                        // Strip the "in X secs" from the end
+                        $mappedRow[$columnHeaders[$key] ?? $key] = preg_replace('/ in \d+\.?\d* secs$/', '', $value);
+                    }
+                    // Process timing info for non-Array responses
+                    else if (strpos($value, '[AI secs]') !== false) {
                         $pattern = '/\[AI secs\]\s+([\d.]+)\s+\[TTS secs\]\s+([\d.]+)/';
                         if (preg_match($pattern, $value, $matches)) {
                             $aiTime = floatval($matches[1]);
@@ -570,8 +575,8 @@ $debugPaneLink = true;
                             
                             $mappedRow[$columnHeaders[$key] ?? $key] = 
                                 $baseText . 
-                                "<br>[AI secs] <span style='color: " . $aiColor . "'>" . $aiTimeFormatted . "</span>" .
-                                " [TTS secs] <span style='color: " . $ttsColor . "'>" . $ttsTimeFormatted . "</span>" .
+                                "<br>[LLM] <span style='color: " . $aiColor . "'>" . $aiTimeFormatted . "</span>" .
+                                " [TTS] <span style='color: " . $ttsColor . "'>" . $ttsTimeFormatted . "</span>" .
                                 " [Total]: <span style='color: " . $totalColor . "'>" . $totalTtsTime . "</span>";
                         } else {
                             $mappedRow[$columnHeaders[$key] ?? $key] = $value;
