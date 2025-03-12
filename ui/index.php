@@ -1121,7 +1121,7 @@ $debugPaneLink = true;
         } else {
             echo '<form method="post" style="margin:0;">
                     <input type="hidden" name="download_minai" value="1">
-                    <button type="submit" class="open-overlay-btn">Download MinAI</button>
+                    <button type="submit" class="btn-primary">Download MinAI</button>
                   </form>';
         }
         echo '</td>';
