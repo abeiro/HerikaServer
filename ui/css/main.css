@@ -1081,12 +1081,13 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-cancel {
-    background-color: rgba(75, 85, 99, 0.8);
+    background-color: rgba(85, 95, 109, 0.9);
+
     border-color: rgba(156, 163, 175, 0.3);
 }
 
 .btn-cancel:hover {
-    background-color: rgba(85, 95, 109, 0.9);
+    background-color: rgba(75, 85, 99, 0.8);
     border-color: rgba(156, 163, 175, 0.4);
 }
 
