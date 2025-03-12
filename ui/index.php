@@ -409,6 +409,14 @@ $debugPaneLink = true;
         $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
         $offset = ($page - 1) * $limit;
 
+        // Add function to determine color based on time value - moved outside
+        function getTimeColor($time) {
+            if ($time <= 2) return "#88cc88"; // green
+            if ($time <= 5) return "#ffff00"; // yellow
+            if ($time <= 8) return "#ffa500"; // orange
+            return "#ff6666"; // red
+        }
+
         // Add modal HTML structure at the top
         echo '
         <div id="contentModal" class="modal">
@@ -520,7 +528,8 @@ $debugPaneLink = true;
         $columnHeaders = [
             'localts' => 'Time (UTC)',
             'response' => 'AI Response',
-            'prompt' => 'Prompt'
+            'prompt' => 'Prompt',
+            'url' => 'HTTP Request'
         ];
     
         $mappedResults = array_map(function ($row) use ($columnHeaders) {
@@ -538,6 +547,38 @@ $debugPaneLink = true;
                     $dt = new DateTime("@$value");
                     $dt->setTimezone(new DateTimeZone('UTC'));
                     $mappedRow[$columnHeaders[$key]] = $dt->format('d-m-Y H:i:s');
+                } else if ($key === 'url') {
+                    // Process timing info only for non-Array responses
+                    if (strpos($value, '[AI secs]') !== false) {
+                        $pattern = '/\[AI secs\]\s+([\d.]+)\s+\[TTS secs\]\s+([\d.]+)/';
+                        if (preg_match($pattern, $value, $matches)) {
+                            $aiTime = floatval($matches[1]);
+                            $totalTtsTime = floatval($matches[2]);
+                            $actualTtsTime = $totalTtsTime - $aiTime;
+                            
+                            // Format numbers
+                            $aiTimeFormatted = number_format($aiTime, 2);
+                            $ttsTimeFormatted = number_format($actualTtsTime, 2);
+                            
+                            // Get colors based on times
+                            $aiColor = getTimeColor($aiTime);
+                            $ttsColor = getTimeColor($actualTtsTime);
+                            $totalColor = getTimeColor($totalTtsTime);
+                            
+                            // Get everything before [AI secs]
+                            $baseText = substr($value, 0, strpos($value, '[AI secs]'));
+                            
+                            $mappedRow[$columnHeaders[$key] ?? $key] = 
+                                $baseText . 
+                                "<br>[AI secs] <span style='color: " . $aiColor . "'>" . $aiTimeFormatted . "</span>" .
+                                " [TTS secs] <span style='color: " . $ttsColor . "'>" . $ttsTimeFormatted . "</span>" .
+                                " [Total]: <span style='color: " . $totalColor . "'>" . $totalTtsTime . "</span>";
+                        } else {
+                            $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                        }
+                    } else {
+                        $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                    }
                 } else {
                     $mappedRow[$columnHeaders[$key] ?? $key] = $value;
                 }
