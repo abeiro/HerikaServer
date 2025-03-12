@@ -20,6 +20,12 @@ class openrouterjson
     public $_extractedbuffer;
     private $_rawbuffer;
     private $_forcedClose=false;
+    private $_model="";
+    private $_reasoning=false;
+    private $_websearch=false;
+    private $_websearch_text="";
+    private $_websearch_index=0;
+    private $_webbackup_func=false;
 
     public function __construct()
     {
@@ -27,10 +33,55 @@ class openrouterjson
         $this->_commandBuffer=[];
         $this->_stopProc=false;
         $this->_extractedbuffer="";
+        $this->_forcedClose=false;
+        $this->_model="";
+        $this->_reasoning=false;
+        $this->_websearch=false;
+        $this->_websearch_text="";
+        $this->_websearch_index=0;
+        $this->_webbackup_func=false;
         require_once(__DIR__."/__jpd.php");
     }
 
 
+    private function isWebSearchInMessage($s_msg="") {
+        $i_pos = false;
+        if (strlen($s_msg) > 7) {
+            $i_pos = stripos($s_msg, "Skyrim search");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_msg, "Search Skyrim");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_msg, "Find knowledge in Skyrim");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_msg, "Search Elder Scrolls");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_msg, "Find knowledge in Elder Scrolls");
+        }
+        return (!($i_pos === false));
+    }
+
+
+    private function isReasoningModel($s_model="") { //recognize a reasoning model that can hide <think> cot part with dedicated parameters
+        $i_pos = false;
+        if (strlen($s_model) > 0) {
+            $i_pos = stripos($s_model, "deepseek-r"); 
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-32b"); //OR
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "sonar-reasoning");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "sonar-deep-research");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "claude-3.7-sonnet");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "r1-1776");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "dolphin3.0-r1-mistral");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "aion-1.0");
+        }
+        return (!($i_pos === false));
+    }
    
     
     public function open($contextData, $customParms)
@@ -38,7 +89,7 @@ class openrouterjson
         $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
-
+        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'nvidia/llama-3.1-nemotron-70b-instruct';
 
 
         /***
@@ -61,33 +112,57 @@ class openrouterjson
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
+        /* original code exposing duplicate prompt part
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
         }
+        */
+        // this is a temporary fix for double inclusion
+        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {  
+            // part of command_prompt is already included in main.php
+            if (isset($GLOBALS["COMMAND_PROMPT_FUNCTIONS"])) {
+                $s_mark = $GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+                $s_cprompt = $GLOBALS["COMMAND_PROMPT"];
+                $s_ctx = $contextData[0]["content"];
+                if (!(stripos($s_ctx, $s_mark) === false)) {
+                    $i_pos = stripos($s_cprompt, $s_mark); 
+                    if ((!($i_pos === false)) && ($i_pos > 0)) {
+                        $i_len = strlen($s_mark);
+                        $s_cprompt = substr($GLOBALS["COMMAND_PROMPT"], $i_pos + $i_len );
+                    }
+                }
+            }
+            $contextData[0]["content"].=$s_cprompt;
+        } 
 
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+        } else {
+            $prefix="";
         }
-        $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
 
         if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle.";
         } else
             $speechReinforcement="";
 
+        $zonosTones = $GLOBALS["TTSFUNCTION"] == "zonos_gradio" ? " (Response tones are mandatory in the response)" : "";
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"])
+            'content' => "{$prefix}. $speechReinforcement Use only this JSON object to give your answer, avoid extra content outside JSON structure{$zonosTones}: ".json_encode($GLOBALS["responseTemplate"])
         ];
         $pb=[];
         $pb["user"]="";
-      
+        $pb["system"]="";
         
         $contextDataOrig=array_values($contextData);
         $lastrole="";
         $assistantAppearedInhistory=false;
         $lastTargetBuffer="";
         $assistantRoleBuffer="";
+        $n_ctxsize = sizeof($contextDataOrig); 
+        $this->_webbackup_func = $GLOBALS["FUNCTIONS_ARE_ENABLED"];
+
         foreach ($contextDataOrig as $n=>$element) {
             
             if (!is_array($element)) {
@@ -95,8 +170,32 @@ class openrouterjson
                 continue;
 
             }
+
+            if (isset($element["content"]) && ($element["role"]!="tool") && ($n < ($n_ctxsize-2)) && ($n > ($n_ctxsize-6)) ) { // start online search request check
+                //$s_msg = $element["content"];
+                $i_pos = $this->isWebSearchInMessage($element["content"]); //check search trigger
+
+                if ($this->_websearch && ($this->_websearch_index < $n) && ($element["role"] == "user")) {
+                    if($i_pos === false) {
+                        if (strpos($element["content"], "##") === false) { //is not memory mark
+                            $this->_websearch = false; //previous web search was found in context history, do not repeat the search 
+                            $GLOBALS["FUNCTIONS_ARE_ENABLED"] = $this->_webbackup_func;
+                            error_log(" - dbg - online FALSE, {$n}/{$n_ctxsize} line: ".$element["content"]);
+                        }
+                    }
+                }
+
+                if(!($i_pos === false)) { // found search trigger
+                    $this->_websearch_text = $element["content"];
+                    $this->_websearch_index = $n;
+                    $this->_websearch = true;
+                    $GLOBALS["FUNCTIONS_ARE_ENABLED"] = false;
+                    $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] = false;
+                    error_log(" - dbg - online TRUE, {$n}/{$n_ctxsize} src: " . $this->_websearch_text);
+                }
+            } // --- end online search 
             
-            if ($n>=(sizeof($contextDataOrig)-1) && $element["role"]!="tool") {
+            if ($n>=($n_ctxsize-1) && $element["role"]!="tool") {
                 // Last element
                 $pb["user"].=$element["content"];
                 $contextDataCopy[]=$element;
@@ -267,10 +366,8 @@ class openrouterjson
         
         
         $data = array(
-            'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-3.5-turbo-1106',
-            'messages' =>
-                $contextData
-            ,
+            'model' => $this->_model, 
+            'messages' => $contextData,
             'stream' => true,
             'max_tokens'=>$MAX_TOKENS,
             'stop'=>[
@@ -282,21 +379,21 @@ class openrouterjson
         
         
         $data["temperature"]=floatval($GLOBALS["CONNECTOR"][$this->name]["temperature"]+0);
-         $data["frequency_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]+0);
-         $data["presence_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]+0);
-         $data["repetition_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]+0);
-         $data["min_p"]=$GLOBALS["CONNECTOR"][$this->name]["min_p"]+0;
-         $data["top_a"]=$GLOBALS["CONNECTOR"][$this->name]["top_a"]+0;
-         $data["top_k"]=$GLOBALS["CONNECTOR"][$this->name]["top_k"]+0;
-         $data["top_p"]=$GLOBALS["CONNECTOR"][$this->name]["top_p"]+0;
+        $data["frequency_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]+0);
+        $data["presence_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]+0);
+        $data["repetition_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]+0);
+        $data["min_p"]=floatval($GLOBALS["CONNECTOR"][$this->name]["min_p"]+0);
+        $data["top_a"]=floatval($GLOBALS["CONNECTOR"][$this->name]["top_a"]+0);
+        $data["top_k"]=floatval($GLOBALS["CONNECTOR"][$this->name]["top_k"]+0);
+        $data["top_p"]=floatval($GLOBALS["CONNECTOR"][$this->name]["top_p"]+0);
          
-         if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
+        if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
             if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
                 $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
             } else {
                 $data["response_format"]=["type"=>"json_object"];
             }
-         }
+        }
         
             
         // Mistral AI API does not support penalty params
@@ -332,6 +429,69 @@ class openrouterjson
         }
             
         $data["transforms"]=[];
+
+        $this->_reasoning = $this->isReasoningModel($this->_model);
+        if ($this->_reasoning) { // add parameter to hide <think> content
+            $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
+            error_log(" dbg reasoning " . $this->_model);
+        }
+
+        if ($this->_websearch) { // online search request 
+
+            $sx = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'meta-llama/llama-3.3-70b-instruct';
+            if (strpos($sx, ":online") === false) 
+                $sx = $sx . ":online";   
+            $this->_model = $sx;
+
+            $data["model"] = $this->_model;
+            
+            $search_text = $this->_websearch_text;
+            $target = "";
+            $i_pos = strpos($search_text, ":");
+            if (!($i_pos === false)) {
+                $target = substr($this->_websearch_text, 0, $i_pos);
+                $search_text = substr($this->_websearch_text,strlen($target)+1);
+                $i_pos2 = strripos($search_text, "(Talking to");
+                if (!($i_pos2 === false)) {
+                    $search_text = substr($search_text, 0, $i_pos2); 
+                }
+            }
+            if (stripos($search_text, "Skyrim") === false) 
+                $s_prefix = "Skyrim lore ";
+            else
+                $s_prefix = "";
+
+            $data["response_format"] = array ('type' => 'json_object');
+            $data["stream"] = true;
+
+            $data["messages"] = array(); //clean everything 
+            $data["messages"] = [
+                ['role' => 'system', 
+                 'content' => "" // "Role-play in Skyrim universe. "
+                 ."You are an expert with extensive knowledge about Skyrim lore focusing on puzzle solutions, quests, places and people." 
+                 ." Use web sources like gamerant.com, en.uesp.net, elderscrolls.fandom.com, gaming.stackexchange.com and avoid video sources like youtube.com "
+                ],
+                ['role' => 'user',
+                 'content' => $s_prefix . trim($search_text)
+                ],
+                ['role' => 'user',
+                 'content' => trim(" {$speechReinforcement} Always use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ))
+                ]
+            ];
+
+            $data["plugins"] = array();
+            $data["plugins"] = [
+                ['id' => 'web', 
+                 'search_prompt' => "Search the web to find relevant information related to Skyrim universe. "
+                    . "Include relevant search results to provide most informative response. "
+                    . "Write your answer from first person point of view. "
+                    //. "IMPORTANT: avoid markdown and any text formatting, lists, numbered lists, step by step instructions. " 
+                    . "Never mention web sources. ", // production
+                 'max_results' => 2 
+                ]
+            ];
+
+        } // --- end online search request
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
@@ -472,7 +632,7 @@ class openrouterjson
                 $buffer.=$data["choices"][0]["delta"]["content"];
                 $this->_buffer.=$data["choices"][0]["delta"]["content"];
                 // Check to see if we've received something that looks like it starts with a JSON object
-                if (strlen($this->_buffer)>10 && strpos($this->_buffer, '{') === false) {
+                if (strlen($this->_buffer)>64 && strpos($this->_buffer, '{') === false) { //10 is not enough, some LLMs output a prefix tag/markup before JSON or "here is your JSON ..."
                     return -1;
                 }
 
@@ -529,6 +689,8 @@ class openrouterjson
                             $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }
                         
+                        // Store the entire response for TTS systems that need additional data like emotions
+                        $GLOBALS["LAST_LLM_RESPONSE"] = $finalData;
                     }
                 }
                 
@@ -557,6 +719,7 @@ class openrouterjson
             }
         }
         file_put_contents(__DIR__."/../log/output_from_llm.log","{$this->_buffer}\n\n".date(DATE_ATOM)." END\n==\n", FILE_APPEND);
+        return $this->_buffer;
 
 
     }
