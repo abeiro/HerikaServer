@@ -93,7 +93,7 @@ a:has(.bi-trash) {
 a:has(.bi-trash):hover {
     text-decoration: none !important;
     color: white !important;
-    background-color: red !important;
+    background-color: rgba(153, 6, 6, 0.651) !important;
     border-color: red !important;
 }
 
@@ -1061,22 +1061,22 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-danger {
-    background-color: rgba(146, 43, 53, 0.8);
+    background-color: rgba(166, 53, 63, 0.9);
     border-color: rgba(255, 99, 99, 0.3);
 }
 
 .btn-danger:hover {
-    background-color: rgba(166, 53, 63, 0.9);
+    background-color: rgba(146, 43, 53, 0.8);
     border-color: rgba(255, 99, 99, 0.4);
 }
 
 .btn-save {
-    background-color: rgba(32, 122, 74, 0.8);
+    background-color: rgba(42, 142, 94, 0.9);
     border-color: rgba(72, 187, 120, 0.3);
 }
 
 .btn-save:hover {
-    background-color: rgba(42, 142, 94, 0.9);
+    background-color: rgba(32, 122, 74, 0.8);
     border-color: rgba(72, 187, 120, 0.4);
 }
 
@@ -1091,7 +1091,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-primary {
-    background-color: rgba(37, 99, 235, 0.8);
+    background-color: rgba(47, 109, 245, 0.9);
     border-color: rgba(96, 165, 250, 0.3);
     background-image: linear-gradient(180deg, 
                       rgba(255, 255, 255, 0.08) 0%,
@@ -1099,7 +1099,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-primary:hover {
-    background-color: rgba(47, 109, 245, 0.9);
+    background-color: rgba(37, 99, 235, 0.8);
     border-color: rgba(96, 165, 250, 0.4);
 }
 
