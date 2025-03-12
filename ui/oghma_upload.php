@@ -603,6 +603,16 @@ if ($selectedCategory && $letter && $searchTerm) {
                knowledge_class_basic, tags, category
         FROM $schema.oghma
         WHERE category = $1
+          AND topic ILIKE $2
+        ORDER BY topic $order
+    ";
+    $params = [$selectedCategory, $letter . '%'];
+} elseif ($selectedCategory) {
+    $query = "
+        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+               knowledge_class_basic, tags, category
+        FROM $schema.oghma
+        WHERE category = $1
         ORDER BY topic $order
     ";
     $params = [$selectedCategory];
