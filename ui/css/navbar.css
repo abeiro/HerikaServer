@@ -65,14 +65,14 @@ body.auto-refresh .chim-status-nav {
     font-family: 'MagicCards', sans-serif;
     font-size: 18px;
     letter-spacing: 0.5px;
-    color: #ffffff;
+    color: #ffffffda;
     margin: 0 4px;
 }
 
 .nav-item.dropdown.mx-2 > .nav-link {
     font-family: 'MagicCards', sans-serif;
     font-size: 22px;
-    color: #ffffffe8;
+    color: #ffffffda;
     padding: 4px 8px;
     word-spacing: 4px;
 }
