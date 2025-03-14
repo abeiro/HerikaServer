@@ -5,6 +5,12 @@ $MUST_END=false;
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
+    // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
+    if ($gameRequest[2] == "10000000") {
+        error_log("Ignoring init with a gamets of 10000000.");
+        $MUST_END=true;
+        return;
+    }
     $now=time();
     $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
@@ -193,7 +199,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         require_once(__DIR__.DIRECTORY_SEPARATOR."quest_oghma_sync.php");
         // After updating quest, sync with oghma if stage info available
         if (isset($questParsedData[1])) {
-            syncQuestWithOghma($questParsedData[0], intval($questParsedData[1]));
+            dynamicOghma($questParsedData[0], intval($questParsedData[1]));
         }
     }
     $MUST_END=true;
@@ -237,7 +243,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
                 'speaker' => $speech["speaker"],
                 'speech' => $speech["speech"],
                 'location' => $speech["location"],
-                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):"",
+                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):DataBeingsInCloseRange(),
                 'sess' => 'pending',
                 'audios' => isset($speech["audios"])?$speech["audios"]:null,
                 'topic' => isset($speech["debug"])?$speech["debug"]:null,
@@ -277,6 +283,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
 
 } elseif ($gameRequest[0] == "contentbook") {
+    // This should be deprecated once version 1.2.0 is released
     $db->insert(
         'books',
         array(
@@ -335,6 +342,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             $MUST_END=true;
         } else {
             logEvent($gameRequest);
+            
         }
     } else
         $MUST_END=true;
@@ -431,7 +439,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
 } elseif ($gameRequest[0] == "setconf") {
     
-    //logEvent($gameRequest);
+    // logEvent($gameRequest);
 
     $vars=explode("@",$gameRequest[3]);
     $db->delete("conf_opts", "id='".$db->escape($vars[0])."'");
@@ -446,21 +454,33 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
     $MUST_END=true;
     
-} elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever commands
+} elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever requests
 
     logEvent($gameRequest);
 
     $MUST_END=true;
 
     
-} elseif (strpos($gameRequest[0], "addnpc")===0) {    // info_whatever commands
+} elseif (strpos($gameRequest[0], "addnpc")===0) {    // addnpc 
     logEvent($gameRequest);
     
-    if (!profile_exists($gameRequest[3]))
-        AddFirstTimeMet($gameRequest[3], $momentum, $gameRequest[2],$gameRequest[1]);
+    $splitNameBase=explode("@",$gameRequest[3]);
+    if (sizeof($splitNameBase)>1) {
+        $localName=$splitNameBase[0];
+        $baseProfile=$splitNameBase[1];
+    } else {
+        $localName=$splitNameBase[0];
+        $baseProfile="";
+    }
 
-    createProfile($gameRequest[3],[],false);
-    
+    if ($localName==$baseProfile)
+        $baseProfile="";
+
+    if (!profile_exists($localName))
+        AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
+
+    createProfile($localName,[],false,$baseProfile);
+    audit_log("comm.php addnpc $localName");
     $MUST_END=true;
     
     
