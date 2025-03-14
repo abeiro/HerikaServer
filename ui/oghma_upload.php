@@ -236,6 +236,99 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 }
 
 /********************************************************************
+ *  3.5) DYNAMIC CSV UPLOAD AND EXAMPLE
+ ********************************************************************/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_dynamic_csv'])) {
+    if (isset($_FILES['dynamic_csv_file']) && $_FILES['dynamic_csv_file']['error'] === UPLOAD_ERR_OK) {
+        $fileTmpPath = $_FILES['dynamic_csv_file']['tmp_name'];
+        $fileName    = $_FILES['dynamic_csv_file']['name'];
+
+        $allowedfileExtensions = array('csv');
+        $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
+
+        if (in_array($fileExtension, $allowedfileExtensions)) {
+            if (($handle = fopen($fileTmpPath, 'r')) !== false) {
+                // Skip header row
+                fgetcsv($handle, 1000, ',');
+
+                $rowCount = 0;
+                while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                    $id_quest             = trim($data[0] ?? '');
+                    $stage                = intval($data[1] ?? 0);
+                    $topic                = strtolower(trim($data[2] ?? ''));
+                    $topic_desc           = $data[3] ?? '';
+                    $knowledge_class      = $data[4] ?? '';
+                    $topic_desc_basic     = $data[5] ?? '';
+                    $knowledge_class_basic= $data[6] ?? '';
+                    $tags                 = $data[7] ?? '';
+                    $category             = $data[8] ?? '';
+
+                    if (!empty($id_quest) && !empty($topic)) {
+                        $query = "
+                            INSERT INTO $schema.oghma_dynamic (
+                                id_quest,
+                                stage,
+                                topic,
+                                topic_desc,
+                                knowledge_class,
+                                topic_desc_basic,
+                                knowledge_class_basic,
+                                tags,
+                                category
+                            )
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        ";
+                        
+                        $result = pg_query_params($conn, $query, [
+                            $id_quest,
+                            $stage,
+                            $topic,
+                            $topic_desc,
+                            $knowledge_class,
+                            $topic_desc_basic,
+                            $knowledge_class_basic,
+                            $tags,
+                            $category
+                        ]);
+
+                        if ($result) {
+                            $rowCount++;
+                        } else {
+                            $message .= "<p>Error processing row with quest ID '$id_quest': " . pg_last_error($conn) . "</p>";
+                        }
+                    } else {
+                        $message .= "<p>Skipping empty or invalid row (Quest ID/Topic missing).</p>";
+                    }
+                }
+                fclose($handle);
+
+                $message .= "<p>$rowCount dynamic entries inserted successfully from the CSV file.</p>";
+            } else {
+                $message .= '<p>Error opening the CSV file.</p>';
+            }
+        } else {
+            $message .= '<p>Upload failed. Allowed file types: ' . implode(',', $allowedfileExtensions) . '</p>';
+        }
+    } else {
+        $message .= '<p>No file uploaded or there was an upload error.</p>';
+    }
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'download_dynamic_example') {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="oghma_dynamic_example.csv"');
+    header('Expires: 0');
+    header('Cache-Control: must-revalidate');
+    header('Pragma: public');
+    
+    // Example content with header and two sample entries
+    echo "id_quest,stage,topic,topic_desc,knowledge_class,topic_desc_basic,knowledge_class_basic,tags,category\n";
+    echo "TutorialBlacksmithing,1,blacksmithing,The art of blacksmithing involves crafting weapons and armor at a forge.,blacksmith;craftsman,Basic knowledge about forging metal items.,,,Skills\n";
+    echo "MQ101,10,helgen_attack,A dragon attacked the town of Helgen during an Imperial execution.,guard;soldier,A dragon destroyed Helgen.,,,Events\n";
+    exit;
+}
+
+/********************************************************************
  *  4) DELETE ALL
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all') {
@@ -478,6 +571,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+/********************************************************************
+ *  DELETE ALL DYNAMIC ENTRIES
+ ********************************************************************/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all_dynamic') {
+    $truncateQuery = "TRUNCATE TABLE {$schema}.oghma_dynamic RESTART IDENTITY";
+    $truncateResult = pg_query($conn, $truncateQuery);
+
+    if ($truncateResult) {
+        $message .= "<p style='color: #ff6464; font-weight: bold;'>All Dynamic Oghma entries have been deleted successfully.</p>";
+    } else {
+        $message .= "<p>Error deleting dynamic entries: " . pg_last_error($conn) . "</p>";
+    }
+}
+
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
@@ -622,6 +729,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </div>
 
     <br>
+    
 
 
 <?php
@@ -836,11 +944,35 @@ if ($result) {
 echo '<br><br>';
 echo '<h1>Dynamic Oghma Updates</h1>';
 echo '<p>Entires in the Dynamic Oghma table will update the Oghma Table whenever the quest ID & stage ID for the quest is reached.</p>';
-echo '<p>Any changes from a topic in this table will override whatever is in the Oghma Table.</p>';
-echo '<p>You can leave cells empty so they do not overwrite specific info from the Oghma Table.</p>';
+echo '<p>Any changes from a topic in this table will override whatever is in the Oghma table.</p>';
+echo '<p>You can leave cells empty so they do not overwrite specific info from the Oghma table.</p>';
 echo '<p>You also can introduce new topics to the Oghma table as well.</p>';
 echo '<p>It is currently empty by default. We need help adding more entries to it!</p>';
 echo '<p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Go here to learn more!</a></p>';
+echo '<div class="form-container">';
+echo '<form action="" method="post" enctype="multipart/form-data">';
+echo '<div>';
+echo '<label for="dynamic_csv_file">Select .csv file to upload dynamic entries:</label>';
+echo '<br>';
+echo '<input type="file" name="dynamic_csv_file" id="dynamic_csv_file" accept=".csv" required>';
+echo '</div>';
+echo '<div class="button-group">';
+echo '<input type="submit" name="submit_dynamic_csv" value="Upload CSV" class="action-button upload-csv">';
+echo '<a href="../data/oghma_dynamic_example.csv" class="action-button download-csv">Download Example CSV</a>';
+echo '</div>';
+echo '</form>';
+echo '<p>You can verify that the entries have been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma_dynamic</b></p>';
+echo '<p>Dynamic entries will update or create topics in the Oghma table when their corresponding quest stage is reached.</p>';
+echo '<p>All uploaded entries will be saved into the <code>oghma_dynamic</code> table.</p>';
+echo '<br>';
+echo '<form action="" method="post">';
+echo '<input type="hidden" name="action" value="delete_all_dynamic">';
+echo '<input type="submit" class="btn-danger" value="Delete All Dynamic Entries" onclick="return confirm(\'Are you sure you want to delete ALL dynamic entries? This cannot be undone!\');">';
+echo '</form>';
+echo '<br>';
+echo '</div>';
+echo '<br>';
+
 echo '<div class="action-container">';
 echo '<button onclick="openNewDynamicEntryModal()" class="action-button add-new">Add New Dynamic Entry</button>';
 echo '</div>';
