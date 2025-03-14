@@ -943,12 +943,12 @@ if ($result) {
 // Add Dynamic Oghma Entries Section
 echo '<br><br>';
 echo '<h1>Dynamic Oghma Updates</h1>';
-echo '<p>Entires in the Dynamic Oghma table will update the Oghma Table whenever the quest ID & stage ID for the quest is reached.</p>';
+echo '<p>Entires in the Dynamic Oghma table will update the Oghma table above whenever the quest ID & stage ID for a quest is reached.</p>';
 echo '<p>Any changes from a topic in this table will override whatever is in the Oghma table.</p>';
 echo '<p>You can leave cells empty so they do not overwrite specific info from the Oghma table.</p>';
 echo '<p>You also can introduce new topics to the Oghma table as well.</p>';
-echo '<p>It is currently empty by default. We need help adding more entries to it!</p>';
-echo '<p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Go here to learn more!</a></p>';
+echo '<p>It is currently empty by default. We need your help adding more entries!</p>';
+echo '<p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Would you like to know more?</a></p>';
 echo '<div class="form-container">';
 echo '<form action="" method="post" enctype="multipart/form-data">';
 echo '<div>';
@@ -962,7 +962,6 @@ echo '<a href="../data/oghma_dynamic_example.csv" class="action-button download-
 echo '</div>';
 echo '</form>';
 echo '<p>You can verify that the entries have been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma_dynamic</b></p>';
-echo '<p>Dynamic entries will update or create topics in the Oghma table when their corresponding quest stage is reached.</p>';
 echo '<p>All uploaded entries will be saved into the <code>oghma_dynamic</code> table.</p>';
 echo '<br>';
 echo '<form action="" method="post">';
