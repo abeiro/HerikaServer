@@ -4,6 +4,7 @@
 $PLAYER_NAME="Prisoner"; //Player's current character name.
 $DBDRIVER="postgresql"; //Database - Do not change.
 $HERIKA_NAME="The Narrator"; //NPC name. MUST MATCH their Skyrim in-game NPC name!
+$LOCK_PROFILE=false; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $PROMPT_HEAD="Let's roleplay in the Universe of Skyrim."; //System Prompt. Defines the rules of the roleplay.
 $PLAYER_BIOS="I'm #PLAYER_NAME#"; //Player character description. 
 $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. "
@@ -15,6 +16,7 @@ $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically.
 $DYNAMIC_PROFILE=false; //Dynamic profile updates during certain ingame events.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
+$OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
 
 //[Advanced Configuration]
 $RECHAT_H=2; //Rechat Rounds. Higher values will increase the amount of rounds NPC's will talk amongst themselves.
@@ -55,16 +57,14 @@ $EMOTEMOODS="sassy,"
     . "teasing,"
     . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
-$DYNAMIC_PROMPT = "Use the recent Dialogue history to update the dynamic character profile. "
-    . " Mandatory Format:"
-    . " Current goal: "
-    . " Relations with: "
-    . " Likes: "
-    . " Fears: "
-    . " Dislikes: "
-    . " Current mood: "
-    . " Relation with other characters if any: "
-    . "DO NOT WRITE HOW MANY KEYWORDS YOU HAVE USED OR OTHER META DATA!";
+$DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA COMMENTARY I.E. NPC NAME. NO META-DATA, or DISCLAIMERS OF TASK! I.E. \"UPDATING NPC PROFILE\". Use concise, fragmented prose for the following output.) "
+    . "Last in-game date/time found: [date or \"No date\"] "
+    . "1. RECENT HIGHLIGHTS (3–5 bullet points) "
+    . "   - Write one sentence per bullet with objective facts (locations, quest progress, important decisions). Re-list older relevant events DO NOT REMOVE ENTRIES that are still important. "
+    . "2. EMOTIONAL/RELATIONAL UPDATES (1–2 lines per key person/faction) "
+    . "   - Describe the NPC's evolving feelings or stance toward the dragonborn, key individuals or groups. Always re-list unchanged but relevant relationships. "
+    . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2–3 bullet points) "
+    . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
 
@@ -75,9 +75,9 @@ $CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp"]; //Cre
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.1-70b-instruct"; //LLM model.
+$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.3-70b-instruct"; //LLM model.
 $CONNECTOR["openrouterjson"]["max_tokens"]='512'; //Maximum tokens to generate.
-$CONNECTOR["openrouterjson"]["temperature"]=0.8; //LLM parameter temperature.
+$CONNECTOR["openrouterjson"]["temperature"]=0.6; //LLM parameter temperature.
 $CONNECTOR["openrouterjson"]["presence_penalty"]=0; //LLM parameter presence_penalty.
 $CONNECTOR["openrouterjson"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
 $CONNECTOR["openrouterjson"]["repetition_penalty"]=1.1;	//LLM parameter repetition_penalty.
@@ -180,7 +180,7 @@ $CONNECTOR["llamacpp"]["temperature"]=0.7; //LLM parameter temperature.
 $CONNECTOR["llamacpp"]["rep_pen"]=1.12;	//LLM parameter rep_pen.
 $CONNECTOR["llamacpp"]["top_p"]=0.9; //LLM parameter top_p.
 $CONNECTOR["llamacpp"]["MAX_TOKENS_MEMORY"]='512'; //Maximum tokens to generate when summarizing.
-$CONNECTOR["llamacpp"]["eos_token"]='</s>';	//EOS token LLM uses.
+$CONNECTOR["llamacpp"]["eos_token"]='';	//EOS token LLM uses.
 $CONNECTOR["llamacpp"]["template"]='alpaca'; //Prompt Format. Specified in the HuggingFace model card.
 
 //[Text-to-Speech Service]
@@ -271,6 +271,15 @@ $TTS["koboldcpp"]["voice"]='kobo';
 $TTS["KOKORO"]["endpoint"]='http://127.0.0.1:8880'; //API endpoint.
 $TTS["KOKORO"]["voiceid"]='af_bella'; //Voice ID.
 $TTS["KOKORO"]["speed"]=1.0; //Speech speed.
+
+// ZONOS_GRADIO TTS
+$TTS["ZONOS_GRADIO"]["endpoint"]='http://127.0.0.1:7860';	//Endpoint URL
+$TTS["ZONOS_GRADIO"]["language"]='en-us';	//Language
+$TTS["ZONOS_GRADIO"]["model"]='Zyphra/Zonos-v0.1-hybrid';	//Zonos model type
+$TTS["ZONOS_GRADIO"]["voiceid"]='TheNarrator';	//Voice id
+$TTS["ZONOS_GRADIO"]["pitch_std"]=45;	//Pitch standard deviation
+$TTS["ZONOS_GRADIO"]["speaking_rate"]=14.6;	//Speaking rate
+$TTS["ZONOS_GRADIO"]["cfg_scale"]=4.5;	//Context-free guidance scale
 
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";

@@ -1,6 +1,33 @@
 <?php 
 session_start();
 
+// Define base paths if not already defined
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', dirname(dirname(dirname(__DIR__))));
+}
+if (!defined('UI_PATH')) {
+    define('UI_PATH', dirname(dirname(__DIR__)));
+}
+
+// Get the relative web path from document root to our application if not already defined
+if (!isset($webRoot)) {
+    $scriptPath = $_SERVER['SCRIPT_NAME'];
+    $webRoot = dirname(dirname(dirname($scriptPath))); // Go up three levels from the script location
+    if ($webRoot == '/') $webRoot = '';
+    $webRoot = rtrim($webRoot, '/');
+}
+
+require_once(UI_PATH.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$TITLE = "📆CHIM Adventure Log";
+
+ob_start();
+
+include(UI_PATH.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
+
+$debugPaneLink = false;
+include(UI_PATH.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
+
 date_default_timezone_set('UTC');
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -410,290 +437,115 @@ if (!$result) {
     echo "<div class='message'>Query error: " . pg_last_error($conn) . "</div>";
     exit;
 }
-?> 
 
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="icon" type="image/x-icon" href="../../images/favicon.ico">
-    <title>📆CHIM Adventure Log</title>
-    <style>
-        /* Updated CSS for Dark Grey Background Theme */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c; /* Dark grey background */
-            color: #f8f9fa; /* Light grey text for readability */
-            margin: 0;
-            padding: 20px;
-        }
+// Start the HTML output
+?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+    /* Only keep calendar-specific styles that aren't in main.css */
+    .calendar {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+    }
 
-        h1, h2 {
-            color: #ffffff; /* White color for headings */
-        }
+    .calendar th, .calendar td {
+        border: 1px solid #555555;
+        padding: 10px;
+        text-align: center;
+        vertical-align: middle;
+        position: relative;
+    }
 
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 20px;
-            table-layout: fixed; /* Enforce fixed table layout */
-        }
+    .calendar td.has-event {
+        background-color: #007bff;
+    }
 
-        .bold-name {
-            font-weight: bold;
-        }
+    .calendar td a {
+        color: #ffffff;
+        text-decoration: none;
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
 
-        /* Define column widths using <colgroup> */
-        colgroup col:nth-child(1) { /* Context */
-            width: 50%;
-        }
+    .calendar td.has-event a:hover {
+        background-color: #0056b3;
+        color: #ffcc00;
+    }
 
-        colgroup col:nth-child(2) { /* Nearby People */
-            width: 25%;
-        }
+    .calendar-navigation {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+        gap: 15px;
+    }
 
-        colgroup col:nth-child(3) { /* Location & Tamriel Time */
-            width: 19%;
-        }
+    .calendar-navigation a {
+        padding: 8px 16px;
+        color: #ffffff;
+        text-decoration: none;
+        background-color: #007bff;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+    }
 
-        colgroup col:nth-child(4) { /* Time */
-            width: 6%;
-        }
+    .calendar-navigation a:hover {
+        background-color: #0056b3;
+        text-decoration: none;
+    }
 
-        th, td {
-            border: 1px solid #555555; /* Darker borders for table cells */
-            padding: 12px;
-            text-align: left;
-            word-wrap: break-word; /* Ensure long words break to maintain layout */
-            overflow: hidden; /* Hide overflow content */
-            white-space: normal; /* Allow content to wrap */
-        }
+    .calendar-navigation span {
+        color: #ffffff;
+    }
 
-        th {
-            background-color: #3a3a3a; /* Slightly lighter grey for table headers */
-            color: #f8f9fa;
-        }
+    /* Override specific styles for this page */
+    main {
+        padding-top: 160px;
+        padding-bottom: 40px;
+        padding-left: 10px;
+    }
 
-        tr:nth-child(even) {
-            background-color: #3a3a3a; /* Zebra striping for table rows */
-        }
+    .csv-buttons {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+        justify-content: center;
+    }
 
-        .message {
-            background-color: #444444; /* Darker background for messages */
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #555555;
-            max-width: 600px;
-            margin-bottom: 20px;
-            color: #f8f9fa; /* Light text in messages */
-        }
+    .csv-buttons .button {
+        margin: 0;
+    }
 
-        .message p {
-            margin: 0;
-        }
+    /* Table specific overrides */
+    .table-container {
+        margin-top: 20px;
+        overflow-x: auto;
+    }
 
-        /* CSV Buttons Container */
-        .csv-buttons {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
-            margin-top: 10px;
-        }
+    table {
+        font-size: 14px;
+    }
 
-        .csv-buttons .button {
-            margin: 5px 10px; /* Consistent spacing between CSV buttons */
-        }
+    th a {
+        color: yellow;
+    }
+</style>
 
-        /* Responsive Design */
-        @media screen and (max-width: 768px) {
-            table, th, td {
-                font-size: 14px;
-            }
+<main>
+    <div class="indent5">
+        <h1>📆CHIM Adventure Log</h1>
+        <h2>All time and dates are in UTC. Tamrelic Time may be inconsistent.</h2>
+        <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
 
-            .csv-buttons .button {
-                margin: 10px 0;
-            }
-        }
-
-        /* Additional Styles from Provided CSS */
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
-            max-width: 600px;
-        }
-
-        label {
-            font-weight: bold;
-            color: #f8f9fa; /* Ensure labels are readable */
-        }
-
-        input[type="text"], input[type="file"], textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #555555; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            resize: vertical; /* Allows users to resize vertically if needed */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 14px; /* Sets a readable font size */
-        }
-
-        input[type="submit"], .button {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px; /* Slightly larger border radius */
-            cursor: pointer;
-            padding: 8px 16px; /* Increased padding for larger button */
-            font-size: 16px;    /* Increased font size */
-            font-weight: bold;  /* Bold text for better visibility */
-            transition: background-color 0.3s ease; /* Smooth hover transition */
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        input[type="submit"]:hover, .button:hover {
-            background-color: #0056b3; /* Darker shade on hover */
-        }
-
-        .response-container {
-            margin-top: 20px;
-        }
-
-        .indent {
-            padding-left: 10ch; /* 10 character spaces */
-        }
-
-        .indent5 {
-            padding-left: 5ch; /* 5 character spaces */
-        }
-
-        /* Highlighted date style */
-        .has-event a {
-            background-color: #007bff !important; /* Blue background matching buttons */
-            color: white !important;
-            text-decoration: none; /* Ensures no underline */
-
-            display: block; /* Make the link fill the cell */
-            width: 100%; /* Full width of the parent cell */
-            height: 100%; /* Full height of the parent cell */
-            text-align: center; /* Center align the text */
-            line-height: 1.5; /* Ensures vertical alignment if needed */
-            box-sizing: border-box; /* Include padding and borders in size */
-
-            border: 2px solid white; /* White border around the link */
-            border-radius: 5px; /* Rounded corners for a smooth look */
-            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
-            transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
-        }
-
-        /* Extra hover event */
-        .has-event a:hover {
-            background-color: #0056b3 !important; /* Darker blue on hover */
-            color: #ffcc00 !important; /* Yellow text for contrast */
-            transition: all 0.2s ease-in-out; /* Smooth hover animation */
-        }
-
-        /* Calendar Styles */
-        .calendar {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-
-        .calendar th, .calendar td {
-            border: 1px solid #555555;
-            padding: 10px;
-            text-align: center;
-            vertical-align: middle;
-            position: relative; /* For tooltip positioning */
-        }
-
-        .calendar th {
-            background-color: #3a3a3a;
-            color: #f8f9fa;
-        }
-
-        .calendar td.has-event {
-            color: #ffffff; /* White text for contrast */
-        }
-
-        .calendar td.has-event a {
-            color: #ffffff;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .calendar td a {
-            display: block;
-            width: 100%;
-            height: 100%;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        /* Tooltip text */
-        .calendar td a::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 120%; /* Position above the date */
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333333;
-            color: #ffffff;
-            padding: 5px 8px;
-            border-radius: 4px;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease;
-            font-size: 12px;
-            z-index: 10;
-        }
-
-        .calendar td.has-event a:hover::after {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .calendar-navigation {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 20px 0;
-        }
-
-        .calendar-navigation a {
-            margin: 0 10px;
-            padding: 8px 12px;
-            background-color: #007bff;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-        }
-
-    </style>
-</head>
-<body>
-    <h1>📆CHIM Adventure Log</h1>
-    <h2>All time and dates are in UTC. Tamrelic Time may be inconsistent.</h2>
-    <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
-
-    <?php
-    // Render Combined CSV Download Buttons at the Top
-    renderHeader();
-    ?>
-
-    <!-- Calendar Navigation -->
-    <div class="calendar-navigation">
         <?php
+        // Render Combined CSV Download Buttons at the Top
+        renderHeader();
+
+        // Calendar Navigation
+        echo '<div class="calendar-navigation">';
+        
         // Calculate previous and next month and year
         $prevMonth = $month - 1;
         $prevYear = $year;
@@ -718,57 +570,63 @@ if (!$result) {
 
         // Link to next month
         echo "<a href='?month={$nextMonth}&year={$nextYear}'><b>Next Month</b> &raquo;</a>";
+        echo '</div>';
+
+        // Render the Calendar
+        echo renderCalendar($month, $year, $allEventDates);
+
+        // Event Table
+        ?>
+        <table>
+            <colgroup>
+                <col style="width: 50%;">
+                <col style="width: 25%;">
+                <col style="width: 19%;">
+                <col style="width: 6%;">
+            </colgroup>
+            <tr>
+                <th>Context</th>
+                <th>Nearby People</th>
+                <th>Location & <a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a></th>
+                <th>Time(UTC)</th>
+            </tr>
+            <?php
+            // Reset the result pointer to the beginning for table rendering
+            pg_result_seek($result, 0);
+
+            // Fetch and display each row in the table
+            while ($row = pg_fetch_assoc($result)) {
+                $processed_row = process_event_row($row, false);
+                if ($processed_row === null) {
+                    continue;
+                }
+
+                echo "<tr>";
+                echo "<td>{$processed_row['Context']}</td>";
+                echo "<td>{$processed_row['Nearby People']}</td>";
+                echo "<td>{$processed_row['Location & Tamrelic Time']}</td>";
+                echo "<td>{$processed_row['Time(UTC)']}</td>";
+                echo "</tr>";
+            }
+            ?>
+        </table>
+
+        <?php
+        // Render Combined CSV Download Buttons at the Bottom
+        renderHeader();
+
+        // Close Database Connection
+        pg_close($conn);
         ?>
     </div>
+</main>
 
-    <!-- Render the Calendar -->
-    <?php
-    echo renderCalendar($month, $year, $allEventDates);
-    ?>
+<?php
+include(UI_PATH.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."footer.html");
 
-    <!-- Event Table -->
-    <table>
-        <colgroup>
-            <col style="width: 50%;">
-            <col style="width: 25%;">
-            <col style="width: 19%;">
-            <col style="width: 6%;"> <!-- Adjusted width for Time column -->
-        </colgroup>
-        <tr>
-            <th>Context</th>
-            <th>Nearby People</th>
-            <th>Location & <a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a></th>
-            <th>Time(UTC)</th>
-        </tr>
-        <?php
-        // Reset the result pointer to the beginning for table rendering
-        pg_result_seek($result, 0);
-
-        // Fetch and display each row in the table
-        while ($row = pg_fetch_assoc($result)) {
-            $processed_row = process_event_row($row, false); // false indicates HTML context
-            if ($processed_row === null) {
-                continue; // Skip rows with types not in the allowed list
-            }
-
-            // Extract processed data
-            $data = $processed_row['Context'];
-            $people = $processed_row['Nearby People'];
-            $location = $processed_row['Location & Tamrelic Time'];
-            $timeDisplay = $processed_row['Time(UTC)'];
-
-            // **Output the table row**
-            echo "<tr><td>{$data}</td><td>{$people}</td><td>{$location}</td><td>{$timeDisplay}</td></tr>";
-        }
-        ?>
-    </table>
-
-    <?php
-    // Render Combined CSV Download Buttons at the Bottom
-    renderHeader();
-
-    // **Close Database Connection**
-    pg_close($conn);
-    ?>
-</body>
-</html>
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>

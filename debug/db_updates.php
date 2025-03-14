@@ -4,7 +4,7 @@ $checkVersion = function($tablename) {
     global $db;
     $query = "
     SELECT version 
-    FROM database_versioning
+    FROM public.database_versioning
     WHERE tablename = '$tablename'
     ";
 
@@ -282,7 +282,7 @@ $db->execQuery("update public.oghma SET native_vector = setweight(to_tsvector(co
 $query = "SELECT 1 as bad_syntax_exists  FROM public.npc_templates WHERE  npc_name LIKE '%' || CHR(39) || '%'";
 
 $existsColumn=$db->fetchAll($query);
-if ($existsColumn[0]["bad_syntax_exists"]) {
+if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
     $data = $db->fetchAll("SELECT npc_name FROM public.npc_templates WHERE npc_name LIKE '%' || CHR(39) || '%'");
     $n=0;    
     require_once(__DIR__."/../lib/utils.php");
@@ -302,7 +302,7 @@ if ($existsColumn[0]["bad_syntax_exists"]) {
 $query = "SELECT 1 as bad_syntax_exists  FROM npc_templates_custom WHERE  npc_name LIKE '%' || CHR(39) || '%'";
 
 $existsColumn=$db->fetchAll($query);
-if ($existsColumn[0]["bad_syntax_exists"]) {
+if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
     $data = $db->fetchAll("SELECT npc_name FROM npc_templates_custom WHERE npc_name LIKE '%' || CHR(39) || '%'");
         
     foreach ($data as $n=>$element) {
@@ -424,6 +424,12 @@ if (!$existsColumn[0]["version"] || $existsColumn[0]["version"]<20250120001) {
 
 if ($checkVersion("npc_templates")<20250129001) {
     $query = "
+	SET schema 'public';
+	CREATE TABLE IF NOT EXISTS npc_templates (
+		npc_name character varying(128) NOT NULL,
+		npc_pers text NOT NULL,
+		npc_misc text
+	);
     ALTER TABLE npc_templates 
     ADD COLUMN IF NOT EXISTS npc_dynamic TEXT;
     ALTER TABLE npc_templates 
@@ -439,6 +445,12 @@ if ($checkVersion("npc_templates")<20250129001) {
 
 if ($checkVersion("npc_templates_custom")<20250129001) {
     $query = "
+	SET schema 'public';
+	CREATE TABLE IF NOT EXISTS npc_templates_custom (
+		npc_name character varying(128) NOT NULL,
+		npc_pers text NOT NULL,
+		npc_misc text
+	);
     ALTER TABLE npc_templates_custom 
     ADD COLUMN IF NOT EXISTS npc_dynamic TEXT;
     ALTER TABLE npc_templates_custom 
@@ -482,6 +494,12 @@ if ($checkVersion("combined_npc_templates")<20250129001) {
 
 if ($checkVersion("oghma")<20250902001) {
     $query = "
+	SET schema 'public';
+	CREATE TABLE IF NOT EXISTS oghma (
+		topic character varying NOT NULL,
+		topic_desc character varying NOT NULL,
+		native_vector tsvector
+	);
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS knowledge_class TEXT;
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS topic_desc_basic TEXT;
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS knowledge_class_basic TEXT;
@@ -715,5 +733,39 @@ if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
 }
 
 //----------------------------------------------------
+
+
+
+//----------------------------------------------------
+// npc_template and oghma table. 1.1.0 update
+// 
+//----------------------------------------------------
+                                          
+if ($checkVersion("npc_templates")<20250302001) {
+    $query="TRUNCATE TABLE public.npc_templates";
+    $db->execQuery($query);
+    $db->execQuery(file_get_contents(__DIR__."/../data/npc_templates_20250302001.sql"));
+    $updateVersion("npc_templates",20250302001);
+    error_log("Applied patch npc_templates 20250302001");
+}
+
+if ($checkVersion("oghma")<20250902002) {
+
+    $query="TRUNCATE TABLE public.oghma";
+    $db->execQuery($query);
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_20250302001.sql"));
+    
+    $updateVersion("oghma",20250902002);
+    error_log("Applied patch oghma 20250902002");
+}
+
+if ($checkVersion("questlog")<20250310001) {
+
+    $db->execQuery(file_get_contents(__DIR__."/../data/questlog.sql"));
+
+
+    $updateVersion("questlog",20250310001);
+    error_log("Applied patch questlog 20250310001");
+}
 
 ?>

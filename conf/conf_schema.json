@@ -1,6 +1,7 @@
 {
   "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"Your current character name.","_title":"Biography Management"},
   "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change."},
+  "LOCK_PROFILE": {"userlvl":"basic","type":"boolean","description":"When enabled, this profile will be skipped when using 'Copy to All Profiles' functionality. It will also not be deleted when you Delete All Character Profiles. Can not be toggled for the default profile."},
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!<br>If you are in the default profile <b>YOU MUST</b> leave it as <i>The Narrator</i>!<br><b>You can change profiles by clicking the blue button in the top left.</b>"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
@@ -10,13 +11,14 @@
   "DYNAMIC_PROFILE":{"userlvl":"basic","type":"boolean","description":"Will automatically update HERIKA_DYNAMIC during certain ingame events (such as sleeping). Can adjust the prompt used by editing DYNAMIC_PROMPT. Requires CONNECTOR_DIARY to be configured."},
   "MINIME_T5":{"userlvl":"basic","type":"boolean","scope":"global","description":"Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in DwemerDistro under Tools/components. <br> <strong> Must be configued in default profile and only works in English!</strong>"},
   "OGHMA_INFINIUM": {"type":"boolean","userlvl":"basic","description":"Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics."},
-  "OGHMA_KNOWLEDGE": {"type":"string","userlvl":"wip","description":"Knowledge Classes assigned to the NPC. Effects what articles they can access in the Oghma database. If you want to add more make sure they are comma separated. Recommend to leave as default." ,"helpurl":"https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641"},
+  "OGHMA_KNOWLEDGE": {"type":"string","userlvl":"basic","description":"Knowledge Classes assigned to the NPC. Effects what articles they can access in the Oghma database. If you want to add more make sure they are comma separated. Recommend to leave as default." ,"helpurl":"https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641"},
+  "OGHMA_AMOUNT": {"type":"select","values":["1","2","3"],"userlvl":"basic","description":"Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times."},
   "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Roleplay Management"},
   "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability. Chance that an AI NPC will continue an ongoing conversation.<br>0 = Never | 50 = 50% | 100 = Always"},
   "BORED_EVENT": {"userlvl":"basic","type":"integer","description":"Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.<br>0 = Never | 50 = 50% | 100 = Always"},
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.<br>Higher Context = more tokens used and slower response time.<br><b>We recommend you do not go over 100</b>"},
   "ALIVE_MESSAGE": {"userlvl":"basic","type":"boolean","description":"Whether the <i>I am alive..</i> response will trigger whenever you activate an AI NPC."},
-  "TIME_AWARENESS": {"userlvl":"wip","type":"boolean","description":"Whether the NPC will be aware of how long it has been since you last talked to them, or if you are talking for the first time."},
+  "TIME_AWARENESS": {"userlvl":"pro","type":"boolean","description":"Whether the NPC will be aware of how long it has been since you last talked to them, or if you are talking for the first time."},
   "BOOK_EVENT_FULL": {"userlvl":"pro","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.<br><strong>SET THIS ON default profile to apply to all NPCs.</strong>","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
@@ -32,10 +34,10 @@
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.q88yv4qigyw7"},
-  "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Default profile only! Custom instructions added when generating summaries for memories.","scope":"global"},
-  "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Default profile only! Instructions for updating HERIKA_DYNAMIC.","scope":"global"},
+  "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Default profile only! Custom instructions added when generating summaries for memories. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
+  "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Default profile only! Instructions for updating HERIKA_DYNAMIC. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","web_connector","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Connectors Selection"},
-  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Used for creating diary entries, dynamic profiles and summarized memories!<br><br><strong>You will need to place your API key in the (SUMMARY) connector for this to work!</strong>"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Is one of the SUMMARY connectors. Used for creating diary entries, dynamic profiles and summarized memories!<br><br><strong>You will need to place your API key in the (SUMMARY) connector for this to work!</strong>"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openrouterjson": {
@@ -57,10 +59,10 @@
       "top_a": {"userlvl":"pro","type":"number","description":"Top_A [0-1]","helpurl":"https://openrouter.ai/docs#format"},
       "ENFORCE_JSON": {"type":"boolean","description":"Will attempt to enforce dumb LLM's to stay in JSON format. Leave as default (TRUE), only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
       "PREFILL_JSON": {"type":"boolean","description":"Will attempt to prefill the JSON AI response for some dumber LLM's. Leave as default (FALSE), only works with specific models.","helpurl":"https://openrouter.ai/docs#format"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "MAX_TOKENS_MEMORY": {"userlvl":"wip","type":"wip","description":"No longer used. Use SUMMARY connector for memory tokens instead."},
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
-      "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
-      "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
+      "xreferer": {"userlvl":"wip","type":"string","description":"Stub needed header. Keep default."},
+      "xtitle": {"userlvl":"wip","type":"string","description":"Stub needed header. Keep default."},
       "json_schema": {"type":"boolean","description":"Enable OpenRouter Json schema. Does not work with all models. You must set a provider that supports structured outputs. Requires ENFORCE_JSON to be true.","helpurl":"https://openrouter.ai/docs/structured-outputs#model-support"}
     },
     "openrouter": {
@@ -68,7 +70,7 @@
       "url": {"type":"url","description":"OpenRouter API endpoint"},
       "model": {"type":"ormodellist","description":"Model to use.<br>FREE MODELS ARE NOT RECOMMENDED!<br>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Leave blank unless you want to manually select a provider from OpenRouter. It is case sensitive!","helpurl":"https://openrouter.ai/docs/provider-routing"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate for regular responses, NOT SUMMARIES."},
       "temperature": {"type":"number","description":"Temperature [0-2]","helpurl":"https://openrouter.ai/docs#format"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"Presence Penalty [(-2)-2]","helpurl":"https://openrouter.ai/docs#format"},
       "frequency_penalty": {"userlvl":"pro","type":"number","description":"Frequency Penalty [(-2)-2]","helpurl":"https://openrouter.ai/docs#format"},
@@ -78,9 +80,9 @@
       "min_p": {"userlvl":"pro","type":"number","description":"Min_P [0-1]","helpurl":"https://openrouter.ai/docs#format"},
       "top_a": {"userlvl":"pro","type":"number","description":"Top_A [0-1]","helpurl":"https://openrouter.ai/docs#format"},
       "API_KEY":  {"type":"apikey","description":"OpenRouter key","code":"OPENAI_API_KEY"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
-      "xreferer": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
-      "xtitle": {"userlvl":"pro","type":"string","description":"Stub needed header. Keep default."},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, diary entries, and dynamic profile updates."},
+      "xreferer": {"userlvl":"wip","type":"string","description":"Stub needed header. Keep default."},
+      "xtitle": {"userlvl":"wip","type":"string","description":"Stub needed header. Keep default."},
       "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouter_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
       "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouter_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
       "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for high randomness in AI response (P90)","action":"action_openrouter_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"}
@@ -95,30 +97,30 @@
       "frequency_penalty": {"userlvl":"pro","type":"number","description":"Frequency Penalty [(-2)-2]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "top_p": {"userlvl":"pro","type":"number","description":"Top_P [0-1]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "MAX_TOKENS_MEMORY": {"userlvl":"wip","type":"integer","description":"No longer used. Use SUMMARY connector for memory tokens instead."},
       "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema. Does not work with all OpenAI's models","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
     },
     "openai": {
       "_title":"OpenAI/ChatGPT API (SUMMARY)",
       "url": {"type":"url","description":"OpenAI API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate for regular responses, NOT SUMMARIES."},
       "temperature": {"type":"number","description":"Temperature [0-2]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"Presence Penalty [(-2)-2]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "frequency_penalty": {"userlvl":"pro","type":"number","description":"Frequency Penalty [(-2)-2]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "top_p": {"userlvl":"pro","type":"number","description":"Top_P [0-1]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."}
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, diary entries, and dynamic profile updates."}
     },
     "google_openaijson": {
-      "_title":"Google OpenAI API (JSON)",
+      "_title":"Google OpenAI API (JSON/SUMMARY)",
       "url": {"type":"url","description":"Google OpenAI API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://ai.google.dev/gemini-api/docs/models/gemini"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"Temperature [0-2]","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
       "top_p": {"userlvl":"pro","type":"number","description":"Top_P [0-1]","helpurl":"https://ai.google.dev/api/generate-content#generationconfig"},
       "API_KEY":  {"type":"apikey","description":"Google API key","code":"OPENAI_API_KEY","helpurl":"https://aistudio.google.com/apikey"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, diary entries, and dynamic profile updates."},
       "json_schema": {"type":"boolean","description":"Enable OpenAI Json schema.","helpurl":"https://platform.openai.com/docs/guides/structured-outputs?lang=js"}
     },
     "web_connector": {
@@ -134,7 +136,7 @@
       "min_p": {"userlvl":"pro","type":"number","description":"Min_P [0-1]"},
       "top_k": {"userlvl":"pro","type":"number","description":"Top_K [0-100]"},
       "PREFILL_JSON": {"type":"boolean","description":"Will prefill JSON, which is useful for some AI models, and destroy others."},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "MAX_TOKENS_MEMORY": {"userlvl":"wip","type":"integer","description":"No longer used. Use SUMMARY connector for memory tokens instead."},
       "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
@@ -144,20 +146,20 @@
     "koboldcpp": {
       "_title":"KoboldCPP API (SUMMARY)",
       "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.4c92h73gekhw"},
-      "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate for regular responses, NOT SUMMARIES."},
       "temperature": {"type":"number","description":"Temperature [0-2]"},
       "rep_pen": {"userlvl":"pro","type":"number","description":"Repetition Penalty [0-2]"},
       "top_p": {"userlvl":"pro","type":"number","description":"Top_P [0-1]"},
       "min_p": {"userlvl":"pro","type":"number","description":"Min_P [0-1]"},
       "top_k": {"userlvl":"pro","type":"number","description":"Top_K [0-100]"},
-      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, such as writing to diary."},
+      "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, diary entries, and dynamic profile updates."},
       "newline_as_stopseq": {"type":"boolean","description":"A new line in the output that will be considered a stop sequence. Recommended to leave as default."},
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai","kokoro","koboldcpp"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -249,9 +251,19 @@
       "_title": "KoboldCPP TTS",
       "endpoint":{"type":"url","description":"Endpoint URL"},
       "voice": {"type":"string","description":"Voice to use"}
+    },
+    "ZONOS_GRADIO": {
+      "_title": "Zonos TTS (via Gradio)",
+      "endpoint":{"type":"url","description":"Endpoint URL"},
+      "language":{"type":"select","values":["af", "am", "an", "ar", "as", "az", "ba", "bg", "bn", "bpy", "bs", "ca", "cmn", "cs", "cy", "da", "de", "el", "en-029", "en-gb", "en-gb-scotland", "en-gb-x-gbclan", "en-gb-x-gbcwmd", "en-gb-x-rp", "en-us", "eo", "es", "es-419", "et", "eu", "fa", "fa-latn", "fi", "fr-be", "fr-ch", "fr-fr", "ga", "gd", "gn", "grc", "gu", "hak", "hi", "hr", "ht", "hu", "hy", "hyw", "ia", "id", "is", "it", "ja", "jbo", "ka", "kk", "kl", "kn", "ko", "kok", "ku", "ky", "la", "lfn", "lt", "lv", "mi", "mk", "ml", "mr", "ms", "mt", "my", "nb", "nci", "ne", "nl", "om", "or", "pa", "pap", "pl", "pt", "pt-br", "py", "quc", "ro", "ru", "ru-lv", "sd", "shn", "si", "sk", "sl", "sq", "sr", "sv", "sw", "ta", "te", "tn", "tr", "tt", "ur", "uz", "vi", "vi-vn-x-central", "vi-vn-x-south", "yue"],"description":"Language","helpurl":"https://github.com/Zyphra/Zonos/blob/a09ff4fa50cfa66bf79986e19c191f85f5cb53e8/zonos/conditioning.py#L316"},
+      "model": {"type":"select","values":["Zyphra/Zonos-v0.1-transformer", "Zyphra/Zonos-v0.1-hybrid"],"description":"Default profile only. Model to use.", "scope":"global"},
+      "voiceid": {"type":"string","description":"Generated voice file name. Works the same as XTTSFASTAPI's voiceid and uses its voicelogic setting."},
+      "pitch_std": {"type":"number","description":"Pitch standard deviation [0-300]"},
+      "speaking_rate": {"type":"number","description":"Speaking rate. Higher is faster. [5-30]"},
+      "cfg_scale": {"type":"number","description":"CFG scale. Controls how closely the audio matches the sample voice. Higher numbers will be a closer match. [1.1 - 5]"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai","kokoro"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
