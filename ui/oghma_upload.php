@@ -949,6 +949,8 @@ echo '<p>You can leave cells empty so they do not overwrite specific info from t
 echo '<p>You also can introduce new topics to the Oghma table as well.</p>';
 echo '<p>It is currently empty by default. We need your help adding more entries!</p>';
 echo '<p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Would you like to know more?</a></p>';
+echo '<br>';
+echo '<h1>Batch Upload</h1>';
 echo '<div class="form-container">';
 echo '<form action="" method="post" enctype="multipart/form-data">';
 echo '<div>';
@@ -972,7 +974,8 @@ echo '</form>';
 echo '<br>';
 echo '</div>';
 echo '<br>';
-
+echo '<br>';
+echo '<h1>Dynamic Oghma Entries</h1>';
 echo '<div class="action-container">';
 echo '<button onclick="openNewDynamicEntryModal()" class="action-button add-new">Add New Dynamic Entry</button>';
 echo '</div>';
