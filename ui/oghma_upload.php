@@ -962,6 +962,7 @@ echo '<a href="../data/oghma_dynamic_example.csv" class="action-button download-
 echo '</div>';
 echo '</form>';
 echo '<p>You can verify that the entries have been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma_dynamic</b></p>';
+echo '<p>You see what quests CHIM have detected by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> questlog</b></p>';
 echo '<p>All uploaded entries will be saved into the <code>oghma_dynamic</code> table.</p>';
 echo '<br>';
 echo '<form action="" method="post">';
