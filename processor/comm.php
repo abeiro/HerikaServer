@@ -5,12 +5,6 @@ $MUST_END=false;
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
-    // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
-    if ($gameRequest[2] == "10000000") {
-        error_log("Ignoring init with a gamets of 10000000.");
-        $MUST_END=true;
-        return;
-    }
     $now=time();
     $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
@@ -184,21 +178,23 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 
 
 } elseif ($gameRequest[0] == "_uquest") {
+    error_reporting(E_ALL);
 
     $questParsedData = explode("@",$gameRequest[3]);
-    
+    print_r($questParsedData);
     if (!empty($questParsedData[0])) {
         $data=array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'localts' => time(),
-            'briefing' => $questParsedData[2],
-            'data' => $questParsedData[2],
-            'id_quest'=>$questParsedData[0]
+                'briefing' => $questParsedData[2],
+                'data' => $questParsedData[2]
         );
         
-        $db->insert('questlog',$data);
+        $db->updateRow('quests',$data," id_quest='{$questParsedData[0]}' ");
 
+        require_once(__DIR__.DIRECTORY_SEPARATOR."quest_oghma_sync.php");
+        // After updating quest, sync with oghma if stage info available
+        if (isset($questParsedData[1])) {
+            syncQuestWithOghma($questParsedData[0], intval($questParsedData[1]));
+        }
     }
     $MUST_END=true;
 
@@ -241,7 +237,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
                 'speaker' => $speech["speaker"],
                 'speech' => $speech["speech"],
                 'location' => $speech["location"],
-                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):DataBeingsInCloseRange(),
+                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):"",
                 'sess' => 'pending',
                 'audios' => isset($speech["audios"])?$speech["audios"]:null,
                 'topic' => isset($speech["debug"])?$speech["debug"]:null,
@@ -281,7 +277,6 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
 
 } elseif ($gameRequest[0] == "contentbook") {
-    // This should be deprecated once version 1.2.0 is released
     $db->insert(
         'books',
         array(
@@ -340,7 +335,6 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             $MUST_END=true;
         } else {
             logEvent($gameRequest);
-            
         }
     } else
         $MUST_END=true;
@@ -437,7 +431,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
 } elseif ($gameRequest[0] == "setconf") {
     
-    // logEvent($gameRequest);
+    //logEvent($gameRequest);
 
     $vars=explode("@",$gameRequest[3]);
     $db->delete("conf_opts", "id='".$db->escape($vars[0])."'");
@@ -452,33 +446,21 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
     $MUST_END=true;
     
-} elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever requests
+} elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever commands
 
     logEvent($gameRequest);
 
     $MUST_END=true;
 
     
-} elseif (strpos($gameRequest[0], "addnpc")===0) {    // addnpc 
+} elseif (strpos($gameRequest[0], "addnpc")===0) {    // info_whatever commands
     logEvent($gameRequest);
     
-    $splitNameBase=explode("@",$gameRequest[3]);
-    if (sizeof($splitNameBase)>1) {
-        $localName=$splitNameBase[0];
-        $baseProfile=$splitNameBase[1];
-    } else {
-        $localName=$splitNameBase[0];
-        $baseProfile="";
-    }
+    if (!profile_exists($gameRequest[3]))
+        AddFirstTimeMet($gameRequest[3], $momentum, $gameRequest[2],$gameRequest[1]);
 
-    if ($localName==$baseProfile)
-        $baseProfile="";
-
-    if (!profile_exists($localName))
-        AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
-
-    createProfile($localName,[],false,$baseProfile);
-    audit_log("comm.php addnpc $localName");
+    createProfile($gameRequest[3],[],false);
+    
     $MUST_END=true;
     
     

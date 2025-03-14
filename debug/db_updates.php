@@ -768,4 +768,10 @@ if ($checkVersion("questlog")<20250310001) {
     error_log("Applied patch questlog 20250310001");
 }
 
+if ($checkVersion("oghma_dynamic")<20250310001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_dynamic.sql"));
+    $updateVersion("oghma_dynamic",20250310001);
+    error_log("Applied patch oghma_dynamic 20250310001");
+}
+
 ?>
