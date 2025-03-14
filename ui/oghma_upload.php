@@ -942,7 +942,7 @@ if ($result) {
 
 // Add Dynamic Oghma Entries Section
 echo '<br><br>';
-echo '<h1>Dynamic Oghma Updates</h1>';
+echo '<h1>Dynamic Oghma</h1>';
 echo '<p>Entires in the Dynamic Oghma table will update the Oghma table above whenever the quest ID & stage ID for a quest is reached.</p>';
 echo '<p>Any changes from a topic in this table will override whatever is in the Oghma table.</p>';
 echo '<p>You can leave cells empty so they do not overwrite specific info from the Oghma table.</p>';
