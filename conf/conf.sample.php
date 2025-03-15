@@ -276,6 +276,7 @@ $TTS["KOKORO"]["speed"]=1.0; //Speech speed.
 $TTS["ZONOS_GRADIO"]["endpoint"]='http://127.0.0.1:7860';	//Endpoint URL
 $TTS["ZONOS_GRADIO"]["language"]='en-us';	//Language
 $TTS["ZONOS_GRADIO"]["model"]='Zyphra/Zonos-v0.1-hybrid';	//Zonos model type
+$TTS["ZONOS_GRADIO"]["dynamic_tones"]=true;	//Zonos dynamic tones
 $TTS["ZONOS_GRADIO"]["voiceid"]='TheNarrator';	//Voice id
 $TTS["ZONOS_GRADIO"]["pitch_std"]=45;	//Pitch standard deviation
 $TTS["ZONOS_GRADIO"]["speaking_rate"]=14.6;	//Speaking rate
