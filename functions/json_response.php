@@ -94,7 +94,7 @@
         }
 
         // request speaking tones from the LLM when using zonos TTS
-        if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
+        if (zonosIsActive()) {
             $GLOBALS["responseTemplate"] = array_merge($GLOBALS["responseTemplate"], [
                 "response_tone_happiness"=>"Value from 0-1",
                 "response_tone_sadness"=>"Value from 0-1",
@@ -172,7 +172,7 @@
         );
 
         // request speaking tones from the LLM when using zonos TTS
-        if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
+        if (zonosIsActive()) {
             $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
                 $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
                     "response_tone_happiness" => array(
@@ -262,7 +262,7 @@
         }
 
         // build the string for zonos tts tones
-        $zonos_tones_str = $GLOBALS["TTSFUNCTION"] == "zonos_gradio"
+        $zonos_tones_str = zonosIsActive()
             ? '"," ws root-response_tone_happiness "," ws root-response_tone_sadness "," ws root-response_tone_disgust "," ws root-response_tone_fear ","'.
               ' ws root-response_tone_surprise "," ws root-response_tone_anger "," ws root-response_tone_other "," ws root-response_tone_neutral '
             : "";
@@ -301,6 +301,10 @@
         $GLOBALS["grammar"]=str_replace('{$ZONOS}', $zonos_tones_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$MOODS}', $moods_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$ACTIONS}', $actions_str, $GLOBALS["grammar"]);
+    }
+
+    Function zonosIsActive() {
+        return $GLOBALS["TTSFUNCTION"] == "zonos_gradio" && isset($GLOBALS["TTS"]["ZONOS_GRADIO"]["dynamic_tones"]) && $GLOBALS["TTS"]["ZONOS_GRADIO"]["dynamic_tones"];
     }
 
 ?>
