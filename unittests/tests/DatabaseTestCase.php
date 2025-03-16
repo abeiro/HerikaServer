@@ -157,7 +157,7 @@ abstract class DatabaseTestCase extends TestCase
             return "null";
         };
         $GLOBALS["mockMinimeTopic"] = function($text) {
-            return '{"input_text": "'.$text.'", "generated_tags": "", "elapsed_time": "0.05 seconds"}';
+            return '{"input_text": "'.$text.'", "generated_tags": "'.$text.'", "elapsed_time": "0.05 seconds"}';
         };
     }
 
