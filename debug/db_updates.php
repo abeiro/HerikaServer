@@ -10,7 +10,7 @@ $checkVersion = function($tablename) {
 
     $existsColumn=$db->fetchAll($query);
 
-    if (!$existsColumn[0]["version"] )
+    if (sizeof($existsColumn) == 0 || !$existsColumn[0]["version"] )
         return -1;
     else
         return $existsColumn[0]["version"]+0;
@@ -424,12 +424,12 @@ if (!$existsColumn[0]["version"] || $existsColumn[0]["version"]<20250120001) {
 
 if ($checkVersion("npc_templates")<20250129001) {
     $query = "
-	SET schema 'public';
-	CREATE TABLE IF NOT EXISTS npc_templates (
-		npc_name character varying(128) NOT NULL,
-		npc_pers text NOT NULL,
-		npc_misc text
-	);
+    SET schema 'public';
+    CREATE TABLE IF NOT EXISTS npc_templates (
+        npc_name character varying(128) NOT NULL,
+        npc_pers text NOT NULL,
+        npc_misc text
+    );
     ALTER TABLE npc_templates 
     ADD COLUMN IF NOT EXISTS npc_dynamic TEXT;
     ALTER TABLE npc_templates 
@@ -445,12 +445,12 @@ if ($checkVersion("npc_templates")<20250129001) {
 
 if ($checkVersion("npc_templates_custom")<20250129001) {
     $query = "
-	SET schema 'public';
-	CREATE TABLE IF NOT EXISTS npc_templates_custom (
-		npc_name character varying(128) NOT NULL,
-		npc_pers text NOT NULL,
-		npc_misc text
-	);
+    SET schema 'public';
+    CREATE TABLE IF NOT EXISTS npc_templates_custom (
+        npc_name character varying(128) NOT NULL,
+        npc_pers text NOT NULL,
+        npc_misc text
+    );
     ALTER TABLE npc_templates_custom 
     ADD COLUMN IF NOT EXISTS npc_dynamic TEXT;
     ALTER TABLE npc_templates_custom 
@@ -494,12 +494,12 @@ if ($checkVersion("combined_npc_templates")<20250129001) {
 
 if ($checkVersion("oghma")<20250902001) {
     $query = "
-	SET schema 'public';
-	CREATE TABLE IF NOT EXISTS oghma (
-		topic character varying NOT NULL,
-		topic_desc character varying NOT NULL,
-		native_vector tsvector
-	);
+    SET schema 'public';
+    CREATE TABLE IF NOT EXISTS oghma (
+        topic character varying NOT NULL,
+        topic_desc character varying NOT NULL,
+        native_vector tsvector
+    );
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS knowledge_class TEXT;
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS topic_desc_basic TEXT;
     ALTER TABLE oghma ADD COLUMN IF NOT EXISTS knowledge_class_basic TEXT;
