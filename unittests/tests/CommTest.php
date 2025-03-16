@@ -275,7 +275,7 @@ final class CommTest extends DatabaseTestCase
                 $options = stream_context_get_options($streamContext);
                 $content = json_decode($options['http']['content']);
                 foreach ($content->messages as $actual) {
-                    if (isset($actual->role) && $actual->role === "user" && isset($actual->content) && strpos($actual->content, "Choose coherent ACTION to obey Prisoner..  Use this JSON object to give your answer: ") === 0)
+                    if (isset($actual->role) && $actual->role === "user" && isset($actual->content) && strpos($actual->content, "Choose coherent ACTION to obey Prisoner..  Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure: ") === 0)
                     {
                         $jsonString = preg_match('/\{(.*)\}/', $actual->content, $matches);
                         $jsonString = $matches[0];
