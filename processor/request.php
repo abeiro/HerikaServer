@@ -130,8 +130,9 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	}
 	else {
 		if (isset($PROMPTS[$gameRequest[0]]["cue"]))
-
 			$request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]); // Add support for arrays here	
+		else 
+			error_log("$request is empty! ");
 	}
 }
 

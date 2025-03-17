@@ -34,8 +34,8 @@ if (php_sapi_name()=="cli") {
 
     $latsRid=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0");
     $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$latsRid[0]["rowid"]}");
-    $res[0]["ts"]=$res[0]["ts"]+0;
-    $res[0]["gamets"]=$res[0]["ts"]+0;
+    $res[0]["ts"]=$res[0]["ts"]+1;
+    $res[0]["gamets"]=$res[0]["gamets"]+1;
         
     
         
@@ -393,10 +393,10 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     
     
     if (sizeof($rechatHistory)>1) {
-        // Lets make rechat wait a bit, so events while NPCs are speaking get into context
+        // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
         sem_release($semaphore);
         error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
-        sleep(1);
+        
         while (sem_acquire($semaphore,true)!=true)  {
             $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
             if (isset($user_input_after[0]))
@@ -459,7 +459,7 @@ if (!isset($GLOBALS["CACHE_LOCATION"])) {
 }     
 
 if (!isset($GLOBALS["CACHE_PARTY"])) {
-        $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
+    $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
 if (in_array($gameRequest[0],["inputtext_s"])) {    // I stealth and targetet follower, CACHE_PEOPLE will only contain target NPC
@@ -712,8 +712,10 @@ if ($gameRequest[0] == "funcret") {
                 error_log("Injected memory");
             }
             
-        } else
+        } else {
+            error_log("CRITICAL? :: Empty request , prompt empty");
             $prompt=[];
+        }
     }
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);

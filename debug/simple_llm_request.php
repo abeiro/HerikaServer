@@ -44,7 +44,10 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
     require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 
 
+    $GLOBALS["HERIKA_NAME"]="Herika";
+
     $contextDataHistoric = DataLastDataExpandedFor("", -50);
+    
     $contextDataWorld = DataLastInfoFor("", -2);
     $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
     $historyData="";
@@ -56,13 +59,13 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
       }
 
     
-    $GLOBALS["HERIKA_NAME"]="random present actor";
+    //$GLOBALS["HERIKA_NAME"]="random present actor";
     $GLOBALS["HERIKA_PERS"]="";
 
     $prompt[] = array('role' => 'system', 'content' => "I want you to read this gameplay transcription in Skyrim universe.");
     $prompt[] = array('role' => 'user', 'content' => $historyData);
     $prompt[] = array('role' => 'user', 'content' =>"Now act as a movie director and create a new line of dialogue for any of the participants. 
-This new line can introduce a new topic, keep talking about same topics, say someting new, point to a enviroment action has happened...be creative but logical.");
+This new line can introduce a new topic, keep talking about same topics, say someting new, or point to a enviromental action that has happened...be creative but logical.");
     
     $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
     $connectionHandler->open($prompt,["MAX_TOKENS"=>256]);
