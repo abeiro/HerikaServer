@@ -1365,7 +1365,7 @@ function logEvent($dataArray)
     global $db;
 
     if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange(); // DataBeingsInRange() won't work as depends on user input
     } 
     
     if (!isset($GLOBALS["CACHE_LOCATION"])) {

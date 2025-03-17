@@ -12,17 +12,17 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         return;
     }
     $now=time();
-    $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
+    $db->delete("eventlog", "gamets>={$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
     //$db->delete("eventlog", "type='playerinfo'");
     //$db->delete("quests", "1=1");
-    $db->delete("speech", "gamets>{$gameRequest[2]}  ");
+    $db->delete("speech", "gamets>={$gameRequest[2]}  ");
     $db->delete("speech", "localts>$now ");
-    $db->delete("currentmission", "gamets>{$gameRequest[2]}  ");
+    $db->delete("currentmission", "gamets>={$gameRequest[2]}  ");
     $db->delete("currentmission", "localts>$now   ");
-    $db->delete("diarylog", "gamets>{$gameRequest[2]}  ");
-    $db->delete("diarylog", "localts>$now ");
-    $db->delete("books", "gamets>{$gameRequest[2]}  ");
+    $db->delete("diarylog", "gamets>={$gameRequest[2]}  ");
+    $db->delete("diarylog", "localts>=0$now ");
+    $db->delete("books", "gamets>=0{$gameRequest[2]}  ");
     $db->delete("books", "localts>$now ");
     $db->delete("responselog", " 1=1 ");
 
@@ -194,7 +194,8 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             'localts' => time(),
             'briefing' => $questParsedData[2],
             'data' => $questParsedData[2],
-            'id_quest'=>$questParsedData[0]
+            'id_quest'=>$questParsedData[0],
+            'stage'=>$questParsedData[3]
         );
         
         $db->insert('questlog',$data);
