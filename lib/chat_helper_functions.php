@@ -539,7 +539,11 @@ function returnLines($lines,$writeOutput=true)
                     $GLOBALS["SCRIPTLINE_ANIMATION"]="";
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
                 }
-                
+
+                if (is_array($GLOBALS["SCRIPTLINE_LISTENER"]) && sizeof($GLOBALS["SCRIPTLINE_LISTENER"]) > 0 && is_string($GLOBALS["SCRIPTLINE_LISTENER"][0])) {
+                    $GLOBALS["SCRIPTLINE_LISTENER"]=$GLOBALS["SCRIPTLINE_LISTENER"][0];
+                }
+
                 $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix) && (sizeof($listenerFix)>1)) {
                     $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix[0];
