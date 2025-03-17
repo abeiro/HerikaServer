@@ -220,10 +220,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #f8f9fa; /* Ensure labels are readable */
         }
 
-        input[type="submit"]:hover {
-            background-color: #0056b3; /* Darker shade on hover */
-        }
-
         .message {
             background-color: #444444; /* Darker background for messages */
             padding: 10px;

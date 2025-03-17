@@ -1741,7 +1741,9 @@ function call_llm() {
 
     if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  {
         $actions=$connectionHandler->processActions();
-
+        if (isset($GLOBALS["action_post_process_fnct"])) {
+            $actions=$GLOBALS["action_post_process_fnct"]($actions);
+        }
         if (is_array($actions) && (sizeof($actions)>0)) {
             
             // ACTION POST-FILTER

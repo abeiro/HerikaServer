@@ -93,7 +93,7 @@ a:has(.bi-trash) {
 a:has(.bi-trash):hover {
     text-decoration: none !important;
     color: white !important;
-    background-color: red !important;
+    background-color: rgba(153, 6, 6, 0.651) !important;
     border-color: red !important;
 }
 
@@ -101,23 +101,229 @@ a .bi-trash {
     color: inherit !important;
 }
 
-.button {
+/* Base button styles - shared properties for all buttons */
+.button,
+.refresh-button,
+.action-button,
+.alphabet-button,
+.copy-btn,
+.copy-to-all,
+.copy-to-all-btn {
     padding: 10px 20px;
-    background-color: rgb(0, 48, 176);
     color: #ffffff;
-    border: 2px solid rgba(255, 255, 255, 0.65);
-    border-radius: 6px;
+    background-color: rgba(30, 35, 45, 0.8);
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.3s, color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
     margin: 5px;
-    font-weight: bold;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
 }
 
-.button:hover {
-    background-color: rgb(0, 38, 156);
+/* Hover state for all buttons */
+.button:hover,
+.refresh-button:hover,
+.action-button:hover,
+.alphabet-button:hover,
+.copy-btn:hover,
+.copy-to-all:hover,
+.copy-to-all-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
+    text-decoration: none;
+    color: #ffffff;
+}
+
+/* Active state for all buttons */
+.button:active,
+.refresh-button:active,
+.action-button:active,
+.alphabet-button:active,
+.copy-btn:active,
+.copy-to-all:active,
+.copy-to-all-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Refresh button specific styles */
+.refresh-button {
+    background-color: rgba(23, 162, 184, 0.8);
+    border-color: rgba(138, 155, 182, 0.3);
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.refresh-button:hover {
+    background-color: rgba(33, 172, 194, 0.9);
+}
+
+.refresh-button svg {
+    margin-right: 8px;
+}
+
+.refresh-button.refreshing {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Action button variants */
+.action-button {
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.action-button.edit {
+    background-color: rgba(23, 162, 184, 0.8);
+    border-color: rgba(138, 155, 182, 0.3);
+}
+
+.action-button.edit:hover {
+    background-color: rgba(33, 172, 194, 0.9);
+}
+
+.action-button.add-new,
+.action-button.upload-csv {
+    background-color: rgba(32, 122, 74, 0.8);
+    border-color: rgba(72, 187, 120, 0.3);
+}
+
+.action-button.add-new:hover,
+.action-button.upload-csv:hover {
+    background-color: rgba(42, 142, 94, 0.9);
+}
+
+.action-button.download-csv {
+    background-color: rgba(37, 99, 235, 0.8);
+    border-color: rgba(96, 165, 250, 0.3);
+}
+
+.action-button.download-csv:hover {
+    background-color: rgba(47, 109, 245, 0.9);
+}
+
+/* Alphabet button styles */
+.alphabet-button {
+    padding: 6px 10px;
+    font-size: 13px;
+    margin: 2px;
+    background-color: rgba(37, 99, 235, 0.8);
+    border-color: rgba(96, 165, 250, 0.3);
+}
+
+.alphabet-button:hover {
+    background-color: rgba(47, 109, 245, 0.9);
+}
+
+/* Copy button styles */
+.copy-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    opacity: 0.4;
+    background-color: rgba(75, 85, 99, 0.8);
+    margin-left: 8px;
+}
+
+.voice-item:hover .copy-btn {
+    opacity: 0.8;
+}
+
+.copy-btn:hover {
+    opacity: 1 !important;
+    background-color: rgba(85, 95, 109, 0.9);
+}
+
+/* Copy to all profiles button styles */
+.copy-to-all,
+.copy-to-all-btn {
+    background-color: rgba(75, 85, 99, 0.8);
+    border-color: rgba(156, 163, 175, 0.3);
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+.copy-to-all:hover,
+.copy-to-all-btn:hover {
+    background-color: rgba(85, 95, 109, 0.9);
+    border-color: rgba(255, 215, 0, 0.4);
+}
+
+/* File upload button styling */
+input[type="file"] {
+    background-color: rgba(30, 35, 45, 0.8);
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    cursor: pointer;
+    width: auto;
+    backdrop-filter: blur(5px);
+}
+
+input[type="file"]::-webkit-file-upload-button {
+    background-color: rgba(75, 85, 99, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: all 0.2s ease-in-out;
+    font-size: 14px;
+}
+
+input[type="file"]::-webkit-file-upload-button:hover {
+    background-color: rgba(85, 95, 109, 0.9);
+    transform: translateY(-1px);
+}
+
+/* Firefox file input styling */
+input[type="file"]::-moz-file-upload-button {
+    background-color: rgba(75, 85, 99, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: all 0.2s ease-in-out;
+    font-size: 14px;
+}
+
+input[type="file"]::-moz-file-upload-button:hover {
+    background-color: rgba(85, 95, 109, 0.9);
+    transform: translateY(-1px);
+}
+
+/* Legacy buttonify update */
+.buttonify {
+    background-color: rgba(30, 35, 45, 0.8);
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.buttonify:hover {
+    background-color: rgba(40, 45, 55, 0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* ==========================================================================
@@ -811,52 +1017,114 @@ input[type="file"]::-moz-file-upload-button:hover {
 /* Standardized Button System */
 .btn-base,
 .btn-danger,
-.btm-cancel,
+.btn-cancel,
 .btn-save,
 .btn-primary {
     padding: 10px 20px;
     color: #ffffff;
-    border: 2px solid rgba(255, 255, 255, 0.65);
-    border-radius: 6px;
+    background-color: rgba(30, 35, 45, 0.8);
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.3s, color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
     margin: 5px;
-    font-weight: bold;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.btn-base:hover,
+.btn-danger:hover,
+.btn-cancel:hover,
+.btn-save:hover,
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.btn-base:active,
+.btn-danger:active,
+.btn-cancel:active,
+.btn-save:active,
+.btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .btn-danger {
-    background-color: rgb(200, 53, 69);
+    background-color: rgba(166, 53, 63, 0.9);
+    border-color: rgba(255, 99, 99, 0.3);
 }
 
 .btn-danger:hover {
-    background-color: rgb(176, 42, 55);
+    background-color: rgba(146, 43, 53, 0.8);
+    border-color: rgba(255, 99, 99, 0.4);
 }
 
 .btn-save {
-    background-color: rgb(40, 167, 69);
+    background-color: rgba(42, 142, 94, 0.9);
+    border-color: rgba(72, 187, 120, 0.3);
 }
 
 .btn-save:hover {
-    background-color: rgb(34, 146, 58);
+    background-color: rgba(32, 122, 74, 0.8);
+    border-color: rgba(72, 187, 120, 0.4);
 }
 
 .btn-cancel {
-    background-color: rgb(85, 85, 85);
+    background-color: rgba(85, 95, 109, 0.9);
+
+    border-color: rgba(156, 163, 175, 0.3);
 }
 
 .btn-cancel:hover {
-    background-color: rgb(46, 46, 46);
+    background-color: rgba(75, 85, 99, 0.8);
+    border-color: rgba(156, 163, 175, 0.4);
 }
 
 .btn-primary {
-    background-color: rgb(0, 48, 176);
+    background-color: rgba(47, 109, 245, 0.9);
+    border-color: rgba(96, 165, 250, 0.3);
+    background-image: linear-gradient(180deg, 
+                      rgba(255, 255, 255, 0.08) 0%,
+                      rgba(255, 255, 255, 0) 100%);
 }
 
 .btn-primary:hover {
-    background-color: rgb(0, 38, 156);
+    background-color: rgba(37, 99, 235, 0.8);
+    border-color: rgba(96, 165, 250, 0.4);
+}
+
+/* Add subtle glow effect for focus state */
+.btn-base:focus,
+.btn-danger:focus,
+.btn-cancel:focus,
+.btn-save:focus,
+.btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(138, 155, 182, 0.15),
+                0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Disabled state */
+.btn-base:disabled,
+.btn-danger:disabled,
+.btn-cancel:disabled,
+.btn-save:disabled,
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 /* Table Container */

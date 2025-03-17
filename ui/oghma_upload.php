@@ -488,7 +488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                    onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
         </form>
         <br>
-        <form action="' . $webRoot . '/ui/oghma_reset.php" method="post">
+        <form action="<?php echo $webRoot; ?>/ui/oghma_reset.php" method="post">
             <input type="submit" class="btn-danger" value="Factory Reset Oghma Database" 
                    onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
         </form>
@@ -598,6 +598,16 @@ if ($selectedCategory && $letter && $searchTerm) {
     ";
     $params = ['%' . $searchTerm . '%'];
 } elseif ($selectedCategory && $letter) {
+    $query = "
+        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+               knowledge_class_basic, tags, category
+        FROM $schema.oghma
+        WHERE category = $1
+          AND topic ILIKE $2
+        ORDER BY topic $order
+    ";
+    $params = [$selectedCategory, $letter . '%'];
+} elseif ($selectedCategory) {
     $query = "
         SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
                knowledge_class_basic, tags, category

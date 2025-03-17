@@ -83,6 +83,94 @@ function readRegularLog($logPath, $logName) {
 function sanitizeId($name) {
     return preg_replace('/[^a-zA-Z0-9]/', '', $name);
 }
+
+// Function to create and download zip of all logs
+function createLogsZip() {
+    $logPath = realpath(__DIR__ . '/../../log/');
+    $zipName = 'CHIM-Logs.zip';
+    $zipPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $zipName;
+
+    // Create new zip archive
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
+        error_log("Failed to create zip file");
+        return false;
+    }
+
+    // Add all .log files from the log directory
+    $files = glob($logPath . DIRECTORY_SEPARATOR . '*.log');
+    if (empty($files)) {
+        error_log("No log files found in " . $logPath);
+        $zip->close();
+        return false;
+    }
+
+    $addedFiles = 0;
+    foreach ($files as $file) {
+        if (is_readable($file)) {
+            $relativePath = basename($file);
+            if ($zip->addFile($file, $relativePath)) {
+                $addedFiles++;
+            } else {
+                error_log("Failed to add file to zip: " . $file);
+            }
+        } else {
+            error_log("File not readable: " . $file);
+        }
+    }
+
+    $zip->close();
+
+    // Check if we actually added any files
+    if ($addedFiles === 0) {
+        error_log("No files were added to the zip");
+        if (file_exists($zipPath)) {
+            unlink($zipPath);
+        }
+        return false;
+    }
+
+    // Verify the zip file exists and is readable
+    if (!file_exists($zipPath) || !is_readable($zipPath)) {
+        error_log("Created zip file is not accessible");
+        return false;
+    }
+
+    // Send the file to the browser
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $zipName . '"');
+    header('Content-Length: ' . filesize($zipPath));
+    header('Pragma: public');
+    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+    header('Expires: 0');
+
+    // Clear any previous output
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+
+    // Read file in chunks to handle large files
+    if ($fp = fopen($zipPath, 'rb')) {
+        while (!feof($fp)) {
+            echo fread($fp, 8192);
+            flush();
+        }
+        fclose($fp);
+        unlink($zipPath); // Delete the temporary zip file
+        return true;
+    }
+
+    return false;
+}
+
+// Handle download request with error handling
+if (isset($_GET['download_logs'])) {
+    if (!createLogsZip()) {
+        header('HTTP/1.1 500 Internal Server Error');
+        echo "Failed to create zip file. Please check the server logs for details.";
+    }
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -334,8 +422,14 @@ function sanitizeId($name) {
             </svg>
             Refresh Logs
         </button>
+        <button class="refresh-button" id="downloadLogs" style="margin-left: 10px;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0a1 1 0 0 1 1 1v6h2.586l-2.293 2.293a1 1 0 0 1-1.414 0L5.586 7H8V1a1 1 0 0 1 1-1zM4 11h8a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2z"/>
+            </svg>
+            Download All Logs
+        </button>
     </div>
-    <h2>Logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">Click here to view the log folder.</a></h2>
+    <h2>Logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
 
     <div class="grid-container" id="logGrid">
         <div class="log-section">
@@ -424,6 +518,11 @@ function refreshLogs() {
 
 // Add click event listener to refresh button
 document.getElementById('refreshLogs').addEventListener('click', refreshLogs);
+
+// Add click event listener to download button
+document.getElementById('downloadLogs').addEventListener('click', function() {
+    window.location.href = window.location.pathname + '?download_logs=1';
+});
 </script>
 
 <?php

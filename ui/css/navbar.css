@@ -9,10 +9,10 @@
 /* Define the scrolling animation */
 @keyframes scrollBackground {
     from {
-        background-position: 0 0;
+        background-position-x: 0;
     }
     to {
-        background-position: -1920px 0; /* Adjust this value based on your background image width */
+        background-position-x: -7680px;
     }
 }
 
@@ -32,7 +32,7 @@ body.auto-refresh .chim-status-nav {
     background-repeat: repeat-x;
     background-position: 0 0;
     font-family: 'Futura CondensedLight', Arial, sans-serif;
-    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
+    animation: scrollBackground 240s linear infinite;
 }
 
 .chim-navbar {
@@ -46,7 +46,7 @@ body.auto-refresh .chim-status-nav {
     background-position: 0 0;
     width: 100%;
     padding: 10px 0;
-    animation: scrollBackground 100s linear infinite; /* 60s duration, adjust as needed */
+    animation: scrollBackground 240s linear infinite;
 }
 
 .chim-status-container {
@@ -65,14 +65,14 @@ body.auto-refresh .chim-status-nav {
     font-family: 'MagicCards', sans-serif;
     font-size: 18px;
     letter-spacing: 0.5px;
-    color: #ffffff;
+    color: #ffffffda;
     margin: 0 4px;
 }
 
 .nav-item.dropdown.mx-2 > .nav-link {
     font-family: 'MagicCards', sans-serif;
     font-size: 22px;
-    color: #ffffff;
+    color: #ffffffda;
     padding: 4px 8px;
     word-spacing: 4px;
 }
@@ -226,46 +226,60 @@ body.overlay-active {
 .dropdown-option {
     position: relative;
     padding: 15px;
-    background-color: #031633;
-    border: 2px solid #021b4d;
-    border-radius: 6px;
+    background-color: rgba(3, 22, 51, 0.8);
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 8px;
     cursor: pointer;
     text-align: center;
-    font-size: 16px;
+    font-size: 15px;
     color: #ffffff;
-    transition: background-color 0.3s, border-color 0.3s;
+    transition: all 0.2s ease-in-out;
     text-decoration: none;
     display: block;
-    font-weight: bold;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .dropdown-option:hover {
-    background-color: #022a6a;
-    border-color: #031633;
+    background-color: rgba(2, 42, 106, 0.9);
+    border-color: rgba(96, 165, 250, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
 }
 
 /* Favorite Button */
 .favorite-btn {
     position: absolute;
     top: 50%;
-    right: 1px;
+    right: 8px;
     transform: translateY(-50%) scale(0.8);
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 36px;
-    color: #FFD700;
-    transition: color 0.3s, transform 0.3s;
-    font-weight: bold;
-    z-index: 1;
-}
-
-.favorite-btn.favorited {
-    color: #FFD700;
+    font-size: 24px;
+    color: rgba(255, 215, 0, 0.7);
+    transition: all 0.2s ease-in-out;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
 }
 
 .favorite-btn:hover {
-    background: #022a6a;
+    background: rgba(2, 42, 106, 0.4);
+    color: rgba(255, 215, 0, 1);
+    transform: translateY(-50%) scale(0.85);
+}
+
+.favorite-btn.favorited {
+    color: rgba(255, 215, 0, 1);
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
 }
 
 /* Profile Selection Button */
@@ -274,18 +288,21 @@ body.overlay-active {
     height: 100%;
     background: none;
     border: none;
-    padding: 0;
+    padding: 15px;
     margin: 0;
     text-align: center;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     color: inherit;
-    font-weight: bold;
+    font-weight: 500;
     font-family: 'Futura CondensedLight', Arial, sans-serif;
+    transition: all 0.2s ease-in-out;
+    letter-spacing: 0.3px;
 }
 
 .profile-select-btn:hover {
-    background: #022a6a;
+    background: rgba(2, 42, 106, 0.4);
+    backdrop-filter: blur(5px);
 }
 
 .profile-select-btn:focus {
@@ -303,51 +320,80 @@ body.overlay-active {
 
 .filter-button {
     padding: 8px 12px;
-    background-color: #031633;
-    border: none;
-    border-radius: 4px;
+    background-color: rgba(3, 22, 51, 0.8);
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
     color: #ffffff;
-    transition: background-color 0.3s, color 0.3s;
-    font-weight: bold;
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
     font-family: 'Futura CondensedLight', Arial, sans-serif;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.filter-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
 }
 
 .filter-button[data-filter="all"] {
-    background-color: #28a745;
+    background-color: rgba(32, 122, 74, 0.8);
+    border-color: rgba(72, 187, 120, 0.3);
 }
 
 .filter-button[data-filter="all"]:hover,
 .filter-button[data-filter="all"].active {
-    background-color: #218838;
-    color: #ffffff;
+    background-color: rgba(42, 142, 94, 0.9);
+    border-color: rgba(72, 187, 120, 0.4);
 }
 
 .filter-button:not([data-filter="all"]):hover,
 .filter-button:not([data-filter="all"]).active {
-    background-color: #022a6a;
-    color: #ffffff;
+    background-color: rgba(2, 42, 106, 0.9);
+    border-color: rgba(96, 165, 250, 0.4);
 }
 
 /* NPC Profile Button */
 .btn-npcprofile {
-    background-color: #b81493;
+    background-color: rgba(184, 20, 147, 0.8);
     color: #ffffff;
     padding: 10px 20px;
-    border: 2px solid rgba(255, 255, 255, 0.65);
-    border-radius: 6px;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.3s, color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
     margin: 5px;
-    font-weight: bold;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+    background-image: linear-gradient(180deg, 
+                      rgba(255, 255, 255, 0.08) 0%,
+                      rgba(255, 255, 255, 0) 100%);
 }
 
 .btn-npcprofile:hover {
-    background-color: #4a1f40;
+    background-color: rgba(105, 44, 91, 0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.btn-npcprofile:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
 }
 
 /* Configuration Depth Section */
@@ -385,5 +431,302 @@ body {
 @media (max-width: 500px) {
     .options-container {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Dropdown Menu Items */
+.nav-item.dropdown.mx-2 .dropdown-item {
+    padding: 8px 16px;
+    color: #ffffff;
+    transition: all 0.2s ease-in-out;
+    line-height: 1.4;
+    white-space: nowrap;
+    position: relative;
+    border-radius: 6px;
+    background: transparent;
+}
+
+.nav-item.dropdown.mx-2 .dropdown-item:hover {
+    background-color: rgba(2, 42, 106, 0.8);
+    backdrop-filter: blur(5px);
+}
+
+/* Active states for all buttons */
+.dropdown-option:active,
+.filter-button:active,
+.btn-npcprofile:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Focus states for all buttons */
+.dropdown-option:focus,
+.filter-button:focus,
+.btn-npcprofile:focus,
+.profile-select-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(138, 155, 182, 0.15),
+                0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* AI Service Toggle Button */
+.ai-service-toggle {
+    padding: 6px 12px;
+    background-color: rgba(184, 20, 147, 0.8);
+    color: #ffffff;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+    background-image: linear-gradient(180deg, 
+                      rgba(255, 255, 255, 0.08) 0%,
+                      rgba(255, 255, 255, 0) 100%);
+}
+
+.ai-service-toggle:hover {
+    background-color: rgba(105, 44, 91, 0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.ai-service-toggle:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.ai-service-toggle .model-name {
+    color: #ffeb3b;
+    margin-left: 4px;
+}
+
+/* Copy to all profiles button style */
+.copy-to-all-profiles-btn {
+    color: #FFFFFF; 
+    cursor: pointer; 
+    font-size: 13px; 
+    display: inline-block; 
+    position: relative; 
+    background-color: rgba(85, 95, 109, 0.9);
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    padding: 6px 12px; 
+    border-radius: 8px;
+    text-decoration: none;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease-in-out;
+    margin-left: 1em;
+    background-image: linear-gradient(180deg, 
+                      rgba(255, 255, 255, 0.08) 0%,
+                      rgba(255, 255, 255, 0) 100%);
+}
+
+.copy-to-all-profiles-btn:hover {
+    background-color: rgba(75, 85, 99, 0.8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.copy-to-all-profiles-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Configuration Depth Buttons */
+.config-depth-btn {
+    margin-top: 5px;
+    font-weight: 500;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #000000;
+    transition: all 0.2s ease-in-out;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+    background-image: linear-gradient(180deg, 
+                      rgba(255, 255, 255, 0.08) 0%,
+                      rgba(255, 255, 255, 0) 100%);
+}
+
+.config-depth-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.config-depth-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.config-depth-btn.basic {
+    background-color: rgba(255, 193, 7, 0.8);
+}
+
+.config-depth-btn.basic:hover {
+    background-color: rgba(204, 154, 5, 0.9);
+}
+
+.config-depth-btn.advanced {
+    background-color: rgba(253, 126, 20, 0.8);
+}
+
+.config-depth-btn.advanced:hover {
+    background-color: rgba(211, 102, 13, 0.9);
+}
+
+.config-depth-btn.experimental {
+    background-color: rgba(220, 53, 69, 0.8);
+    border: 2px solid rgba(255, 87, 34, 0.8);
+    color: #fff;
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+    animation: warningPulse 2s infinite;
+    position: relative;
+}
+
+@keyframes warningPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 87, 34, 0.4),
+                    inset 0 1px rgba(255, 255, 255, 0.1);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(255, 87, 34, 0),
+                    inset 0 1px rgba(255, 255, 255, 0.1);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 87, 34, 0),
+                    inset 0 1px rgba(255, 255, 255, 0.1);
+    }
+}
+
+.config-depth-btn.experimental:hover {
+    background-color: rgba(180, 31, 46, 0.9);
+    border-color: rgba(255, 87, 34, 1);
+    text-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4),
+                inset 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.config-depth-btn.experimental:before {
+    content: "⚠️";
+}
+
+.config-depth-btn.active {
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* View Contents Button */
+.view-contents-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: rgba(0, 48, 176, 0.8);
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+    background-image: linear-gradient(180deg, 
+                      rgba(255, 255, 255, 0.08) 0%,
+                      rgba(255, 255, 255, 0) 100%);
+    margin: 4px 0;
+}
+
+.view-contents-btn:hover {
+    background-color: rgba(0, 38, 156, 0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.view-contents-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.view-contents-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(138, 155, 182, 0.15),
+                0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Social Links */
+.social-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-right: 15px;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
+    opacity: 0.8;
+}
+
+.social-link:hover {
+    transform: translateY(-2px);
+    opacity: 1;
+}
+
+.social-link img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+/* Responsive adjustments for social links */
+@media (max-width: 768px) {
+    .social-links {
+        gap: 8px;
+        margin-right: 10px;
+    }
+    
+    .social-link img {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .social-links {
+        gap: 6px;
+        margin-right: 8px;
+    }
+    
+    .social-link img {
+        width: 18px;
+        height: 18px;
     }
 }

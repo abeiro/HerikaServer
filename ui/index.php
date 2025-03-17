@@ -409,6 +409,14 @@ $debugPaneLink = true;
         $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
         $offset = ($page - 1) * $limit;
 
+        // Add function to determine color based on time value - moved outside
+        function getTimeColor($time) {
+            if ($time <= 2) return "#88cc88"; // green
+            if ($time <= 5) return "#ffff00"; // yellow
+            if ($time <= 8) return "#ffa500"; // orange
+            return "#ff6666"; // red
+        }
+
         // Add modal HTML structure at the top
         echo '
         <div id="contentModal" class="modal">
@@ -462,33 +470,6 @@ $debugPaneLink = true;
         .close:focus {
             color: #fff;
             text-decoration: none;
-        }
-
-        /* View Contents Button Style */
-        .view-contents-btn {
-            display: inline-block;
-            padding: 8px 16px;
-            background-color:rgb(0, 48, 176);
-            color: #fff;
-            border: 1px solid white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9em;
-            text-align: center;
-            width: auto;
-            margin: 4px 0;
-        }
-
-        .view-contents-btn:hover {
-            background-color:rgb(0, 38, 156);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .view-contents-btn:active {
-            transform: translateY(0);
-            box-shadow: none;
         }
 
         #modalText {
@@ -547,7 +528,8 @@ $debugPaneLink = true;
         $columnHeaders = [
             'localts' => 'Time (UTC)',
             'response' => 'AI Response',
-            'prompt' => 'Prompt'
+            'prompt' => 'Prompt',
+            'url' => 'HTTP Request'
         ];
     
         $mappedResults = array_map(function ($row) use ($columnHeaders) {
@@ -565,6 +547,43 @@ $debugPaneLink = true;
                     $dt = new DateTime("@$value");
                     $dt->setTimezone(new DateTimeZone('UTC'));
                     $mappedRow[$columnHeaders[$key]] = $dt->format('d-m-Y H:i:s');
+                } else if ($key === 'url') {
+                    // Check if response starts with Array and contains "in X secs"
+                    if (strpos($row['response'], 'Array') === 0) {
+                        // Strip the "in X secs" from the end
+                        $mappedRow[$columnHeaders[$key] ?? $key] = preg_replace('/ in \d+\.?\d* secs$/', '', $value);
+                    }
+                    // Process timing info for non-Array responses
+                    else if (strpos($value, '[AI secs]') !== false) {
+                        $pattern = '/\[AI secs\]\s+([\d.]+)\s+\[TTS secs\]\s+([\d.]+)/';
+                        if (preg_match($pattern, $value, $matches)) {
+                            $aiTime = floatval($matches[1]);
+                            $totalTtsTime = floatval($matches[2]);
+                            $actualTtsTime = $totalTtsTime - $aiTime;
+                            
+                            // Format numbers
+                            $aiTimeFormatted = number_format($aiTime, 2);
+                            $ttsTimeFormatted = number_format($actualTtsTime, 2);
+                            
+                            // Get colors based on times
+                            $aiColor = getTimeColor($aiTime);
+                            $ttsColor = getTimeColor($actualTtsTime);
+                            $totalColor = getTimeColor($totalTtsTime);
+                            
+                            // Get everything before [AI secs]
+                            $baseText = substr($value, 0, strpos($value, '[AI secs]'));
+                            
+                            $mappedRow[$columnHeaders[$key] ?? $key] = 
+                                $baseText . 
+                                "<br>[LLM] <span style='color: " . $aiColor . "'>" . $aiTimeFormatted . "</span>" .
+                                " [TTS] <span style='color: " . $ttsColor . "'>" . $ttsTimeFormatted . "</span>" .
+                                " [Total]: <span style='color: " . $totalColor . "'>" . $totalTtsTime . "</span>";
+                        } else {
+                            $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                        }
+                    } else {
+                        $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                    }
                 } else {
                     $mappedRow[$columnHeaders[$key] ?? $key] = $value;
                 }
@@ -1102,7 +1121,7 @@ $debugPaneLink = true;
         } else {
             echo '<form method="post" style="margin:0;">
                     <input type="hidden" name="download_minai" value="1">
-                    <button type="submit" class="open-overlay-btn">Download MinAI</button>
+                    <button type="submit" class="btn-primary">Download MinAI</button>
                   </form>';
         }
         echo '</td>';
