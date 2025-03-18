@@ -48,7 +48,7 @@ function dow2str_gregorian_day($s_dow_number) {
     } elseif($sdx == "5") {
         $sRes = "Thursday";
     } elseif($sdx == "6") {
-        $sRes = "Fryday";
+        $sRes = "Friday";
     } elseif($sdx == "7") {
         $sRes = "Saturday";
     } 
@@ -857,8 +857,8 @@ function gamets2str_datetime_for_prompt_explained($gamets, $b_include_gregorian=
 
         $s_date_long = convert_gamets2skyrim_long_date_no_time($gamets);
         $s_day_of_week_gregorian = gamets2str_dow_gregorian($f_gamets);
-        $s_day_of_week_skyrim = convert_dow_gregorian2dow_skyrim($s_day_of_week_gregorian); 
-        
+        $s_day_of_week_skyrim = gamets2str_dow_skyrim($f_gamets);
+
         $s_month = date('m', $ts_datetime);
         $s_skyrim_month = gamets2str_skyrim_month($f_gamets);
         $s_gregorian_month = gamets2str_gregorian_month($f_gamets); 
