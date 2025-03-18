@@ -296,7 +296,7 @@ class openaijson
                 ,
                 'stream' => true,
                 'max_completion_tokens'=>$MAX_TOKENS,
-                'temperature' => ($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1,
+                'temperature' => $temperature,
                 'top_p' => ($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1,
                 'response_format'=>["type"=>"json_object"]
 
