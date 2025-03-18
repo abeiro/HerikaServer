@@ -112,29 +112,10 @@ class openrouterjson
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
-        /* original code exposing duplicate prompt part
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
         }
-        */
-        // this is a temporary fix for double inclusion
-        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {  
-            // part of command_prompt is already included in main.php
-            if (isset($GLOBALS["COMMAND_PROMPT_FUNCTIONS"])) {
-                $s_mark = $GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
-                $s_cprompt = $GLOBALS["COMMAND_PROMPT"];
-                $s_ctx = $contextData[0]["content"];
-                if (!(stripos($s_ctx, $s_mark) === false)) {
-                    $i_pos = stripos($s_cprompt, $s_mark); 
-                    if ((!($i_pos === false)) && ($i_pos > 0)) {
-                        $i_len = strlen($s_mark);
-                        $s_cprompt = substr($GLOBALS["COMMAND_PROMPT"], $i_pos + $i_len );
-                    }
-                }
-            }
-            $contextData[0]["content"].=$s_cprompt;
-        } 
-
+        
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         } else {
