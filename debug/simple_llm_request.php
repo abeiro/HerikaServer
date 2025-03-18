@@ -13,31 +13,60 @@ $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 
 
 
 $FUNCTIONS_ARE_ENABLED=false;
 $gameRequest=["inputtext"];
 
+$profile=md5("default");
+
+if (file_exists($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php")) {
+    error_log("PROFILE: {$profile}");
+    $GLOBALS["active_profile"]=$profile;
+    require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php");
+
+} else 
+    error_log($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php");
+
+$GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
+
+$db=new sql();
+
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
     die("Choose a LLM model and connector.".PHP_EOL);
 
 } else {
-
+    error_log("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
     require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 
 
-    $prompt[] = array('role' => 'user', 'content' => $argv[1]);
+    $contextDataHistoric = DataLastDataExpandedFor("", -50);
+    $contextDataWorld = DataLastInfoFor("", -2);
+    $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
+    $historyData="";
 
+    foreach ($contextDataFull as $element) {
+    
+        $historyData.=trim("{$element["content"]}").PHP_EOL;
+        
+      }
 
     
-    $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
-    $connectionHandler->open($prompt,["MAX_TOKENS"=>32]);
+    $GLOBALS["HERIKA_NAME"]="random present actor";
+    $GLOBALS["HERIKA_PERS"]="";
 
-    print_r($GLOBALS["DEBUG_DATA"]["full"]);
-     
+    $prompt[] = array('role' => 'system', 'content' => "I want you to read this gameplay transcription in Skyrim universe.");
+    $prompt[] = array('role' => 'user', 'content' => $historyData);
+    $prompt[] = array('role' => 'user', 'content' =>"Now act as a movie director and create a new line of dialogue for any of the participants. 
+This new line can introduce a new topic, keep talking about same topics, say someting new, point to a enviroment action has happened...be creative but logical.");
+    
+    $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
+    $connectionHandler->open($prompt,["MAX_TOKENS"=>256]);
+
     $buffer="";
     $totalBuffer="";
     $breakFlag=false;
@@ -48,7 +77,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             break;
         }
 
-        $buffer.=$connectionHandler->process();
+        $buffer=$connectionHandler->process();
         $totalBuffer.=$buffer;
 
         if ($connectionHandler->isDone()) {
@@ -56,10 +85,10 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         }
         
      }
-     
     
+    $rawbuffer=$connectionHandler->close();
      
-     echo PHP_EOL."$buffer".PHP_EOL;
+    print_r($rawbuffer);
    
 }
 

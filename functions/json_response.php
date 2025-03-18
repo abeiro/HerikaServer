@@ -58,7 +58,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
-                    "lang"=>"en|es",
+                    "lang"=>"en|es"
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -67,7 +67,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target|destination name",
+                    "target"=>"action's target|destination name"
                 ];
             }
         } else {
@@ -79,7 +79,7 @@
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
                     "lang"=>"en|es",
-                    "message"=>"lines of dialogue",
+                    "message"=>"lines of dialogue"
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -88,9 +88,23 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
-                    "message"=>"lines of dialogue",
+                    "message"=>"lines of dialogue"
                 ];
             }
+        }
+
+        // request speaking tones from the LLM when using zonos TTS
+        if (zonosIsActive()) {
+            $GLOBALS["responseTemplate"] = array_merge($GLOBALS["responseTemplate"], [
+                "response_tone_happiness"=>"Value from 0-1",
+                "response_tone_sadness"=>"Value from 0-1",
+                "response_tone_disgust"=>"Value from 0-1",
+                "response_tone_fear"=>"Value from 0-1",
+                "response_tone_surprise"=>"Value from 0-1",
+                "response_tone_anger"=>"Value from 0-1",
+                "response_tone_other"=>"Value from 0-1",
+                "response_tone_neutral"=>"Value from 0-1"
+            ]);
         }
     }
     
@@ -156,6 +170,66 @@
                 "strict" => true
             )
         );
+
+        // request speaking tones from the LLM when using zonos TTS
+        if (zonosIsActive()) {
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                    "response_tone_happiness" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_sadness" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_disgust" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_fear" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_surprise" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_anger" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_other" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 0
+                    ),
+                    "response_tone_neutral" => array(
+                        "type" => "number",
+                        "description" => "Value from 0-1",
+                        "default" => 1.0
+                    )
+                )
+            );
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"] = array_merge(
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"], [
+                    "response_tone_happiness",
+                    "response_tone_sadness",
+                    "response_tone_disgust",
+                    "response_tone_fear",
+                    "response_tone_surprise",
+                    "response_tone_anger",
+                    "response_tone_other",
+                    "response_tone_neutral"
+                ]
+            );
+        }
     }
 
     // sets the grammar used by koboldcpp
@@ -187,15 +261,29 @@
             $actions_str = "string";
         }
 
+        // build the string for zonos tts tones
+        $zonos_tones_str = zonosIsActive()
+            ? '"," ws root-response_tone_happiness "," ws root-response_tone_sadness "," ws root-response_tone_disgust "," ws root-response_tone_fear ","'.
+              ' ws root-response_tone_surprise "," ws root-response_tone_anger "," ws root-response_tone_other "," ws root-response_tone_neutral '
+            : "";
+
         // using a quoted heredoc to avoid having to escape everything
         $GLOBALS["grammar"] = <<<'EOD'
-        root ::= "{" ws root-character "," ws root-listener "," ws root-message "," ws root-mood "," ws root-action "," ws root-target "}" ws
+        root ::= "{" ws root-character "," ws root-listener "," ws root-message "," ws root-mood "," ws root-action "," ws root-target {$ZONOS}"}" ws
         root-character ::= "\"character\"" ":" ws string
         root-listener ::= "\"listener\"" ":" ws string
         root-message ::= "\"message\"" ":" ws string
         root-mood ::= "\"mood\"" ":" ws {$MOODS}
         root-action ::= "\"action\"" ":" ws {$ACTIONS}
         root-target ::= "\"target\"" ":" ws string
+        root-response_tone_happiness ::= "\"response_tone_happiness\"" ":" ws number
+        root-response_tone_sadness ::= "\"response_tone_sadness\"" ":" ws number
+        root-response_tone_disgust ::= "\"response_tone_disgust\"" ":" ws number
+        root-response_tone_fear ::= "\"response_tone_fear\"" ":" ws number
+        root-response_tone_surprise ::= "\"response_tone_surprise\"" ":" ws number
+        root-response_tone_anger ::= "\"response_tone_anger\"" ":" ws number
+        root-response_tone_other ::= "\"response_tone_other\"" ":" ws number
+        root-response_tone_neutral ::= "\"response_tone_neutral\"" ":" ws number
 
         string ::=
         "\"" (
@@ -203,13 +291,20 @@
             "\\" (["\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]) # escapes
         )* "\"" ws
 
+        number ::= ("-"? ([0-9] | [1-9] [0-9]*)) ("." [0-9]+)? ([eE] [-+]? [0-9]+)? ws
+
         # Optional space: by convention, applied in this grammar after literal chars when allowed
         ws ::= ([ \t\n] ws)?
         EOD;
 
         // replace the mood and action templates with the strings built earlier
+        $GLOBALS["grammar"]=str_replace('{$ZONOS}', $zonos_tones_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$MOODS}', $moods_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$ACTIONS}', $actions_str, $GLOBALS["grammar"]);
+    }
+
+    Function zonosIsActive() {
+        return $GLOBALS["TTSFUNCTION"] == "zonos_gradio" && isset($GLOBALS["TTS"]["ZONOS_GRADIO"]["dynamic_tones"]) && $GLOBALS["TTS"]["ZONOS_GRADIO"]["dynamic_tones"];
     }
 
 ?>

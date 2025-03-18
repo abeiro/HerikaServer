@@ -99,9 +99,30 @@ if ($method === "POST") {
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
 		$connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-        $GLOBALS["FORCE_MAX_TOKENS"]=1500;
-		$gameRequest=["updateprofile"];	// Fake an updateprofile call.
-		$connectionHandler->open($contextData, ["max_tokens"=>1500]);
+
+		// Get max tokens based on which connector is being used for diary
+		$maxTokens = 1000; // Default fallback
+		switch($GLOBALS["CONNECTORS_DIARY"]) {
+			case "openrouter":
+				$maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
+					$GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"] : $maxTokens;
+				break;
+			case "openai":
+				$maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
+					$GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"] : $maxTokens;
+				break;
+			case "google_openaijson":
+				$maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
+					$GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"] : $maxTokens;
+				break;
+			case "koboldcpp":
+				$maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
+					$GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"] : $maxTokens;
+				break;
+		}
+
+		$connectionHandler->open($contextData, ["max_tokens"=>$maxTokens]);
+
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;

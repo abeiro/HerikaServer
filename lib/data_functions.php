@@ -618,8 +618,11 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             if ($printLocation) {
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
-                        //$timeStampBuffer[$hoursAgo]="set";// Disabled
-                        $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: SCENARIO CHANGE, $currentLocation, timeline mark: $hoursAgo hours ago  ");
+                        if (DataLastKnownLocationHuman(false,true)==$currentLocation)   // Enforce current location.
+                            $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: LOCATION CHANGE, THIS IS THE CURRENT LOCATION: $currentLocation");
+                        
+                        else
+                            $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: LOCATION CHANGE to $currentLocation, timeline mark: $hoursAgo hours ago  ");
                     }
                 }
             }
@@ -1174,10 +1177,13 @@ function DataLastKnownLocation()
 
 }
 
-function DataLastKnownLocationHuman($hold=false)
+function DataLastKnownLocationHuman($hold=false,$cached=false)
 {
 
     global $db;
+
+    if ($cached && isset($GLOBALS["LAST_KNOW_LOCATION_HUMAN"]))
+        return $GLOBALS["LAST_KNOW_LOCATION_HUMAN"];
 
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
@@ -1187,13 +1193,17 @@ function DataLastKnownLocationHuman($hold=false)
     if (!$hold) {
         $re = '/Context location: ([\w\ \']*)/';
         preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
+        $GLOBALS["LAST_KNOW_LOCATION_HUMAN"]=$matches[1][0];
         return $matches[1][0];
     } else {
         preg_match('/Hold:\s*(\w+)/', $lastLoc[0]["data"], $matches);
-        if (isset($matches[1]))
+        if (isset($matches[1])) {
             $hold = $matches[1];
+            $GLOBALS["LAST_KNOW_LOCATION_HUMAN"]=$matches[1];
+        }
         else 
             $hold = "";
+        
         return $hold;
     }
 
@@ -1391,7 +1401,7 @@ function DataBeingsInCloseRange()
     }
     
     $beings=strtr($lastLoc[0]["data"],["beings in range:"=>""]);
-    $beingsArray=explode(",",$beings);
+    $beingsArray=explode("/",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
         if (strpos($v,")")===false) 
@@ -1708,7 +1718,9 @@ function call_llm() {
 
     if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  {
         $actions=$connectionHandler->processActions();
-
+        if (isset($GLOBALS["action_post_process_fnct"])) {
+            $actions=$GLOBALS["action_post_process_fnct"]($actions);
+        }
         if (is_array($actions) && (sizeof($actions)>0)) {
             
             // ACTION POST-FILTER
@@ -1733,9 +1745,9 @@ function call_llm() {
                 }
             }
 
-            $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
-            echo implode("\r\n", $actions).PHP_EOL;
-            file_put_contents(__DIR__."/../log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
+                $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
+                echo implode("\r\n", $actions).PHP_EOL;
+                file_put_contents(__DIR__."/../log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
 
         }
     }
@@ -1995,7 +2007,7 @@ function profile_exists($npcname) {
     return file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
 }
 
-function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
+function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile='') {
    
     global $db; 
 
@@ -2006,13 +2018,14 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
     $newConfFile=md5($npcname);
 
     $codename = npcNameToCodename($npcname);
+    $baseprofileName = npcNameToCodename($baseprofile);
     
    
 
     if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
         
-        error_log("Overwritting conf");
-        sleep (1);
+        //error_log("Overwritting conf");
+        //sleep (1);
         $cn=$db->escape("Voicetype/$codename");
         $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
         $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
@@ -2038,6 +2051,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
             unset($file_lines[$i]);
         }
         
+
         if (empty($GLOBALS["CORE_LANG"])) {
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
@@ -2052,8 +2066,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
                 $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
             }
         }
-        
-
+                
         $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
         //use the Nametype conf opts to latch onto the character name while still being able to pull the correct voicetype[3]
         if ($voicelogic === "voicetype") {
@@ -2129,8 +2142,10 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         } else {
             if ($voicelogic === "voicetype") {
                 file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . strtolower($voicetype[3]) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
+                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . strtolower($voicetype[3]) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
             } else {
                 file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
+                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
             }
         }
         // MeloTTS voiceid override from table, if fails then generated normally.
@@ -2161,6 +2176,9 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false) {
         if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json")) {
             
             $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
+            if (!$characterMap)
+                $characterMap=[];
+
             error_log("Loading character map: ".sizeof($characterMap));
         }
 
@@ -2200,6 +2218,7 @@ function requireFilesRecursively($dir,$name) {
         } 
     }
 }
+
 
 ?>
 

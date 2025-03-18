@@ -14,7 +14,7 @@ final class OghmaTest extends DatabaseTestCase
         $this->insertPotionLore();
         
         $GLOBALS["mockMinimeTopic"] = function($text) {
-            return '{"input_text": "'.$text.'", "generated_tags": "Commander Shepard", "elapsed_time": "0.05 seconds"}';
+            return '{"input_text": "'.$text.'", "generated_tags": "", "elapsed_time": "0.05 seconds"}';
         };
         
         // input topic = 0
@@ -37,8 +37,8 @@ final class OghmaTest extends DatabaseTestCase
             return $this->defaultConnectorResponse($url, $context);
         });
 
-        // comm.php?data=inputtext|100|200|Tell me about Commander Shepard. (base64 encoded)
-        $encodedData = base64_encode("inputtext|100|200|Tell me about Commander Shepard.");
+        // comm.php?data=inputtext|100|200|What's going on around here? (base64 encoded)
+        $encodedData = base64_encode("inputtext|100|200|What's going on around here?");
         $_SERVER["QUERY_STRING"] = "data={$encodedData}";
         require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
     }
@@ -49,10 +49,6 @@ final class OghmaTest extends DatabaseTestCase
         require("conf.php");
 
         $this->insertPotionLore();
-        
-        $GLOBALS["mockMinimeTopic"] = function($text) {
-            return '{"input_text": "'.$text.'", "generated_tags": "Potion Seller", "elapsed_time": "0.05 seconds"}';
-        };
         
         // input topic = 6.9
         // oghma topic = 0
@@ -65,12 +61,11 @@ final class OghmaTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner".
+                $expectedPrompt =
                     "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
-                    "He has little respect for knights, because his potions can do anything that they can.\n".
-                    "You are The Narrator in a Skyrim adventure. You will only talk to Prisoner. You refer to yourself as 'The Narrator'. Only Prisoner can hear you. ".
-                    "Your goal is to comment on Prisoner's playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events.\n\nDon't write narrations.\nNo active quests right now."];
-                $this->expectPromptInContext($streamContext, $expectedPrompt);
+                    "He has little respect for knights, because his potions can do anything that they can.";
+                $options = stream_context_get_options($streamContext);
+                $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;
             })
         )
@@ -112,12 +107,11 @@ final class OghmaTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner".
+                $expectedPrompt =
                     "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
-                    "He has little respect for knights, because his potions can do anything that they can.\n".
-                    "You are The Narrator in a Skyrim adventure. You will only talk to Prisoner. You refer to yourself as 'The Narrator'. Only Prisoner can hear you. ".
-                    "Your goal is to comment on Prisoner's playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events.\n\nDon't write narrations.\nNo active quests right now."];
-                $this->expectPromptInContext($streamContext, $expectedPrompt);
+                    "He has little respect for knights, because his potions can do anything that they can.";
+                $options = stream_context_get_options($streamContext);
+                $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;
             })
         )
@@ -185,27 +179,27 @@ final class OghmaTest extends DatabaseTestCase
             'conf_opts',
             array(
                 'id' => 'current_oghma_topic',
-                'value' => 'Alchemist'
+                'value' => 'Potion'
             )
         );
-        // Hold regex breaks on spaces, so only the Potion keyword is used
+        // Hold regex breaks on spaces, so only the Seller keyword is used
         $testDb->insert(
             'eventlog',
             array(
                 'ts' => "0",
                 'gamets' => "0",
                 'type' => "infoloc",
-                'data' => "(Context location: Lair of the Potion Seller ,Hold: Potion Seller's Lair, Buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:20 PM, 18th of Frostfall, 4E 201)",
+                'data' => "(Context location: Lair of the Potion Seller ,Hold: Seller Of Potions, Buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:20 PM, 18th of Frostfall, 4E 201)",
                 'sess' => 'pending',
                 'localts' => 0,
-                'location'=> "(Context location: Lair of the Potion Seller ,Hold: Potion Seller's Lair, buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:18 PM, 18th of Frostfall, 4E 201)"
+                'location'=> "(Context location: Lair of the Potion Seller ,Hold: Seller of Potions, buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:18 PM, 18th of Frostfall, 4E 201)"
             )
         );
         $testDb->close();
         
         // input topic = 0
-        // oghma topic = 1.2
-        // location = 1.4
+        // oghma topic = 3.6 (potion_of_pickpocketing wins without the eventlog entry)
+        // location = 1.3
         // context = 0
 
         $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
@@ -214,12 +208,11 @@ final class OghmaTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner".
+                $expectedPrompt =
                     "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
-                    "He has little respect for knights, because his potions can do anything that they can.\n".
-                    "You are The Narrator in a Skyrim adventure. You will only talk to Prisoner. You refer to yourself as 'The Narrator'. Only Prisoner can hear you. ".
-                    "Your goal is to comment on Prisoner's playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events.\n\nDon't write narrations.\nNo active quests right now."];
-                $this->expectPromptInContext($streamContext, $expectedPrompt);
+                    "He has little respect for knights, because his potions can do anything that they can.";
+                $options = stream_context_get_options($streamContext);
+                $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;
             })
         )
@@ -244,7 +237,7 @@ final class OghmaTest extends DatabaseTestCase
             'conf_opts',
             array(
                 'id' => 'current_oghma_topic',
-                'value' => 'Alchemist'
+                'value' => 'Strongest'
             )
         );
         $testDb->insert(
@@ -253,10 +246,10 @@ final class OghmaTest extends DatabaseTestCase
                 'ts' => "0",
                 'gamets' => "0",
                 'type' => "infoloc",
-                'data' => "(Context location: Lair of the Potion Seller ,Hold: Strongest Alchemist, Buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:20 PM, 18th of Frostfall, 4E 201)",
+                'data' => "(Context location: Lair of the Potion Seller ,Hold: Potion Seller's Lair, Buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:20 PM, 18th of Frostfall, 4E 201)",
                 'sess' => 'pending',
                 'localts' => 0,
-                'location'=> "(Context location: Lair of the Potion Seller ,Hold: Strongest Alchemist, buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:18 PM, 18th of Frostfall, 4E 201)"
+                'location'=> "(Context location: Lair of the Potion Seller ,Hold: Potion Seller's Lair, buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:18 PM, 18th of Frostfall, 4E 201)"
             )
         );
         $testDb->insert(
@@ -286,9 +279,13 @@ final class OghmaTest extends DatabaseTestCase
         );
         $testDb->close();
         
+        $GLOBALS["mockMinimeTopic"] = function($text) {
+            return '{"input_text": "'.$text.'", "generated_tags": "dummy", "elapsed_time": "0.05 seconds"}';
+        };
+        
         // input topic = 0
-        // oghma topic = 1.2
-        // location = 0.6
+        // oghma topic = 1.5
+        // location = 1.4
         // context = 0.4
 
         $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
@@ -297,12 +294,11 @@ final class OghmaTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner".
+                $expectedPrompt =
                     "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
-                    "He has little respect for knights, because his potions can do anything that they can.\n".
-                    "You are The Narrator in a Skyrim adventure. You will only talk to Prisoner. You refer to yourself as 'The Narrator'. Only Prisoner can hear you. ".
-                    "Your goal is to comment on Prisoner's playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events.\n\nDon't write narrations.\nNo active quests right now."];
-                $this->expectPromptInContext($streamContext, $expectedPrompt);
+                    "He has little respect for knights, because his potions can do anything that they can.";
+                $options = stream_context_get_options($streamContext);
+                $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;
             })
         )

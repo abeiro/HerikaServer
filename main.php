@@ -138,8 +138,15 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     // unset($db);
 }
 
-if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close","infoaction",
-        "status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset"])) {
+
+$fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
+    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat"];
+
+if (isset($GLOBALS["external_fast_commands"])) {
+    $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
+}
+
+if (!in_array($gameRequest[0],$fast_commands)) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     
@@ -279,7 +286,7 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
     if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
-        // error_log("Skipping {$gameRequest[0]}");
+        //error_log("Skipping {$gameRequest[0]}");
         die();
     }
     logEvent($gameRequest);
@@ -323,13 +330,13 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 }
 
 
-// Fake entry to mark time passing when borded event
+// Fake entry to mark time passing when bored event
 if (in_array($gameRequest[0],["bored"])) {
     $localGameRequest=$gameRequest;
     $localGameRequest[0]="infoaction";
     $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
     logEvent($localGameRequest);
-    
+    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 }
 
 
@@ -374,7 +381,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     $rechatHistory=DataRechatHistory();
     
     if (sizeof($rechatHistory)>($GLOBALS["RECHAT_H"]))    {   // TOO MUCH RECHAT
-        error_log("Rechat discarded");
+        error_log("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
         sem_release($semaphore);
         while(@ob_end_clean());
@@ -384,7 +391,10 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     
     $rndNumber = rand(1, 100);
     if ($rndNumber <= $GLOBALS["RECHAT_P"]) {
-        
+        // Process Oghma for rechat events using NPC's last dialogue
+        if ($GLOBALS["MINIME_T5"] && isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
+                require(__DIR__."/processor/oghma.php"); // Process Oghma
+        }
     }
     else{
         die();
@@ -411,6 +421,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
 
     $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
+    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 
 } else
     $sqlfilter=" and type<>'prechat' "; // Will dismiss prechat entries by default. prechat are LLM responses still not displayed in-game
@@ -450,7 +461,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-    $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+    $GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange();
 } 
 if (!isset($GLOBALS["CACHE_LOCATION"])) {
     $GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
@@ -564,7 +575,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         
     } else {
         $memoryInjectionCtx=[];
-        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
+        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);//Cleans the memory statement.
             
     }
 } else
@@ -634,9 +645,6 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 }
 
 
-// Check for context overrides on ext dir (plugins)
-requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
-
 if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
     $GLOBALS["PROMPT_HEAD"].=PHP_EOL.$GLOBALS["PLAYER_BIOS"];
 }
@@ -650,6 +658,8 @@ $head[] = array('role' => 'system', 'content' =>
     strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n". $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
 );
 
+// Check for context overrides on ext dir (plugins)
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
 /**********************
 CALL BUILDING
@@ -742,12 +752,6 @@ if (!$outputWasValid) {
         $GLOBALS["LLM_RETRY_FNCT"]();
     }
 }
-
-
-
-
-
-
 
 
 if (sizeof($talkedSoFar) == 0) {

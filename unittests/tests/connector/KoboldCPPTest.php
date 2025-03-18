@@ -257,7 +257,6 @@ final class KoboldCPPTest extends DatabaseTestCase
             return $resourceMock;
         });
 
-        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
         $_GET["profile"] = md5($this->testNPCName);
         global $argv;
         $argv = ["util_memory_subsystem.php", "compact", "noembed", "2", "&"];

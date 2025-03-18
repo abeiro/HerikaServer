@@ -335,7 +335,7 @@ function returnLines($lines,$writeOutput=true)
         $sentence=$output;
         $output = strtr($sentence,[
                         "*Smirks*"=>"","*smirks*"=>"",
-                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*laughs*"=>"",
+                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*Giggles*"=>"","*laughs*"=>"",
                         "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
                         "*pant*"=>"",
                         "*cough*"=>"",
@@ -481,8 +481,15 @@ function returnLines($lines,$writeOutput=true)
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "koboldcpp") {
+
                 require_once(__DIR__."/../tts/tts-koboldcpp.php");
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+
+            } else if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
+
+                require_once(__DIR__."/../tts/tts-zonos_gradio.php");
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+
             } 
             else {
                 if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
@@ -517,12 +524,12 @@ function returnLines($lines,$writeOutput=true)
        
 
         if ($writeOutput) {
-            //if (isset($GLOBALS["NEWQUEUE"]) && $GLOBALS["NEWQUEUE"]) {
+            
             if (true) {
                  if (isset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) && $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) 
                      $GLOBALS["SCRIPTLINE_ANIMATION"]="";
                 else {
-                    if ((rand(0,4)!==0) ){ // Will disable animations, 20% chance to trigger
+                    if ((rand(0,4)!==0)){ // Will disable animations, 20% chance to trigger
                         $GLOBALS["SCRIPTLINE_ANIMATION"]="IdleDialogueExpressiveStart";
                     }
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
@@ -532,7 +539,11 @@ function returnLines($lines,$writeOutput=true)
                     $GLOBALS["SCRIPTLINE_ANIMATION"]="";
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
                 }
-                
+
+                if (is_array($GLOBALS["SCRIPTLINE_LISTENER"]) && sizeof($GLOBALS["SCRIPTLINE_LISTENER"]) > 0 && is_string($GLOBALS["SCRIPTLINE_LISTENER"][0])) {
+                    $GLOBALS["SCRIPTLINE_LISTENER"]=$GLOBALS["SCRIPTLINE_LISTENER"][0];
+                }
+
                 $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix) && (sizeof($listenerFix)>1)) {
                     $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix[0];
@@ -543,9 +554,12 @@ function returnLines($lines,$writeOutput=true)
                     error_log("Applying listenerFix2");
                     $GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[0]);
                 }
+
+                // convert Japanese to Latin characters for use with lip sync
+                $responseTextPhonetic = containsJapanese($responseTextUnmooded) ? convertJapaneseTextToLatin($responseTextUnmooded) : "";
                 
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
-                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}\r\n";
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
                 file_put_contents(__DIR__."/../log/output_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
             }
             else
@@ -1431,3 +1445,25 @@ function startsWithUppercase($string) {
     return preg_match('/^[A-Z]/', $string);
 }
 
+function containsJapanese($string) {
+    $pattern = '/[\p{Hiragana}\p{Katakana}\p{Han}]/u';
+    return preg_match($pattern, $string);
+}
+
+function convertJapaneseTextToLatin($jpText) {
+    if (!file_exists("/home/dwemer/kakasi/")) {
+        error_log("Error: could not convert Japanese to Romaji because Kakasi is not installed. Lip sync will not work.");
+        return "";
+    }
+    $venvPath = "/home/dwemer/kakasi/kakasi_env/bin/python3";
+    $scriptPath = "/home/dwemer/kakasi/convert_to_romaji.py";
+
+    // Escape the Japanese text to avoid issues with special characters
+    $escapedText = escapeshellarg($jpText);
+
+    // Run the Python script using the virtual environment
+    $command = "$venvPath $scriptPath $escapedText";
+    $output = shell_exec($command);
+    $romaji = trim($output);
+    return $romaji;
+}

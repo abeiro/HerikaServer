@@ -2,8 +2,18 @@
 session_start();
 error_reporting(E_ALL);
 
-$localPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$enginePath = $localPath;
+require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+
+$TITLE = "🖼️CHIM - ITT Test - CHIM Server";
+
+ob_start();
+
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+
+$enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "$DBDRIVER.class.php");
@@ -12,7 +22,6 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
-
 
 $db=new sql();
 
@@ -24,16 +33,31 @@ $sampleImagePath = '../../debug/data/sample.jpg';
 $description = itt("$enginePath/debug/data/sample.jpg", '');
 $end_time = time();
 
-// Uncomment the following line if you want to use a predefined description
-// $description = "In this Skyrim image, we see two characters standing in a snowy landscape...";
-
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Image-to-Text Test Page</title>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <title><?php echo $TITLE; ?></title>
+    <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
+    <link rel="stylesheet" href="../css/main.css">
     <style>
+        /* Override main container styles */
+        main {
+            padding-top: 160px; /* Space for navbar */
+            padding-bottom: 40px; /* Reduced space for footer */
+            padding-left: 10px;
+        }
+        
+        /* Override footer styles */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 20px; /* Reduced footer height */
+            background: #031633;
+            z-index: 100;
+        }
+
         /* Updated CSS for Dark Grey Background Theme */
         body {
             font-family: Arial, sans-serif;
@@ -106,7 +130,7 @@ $end_time = time();
             margin-right: 0;
         }
 
-        img {
+        .image-container img {
             max-width: 100%;
             height: auto;
             border: 1px solid #555555;
@@ -131,31 +155,43 @@ $end_time = time();
     </style>
 </head>
 <body>
+<main>
+<div class="indent5">
+    <h1>🖼️CHIM Image-to-Text Test</h1>
 
-<div class="header">Image-to-Text Test Page</div>
+    <div class="section clearfix">
+        <div class="image-container">
+            <h3>Sample Image Sent</h3>
+            <img src="<?php echo htmlspecialchars($sampleImagePath); ?>" alt="Sample Image">
+        </div>
 
-<div class="section clearfix">
-    <div class="image-container">
-        <h3>Sample Image Sent</h3>
-        <img src="<?php echo htmlspecialchars($sampleImagePath); ?>" alt="Sample Image">
+        <div class="description-container">
+            <h3>ITT Output</h3>
+            <div class="response">
+                <?php echo nl2br(htmlspecialchars($description)); ?>
+            </div>
+        </div>
     </div>
 
-    <div class="description-container">
-        <h3>ITT Output</h3>
-        <div class="response">
-            <?php echo nl2br(htmlspecialchars($description)); ?>
+    <div class="section">
+        <div class="message">
+            <?php
+            $timeTaken = $end_time - $start_time;
+            echo "<p><strong>Time taken for ITT call:</strong> {$timeTaken} seconds</p>";
+            echo "<p><strong>Service used:</strong> {$GLOBALS['ITTFUNCTION']}</p>";
+            ?>
         </div>
     </div>
 </div>
+</main>
+<?php
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/footer.html");
 
-<div class="section">
-    <div class="message">
-        <?php
-        $timeTaken = $end_time - $start_time;
-        echo "<p><strong>Time taken for ITT call:</strong> {$timeTaken} seconds</p>";
-        ?>
-    </div>
-</div>
-
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>
 </body>
 </html>

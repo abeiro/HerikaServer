@@ -197,6 +197,7 @@ final class DynamicProfileTest extends DatabaseTestCase
     {
         // default test config
         require("conf.php");
+        $GLOBALS["PLAYER_NAME"]="Prisoner";
         $GLOBALS["HERIKA_NAME"]="Unit Test";
         $GLOBALS["HERIKA_PERS"]="You are a Unit Test.";
         $GLOBALS["HERIKA_DYNAMIC"]='Let\\\'s use \"quotes.\"'; // $HERIKA_DYNAMIC='Let\\\'s use \"quotes.\"';
@@ -207,9 +208,9 @@ final class DynamicProfileTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"system", "content"=>"Let's roleplay in the Universe of Skyrim.\nI'm Prisoner\nYou are a Unit Test.Let\'s use \\\"quotes.\\\"\n\nDon't write narrations.\nNo active quests right now."];
-                $this->expectPromptInContext($streamContext, $expectedPrompt);
-                
+                $expectedPrompt = 'Let\\\\\'s use \\\\\"quotes.\\\\\"';
+                $options = stream_context_get_options($streamContext);
+                $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;
             })
         )

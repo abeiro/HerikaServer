@@ -20,6 +20,11 @@ require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.sample.php");	// Should 
 if (file_exists($rootPath."conf".DIRECTORY_SEPARATOR."conf.php"))
     require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.php");	// Should contain current ones
 
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
 $TITLE = "Config Wizard";
 
 require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
@@ -59,53 +64,72 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
     $_SESSION["PROFILE"]="$configFilepath/conf.php";
 // End of profile selection
 
-include("tmpl/head.html");
-// Config wizard styles
-echo "
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
 <style>
-    label{
-        color: #ff00c6;
-
+    /* Override main container styles */
+    main {
+        padding-top: 160px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
     }
 
-    p.conf-item{
-        color: #ff00c6;
-
+    /* Additional index-specific styles */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
     }
 
+    label {
+        color: #ff00c6;
+    }
+
+    p.conf-item {
+        color: #ff00c6;
+    }
 
     p.conf-item input[type=radio] + label {
         color: white;
-
     }
+
     span {
         color: white;
-
     }
 
     button {
-    padding: 5px 10px;
-    background-color: rgb(0, 48, 176);
-    color: #ffffff;
-    border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.3s, color 0.3s;
-    margin: 2px;
-    font-weight: bold;
+        padding: 5px 10px;
+        background-color: rgb(0, 48, 176);
+        color: #ffffff;
+        border: 2px solid rgba(var(--bs-emphasis-color-rgb), 0.65);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s, color 0.3s;
+        margin: 2px;
+        font-weight: bold;
     }
 
     button:hover {
-        background-color: rgb(0, 38, 156); /* Darker shade for hover */
+        background-color: rgb(0, 38, 156);
     }
-
 </style>
-";
+<?php
+
 $debugPaneLink = false;
-include("tmpl/navbar.php");
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 echo ' <form action="" method="post" name="mainC" class="confwizard" id="top">
 <input type="hidden" name="profile" value="'.$_SESSION["PROFILE"].'" />
@@ -242,8 +266,12 @@ foreach ($currentConf as $pname=>$parms) {
         $FORCE_DISABLED=" readonly='true' disabled='true' title='This is a readonly parameter'";
     }
     
+    if ($DEFAULT_PROFILE && $fieldName === "LOCK_PROFILE") {
+        $FORCE_DISABLED = " readonly='true' disabled='true' title='This option cannot be changed for the default profile' ";
+        $parms["currentValue"] = false;  // Force false for default profile
+    }
     
-    echo "<div $MAKE_NO_VISIBLE_MARK class='softdiv'>";
+    echo "<div $MAKE_NO_VISIBLE_MARK class='softdiv' style='margin:0;padding:0;'>";
     if ($parms["type"]=="string") {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input $FORCE_DISABLED type='text' value=\"".htmlspecialchars($fieldValue,ENT_QUOTES)."\" name='$fieldName'><span> {$parms["description"]}</span></p>".PHP_EOL;
 
@@ -251,7 +279,29 @@ foreach ($currentConf as $pname=>$parms) {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><textarea $FORCE_DISABLED name='$fieldName'>".htmlspecialchars($fieldValue,ENT_QUOTES)."</textarea><span>{$parms["description"]}</span></p> ".PHP_EOL;
 
     } else if ($parms["type"]=="url") {
-        $checkButton="<button class='url' type='button' onclick=\"checkUrlFromServer('$fieldName')\">Check</button>";
+        $checkButton="<button class='url' type='button' style='
+            padding: 6px 12px;
+            background-color: rgba(37, 99, 235, 0.8);
+            color: #ffffff;
+            border: 1px solid rgba(138, 155, 182, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease-in-out;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                        inset 0 1px rgba(255, 255, 255, 0.1);
+            margin-left: 5px;'
+            onclick=\"checkUrlFromServer('$fieldName')\"
+            onmouseover=\"this.style.backgroundColor='rgba(47, 109, 245, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';\"
+            onmouseout=\"this.style.backgroundColor='rgba(37, 99, 235, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';\">
+            Check</button>";
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><input  $FORCE_DISABLED class='url' type='url' value='".htmlspecialchars($fieldValue,ENT_QUOTES)."' name='$fieldName'/>$checkButton<span> {$parms["description"]}</span></p>".PHP_EOL;
 
     } else if ($parms["type"]=="select") {
@@ -302,7 +352,6 @@ foreach ($currentConf as $pname=>$parms) {
         echo "<p class='conf-item'><label>$pname</label>$buffer<span>{$parms["description"]}</span></p>".PHP_EOL;
 
     } else if ($parms["type"]=="boolean") {
-        
         $rtrue = $parms["currentValue"] ? "checked" : "";
         $rfalse = $parms["currentValue"] ? "" : "checked";
         
@@ -313,91 +362,90 @@ foreach ($currentConf as $pname=>$parms) {
             <input $FORCE_DISABLED type='radio' name='$fieldName' value='false' $rfalse id='$id2'/><label for='$id2'>False</label>
             <span $FORCE_DISABLED> {$parms["description"]}</span></p>".PHP_EOL;
 
-        
-        } else if ($parms["type"] == "integer") {
+    } else if ($parms["type"] == "integer") {
 
-            if ($pname === "RECHAT_P") {
-            // RECHAT_P: 0-100
-            echo "<p class='conf-item'>
-                    <label for='$fieldName'>$pname</label>
-                    <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        name='$fieldName'
-                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                        id='{$fieldName}_range'
-                        $FORCE_DISABLED>
-                    
-                    <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        style='width:60px;'
-                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                        id='{$fieldName}_number'>
-                    
-                    <span>{$parms["description"]}</span>
-                    </p>" . PHP_EOL;
-        
-        } else if ($pname === "BORED_EVENT") {
-            // BORED_EVENT: 0-100
-            echo "<p class='conf-item'>
-                    <label for='$fieldName'>$pname</label>
-                    <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        name='$fieldName'
-                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                        id='{$fieldName}_range'
-                        $FORCE_DISABLED>
-                    
-                    <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        style='width:60px;'
-                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                        id='{$fieldName}_number'>
-                    
-                    <span>{$parms["description"]}</span>
-                    </p>" . PHP_EOL;
-        
-        } else if ($pname === "CONTEXT_HISTORY") {
-            // CONTEXT_HISTORY: 0-100
-            echo "<p class='conf-item'>
-                    <label for='$fieldName'>$pname</label>
-                    <input type='range' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        name='$fieldName'
-                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                        id='{$fieldName}_range'
-                        $FORCE_DISABLED>
-                    
-                    <input type='number' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        style='width:60px;'
-                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                        id='{$fieldName}_number'>
-                    
-                    <span>{$parms["description"]}</span>
-                    </p>" . PHP_EOL;
+        if ($pname === "RECHAT_P") {
+        // RECHAT_P: 0-100
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:60px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
     
-        } else if ($pname === "RECHAT_H") {
-            // RECHAT_H: 1-10
-            echo "<p class='conf-item'>
-                    <label for='$fieldName'>$pname</label>
-                    <input type='range' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        name='$fieldName'
-                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                        id='{$fieldName}_range'
-                        $FORCE_DISABLED>
-                    
-                    <input type='number' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        style='width:60px;'
-                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                        id='{$fieldName}_number'>
-                    
-                    <span>{$parms["description"]}</span>
-                    </p>" . PHP_EOL;
-        
-        } else {
-            // Default integer handling
-            echo "<p class='conf-item'>
-                    <label for='$fieldName'>$pname</label>
-                    <input type='number' $FORCE_DISABLED inputmode='numeric' step='1' 
-                            value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                            name='$fieldName'>
-                    <span>Integer: {$parms["description"]}</span>
-                    </p>" . PHP_EOL;
-        }
+    } else if ($pname === "BORED_EVENT") {
+        // BORED_EVENT: 0-100
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:60px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
+    } else if ($pname === "CONTEXT_HISTORY") {
+        // CONTEXT_HISTORY: 0-100
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:60px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
+    } else if ($pname === "RECHAT_H") {
+        // RECHAT_H: 1-10
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:60px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
+    } else {
+        // Default integer handling
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='number' $FORCE_DISABLED inputmode='numeric' step='1' 
+                        value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'>
+                <span>Integer: {$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    }
     
     } else if ($parms["type"] == "number") {
         // Extract the final parameter name segment
@@ -510,10 +558,31 @@ foreach ($currentConf as $pname=>$parms) {
         </p>".PHP_EOL;
 
     } 
-    if (!in_array($fieldName,["HERIKA_NAME","HERIKA_PERS","HERIKA_DYNAMIC","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid", "OGHMA_KNOWLEDGE"]))
+    if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid", "OGHMA_KNOWLEDGE"]))
         if (!in_array($parms["type"],["util"]))
             if (!in_array($parms["scope"],["global","constant"]))
-                echo "<button class='ctapb' title='Copy $fieldName to all profiles' style='color:#FFFFFF; cursor:pointer; font-size:9px; display:block; position:relative; background-color:#444444; border:1px solid #FFFFFF; padding:2px 6px; border-radius:4px; text-decoration:none;' onmouseover=\"this.style.backgroundColor='#666666'; this.style.borderColor='#FFD700';\" onmouseout=\"this.style.backgroundColor='#444444'; this.style.borderColor='#FFFFFF';\" onclick=\"copyToAllprofiles(event,'$fieldName','$jsid')\">Copy to All Profiles</button>";
+                echo "<button class='ctapb' title='Copy $fieldName to all profiles' style='
+                    color: #FFFFFF; 
+                    cursor: pointer; 
+                    font-size: 13px; 
+                    display: block; 
+                    position: relative; 
+                    background-color: rgba(75, 85, 99, 0.8);
+                    border: 1px solid rgba(138, 155, 182, 0.3);
+                    padding: 6px 12px; 
+                    border-radius: 8px;
+                    text-decoration: none;
+                    letter-spacing: 0.3px;
+                    backdrop-filter: blur(5px);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                                inset 0 1px rgba(255, 255, 255, 0.1);
+                    transition: all 0.2s ease-in-out;
+                    margin: 5px 0;
+                    ' 
+                    onclick=\"copyToAllprofiles(event,'$fieldName','$jsid')\"
+                    onmouseover=\"this.style.backgroundColor='rgba(85, 95, 109, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';\"
+                    onmouseout=\"this.style.backgroundColor='rgba(75, 85, 99, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';\">
+                    Copy to All Profiles</button>";
     echo "</div>";
 
 }
@@ -522,7 +591,7 @@ echo str_repeat("</fieldset>", $lvl2);
 
 echo '</form>';
 
-echo "<div style='position:fixed;top:0px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px;'>
+echo "<div style='position:fixed;top:70px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px; z-index: 100000;'>
 <span><strong>Quick Access for <span style='color:yellow'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br><span style='font-size:11px'>You must click save before using 'Copy to All Profiles'</span><br/><span style='font-size:7px'>".
     basename($_SESSION["PROFILE"])
 ."</span></strong></span><ul>";
@@ -535,15 +604,22 @@ echo '<input
     id="saveProfileButton"
     style="
         margin-top: 10px;
-        font-weight: bold;
-        border: 1px solid #ffffff; /* White border */
+        font-weight: 500;
+        border: 1px solid rgba(138, 155, 182, 0.3);
         padding: 10px 20px;
         cursor: pointer;
-        border-radius: 4px;
-        font-size: 16px;
-        background-color: #28a745; /* Green background */
-        color: white; /* White text */
-        transition: background-color 0.3s, color 0.3s; /* Smooth transition */
+        border-radius: 8px;
+        font-size: 15px;
+        background-color: rgba(32, 122, 74, 0.8);
+        color: white;
+        transition: all 0.2s ease-in-out;
+        letter-spacing: 0.3px;
+        backdrop-filter: blur(5px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255, 255, 255, 0.1);
+        background-image: linear-gradient(180deg, 
+                          rgba(255, 255, 255, 0.08) 0%,
+                          rgba(255, 255, 255, 0) 100%);
     "
     onclick=\'if (validateForm()) {
         formSubmitting=true;
@@ -551,11 +627,44 @@ echo '<input
         document.getElementById("top").action="tools/conf_writer.php?save=true&sc=" + getAnchorNH();
         document.getElementById("top").submit();
     }\'
-    onmouseover=\'this.style.backgroundColor="#218838";\' /* Darker green on hover */
-    onmouseout=\'this.style.backgroundColor="#28a745";\' /* Revert to original green */
+    onmouseover=\'this.style.backgroundColor="rgba(42, 142, 94, 0.9)"; this.style.transform="translateY(-1px)"; this.style.boxShadow="0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)";\'
+    onmouseout=\'this.style.backgroundColor="rgba(32, 122, 74, 0.8)"; this.style.transform="none"; this.style.boxShadow="0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)";\'
 />';
 
 echo ' :: ';
+
+// Check if profile is locked or is default profile
+$isDefaultProfile = basename($_SESSION["PROFILE"]) === "conf.php";
+$isLocked = (isset($LOCK_PROFILE) && $LOCK_PROFILE === true) || $isDefaultProfile;
+$disabledStyle = $isLocked ? 'opacity: 0.5; cursor: not-allowed;' : '';
+$baseStyle = '
+    margin-top: 10px;
+    font-weight: 500;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: rgba(146, 43, 53, 0.8);
+    color: white;
+    transition: all 0.2s ease-in-out;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px rgba(255, 255, 255, 0.1);
+    background-image: linear-gradient(180deg, 
+                      rgba(255, 255, 255, 0.08) 0%,
+                      rgba(255, 255, 255, 0) 100%);
+    ' . $disabledStyle;
+
+$onclickEvent = $isLocked ? 
+    'onclick="alert(\'' . ($isDefaultProfile ? 'The default profile cannot be deleted.' : 'This profile is locked and cannot be deleted.') . '\');"' : 
+    'onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
+        formSubmitting = true;
+        document.getElementById("top").target = "_self";
+        document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
+        document.getElementById("top").submit();
+    }\'';
 
 echo '<input
     type="button"
@@ -563,27 +672,19 @@ echo '<input
     value="Delete Profile"
     id="deleteProfileButton"
     aria-label="Delete your profile"
-    style="
-        margin-top: 10px;
-        font-weight: bold;
-        border: 1px solid #ffffff; /* White border */
-        padding: 10px 20px;
-        cursor: pointer;
-        border-radius: 4px;
-        font-size: 16px;
-        background-color: #dc3545; /* Red background */
-        color: white; /* White text */
-        transition: background-color 0.3s, color 0.3s; /* Smooth transition */
-    "
-    onclick=\'if (confirm("Are you sure you want to delete your profile?")) {
-        formSubmitting = true;
-        document.getElementById("top").target = "_self";
-        document.getElementById("top").action = "tools/conf_deletion.php?save=true&sc=" + getAnchorNH();
-        document.getElementById("top").submit();
-    }\' 
-    onmouseover=\'this.style.backgroundColor="#c82333";\' /* Darker red on hover */
-    onmouseout=\'this.style.backgroundColor="#dc3545";\' /* Revert to original red */
-/></p>';
+    style="' . $baseStyle . '"
+    ' . $onclickEvent . ' 
+    onmouseover=\'if (!this.style.opacity || this.style.opacity === "1") { 
+        this.style.backgroundColor="rgba(166, 53, 63, 0.9)"; 
+        this.style.transform="translateY(-1px)"; 
+        this.style.boxShadow="0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)";
+    }\'
+    onmouseout=\'if (!this.style.opacity || this.style.opacity === "1") { 
+        this.style.backgroundColor="rgba(146, 43, 53, 0.8)"; 
+        this.style.transform="none"; 
+        this.style.boxShadow="0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)";
+    }\'
+/>';
 
 foreach ($summary as $k=>$item) {
     echo "<li>&nbsp;<a href='#$k'>{$item["main"]}</a></li>";
