@@ -87,21 +87,53 @@ function DataLastDataFor($actor, $lastNelements = -10)
 
 }
 
-function DataLastInfoFor($actor, $lastNelements = -2)
+function DataLastInfoFor($actor, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
    
     $followers=[];
-    $actorsInRange=strtr(DataBeingsInRange(),["|"=>"\n* "]);
+    $actorsInRange=strtr(DataBeingsInCloseRange(),["|"=>"\n* "]);
+    // Actors
+    if ($actorsInRange && $addNPCDescriptions) {
+        $actorDetailedList=explode("|",DataBeingsInCloseRange());
+        $actorDetailedListWithProfile=[];
+        foreach ($actorDetailedList as $actor) {
+            if (empty($actor))
+                continue;
+            if ($excludeBusy)
+                if ((strpos($actor,"(busy)")>0)||(strpos($actor,"(dead)")>0))
+                    continue;
+
+            if ($actor==$GLOBALS["PLAYER_NAME"]) 
+                $actorDetailedListWithProfile[]="$actor: player character";
+            else {
+                
+                $actorName = preg_replace("/\s*\(.*?\)\s*/", "", $actor);
+                $codename = npcNameToCodename($actorName);
+                $npcknowledge=$GLOBALS["db"]->fetchAll("SELECT COALESCE(NULLIF(trim(npc_dynamic), ''), npc_misc) as npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
+                if (isset($npcknowledge[0]))
+                    $actorDetailedListWithProfile[]="$actor: ".trim($npcknowledge[0]["npc_dynamic"]);
+                else
+                    $actorDetailedListWithProfile[]="$actor";
+            }
+        }
+        $actorsInRange=implode("\n· ",$actorDetailedListWithProfile);
+
+    }
+
+    //Followers
     foreach (json_decode(DataGetCurrentPartyConf(),JSON_OBJECT_AS_ARRAY) as $followername=>$followerdata) {
-        $followers[]="* $followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+        if ($followername==$GLOBALS["PLAYER_NAME"]) {
+            $followers[]="· $followername (roleplayed by player)";
+        } else 
+            $followers[]="· $followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
     }
 
     $followers[]="* {$GLOBALS["PLAYER_NAME"]}";
 
-    $lastDialog[] = array('role' => 'user', 'content' => "--- NEARBY ACTORS/NPC IN THE SCENE --- $actorsInRange");
-    $lastDialog[] = array('role' => 'user', 'content' => "\n--- PARTY STATUS --- \n". (implode("\n",$followers)));
+    $lastDialog[] = array('role' => 'user', 'content' => "*** NEARBY ACTORS/NPC IN THE SCENE *** \n· $actorsInRange");
+    $lastDialog[] = array('role' => 'user', 'content' => "\n*** PARTY STATUS *** \n". (implode("\n",$followers)));
 
-    $lastDialog[] = array('role' => 'user', 'content' => "\n--- LOCATIONS OF INTEREST --- \n". (implode("\n* ",DataPosibleLocationsToGo())));
+    $lastDialog[] = array('role' => 'user', 'content' => "\n*** LOCATIONS OF INTEREST *** \n· ". (implode("\n· ",DataPosibleLocationsToGo())));
  
     return $lastDialog;
 
@@ -618,12 +650,27 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         $lastrole=$line["role"];
     }
 
+    // Last entry
     if (sizeof($bufferHerika)>0) {
-        $lastDialogFullCopy[] = ["role"=>"assistant","content"=>$bufferHerika];
+        foreach ($bufferHerika as $m=>$singleline) {
+            $compactedBuffer .=" ";
+            if ($m>0) {
+                //$regexpNpcName = strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]);
+                preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $singleline, $matches);
+                $extracted=$matches[1] ?? $singleline;
+                $compactedBuffer .= trim(removeTalkingToOccurrences($extracted));
+
+            } else 
+                $compactedBuffer .= trim(removeTalkingToOccurrences($singleline));
+
+
+        }
+        $lastDialogFullCopy[] = ["role"=>"assistant","content"=>trim($compactedBuffer)];
+        $bufferHerika=[];
     }
 
     
-
+    
     // Compact other info
     $lastSpeaker = "";
     $buffer = [];
@@ -686,6 +733,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $buffer));
 
     
+      
 
     // Replace roles for user.
     foreach ($lastDialogFull as $n => $line) {
@@ -1427,7 +1475,7 @@ function DataBeingsInCloseRange()
     $beingsArray=explode("/",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
-        if (strpos($v,")")===false) 
+        //if (strpos($v,")")===false) 
             if (strpos($v,"Horse")!==0) 
                 if (strpos($v,"Chicken")!==0) 
                     $beingsArrayNew[]=$v;
