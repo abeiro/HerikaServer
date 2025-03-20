@@ -28,7 +28,8 @@ $ENABLED_FUNCTIONS=[
     'SearchMemory',
     'GiveItemToPlayer',
     'TakeGoldFromPlayer',
-    'FollowPlayer'
+    'FollowPlayer',
+    'ComeCloser'
 //    'WaitHere'
 ];
 
@@ -62,6 +63,7 @@ $F_TRANSLATIONS["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and stands at the c
 $F_TRANSLATIONS["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
 $F_TRANSLATIONS["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]} (property listener)";
 $F_TRANSLATIONS["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
+$F_TRANSLATIONS["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 
 
 $F_RETURNMESSAGES["Inspect"]="{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
@@ -92,6 +94,8 @@ $F_RETURNMESSAGES["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and stands at the
 $F_RETURNMESSAGES["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
 $F_RETURNMESSAGES["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
 $F_RETURNMESSAGES["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
+$F_RETURNMESSAGES["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} aproaches {$GLOBALS["PLAYER_NAME"]}";
+
 
 
 // What is this?. We can translate functions or give them a custom name. 
@@ -125,7 +129,7 @@ $F_NAMES["WaitHere"]="WaitHere";
 $F_NAMES["GiveItemToPlayer"]="GiveItemToPlayer";
 $F_NAMES["TakeGoldFromPlayer"]="TakeGoldFromPlayer";
 $F_NAMES["FollowPlayer"]="FollowPlayer";
-
+$F_NAMES["ComeCloser"]="ComeCloser";
 
 if (isset($GLOBALS["CORE_LANG"]))
 	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
@@ -523,6 +527,17 @@ $FUNCTIONS = [
                 ],
                 "required" =>[""]
             ]
+            ],
+    [
+            "name" => $F_NAMES["ComeCloser"],
+            "description" => $F_TRANSLATIONS["ComeCloser"],
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ]
+            ],
+            "required" => [""]
     ]
     
 ];
@@ -609,6 +624,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         //'SearchMemory',
         //'StopWalk'
         'WaitHere',
+        'ComeCloser',
         //'GiveItemToPlayer',
         //'TakeGoldFromPlayer',
         //'FollowPlayer'
