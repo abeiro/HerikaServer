@@ -1529,7 +1529,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         FROM memory_summary A
         where native_vec @@to_tsquery('$kwStringAny')
         and not (native_vec @@to_tsquery('#Reminiscence'))
-        and companions like '%$npcfilter%'
+        and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
 
         ORDER BY rank_all DESC, rank_any DESC;
         ");

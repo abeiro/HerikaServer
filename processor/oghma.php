@@ -276,13 +276,13 @@ if ($GLOBALS["MINIME_T5"]) {
             // After the loop, update current Oghma topic in database with the first topic we found
             if ($firstTopic !== null) {
                 error_log("[OGHMA] Setting first topic as current: $firstTopic");
-                $GLOBALS["db"]->delete("conf_opts", "id='current_oghma_topic'");
-                $GLOBALS["db"]->insert(
+                $GLOBALS["db"]->upsertRowOnConflict(
                     'conf_opts',
                     array(
                         'id' => 'current_oghma_topic',
                         'value' => $firstTopic
-                    )
+                    ),
+                    'id'
                 );
             }
         }

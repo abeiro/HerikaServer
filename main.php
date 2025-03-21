@@ -315,13 +315,13 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 
         // Update the timestamp in the database to the current time
         $currentTimestamp = time();
-        $GLOBALS["db"]->delete("conf_opts", "id='NARRATOR_WELCOME_TIMESTAMP'");
-        $GLOBALS["db"]->insert(
+        $GLOBALS["db"]->upsertRowOnConflict(
             "conf_opts",
             array(
                 "id"    => "NARRATOR_WELCOME_TIMESTAMP",
                 "value" => $currentTimestamp
-            )
+            ),
+            'id'
         );
 
         // If cooldown has passed, allow execution and disable functions
@@ -739,10 +739,10 @@ CALL INITIALIZATION
 ***********************/
 
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
-	die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector.".PHP_EOL);
+    die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector.".PHP_EOL);
 } else {
 
-	require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
+    require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 }
 
 $outputWasValid = call_llm();
@@ -821,7 +821,7 @@ if (sizeof($talkedSoFar) == 0) {
             );
             /*
             $db->insert(
-			'diarylogv2',
+            'diarylogv2',
                 array(
                     'topic' => ($topic),
                     'content' => (implode(" ", $talkedSoFar)),
@@ -833,7 +833,7 @@ if (sizeof($talkedSoFar) == 0) {
             */
             // Log Memory also.
             if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
-	            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
+                logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
             returnLines([$RESPONSE_OK_NOTED]);
 
         } else {
