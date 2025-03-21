@@ -441,13 +441,13 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     // logEvent($gameRequest);
 
     $vars=explode("@",$gameRequest[3]);
-    $db->delete("conf_opts", "id='".$db->escape($vars[0])."'");
-    $db->insert(
+    $db->upsertRowOnConflict(
         'conf_opts',
         array(
-                'id' => $vars[0],
-                'value' => $vars[1]
-            )
+            'id' => $vars[0],
+            'value' => $vars[1]
+        ),
+        "id"
     );
     
     
