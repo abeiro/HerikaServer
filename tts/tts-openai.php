@@ -32,7 +32,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		
 		// add instructions if using gpt-4o-mini-tts
 		if ($GLOBALS["TTS"]["openai"]["model_id"] == "gpt-4o-mini-tts") {
-			if ($mood) {
+			if ($mood && $mood != "default") {
 				$data["instructions"] = "Emotion: $mood\n";
 			}
 
