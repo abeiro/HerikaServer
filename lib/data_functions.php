@@ -1191,7 +1191,7 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
     }
     
     if (!$hold) {
-        $re = '/Context location: ([\w\ \']*)/';
+        $re = '/Context (?:new )?location: ([\w\ \']*)/';
         preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
         $GLOBALS["LAST_KNOW_LOCATION_HUMAN"]=$matches[1][0];
         return $matches[1][0];
