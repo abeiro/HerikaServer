@@ -212,8 +212,9 @@
       "_title":"OpenAI TTS",
       "endpoint":{"type":"url","description":"Endpoint URL","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
       "API_KEY":{"type":"apikey","description":"API KEY"},
-      "voice":{"type":"select","values":["alloy", "echo", "fable", "onyx", "nova", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
-      "model_id":{"type":"select","values":["tts-1", "tts-1-hd"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
+      "voice":{"type":"select","values":["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "model_id":{"type":"select","values":["tts-1", "tts-1-hd", "gpt-4o-mini-tts"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "instructions":{"type":"longstring","description":"Control the voice of your generated audio with additional instructions. Does not work with tts-1 or tts-1-hd.","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
     },
     "ELEVEN_LABS": {
       "_title":"ElevenLabs Text-To-Speech",

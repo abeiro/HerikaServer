@@ -29,7 +29,17 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			'voice' => $GLOBALS["TTS"]["openai"]["voice"],
 			'style' => $GLOBALS["TTS"]["openai"]["style"]+0
 			);
+		
+		// add instructions if using gpt-4o-mini-tts
+		if ($GLOBALS["TTS"]["openai"]["model_id"] == "gpt-4o-mini-tts") {
+			if ($mood) {
+				$data["instructions"] = "Emotion: $mood\n";
+			}
 
+			if (isset($GLOBALS["TTS"]["openai"]["instructions"]) && $GLOBALS["TTS"]["openai"]["instructions"]) {
+				$data["instructions"] .= $GLOBALS["TTS"]["openai"]["instructions"];
+			}
+		}
 
 		// Create stream context options
 		$options = array(
@@ -66,7 +76,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			//
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\r\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
-			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in 11labs call and $endTimeTrans microseconds in ffmpeg transcoding";
+			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in openai tts call and $endTimeTrans microseconds in ffmpeg transcoding";
 			return "soundcache/" . md5(trim($stringforhash)) . ".wav";
 			
 		} else {
