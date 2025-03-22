@@ -275,7 +275,7 @@ final class CommTest extends DatabaseTestCase
                 $options = stream_context_get_options($streamContext);
                 $content = json_decode($options['http']['content']);
                 foreach ($content->messages as $actual) {
-                    if (isset($actual->role) && $actual->role === "user" && isset($actual->content) && strpos($actual->content, "Choose coherent ACTION to obey Prisoner..  Use this JSON object to give your answer: ") === 0)
+                    if (isset($actual->role) && $actual->role === "user" && isset($actual->content) && strpos($actual->content, "Choose coherent ACTION to obey Prisoner..  Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure: ") === 0)
                     {
                         $jsonString = preg_match('/\{(.*)\}/', $actual->content, $matches);
                         $jsonString = $matches[0];
@@ -367,6 +367,160 @@ final class CommTest extends DatabaseTestCase
         $this->assertSame("chat", $rows[0]["type"]);
         $this->assertSame("The Narrator: Unit test message (talking to Prisoner)", $rows[0]["data"]);
         $this->assertSame("pending", $rows[0]["sess"]);
+    }
+
+    public function testComm_Init_ShouldPurgeNewEvents(): void
+    {
+        // default test config
+        require("conf.php");
+
+        // add chat history
+        $testDb = new sql();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "100",
+                'gamets' => "100",
+                'type' => "inputtext",
+                'data' => "Prisoner:Make sure there are no more enemies nearby. (Talking to Lydia)",
+                'sess' => 'pending',
+                'localts' => 0,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "200",
+                'gamets' => "200",
+                'type' => "chat",
+                'data' => "Lydia: Very well my Thane, I'll take a look around. (talking to Prisoner)",
+                'sess' => 'pending',
+                'localts' => 2,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+
+        // comm.php?data=init|150|150| (base64 encoded)
+        $encodedData = base64_encode("init|150|150|");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        // confirm events after the 150 timestamp were purged
+        $rows=$testDb->fetchAll("SELECT * FROM eventlog ORDER BY rowid ASC;");
+        $testDb->close();
+        $this->assertSame(3, sizeof($rows));
+        $this->assertSame("Prisoner:Make sure there are no more enemies nearby. (Talking to Lydia)", $rows[0]["data"]);
+        $this->assertSame("user_input", $rows[1]["type"]);
+        $this->assertSame("init", $rows[1]["data"]);
+        $this->assertSame("init", $rows[2]["type"]);
+    }
+
+    public function testComm_Init_ShouldNotPurgeEventsWhenGametsIs10000000(): void
+    {
+        // default test config
+        require("conf.php");
+
+        // add chat history
+        $testDb = new sql();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "100",
+                'gamets' => "100",
+                'type' => "inputtext",
+                'data' => "Prisoner:Make sure there are no more enemies nearby. (Talking to Lydia)",
+                'sess' => 'pending',
+                'localts' => 0,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "200",
+                'gamets' => "200",
+                'type' => "chat",
+                'data' => "Lydia: Very well my Thane, I'll take a look around. (talking to Prisoner)",
+                'sess' => 'pending',
+                'localts' => 2,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+
+        // comm.php?data=init|150|10000000| (base64 encoded)
+        $encodedData = base64_encode("init|150|10000000|");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        // confirm events were not purged
+        $rows=$testDb->fetchAll("SELECT * FROM eventlog ORDER BY rowid ASC;");
+        $testDb->close();
+        $this->assertSame(3, sizeof($rows));
+        $this->assertSame("Prisoner:Make sure there are no more enemies nearby. (Talking to Lydia)", $rows[0]["data"]);
+        $this->assertSame("Lydia: Very well my Thane, I'll take a look around. (talking to Prisoner)", $rows[1]["data"]);
+        $this->assertSame("user_input", $rows[2]["type"]);
+        $this->assertSame("init", $rows[2]["data"]);
+    }
+
+    public function testComm_WhenLinesAreNotJapanese_PhoneticTextShouldBeNotSentToScriptQueue(): void
+    {
+        // default test config
+        require("conf.php");
+        $GLOBALS["HERIKA_NAME"] = "Lydia";
+        $GLOBALS["HERIKA_PERS"] = "Roleplay as Lydia.";
+
+        $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
+        $GLOBALS["mockConnectorSend"]->expects($this->once())
+        ->method('__invoke')
+        ->willReturnCallback(function($url, $context) {
+            $response = 'data: {"choices":[{"delta":{"content": "{\"character\": \"The Narrator\", \"listener\": \"Prisoner\", \"message\": \"Of course I do.\", \"mood\": \"default\", \"action\": \"Talk\", \"target\": \"Prisoner\"}"}}]}';
+            $resourceMock = fopen('php://temp', 'r+');
+            fwrite($resourceMock, $response);
+            rewind($resourceMock);
+            return $resourceMock;
+        });
+
+        // comm.php?data=inputtext|100|200|Do you speak Japanese? (base64 encoded)
+        $encodedData = base64_encode("inputtext|100|200|Do you speak Japanese?");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        $this->assertMatchesRegularExpression('/Lydia|ScriptQueue|Of course I do\.\/\/Prisoner\/(IdleDialogueExpressiveStart)?\/\r\n/', $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]);
+    }
+
+    public function testComm_WhenLinesAreJapanese_PhoneticTextShouldBeSentToScriptQueue(): void
+    {
+        // default test config
+        require("conf.php");
+        $GLOBALS["HERIKA_NAME"] = "Lydia";
+        $GLOBALS["HERIKA_PERS"] = "Roleplay as Lydia.";
+
+        $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
+        $GLOBALS["mockConnectorSend"]->expects($this->once())
+        ->method('__invoke')
+        ->willReturnCallback(function($url, $context) {
+            $response = 'data: {"choices":[{"delta":{"content": "{\"character\": \"The Narrator\", \"listener\": \"Prisoner\", \"message\": \"当たり前でしょう。\", \"mood\": \"default\", \"action\": \"Talk\", \"target\": \"Prisoner\"}"}}]}';
+            $resourceMock = fopen('php://temp', 'r+');
+            fwrite($resourceMock, $response);
+            rewind($resourceMock);
+            return $resourceMock;
+        });
+
+        // comm.php?data=inputtext|100|200|日本語が分かりますか？ (base64 encoded)
+        $encodedData = base64_encode("inputtext|100|200|日本語が分かりますか？");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        $this->assertMatchesRegularExpression('/Lydia|ScriptQueue|当たり前でしょう。\/\/Prisoner\/(IdleDialogueExpressiveStart)?\/atarimae deshou\.\r\n/', $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]);
     }
 
     private function expectPromptInContext($streamContext, $expectedPrompt) {

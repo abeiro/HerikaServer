@@ -19,9 +19,32 @@ if ($method === 'POST') {
     $files=glob($configFilepath . 'conf_????????????????????????????????.php');
     $files[]=$configFilepath. 'conf.php';
 
+    $updated = [];
+    $skipped = [];
+
     foreach ($files as $mconf ) {
         if (file_exists($mconf)) {
+            // First, check if this profile is locked and get character name
+            $isLocked = false;
             $original=file_get_contents($mconf);
+            
+            // Extract character name
+            $characterName = "Unknown";
+            if (preg_match('/\$HERIKA_NAME\s*=\s*[\'"]([^\'"]+)[\'"];/', $original, $nameMatches)) {
+                $characterName = $nameMatches[1];
+            } else if (basename($mconf) === "conf.php") {
+                $characterName = "The Narrator";
+            }
+
+            // Skip lock check for default profile
+            if (basename($mconf) !== "conf.php") {
+                // Look for LOCK_PROFILE setting only for non-default profiles
+                if (preg_match('/\$LOCK_PROFILE\s*=\s*true\s*;/', $original)) {
+                    $skipped[] = $characterName;
+                    error_log("Skipping locked profile: " . $characterName);
+                    continue;
+                }
+            }
 
             $pattern = '/<\?php(.*?)\?>/s';
 
@@ -32,6 +55,7 @@ if ($method === 'POST') {
 
             } else {
                 error_log("No PHP code found in the file.");
+                continue;
             }
 
             // Split the string by '@'
@@ -44,7 +68,7 @@ if ($method === 'POST') {
             }
 
             $value=$jsonDataInput["value"];
-            error_log("copying {$jsonDataInput["name"]} to all profiles");
+            error_log("copying {$jsonDataInput["name"]} to profile: " . $characterName);
             $new_php_code="";
             if (!is_array($value))
                 if ($value=='false')
@@ -60,9 +84,10 @@ if ($method === 'POST') {
                 }
                 $new_php_code.="$result=['".implode("','",$vv)."'];".PHP_EOL;
             }
-            $fres[]=$mconf;
+            
+            $updated[] = $characterName;
             file_put_contents($mconf,"<?php".PHP_EOL.$php_code.PHP_EOL.$new_php_code."?>");
-            error_log("Written $mconf");
+            error_log("Written to " . $characterName . "'s profile");
 
         } else {
             error_log("Does not exists $mconf");
@@ -70,7 +95,10 @@ if ($method === 'POST') {
     }
 
 
-    echo json_encode($fres);
+    echo json_encode([
+        "updated" => $updated,
+        "skipped" => $skipped
+    ]);
 }
 
 

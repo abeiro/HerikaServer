@@ -1,6 +1,43 @@
 <?php
 session_start();
 
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+$enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+
+require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+
+$TITLE = "💬 CHIM Chat Testing";
+
+ob_start();
+
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<?php
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+
+if (isset($_SESSION["PROFILE"])) {
+    require_once($_SESSION["PROFILE"]);
+}
+
+$pattern = '/conf_([a-f0-9]+)\.php/';
+preg_match($pattern, basename($_SESSION["PROFILE"]), $matches);
+$hash = $matches[1];    
+
+$db=new sql();
+$res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");
+$last_gamets=$res[0]["last_gamets"]+1;
+
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
@@ -23,7 +60,7 @@ $acceptablePattern = '/^(conf_[a-f0-9]{32}\.php|conf\.php|character_map\.json|\.
 // Initialize message variable
 $message = '';
 
-// Define deleteDir() function at the top so it’s always available
+// Define deleteDir() function at the top so it's always available
 function deleteDir($dirPath) {
     if (!is_dir($dirPath)) {
         return;
@@ -146,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Delete the temporary directory and its contents
                     deleteDir($tempDir);
 
-                    $message .= '<p>Configuration files imported successfully.</p>';
+                    $message .= '<p>Configuration files imported successfully. Refresh the page to see the new profiles.</p>';
                 }
             } else {
                 $message .= '<p>Failed to open the ZIP file.</p>';
@@ -177,48 +214,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #ffffff; /* White color for headings */
         }
 
-        form {
-            margin-bottom: 20px;
-            background-color: #3a3a3a; /* Slightly lighter grey for form backgrounds */
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #555555; /* Darker border for contrast */
-            max-width: 600px;
-        }
 
         label {
             font-weight: bold;
             color: #f8f9fa; /* Ensure labels are readable */
-        }
-
-        input[type="text"], input[type="file"], textarea {
-            width: 100%;
-            padding: 6px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #555555; /* Darker borders */
-            border-radius: 3px;
-            background-color: #4a4a4a; /* Dark input backgrounds */
-            color: #f8f9fa; /* Light text inside inputs */
-            resize: vertical; /* Allows users to resize vertically if needed */
-            font-family: Arial, sans-serif; /* Ensures consistent font */
-            font-size: 14px; /* Sets a readable font size */
-        }
-
-        input[type="submit"] {
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px; /* Slightly larger border radius */
-            cursor: pointer;
-            padding: 5px 15px; /* Increased padding for larger button */
-            font-size: 18px;    /* Increased font size */
-            font-weight: bold;  /* Bold text for better visibility */
-            transition: background-color 0.3s ease; /* Smooth hover transition */
-        }
-
-        input[type="submit"]:hover {
-            background-color: #0056b3; /* Darker shade on hover */
         }
 
         .message {
@@ -252,19 +251,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding-left: 5ch; /* 5 character spaces */
         }
 
-        .button {
-            padding: 8px 16px;
-            margin-top: 10px;
-            cursor: pointer;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 3px;
-        }
-
-        .button:hover {
-            background-color: #0056b3;
-        }
     </style>
 </head>
 <body>
@@ -281,9 +267,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form action="" method="post" enctype="multipart/form-data">
         <label for="zip_file">Select ZIP file to upload:</label>
         <input type="file" name="zip_file" id="zip_file" accept=".zip" required>
-        <input type="submit" value="Upload and Import">
+        <br>
+        <input type="submit" class="btn-save" value="Upload and Import">
+        <p><strong>Note:</strong> Only files with names matching the pattern <code>conf_[32-character MD5 hash].php</code> will be imported.</p>
     </form>
-    <p><strong>Note:</strong> Only files with names matching the pattern <code>conf_[32-character MD5 hash].php</code> will be imported.</p>
 </div>
 </body>
 </html>

@@ -1,6 +1,7 @@
 <?php
 
 session_start();
+header('Content-Type: application/json');
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."../";
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
@@ -8,13 +9,10 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 
-
-
 $configFilepath=$enginePath."conf".DIRECTORY_SEPARATOR;
 
 // Profile selection
-
-
+$profiles = [];
 foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
     if (file_exists($mconf)) {
         $filename=basename($mconf);
@@ -26,9 +24,11 @@ foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as 
     }
 }
 
-
 file_put_contents($enginePath . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($GLOBALS["PROFILES"]));
     
-echo "Done! You can close this tab. If you see nothing then it means your character map was already good to go.";
+echo json_encode([
+    'success' => true,
+    'message' => 'Character map has been successfully regenerated!'
+]);
 
 ?>

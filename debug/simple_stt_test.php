@@ -2,6 +2,17 @@
 session_start();
 error_reporting(E_ALL);
 
+require_once(__DIR__.DIRECTORY_SEPARATOR."../ui/profile_loader.php");
+
+$TITLE = "🎤CHIM - STT Test - CHIM Server";
+
+ob_start();
+
+include(__DIR__.DIRECTORY_SEPARATOR."../ui/tmpl/head.html");
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."../ui/tmpl/navbar.php");
+
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "$DBDRIVER.class.php");
@@ -30,9 +41,27 @@ if (php_sapi_name() != "cli") {
     <!DOCTYPE html>
     <html>
     <head>
-        <title>CHIM Speech-to-Text Test</title>
+        <title><?php echo $TITLE; ?></title>
         <link rel="icon" type="image/x-icon" href="../ui/images/favicon.ico">
+        <link rel="stylesheet" href="../ui/css/main.css">
         <style>
+            /* Override main container styles */
+            main {
+                padding-top: 160px; /* Space for navbar */
+                padding-bottom: 40px; /* Reduced space for footer */
+                padding-left: 10px;
+            }
+            
+            /* Override footer styles */
+            footer {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+                height: 20px; /* Reduced footer height */
+                background: #031633;
+                z-index: 100;
+            }
+
             /* Updated CSS for Dark Grey Background Theme */
             body {
                 font-family: Arial, sans-serif;
@@ -130,11 +159,11 @@ if (php_sapi_name() != "cli") {
         </style>
     </head>
     <body>
+    <main>
+    <div class="indent5">
+        <h1>🎤CHIM Speech-to-Text Test</h1>
 
-    <div class="header">CHIM Speech-to-Text Test</div>
-
-    <div class="section">
-
+        <div class="section">
         <?php
         echo '<div class="status"><span class="label">Sending test audio file...</span></div>';
 
@@ -162,11 +191,6 @@ if (php_sapi_name() != "cli") {
                 $similarity = 0;
             }
 
-            // Alternatively, you can use similar_text() function
-            /*
-            similar_text(strtolower($expected_transcription), strtolower($transcription), $similarity);
-            */
-
             // Display similarity percentage
             echo '<div class="message accuracy">Similarity: ' . number_format($similarity, 2) . '%</div>';
         } else {
@@ -190,7 +214,17 @@ if (php_sapi_name() != "cli") {
             </div>'; 
         echo '</div>';
         ?>
+    </div>
+    </main>
+    <?php
+    include(__DIR__.DIRECTORY_SEPARATOR."../ui/tmpl/footer.html");
 
+    $buffer = ob_get_contents();
+    ob_end_clean();
+    $title = $TITLE;
+    $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+    echo $buffer;
+    ?>
     </body>
     </html>
     <?php

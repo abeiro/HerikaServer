@@ -101,6 +101,24 @@
     .button:hover {
         background-color: #0056b3;
     }
+
+    .locked {
+        color: #ffd700; /* Gold color for locked profiles */
+    }
+
+    .deleted {
+        color: #dc3545; /* Red color for deleted profiles */
+    }
+
+    .error {
+        color: #dc3545; /* Red color for errors */
+    }
+
+    .profile-name {
+        color: #f8f9fa; /* Light grey for the profile name */
+        margin-left: 10px;
+        font-style: italic;
+    }
 </style>
 </head>
 <body>
@@ -110,7 +128,7 @@ $confDir = __DIR__ . '/../conf';
 
 // Check if the directory exists
 if (!is_dir($confDir)) {
-    echo '<div class="message"><p>Directory ' . htmlspecialchars($confDir) . ' does not exist.</p></div>';
+    echo '<div class="message"><p class="error">Directory ' . htmlspecialchars($confDir) . ' does not exist.</p></div>';
     exit;
 }
 
@@ -128,7 +146,12 @@ $exclusions = [
     $confDir . '/conf.php'
 ];
 
-echo '<div class="message">';
+$lockedProfiles = [];
+$deletedProfiles = [];
+$errorProfiles = [];
+$profileNames = []; // Array to store HERIKA_NAMEs
+$availableProfiles = []; // Array to store all available profiles
+
 foreach ($patterns as $pattern) {
     foreach (glob($pattern) as $file) {
         // Skip the file if it's in the exclusion list
@@ -136,18 +159,107 @@ foreach ($patterns as $pattern) {
             continue;
         }
 
-        // Attempt to delete only if it's a file
-        if (is_file($file)) {
-            if (unlink($file)) {
-                echo "<p>Deleted: " . htmlspecialchars($file) . "</p>";
-            } else {
-                echo "<p>Failed to delete: " . htmlspecialchars($file) . "</p>";
+        // Check if it's a PHP configuration file
+        if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+            // Include the file to check for LOCK_PROFILE and get HERIKA_NAME
+            $LOCK_PROFILE = false;
+            $HERIKA_NAME = '';
+            include($file);
+            
+            $filename = basename($file);
+            $profileNames[$filename] = $HERIKA_NAME;
+            $availableProfiles[] = $filename;
+            
+            if ($LOCK_PROFILE === true) {
+                $lockedProfiles[] = $filename;
+                continue;
             }
         }
     }
 }
-echo "<p>All profiles apart from default have been deleted</p>";
+
+// If no profiles found at all
+if (empty($availableProfiles)) {
+    echo '<div class="message">';
+    echo "<h1>Profile Status</h1>";
+    echo "<p>No profiles detected (apart from default).</p>";
+    echo '</div>';
+    exit;
+}
+
+// If there are only locked profiles or no deletable profiles
+if (count($availableProfiles) === count($lockedProfiles)) {
+    echo '<div class="message">';
+    echo "<h1>No profiles available for deletion.</h1>";
+    echo "<h1>Current Locked Profiles:</h1>";
+    foreach ($lockedProfiles as $profile) {
+        $displayName = isset($profileNames[$profile]) ? " - {$profileNames[$profile]}" : "";
+        echo "<p class='locked'>🔒 " . htmlspecialchars($profile) . 
+             "<span class='profile-name'>" . htmlspecialchars($displayName) . "</span></p>";
+    }
+    echo '</div>';
+    exit;
+}
+
+// Process deletions for non-locked profiles
+foreach ($patterns as $pattern) {
+    foreach (glob($pattern) as $file) {
+        if (in_array($file, $exclusions) || in_array(basename($file), $lockedProfiles)) {
+            continue;
+        }
+
+        if (is_file($file)) {
+            if (unlink($file)) {
+                $deletedProfiles[] = basename($file);
+            } else {
+                $errorProfiles[] = basename($file);
+            }
+        }
+    }
+}
+
+echo '<div class="message">';
+
+// Display results
+if (!empty($lockedProfiles)) {
+    echo "<h2>Locked Profiles (Not Deleted):</h2>";
+    foreach ($lockedProfiles as $profile) {
+        $displayName = isset($profileNames[$profile]) ? " - {$profileNames[$profile]}" : "";
+        echo "<p class='locked'>🔒 " . htmlspecialchars($profile) . 
+             "<span class='profile-name'>" . htmlspecialchars($displayName) . "</span></p>";
+    }
+}
+
+if (!empty($deletedProfiles)) {
+    echo "<h2>Deleted Profiles:</h2>";
+    foreach ($deletedProfiles as $profile) {
+        $displayName = isset($profileNames[$profile]) ? " - {$profileNames[$profile]}" : "";
+        echo "<p class='deleted'>✓ " . htmlspecialchars($profile) . 
+             "<span class='profile-name'>" . htmlspecialchars($displayName) . "</span></p>";
+    }
+}
+
+if (!empty($errorProfiles)) {
+    echo "<h2>Failed to Delete:</h2>";
+    foreach ($errorProfiles as $profile) {
+        $displayName = isset($profileNames[$profile]) ? " - {$profileNames[$profile]}" : "";
+        echo "<p class='error'>❌ " . htmlspecialchars($profile) . 
+             "<span class='profile-name'>" . htmlspecialchars($displayName) . "</span></p>";
+    }
+}
+
 echo '</div>';
+
+// Run the character map regeneration only if files were deleted
+if (!empty($deletedProfiles)) {
+    echo '<div class="message">';
+    echo "<h2>Updating Character Map</h2>";
+    ob_start();
+    require_once(__DIR__ . '/cmd/action_regen_charmap.php');
+    $result = ob_get_clean();
+    echo "<p>Character map has been updated.</p>";
+    echo '</div>';
+}
 ?>
 </body>
 </html>
