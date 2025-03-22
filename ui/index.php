@@ -45,7 +45,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         width: 100%;
         height: 20px; /* Reduced footer height */
         background: #031633;
-        z-index: 100;
+        z-index: 100
     }
 
     /* Additional index-specific styles */
