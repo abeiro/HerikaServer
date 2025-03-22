@@ -57,7 +57,7 @@ function sanitize_int($value, $default) {
  *
  * @param array $row The associative array representing a database row.
  * @param bool $for_csv Indicates whether the output is for CSV (true) or HTML (false).
- * @return array|null An associative array with keys: Context, Nearby People, Location & Tamrelic Time, Time(UTC).
+ * @return array|null An associative array with keys: Context, Nearby People, Location & Tamrielic Time, Time(UTC).
  */
 function process_event_row($row, $for_csv = false) {
     // **Format 'localts' into a readable UTC date format**
@@ -151,7 +151,7 @@ function process_event_row($row, $for_csv = false) {
     return [
         'Context' => $data,
         'Nearby People' => $people,
-        'Location & Tamrelic Time' => $locationDisplay,
+        'Location & Tamrielic Time' => $locationDisplay,
         'Time(UTC)' => $timeDisplay
     ];
 }
@@ -226,7 +226,7 @@ function handle_csv_export($conn, $schema) {
             $output = fopen('php://output', 'w');
 
             // Output the column headings matching the table
-            fputcsv($output, ['Context', 'Nearby People', 'Location & Tamrelic Time', 'Time(UTC)']);
+            fputcsv($output, ['Context', 'Nearby People', 'Location & Tamrielic Time', 'Time(UTC)']);
 
             // Fetch and process each row, then write to the CSV
             while ($row = pg_fetch_assoc($result)) {
@@ -235,7 +235,7 @@ function handle_csv_export($conn, $schema) {
                     fputcsv($output, [
                         $processed_row['Context'],
                         $processed_row['Nearby People'],
-                        $processed_row['Location & Tamrelic Time'],
+                        $processed_row['Location & Tamrielic Time'],
                         $processed_row['Time(UTC)']
                     ]);
                 }
@@ -516,7 +516,7 @@ if (!$result) {
 <body>
     <main class="container">
         <h1>📆CHIM Adventure Log</h1>
-        <h2>All time and dates are in UTC. Tamrelic Time may be inconsistent.</h2>
+        <h2>All time and dates are in UTC. Tamrielic Time may be inconsistent.</h2>
         <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
 
         <?php
@@ -615,7 +615,7 @@ if (!$result) {
             <tr>
                 <th>Context</th>
                 <th>Nearby People</th>
-                <th><a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a></th>
+                <th><a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a></th>
                 <th>Time (UTC)</th>
             </tr>
             <?php

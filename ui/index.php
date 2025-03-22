@@ -328,7 +328,7 @@ $debugPaneLink = true;
         $columnHeaders = [
             'type' => 'Event',
             'data' => 'Data',
-            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>',
+            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>',
             'localts' => 'Time (UTC)',
             'ts' => 'TS',
         ];
@@ -651,7 +651,7 @@ $debugPaneLink = true;
         // Define column headers mapping
         $columnHeaders = [
             'ts' => 'TS',
-            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>',
+            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>',
             'localts' => 'Time (UTC)',
             'topic' => 'Topic',
             'content' => 'Content',
@@ -694,7 +694,7 @@ $debugPaneLink = true;
         $columnHeaders = [
             'title' => 'Title',
             'content' => 'Content',
-            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>',
+            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>',
             'localts' => 'Time (UTC)',
             'ts' => 'TS'
         ];
@@ -741,7 +741,7 @@ $debugPaneLink = true;
         require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."utils_game_timestamp.php");
 
         echo "<style>
-            .table-container table td:nth-child(2), /* Tamrelic Time */
+            .table-container table td:nth-child(2), /* Tamrielic Time */
             .table-container table th:nth-child(2) {
                 min-width: 200px;
             }
@@ -760,7 +760,7 @@ $debugPaneLink = true;
         // Define column headers mapping
         $columnHeaders = [
             'ts' => 'TS',
-            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>',
+            'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>',
             'localts' => 'Time (UTC)',
             'speaker' => 'Speaker',
             'message' => 'Message',
@@ -888,7 +888,7 @@ $debugPaneLink = true;
             // Create the processed row with rowid included
             $processedRow = [
                 'RowID' => $row['rowid'],
-                '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrelic Time</a>' => !empty($row['gamets_truncated']) ? convert_gamets2skyrim_long_date2($row['gamets_truncated']) : '',
+                '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>' => !empty($row['gamets_truncated']) ? convert_gamets2skyrim_long_date2($row['gamets_truncated']) : '',
                 'ID' => $row['n'],
                 'Classifier' => $row['classifier'],
                 'Summary' => $displayHtml
