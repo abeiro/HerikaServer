@@ -485,36 +485,68 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     <br>
     <?php
     $letter = isset($_GET['letter']) ? strtoupper($_GET['letter']) : '';
+    $searchTerm = isset($_GET['search']) ? strtolower(trim($_GET['search'])) : '';
 
-    // Build query based on optional filter
+    // Build query based on filters
     if (!empty($letter) && ctype_alpha($letter) && strlen($letter) === 1) {
-        // Filter by first letter
-        $query_combined = "
-            SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
-            FROM {$schema}.combined_npc_templates
-            WHERE npc_name ILIKE $1
-            ORDER BY npc_name ASC
-        ";
-        $params_combined = [$letter . '%'];
-        $result_combined = pg_query_params($conn, $query_combined, $params_combined);
+        if (!empty($searchTerm)) {
+            // Filter by both letter and search term
+            $query_combined = "
+                SELECT *
+                FROM {$schema}.combined_npc_templates
+                WHERE LOWER(npc_name) LIKE LOWER($1) 
+                AND LOWER(npc_name) LIKE LOWER($2)
+                ORDER BY npc_name ASC
+            ";
+            $params_combined = [$letter . '%', '%' . $searchTerm . '%'];
+        } else {
+            // Filter by letter only
+            $query_combined = "
+                SELECT *
+                FROM {$schema}.combined_npc_templates
+                WHERE LOWER(npc_name) LIKE LOWER($1)
+                ORDER BY npc_name ASC
+            ";
+            $params_combined = [$letter . '%'];
+        }
     } else {
-        // No filter: show all
-        $query_combined = "
-            SELECT npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid
-            FROM {$schema}.combined_npc_templates
-            ORDER BY npc_name ASC
-        ";
-        $result_combined = pg_query($conn, $query_combined);
+        if (!empty($searchTerm)) {
+            // Filter by search term only
+            $query_combined = "
+                SELECT *
+                FROM {$schema}.combined_npc_templates
+                WHERE LOWER(npc_name) LIKE LOWER($1)
+                ORDER BY npc_name ASC
+            ";
+            $params_combined = ['%' . $searchTerm . '%'];
+        } else {
+            // No filters
+            $query_combined = "
+                SELECT *
+                FROM {$schema}.combined_npc_templates
+                ORDER BY npc_name ASC
+            ";
+            $params_combined = [];
+        }
     }
+
+    $result_combined = !empty($params_combined) 
+        ? pg_query_params($conn, $query_combined, $params_combined)
+        : pg_query($conn, $query_combined);
+
     echo '<br>';
     // Wrap the NPC Templates Database section in a div for indentation
     echo '<div class="indent5" id="table">';
     echo '<h1>NPC Templates Database</h1>';
     echo '<div class="action-container">';
     echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
+    echo '<div class="search-container">';
+    echo '<input type="text" id="searchBox" placeholder="Search NPC names..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">';
+    echo '<button onclick="applySearch()" class="action-button edit">Search</button>';
+    echo '</div>';
     echo '</div>';
     echo '<h3>Note: This is just for editing an NPC entry before they are activated ingame. Any further edits should be done in the configuration wizard.</h3>';
-    echo '<p>Also due to complexity you can not delete an NPC entry. You can simply make another one with the correct name if you make a mistake.</p>';
+    echo '<p>You can not delete an NPC entry. You can simply make another one with the correct name if you make a mistake.</p>';
 
     echo '<br>';
 
@@ -580,7 +612,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         echo '</div>';
 
         if ($rowCountCombined === 0) {
-            echo '<p>No combined NPC templates found.</p>';
+            echo '<p>No NPCs found.</p>';
         }
     } else {
         echo '<p>Error fetching combined NPC templates: ' . pg_last_error($conn) . '</p>';
@@ -601,11 +633,11 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <input type="hidden" name="npc_name_original" id="edit_npc_name_original">
 
                 <label for="edit_npc_name">NPC Name:</label>
-                <small>Make sure name is lowercase with underscores instead of spaces.</small>
-                <input type="text" name="npc_name" id="edit_npc_name" required>
+                <small>NPC names cannot be changed after creation. If you need to change a name, create a new entry.</small>
+                <input type="text" name="npc_name" id="edit_npc_name" readonly style="background-color: #2a2a2a; cursor: not-allowed;" required>
 
                 <label for="edit_npc_pers">NPC Static Bio:</label>
-                <small>Static tratits and background of the NPC.</small>
+                <small>Static traits and background of the NPC.</small>
                 <textarea name="npc_pers" id="edit_npc_pers" rows="8" required></textarea>
 
                 <label for="edit_npc_dynamic">NPC Dynamic Bio:</label>
@@ -754,6 +786,47 @@ function filterByLetter(letter) {
             showToast('Error loading data. Please try again.');
         });
 }
+
+// Replace the existing applySearch function with this updated version
+function applySearch() {
+    const searchTerm = document.getElementById("searchBox").value.trim();
+    const currentUrl = new URL(window.location.href);
+    const urlParams = new URLSearchParams(currentUrl.search);
+    
+    // Update or add search parameter
+    if (searchTerm) {
+        urlParams.set("search", searchTerm);
+    } else {
+        urlParams.delete("search");
+    }
+    
+    // Preserve existing parameters if they exist
+    const currentLetter = urlParams.get("letter");
+    if (currentLetter) {
+        urlParams.set("letter", currentLetter);
+    }
+    
+    // Create the new URL with the base path and updated parameters
+    const newUrl = `${window.location.pathname}?${urlParams.toString()}#table`;
+    window.location.href = newUrl;
+}
+
+// Add enter key support for the search box
+document.getElementById("searchBox").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        applySearch();
+    }
+});
+
+// Set initial search box value from URL
+window.addEventListener("load", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchTerm = urlParams.get("search");
+    if (searchTerm) {
+        document.getElementById("searchBox").value = decodeURIComponent(searchTerm);
+    }
+});
 </script>
 
 <?php
