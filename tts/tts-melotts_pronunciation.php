@@ -9,7 +9,10 @@ If this file is missing from tts folder, meloTTS will revert to original behavio
 $GLOBALS['MELOTTS_PRONUNCIATION_ADJUST'] = true; // set false to hear original pronunciation 	
 $GLOBALS['MELOTTS_PRONUNCIATION_DEBUG'] = false; // for tests in tts-test.php, true to display changed text 	
 
-$s_pronunciation_test=" I'd like better pronunciation. ";
+$s_pronunciation_test=""; // add here your changes for test
+
+/*
+$s_pronunciation_test.=" I'd like better pronunciation. ";
 $s_pronunciation_test.=" Let's hear contractions. 
  It's nice in Solitude, but isn't warm, I'll not wonder who's responsible. 
  Dragons wouldn't soar if Alduin couldn't rise - it's your fault, that's right! 
@@ -18,8 +21,8 @@ $s_pronunciation_test.=" Let's hear contractions.
  Sword it's new and I'm cold after I've slept in snow. This isn't good, they're frozen, they've risen, we're doomed. 
  We've plumes, we weren't good enough, so I'm querying who're they? He shan't care about bullseye! 
  You wouldn't dare because you're small and you've issues so I'm asking: who've headache? ";
-//$s_pronunciation_test.=" ";  
 $s_pronunciation_test.=" C'mon this is mindblowing. "; // test end
+*/
 
 function adjust_pronunciation($s_text="", $language="EN") {
 	// Specific corrections should precede generic fixes

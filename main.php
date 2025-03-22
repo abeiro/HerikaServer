@@ -22,6 +22,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
 
 
@@ -137,8 +138,15 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     // unset($db);
 }
 
-if (!in_array($gameRequest[0],["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close","infoaction",
-        "status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat"])) {
+
+$fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
+    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat"];
+
+if (isset($GLOBALS["external_fast_commands"])) {
+    $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
+}
+
+if (!in_array($gameRequest[0],$fast_commands)) {
     $semaphoreKey =abs(crc32(__FILE__));
     $semaphore = sem_get($semaphoreKey);
     
@@ -637,9 +645,6 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 }
 
 
-// Check for context overrides on ext dir (plugins)
-requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
-
 if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
     $GLOBALS["PROMPT_HEAD"].=PHP_EOL.$GLOBALS["PLAYER_BIOS"];
 }
@@ -653,6 +658,8 @@ $head[] = array('role' => 'system', 'content' =>
     strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n". $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
 );
 
+// Check for context overrides on ext dir (plugins)
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
 /**********************
 CALL BUILDING

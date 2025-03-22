@@ -13,6 +13,10 @@ final class OghmaTest extends DatabaseTestCase
 
         $this->insertPotionLore();
         
+        $GLOBALS["mockMinimeTopic"] = function($text) {
+            return '{"input_text": "'.$text.'", "generated_tags": "", "elapsed_time": "0.05 seconds"}';
+        };
+        
         // input topic = 0
         // oghma topic = 0
         // location = 0
@@ -45,10 +49,6 @@ final class OghmaTest extends DatabaseTestCase
         require("conf.php");
 
         $this->insertPotionLore();
-        
-        $GLOBALS["mockMinimeTopic"] = function($text) {
-            return '{"input_text": "'.$text.'", "generated_tags": "Potion Seller", "elapsed_time": "0.05 seconds"}';
-        };
         
         // input topic = 6.9
         // oghma topic = 0
@@ -246,10 +246,10 @@ final class OghmaTest extends DatabaseTestCase
                 'ts' => "0",
                 'gamets' => "0",
                 'type' => "infoloc",
-                'data' => "(Context location: Lair of the Potion Seller ,Hold: Brew Shop, Buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:20 PM, 18th of Frostfall, 4E 201)",
+                'data' => "(Context location: Lair of the Potion Seller ,Hold: Potion Seller's Lair, Buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:20 PM, 18th of Frostfall, 4E 201)",
                 'sess' => 'pending',
                 'localts' => 0,
-                'location'=> "(Context location: Lair of the Potion Seller ,Hold: Brew Shop, buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:18 PM, 18th of Frostfall, 4E 201)"
+                'location'=> "(Context location: Lair of the Potion Seller ,Hold: Potion Seller's Lair, buildings to go:The Ragged Flagon,, Current Date in Skyrim World: Loredas, 2:18 PM, 18th of Frostfall, 4E 201)"
             )
         );
         $testDb->insert(
@@ -279,9 +279,13 @@ final class OghmaTest extends DatabaseTestCase
         );
         $testDb->close();
         
+        $GLOBALS["mockMinimeTopic"] = function($text) {
+            return '{"input_text": "'.$text.'", "generated_tags": "dummy", "elapsed_time": "0.05 seconds"}';
+        };
+        
         // input topic = 0
         // oghma topic = 1.5
-        // location = 0.5
+        // location = 1.4
         // context = 0.4
 
         $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
