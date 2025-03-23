@@ -70,8 +70,6 @@ if ($voicelogic === 'voicetype') {
                 $replacement = "\$TTS[\"$ttsName\"][\"voiceid\"]='$voiceid';";
                 $updatedContent = substr_replace($confContent, $replacement, $startPosition, $length);
                 file_put_contents($confFilePath, $updatedContent);
-                
-                print_r($updatedContent);
             }
         }
     };
