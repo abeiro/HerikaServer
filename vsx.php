@@ -54,6 +54,35 @@ if ($voicelogic === 'voicetype') {
 
     $db->close();
 
+    // update voiceid in the conf file if it is still blank (because the npc was added before they spoke)
+    $replaceBlankVoiceID = function($ttsName, $voiceid, $confFilePath) {
+        $pattern = '/\$TTS\[\"'.$ttsName.'\"\]\[\"voiceid\"\]\s*=\s*(".*"|\'.*\');/';
+        $confContent = file_get_contents($confFilePath);
+        preg_match_all($pattern, $confContent, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+
+        if (!empty($matches)) {
+            $lastMatch = end($matches);
+
+            // only replace if the last voiceid is blank
+            if ($lastMatch[1][0] == "''" || $lastMatch[1][0] == '""') {
+                $startPosition = $lastMatch[0][1];
+                $length = strlen($lastMatch[0][0]);
+                $replacement = "\$TTS[\"$ttsName\"][\"voiceid\"]='$voiceid';";
+                $updatedContent = substr_replace($confContent, $replacement, $startPosition, $length);
+                file_put_contents($confFilePath, $updatedContent);
+                
+                print_r($updatedContent);
+            }
+        }
+    };
+
+    $hashedname=md5($_GET["codename"]);
+    $confFilePath = __DIR__.DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR."conf_$hashedname.php";
+    if (file_exists($confFilePath)) {
+        $replaceBlankVoiceID("XTTSFASTAPI", $codename, $confFilePath);
+        $replaceBlankVoiceID("ZONOS_GRADIO", $codename, $confFilePath);
+    }
+
 } else {
   $codename = npcNameToCodename($_GET["codename"]);
     // Old name logic
