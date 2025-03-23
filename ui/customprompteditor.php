@@ -239,7 +239,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <label for="editor">prompts_custom.php Editor:</label>
             <div id="editor"></div>
             <textarea name="content" id="hiddenContent" style="display:none;"></textarea>
-            <br>
             <div class="button-group">
                 <input type="submit" name="save" value="Save" class="action-button upload-csv">
                 <input type="submit" name="validate" value="Validate" class="action-button edit">
