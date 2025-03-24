@@ -146,11 +146,11 @@ $exclusions = [
     $confDir . '/conf.php'
 ];
 
-echo '<div class="message">';
 $lockedProfiles = [];
 $deletedProfiles = [];
 $errorProfiles = [];
 $profileNames = []; // Array to store HERIKA_NAMEs
+$availableProfiles = []; // Array to store all available profiles
 
 foreach ($patterns as $pattern) {
     foreach (glob($pattern) as $file) {
@@ -168,14 +168,46 @@ foreach ($patterns as $pattern) {
             
             $filename = basename($file);
             $profileNames[$filename] = $HERIKA_NAME;
+            $availableProfiles[] = $filename;
             
             if ($LOCK_PROFILE === true) {
                 $lockedProfiles[] = $filename;
                 continue;
             }
         }
+    }
+}
 
-        // Attempt to delete only if it's a file
+// If no profiles found at all
+if (empty($availableProfiles)) {
+    echo '<div class="message">';
+    echo "<h1>Profile Status</h1>";
+    echo "<p>No profiles detected (apart from default).</p>";
+    echo '</div>';
+    exit;
+}
+
+// If there are only locked profiles or no deletable profiles
+if (count($availableProfiles) === count($lockedProfiles)) {
+    echo '<div class="message">';
+    echo "<h1>No profiles available for deletion.</h1>";
+    echo "<h1>Current Locked Profiles:</h1>";
+    foreach ($lockedProfiles as $profile) {
+        $displayName = isset($profileNames[$profile]) ? " - {$profileNames[$profile]}" : "";
+        echo "<p class='locked'>🔒 " . htmlspecialchars($profile) . 
+             "<span class='profile-name'>" . htmlspecialchars($displayName) . "</span></p>";
+    }
+    echo '</div>';
+    exit;
+}
+
+// Process deletions for non-locked profiles
+foreach ($patterns as $pattern) {
+    foreach (glob($pattern) as $file) {
+        if (in_array($file, $exclusions) || in_array(basename($file), $lockedProfiles)) {
+            continue;
+        }
+
         if (is_file($file)) {
             if (unlink($file)) {
                 $deletedProfiles[] = basename($file);
@@ -185,6 +217,8 @@ foreach ($patterns as $pattern) {
         }
     }
 }
+
+echo '<div class="message">';
 
 // Display results
 if (!empty($lockedProfiles)) {
@@ -214,21 +248,18 @@ if (!empty($errorProfiles)) {
     }
 }
 
-if (empty($lockedProfiles) && empty($deletedProfiles) && empty($errorProfiles)) {
-    echo "<p>No profiles found to process.</p>";
+echo '</div>';
+
+// Run the character map regeneration only if files were deleted
+if (!empty($deletedProfiles)) {
+    echo '<div class="message">';
+    echo "<h2>Updating Character Map</h2>";
+    ob_start();
+    require_once(__DIR__ . '/cmd/action_regen_charmap.php');
+    $result = ob_get_clean();
+    echo "<p>Character map has been updated.</p>";
+    echo '</div>';
 }
-
-echo '</div>';
-
-// Run the character map regeneration
-echo '<div class="message">';
-echo "<h2>Updating Character Map</h2>";
-ob_start();
-require_once(__DIR__ . '/cmd/action_regen_charmap.php');
-$result = ob_get_clean();
-echo "<p>Character map has been updated.</p>";
-echo '</div>';
-
 ?>
 </body>
 </html>

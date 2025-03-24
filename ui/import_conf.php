@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Delete the temporary directory and its contents
                     deleteDir($tempDir);
 
-                    $message .= '<p>Configuration files imported successfully.</p>';
+                    $message .= '<p>Configuration files imported successfully. Refresh the page to see the new profiles.</p>';
                 }
             } else {
                 $message .= '<p>Failed to open the ZIP file.</p>';

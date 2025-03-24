@@ -263,8 +263,8 @@
 
         // build the string for zonos tts tones
         $zonos_tones_str = zonosIsActive()
-            ? '"," ws root-response_tone_happiness "," ws root-response_tone_sadness "," ws root-response_tone_disgust "," ws root-response_tone_fear ","'.
-              ' ws root-response_tone_surprise "," ws root-response_tone_anger "," ws root-response_tone_other "," ws root-response_tone_neutral '
+            ? '"," ws root-response-tone-happiness "," ws root-response-tone-sadness "," ws root-response-tone-disgust "," ws root-response-tone-fear ","'.
+              ' ws root-response-tone-surprise "," ws root-response-tone-anger "," ws root-response-tone-other "," ws root-response-tone-neutral '
             : "";
 
         // using a quoted heredoc to avoid having to escape everything
@@ -276,14 +276,14 @@
         root-mood ::= "\"mood\"" ":" ws {$MOODS}
         root-action ::= "\"action\"" ":" ws {$ACTIONS}
         root-target ::= "\"target\"" ":" ws string
-        root-response_tone_happiness ::= "\"response_tone_happiness\"" ":" ws number
-        root-response_tone_sadness ::= "\"response_tone_sadness\"" ":" ws number
-        root-response_tone_disgust ::= "\"response_tone_disgust\"" ":" ws number
-        root-response_tone_fear ::= "\"response_tone_fear\"" ":" ws number
-        root-response_tone_surprise ::= "\"response_tone_surprise\"" ":" ws number
-        root-response_tone_anger ::= "\"response_tone_anger\"" ":" ws number
-        root-response_tone_other ::= "\"response_tone_other\"" ":" ws number
-        root-response_tone_neutral ::= "\"response_tone_neutral\"" ":" ws number
+        root-response-tone-happiness ::= "\"response-tone-happiness\"" ":" ws number
+        root-response-tone-sadness ::= "\"response-tone-sadness\"" ":" ws number
+        root-response-tone-disgust ::= "\"response-tone-disgust\"" ":" ws number
+        root-response-tone-fear ::= "\"response-tone-fear\"" ":" ws number
+        root-response-tone-surprise ::= "\"response-tone-surprise\"" ":" ws number
+        root-response-tone-anger ::= "\"response-tone-anger\"" ":" ws number
+        root-response-tone-other ::= "\"response-tone-other\"" ":" ws number
+        root-response-tone-neutral ::= "\"response-tone-neutral\"" ":" ws number
 
         string ::=
         "\"" (

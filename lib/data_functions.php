@@ -361,8 +361,8 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
         $buffer="";
         foreach ($orderedData as $speechEvent)  {
             
-            if ($speechEvent["gamets_diff"]>1000000) {
-                $lastDialogFull[$speechEvent["ts"]] = array('role' => "user", 'content' => "The Narrator: about ".number_format(($speechEvent["gamets_diff"]/1000000))." hours later....");
+            if (($speechEvent["gamets_diff"] * 0.0000024) > 1.0) { // more than one hour
+                $lastDialogFull[$speechEvent["ts"]] = array('role' => "user", 'content' => "The Narrator: about ".number_format(floor($speechEvent["gamets_diff"]*0.0000024),0)." hours later...");
             }
 
             
@@ -476,7 +476,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     and (people like '|%$actorEscaped%|' or people like '$actorEscaped') ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
-" order by gamets desc,ts desc,rowid desc LIMIT $nRecordsLimit OFFSET 0";  
+    " order by gamets desc,ts desc,rowid desc LIMIT $nRecordsLimit OFFSET 0";  
     
     $results = $db->fetchAll($query);
 
@@ -924,7 +924,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
         }
 
         if ($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"]) {
-            $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60*60 * 20), 0);
+            $hoursAgo=round(($currentGameTs-$row["gamets"]) * 0.0000024, 0);
             if ($hoursAgo>12) {
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
@@ -1854,15 +1854,16 @@ function AddFirstTimeMet($followerName,$momentum,$gamets,$ts) {
         return;
     }
 
-    $realFirst=$GLOBALS["db"]->fetchAll("SELECT gamets,ts,localts FROM speech where companions like '%$fn%' order by rowid asc limit 1 offset 0");
+    $realFirst=$GLOBALS["db"]->fetchAll("SELECT gamets,convert_gamets2skyrim_date(gamets) as sk_date,ts,localts FROM speech where companions ilike '%$fn%' order by rowid asc limit 1 offset 0");
 
     if (is_array($realFirst) && sizeof($realFirst)>0) {
         $gamets=$realFirst[0]["gamets"];
         $ts=$realFirst[0]["ts"];
         $momentum=$realFirst[0]["localts"];
+        $sk_date=$realFirst[0]["sk_date"]; // game timestamp converted to skyrim date YYYY-MM-DD HH:MM:SS
 
         logMemory($GLOBALS["PLAYER_NAME"], $followerName,
-        "(Important note: {$GLOBALS["PLAYER_NAME"]} met {$followerName} for the first time. This is an important event, so use tag #FirstTimeMet.)",
+        "(Important note: {$GLOBALS["PLAYER_NAME"]} met {$followerName} for the first time on {$sk_date}. This is an important event, so use tag #FirstTimeMet.)",
         $momentum, $gamets,'first_met',$ts);
     }
 
