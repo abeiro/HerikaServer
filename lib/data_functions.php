@@ -712,7 +712,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
             if (sizeof($buffer) > 0) {
                 if ($lastSpeaker=="narratorci")
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", removeEmptyElements($buffer)));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "* ".implode("\n* ", removeEmptyElements($buffer)));
                 else if ($lastSpeaker=="backgroundchat")
                     $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)));
                 else 
@@ -762,7 +762,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         } else if ($line["role"] == "backgroundchat") {
         
             $lastDialogFull[$n]["role"] = "user";
-            $lastDialogFull[$n]["content"] = " (... \n".PHP_EOL.$lastDialogFull[$n]["content"]."...)\n";
+            $lastDialogFull[$n]["content"] = " (... ".PHP_EOL.$lastDialogFull[$n]["content"]."\n...)";
 
         } else if ($line["role"] == "narratorci") {
         
