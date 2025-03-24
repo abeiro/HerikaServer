@@ -116,24 +116,27 @@ function DataLastInfoFor($actor, $lastNelements = -2,$addNPCDescriptions=false,$
                     $actorDetailedListWithProfile[]="$actor";
             }
         }
-        $actorsInRange=implode("\n· ",$actorDetailedListWithProfile);
+        $actorsInRange=implode("\n## ",$actorDetailedListWithProfile);
 
     }
 
     //Followers
     foreach (json_decode(DataGetCurrentPartyConf(),JSON_OBJECT_AS_ARRAY) as $followername=>$followerdata) {
+        if (!$followername)
+            continue;
+
         if ($followername==$GLOBALS["PLAYER_NAME"]) {
-            $followers[]="· $followername (roleplayed by player)";
+            $followers[]="$followername (roleplayed by player)";
         } else 
-            $followers[]="· $followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+            $followers[]="$followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
     }
 
-    $followers[]="* {$GLOBALS["PLAYER_NAME"]}";
+    $followers[]="{$GLOBALS["PLAYER_NAME"]}";
 
-    $lastDialog[] = array('role' => 'user', 'content' => "*** NEARBY ACTORS/NPC IN THE SCENE *** \n· $actorsInRange");
-    $lastDialog[] = array('role' => 'user', 'content' => "\n*** PARTY STATUS *** \n". (implode("\n",$followers)));
+    $lastDialog[] = array('role' => 'user', 'content' => "# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange");
+    $lastDialog[] = array('role' => 'user', 'content' => "# PARTY STATUS\n## ". (implode("\n## ",$followers)));
 
-    $lastDialog[] = array('role' => 'user', 'content' => "\n*** LOCATIONS OF INTEREST *** \n· ". (implode("\n· ",DataPosibleLocationsToGo())));
+    $lastDialog[] = array('role' => 'user', 'content' => "# LOCATIONS OF INTEREST \n## ". (implode("\n## ",DataPosibleLocationsToGo())));
  
     return $lastDialog;
 
@@ -427,6 +430,12 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
         return $orderedData;
 }
 
+function removeEmptyElements(array $array): array {
+    return array_filter($array, function($value) {
+        return !empty($value) || $value === 0 || $value === "0"; 
+    });
+}
+
 function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 {
 
@@ -703,11 +712,11 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
             if (sizeof($buffer) > 0) {
                 if ($lastSpeaker=="narratorci")
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $buffer));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", removeEmptyElements($buffer)));
                 else if ($lastSpeaker=="backgroundchat")
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $buffer));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)));
                 else 
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $buffer));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", removeEmptyElements($buffer)));
             }
             $buffer = [];
             $buffer[] = $line["content"];
@@ -723,14 +732,21 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     }
 
+    // Clean empty entries
+    $bufferCopy=[];
+    foreach ($buffer as $n=>$bufferEntry) {
+        if (!empty(trim($bufferEntry)))
+            $bufferCopy[]=$bufferEntry;
+
+    }
     // Last buffer, probably user input.
 
     if ($lastSpeaker=="narratorci")
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $buffer));
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $bufferCopy));
     else if ($lastSpeaker=="backgroundchat")
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $buffer));
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy));
     else 
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $buffer));
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
 
     
       
@@ -746,12 +762,12 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         } else if ($line["role"] == "backgroundchat") {
         
             $lastDialogFull[$n]["role"] = "user";
-            $lastDialogFull[$n]["content"] = "[BACKGROUND CHATTER]\n".PHP_EOL.$lastDialogFull[$n]["content"].PHP_EOL."\n[/BACKGROUND CHATTER]";
+            $lastDialogFull[$n]["content"] = " (... \n".PHP_EOL.$lastDialogFull[$n]["content"]."...)\n";
 
         } else if ($line["role"] == "narratorci") {
         
             $lastDialogFull[$n]["role"] = "user";
-            $lastDialogFull[$n]["content"] = "[CONTEXT INFO] ".PHP_EOL."* ".$lastDialogFull[$n]["content"]."\n[/CONTEXT INFO]";
+            $lastDialogFull[$n]["content"] = $lastDialogFull[$n]["content"]."\n";
         
         } else if ($line["role"] == "narratorchat") {
 
