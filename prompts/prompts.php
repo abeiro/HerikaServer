@@ -95,7 +95,7 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about their hopes for the rest of the journey) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
-        ,"extra" => ["dontuse" => (rand(0, 99) >= $GLOBALS["BORED_EVENT"])]
+        ,"extra" => ["dontuse" => (rand(0, 99) >= intval($GLOBALS["BORED_EVENT"]))]
     ],
 
     "goodmorning"=>[
