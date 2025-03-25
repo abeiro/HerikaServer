@@ -18,6 +18,9 @@ $distroLogPath = $logPath . 'apache_error.log';
 $llmOutputPath = $logPath . 'output_from_llm.log';
 $llmContextPath = $logPath . 'context_sent_to_llm.log';
 $pluginOutputPath = $logPath . 'ouput_to_plugin.log';
+$sttLogPath = $logPath . 'stt.log';
+$visionLogPath = $logPath . 'vision.log';
+$debugStreamLogPath = $logPath . 'debugstream.log';
 
 // Function to read and filter the error log from a given path
 function readErrorLog($errorLogPath, $logType) {
@@ -26,6 +29,9 @@ function readErrorLog($errorLogPath, $logType) {
         $errorLog = array_reverse($errorLog);
 
         echo "<h2>$logType</h2>";
+        echo '<div class="search-container">';
+        echo '<input type="text" class="search-input" placeholder="Search in Apache Error Log..." data-target="errorLogContainer">';
+        echo '</div>';
         echo '<div class="log-container" id="errorLogContainer">';
         
         foreach ($errorLog as $line) {
@@ -69,6 +75,9 @@ function readRegularLog($logPath, $logName) {
         $log = file_get_contents($logPath);
 
         echo "<h2>$logName</h2>";
+        echo '<div class="search-container">';
+        echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . sanitizeId($logName) . 'Container">';
+        echo '</div>';
         echo '<div class="log-container" id="' . sanitizeId($logName) . 'Container">';
         echo '<div class="log-entry regular-entry">';
         echo '<pre class="log-content">' . htmlspecialchars($log) . '</pre>';
@@ -401,6 +410,56 @@ if (isset($_GET['download_logs'])) {
             display: flex;
             align-items: center;
         }
+
+        /* Search bar styles */
+        .search-container {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+            color: #f8f9fa;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #17a2b8;
+        }
+
+        .regex-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #f8f9fa;
+            font-size: 0.9em;
+        }
+
+        .regex-toggle input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .no-results {
+            color: #888;
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
+
+        .highlight {
+            background-color: #17a2b8;
+            color: #ffffff;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -457,6 +516,27 @@ if (isset($_GET['download_logs'])) {
             <?php
             // Display plugin output log
             readRegularLog($pluginOutputPath, "Plugin Output (ouput_to_plugin.log)");
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
+            // Display STT log
+            readRegularLog($sttLogPath, "Speech-to-Text Log (stt.log)");
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
+            // Display Vision log
+            readRegularLog($visionLogPath, "Vision Log (vision.log)");
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
+            // Display Debug Stream log
+            readRegularLog($debugStreamLogPath, "Debug Stream Log (debugstream.log)");
             ?>
         </div>
     </div>
@@ -522,6 +602,61 @@ document.getElementById('refreshLogs').addEventListener('click', refreshLogs);
 // Add click event listener to download button
 document.getElementById('downloadLogs').addEventListener('click', function() {
     window.location.href = window.location.pathname + '?download_logs=1';
+});
+
+// Search functionality
+document.querySelectorAll('.search-input').forEach(input => {
+    const targetId = input.getAttribute('data-target');
+    const container = document.getElementById(targetId);
+    let originalContent = '';
+
+    // Store original content when the page loads
+    if (container) {
+        originalContent = container.innerHTML;
+    }
+
+    function performSearch() {
+        if (!container) return;
+
+        const searchTerm = input.value.trim();
+        if (!searchTerm) {
+            container.innerHTML = originalContent;
+            return;
+        }
+
+        let regex;
+        try {
+            // Try to detect if the search term is a regex pattern
+            const regexPattern = /^\/.+\/[gimuy]*$/;
+            if (regexPattern.test(searchTerm)) {
+                // If it looks like a regex pattern (starts and ends with /), use it directly
+                const parts = searchTerm.split('/');
+                const flags = parts.pop();
+                const pattern = parts.slice(1).join('/');
+                regex = new RegExp(pattern, flags);
+            } else {
+                // Otherwise, escape special characters and use as plain text
+                regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+            }
+        } catch (e) {
+            console.error('Invalid regex:', e);
+            return;
+        }
+
+        const content = container.textContent;
+        const matches = content.match(regex);
+        
+        if (!matches) {
+            container.innerHTML = '<div class="no-results">No matches found</div>';
+            return;
+        }
+
+        const highlightedContent = content.replace(regex, match => `<span class="highlight">${match}</span>`);
+        container.innerHTML = `<pre class="log-content">${highlightedContent}</pre>`;
+    }
+
+    // Add event listener
+    input.addEventListener('input', performSearch);
 });
 </script>
 

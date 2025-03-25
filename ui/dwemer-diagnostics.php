@@ -44,6 +44,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]));
     }
 
+    // Process read log command first - before any SQL processing
+    if (preg_match('/^read\s+log\s+(\w+\.log)$/', $query, $matches)) {
+        $log_file = $matches[1];
+        $log_path = __DIR__ . '/../log/' . $log_file;
+        
+        if (!file_exists($log_path)) {
+            die(json_encode([
+                'error' => "Log file '$log_file' not found"
+            ]));
+        }
+        
+        if (!is_readable($log_path)) {
+            die(json_encode([
+                'error' => "Log file '$log_file' is not readable"
+            ]));
+        }
+        
+        // Read the entire log file
+        $content = file_get_contents($log_path);
+        if ($content === false) {
+            die(json_encode([
+                'error' => "Error reading log file '$log_file'"
+            ]));
+        }
+        
+        // Format the response
+        echo json_encode([
+            'response' => $content
+        ]);
+        exit;
+    }
+
     // Process help command
     if ($query === 'help') {
         die(json_encode([
@@ -314,38 +346,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Process read log command
-    if (preg_match('/^read\s+log\s+(\w+\.log)$/', $query, $matches)) {
-        $log_file = $matches[1];
-        $log_path = __DIR__ . '/../log/' . $log_file;
-        
-        if (!file_exists($log_path)) {
-            die(json_encode([
-                'error' => "Log file '$log_file' not found"
-            ]));
-        }
-        
-        if (!is_readable($log_path)) {
-            die(json_encode([
-                'error' => "Log file '$log_file' is not readable"
-            ]));
-        }
-        
-        // Read the entire log file
-        $content = file_get_contents($log_path);
-        if ($content === false) {
-            die(json_encode([
-                'error' => "Error reading log file '$log_file'"
-            ]));
-        }
-        
-        // Format the response
-        echo json_encode([
-            'response' => $content
-        ]);
-        exit;
-    }
-
     // If no specific command matched, use OpenRouter for natural language query
     try {
         // Get settings from the request
@@ -387,6 +387,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          - Personal details and background are in npc_pers
                          - Current state and dynamic information in npc_dynamic
                          
+                         Available Log Files:
+                         - context_sent_to_llm.log: Contains context sent to the language model
+                         - output_from_llm.log: Contains responses from the language model
+                         - output_to_plugin.log: Contains output sent to the plugin
+                         - apache_error.log: Contains Apache server errors
+                         - debugStream.log: Contains debug information
+                         
+                         You can query these logs using the 'read log [filename]' command.
+                         
                          Example format for multiple queries:
                          ```sql
                          -- First query to get basic count
@@ -409,7 +418,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          - Don't stop at just one query unless you're absolutely sure you have all needed information
                          - Use the executeQuery() function with proper parameter escaping to prevent SQL injection
                          - ALWAYS explain your thought process between queries
-                         - ALWAYS provide a final analysis after all queries"
+                         - ALWAYS provide a final analysis after all queries
+                         - You can query log files to get additional context about the system's behavior"
         ];
 
         // Add database schema info
@@ -704,7 +714,7 @@ $TITLE = "🔍 Dwemer Diagnostics";
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             background-color: #1e1e1e;
             color: #d4d4d4;
             padding-top: 100px;
@@ -714,7 +724,10 @@ $TITLE = "🔍 Dwemer Diagnostics";
             gap: 20px;
             height: calc(100vh - 200px);
             margin-top: 80px;
-            padding: 0 20px;
+            padding: 0 10px;
+            width: 95%;
+            margin-left: auto;
+            margin-right: auto;
         }
         .tables-section {
             flex: 0 0 200px;
@@ -793,6 +806,9 @@ $TITLE = "🔍 Dwemer Diagnostics";
         .log-tab-checkbox {
             margin: 0;
             cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: #0e639c;
         }
         .log-content {
             flex: 1;
@@ -1030,6 +1046,54 @@ $TITLE = "🔍 Dwemer Diagnostics";
             background-color: #2d2d2d;
             z-index: 1;
         }
+        .timestamp {
+            color: #569cd6;
+            font-weight: bold;
+        }
+        .array-keyword {
+            color: #569cd6;
+            font-weight: bold;
+        }
+        .array-key {
+            color: #9cdcfe;
+        }
+        .array-value {
+            color: #ce9178;
+        }
+        .json-entry {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #2d2d2d;
+            border-radius: 4px;
+        }
+        .json-object {
+            margin-left: 20px;
+            padding-left: 10px;
+            border-left: 2px solid #3e3e3e;
+        }
+        .json-nested {
+            margin-left: 20px;
+            padding-left: 10px;
+            border-left: 2px solid #3e3e3e;
+        }
+        .json-property {
+            margin: 5px 0;
+            padding: 2px 0;
+        }
+        .timestamp {
+            color: #569cd6;
+            font-weight: bold;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .array-key {
+            color: #9cdcfe;
+            font-weight: bold;
+        }
+        .array-value {
+            color: #ce9178;
+        }
     </style>
 </head>
 <body>
@@ -1248,12 +1312,21 @@ $TITLE = "🔍 Dwemer Diagnostics";
 
         // Log window management
         const logFiles = [
-            { name: 'debugStream.log', title: 'Debug Stream' },
             { name: 'context_sent_to_llm.log', title: 'Context to LLM' },
             { name: 'output_from_llm.log', title: 'LLM Output' },
             { name: 'output_to_plugin.log', title: 'Plugin Output' },
-            { name: 'apache_error.log', title: 'Apache Errors' }
+            { name: 'apache_error.log', title: 'Apache Errors' },
+            { name: 'debugStream.log', title: 'Debug Stream' }
         ];
+
+        // Store log contents in variables
+        let logContents = {
+            'context_sent_to_llm.log': '',
+            'output_from_llm.log': '',
+            'output_to_plugin.log': '',
+            'apache_error.log': '',
+            'debugStream.log': ''
+        };
 
         let selectedContext = new Set();
 
@@ -1336,7 +1409,11 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 const data = await response.json();
                 if (data.error) {
                     content.querySelector('.log-text').textContent = `Error: ${data.error}`;
+                    logContents[logFile] = `Error: ${data.error}`;
                 } else if (data.response) {
+                    // Store the raw content
+                    logContents[logFile] = data.response;
+                    
                     // Special handling for context log
                     if (logFile === 'context_sent_to_llm.log') {
                         try {
@@ -1344,19 +1421,37 @@ $TITLE = "🔍 Dwemer Diagnostics";
                             const jsonContent = JSON.parse(data.response);
                             let formattedContent = '';
                             
-                            // Format each entry
+                            // Format each entry with syntax highlighting
                             Object.entries(jsonContent).forEach(([key, value]) => {
+                                formattedContent += `<div class="json-entry">`;
+                                formattedContent += `<span class="timestamp">${key}</span>\n`;
+                                
                                 if (typeof value === 'object' && value !== null) {
-                                    formattedContent += `${key} =>\n`;
-                                    formattedContent += `array (\n`;
+                                    formattedContent += `<div class="json-object">`;
                                     Object.entries(value).forEach(([k, v]) => {
-                                        formattedContent += `  '${k}' => '${v}',\n`;
+                                        formattedContent += `<div class="json-property">`;
+                                        formattedContent += `<span class="array-key">${k}</span>: `;
+                                        
+                                        if (typeof v === 'object' && v !== null) {
+                                            formattedContent += `<div class="json-nested">`;
+                                            Object.entries(v).forEach(([subK, subV]) => {
+                                                formattedContent += `<div class="json-property">`;
+                                                formattedContent += `<span class="array-key">${subK}</span>: `;
+                                                formattedContent += `<span class="array-value">${subV}</span>`;
+                                                formattedContent += `</div>`;
+                                            });
+                                            formattedContent += `</div>`;
+                                        } else {
+                                            formattedContent += `<span class="array-value">${v}</span>`;
+                                        }
+                                        formattedContent += `</div>`;
                                     });
-                                    formattedContent += `),\n\n`;
+                                    formattedContent += `</div>`;
                                 }
+                                formattedContent += `</div>\n`;
                             });
                             
-                            content.querySelector('.log-text').textContent = formattedContent;
+                            content.querySelector('.log-text').innerHTML = formattedContent;
                         } catch (e) {
                             // If parsing fails, show original content
                             content.querySelector('.log-text').textContent = data.response;
@@ -1367,11 +1462,16 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 } else if (data.table_data && Array.isArray(data.table_data)) {
                     const logText = data.table_data.map(row => row.line || row.content || JSON.stringify(row)).join('\n');
                     content.querySelector('.log-text').textContent = logText;
+                    logContents[logFile] = logText;
                 } else {
-                    content.querySelector('.log-text').textContent = JSON.stringify(data, null, 2);
+                    const content = JSON.stringify(data, null, 2);
+                    content.querySelector('.log-text').textContent = content;
+                    logContents[logFile] = content;
                 }
             } catch (error) {
-                content.querySelector('.log-text').textContent = `Error loading log: ${error.message}`;
+                const errorMessage = `Error loading log: ${error.message}`;
+                content.querySelector('.log-text').textContent = errorMessage;
+                logContents[logFile] = errorMessage;
             }
         }
 
@@ -1398,7 +1498,7 @@ $TITLE = "🔍 Dwemer Diagnostics";
             });
         }
 
-        // Modify sendQuery to include selected log context
+        // Modify sendQuery to use stored log contents
         async function sendQuery() {
             const input = document.getElementById('inputText');
             const query = input.value.trim();
@@ -1414,13 +1514,11 @@ $TITLE = "🔍 Dwemer Diagnostics";
             loadingIndicator.style.display = 'block';
 
             try {
-                // Get context from selected logs
+                // Get context from selected logs using stored contents
                 const context = [];
                 for (const logFile of selectedContext) {
-                    const content = document.querySelector(`.log-content[data-log-file="${logFile}"]`);
-                    if (content) {
-                        const logText = content.querySelector('.log-text').textContent;
-                        context.push(`Log ${logFile}:\n${logText}`);
+                    if (logContents[logFile]) {
+                        context.push(`Log ${logFile}:\n${logContents[logFile]}`);
                     }
                 }
 
