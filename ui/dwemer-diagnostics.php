@@ -331,19 +331,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]));
         }
         
-        // Read the last 100 lines of the log file
-        $lines = array_slice(file($log_path), -100);
-        if ($lines === false) {
+        // Read the entire log file
+        $content = file_get_contents($log_path);
+        if ($content === false) {
             die(json_encode([
                 'error' => "Error reading log file '$log_file'"
             ]));
         }
         
         // Format the response
-        $response = implode('', $lines);
-        
         echo json_encode([
-            'response' => $response
+            'response' => $content
         ]);
         exit;
     }
@@ -785,9 +783,16 @@ $TITLE = "🔍 Dwemer Diagnostics";
             color: #d4d4d4;
             cursor: pointer;
             font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .log-tab.active {
             background-color: #0e639c;
+        }
+        .log-tab-checkbox {
+            margin: 0;
+            cursor: pointer;
         }
         .log-content {
             flex: 1;
@@ -802,16 +807,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
         }
         .log-content.active {
             display: block;
-        }
-        .log-checkbox {
-            margin-right: 8px;
-        }
-        .log-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #3e3e3e;
         }
         .log-text {
             font-family: 'Consolas', 'Courier New', monospace;
@@ -1265,17 +1260,44 @@ $TITLE = "🔍 Dwemer Diagnostics";
         function createLogTab(logFile) {
             const tab = document.createElement('button');
             tab.className = 'log-tab';
-            tab.textContent = logFile.title;
             tab.dataset.logFile = logFile.name;
             
-            tab.addEventListener('click', () => {
-                // Remove active class from all tabs and contents
-                document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.log-content').forEach(c => c.classList.remove('active'));
-                
-                // Add active class to clicked tab and corresponding content
-                tab.classList.add('active');
-                document.querySelector(`.log-content[data-log-file="${logFile.name}"]`).classList.add('active');
+            // Create checkbox
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'log-tab-checkbox';
+            checkbox.title = 'Use as context';
+            
+            // Create title span
+            const title = document.createElement('span');
+            title.textContent = logFile.title;
+            
+            // Add elements to tab
+            tab.appendChild(checkbox);
+            tab.appendChild(title);
+            
+            // Add event listeners
+            tab.addEventListener('click', (e) => {
+                // Don't toggle active state if clicking checkbox
+                if (e.target !== checkbox) {
+                    // Remove active class from all tabs and contents
+                    document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.log-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    tab.classList.add('active');
+                    document.querySelector(`.log-content[data-log-file="${logFile.name}"]`).classList.add('active');
+                }
+            });
+            
+            // Add checkbox event listener
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    selectedContext.add(logFile.name);
+                } else {
+                    selectedContext.delete(logFile.name);
+                }
+                updateContextCount();
             });
             
             return tab;
@@ -1286,24 +1308,8 @@ $TITLE = "🔍 Dwemer Diagnostics";
             content.className = 'log-content';
             content.dataset.logFile = logFile.name;
             content.innerHTML = `
-                <div class="log-header">
-                    <input type="checkbox" class="log-checkbox" title="Use as context">
-                    <span>${logFile.title}</span>
-                </div>
                 <div class="log-text">Loading...</div>
             `;
-
-            // Add event listener for checkbox
-            const checkbox = content.querySelector('.log-checkbox');
-            checkbox.addEventListener('change', () => {
-                if (checkbox.checked) {
-                    selectedContext.add(logFile.name);
-                } else {
-                    selectedContext.delete(logFile.name);
-                }
-                updateContextCount();
-            });
-
             return content;
         }
 
@@ -1331,7 +1337,33 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 if (data.error) {
                     content.querySelector('.log-text').textContent = `Error: ${data.error}`;
                 } else if (data.response) {
-                    content.querySelector('.log-text').textContent = data.response;
+                    // Special handling for context log
+                    if (logFile === 'context_sent_to_llm.log') {
+                        try {
+                            // Try to parse the response as JSON
+                            const jsonContent = JSON.parse(data.response);
+                            let formattedContent = '';
+                            
+                            // Format each entry
+                            Object.entries(jsonContent).forEach(([key, value]) => {
+                                if (typeof value === 'object' && value !== null) {
+                                    formattedContent += `${key} =>\n`;
+                                    formattedContent += `array (\n`;
+                                    Object.entries(value).forEach(([k, v]) => {
+                                        formattedContent += `  '${k}' => '${v}',\n`;
+                                    });
+                                    formattedContent += `),\n\n`;
+                                }
+                            });
+                            
+                            content.querySelector('.log-text').textContent = formattedContent;
+                        } catch (e) {
+                            // If parsing fails, show original content
+                            content.querySelector('.log-text').textContent = data.response;
+                        }
+                    } else {
+                        content.querySelector('.log-text').textContent = data.response;
+                    }
                 } else if (data.table_data && Array.isArray(data.table_data)) {
                     const logText = data.table_data.map(row => row.line || row.content || JSON.stringify(row)).join('\n');
                     content.querySelector('.log-text').textContent = logText;
