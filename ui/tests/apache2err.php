@@ -28,7 +28,12 @@ function readErrorLog($errorLogPath, $logType) {
         $errorLog = file($errorLogPath);
         $errorLog = array_reverse($errorLog);
 
+        echo '<div class="section-header">';
         echo "<h2>$logType</h2>";
+        echo '<button class="expand-button" onclick="openModal(\'errorLogModal\', \'errorLogContainer\')">';
+        echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+        echo '</button>';
+        echo '</div>';
         echo '<div class="search-container">';
         echo '<input type="text" class="search-input" placeholder="Search in Apache Error Log..." data-target="errorLogContainer">';
         echo '</div>';
@@ -73,14 +78,27 @@ function readErrorLog($errorLogPath, $logType) {
 function readRegularLog($logPath, $logName) {
     if (file_exists($logPath) && is_readable($logPath)) {
         $log = file_get_contents($logPath);
+        $sanitizedId = sanitizeId($logName);
 
+        echo '<div class="section-header">';
         echo "<h2>$logName</h2>";
-        echo '<div class="search-container">';
-        echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . sanitizeId($logName) . 'Container">';
+        echo '<button class="expand-button" onclick="openModal(\'' . $sanitizedId . 'Modal\', \'' . $sanitizedId . 'Container\')">';
+        echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+        echo 'Expand';
+        echo '</button>';
         echo '</div>';
-        echo '<div class="log-container" id="' . sanitizeId($logName) . 'Container">';
+        echo '<div class="search-container">';
+        echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . $sanitizedId . 'Container">';
+        echo '</div>';
+        echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
         echo '<div class="log-entry regular-entry">';
-        echo '<pre class="log-content">' . htmlspecialchars($log) . '</pre>';
+        
+        if (strpos($logName, 'LLM Context') !== false) {
+            echo '<pre class="log-content">' . htmlspecialchars($log) . '</pre>';
+        } else {
+            echo '<pre class="log-content">' . htmlspecialchars($log) . '</pre>';
+        }
+        
         echo '</div>';
         echo '</div>';
     } else {
@@ -225,11 +243,11 @@ if (isset($_GET['download_logs'])) {
 
         .grid-container {
             display: grid;
-            grid-template-columns: 1fr 1fr;
             gap: 10px;
             width: 100%;
             margin: 0 auto;
             box-sizing: border-box;
+            grid-template-columns: repeat(3, 1fr);
         }
 
         .log-section {
@@ -240,6 +258,32 @@ if (isset($_GET['download_logs'])) {
             display: flex;
             flex-direction: column;
             min-width: 0;
+            position: relative;
+            resize: both;
+            overflow: auto;
+            min-height: 300px;
+            min-width: 300px;
+        }
+
+        .log-section::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 15px;
+            height: 15px;
+            cursor: se-resize;
+            background: linear-gradient(135deg, transparent 50%, #444 50%);
+        }
+
+        h2 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+            font-size: 1.2em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .log-container {
@@ -295,32 +339,18 @@ if (isset($_GET['download_logs'])) {
             height: 100%;
             word-wrap: break-word;
             overflow-wrap: break-word;
-        }
-
-        h2 {
-            margin-top: 0;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #444;
-            font-size: 1.2em;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 13px;
         }
 
         @media (max-width: 1200px) {
             .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .grid-container {
                 grid-template-columns: 1fr;
-            }
-            .log-container {
-                height: 400px;
-                max-height: 400px;
-            }
-            main {
-                padding-left: 5px;
-                padding-right: 5px;
-            }
-            .log-section {
-                padding: 10px;
             }
         }
 
@@ -460,6 +490,148 @@ if (isset($_GET['download_logs'])) {
             padding: 0 2px;
             border-radius: 2px;
         }
+
+        /* Grid layout controls */
+        .grid-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .grid-controls select {
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+            color: #f8f9fa;
+            font-size: 14px;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow-y: auto;
+            padding-top: 160px;
+            padding-bottom: 40px;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: #2a2a2a;
+            margin: 0 auto;
+            padding: 20px;
+            width: 95%;
+            max-width: 1600px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            max-height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.5em;
+            color: #ffffff;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #f8f9fa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .close-modal:hover {
+            background-color: #444;
+        }
+
+        .modal-search-container {
+            margin: 0 0 15px 0;
+            padding: 10px;
+            background-color: #1a1a1a;
+            border-radius: 4px;
+            border: 1px solid #555555;
+        }
+
+        .modal-search-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+            color: #f8f9fa;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .modal-search-input:focus {
+            outline: none;
+            border-color: #17a2b8;
+        }
+
+        .modal-body {
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #555555;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .expand-button {
+            background: none;
+            border: none;
+            color: #17a2b8;
+            cursor: pointer;
+            padding: 4px 8px;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            border-radius: 4px;
+        }
+
+        .expand-button:hover {
+            background-color: #444;
+        }
+
+        .expand-button svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 4px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
     </style>
 </head>
 <body>
@@ -542,6 +714,112 @@ if (isset($_GET['download_logs'])) {
     </div>
 </div>
 </main>
+
+<!-- Modals -->
+<div id="errorLogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Apache Error Log</h2>
+            <button class="close-modal" onclick="closeModal('errorLogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Apache Error Log..." data-target="errorLogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="errorLogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="LLMOutputoutputfromllmlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">LLM Output Log</h2>
+            <button class="close-modal" onclick="closeModal('LLMOutputoutputfromllmlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in LLM Output Log..." data-target="LLMOutputoutputfromllmlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="LLMOutputoutputfromllmlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="LLMContextcontextsenttollmlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">LLM Context Log</h2>
+            <button class="close-modal" onclick="closeModal('LLMContextcontextsenttollmlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in LLM Context Log..." data-target="LLMContextcontextsenttollmlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="LLMContextcontextsenttollmlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="PluginOutputouputtopluginlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Plugin Output Log</h2>
+            <button class="close-modal" onclick="closeModal('PluginOutputouputtopluginlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Plugin Output Log..." data-target="PluginOutputouputtopluginlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="PluginOutputouputtopluginlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="SpeechtoTextLogsttlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Speech-to-Text Log</h2>
+            <button class="close-modal" onclick="closeModal('SpeechtoTextLogsttlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Speech-to-Text Log..." data-target="SpeechtoTextLogsttlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="SpeechtoTextLogsttlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="VisionLogvisionlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Vision Log</h2>
+            <button class="close-modal" onclick="closeModal('VisionLogvisionlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Vision Log..." data-target="VisionLogvisionlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="VisionLogvisionlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="DebugStreamLogdebugstreamlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Debug Stream Log</h2>
+            <button class="close-modal" onclick="closeModal('DebugStreamLogdebugstreamlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Debug Stream Log..." data-target="DebugStreamLogdebugstreamlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="DebugStreamLogdebugstreamlogModalContent"></div>
+        </div>
+    </div>
+</div>
 
 <script>
 // Hide loading overlay and show content when everything is loaded
@@ -657,6 +935,90 @@ document.querySelectorAll('.search-input').forEach(input => {
 
     // Add event listener
     input.addEventListener('input', performSearch);
+});
+
+// Modal functionality
+function openModal(modalId, sourceId) {
+    const modal = document.getElementById(modalId);
+    const contentId = modalId + 'Content';
+    const content = document.getElementById(contentId);
+    const sourceContainer = document.getElementById(sourceId);
+    
+    if (sourceContainer && modal) {
+        content.innerHTML = sourceContainer.innerHTML;
+        modal.style.display = 'block';
+        
+        // Initialize search functionality for the modal
+        const modalSearchInput = modal.querySelector('.modal-search-input');
+        if (modalSearchInput) {
+            const originalContent = content.innerHTML;
+            
+            modalSearchInput.addEventListener('input', function() {
+                const searchTerm = this.value.trim();
+                if (!searchTerm) {
+                    content.innerHTML = originalContent;
+                    return;
+                }
+
+                let regex;
+                try {
+                    const regexPattern = /^\/.+\/[gimuy]*$/;
+                    if (regexPattern.test(searchTerm)) {
+                        const parts = searchTerm.split('/');
+                        const flags = parts.pop();
+                        const pattern = parts.slice(1).join('/');
+                        regex = new RegExp(pattern, flags);
+                    } else {
+                        regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                    }
+                } catch (e) {
+                    console.error('Invalid regex:', e);
+                    return;
+                }
+
+                const textContent = content.textContent;
+                const matches = textContent.match(regex);
+                
+                if (!matches) {
+                    content.innerHTML = '<div class="no-results">No matches found</div>';
+                    return;
+                }
+
+                const highlightedContent = textContent.replace(regex, match => `<span class="highlight">${match}</span>`);
+                content.innerHTML = `<pre class="log-content">${highlightedContent}</pre>`;
+            });
+        }
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+    }
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.style.display = 'none';
+        });
+    }
+});
+
+// Add data-modal-target attributes to log containers
+document.querySelectorAll('.log-container').forEach(container => {
+    const modalId = container.id.replace('Container', 'Modal');
+    container.setAttribute('data-modal-target', modalId);
 });
 </script>
 
