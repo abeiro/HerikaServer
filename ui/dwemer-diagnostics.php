@@ -276,6 +276,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Process direct SQL query
+    if (preg_match('/^SELECT\s+.*FROM\s+(\w+)/i', $query, $matches)) {
+        $table_name = pg_escape_string($matches[1]);
+        
+        // Verify table exists
+        $table_check = pg_query($conn, "
+            SELECT 1 
+            FROM information_schema.tables 
+            WHERE table_schema = '$schema' 
+            AND table_name = '$table_name'
+        ");
+        
+        if (!$table_check || pg_num_rows($table_check) === 0) {
+            die(json_encode([
+                'error' => "Table '$table_name' not found"
+            ]));
+        }
+        
+        // Execute the query
+        $result = pg_query($conn, $query);
+        
+        if (!$result) {
+            die(json_encode([
+                'error' => 'Error executing query: ' . pg_last_error($conn)
+            ]));
+        }
+        
+        $rows = [];
+        while ($row = pg_fetch_assoc($result)) {
+            $rows[] = $row;
+        }
+        
+        echo json_encode([
+            'table_data' => $rows
+        ]);
+        exit;
+    }
+
+    // Process read log command
+    if (preg_match('/^read\s+log\s+(\w+\.log)$/', $query, $matches)) {
+        $log_file = $matches[1];
+        $log_path = __DIR__ . '/../log/' . $log_file;
+        
+        if (!file_exists($log_path)) {
+            die(json_encode([
+                'error' => "Log file '$log_file' not found"
+            ]));
+        }
+        
+        if (!is_readable($log_path)) {
+            die(json_encode([
+                'error' => "Log file '$log_file' is not readable"
+            ]));
+        }
+        
+        // Read the last 100 lines of the log file
+        $lines = array_slice(file($log_path), -100);
+        if ($lines === false) {
+            die(json_encode([
+                'error' => "Error reading log file '$log_file'"
+            ]));
+        }
+        
+        // Format the response
+        $response = implode('', $lines);
+        
+        echo json_encode([
+            'response' => $response
+        ]);
+        exit;
+    }
+
     // If no specific command matched, use OpenRouter for natural language query
     try {
         // Get settings from the request
@@ -618,6 +690,10 @@ ob_start();
 
 $TITLE = "🔍 Dwemer Diagnostics";
 ?>
+    <?php 
+    $debugPaneLink = false;
+    include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+    ?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -633,12 +709,46 @@ $TITLE = "🔍 Dwemer Diagnostics";
             padding: 20px;
             background-color: #1e1e1e;
             color: #d4d4d4;
+            padding-top: 100px;
         }
         .container {
             display: flex;
             gap: 20px;
             height: calc(100vh - 200px);
-            margin-top: 160px;
+            margin-top: 80px;
+            padding: 0 20px;
+        }
+        .tables-section {
+            flex: 0 0 200px;
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        .tables-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #0e639c;
+        }
+        .table-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .table-item {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background-color: #1e1e1e;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .table-item:hover {
+            background-color: #3e3e3e;
+        }
+        .table-item.active {
+            background-color: #0e639c;
+            color: white;
         }
         .chat-section {
             flex: 1;
@@ -647,13 +757,72 @@ $TITLE = "🔍 Dwemer Diagnostics";
             background-color: #2d2d2d;
             border-radius: 8px;
             padding: 15px;
+            max-width: 65%;
+            min-width: 50%;
         }
-        .results-section {
+        .logs-section {
             flex: 1;
+            display: flex;
+            flex-direction: column;
             background-color: #2d2d2d;
             border-radius: 8px;
             padding: 15px;
+            max-width: 50%;
+            min-width: 40%;
+        }
+        .log-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #3e3e3e;
+            padding-bottom: 5px;
+        }
+        .log-tab {
+            padding: 8px 15px;
+            background-color: #1e1e1e;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            color: #d4d4d4;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .log-tab.active {
+            background-color: #0e639c;
+        }
+        .log-content {
+            flex: 1;
+            background-color: #1e1e1e;
+            border-radius: 4px;
+            padding: 10px;
             overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .log-content.active {
+            display: block;
+        }
+        .log-checkbox {
+            margin-right: 8px;
+        }
+        .log-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #3e3e3e;
+        }
+        .log-text {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            max-height: calc(100vh - 400px);
+            height: 100%;
+            padding: 10px;
+            background-color: #1e1e1e;
+            border-radius: 4px;
         }
         #chatWindow {
             flex: 1;
@@ -662,10 +831,13 @@ $TITLE = "🔍 Dwemer Diagnostics";
             padding: 10px;
             background-color: #1e1e1e;
             border-radius: 4px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            white-space: pre-wrap;
         }
         .input-container {
             display: flex;
             gap: 10px;
+            padding: 10px 0;
         }
         #inputText {
             flex: 1;
@@ -685,17 +857,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
         }
         button:hover {
             background-color: #1177bb;
-        }
-        .message {
-            margin-bottom: 10px;
-            padding: 8px;
-            border-radius: 4px;
-        }
-        .user-message {
-            background-color: #264f78;
-        }
-        .system-message {
-            background-color: #3e3e3e;
         }
         .help-section {
             margin-bottom: 15px;
@@ -806,13 +967,83 @@ $TITLE = "🔍 Dwemer Diagnostics";
         .settings-button:hover {
             background-color: #1177bb;
         }
+        .context-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #2d2d2d;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .context-count {
+            background-color: #0e639c;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .table-data-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+
+        .table-data-content {
+            position: relative;
+            background-color: #2d2d2d;
+            margin: 5% auto;
+            padding: 20px;
+            width: 80%;
+            max-height: 80vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .table-data-close {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #d4d4d4;
+        }
+
+        .table-data-title {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #0e639c;
+        }
+
+        .table-data-table {
+            width: 100%;
+            margin-top: 10px;
+            background-color: #1e1e1e;
+        }
+
+        .table-data-table th {
+            position: sticky;
+            top: 0;
+            background-color: #2d2d2d;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
-    <?php 
-    $debugPaneLink = false;
-    include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
-    ?>
+
+
+    <div class="context-indicator">
+        <span>Context Logs:</span>
+        <span class="context-count" id="contextCount">0</span>
+    </div>
 
     <div id="settingsModal" class="settings-modal">
         <div class="settings-content">
@@ -844,7 +1075,21 @@ $TITLE = "🔍 Dwemer Diagnostics";
         </div>
     </div>
 
+    <div id="tableDataModal" class="table-data-modal">
+        <div class="table-data-content">
+            <span class="table-data-close" onclick="closeTableData()">&times;</span>
+            <h2 class="table-data-title" id="tableDataTitle"></h2>
+            <div id="tableDataContent"></div>
+        </div>
+    </div>
+
     <div class="container">
+        <div class="tables-section">
+            <h3>Database Tables</h3>
+            <ul class="table-list" id="tableList">
+                <!-- Tables will be populated here -->
+            </ul>
+        </div>
         <div class="chat-section">
             <div class="help-section">
                 <h3>🔍 Dwemer Diagnostics Help</h3>
@@ -866,9 +1111,9 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 <button class="settings-button" onclick="openSettings()">⚙️ Settings</button>
             </div>
         </div>
-        <div class="results-section" id="resultsPanel">
-            <h3>Query Results</h3>
-            <div id="resultsContent"></div>
+        <div class="logs-section">
+            <div class="log-tabs" id="logTabs"></div>
+            <div id="logContents"></div>
         </div>
     </div>
 
@@ -900,74 +1145,41 @@ $TITLE = "🔍 Dwemer Diagnostics";
         }
 
         function displayResults(data) {
-            resultsContent.innerHTML = '';
-            
             if (data.queries) {
                 data.queries.forEach((queryData, index) => {
                     // Display thinking text before query
                     if (queryData.thinking) {
-                        const thinkingDiv = document.createElement('div');
-                        thinkingDiv.className = 'ai-response';
-                        thinkingDiv.textContent = queryData.thinking;
-                        resultsContent.appendChild(thinkingDiv);
+                        appendMessage(queryData.thinking, false, 'ai-response');
                     }
                     
                     // Display SQL query
-                    const queryDiv = document.createElement('div');
-                    queryDiv.className = 'sql-query';
-                    queryDiv.innerHTML = `<strong>Query ${index + 1}:</strong>\n${queryData.query}`;
-                    resultsContent.appendChild(queryDiv);
+                    appendMessage(queryData.query, false, 'sql-query');
                     
-                    // Create section for query results
-                    const querySection = document.createElement('div');
-                    querySection.className = 'query-section';
-                    
+                    // Display results if any
                     if (queryData.results && queryData.results.length > 0) {
-                        const table = document.createElement('table');
-                        
-                        // Create header
-                        const thead = document.createElement('thead');
-                        const headerRow = document.createElement('tr');
-                        Object.keys(queryData.results[0]).forEach(key => {
-                            const th = document.createElement('th');
-                            th.textContent = key;
-                            headerRow.appendChild(th);
-                        });
-                        thead.appendChild(headerRow);
-                        table.appendChild(thead);
-
-                        // Create body
-                        const tbody = document.createElement('tbody');
-                        queryData.results.forEach(row => {
-                            const tr = document.createElement('tr');
-                            Object.values(row).forEach(value => {
-                                const td = document.createElement('td');
-                                td.textContent = value;
-                                tr.appendChild(td);
-                            });
-                            tbody.appendChild(tr);
-                        });
-                        table.appendChild(tbody);
-                        
-                        querySection.appendChild(table);
+                        const table = createTable(queryData.results);
+                        const tableDiv = document.createElement('div');
+                        tableDiv.className = 'query-section';
+                        tableDiv.appendChild(table);
+                        chatWindow.appendChild(tableDiv);
+                        chatWindow.scrollTop = chatWindow.scrollHeight;
                     }
-                    
-                    resultsContent.appendChild(querySection);
                 });
                 
                 // Display final explanation if present
                 if (data.final_explanation) {
-                    const finalDiv = document.createElement('div');
-                    finalDiv.className = 'ai-response';
-                    finalDiv.textContent = data.final_explanation;
-                    resultsContent.appendChild(finalDiv);
+                    appendMessage(data.final_explanation, false, 'ai-response');
                 }
             } else if (data.table_data) {
                 // Handle single query results (backward compatibility)
                 const table = createTable(data.table_data);
-                resultsContent.appendChild(table);
-            } else {
-                resultsContent.innerHTML = '<p>No tabular data to display.</p>';
+                const tableDiv = document.createElement('div');
+                tableDiv.className = 'query-section';
+                tableDiv.appendChild(table);
+                chatWindow.appendChild(tableDiv);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            } else if (data.response) {
+                appendMessage(data.response, false);
             }
         }
 
@@ -1039,6 +1251,122 @@ $TITLE = "🔍 Dwemer Diagnostics";
             appendMessage('Settings saved successfully', false);
         });
 
+        // Log window management
+        const logFiles = [
+            { name: 'debugStream.log', title: 'Debug Stream' },
+            { name: 'context_sent_to_llm.log', title: 'Context to LLM' },
+            { name: 'output_from_llm.log', title: 'LLM Output' },
+            { name: 'output_to_plugin.log', title: 'Plugin Output' },
+            { name: 'apache_error.log', title: 'Apache Errors' }
+        ];
+
+        let selectedContext = new Set();
+
+        function createLogTab(logFile) {
+            const tab = document.createElement('button');
+            tab.className = 'log-tab';
+            tab.textContent = logFile.title;
+            tab.dataset.logFile = logFile.name;
+            
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and contents
+                document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.log-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                document.querySelector(`.log-content[data-log-file="${logFile.name}"]`).classList.add('active');
+            });
+            
+            return tab;
+        }
+
+        function createLogContent(logFile) {
+            const content = document.createElement('div');
+            content.className = 'log-content';
+            content.dataset.logFile = logFile.name;
+            content.innerHTML = `
+                <div class="log-header">
+                    <input type="checkbox" class="log-checkbox" title="Use as context">
+                    <span>${logFile.title}</span>
+                </div>
+                <div class="log-text">Loading...</div>
+            `;
+
+            // Add event listener for checkbox
+            const checkbox = content.querySelector('.log-checkbox');
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    selectedContext.add(logFile.name);
+                } else {
+                    selectedContext.delete(logFile.name);
+                }
+                updateContextCount();
+            });
+
+            return content;
+        }
+
+        async function loadLogContent(logFile, content) {
+            try {
+                const response = await fetch('dwemer-diagnostics.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ 
+                        query: `read log ${logFile}`,
+                        settings: aiSettings
+                    }),
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load log file');
+                }
+
+                const data = await response.json();
+                if (data.error) {
+                    content.querySelector('.log-text').textContent = `Error: ${data.error}`;
+                } else if (data.response) {
+                    content.querySelector('.log-text').textContent = data.response;
+                } else if (data.table_data && Array.isArray(data.table_data)) {
+                    const logText = data.table_data.map(row => row.line || row.content || JSON.stringify(row)).join('\n');
+                    content.querySelector('.log-text').textContent = logText;
+                } else {
+                    content.querySelector('.log-text').textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                content.querySelector('.log-text').textContent = `Error loading log: ${error.message}`;
+            }
+        }
+
+        // Initialize log windows
+        function initializeLogWindows() {
+            const tabsContainer = document.getElementById('logTabs');
+            const contentsContainer = document.getElementById('logContents');
+            
+            logFiles.forEach((logFile, index) => {
+                const tab = createLogTab(logFile);
+                const content = createLogContent(logFile);
+                
+                tabsContainer.appendChild(tab);
+                contentsContainer.appendChild(content);
+                
+                // Make first tab active by default
+                if (index === 0) {
+                    tab.classList.add('active');
+                    content.classList.add('active');
+                }
+                
+                // Load log content
+                loadLogContent(logFile.name, content);
+            });
+        }
+
+        // Modify sendQuery to include selected log context
         async function sendQuery() {
             const input = document.getElementById('inputText');
             const query = input.value.trim();
@@ -1054,6 +1382,16 @@ $TITLE = "🔍 Dwemer Diagnostics";
             loadingIndicator.style.display = 'block';
 
             try {
+                // Get context from selected logs
+                const context = [];
+                for (const logFile of selectedContext) {
+                    const content = document.querySelector(`.log-content[data-log-file="${logFile}"]`);
+                    if (content) {
+                        const logText = content.querySelector('.log-text').textContent;
+                        context.push(`Log ${logFile}:\n${logText}`);
+                    }
+                }
+
                 const response = await fetch('dwemer-diagnostics.php', {
                     method: 'POST',
                     headers: {
@@ -1064,10 +1402,8 @@ $TITLE = "🔍 Dwemer Diagnostics";
                     body: JSON.stringify({ 
                         query: query,
                         settings: {
-                            apiKey: aiSettings.apiKey,
-                            model: aiSettings.model,
-                            temperature: aiSettings.temperature,
-                            maxTokens: aiSettings.maxTokens
+                            ...aiSettings,
+                            context: context
                         }
                     }),
                     credentials: 'same-origin'
@@ -1097,6 +1433,133 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 appendMessage('Error: ' + error.message, false);
             } finally {
                 loadingIndicator.style.display = 'none';
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeLogWindows();
+            loadTables();
+        });
+
+        // Function to load and display tables
+        async function loadTables() {
+            try {
+                const response = await fetch('dwemer-diagnostics.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ 
+                        query: 'show tables',
+                        settings: aiSettings
+                    }),
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load tables');
+                }
+
+                const data = await response.json();
+                if (data.error) {
+                    console.error('Error loading tables:', data.error);
+                    return;
+                }
+
+                const tableList = document.getElementById('tableList');
+                if (data.table_data) {
+                    data.table_data.forEach(row => {
+                        const tableName = row.table_name;
+                        const li = document.createElement('li');
+                        li.className = 'table-item';
+                        li.textContent = tableName;
+                        
+                        // Add click handler to show table data
+                        li.addEventListener('click', () => {
+                            // Remove active class from all items
+                            document.querySelectorAll('.table-item').forEach(item => {
+                                item.classList.remove('active');
+                            });
+                            // Add active class to clicked item
+                            li.classList.add('active');
+                            // Show table data
+                            showTableData(tableName);
+                        });
+                        
+                        tableList.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading tables:', error);
+            }
+        }
+
+        // Function to show table data in modal
+        async function showTableData(tableName) {
+            try {
+                const response = await fetch('dwemer-diagnostics.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ 
+                        query: `SELECT * FROM ${tableName} ORDER BY id DESC LIMIT 10`,
+                        settings: aiSettings
+                    }),
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load table data');
+                }
+
+                const data = await response.json();
+                if (data.error) {
+                    console.error('Error loading table data:', data.error);
+                    return;
+                }
+
+                // Update modal title
+                document.getElementById('tableDataTitle').textContent = `Latest 10 rows from ${tableName}`;
+                
+                // Create and display table
+                const tableDataContent = document.getElementById('tableDataContent');
+                tableDataContent.innerHTML = ''; // Clear previous content
+                
+                if (data.table_data && data.table_data.length > 0) {
+                    const table = createTable(data.table_data);
+                    table.classList.add('table-data-table');
+                    tableDataContent.appendChild(table);
+                } else {
+                    tableDataContent.textContent = 'No data available';
+                }
+
+                // Show modal
+                document.getElementById('tableDataModal').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading table data:', error);
+                // Show error in modal
+                document.getElementById('tableDataTitle').textContent = `Error loading ${tableName}`;
+                document.getElementById('tableDataContent').textContent = `Error: ${error.message}`;
+                document.getElementById('tableDataModal').style.display = 'block';
+            }
+        }
+
+        // Function to close table data modal
+        function closeTableData() {
+            document.getElementById('tableDataModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const tableDataModal = document.getElementById('tableDataModal');
+            if (event.target === tableDataModal) {
+                closeTableData();
             }
         }
     </script>
