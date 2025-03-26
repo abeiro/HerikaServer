@@ -27,17 +27,6 @@ require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "📆CHIM Adventure Log";
 
-ob_start();
-
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
-?>
-<!-- Ensure main.css is loaded after any reboot.css -->
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<?php
-
-$debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
-
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
 
@@ -168,24 +157,50 @@ function handle_csv_export($conn, $schema) {
     if (isset($_GET['export'])) {
         $exportType = $_GET['export'];
 
-        if (($exportType === 'csv' && isset($_GET['date'])) || $exportType === 'all_csv') {
+        if ($exportType === 'csv' || $exportType === 'all_csv') {
             // Clear any existing output buffer
             while (ob_get_level()) {
                 ob_end_clean();
             }
 
-            $is_specific_date = ($exportType === 'csv' && isset($_GET['date']));
+            $is_specific_date = ($exportType === 'csv');
 
             if ($is_specific_date) {
-                // Export CSV for the selected date
-                $selectedDate = $_GET['date'];
-
-                // Validate the selected date format (YYYY-MM-DD)
-                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
-                    // Invalid date format
-                    header("HTTP/1.1 400 Bad Request");
-                    echo "Invalid date format.";
-                    exit;
+                // Get the selected date from URL or latest date if not specified
+                if (isset($_GET['date'])) {
+                    $selectedDate = $_GET['date'];
+                    // Validate the selected date format (YYYY-MM-DD)
+                    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
+                        // Invalid date format
+                        header("HTTP/1.1 400 Bad Request");
+                        echo "Invalid date format.";
+                        exit;
+                    }
+                } else {
+                    // Get the most recent date from the eventlog
+                    $latestDateQuery = "
+                        SELECT to_char(to_timestamp(localts::double precision) AT TIME ZONE 'UTC', 'YYYY-MM-DD') as event_date
+                        FROM {$schema}.eventlog
+                        WHERE type IN ('im_alive', 'chat','infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+                        ORDER BY localts DESC
+                        LIMIT 1
+                    ";
+                    
+                    $latestDateResult = pg_query($conn, $latestDateQuery);
+                    if (!$latestDateResult) {
+                        header("HTTP/1.1 500 Internal Server Error");
+                        echo "Error fetching latest date: " . pg_last_error($conn);
+                        exit;
+                    }
+                    
+                    $latestDateRow = pg_fetch_assoc($latestDateResult);
+                    if (!$latestDateRow) {
+                        header("HTTP/1.1 404 Not Found");
+                        echo "No events found in the adventure log.";
+                        exit;
+                    }
+                    
+                    $selectedDate = $latestDateRow['event_date'];
                 }
 
                 // Calculate the start and end timestamps for the selected day in UTC
@@ -224,7 +239,11 @@ function handle_csv_export($conn, $schema) {
             // Set headers to prompt file download
             header('Content-Type: text/csv; charset=utf-8');
             if ($is_specific_date) {
-                header('Content-Disposition: attachment; filename=adventure_log_' . $selectedDate . '.csv');
+                if (isset($_GET['date'])) {
+                    header('Content-Disposition: attachment; filename=adventure_log_' . $selectedDate . '.csv');
+                } else {
+                    header('Content-Disposition: attachment; filename=adventure_log_latest.csv');
+                }
             } else {
                 header('Content-Disposition: attachment; filename=adventure_log_full.csv');
             }
@@ -283,11 +302,20 @@ function handle_csv_export($conn, $schema) {
     }
 }
 
-// Handle CSV export if requested - move this before any HTML output
+// Handle CSV export if requested - do this before any output buffering
 handle_csv_export($conn, $schema);
 
 // Start output buffering after CSV handling
 ob_start();
+
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
+<!-- Ensure main.css is loaded after any reboot.css -->
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<?php
+
+$debugPaneLink = false;
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Determine the month and year to display
 $month = isset($_GET['month']) && isset($_GET['year']) 
