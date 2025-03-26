@@ -169,6 +169,11 @@ function handle_csv_export($conn, $schema) {
         $exportType = $_GET['export'];
 
         if (($exportType === 'csv' && isset($_GET['date'])) || $exportType === 'all_csv') {
+            // Clear any existing output buffer
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+
             $is_specific_date = ($exportType === 'csv' && isset($_GET['date']));
 
             if ($is_specific_date) {
@@ -192,7 +197,7 @@ function handle_csv_export($conn, $schema) {
 
                 // Prepare the SQL query with explicit casting to double precision
                 $query = "
-                    SELECT type, data, people, location, localts
+                    SELECT type, data, people, location, localts, gamets
                     FROM {$schema}.eventlog
                     WHERE type IN ('im_alive', 'chat','infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
                     AND to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
@@ -200,10 +205,8 @@ function handle_csv_export($conn, $schema) {
                 ";
             } elseif ($exportType === 'all_csv') {
                 // Export CSV for all data without date filtering
-
-                // Prepare the SQL query without date filters
                 $query = "
-                    SELECT type, data, people, location, localts
+                    SELECT type, data, people, location, localts, gamets
                     FROM {$schema}.eventlog
                     WHERE type IN ('im_alive', 'chat','infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
                     ORDER BY localts ASC
@@ -235,10 +238,36 @@ function handle_csv_export($conn, $schema) {
             // Output the column headings matching the table
             fputcsv($output, ['Context', 'Nearby People', 'Location & Tamrielic Time', 'Time(UTC)']);
 
+            // Initialize previous location for tracking changes
+            $previousLocation = null;
+
             // Fetch and process each row, then write to the CSV
             while ($row = pg_fetch_assoc($result)) {
                 $processed_row = process_event_row($row, true); // true indicates CSV context
                 if ($processed_row !== null) { // Only include allowed types
+                    // Check for location change
+                    if ($previousLocation !== null && $previousLocation !== $processed_row['Location & Tamrielic Time']) {
+                        // Extract just the location name without date/time
+                        $locationPattern = '/Context new location:\s*([^,]+)/i';
+                        $cleanLocation = trim($row['location'], "()");
+                        if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
+                            $locationName = trim($locationMatch[1]);
+                        } else {
+                            $holdPattern = '/Hold:\s*([^,]+)/i';
+                            if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
+                                $locationName = trim($holdMatch[1]);
+                            } else {
+                                $locationName = $cleanLocation;
+                            }
+                        }
+                        // Write location change as a special row
+                        fputcsv($output, ['', '', 'Location Change: ' . $locationName, '']);
+                    }
+                    
+                    // Update previous location
+                    $previousLocation = $processed_row['Location & Tamrielic Time'];
+
+                    // Write the actual event row
                     fputcsv($output, [
                         $processed_row['Context'],
                         $processed_row['Nearby People'],
@@ -254,8 +283,11 @@ function handle_csv_export($conn, $schema) {
     }
 }
 
-// Handle CSV export if requested
+// Handle CSV export if requested - move this before any HTML output
 handle_csv_export($conn, $schema);
+
+// Start output buffering after CSV handling
+ob_start();
 
 // Determine the month and year to display
 $month = isset($_GET['month']) && isset($_GET['year']) 
