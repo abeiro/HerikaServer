@@ -578,7 +578,7 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
         return false;
     }
     if ((time()-$last_llm_call)<60) {
-        error_log("Skipping askLLMForTopic: ".((time()-$last_llm_call)));
+        Logger::info("Skipping askLLMForTopic: ".((time()-$last_llm_call)));
         return ["res"=>false,"missing"=>"skip"];
     }
 
@@ -682,7 +682,7 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
     }
 
     
-    error_log($originalBuffer);
+    Logger::debug($originalBuffer);
     
     //$res=true;
     return ["res"=>$res,"missing"=>$buffer];
@@ -767,7 +767,7 @@ function testSpawnRandomNPC() {
     $race=$races[array_rand($races)];
     $gender=$genders[array_rand($genders)];
 
-    error_log("$name,$class,$race,$gender");
+    Logger::debug("$name,$class,$race,$gender");
     npcProfileBase($name,$class,$race,$gender,"nearby","test");
     return $name;
 
@@ -815,7 +815,7 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
     else if ($location=="random") {
         $posibleLoc=array_keys($locations);
         $location = $posibleLoc[array_rand($posibleLoc)];
-        error_log($location);
+        Logger::debug($location);
         $parm4 = $locations[$location][array_rand($locations[$location])];   
         $rumors=true;
     } else 
@@ -967,7 +967,7 @@ function createQuestFromTemplate($template,$notes) {
     $originalBuffer=$buffer;
     $parsedbuffer=__jpd_decode_lazy($buffer);
 
-    error_log($originalBuffer);
+    Logger::debug($originalBuffer);
 
     if (is_array($parsedbuffer)) {
         return $parsedbuffer;

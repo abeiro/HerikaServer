@@ -5,7 +5,7 @@ function aiff_audit_end() {
     $elapsedTime = $endTime - $startTime;
 
     if ($elapsedTime>1)
-        error_log("Audit {$GLOBALS["AUDIT_RUNID"]}, {$GLOBALS["AUDIT_RUNID_REQUEST"]}, elapsed time: " . $elapsedTime . " seconds");
+        Logger::trace("Audit {$GLOBALS["AUDIT_RUNID"]}, {$GLOBALS["AUDIT_RUNID_REQUEST"]}, elapsed time: " . $elapsedTime . " seconds");
 }
 
 
@@ -15,7 +15,7 @@ function audit_log($fromFile='') {
     $elapsedTime = $endTime - $startTime;
 
     
-    error_log("Audit {$GLOBALS["AUDIT_RUNID"]}, {$GLOBALS["AUDIT_RUNID_REQUEST"]}, $fromFile, elapsed time: " . $elapsedTime . " seconds");
+    Logger::trace("Audit {$GLOBALS["AUDIT_RUNID"]}, {$GLOBALS["AUDIT_RUNID_REQUEST"]}, $fromFile, elapsed time: " . $elapsedTime . " seconds");
 }
 
 

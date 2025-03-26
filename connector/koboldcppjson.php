@@ -41,7 +41,7 @@ class koboldcppjson
         foreach ($contextData as $n=>$s_msg) {	// Have to mangle context format
 
             if (!isset($s_msg["content"])) {
-                error_log("Entry $n without content");
+                Logger::debug("Entry $n without content");
                 continue;
             }
             
@@ -146,7 +146,7 @@ class koboldcppjson
 
         } elseif (file_exists(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php")) {
 
-            error_log("Using template ".__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
+            Logger::info("Using template ".__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
             include(__DIR__.DIRECTORY_SEPARATOR."templates".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTOR"][$this->name]["template"]}.php");
 
         }
@@ -274,7 +274,7 @@ class koboldcppjson
             fwrite($this->primary_handler, $request);
             fflush($this->primary_handler);
         } else if (($this->primary_handler == null) || (!$this->primary_handler)){
-             error_log("Unable to connect to koboldcpp backend!");
+			Logger::error("Unable to connect to koboldcpp backend!");
             return false;
         }
 
@@ -422,14 +422,14 @@ class koboldcppjson
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
                             else {
-                                error_log("Missing required parameter");
+                                Logger::warn("Missing required parameter");
                             }
                                 
                         } else {
                             $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                         }
                     } elseif ($parsedResponse["action"] != "Talk") {
-                        error_log("Function not found for {$parsedResponse["action"]}");
+                        Logger::warn("Function not found for {$parsedResponse["action"]}");
                     }
                     
                     //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
@@ -438,7 +438,7 @@ class koboldcppjson
                     $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
                 
                 } else {
-                      error_log("Function not found for {$parsedResponse["action"]} already sent");
+					Logger::warn("Function not found for {$parsedResponse["action"]} already sent");
                 }
                     
             }

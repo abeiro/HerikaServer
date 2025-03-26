@@ -104,7 +104,7 @@ class openaijson
         foreach ($contextDataOrig as $n=>$element) {
             
             if (!is_array($element)) {
-                error_log("Warning: $n=>$element was not an array");
+                Logger::debug("Warning: $n=>$element was not an array");
                 continue;
 
             }
@@ -134,7 +134,7 @@ class openaijson
                     
                 } else if ($element["role"]=="user") {
                     if (empty($element["content"])) {
-                        error_log("Empty element[content]".__FILE__." ".__LINE__);
+                        Logger::debug("Empty element[content]".__FILE__." ".__LINE__);
                         //unset($contextData[$n]);
                     } else
                         $contextDataCopy[]=$element;
@@ -356,7 +356,7 @@ class openaijson
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
-            error_log(print_r($error,true));
+            Logger::error(print_r($error,true));
 
             if ($GLOBALS["db"]) {
                 $GLOBALS["db"]->insert(
@@ -552,14 +552,14 @@ class openaijson
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
-                                    error_log("Missing required parameter");
+                                    Logger::warn("Missing required parameter");
                                 }
                                     
                             } else {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
                         } elseif ($parsedResponse["action"] != "Talk") {
-                            error_log("Function not found for {$parsedResponse["action"]}");
+                            Logger::warn("Function not found for {$parsedResponse["action"]}");
                         }
                         
                         //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
@@ -573,7 +573,7 @@ class openaijson
                 
                 @ob_flush();    
             } else {
-                error_log("No actions");
+                Logger::info("No actions");
                 return null;
             }
         }

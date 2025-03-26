@@ -19,6 +19,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.cl
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 
 if (!isset($argv[1])) {
@@ -90,7 +91,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
         require_once($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 		
-		error_log("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
+		Logger::info("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
         $results = $db->query("select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where 
         (gamets_truncated>$maxRow         or summary is null )
         order by rowid asc ");
@@ -173,9 +174,9 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
             }
 
 			
-            error_log("$TEST_TEXT");
+            Logger::debug("$TEST_TEXT");
             if (($argv[2]!="noembed")&& false) {
-                error_log("Getting embedding");
+                Logger::debug("Getting embedding");
                 storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]);
             }
             
@@ -192,7 +193,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
                 $tagsCol=implode(" ",$tagsArray);
             } else {
                 $tagsCol='';
-                error_log("No tags...discarding");
+                Logger::info("No tags...discarding");
                 continue;
             }
 

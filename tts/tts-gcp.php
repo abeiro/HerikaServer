@@ -18,7 +18,7 @@ function tts($textString, $mood = 'default', $stringforhash)
   $serviceAccountKeyFile = $enginePath."data".DIRECTORY_SEPARATOR.$GLOBALS["TTS"]["GCP"]["GCP_SA_FILEPATH"];
   if (!file_exists($serviceAccountKeyFile)) {
     // Handle the error when the service account key file is missing
-    error_log('Service account key file not found.');
+    Logger::error('Service account key file not found.');
     return false;
   }
 

@@ -13,6 +13,7 @@ if ($method === "POST") {
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
+    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
 
     $FEATURES["MEMORY_EMBEDDING"]["ENABLED"] = false;
 
@@ -22,12 +23,12 @@ if ($method === "POST") {
         if (file_exists($profile)) {
             require_once $profile;
         } else {
-            error_log(__FILE__ . ". Using default profile because GET PROFILE NOT EXISTS");
+            Logger::info(__FILE__ . ". Using default profile because GET PROFILE NOT EXISTS");
         }
         $GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
         $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] = $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
     } else {
-        error_log(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
+        Logger::info(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
         $GLOBALS["USING_DEFAULT_PROFILE"] = true;
     }
     $db = new sql();
@@ -88,7 +89,7 @@ if ($method === "POST") {
 
         $partyConf = DataGetCurrentPartyConf();
         $partyConfA = json_decode($partyConf, true);
-        error_log($partyConf);
+        Logger::debug($partyConf);
 
 		// Use the global DYNAMIC_PROMPT
         $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
