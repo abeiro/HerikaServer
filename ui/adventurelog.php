@@ -72,6 +72,13 @@ function process_event_row($row, $for_csv = false) {
         $timeDisplay = $row['localts'];
     }
 
+    // Add debug logging for gamets conversion
+    if (isset($row['gamets']) && $row['gamets'] > 0) {
+        error_log("Debug - Raw gamets: " . $row['gamets']);
+        error_log("Debug - Converted time: " . convert_gamets2skyrim_long_date2($row['gamets']));
+        error_log("Debug - Raw location: " . $row['location']);
+    }
+
     // **Step 1: Check the 'type' column**
     $type = $row['type'];
 
@@ -385,7 +392,7 @@ $endOfDay = $dtSelectedEnd->getTimestamp();
 
 // Modify the SQL query to fetch records for the selected day with explicit casting
 $query = "
-    SELECT type, data, people, location, localts
+    SELECT type, data, people, location, localts, gamets
     FROM {$schema}.eventlog
     WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
     AND to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
@@ -397,6 +404,14 @@ $result = pg_query($conn, $query);
 if (!$result) {
     echo "<div class='message'>Query error: " . pg_last_error($conn) . "</div>";
     exit;
+}
+
+// Add debug logging for the first row
+$firstRow = pg_fetch_assoc($result);
+if ($firstRow) {
+    error_log("Debug - First row gamets: " . $firstRow['gamets']);
+    error_log("Debug - First row location: " . $firstRow['location']);
+    pg_result_seek($result, 0); // Reset the result pointer
 }
 ?> 
 
@@ -645,7 +660,19 @@ if (!$result) {
             if ($firstRow) {
                 $firstProcessedRow = process_event_row($firstRow, false);
                 if ($firstProcessedRow !== null) {
-                    $initialLocation = $firstProcessedRow['Location & Tamrielic Time'];
+                    // Extract just the location name without date/time
+                    $locationPattern = '/Context new location:\s*([^,]+)/i';
+                    $cleanLocation = trim($firstRow['location'], "()");
+                    if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
+                        $initialLocation = trim($locationMatch[1]);
+                    } else {
+                        $holdPattern = '/Hold:\s*([^,]+)/i';
+                        if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
+                            $initialLocation = trim($holdMatch[1]);
+                        } else {
+                            $initialLocation = $cleanLocation;
+                        }
+                    }
                     echo "<tr class='location-change-row'><td colspan='4'>Current Location: {$initialLocation}</td></tr>";
                 }
                 // Reset the result pointer again for the main loop
@@ -667,8 +694,21 @@ if (!$result) {
                 
                 // Check for location change
                 if ($previousLocation !== null && $previousLocation !== $location) {
-                    // Output location change row
-                    echo "<tr class='location-change-row'><td colspan='4'>Location Change: {$location}</td></tr>";
+                    // Extract just the location name without date/time for the divider
+                    $locationPattern = '/Context new location:\s*([^,]+)/i';
+                    $cleanLocation = trim($row['location'], "()");
+                    if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
+                        $locationName = trim($locationMatch[1]);
+                    } else {
+                        $holdPattern = '/Hold:\s*([^,]+)/i';
+                        if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
+                            $locationName = trim($holdMatch[1]);
+                        } else {
+                            $locationName = $cleanLocation;
+                        }
+                    }
+                    // Output location change row with simplified location
+                    echo "<tr class='location-change-row'><td colspan='4'>Location Change: {$locationName}</td></tr>";
                 }
                 
                 // Update previous location
@@ -676,8 +716,8 @@ if (!$result) {
                 
                 // Convert timestamp to game time
                 $gameTimeDisplay = "";
-                if (isset($row['localts']) && $row['localts'] > 0) {
-                    $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['localts']);
+                if (isset($row['gamets']) && $row['gamets'] > 0) {
+                    $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['gamets']);
                 }
 
                 // **Output the table row**
