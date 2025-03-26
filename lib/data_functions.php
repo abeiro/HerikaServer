@@ -1482,7 +1482,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
 
             $kwStringAny=implode(" | ",$result);
             $kwStringAll=implode(" & ",$result);
-            Logger::info("CONTEXT SEARCH KEYWORDS FROM MINIBOT: ".print_r($result,true));
+            Logger::debug("CONTEXT SEARCH KEYWORDS FROM MINIBOT: ".print_r($result,true));
         }
         
     } 
@@ -1516,7 +1516,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
 
         $kwStringAny=implode(" | ",$result);
         $kwStringAll=implode(" & ",$result);
-        Logger::info("CONTEXT SEARCH KEYWORDS FROM DUMB: ".print_r($result,true));
+        Logger::debug("CONTEXT SEARCH KEYWORDS FROM DUMB: ".print_r($result,true));
     }
         
     
