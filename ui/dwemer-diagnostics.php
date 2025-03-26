@@ -13,8 +13,25 @@ require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
+$TITLE = "🔍 Dwemer Diagnostics";
+$debugPaneLink = false;
+
+// Start output buffering
+ob_start();
+
+// Include head template first
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+
+// Include navbar after head
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Clear any existing output buffers
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
     header('Content-Type: application/json');
     
     // Database connection details
@@ -512,366 +529,324 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Start output buffering for the HTML response
-ob_start();
-
-$TITLE = "🔍 Dwemer Diagnostics";
+// For non-AJAX requests, continue with the page content
 ?>
-    <?php 
-    $debugPaneLink = false;
-    include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
-    ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title><?php echo $TITLE; ?></title>
-    <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
-    <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-    <?php include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html"); ?>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 10px;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            padding-top: 100px;
-        }
-        .container {
-            display: flex;
-            gap: 20px;
-            height: calc(100vh - 200px);
-            margin-top: 80px;
-            padding: 0 10px;
-            width: 95%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .tables-section {
-            flex: 0 0 300px;
-            background-color: #2d2d2d;
-            border-radius: 8px;
-            padding: 15px;
-            overflow-y: auto;
-        }
-        .tables-section h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #0e639c;
-        }
-        .table-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .table-item {
-            padding: 8px 12px;
-            margin-bottom: 5px;
-            background-color: #1e1e1e;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .table-item:hover {
-            background-color: #3e3e3e;
-        }
-        .table-item.active {
-            background-color: #0e639c;
-            color: white;
-        }
-        .table-item .table-name {
-            flex: 1;
-        }
-        .table-item .table-icon {
-            margin-left: 10px;
-            opacity: 0.7;
-        }
-        .chat-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: #2d2d2d;
-            border-radius: 8px;
-            padding: 15px;
-            max-width: 65%;
-            min-width: 50%;
-        }
-        #chatWindow {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #1e1e1e;
-            border-radius: 4px;
-            font-family: 'Consolas', 'Courier New', monospace;
-            white-space: pre-wrap;
-        }
-        .input-container {
-            display: flex;
-            gap: 10px;
-            padding: 10px 0;
-        }
-        #inputText {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #3e3e3e;
-            border-radius: 4px;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #0e639c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #1177bb;
-        }
-        .help-section {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #3e3e3e;
-            border-radius: 4px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            background-color: #1e1e1e;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-            border: 1px solid #3e3e3e;
-        }
-        th {
-            background-color: #2d2d2d;
-        }
-        .loading {
-            display: none;
-            margin: 10px 0;
-            color: #0e639c;
-        }
-        .ai-response {
-            background-color: #2d2d2d;
-            padding: 10px;
-            margin-top: 10px;
-            border-left: 3px solid #0e639c;
-        }
-        .sql-query {
-            background-color: #1e1e1e;
-            padding: 10px;
-            margin-top: 10px;
-            border-left: 3px solid #569cd6;
-            font-family: 'Consolas', 'Courier New', monospace;
-            white-space: pre;
-        }
-        .settings-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-        }
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 40px; /* Space for navbar */
+        padding-bottom: 40px; /* Reduced space for footer */
+        padding-left: 10px;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px; /* Reduced footer height */
+        background: #031633;
+        z-index: 100;
+    }
 
-        .settings-content {
-            position: relative;
-            background-color: #2d2d2d;
-            margin: 15% auto;
-            padding: 20px;
-            width: 50%;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Rest of your existing styles */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+    }
+    .container {
+        display: flex;
+        gap: 20px;
+        height: calc(100vh - 100px);
+        padding: 160px 10px 0 10px; /* Added back top padding */
+        width: 95%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .tables-section {
+        flex: 0 0 300px;
+        background-color: #2d2d2d;
+        border-radius: 8px;
+        padding: 15px;
+        overflow-y: auto;
+    }
+    .tables-section h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #0e639c;
+    }
+    .table-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .table-item {
+        padding: 8px 12px;
+        margin-bottom: 5px;
+        background-color: #1e1e1e;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .table-item:hover {
+        background-color: #3e3e3e;
+    }
+    .table-item.active {
+        background-color: #0e639c;
+        color: white;
+    }
+    .table-item .table-name {
+        flex: 1;
+    }
+    .table-item .table-icon {
+        margin-left: 10px;
+        opacity: 0.7;
+    }
+    .chat-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background-color: #2d2d2d;
+        border-radius: 8px;
+        padding: 15px;
+        max-width: 65%;
+        min-width: 50%;
+    }
+    #chatWindow {
+        flex: 1;
+        overflow-y: auto;
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: #1e1e1e;
+        border-radius: 4px;
+        font-family: 'Consolas', 'Courier New', monospace;
+        white-space: pre-wrap;
+    }
+    .input-container {
+        display: flex;
+        gap: 10px;
+        padding: 10px 0;
+    }
+    #inputText {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #3e3e3e;
+        border-radius: 4px;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+    }
+    button {
+        padding: 10px 20px;
+        background-color: #0e639c;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    button:hover {
+        background-color: #1177bb;
+    }
+    .help-section {
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: #3e3e3e;
+        border-radius: 4px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        background-color: #1e1e1e;
+    }
+    th, td {
+        padding: 8px;
+        text-align: left;
+        border: 1px solid #3e3e3e;
+    }
+    th {
+        background-color: #2d2d2d;
+    }
+    .loading {
+        display: none;
+        margin: 10px 0;
+        color: #0e639c;
+    }
+    .ai-response {
+        background-color: #2d2d2d;
+        padding: 10px;
+        margin-top: 10px;
+        border-left: 3px solid #0e639c;
+    }
+    .sql-query {
+        background-color: #1e1e1e;
+        padding: 10px;
+        margin-top: 10px;
+        border-left: 3px solid #569cd6;
+        font-family: 'Consolas', 'Courier New', monospace;
+        white-space: pre;
+    }
+    .settings-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+    }
+    .settings-content {
+        position: relative;
+        background-color: #2d2d2d;
+        margin: 15% auto;
+        padding: 20px;
+        width: 50%;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .settings-close {
+        position: absolute;
+        right: 20px;
+        top: 10px;
+        font-size: 24px;
+        cursor: pointer;
+        color: #d4d4d4;
+    }
+    .settings-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .form-group label {
+        font-weight: bold;
+    }
+    .form-group input, .form-group select {
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #3e3e3e;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+    }
+    .settings-button {
+        padding: 10px 20px;
+        background-color: #0e639c;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+    }
+    .settings-button:hover {
+        background-color: #1177bb;
+    }
+    .table-data-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+    }
+    .table-data-content {
+        position: relative;
+        background-color: #2d2d2d;
+        margin: 5% auto;
+        padding: 20px;
+        width: 80%;
+        max-height: 80vh;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+    }
+    .table-data-close {
+        position: absolute;
+        right: 20px;
+        top: 10px;
+        font-size: 24px;
+        cursor: pointer;
+        color: #d4d4d4;
+    }
+    .table-data-title {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #0e639c;
+    }
+    .table-data-table {
+        width: 100%;
+        margin-top: 10px;
+        background-color: #1e1e1e;
+    }
+    .table-data-table th {
+        position: sticky;
+        top: 0;
+        background-color: #2d2d2d;
+        z-index: 1;
+    }
+    .toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+    .toast {
+        background-color: #2d2d2d;
+        color: #d4d4d4;
+        padding: 12px 24px;
+        border-radius: 4px;
+        margin-top: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        max-width: 300px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideIn 0.3s ease-out;
+    }
+    .toast .toast-icon {
+        color: #0e639c;
+    }
+    .toast .toast-content {
+        flex: 1;
+    }
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
         }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+</style>
 
-        .settings-close {
-            position: absolute;
-            right: 20px;
-            top: 10px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #d4d4d4;
-        }
-
-        .settings-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .form-group label {
-            font-weight: bold;
-        }
-
-        .form-group input, .form-group select {
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #3e3e3e;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-        }
-
-        .settings-button {
-            padding: 10px 20px;
-            background-color: #0e639c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 14px;
-        }
-
-        .settings-button:hover {
-            background-color: #1177bb;
-        }
-        .table-data-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-        }
-
-        .table-data-content {
-            position: relative;
-            background-color: #2d2d2d;
-            margin: 5% auto;
-            padding: 20px;
-            width: 80%;
-            max-height: 80vh;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
-        }
-
-        .table-data-close {
-            position: absolute;
-            right: 20px;
-            top: 10px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #d4d4d4;
-        }
-
-        .table-data-title {
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: #0e639c;
-        }
-
-        .table-data-table {
-            width: 100%;
-            margin-top: 10px;
-            background-color: #1e1e1e;
-        }
-
-        .table-data-table th {
-            position: sticky;
-            top: 0;
-            background-color: #2d2d2d;
-            z-index: 1;
-        }
-        /* Toast notification styles */
-        .toast-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        .toast {
-            background-color: #2d2d2d;
-            color: #d4d4d4;
-            padding: 12px 24px;
-            border-radius: 4px;
-            margin-top: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            max-width: 300px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            animation: slideIn 0.3s ease-out;
-        }
-        .toast .toast-icon {
-            color: #0e639c;
-        }
-        .toast .toast-content {
-            flex: 1;
-        }
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="settingsModal" class="settings-modal">
-        <div class="settings-content">
-            <span class="settings-close" onclick="closeSettings()">&times;</span>
-            <h2>Dwemer Diagnostics Settings</h2>
-            <form id="settingsForm" class="settings-form">
-                <div class="form-group">
-                    <label for="apiKey">OpenRouter API Key</label>
-                    <input type="password" id="apiKey" name="apiKey" required>
-                </div>
-                <div class="form-group">
-                    <label for="model">Model</label>
-                    <select id="model" name="model">
-                        <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
-                        <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
-                        <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="temperature">Temperature (0-1)</label>
-                    <input type="number" id="temperature" name="temperature" min="0" max="1" step="0.1" value="0.7">
-                </div>
-                <div class="form-group">
-                    <label for="maxTokens">Max Tokens</label>
-                    <input type="number" id="maxTokens" name="maxTokens" min="100" max="4000" value="500">
-                </div>
-                <button type="submit" class="button">Save Settings</button>
-            </form>
-        </div>
-    </div>
-
+<main>
     <div class="container">
         <div class="tables-section">
             <h3>Database Tables</h3>
@@ -898,311 +873,349 @@ $TITLE = "🔍 Dwemer Diagnostics";
             </div>
         </div>
     </div>
+</main>
 
-    <div class="toast-container" id="toastContainer"></div>
+<div id="settingsModal" class="settings-modal">
+    <div class="settings-content">
+        <span class="settings-close" onclick="closeSettings()">&times;</span>
+        <h2>Dwemer Diagnostics Settings</h2>
+        <form id="settingsForm" class="settings-form">
+            <div class="form-group">
+                <label for="apiKey">OpenRouter API Key</label>
+                <input type="password" id="apiKey" name="apiKey" required>
+            </div>
+            <div class="form-group">
+                <label for="model">Model</label>
+                <select id="model" name="model">
+                    <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
+                    <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
+                    <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="temperature">Temperature (0-1)</label>
+                <input type="number" id="temperature" name="temperature" min="0" max="1" step="0.1" value="0.7">
+            </div>
+            <div class="form-group">
+                <label for="maxTokens">Max Tokens</label>
+                <input type="number" id="maxTokens" name="maxTokens" min="100" max="4000" value="500">
+            </div>
+            <button type="submit" class="button">Save Settings</button>
+        </form>
+    </div>
+</div>
 
-    <script>
-        const chatWindow = document.getElementById('chatWindow');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const input = document.getElementById('inputText');
+<div class="toast-container" id="toastContainer"></div>
 
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendQuery();
-            }
-        });
+<script>
+    const chatWindow = document.getElementById('chatWindow');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const input = document.getElementById('inputText');
 
-        function appendMessage(text, isUser = false, type = 'message') {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `${type} ${isUser ? 'user-message' : 'system-message'}`;
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendQuery();
+        }
+    });
+
+    function appendMessage(text, isUser = false, type = 'message') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `${type} ${isUser ? 'user-message' : 'system-message'}`;
+        
+        if (type === 'sql-query') {
+            messageDiv.innerHTML = '<strong>SQL Query:</strong><br>' + text;
+        } else {
+            messageDiv.textContent = text;
+        }
+        
+        chatWindow.appendChild(messageDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function displayResults(data) {
+        if (data.queries) {
+            data.queries.forEach((queryData, index) => {
+                if (queryData.thinking) {
+                    appendMessage(queryData.thinking, false, 'ai-response');
+                }
+                
+                appendMessage(queryData.query, false, 'sql-query');
+                
+                if (queryData.results && queryData.results.length > 0) {
+                    const table = createTable(queryData.results);
+                    const tableDiv = document.createElement('div');
+                    tableDiv.className = 'query-section';
+                    tableDiv.appendChild(table);
+                    chatWindow.appendChild(tableDiv);
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                }
+            });
             
-            if (type === 'sql-query') {
-                messageDiv.innerHTML = '<strong>SQL Query:</strong><br>' + text;
-            } else {
-                messageDiv.textContent = text;
+            if (data.final_explanation) {
+                appendMessage(data.final_explanation, false, 'ai-response');
+            }
+        } else if (data.table_data) {
+            // Extract table name from the response
+            const tableName = data.response.match(/Structure of table '(\w+)':/)?.[1];
+            if (tableName && tableDescriptions[tableName]) {
+                appendMessage(tableDescriptions[tableName], false, 'ai-response');
             }
             
-            chatWindow.appendChild(messageDiv);
+            const table = createTable(data.table_data);
+            const tableDiv = document.createElement('div');
+            tableDiv.className = 'query-section';
+            tableDiv.appendChild(table);
+            chatWindow.appendChild(tableDiv);
             chatWindow.scrollTop = chatWindow.scrollHeight;
+        } else if (data.response) {
+            appendMessage(data.response, false);
         }
+    }
 
-        function displayResults(data) {
-            if (data.queries) {
-                data.queries.forEach((queryData, index) => {
-                    if (queryData.thinking) {
-                        appendMessage(queryData.thinking, false, 'ai-response');
-                    }
-                    
-                    appendMessage(queryData.query, false, 'sql-query');
-                    
-                    if (queryData.results && queryData.results.length > 0) {
-                        const table = createTable(queryData.results);
-                        const tableDiv = document.createElement('div');
-                        tableDiv.className = 'query-section';
-                        tableDiv.appendChild(table);
-                        chatWindow.appendChild(tableDiv);
-                        chatWindow.scrollTop = chatWindow.scrollHeight;
-                    }
-                });
-                
-                if (data.final_explanation) {
-                    appendMessage(data.final_explanation, false, 'ai-response');
-                }
-            } else if (data.table_data) {
-                // Extract table name from the response
-                const tableName = data.response.match(/Structure of table '(\w+)':/)?.[1];
-                if (tableName && tableDescriptions[tableName]) {
-                    appendMessage(tableDescriptions[tableName], false, 'ai-response');
-                }
-                
-                const table = createTable(data.table_data);
-                const tableDiv = document.createElement('div');
-                tableDiv.className = 'query-section';
-                tableDiv.appendChild(table);
-                chatWindow.appendChild(tableDiv);
-                chatWindow.scrollTop = chatWindow.scrollHeight;
-            } else if (data.response) {
-                appendMessage(data.response, false);
-            }
-        }
-
-        function createTable(data) {
-            const table = document.createElement('table');
-            
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-            Object.keys(data[0]).forEach(key => {
-                const th = document.createElement('th');
-                th.textContent = key;
-                headerRow.appendChild(th);
-            });
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-
-            const tbody = document.createElement('tbody');
-            data.forEach(row => {
-                const tr = document.createElement('tr');
-                Object.values(row).forEach(value => {
-                    const td = document.createElement('td');
-                    td.textContent = value;
-                    tr.appendChild(td);
-                });
-                tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-            
-            return table;
-        }
-
-        let aiSettings = {
-            apiKey: localStorage.getItem('dwemer_api_key') || '',
-            model: localStorage.getItem('dwemer_model') || 'anthropic/claude-3-sonnet',
-            temperature: parseFloat(localStorage.getItem('dwemer_temperature')) || 0.7,
-            maxTokens: parseInt(localStorage.getItem('dwemer_max_tokens')) || 500
-        };
-
-        function openSettings() {
-            document.getElementById('settingsModal').style.display = 'block';
-            document.getElementById('apiKey').value = aiSettings.apiKey;
-            document.getElementById('model').value = aiSettings.model;
-            document.getElementById('temperature').value = aiSettings.temperature;
-            document.getElementById('maxTokens').value = aiSettings.maxTokens;
-        }
-
-        function closeSettings() {
-            document.getElementById('settingsModal').style.display = 'none';
-        }
-
-        document.getElementById('settingsForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            aiSettings = {
-                apiKey: document.getElementById('apiKey').value,
-                model: document.getElementById('model').value,
-                temperature: parseFloat(document.getElementById('temperature').value),
-                maxTokens: parseInt(document.getElementById('maxTokens').value)
-            };
-            
-            localStorage.setItem('dwemer_api_key', aiSettings.apiKey);
-            localStorage.setItem('dwemer_model', aiSettings.model);
-            localStorage.setItem('dwemer_temperature', aiSettings.temperature);
-            localStorage.setItem('dwemer_max_tokens', aiSettings.maxTokens);
-            
-            closeSettings();
-            appendMessage('Settings saved successfully', false);
+    function createTable(data) {
+        const table = document.createElement('table');
+        
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        Object.keys(data[0]).forEach(key => {
+            const th = document.createElement('th');
+            th.textContent = key;
+            headerRow.appendChild(th);
         });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
 
-        async function sendQuery() {
-            const input = document.getElementById('inputText');
-            const query = input.value.trim();
+        const tbody = document.createElement('tbody');
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            Object.values(row).forEach(value => {
+                const td = document.createElement('td');
+                td.textContent = value;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        
+        return table;
+    }
+
+    let aiSettings = {
+        apiKey: localStorage.getItem('dwemer_api_key') || '',
+        model: localStorage.getItem('dwemer_model') || 'anthropic/claude-3-sonnet',
+        temperature: parseFloat(localStorage.getItem('dwemer_temperature')) || 0.7,
+        maxTokens: parseInt(localStorage.getItem('dwemer_max_tokens')) || 500
+    };
+
+    function openSettings() {
+        document.getElementById('settingsModal').style.display = 'block';
+        document.getElementById('apiKey').value = aiSettings.apiKey;
+        document.getElementById('model').value = aiSettings.model;
+        document.getElementById('temperature').value = aiSettings.temperature;
+        document.getElementById('maxTokens').value = aiSettings.maxTokens;
+    }
+
+    function closeSettings() {
+        document.getElementById('settingsModal').style.display = 'none';
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        aiSettings = {
+            apiKey: document.getElementById('apiKey').value,
+            model: document.getElementById('model').value,
+            temperature: parseFloat(document.getElementById('temperature').value),
+            maxTokens: parseInt(document.getElementById('maxTokens').value)
+        };
+        
+        localStorage.setItem('dwemer_api_key', aiSettings.apiKey);
+        localStorage.setItem('dwemer_model', aiSettings.model);
+        localStorage.setItem('dwemer_temperature', aiSettings.temperature);
+        localStorage.setItem('dwemer_max_tokens', aiSettings.maxTokens);
+        
+        closeSettings();
+        appendMessage('Settings saved successfully', false);
+    });
+
+    async function sendQuery() {
+        const input = document.getElementById('inputText');
+        const query = input.value.trim();
+        
+        if (!query) return;
+        if (!aiSettings.apiKey) {
+            appendMessage('Error: Please configure your OpenRouter API key in settings', false);
+            return;
+        }
+
+        appendMessage(query, true);
+        input.value = '';
+        loadingIndicator.style.display = 'block';
+
+        try {
+            const response = await fetch('dwemer-diagnostics.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ 
+                    query: query,
+                    settings: aiSettings
+                }),
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.error || 'Unknown error occurred';
+                } catch (e) {
+                    errorMessage = `Server error: ${response.status} ${response.statusText}`;
+                }
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
             
-            if (!query) return;
-            if (!aiSettings.apiKey) {
-                appendMessage('Error: Please configure your OpenRouter API key in settings', false);
+            if (data.error) {
+                appendMessage('Error: ' + data.error, false);
+            } else {
+                displayResults(data);
+            }
+        } catch (error) {
+            console.error('Error details:', error);
+            appendMessage('Error: ' + error.message, false);
+        } finally {
+            loadingIndicator.style.display = 'none';
+        }
+    }
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTables();
+    });
+
+    // Add table descriptions
+    const tableDescriptions = {
+        'animations': 'Animation table, still WIP.',
+        'animations_custom': 'Custom animations for custom animation mods for CHIM.',
+        'audit_memory': 'Minime-T5 Output log. Showcase memeory and Oghma extraction attempts.',
+        'audit_request': 'LLM Context.',
+        'books': 'All the book content extracted by CHIM.',
+        'conf_opts': 'Custom table used for misclenaious options.',
+        'currentmission': 'The current Dynamic AI Objectives.',
+        'database_versioning': 'Used for automatic database updates.',
+        'diarylog': 'All the NPC diary entries.',
+        'eventlog': 'All the events and current context from CHIM.',
+        'log': 'Response Log. Useful for examining prompts sent to LLM.',
+        'memory': 'Basic memory entries.',
+        'memory_summary': 'Summarized memory entries.',
+        'npc_profile_backup': 'Backup of NPC profiles.',
+        'npc_templates': 'Vanilla CHIM NPC templates. Gets overwritten by custom templates.',
+        'npc_templates_custom': 'User-modified NPC templates with custom attributes and behaviors.',
+        'npc_templates_trl': 'Translation-specific NPC templates for different language versions.',
+        'npc_templates_v2': 'Not activly used, is transfered over to npc_templates during updates.',
+        'oghma': 'Knowledge base containing game lore, quest information, and world data that gets injected into prompts using RAG/Minime-T5.',
+        'questlog': 'Comprehensive log of every quest and stage you have completed.',
+        'quests': 'Current active quests in your quest journal.',
+        'responselog': 'Usually empty, used temporaily for inserting responses.',
+        'speech': 'Raw speech output from NPCs.'
+    };
+
+    // Toast notification function
+    function showToast(message, duration = 3000) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `
+            <div class="toast-icon">ℹ️</div>
+            <div class="toast-content">${message}</div>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                container.removeChild(toast);
+            }, 300);
+        }, duration);
+    }
+
+    // Modify the table list creation
+    async function loadTables() {
+        try {
+            const response = await fetch('dwemer-diagnostics.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ 
+                    query: 'show tables',
+                    settings: aiSettings
+                }),
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load tables');
+            }
+
+            const data = await response.json();
+            if (data.error) {
+                console.error('Error loading tables:', data.error);
                 return;
             }
 
-            appendMessage(query, true);
-            input.value = '';
-            loadingIndicator.style.display = 'block';
-
-            try {
-                const response = await fetch('dwemer-diagnostics.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({ 
-                        query: query,
-                        settings: aiSettings
-                    }),
-                    credentials: 'same-origin'
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    let errorMessage;
-                    try {
-                        const errorJson = JSON.parse(errorText);
-                        errorMessage = errorJson.error || 'Unknown error occurred';
-                    } catch (e) {
-                        errorMessage = `Server error: ${response.status} ${response.statusText}`;
-                    }
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json();
-                
-                if (data.error) {
-                    appendMessage('Error: ' + data.error, false);
-                } else {
-                    displayResults(data);
-                }
-            } catch (error) {
-                console.error('Error details:', error);
-                appendMessage('Error: ' + error.message, false);
-            } finally {
-                loadingIndicator.style.display = 'none';
-            }
-        }
-
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', () => {
-            loadTables();
-        });
-
-        // Add table descriptions
-        const tableDescriptions = {
-            'animations': 'Animation table, still WIP.',
-            'animations_custom': 'Custom animations for custom animation mods for CHIM.',
-            'audit_memory': 'Minime-T5 Output log. Showcase memeory and Oghma extraction attempts.',
-            'audit_request': 'LLM Context.',
-            'books': 'All the book content extracted by CHIM.',
-            'conf_opts': 'Custom table used for misclenaious options.',
-            'currentmission': 'The current Dynamic AI Objectives.',
-            'database_versioning': 'Used for automatic database updates.',
-            'diarylog': 'All the NPC diary entries.',
-            'eventlog': 'All the events and current context from CHIM.',
-            'log': 'Response Log. Useful for examining prompts sent to LLM.',
-            'memory': 'Basic memory entries.',
-            'memory_summary': 'Summarized memory entries.',
-            'npc_profile_backup': 'Backup of NPC profiles.',
-            'npc_templates': 'Vanilla CHIM NPC templates. Gets overwritten by custom templates.',
-            'npc_templates_custom': 'User-modified NPC templates with custom attributes and behaviors.',
-            'npc_templates_trl': 'Translation-specific NPC templates for different language versions.',
-            'npc_templates_v2': 'Not activly used, is transfered over to npc_templates during updates.',
-            'oghma': 'Knowledge base containing game lore, quest information, and world data that gets injected into prompts using RAG/Minime-T5.',
-            'questlog': 'Comprehensive log of every quest and stage you have completed.',
-            'quests': 'Current active quests in your quest journal.',
-            'responselog': 'Usually empty, used temporaily for inserting responses.',
-            'speech': 'Raw speech output from NPCs.'
-        };
-
-        // Toast notification function
-        function showToast(message, duration = 3000) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = `
-                <div class="toast-icon">ℹ️</div>
-                <div class="toast-content">${message}</div>
-            `;
-            
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => {
-                    container.removeChild(toast);
-                }, 300);
-            }, duration);
-        }
-
-        // Modify the table list creation
-        async function loadTables() {
-            try {
-                const response = await fetch('dwemer-diagnostics.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({ 
-                        query: 'show tables',
-                        settings: aiSettings
-                    }),
-                    credentials: 'same-origin'
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load tables');
-                }
-
-                const data = await response.json();
-                if (data.error) {
-                    console.error('Error loading tables:', data.error);
-                    return;
-                }
-
-                const tableList = document.getElementById('tableList');
-                if (data.table_data) {
-                    data.table_data.forEach(row => {
-                        const tableName = row.table_name;
-                        const li = document.createElement('li');
-                        li.className = 'table-item';
-                        li.innerHTML = `
-                            <span class="table-name">${tableName}</span>
-                            <span class="table-icon">📊</span>
-                        `;
-                        
-                        li.addEventListener('click', () => {
-                            document.querySelectorAll('.table-item').forEach(item => {
-                                item.classList.remove('active');
-                            });
-                            li.classList.add('active');
-                            
-                            // Set the input text to the table description
-                            const input = document.getElementById('inputText');
-                            if (tableDescriptions[tableName]) {
-                                input.value = `describe ${tableName}`;
-                            }
+            const tableList = document.getElementById('tableList');
+            if (data.table_data) {
+                data.table_data.forEach(row => {
+                    const tableName = row.table_name;
+                    const li = document.createElement('li');
+                    li.className = 'table-item';
+                    li.innerHTML = `
+                        <span class="table-name">${tableName}</span>
+                        <span class="table-icon">📊</span>
+                    `;
+                    
+                    li.addEventListener('click', () => {
+                        document.querySelectorAll('.table-item').forEach(item => {
+                            item.classList.remove('active');
                         });
+                        li.classList.add('active');
                         
-                        tableList.appendChild(li);
+                        // Set the input text to the table description
+                        const input = document.getElementById('inputText');
+                        if (tableDescriptions[tableName]) {
+                            input.value = `describe ${tableName}`;
+                        }
                     });
-                }
-            } catch (error) {
-                console.error('Error loading tables:', error);
+                    
+                    tableList.appendChild(li);
+                });
             }
+        } catch (error) {
+            console.error('Error loading tables:', error);
         }
-    </script>
+    }
+</script>
 
-    <?php include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html"); ?>
-</body>
-</html>
 <?php
-$buffer = ob_get_clean();
+// Include footer template
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
+
+// Get the buffered content
+$buffer = ob_get_contents();
+ob_end_clean();
+
+// Replace the title if needed
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $TITLE . '$3', $buffer);
+
+// Output the final content
 echo $buffer;
 ?> 
