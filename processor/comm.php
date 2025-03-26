@@ -51,7 +51,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         )
     );
     
-    Logger::trace("INIT PROCESSING ".(time()-$now).PHP_EOL);
+    Logger::trace("INIT PROCESSING ".(time()-$now));
     // Delete TTS(STT cache
     $directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache";
 
@@ -76,7 +76,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         closedir($handle);
     }
     
-    Logger::trace("POST INIT PROCESSING ".(time()-$now).PHP_EOL);
+    Logger::trace("POST INIT PROCESSING ".(time()-$now));
     $MUST_END=true;
 
 
