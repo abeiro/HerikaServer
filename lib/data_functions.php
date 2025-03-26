@@ -2136,15 +2136,16 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             file_put_contents($newFile, '$'.$p.'=\''.addslashes($v).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
-        $getVoiceIdFromVoicetype = function($voicetype, $npcname) {
-            $voiceid = sizeof($voicetype) >= 4 ? $voicetype[3] : "";
-            if (!$voiceid) {
-                Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
-            }
-            return $voiceid;
-        };
-
         // XTTS voiceid override from table. if fails then xtts voicelogic pick
+        $voiceid = isset($voicetype) && sizeof($voicetype) >= 4 ? $voicetype[3] : "";
+        if (!$voiceid && (
+            (empty($xttsid[0]['xtts_voiceid']) && $voicelogic === "voicetype") ||
+            empty($melottsid[0]['melotts_voiceid']) ||
+            empty($xvasynthid[0]['xvasynth_voiceid']))
+        ) {
+            Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
+        }
+
         if (!empty($xttsid[0]['xtts_voiceid'])) {
             file_put_contents(
                 $newFile,
@@ -2153,7 +2154,6 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             );
         } else {
             if ($voicelogic === "voicetype") {
-                $voiceid = $getVoiceIdFromVoicetype($voicetype ?? [], $npcname);
                 file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
                 file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
             } else {
@@ -2166,7 +2166,6 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             // Use the melotts_voiceid value
             file_put_contents($newFile,'$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
         } else {
-            $voiceid = $getVoiceIdFromVoicetype($voicetype ?? [], $npcname);
             file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
@@ -2176,7 +2175,6 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             file_put_contents($newFile,'$TTS["XVASYNTH"]["model"]=\'' . strtolower($xvasnythid[0]['xvasynth_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
         }
         else {
-            $voiceid = $getVoiceIdFromVoicetype($voicetype ?? [], $npcname);
             file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_' . strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
