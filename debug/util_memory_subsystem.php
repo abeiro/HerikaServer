@@ -91,7 +91,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
         require_once($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 		
-		Logger::info("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
+        Logger::info("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
         $results = $db->query("select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where 
         (gamets_truncated>$maxRow         or summary is null )
         order by rowid asc ");
