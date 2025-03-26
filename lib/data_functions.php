@@ -1222,25 +1222,25 @@ function PackIntoSummary()
     $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
 
     $results = $db->query("insert into memory_summary select * from ( 
-								select max(gamets) as gamets_truncated,count(*) as n,
+                                select max(gamets) as gamets_truncated,count(*) as n,
                                 STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
                                 NULL as summary,'dialogue' as classifier,max(uid) as uid
-								from memory_v
-								where 
-								message not like 'Dear Diary%'
-								group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
-							  ) as T where gamets_truncated>$maxRow
-							");
+                                from memory_v
+                                where 
+                                message not like 'Dear Diary%'
+                                group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
+                              ) as T where gamets_truncated>$maxRow
+                            ");
     
     Logger::info("Main insert done");
     //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
     
     $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-								select gamets,1,message,message,'diary',uid,speaker
-								from memory
-								where event='diary'
-								and gamets>$maxRow
-							");
+                                select gamets,1,message,message,'diary',uid,speaker
+                                from memory
+                                where event='diary'
+                                and gamets>$maxRow
+                            ");
 
     Logger::info("Diary insert done");
 
@@ -2029,7 +2029,9 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         $cn=$db->escape("Voicetype/$codename");
         $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
         $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
-        $voicetype=explode("\\",$voicetypeString);
+        if ($voicetypeString) {
+            $voicetype=explode("\\",$voicetypeString);
+        }
     
         $xttsid=$db->fetchAll("SELECT xtts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
         $melottsid=$db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
@@ -2074,7 +2076,9 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $cn=$db->escape("Nametype/$codename");
             $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
             $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
-            $voicetype=explode("\\",$voicetypeString);
+            if ($voicetypeString) {
+                $voicetype=explode("\\",$voicetypeString);
+            }
         }
 
         // 1. Save the file lines
@@ -2132,8 +2136,15 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             file_put_contents($newFile, '$'.$p.'=\''.addslashes($v).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
+        $getVoiceIdFromVoicetype = function($voicetype, $npcname) {
+            $voiceid = sizeof($voicetype) >= 4 ? $voicetype[3] : "";
+            if (!$voiceid) {
+                Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
+            }
+            return $voiceid;
+        };
+
         // XTTS voiceid override from table. if fails then xtts voicelogic pick
-		$voiceid = sizeof($voicetype) >= 4 ? $voicetype[3] : "";
         if (!empty($xttsid[0]['xtts_voiceid'])) {
             file_put_contents(
                 $newFile,
@@ -2142,6 +2153,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             );
         } else {
             if ($voicelogic === "voicetype") {
+                $voiceid = $getVoiceIdFromVoicetype($voicetype ?? [], $npcname);
                 file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
                 file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
             } else {
@@ -2154,6 +2166,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             // Use the melotts_voiceid value
             file_put_contents($newFile,'$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
         } else {
+            $voiceid = $getVoiceIdFromVoicetype($voicetype ?? [], $npcname);
             file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
@@ -2163,6 +2176,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             file_put_contents($newFile,'$TTS["XVASYNTH"]["model"]=\'' . strtolower($xvasnythid[0]['xvasynth_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
         }
         else {
+            $voiceid = $getVoiceIdFromVoicetype($voicetype ?? [], $npcname);
             file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_' . strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
