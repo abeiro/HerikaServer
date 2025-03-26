@@ -595,7 +595,7 @@ class openrouterjson
                         $functionDef=findFunctionByName(trim($parsedResponse["action"]));
                         if ($functionDef) {
                             $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                            if (@strlen($functionDef["parameters"]["required"][0])>0) {
+                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
                                 if (!empty($parsedResponse["target"])) {
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
