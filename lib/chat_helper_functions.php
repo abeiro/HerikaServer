@@ -565,7 +565,7 @@ function returnLines($lines,$writeOutput=true)
             else
                 echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
             
-            @ob_flush();
+            if (ob_get_level()) @ob_flush();
             @flush();
         }
 
@@ -1217,7 +1217,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
    
     
     if (isset($memories[0])) {
-        Logger::debug(print_r($memories[0],true));
+        Logger::trace(print_r($memories[0],true));
 
         if (($memories[0]["rank_any"]==$memories[0]["rank_all"])&&($memories[0]["rank_any"]>0.25)) {
             

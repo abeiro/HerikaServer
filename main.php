@@ -72,7 +72,7 @@ if (!isset($FUNCTIONS_ARE_ENABLED)) {
 
 
 
-while (!getenv('PHPUNIT_TEST') && @ob_end_clean())	;
+while (!getenv('PHPUNIT_TEST') && ob_get_length() && ob_end_clean())	;
 ignore_user_abort(true);
 set_time_limit(1200);
 
@@ -385,7 +385,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
         sem_release($semaphore);
-        while(@ob_end_clean());
+        while(ob_get_length() && ob_end_clean());
         require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
         die();
     }
@@ -457,7 +457,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
 */
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"]) && preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {
     echo "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
-    @ob_flush();
+    if (ob_get_level()) @ob_flush();
     $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
 }
 
@@ -871,7 +871,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
-while(!getenv("PHPUNIT_TEST") && @ob_end_clean());
+while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_clean());
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 
 
