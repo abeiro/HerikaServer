@@ -44,47 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]));
     }
 
-    // Process read log command first - before any SQL processing
-    if (preg_match('/^read\s+log\s+(\w+\.log)$/', $query, $matches)) {
-        $log_file = $matches[1];
-        $log_path = __DIR__ . '/../log/' . $log_file;
-        
-        if (!file_exists($log_path)) {
-            die(json_encode([
-                'error' => "Log file '$log_file' not found"
-            ]));
-        }
-        
-        if (!is_readable($log_path)) {
-            die(json_encode([
-                'error' => "Log file '$log_file' is not readable"
-            ]));
-        }
-        
-        // Read the entire log file
-        $content = file_get_contents($log_path);
-        if ($content === false) {
-            die(json_encode([
-                'error' => "Error reading log file '$log_file'"
-            ]));
-        }
-        
-        // Format the response
-        echo json_encode([
-            'response' => $content
-        ]);
-        exit;
-    }
-
     // Process help command
     if ($query === 'help') {
         die(json_encode([
             'response' => "Available commands:\n" .
                 "- show tables: List all available tables\n" .
                 "- describe [table_name]: Show structure of a table\n" .
-                "- search [table_name] for [text]: Search in a table\n" .
-                "- show recent events: Display recent events\n" .
-                "- show npcs: List all NPCs\n" .
                 "You can also ask natural language questions!"
         ]));
     }
@@ -158,152 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode([
             'response' => "Structure of table '$table_name':",
             'table_data' => $columns
-        ]);
-        exit;
-    }
-
-    // Process search command
-    if (preg_match('/^search\s+(\w+)\s+for\s+(.+)$/', $query, $matches)) {
-        $table_name = pg_escape_string($matches[1]);
-        $search_term = pg_escape_string($matches[2]);
-        
-        // First verify the table exists
-        $table_check = pg_query($conn, "
-            SELECT 1 
-            FROM information_schema.tables 
-            WHERE table_schema = '$schema' 
-            AND table_name = '$table_name'
-        ");
-        
-        if (!$table_check || pg_num_rows($table_check) === 0) {
-            die(json_encode([
-                'error' => "Table '$table_name' not found"
-            ]));
-        }
-        
-        // Get all columns for the table
-        $columns_result = pg_query($conn, "
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_schema = '$schema'
-            AND table_name = '$table_name'
-        ");
-        
-        if (!$columns_result) {
-            die(json_encode([
-                'error' => 'Error getting table structure: ' . pg_last_error($conn)
-            ]));
-        }
-        
-        // Build the search query
-        $search_conditions = [];
-        while ($col = pg_fetch_assoc($columns_result)) {
-            if (strpos($col['data_type'], 'character') !== false || 
-                strpos($col['data_type'], 'text') !== false) {
-                $search_conditions[] = "{$col['column_name']}::text ILIKE '%$search_term%'";
-            }
-        }
-        
-        if (empty($search_conditions)) {
-            die(json_encode([
-                'error' => 'No text columns found to search in'
-            ]));
-        }
-        
-        $search_sql = "
-            SELECT *
-            FROM $schema.$table_name
-            WHERE " . implode(' OR ', $search_conditions) . "
-            LIMIT 100
-        ";
-        
-        $result = pg_query($conn, $search_sql);
-        
-        if (!$result) {
-            die(json_encode([
-                'error' => 'Error searching table: ' . pg_last_error($conn)
-            ]));
-        }
-        
-        $rows = [];
-        while ($row = pg_fetch_assoc($result)) {
-            $rows[] = $row;
-        }
-        
-        echo json_encode([
-            'response' => count($rows) . " results found in '$table_name' for '$search_term':",
-            'table_data' => $rows
-        ]);
-        exit;
-    }
-
-    // Process show recent events command
-    if ($query === 'show recent events') {
-        $sql = "
-            SELECT type, data, people, location, to_timestamp(localts::double precision) as timestamp
-            FROM $schema.eventlog
-            ORDER BY localts DESC
-            LIMIT 50
-        ";
-        
-        $result = pg_query($conn, $sql);
-        
-        if (!$result) {
-            die(json_encode([
-                'error' => 'Error fetching recent events: ' . pg_last_error($conn)
-            ]));
-        }
-        
-        $events = [];
-        while ($row = pg_fetch_assoc($result)) {
-            $events[] = $row;
-        }
-        
-        echo json_encode([
-            'response' => 'Most recent events:',
-            'table_data' => $events
-        ]);
-        exit;
-    }
-
-    // Process show NPCs command
-    if ($query === 'show npcs' || $query === 'how many npcs' || $query === 'count npcs') {
-        // First get the total count
-        $count_sql = "SELECT COUNT(DISTINCT npc_name) as npc_count FROM $schema.combined_npc_templates";
-        $count_result = pg_query($conn, $count_sql);
-        
-        if (!$count_result) {
-            die(json_encode([
-                'error' => 'Error counting NPCs: ' . pg_last_error($conn)
-            ]));
-        }
-        
-        $count_row = pg_fetch_assoc($count_result);
-        $npc_count = $count_row['npc_count'];
-        
-        // Then get the list of NPCs if requested
-        $sql = "
-            SELECT npc_name, npc_pers, npc_dynamic
-            FROM $schema.combined_npc_templates
-            ORDER BY npc_name
-        ";
-        
-        $result = pg_query($conn, $sql);
-        
-        if (!$result) {
-            die(json_encode([
-                'error' => 'Error fetching NPCs: ' . pg_last_error($conn)
-            ]));
-        }
-        
-        $npcs = [];
-        while ($row = pg_fetch_assoc($result)) {
-            $npcs[] = $row;
-        }
-        
-        echo json_encode([
-            'response' => "There are $npc_count unique NPCs in the database:",
-            'table_data' => $npcs
         ]);
         exit;
     }
@@ -730,7 +549,7 @@ $TITLE = "🔍 Dwemer Diagnostics";
             margin-right: auto;
         }
         .tables-section {
-            flex: 0 0 200px;
+            flex: 0 0 300px;
             background-color: #2d2d2d;
             border-radius: 8px;
             padding: 15px;
@@ -753,6 +572,9 @@ $TITLE = "🔍 Dwemer Diagnostics";
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .table-item:hover {
             background-color: #3e3e3e;
@@ -760,6 +582,13 @@ $TITLE = "🔍 Dwemer Diagnostics";
         .table-item.active {
             background-color: #0e639c;
             color: white;
+        }
+        .table-item .table-name {
+            flex: 1;
+        }
+        .table-item .table-icon {
+            margin-left: 10px;
+            opacity: 0.7;
         }
         .chat-section {
             flex: 1;
@@ -770,70 +599,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
             padding: 15px;
             max-width: 65%;
             min-width: 50%;
-        }
-        .logs-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: #2d2d2d;
-            border-radius: 8px;
-            padding: 15px;
-            max-width: 50%;
-            min-width: 40%;
-        }
-        .log-tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #3e3e3e;
-            padding-bottom: 5px;
-        }
-        .log-tab {
-            padding: 8px 15px;
-            background-color: #1e1e1e;
-            border: none;
-            border-radius: 4px 4px 0 0;
-            color: #d4d4d4;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .log-tab.active {
-            background-color: #0e639c;
-        }
-        .log-tab-checkbox {
-            margin: 0;
-            cursor: pointer;
-            width: 16px;
-            height: 16px;
-            accent-color: #0e639c;
-        }
-        .log-content {
-            flex: 1;
-            background-color: #1e1e1e;
-            border-radius: 4px;
-            padding: 10px;
-            overflow-y: auto;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            display: none;
-        }
-        .log-content.active {
-            display: block;
-        }
-        .log-text {
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            overflow-y: auto;
-            max-height: calc(100vh - 400px);
-            height: 100%;
-            padding: 10px;
-            background-color: #1e1e1e;
-            border-radius: 4px;
         }
         #chatWindow {
             flex: 1;
@@ -978,24 +743,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
         .settings-button:hover {
             background-color: #1177bb;
         }
-        .context-indicator {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .context-count {
-            background-color: #0e639c;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 12px;
-        }
         .table-data-modal {
             display: none;
             position: fixed;
@@ -1046,64 +793,55 @@ $TITLE = "🔍 Dwemer Diagnostics";
             background-color: #2d2d2d;
             z-index: 1;
         }
-        .timestamp {
-            color: #569cd6;
-            font-weight: bold;
+        /* Toast notification styles */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
         }
-        .array-keyword {
-            color: #569cd6;
-            font-weight: bold;
-        }
-        .array-key {
-            color: #9cdcfe;
-        }
-        .array-value {
-            color: #ce9178;
-        }
-        .json-entry {
-            margin-bottom: 20px;
-            padding: 10px;
+        .toast {
             background-color: #2d2d2d;
+            color: #d4d4d4;
+            padding: 12px 24px;
             border-radius: 4px;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            max-width: 300px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
         }
-        .json-object {
-            margin-left: 20px;
-            padding-left: 10px;
-            border-left: 2px solid #3e3e3e;
+        .toast .toast-icon {
+            color: #0e639c;
         }
-        .json-nested {
-            margin-left: 20px;
-            padding-left: 10px;
-            border-left: 2px solid #3e3e3e;
+        .toast .toast-content {
+            flex: 1;
         }
-        .json-property {
-            margin: 5px 0;
-            padding: 2px 0;
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
-        .timestamp {
-            color: #569cd6;
-            font-weight: bold;
-            font-size: 14px;
-            display: block;
-            margin-bottom: 10px;
-        }
-        .array-key {
-            color: #9cdcfe;
-            font-weight: bold;
-        }
-        .array-value {
-            color: #ce9178;
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
         }
     </style>
 </head>
 <body>
-
-
-    <div class="context-indicator">
-        <span>Context Logs:</span>
-        <span class="context-count" id="contextCount">0</span>
-    </div>
-
     <div id="settingsModal" class="settings-modal">
         <div class="settings-content">
             <span class="settings-close" onclick="closeSettings()">&times;</span>
@@ -1134,14 +872,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
         </div>
     </div>
 
-    <div id="tableDataModal" class="table-data-modal">
-        <div class="table-data-content">
-            <span class="table-data-close" onclick="closeTableData()">&times;</span>
-            <h2 class="table-data-title" id="tableDataTitle"></h2>
-            <div id="tableDataContent"></div>
-        </div>
-    </div>
-
     <div class="container">
         <div class="tables-section">
             <h3>Database Tables</h3>
@@ -1156,9 +886,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 <ul>
                     <li><code>show tables</code> - List all available tables</li>
                     <li><code>describe [table_name]</code> - Show structure of a table</li>
-                    <li><code>search [table_name] for [text]</code> - Search in a table</li>
-                    <li><code>show recent events</code> - Display recent events</li>
-                    <li><code>show npcs</code> - List all NPCs</li>
                 </ul>
                 <p>You can also ask natural language questions about the database!</p>
             </div>
@@ -1170,15 +897,12 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 <button class="settings-button" onclick="openSettings()">⚙️ Settings</button>
             </div>
         </div>
-        <div class="logs-section">
-            <div class="log-tabs" id="logTabs"></div>
-            <div id="logContents"></div>
-        </div>
     </div>
+
+    <div class="toast-container" id="toastContainer"></div>
 
     <script>
         const chatWindow = document.getElementById('chatWindow');
-        const resultsContent = document.getElementById('resultsContent');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const input = document.getElementById('inputText');
 
@@ -1193,7 +917,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
             messageDiv.className = `${type} ${isUser ? 'user-message' : 'system-message'}`;
             
             if (type === 'sql-query') {
-                // Format SQL query with syntax highlighting
                 messageDiv.innerHTML = '<strong>SQL Query:</strong><br>' + text;
             } else {
                 messageDiv.textContent = text;
@@ -1206,15 +929,12 @@ $TITLE = "🔍 Dwemer Diagnostics";
         function displayResults(data) {
             if (data.queries) {
                 data.queries.forEach((queryData, index) => {
-                    // Display thinking text before query
                     if (queryData.thinking) {
                         appendMessage(queryData.thinking, false, 'ai-response');
                     }
                     
-                    // Display SQL query
                     appendMessage(queryData.query, false, 'sql-query');
                     
-                    // Display results if any
                     if (queryData.results && queryData.results.length > 0) {
                         const table = createTable(queryData.results);
                         const tableDiv = document.createElement('div');
@@ -1225,12 +945,16 @@ $TITLE = "🔍 Dwemer Diagnostics";
                     }
                 });
                 
-                // Display final explanation if present
                 if (data.final_explanation) {
                     appendMessage(data.final_explanation, false, 'ai-response');
                 }
             } else if (data.table_data) {
-                // Handle single query results (backward compatibility)
+                // Extract table name from the response
+                const tableName = data.response.match(/Structure of table '(\w+)':/)?.[1];
+                if (tableName && tableDescriptions[tableName]) {
+                    appendMessage(tableDescriptions[tableName], false, 'ai-response');
+                }
+                
                 const table = createTable(data.table_data);
                 const tableDiv = document.createElement('div');
                 tableDiv.className = 'query-section';
@@ -1245,7 +969,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
         function createTable(data) {
             const table = document.createElement('table');
             
-            // Create header
             const thead = document.createElement('thead');
             const headerRow = document.createElement('tr');
             Object.keys(data[0]).forEach(key => {
@@ -1256,7 +979,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
             thead.appendChild(headerRow);
             table.appendChild(thead);
 
-            // Create body
             const tbody = document.createElement('tbody');
             data.forEach(row => {
                 const tr = document.createElement('tr');
@@ -1300,7 +1022,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 maxTokens: parseInt(document.getElementById('maxTokens').value)
             };
             
-            // Save to localStorage
             localStorage.setItem('dwemer_api_key', aiSettings.apiKey);
             localStorage.setItem('dwemer_model', aiSettings.model);
             localStorage.setItem('dwemer_temperature', aiSettings.temperature);
@@ -1310,195 +1031,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
             appendMessage('Settings saved successfully', false);
         });
 
-        // Log window management
-        const logFiles = [
-            { name: 'context_sent_to_llm.log', title: 'Context to LLM' },
-            { name: 'output_from_llm.log', title: 'LLM Output' },
-            { name: 'output_to_plugin.log', title: 'Plugin Output' },
-            { name: 'apache_error.log', title: 'Apache Errors' },
-            { name: 'debugStream.log', title: 'Debug Stream' }
-        ];
-
-        // Store log contents in variables
-        let logContents = {
-            'context_sent_to_llm.log': '',
-            'output_from_llm.log': '',
-            'output_to_plugin.log': '',
-            'apache_error.log': '',
-            'debugStream.log': ''
-        };
-
-        let selectedContext = new Set();
-
-        function createLogTab(logFile) {
-            const tab = document.createElement('button');
-            tab.className = 'log-tab';
-            tab.dataset.logFile = logFile.name;
-            
-            // Create checkbox
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'log-tab-checkbox';
-            checkbox.title = 'Use as context';
-            
-            // Create title span
-            const title = document.createElement('span');
-            title.textContent = logFile.title;
-            
-            // Add elements to tab
-            tab.appendChild(checkbox);
-            tab.appendChild(title);
-            
-            // Add event listeners
-            tab.addEventListener('click', (e) => {
-                // Don't toggle active state if clicking checkbox
-                if (e.target !== checkbox) {
-                    // Remove active class from all tabs and contents
-                    document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.log-content').forEach(c => c.classList.remove('active'));
-                    
-                    // Add active class to clicked tab and corresponding content
-                    tab.classList.add('active');
-                    document.querySelector(`.log-content[data-log-file="${logFile.name}"]`).classList.add('active');
-                }
-            });
-            
-            // Add checkbox event listener
-            checkbox.addEventListener('change', () => {
-                if (checkbox.checked) {
-                    selectedContext.add(logFile.name);
-                } else {
-                    selectedContext.delete(logFile.name);
-                }
-                updateContextCount();
-            });
-            
-            return tab;
-        }
-
-        function createLogContent(logFile) {
-            const content = document.createElement('div');
-            content.className = 'log-content';
-            content.dataset.logFile = logFile.name;
-            content.innerHTML = `
-                <div class="log-text">Loading...</div>
-            `;
-            return content;
-        }
-
-        async function loadLogContent(logFile, content) {
-            try {
-                const response = await fetch('dwemer-diagnostics.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({ 
-                        query: `read log ${logFile}`,
-                        settings: aiSettings
-                    }),
-                    credentials: 'same-origin'
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load log file');
-                }
-
-                const data = await response.json();
-                if (data.error) {
-                    content.querySelector('.log-text').textContent = `Error: ${data.error}`;
-                    logContents[logFile] = `Error: ${data.error}`;
-                } else if (data.response) {
-                    // Store the raw content
-                    logContents[logFile] = data.response;
-                    
-                    // Special handling for context log
-                    if (logFile === 'context_sent_to_llm.log') {
-                        try {
-                            // Try to parse the response as JSON
-                            const jsonContent = JSON.parse(data.response);
-                            let formattedContent = '';
-                            
-                            // Format each entry with syntax highlighting
-                            Object.entries(jsonContent).forEach(([key, value]) => {
-                                formattedContent += `<div class="json-entry">`;
-                                formattedContent += `<span class="timestamp">${key}</span>\n`;
-                                
-                                if (typeof value === 'object' && value !== null) {
-                                    formattedContent += `<div class="json-object">`;
-                                    Object.entries(value).forEach(([k, v]) => {
-                                        formattedContent += `<div class="json-property">`;
-                                        formattedContent += `<span class="array-key">${k}</span>: `;
-                                        
-                                        if (typeof v === 'object' && v !== null) {
-                                            formattedContent += `<div class="json-nested">`;
-                                            Object.entries(v).forEach(([subK, subV]) => {
-                                                formattedContent += `<div class="json-property">`;
-                                                formattedContent += `<span class="array-key">${subK}</span>: `;
-                                                formattedContent += `<span class="array-value">${subV}</span>`;
-                                                formattedContent += `</div>`;
-                                            });
-                                            formattedContent += `</div>`;
-                                        } else {
-                                            formattedContent += `<span class="array-value">${v}</span>`;
-                                        }
-                                        formattedContent += `</div>`;
-                                    });
-                                    formattedContent += `</div>`;
-                                }
-                                formattedContent += `</div>\n`;
-                            });
-                            
-                            content.querySelector('.log-text').innerHTML = formattedContent;
-                        } catch (e) {
-                            // If parsing fails, show original content
-                            content.querySelector('.log-text').textContent = data.response;
-                        }
-                    } else {
-                        content.querySelector('.log-text').textContent = data.response;
-                    }
-                } else if (data.table_data && Array.isArray(data.table_data)) {
-                    const logText = data.table_data.map(row => row.line || row.content || JSON.stringify(row)).join('\n');
-                    content.querySelector('.log-text').textContent = logText;
-                    logContents[logFile] = logText;
-                } else {
-                    const content = JSON.stringify(data, null, 2);
-                    content.querySelector('.log-text').textContent = content;
-                    logContents[logFile] = content;
-                }
-            } catch (error) {
-                const errorMessage = `Error loading log: ${error.message}`;
-                content.querySelector('.log-text').textContent = errorMessage;
-                logContents[logFile] = errorMessage;
-            }
-        }
-
-        // Initialize log windows
-        function initializeLogWindows() {
-            const tabsContainer = document.getElementById('logTabs');
-            const contentsContainer = document.getElementById('logContents');
-            
-            logFiles.forEach((logFile, index) => {
-                const tab = createLogTab(logFile);
-                const content = createLogContent(logFile);
-                
-                tabsContainer.appendChild(tab);
-                contentsContainer.appendChild(content);
-                
-                // Make first tab active by default
-                if (index === 0) {
-                    tab.classList.add('active');
-                    content.classList.add('active');
-                }
-                
-                // Load log content
-                loadLogContent(logFile.name, content);
-            });
-        }
-
-        // Modify sendQuery to use stored log contents
         async function sendQuery() {
             const input = document.getElementById('inputText');
             const query = input.value.trim();
@@ -1514,14 +1046,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
             loadingIndicator.style.display = 'block';
 
             try {
-                // Get context from selected logs using stored contents
-                const context = [];
-                for (const logFile of selectedContext) {
-                    if (logContents[logFile]) {
-                        context.push(`Log ${logFile}:\n${logContents[logFile]}`);
-                    }
-                }
-
                 const response = await fetch('dwemer-diagnostics.php', {
                     method: 'POST',
                     headers: {
@@ -1531,10 +1055,7 @@ $TITLE = "🔍 Dwemer Diagnostics";
                     },
                     body: JSON.stringify({ 
                         query: query,
-                        settings: {
-                            ...aiSettings,
-                            context: context
-                        }
+                        settings: aiSettings
                     }),
                     credentials: 'same-origin'
                 });
@@ -1568,11 +1089,57 @@ $TITLE = "🔍 Dwemer Diagnostics";
 
         // Initialize the page
         document.addEventListener('DOMContentLoaded', () => {
-            initializeLogWindows();
             loadTables();
         });
 
-        // Function to load and display tables
+        // Add table descriptions
+        const tableDescriptions = {
+            'animations': 'Animation table, still WIP.',
+            'animations_custom': 'Custom animations for custom animation mods for CHIM.',
+            'audit_memory': 'Minime-T5 Output log. Showcase memeory and Oghma extraction attempts.',
+            'audit_request': 'LLM Context.',
+            'books': 'All the book content extracted by CHIM.',
+            'conf_opts': 'Custom table used for misclenaious options.',
+            'currentmission': 'The current Dynamic AI Objectives.',
+            'database_versioning': 'Used for automatic database updates.',
+            'diarylog': 'All the NPC diary entries.',
+            'eventlog': 'All the events and current context from CHIM.',
+            'log': 'Response Log. Useful for examining prompts sent to LLM.',
+            'memory': 'Basic memory entries.',
+            'memory_summary': 'Summarized memory entries.',
+            'npc_profile_backup': 'Backup of NPC profiles.',
+            'npc_templates': 'Vanilla CHIM NPC templates. Gets overwritten by custom templates.',
+            'npc_templates_custom': 'User-modified NPC templates with custom attributes and behaviors.',
+            'npc_templates_trl': 'Translation-specific NPC templates for different language versions.',
+            'npc_templates_v2': 'Not activly used, is transfered over to npc_templates during updates.',
+            'oghma': 'Knowledge base containing game lore, quest information, and world data that gets injected into prompts using RAG/Minime-T5.',
+            'questlog': 'Comprehensive log of every quest and stage you have completed.',
+            'quests': 'Current active quests in your quest journal.',
+            'responselog': 'Usually empty, used temporaily for inserting responses.',
+            'speech': 'Raw speech output from NPCs.'
+        };
+
+        // Toast notification function
+        function showToast(message, duration = 3000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="toast-icon">ℹ️</div>
+                <div class="toast-content">${message}</div>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    container.removeChild(toast);
+                }, 300);
+            }, duration);
+        }
+
+        // Modify the table list creation
         async function loadTables() {
             try {
                 const response = await fetch('dwemer-diagnostics.php', {
@@ -1605,18 +1172,22 @@ $TITLE = "🔍 Dwemer Diagnostics";
                         const tableName = row.table_name;
                         const li = document.createElement('li');
                         li.className = 'table-item';
-                        li.textContent = tableName;
+                        li.innerHTML = `
+                            <span class="table-name">${tableName}</span>
+                            <span class="table-icon">📊</span>
+                        `;
                         
-                        // Add click handler to show table data
                         li.addEventListener('click', () => {
-                            // Remove active class from all items
                             document.querySelectorAll('.table-item').forEach(item => {
                                 item.classList.remove('active');
                             });
-                            // Add active class to clicked item
                             li.classList.add('active');
-                            // Show table data
-                            showTableData(tableName);
+                            
+                            // Set the input text to the table description
+                            const input = document.getElementById('inputText');
+                            if (tableDescriptions[tableName]) {
+                                input.value = `describe ${tableName}`;
+                            }
                         });
                         
                         tableList.appendChild(li);
@@ -1624,72 +1195,6 @@ $TITLE = "🔍 Dwemer Diagnostics";
                 }
             } catch (error) {
                 console.error('Error loading tables:', error);
-            }
-        }
-
-        // Function to show table data in modal
-        async function showTableData(tableName) {
-            try {
-                const response = await fetch('dwemer-diagnostics.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({ 
-                        query: `SELECT * FROM ${tableName} ORDER BY id DESC LIMIT 10`,
-                        settings: aiSettings
-                    }),
-                    credentials: 'same-origin'
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load table data');
-                }
-
-                const data = await response.json();
-                if (data.error) {
-                    console.error('Error loading table data:', data.error);
-                    return;
-                }
-
-                // Update modal title
-                document.getElementById('tableDataTitle').textContent = `Latest 10 rows from ${tableName}`;
-                
-                // Create and display table
-                const tableDataContent = document.getElementById('tableDataContent');
-                tableDataContent.innerHTML = ''; // Clear previous content
-                
-                if (data.table_data && data.table_data.length > 0) {
-                    const table = createTable(data.table_data);
-                    table.classList.add('table-data-table');
-                    tableDataContent.appendChild(table);
-                } else {
-                    tableDataContent.textContent = 'No data available';
-                }
-
-                // Show modal
-                document.getElementById('tableDataModal').style.display = 'block';
-            } catch (error) {
-                console.error('Error loading table data:', error);
-                // Show error in modal
-                document.getElementById('tableDataTitle').textContent = `Error loading ${tableName}`;
-                document.getElementById('tableDataContent').textContent = `Error: ${error.message}`;
-                document.getElementById('tableDataModal').style.display = 'block';
-            }
-        }
-
-        // Function to close table data modal
-        function closeTableData() {
-            document.getElementById('tableDataModal').style.display = 'none';
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const tableDataModal = document.getElementById('tableDataModal');
-            if (event.target === tableDataModal) {
-                closeTableData();
             }
         }
     </script>
