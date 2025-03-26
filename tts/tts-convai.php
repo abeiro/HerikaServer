@@ -12,7 +12,7 @@ function tts($textString, $mood, $stringforhash) {
 				return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
 	
 		} else {
-				error_log("Downloading voice");
+            Logger::info("Downloading voice");
 		}
 	    $starTime = microtime(true);
 

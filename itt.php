@@ -10,6 +10,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 if (isset($_GET["format"]) && $_GET["format"]=="png")
     $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".png";
@@ -18,7 +19,7 @@ else
 
 
 if (!$_FILES["file"]["tmp_name"]) {
-    error_log("ITT error, no data given: ".print_r($_POST,true));
+    Logger::error("ITT error, no data given: ".print_r($_POST,true));
     die("ITT error, no data given");
     
 }
@@ -68,7 +69,7 @@ if (isset($_GET["format"]) && $_GET["format"]=="png")
 else
     $finalNameJpeg=strtr($finalName,[".bmp"=>".jpg","_img_"=>"_img_p_"]);
 
-error_log("Saving $finalName to $finalNameJpeg");
+Logger::info("Saving $finalName to $finalNameJpeg");
 convertImage($finalName,$finalNameJpeg,9);
 @unlink($finalName);
 

@@ -8,6 +8,7 @@ require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 $configFilepath=$enginePath."conf".DIRECTORY_SEPARATOR;
 
@@ -41,7 +42,7 @@ if ($method === 'POST') {
                 // Look for LOCK_PROFILE setting only for non-default profiles
                 if (preg_match('/\$LOCK_PROFILE\s*=\s*true\s*;/', $original)) {
                     $skipped[] = $characterName;
-                    error_log("Skipping locked profile: " . $characterName);
+                    Logger::trace("Skipping locked profile: " . $characterName);
                     continue;
                 }
             }
@@ -54,7 +55,7 @@ if ($method === 'POST') {
                 $php_code = trim($matches[1]);
 
             } else {
-                error_log("No PHP code found in the file.");
+                Logger::warn("No PHP code found in the file.");
                 continue;
             }
 
@@ -68,7 +69,7 @@ if ($method === 'POST') {
             }
 
             $value=$jsonDataInput["value"];
-            error_log("copying {$jsonDataInput["name"]} to profile: " . $characterName);
+            Logger::trace("copying {$jsonDataInput["name"]} to profile: " . $characterName);
             $new_php_code="";
             if (!is_array($value))
                 if ($value=='false')
@@ -87,10 +88,10 @@ if ($method === 'POST') {
             
             $updated[] = $characterName;
             file_put_contents($mconf,"<?php".PHP_EOL.$php_code.PHP_EOL.$new_php_code."?>");
-            error_log("Written to " . $characterName . "'s profile");
+            Logger::trace("Written to " . $characterName . "'s profile");
 
         } else {
-            error_log("Does not exists $mconf");
+            Logger::warn("Does not exists $mconf");
         }
     }
 

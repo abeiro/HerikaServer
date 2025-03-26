@@ -4,6 +4,7 @@ use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 use React\EventLoop\Loop;
 require __DIR__ . '/vendor/autoload.php';
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
 
 class websocket implements MessageComponentInterface {
     protected $clients;
@@ -25,7 +26,7 @@ class websocket implements MessageComponentInterface {
 
         $this->db_conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
         if (!$this->db_conn) {
-            error_log("WebSocket server failed to connect to the database!");
+            Logger::error("WebSocket server failed to connect to the database!");
         }
     }
 
@@ -95,7 +96,7 @@ class websocket implements MessageComponentInterface {
             // We must have a msg_id to know which input this response belongs to
             $msgId = isset($data['msg_id']) ? (int) $data['msg_id'] : 0;
             if ($msgId === 0) {
-                error_log("Received response without a valid msg_id!");
+                Logger::error("Received response without a valid msg_id!");
                 return;
             }
             $query = "INSERT INTO output_queue_websocket (msg_id, response) VALUES ($msgId, '$escapedResponse')";
@@ -120,7 +121,7 @@ class websocket implements MessageComponentInterface {
     }
 
     public function onError(ConnectionInterface $conn, \Exception $e) {
-        error_log("WebSocket error: {$e->getMessage()}");
+        Logger::error("WebSocket error: {$e->getMessage()}");
         $conn->close();
     }
 }

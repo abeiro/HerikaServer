@@ -2,6 +2,8 @@
 
 use PHPUnit\Framework\TestCase;
 
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
+
 abstract class DatabaseTestCase extends TestCase
 {
     protected static string $testDatabaseName = "testdb";
@@ -191,18 +193,18 @@ abstract class DatabaseTestCase extends TestCase
         $connString = "host=localhost dbname=dwemer user=dwemer password=dwemer";
         $mainConnection = pg_connect($connString);
         if (!$mainConnection) {
-            error_log("Failed to connect to main database for dropping test db.");
+            Logger::error("Failed to connect to main database for dropping test db.");
             return;
         }
 
         // Drop the database
         $dropResult = pg_query($mainConnection, "DROP DATABASE IF EXISTS ".self::$testDatabaseName." WITH (FORCE)");
         if (!$dropResult) {
-            error_log("Failed to drop test database: " . pg_last_error($mainConnection));
+            Logger::error("Failed to drop test database: " . pg_last_error($mainConnection));
         }
         $dropResult = pg_query($mainConnection, "DROP DATABASE IF EXISTS ".self::$testDatabaseBkpName." WITH (FORCE)");
         if (!$dropResult) {
-            error_log("Failed to drop test database: " . pg_last_error($mainConnection));
+            Logger::error("Failed to drop test database: " . pg_last_error($mainConnection));
         }
 
         pg_close($mainConnection);

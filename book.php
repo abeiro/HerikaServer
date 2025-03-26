@@ -11,17 +11,18 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.ph
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 
 
 $startTime = microtime(true);
-error_log("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " (BOOK) started: ".$startTime);
+Logger::trace("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " (BOOK) started: ".$startTime);
 $GLOBALS["AUDIT_RUNID_REQUEST"]="BOOK";
 
 $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_book_".md5($_FILES["file"]["tmp_name"]).".txt";
 
 if (!$_FILES["file"]["tmp_name"]) {
-    error_log("BOOK error, no data given: ".print_r($_POST,true));
+    Logger::error("BOOK error, no data given: ".print_r($_POST,true));
     die("BOOK error, no data given");
     
 }
