@@ -344,7 +344,7 @@ class openai
                 }
 
                 $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             }
 
         }
@@ -381,7 +381,7 @@ class openai
                 }
 
                 $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             } else 
                 return null;
         }

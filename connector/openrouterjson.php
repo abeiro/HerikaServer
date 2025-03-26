@@ -574,7 +574,7 @@ class openrouterjson
                 }
 
                 $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             } else 
                 return null;
         } else {
@@ -621,7 +621,7 @@ class openrouterjson
                         
                 }
                 
-                @ob_flush();    
+                if (ob_get_level()) @ob_flush();
             } else {
                 error_log("No actions");
                 return [];

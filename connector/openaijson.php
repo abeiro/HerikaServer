@@ -534,7 +534,7 @@ class openaijson
                 }
 
                 $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             } else 
                 return null;
         } else {
@@ -571,7 +571,7 @@ class openaijson
                         
                 }
                 
-                @ob_flush();    
+                if (ob_get_level()) @ob_flush();
             } else {
                 Logger::info("No actions");
                 return null;
