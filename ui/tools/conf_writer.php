@@ -2,8 +2,9 @@
 
 session_start();
 
-$enginePath=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;;
-require($enginePath.DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
+$enginePath=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+require($enginePath."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
+require($enginePath."lib".DIRECTORY_SEPARATOR.'logger.php');
 
 $confSchema=conf_loader_load_schema();
 
@@ -29,7 +30,7 @@ if (isset($_GET["incomplete"])) {
         $buffer="<?php".PHP_EOL.$php_code;
 
     } else {
-        error_log("No PHP code found in the file.");
+        Logger::warn("No PHP code found in the file.");
     }
 
 

@@ -23,6 +23,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
 
 
@@ -154,7 +155,7 @@ if (!in_array($gameRequest[0],$fast_commands)) {
         //error_log("Audit: Waiting for lock: {$gameRequest[0]}");
         usleep(1000);
     }
-    error_log("Audit:Lock adquired by {$gameRequest[0]}");
+    Logger::info("Audit:Lock acquired by {$gameRequest[0]}");
 } 
 
 // adnpc has its custom semaphore, as it write files
@@ -255,7 +256,7 @@ $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
     // When chatnf_book (make the AI to read a book), will override profile and will select default one
-    error_log("Override conf with default");
+    Logger::info("Override conf with default");
     require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
     $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 }
@@ -381,7 +382,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     $rechatHistory=DataRechatHistory();
     
     if (sizeof($rechatHistory)>(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
-        error_log("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
+        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
         sem_release($semaphore);
         while(@ob_end_clean());
@@ -404,14 +405,14 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context
         sem_release($semaphore);
-        error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
+        Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         sleep(1);
         while (sem_acquire($semaphore,true)!=true)  {
             $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
             if (isset($user_input_after[0]))
                 if (isset($user_input_after[0]["N"]))
                     if ($user_input_after[0]["N"]>0) {
-                        error_log("Generation stopped because user_input. ".__LINE__);
+                        Logger::info("Generation stopped because user_input. ".__LINE__);
                         die();// Abort rechat
                     }
 
@@ -535,7 +536,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
         }
         $GLOBALS["COMMAND_PROMPT"].=$task;
     } else {
-        error_log("Task avoided {$GLOBALS["IS_NPC"]} ");
+        Logger::info("Task avoided {$GLOBALS["IS_NPC"]} ");
     }
 }
 
@@ -611,7 +612,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                         'time'=>$preCommand["elapsed_time"]
                     )
                 );
-                error_log("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
+                Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
                 $memoryInjectionCtx=[]; // Disable memorie when command.
                 $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
                 $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
@@ -696,7 +697,7 @@ if ($gameRequest[0] == "funcret") {
                     $prompt=[];
                 }
                 array_splice($prompt, -1, 0, $memoryInjectionCtx); // add memory as second-to-last entry
-                error_log("Injected memory");
+                Logger::info("Injected memory");
             }
             $FUNCTIONS_ARE_ENABLED=false;
             $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
@@ -717,7 +718,7 @@ if ($gameRequest[0] == "funcret") {
             $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
             if (sizeof($memoryInjectionCtx)>0) {
                 array_splice($prompt, -1, 0, $memoryInjectionCtx); // add memory as second-to-last entry
-                error_log("Injected memory");
+                Logger::info("Injected memory");
             }
             
         } else
@@ -747,7 +748,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEP
 
 $outputWasValid = call_llm();
 if (!$outputWasValid) {
-    error_log("Warning: LLM returned invalid output.");
+    Logger::warn("LLM returned invalid output.");
     if (isset($GLOBALS["LLM_RETRY_FNCT"])) {
         $GLOBALS["LLM_RETRY_FNCT"]();
     }

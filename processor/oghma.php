@@ -98,7 +98,7 @@ if ($GLOBALS["MINIME_T5"]) {
                         
                         // Check if we've already processed this topic
                         if (in_array($normalizedCurrentTopic, $processedTopics)) {
-                            error_log("[OGHMA] Skipping duplicate topic: $currentInputTopic");
+                            Logger::info("[OGHMA] Skipping duplicate topic: $currentInputTopic");
                             break;
                         }
                         
@@ -264,7 +264,7 @@ if ($GLOBALS["MINIME_T5"]) {
                         $remainingText = preg_replace('/\s*,\s*$/', '', $remainingText); // Remove trailing comma
                         $remainingText = trim($remainingText);
                         
-                        error_log("[OGHMA] Remaining text after extraction $i: '$remainingText'");
+                        Logger::info("[OGHMA] Remaining text after extraction $i: '$remainingText'");
                     } else {
                         break;
                     }
@@ -275,7 +275,7 @@ if ($GLOBALS["MINIME_T5"]) {
 
             // After the loop, update current Oghma topic in database with the first topic we found
             if ($firstTopic !== null) {
-                error_log("[OGHMA] Setting first topic as current: $firstTopic");
+                Logger::info("[OGHMA] Setting first topic as current: $firstTopic");
                 $GLOBALS["db"]->upsertRowOnConflict(
                     'conf_opts',
                     array(

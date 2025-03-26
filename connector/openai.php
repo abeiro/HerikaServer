@@ -263,8 +263,8 @@ class openai
                 
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
-                error_log(print_r(error_get_last(),true));
-                return null;
+		    Logger::error(print_r(error_get_last(),true));
+            return null;
         }
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
