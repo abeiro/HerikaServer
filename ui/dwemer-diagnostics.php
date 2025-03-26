@@ -207,7 +207,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $context = [];
         $context[] = [
             'role' => 'system',
-            'content' => "You are a Dwemer Diagnostics AI assistant, helping users understand and analyze their Skyrim database. 
+            'content' => "You are the Dwemer Bot, an AI assistant helping users understand and analyze the PSQL data for a Skyrim mod called CHIM.
+                         CHIM is a mod that makes NPC's alive using AI. It allows for users to interact with these AI's in the game of Skyrim.
                          You have access to information about the database schema and can help interpret data patterns and relationships.
                          Always be precise and technical in your responses, but explain things in a way that's easy to understand.
                          
@@ -218,20 +219,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          4. Continue making queries until you have gathered all relevant information
                          5. ALWAYS provide a final analysis that combines insights from all queries
                          
-                         For NPCs:
+                         For NPCs and characters:
                          - Location information is stored in the npc_pers column
                          - Personal details and background are in npc_pers
                          - Current state and dynamic information in npc_dynamic
-                         
-                         Available Log Files:
-                         - context_sent_to_llm.log: Contains context sent to the language model
-                         - output_from_llm.log: Contains responses from the language model
-                         - output_to_plugin.log: Contains output sent to the plugin
-                         - apache_error.log: Contains Apache server errors
-                         - debugStream.log: Contains debug information
-                         
-                         You can query these logs using the 'read log [filename]' command.
-                         
+
+                         For Context and events:
+                         - eventlog table contains all context for everything that has happended ingame.
+                         - currentmission table is the Dynamic AI objective.
+                         - questlog table showcases all the quests that have happended.
+                         - quests tableshowcases the current active quests.
+                         - diarylog tablehas all diary entries for NPCs.
+                         - books table has all the current books read through CHIM.
+
+                         System Context:
+                         - conf_opts is for misclenaious options
+                         - audit_memory is for Minime-T5 output. It include info for Oghma (RAG world info for Skyrim) and memory requests.
+
                          Example format for multiple queries:
                          ```sql
                          -- First query to get basic count
@@ -574,11 +578,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         padding: 15px;
         overflow-y: auto;
     }
-    .tables-section h3 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        color: #0e639c;
-    }
     .table-list {
         list-style: none;
         padding: 0;
@@ -856,13 +855,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="chat-section">
             <div class="help-section">
-                <h3>🔍 Dwemer Diagnostics Help</h3>
-                <p>Available commands:</p>
+                <h3>🔍 Dwemer Diagnostics</h3>
+                <p>Available (non-AI) commands:</p>
                 <ul>
                     <li><code>show tables</code> - List all available tables</li>
                     <li><code>describe [table_name]</code> - Show structure of a table</li>
                 </ul>
-                <p>You can also ask natural language questions about the database!</p>
+                <p>You can also just ask to lookup stuff in the database!</p>
             </div>
             <div id="chatWindow"></div>
             <div class="loading" id="loadingIndicator">Processing query...</div>
@@ -881,15 +880,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h2>Dwemer Diagnostics Settings</h2>
         <form id="settingsForm" class="settings-form">
             <div class="form-group">
-                <label for="apiKey">OpenRouter API Key</label>
+                <label for="apiKey">OpenRouter API Key (Pulled from CONNECTOR openrouterjson API_KEY)</label>
                 <input type="password" id="apiKey" name="apiKey" required>
             </div>
             <div class="form-group">
                 <label for="model">Model</label>
                 <select id="model" name="model">
                     <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
-                    <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
-                    <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+                    <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                    <option value="openai/gpt-4o-search-preview">GPT 4o</option>
                 </select>
             </div>
             <div class="form-group">
