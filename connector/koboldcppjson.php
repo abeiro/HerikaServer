@@ -274,7 +274,7 @@ class koboldcppjson
             fwrite($this->primary_handler, $request);
             fflush($this->primary_handler);
         } else if (($this->primary_handler == null) || (!$this->primary_handler)){
-			Logger::error("Unable to connect to koboldcpp backend!");
+            Logger::error("Unable to connect to koboldcpp backend!");
             return false;
         }
 
@@ -438,7 +438,7 @@ class koboldcppjson
                     $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
                 
                 } else {
-					Logger::warn("Function not found for {$parsedResponse["action"]} already sent");
+                    Logger::warn("Function not found for {$parsedResponse["action"]} already sent");
                 }
                     
             }

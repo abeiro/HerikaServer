@@ -340,7 +340,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
             fwrite($this->primary_handler, $request);
             fflush($this->primary_handler);
         } else {
-			Logger::error("Unable to connect to koboldcpp backend!");
+            Logger::error("Unable to connect to koboldcpp backend!");
             return false;
         }
 

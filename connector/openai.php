@@ -263,7 +263,7 @@ class openai
                 
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
-		    Logger::error(print_r(error_get_last(),true));
+            Logger::error(print_r(error_get_last(),true));
             return null;
         }
 
