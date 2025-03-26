@@ -67,8 +67,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'response' => "Available commands:\n" .
                 "- show tables: List all available tables\n" .
                 "- describe [table_name]: Show structure of a table\n" .
+                "- list [table_name] [count]: Show latest entries in a table (default 10)\n" .
                 "You can also ask natural language questions!"
         ]));
+    }
+
+    // Process list command
+    if (preg_match('/^list\s+(\w+)(?:\s+(\d+))?$/', $query, $matches)) {
+        $table_name = pg_escape_string($matches[1]);
+        $limit = isset($matches[2]) ? intval($matches[2]) : 10;
+        
+        // Verify table exists
+        $table_check = pg_query($conn, "
+            SELECT 1 
+            FROM information_schema.tables 
+            WHERE table_schema = '$schema' 
+            AND table_name = '$table_name'
+        ");
+        
+        if (!$table_check || pg_num_rows($table_check) === 0) {
+            die(json_encode([
+                'error' => "Table '$table_name' not found"
+            ]));
+        }
+        
+        // Get the primary key or first column for ordering
+        $pk_result = pg_query($conn, "
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = '$schema'
+            AND table_name = '$table_name'
+            AND is_identity = 'YES'
+            LIMIT 1
+        ");
+        
+        $order_by = '1'; // Default to first column if no identity column found
+        if ($pk_result && pg_num_rows($pk_result) > 0) {
+            $pk_row = pg_fetch_assoc($pk_result);
+            $order_by = pg_escape_string($pk_row['column_name']);
+        }
+        
+        // Execute the query
+        $sql = "SELECT * FROM $table_name ORDER BY $order_by DESC LIMIT $limit";
+        $result = pg_query($conn, $sql);
+        
+        if (!$result) {
+            die(json_encode([
+                'error' => 'Error executing query: ' . pg_last_error($conn)
+            ]));
+        }
+        
+        $rows = [];
+        while ($row = pg_fetch_assoc($result)) {
+            $rows[] = $row;
+        }
+        
+        echo json_encode([
+            'response' => "Latest $limit entries from table '$table_name':",
+            'table_data' => $rows
+        ]);
+        exit;
     }
 
     // Process show tables command
@@ -632,14 +690,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         display: flex;
         gap: 10px;
         padding: 10px 0;
+        position: relative;
     }
     #inputText {
         flex: 1;
         padding: 10px;
+        padding-right: 40px; /* Make room for the spinner */
         border: 1px solid #3e3e3e;
         border-radius: 4px;
         background-color: #1e1e1e;
         color: #d4d4d4;
+    }
+    #inputText:disabled {
+        background-color: #2d2d2d;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    .loading-spinner {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        border: 3px solid #1e1e1e;
+        border-top: 3px solid #0e639c;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        display: none;
     }
     button {
         padding: 10px 20px;
@@ -676,6 +754,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         display: none;
         margin: 10px 0;
         color: #0e639c;
+        align-items: center;
+        gap: 10px;
+    }
+    .loading-spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid #1e1e1e;
+        border-top: 3px solid #0e639c;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
     .ai-response {
         background-color: #2d2d2d;
@@ -843,6 +935,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             opacity: 0;
         }
     }
+    .system-message {
+        background-color: #2d2d2d;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .system-message .user-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .system-message .message-content {
+        flex: 1;
+    }
+    .user-message {
+        background-color: #1e1e1e;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        text-align: left;
+        max-width: 80%;
+        margin-right: auto;
+    }
 </style>
 
 <main>
@@ -856,18 +975,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="chat-section">
             <div class="help-section">
                 <h3>🔍 Dwemer Diagnostics</h3>
-                <p>Available (non-AI) commands:</p>
-                <ul>
-                    <li><code>show tables</code> - List all available tables</li>
-                    <li><code>describe [table_name]</code> - Show structure of a table</li>
-                </ul>
-                <p>You can also just ask to lookup stuff in the database!</p>
+                <p>A fun tool to have our AI bot scan through the CHIM database!</p>
+                <p>OpenRouter only, configure in settings.</p>
             </div>
             <div id="chatWindow"></div>
-            <div class="loading" id="loadingIndicator">Processing query...</div>
+            <div class="loading" id="loadingIndicator">
+                <div class="loading-spinner"></div>
+            </div>
             <div class="input-container">
-                <input type="text" id="inputText" placeholder="Enter your query or type 'help' for available commands">
-                <button onclick="sendQuery()">Send</button>
+                <input type="text" id="inputText" placeholder="Enter your question or type 'help' for available commands">
+                <div class="loading-spinner" id="loadingIndicator"></div>
+                <button onclick="sendQuery()" id="sendButton">Send</button>
                 <button class="settings-button" onclick="openSettings()">⚙️ Settings</button>
             </div>
         </div>
@@ -921,10 +1039,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const messageDiv = document.createElement('div');
         messageDiv.className = `${type} ${isUser ? 'user-message' : 'system-message'}`;
         
-        if (type === 'sql-query') {
-            messageDiv.innerHTML = '<strong>SQL Query:</strong><br>' + text;
-        } else {
+        if (isUser) {
             messageDiv.textContent = text;
+        } else {
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'user-icon';
+            iconDiv.style.backgroundImage = 'url(images/DwemerDynamics.png)';
+            iconDiv.style.backgroundSize = 'cover';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (type === 'sql-query') {
+                contentDiv.innerHTML = '<strong>SQL Query:</strong><br>' + text;
+            } else {
+                contentDiv.textContent = text;
+            }
+            
+            messageDiv.appendChild(iconDiv);
+            messageDiv.appendChild(contentDiv);
         }
         
         chatWindow.appendChild(messageDiv);
@@ -1038,6 +1171,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     async function sendQuery() {
         const input = document.getElementById('inputText');
+        const sendButton = document.getElementById('sendButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
         const query = input.value.trim();
         
         if (!query) return;
@@ -1048,6 +1183,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         appendMessage(query, true);
         input.value = '';
+        input.disabled = true;
+        sendButton.disabled = true;
         loadingIndicator.style.display = 'block';
 
         try {
@@ -1088,7 +1225,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             console.error('Error details:', error);
             appendMessage('Error: ' + error.message, false);
         } finally {
+            input.disabled = false;
+            sendButton.disabled = false;
             loadingIndicator.style.display = 'none';
+            input.focus();
         }
     }
 
@@ -1188,11 +1328,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         });
                         li.classList.add('active');
                         
-                        // Set the input text to the table description
+                        // Set the input text to the list command
                         const input = document.getElementById('inputText');
-                        if (tableDescriptions[tableName]) {
-                            input.value = `describe ${tableName}`;
-                        }
+                        input.value = `list ${tableName}`;
                     });
                     
                     tableList.appendChild(li);
