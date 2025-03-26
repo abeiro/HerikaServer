@@ -78,7 +78,9 @@ function readErrorLog($errorLogPath, $logType) {
 // Function to read regular log files
 function readRegularLog($logPath, $logName) {
     if (file_exists($logPath) && is_readable($logPath)) {
-        $log = file_get_contents($logPath);
+        $log = file($logPath);
+        $log = array_reverse($log); // Reverse the array to show latest entries first
+        $log = implode('', $log); // Join the lines back together
         $sanitizedId = sanitizeId($logName);
 
         echo '<div class="section-header">';
