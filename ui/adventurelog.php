@@ -501,9 +501,24 @@ if (!$result) {
 
         /* Column widths for event table */
         .col-context { width: 50%; }
-        .col-people { width: 25%; }
+        .col-people { width: 20%; }
         .col-gamets { width: 15%; }
-        .col-time { width: 10%; }
+        .col-time { width: 15%; }
+
+        /* Location change row styles */
+        .location-change-row {
+            background-color: #2c3e50 !important;
+            color: #ecf0f1;
+            font-weight: bold;
+            text-align: center;
+            padding: 8px;
+        }
+
+        .location-change-row td {
+            padding: 8px;
+            border-top: 2px solid #34495e;
+            border-bottom: 2px solid #34495e;
+        }
 
         /* Main container padding */
         main.container {
@@ -622,6 +637,21 @@ if (!$result) {
             // Reset the result pointer to the beginning for table rendering
             pg_result_seek($result, 0);
 
+            // Initialize previous location
+            $previousLocation = null;
+
+            // Get the first row to check initial location
+            $firstRow = pg_fetch_assoc($result);
+            if ($firstRow) {
+                $firstProcessedRow = process_event_row($firstRow, false);
+                if ($firstProcessedRow !== null) {
+                    $initialLocation = $firstProcessedRow['Location & Tamrielic Time'];
+                    echo "<tr class='location-change-row'><td colspan='4'>Current Location: {$initialLocation}</td></tr>";
+                }
+                // Reset the result pointer again for the main loop
+                pg_result_seek($result, 0);
+            }
+
             // Fetch and display each row in the table
             while ($row = pg_fetch_assoc($result)) {
                 $processed_row = process_event_row($row, false); // false indicates HTML context
@@ -632,7 +662,17 @@ if (!$result) {
                 // Extract processed data
                 $data = $processed_row['Context'];
                 $people = $processed_row['Nearby People'];
+                $location = $processed_row['Location & Tamrielic Time'];
                 $timeDisplay = $processed_row['Time(UTC)'];
+                
+                // Check for location change
+                if ($previousLocation !== null && $previousLocation !== $location) {
+                    // Output location change row
+                    echo "<tr class='location-change-row'><td colspan='4'>Location Change: {$location}</td></tr>";
+                }
+                
+                // Update previous location
+                $previousLocation = $location;
                 
                 // Convert timestamp to game time
                 $gameTimeDisplay = "";
