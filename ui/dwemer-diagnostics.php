@@ -271,11 +271,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          Always be precise and technical in your responses, but explain things in a way that's easy to understand.
                          
                          IMPORTANT: When answering questions about data in the database:
-                         1. ALWAYS start with a basic query to get initial information
-                         2. Based on those results, make additional queries to gather more specific details
-                         3. Use the results from earlier queries to inform later queries
-                         4. Continue making queries until you have gathered all relevant information
-                         5. ALWAYS provide a final analysis that combines insights from all queries
+                         1. If the user's query is vague or unclear (like single words or very short phrases), ALWAYS ask for clarification
+                         2. Only proceed with queries when you have a clear understanding of what the user wants to know
+                         3. When you do have a clear query, start with a basic query to get initial information
+                         4. Based on those results, make additional queries to gather more specific details
+                         5. Use the results from earlier queries to inform later queries
+                         6. Continue making queries until you have gathered all relevant information
+                         7. ALWAYS provide a final analysis that combines insights from all queries
                          
                          For NPCs and characters:
                          - Location information is stored in the npc_pers column
@@ -317,7 +319,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          - Use the executeQuery() function with proper parameter escaping to prevent SQL injection
                          - ALWAYS explain your thought process between queries
                          - ALWAYS provide a final analysis after all queries
-                         - You can query log files to get additional context about the system's behavior"
+                         - You can query log files to get additional context about the system's behavior
+                         - If the query is unclear, ask for clarification instead of making assumptions"
         ];
 
         // Add database schema info
@@ -675,6 +678,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         padding: 15px;
         max-width: 65%;
         min-width: 50%;
+        position: relative; /* Added for absolute positioning of loading overlay */
     }
     #chatWindow {
         flex: 1;
@@ -706,18 +710,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cursor: not-allowed;
         opacity: 0.7;
     }
-    .loading-spinner {
+    .loading-overlay {
+        display: none;
         position: absolute;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 20px;
-        height: 20px;
-        border: 3px solid #1e1e1e;
-        border-top: 3px solid #0e639c;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    .loading-spinner {
+        width: 80px;
+        height: 80px;
+        border: 8px solid #1e1e1e;
+        border-top: 8px solid #0e639c;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-        display: none;
     }
     button {
         padding: 10px 20px;
@@ -756,14 +767,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         color: #0e639c;
         align-items: center;
         gap: 10px;
-    }
-    .loading-spinner {
-        width: 20px;
-        height: 20px;
-        border: 3px solid #1e1e1e;
-        border-top: 3px solid #0e639c;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
     }
     @keyframes spin {
         0% { transform: rotate(0deg); }
@@ -974,19 +977,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="chat-section">
             <div class="help-section">
-                <h3>🔍 Dwemer Diagnostics</h3>
-                <p>A fun tool to have our AI bot scan through the CHIM database!</p>
+                <h3>🔍 Dwemer AI Diagnostics</h3>
+                <p>A tool to have an AI scan through the CHIM database. Just ask it a question!</p>
                 <p>OpenRouter only, configure in settings.</p>
             </div>
             <div id="chatWindow"></div>
-            <div class="loading" id="loadingIndicator">
+            <div class="loading-overlay" id="loadingIndicator">
                 <div class="loading-spinner"></div>
             </div>
             <div class="input-container">
                 <input type="text" id="inputText" placeholder="Enter your question or type 'help' for available commands">
-                <div class="loading-spinner" id="loadingIndicator"></div>
                 <button onclick="sendQuery()" id="sendButton">Send</button>
-                <button class="settings-button" onclick="openSettings()">⚙️ Settings</button>
+                <button class="settings-button" onclick="openSettings()">⚙️</button>
+                <button class="settings-button" onclick="clearChat()">🗑️</button>
             </div>
         </div>
     </div>
@@ -1028,6 +1031,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const chatWindow = document.getElementById('chatWindow');
     const loadingIndicator = document.getElementById('loadingIndicator');
     const input = document.getElementById('inputText');
+
+    function clearChat() {
+        chatWindow.innerHTML = '';
+    }
 
     input.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -1185,7 +1192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input.value = '';
         input.disabled = true;
         sendButton.disabled = true;
-        loadingIndicator.style.display = 'block';
+        loadingIndicator.style.display = 'flex';
 
         try {
             const response = await fetch('dwemer-diagnostics.php', {
@@ -1319,7 +1326,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     li.className = 'table-item';
                     li.innerHTML = `
                         <span class="table-name">${tableName}</span>
-                        <span class="table-icon">📊</span>
                     `;
                     
                     li.addEventListener('click', () => {
