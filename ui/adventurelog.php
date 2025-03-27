@@ -131,7 +131,10 @@ function process_event_row($row, $for_csv = false) {
     $peopleList = array_filter(explode("|", $cleanPeople), 'strlen');
     $people = implode(", ", $peopleList);
 
-    // Remove the '(Context location: ...)' substring
+    // Get the speaker (first person in the list) for row grouping
+    $speaker = !empty($peopleList) ? $peopleList[0] : 'Narrator';
+
+    // Use raw data directly for Context, just remove location context if present
     $data = preg_replace('/\(Context location:[^)]+\)/i', '', $rawData);
     $data = trim($data);
 
@@ -146,6 +149,7 @@ function process_event_row($row, $for_csv = false) {
     // Return the processed data
     return [
         'Context' => $data,
+        'Speaker' => $speaker, // Keep speaker for row grouping
         'Nearby People' => $people,
         'Location & Tamrielic Time' => $locationDisplay,
         'Time(UTC)' => $timeDisplay
@@ -263,7 +267,7 @@ function handle_csv_export($conn, $schema) {
             // Fetch and process each row, then write to the CSV
             while ($row = pg_fetch_assoc($result)) {
                 $processed_row = process_event_row($row, true); // true indicates CSV context
-                if ($processed_row !== null) { // Only include allowed types
+                if ($processed_row !== null) {
                     // Check for location change
                     if ($previousLocation !== null && $previousLocation !== $processed_row['Location & Tamrielic Time']) {
                         // Extract just the location name without date/time
@@ -903,6 +907,18 @@ if ($shouldFetchEvents) {
             color: white !important;
             border: 2px solid #1e7e34 !important;
         }
+
+        .event-table tr {
+            transition: background-color 0.2s;
+        }
+
+        .event-table tr.speaker-even {
+            background-color: #1a1a1a;  /* Original black color */
+        }
+
+        .event-table tr.speaker-odd {
+            background-color: #2d2d2d;  /* Original grey color */
+        }
     </style>
 </head>
 <body>
@@ -1074,8 +1090,10 @@ if ($shouldFetchEvents) {
                 pg_result_seek($result, 0);
 
                 // Initialize variables
-                $previousLocation = null;
                 $hasEvents = false;
+                $currentSpeaker = null;
+                $speakerGroup = 0;
+                $previousLocation = null;
                 $locationHeader = '';
 
                 // Get the first row to check initial location
@@ -1114,6 +1132,7 @@ if ($shouldFetchEvents) {
 
                     // Extract processed data
                     $data = $processed_row['Context'];
+                    $speaker = $processed_row['Speaker'];
                     $people = $processed_row['Nearby People'];
                     $location = $processed_row['Location & Tamrielic Time'];
                     $timeDisplay = $processed_row['Time(UTC)'];
@@ -1162,14 +1181,30 @@ if ($shouldFetchEvents) {
                     // Update previous location
                     $previousLocation = $location;
                     
+                    // Check if speaker changed
+                    // Extract speaker from the data content
+                    $speakerFromData = '';
+                    if (preg_match('/^([^:]+):/', $data, $matches)) {
+                        $speakerFromData = trim($matches[1]);
+                    }
+                    
+                    // Use extracted speaker if available, otherwise use the one from people list
+                    $effectiveSpeaker = $speakerFromData ?: $speaker;
+                    
+                    if ($currentSpeaker !== $effectiveSpeaker) {
+                        $currentSpeaker = $effectiveSpeaker;
+                        $speakerGroup++;
+                    }
+                    
                     // Convert timestamp to game time
                     $gameTimeDisplay = "";
                     if (isset($row['gamets']) && $row['gamets'] > 0) {
                         $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['gamets']);
                     }
 
-                    // Output the table row
-                    echo "<tr><td>{$data}</td><td>{$people}</td><td>{$gameTimeDisplay}</td><td>{$timeDisplay}</td></tr>";
+                    // Output the table row with speaker-based styling
+                    $rowClass = ($speakerGroup % 2 === 0) ? 'speaker-even' : 'speaker-odd';
+                    echo "<tr class='{$rowClass}'><td>{$data}</td><td>{$people}</td><td>{$gameTimeDisplay}</td><td>{$timeDisplay}</td></tr>";
                 }
 
                 // If no events were found, display a message
