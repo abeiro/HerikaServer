@@ -707,6 +707,27 @@ if ($firstRow) {
             padding: 0 15px;
             color: #f8f9fa;
             font-size: 1.5em;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .calendar-navigation a {
+            min-width: 150px;
+            text-align: center;
+            display: inline-block;
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            border: 2px solid #0056b3;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-navigation a:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         /* CSV Buttons Container */
@@ -874,12 +895,12 @@ if ($firstRow) {
         <div class="calendar-mode-toggle">
             <form method="get" style="display: inline;">
                 <?php
-                // Preserve current month and year in the form
-                if (isset($_GET['month'])) echo "<input type='hidden' name='month' value='" . htmlspecialchars($_GET['month']) . "'>";
-                if (isset($_GET['year'])) echo "<input type='hidden' name='year' value='" . htmlspecialchars($_GET['year']) . "'>";
-                if (isset($_GET['date'])) echo "<input type='hidden' name='date' value='" . htmlspecialchars($_GET['date']) . "'>";
+                // Only include tamrielic parameter when switching to Tamrielic mode
+                if (!$useTamrielicTime) {
+                    echo "<input type='hidden' name='tamrielic' value='true'>";
+                }
                 ?>
-                <button type="submit" name="tamrielic" value="<?php echo $useTamrielicTime ? 'false' : 'true'; ?>" class="btn-base <?php echo $useTamrielicTime ? 'btn-primary' : 'btn-secondary'; ?>">
+                <button type="submit" class="btn-base <?php echo $useTamrielicTime ? 'btn-primary' : 'btn-secondary'; ?>">
                     <?php echo $useTamrielicTime ? 'Switch to Gregorian Calendar' : 'Switch to Tamrielic Calendar'; ?>
                 </button>
             </form>
@@ -937,10 +958,14 @@ if ($firstRow) {
                     $nextYear++;
                 }
 
-                echo "<a href='?month={$prevMonth}&year={$prevYear}' class='btn-primary'>&laquo; Previous Month</a>";
-                $monthName = date('F', strtotime("$year-$month-01 UTC"));
-                echo "<span><b>{$monthName} {$year}</b></span>";
-                echo "<a href='?month={$nextMonth}&year={$nextYear}' class='btn-primary'>Next Month &raquo;</a>";
+                // Get month names for navigation
+                $prevMonthName = date('F', strtotime("$prevYear-$prevMonth-01 UTC"));
+                $nextMonthName = date('F', strtotime("$nextYear-$nextMonth-01 UTC"));
+                $currentMonthName = date('F', strtotime("$year-$month-01 UTC"));
+
+                echo "<a href='?month={$prevMonth}&year={$prevYear}' class='btn-primary'>&laquo; {$prevMonthName}</a>";
+                echo "<span><b>{$currentMonthName} {$year}</b></span>";
+                echo "<a href='?month={$nextMonth}&year={$nextYear}' class='btn-primary'>{$nextMonthName} &raquo;</a>";
             }
             ?>
         </div>
