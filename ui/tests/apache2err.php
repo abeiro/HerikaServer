@@ -16,6 +16,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 
 $logPath = __DIR__ . '/../../log/';
 $distroLogPath = $logPath . 'apache_error.log';
+$chimLogPath = $logPath . 'chim.log';
 $llmOutputPath = $logPath . 'output_from_llm.log';
 $llmContextPath = $logPath . 'context_sent_to_llm.log';
 $pluginOutputPath = $logPath . 'ouput_to_plugin.log';
@@ -78,7 +79,9 @@ function readErrorLog($errorLogPath, $logType) {
 // Function to read regular log files
 function readRegularLog($logPath, $logName) {
     if (file_exists($logPath) && is_readable($logPath)) {
-        $log = file_get_contents($logPath);
+        $log = file($logPath);
+        $log = array_reverse($log); // Reverse the array to show latest entries first
+        $log = implode('', $log); // Join the lines back together
         $sanitizedId = sanitizeId($logName);
 
         echo '<div class="section-header">';
@@ -673,6 +676,13 @@ if (isset($_GET['download_logs'])) {
 
         <div class="log-section">
             <?php
+            // Display CHIM log
+            readRegularLog($chimLogPath, "CHIM Log (chim.log)");
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
             // Display LLM output log
             readRegularLog($llmOutputPath, "LLM Output (output_from_llm.log)");
             ?>
@@ -728,6 +738,21 @@ if (isset($_GET['download_logs'])) {
         </div>
         <div class="modal-body">
             <div id="errorLogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="CHIMLogchimlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">CHIM Log</h2>
+            <button class="close-modal" onclick="closeModal('CHIMLogchimlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in CHIM Log..." data-target="CHIMLogchimlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="CHIMLogchimlogModalContent"></div>
         </div>
     </div>
 </div>
