@@ -905,7 +905,6 @@ if ($firstRow) {
         <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
 
         <?php
-        // Modified renderHeader function to use btn-save class
         function renderHeader() {
             echo "<div class='csv-buttons'>";
             
@@ -950,24 +949,38 @@ if ($firstRow) {
             echo "</div>";
         }
 
+        /**
+         * Function to render calendar mode toggle buttons
+         * @param bool $useTamrielicTime Whether Tamrielic time is currently active
+         * @return void
+         */
+        function renderCalendarModeButtons($useTamrielicTime) {
+            // For Tamrielic mode, only use the tamrielic flag
+            $tamrielicUrl = '?tamrielic=true';
+            
+            // For regular mode, use no parameters
+            $regularUrl = '?';
+            
+            echo '<div class="calendar-mode-toggle">';
+            // Regular Calendar button
+            echo '<form method="get" style="display: inline; margin-right: 10px;">';
+            echo '<button type="submit" class="btn-base ' . (!$useTamrielicTime ? 'btn-primary' : 'btn-secondary') . '">Regular Calendar</button>';
+            echo '</form>';
+            
+            // Tamrielic Calendar button
+            echo '<form method="get" style="display: inline;">';
+            echo '<input type="hidden" name="tamrielic" value="true">';
+            echo '<button type="submit" class="btn-base ' . ($useTamrielicTime ? 'btn-primary' : 'btn-secondary') . '">Tamrielic Calendar</button>';
+            echo '</form>';
+            echo '</div>';
+        }
+
         // Render Combined CSV Download Buttons at the Top
         renderHeader();
         ?>
 
-        <!-- Add the toggle button before the calendar navigation -->
-        <div class="calendar-mode-toggle">
-            <form method="get" style="display: inline;">
-                <?php
-                // Only include tamrielic parameter when switching to Tamrielic mode
-                if (!$useTamrielicTime) {
-                    echo "<input type='hidden' name='tamrielic' value='true'>";
-                }
-                ?>
-                <button type="submit" class="btn-base <?php echo $useTamrielicTime ? 'btn-primary' : 'btn-secondary'; ?>">
-                    <?php echo $useTamrielicTime ? 'Switch to Gregorian Calendar' : 'Switch to Tamrielic Calendar'; ?>
-                </button>
-            </form>
-        </div>
+        <!-- Add the toggle buttons before the calendar navigation -->
+        <?php renderCalendarModeButtons($useTamrielicTime); ?>
 
         <!-- Calendar Navigation -->
         <div class="calendar-navigation">
