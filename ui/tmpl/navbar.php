@@ -60,9 +60,6 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=log">Response Log</a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=diarylog">Diary Log</a>
-                    </li>
-                    <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=books">Book Log</a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
