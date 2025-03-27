@@ -615,7 +615,7 @@ function renderCalendarHTML($calendar, $useTamrielicTime) {
                 $class = $day['hasEvents'] ? 'has-event' : '';
                 $dayNum = $day['day'];
                 if ($day['hasEvents']) {
-                    $html .= "<td class='{$class}'><a href='{$day['url']}'>{$dayNum}</a></td>";
+                    $html .= "<td class='{$class}'><a href='{$day['url']}#event-table'>{$dayNum}</a></td>";
                 } else {
                     $html .= "<td class='{$class}'><span>{$dayNum}</span></td>";
                 }
@@ -813,6 +813,7 @@ if ($shouldFetchEvents) {
         .event-table {
             width: 100%;
             margin-top: 20px;
+            scroll-margin-top: 200px; /* Add scroll margin for navbar */
         }
 
         .event-table th {
@@ -907,7 +908,6 @@ if ($shouldFetchEvents) {
 <body>
     <main class="container">
         <h1>📆CHIM Adventure Log</h1>
-        <h2>All time and dates are in UTC. Tamrielic Time may be inconsistent.</h2>
         <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
 
         <?php
@@ -1055,7 +1055,7 @@ if ($shouldFetchEvents) {
         ?>
 
         <!-- Event Table -->
-        <table class="event-table">
+        <table class="event-table" id="event-table">
             <colgroup>
                 <col class="col-context">
                 <col class="col-people">
