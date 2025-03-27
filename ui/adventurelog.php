@@ -628,7 +628,8 @@ function renderCalendarHTML($calendar, $useTamrielicTime) {
     return $html;
 }
 
-// Get the selected date from the URL parameter, default to today if not set
+// Get the selected date from the URL parameter, default to no date
+$selectedDate = null;
 if (isset($_GET['date'])) {
     $selectedDate = $_GET['date'];
     
@@ -639,61 +640,51 @@ if (isset($_GET['date'])) {
     } else {
         // Validate the selected date format (YYYY-MM-DD) for Gregorian dates
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
-            $selectedDate = date('Y-m-d'); // Fallback to today if invalid
-        }
-        
-        // Ensure the date matches the month and year parameters
-        $dateParts = explode('-', $selectedDate);
-        if (count($dateParts) === 3) {
-            $dateYear = intval($dateParts[0]);
-            $dateMonth = intval($dateParts[1]);
-            if ($dateYear !== $year || $dateMonth !== $month) {
-                $selectedDate = sprintf("%04d-%02d-%02d", $year, $month, 1);
-            }
+            $selectedDate = null;
         }
     }
+}
+
+// Only proceed with event fetching if we have a selected date or specific Tamrielic parameters
+$shouldFetchEvents = $selectedDate !== null || 
+    ($useTamrielicTime && isset($_GET['month']) && isset($_GET['year']) && isset($_GET['day']));
+
+if ($shouldFetchEvents) {
+    // Create DateTime objects in UTC for the selected day
+    if ($selectedDate !== null) {
+        $dtSelected = new DateTime($selectedDate . ' 00:00:00', new DateTimeZone('UTC'));
+        $startOfDay = $dtSelected->getTimestamp();
+        $dtSelectedEnd = clone $dtSelected;
+        $dtSelectedEnd->modify('+1 day')->modify('-1 second');
+        $endOfDay = $dtSelectedEnd->getTimestamp();
+    }
+
+    // Modify the SQL query to fetch records for the selected day with explicit casting
+    $query = "
+        SELECT type, data, people, location, localts, gamets
+        FROM {$schema}.eventlog
+        WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+        AND (
+            CASE 
+                WHEN " . ($useTamrielicTime ? 'true' : 'false') . " THEN
+                    -- For Tamrielic mode, we'll filter in PHP instead of SQL
+                    gamets > 0
+                ELSE
+                    -- For Gregorian mode, use localts
+                    localts >= " . (isset($startOfDay) ? $startOfDay : 0) . " AND localts <= " . (isset($endOfDay) ? $endOfDay : 0) . "
+            END
+        )
+        ORDER BY localts ASC
+    ";
+
+    $result = pg_query($conn, $query);
+
+    if (!$result) {
+        echo "<div class='message'>Query error: " . pg_last_error($conn) . "</div>";
+        exit;
+    }
 } else {
-    $selectedDate = date('Y-m-d');
-}
-
-// Create DateTime objects in UTC for the selected day
-$dtSelected = new DateTime($selectedDate . ' 00:00:00', new DateTimeZone('UTC'));
-$startOfDay = $dtSelected->getTimestamp();
-$dtSelectedEnd = clone $dtSelected;
-$dtSelectedEnd->modify('+1 day')->modify('-1 second');
-$endOfDay = $dtSelectedEnd->getTimestamp();
-
-// Modify the SQL query to fetch records for the selected day with explicit casting
-$query = "
-    SELECT type, data, people, location, localts, gamets
-    FROM {$schema}.eventlog
-    WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-    AND (
-        CASE 
-            WHEN " . ($useTamrielicTime ? 'true' : 'false') . " THEN
-                -- For Tamrielic mode, we'll filter in PHP instead of SQL
-                true
-            ELSE
-                -- For Gregorian mode, use localts
-                to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
-        END
-    )
-    ORDER BY localts ASC
-";
-
-$result = pg_query($conn, $query);
-
-if (!$result) {
-    echo "<div class='message'>Query error: " . pg_last_error($conn) . "</div>";
-    exit;
-}
-
-// Add debug logging for the first row
-$firstRow = pg_fetch_assoc($result);
-if ($firstRow) {
-    error_log("Debug - First row gamets: " . $firstRow['gamets']);
-    error_log("Debug - First row location: " . $firstRow['location']);
-    pg_result_seek($result, 0); // Reset the result pointer
+    $result = false;
 }
 ?> 
 
@@ -840,10 +831,10 @@ if ($firstRow) {
         }
 
         /* Column widths for event table */
-        .col-context { width: 50%; }
+        .col-context { width: 55%; }
         .col-people { width: 20%; }
         .col-gamets { width: 15%; }
-        .col-time { width: 15%; }
+        .col-time { width: 10%; font-family: monospace; font-size: 0.9em; }
 
         /* Location change row styles */
         .location-change-row {
@@ -970,30 +961,16 @@ if ($firstRow) {
          * @return void
          */
         function renderCalendarModeButtons($useTamrielicTime) {
-            global $month, $year;
-            
-            // For regular mode, use current real date if not in Tamrielic mode
-            $regularMonth = $useTamrielicTime ? date('n') : $month;
-            $regularYear = $useTamrielicTime ? date('Y') : $year;
-            
-            // For Tamrielic mode, default to Last Seed 201 if coming from regular mode
-            $tamrielicMonth = !$useTamrielicTime ? 8 : $month;
-            $tamrielicYear = !$useTamrielicTime ? 201 : $year;
-            
             echo '<div class="calendar-mode-toggle">';
             
-            // Regular Calendar button
+            // Regular Calendar button - always goes to base URL
             echo '<form method="get" style="display: inline; margin-right: 10px;">';
-            echo '<input type="hidden" name="month" value="' . $regularMonth . '">';
-            echo '<input type="hidden" name="year" value="' . $regularYear . '">';
             echo '<button type="submit" class="btn-base ' . (!$useTamrielicTime ? 'btn-primary' : 'btn-secondary') . '">Regular Calendar</button>';
             echo '</form>';
             
-            // Tamrielic Calendar button
+            // Tamrielic Calendar button - just adds tamrielic=true
             echo '<form method="get" style="display: inline;">';
             echo '<input type="hidden" name="tamrielic" value="true">';
-            echo '<input type="hidden" name="month" value="' . $tamrielicMonth . '">';
-            echo '<input type="hidden" name="year" value="' . $tamrielicYear . '">';
             echo '<button type="submit" class="btn-base ' . ($useTamrielicTime ? 'btn-primary' : 'btn-secondary') . '">Tamrielic Calendar</button>';
             echo '</form>';
             
@@ -1092,94 +1069,119 @@ if ($firstRow) {
                 <th>Time (UTC)</th>
             </tr>
             <?php
-            // Reset the result pointer to the beginning for table rendering
-            pg_result_seek($result, 0);
-
-            // Initialize previous location
-            $previousLocation = null;
-
-            // Get the first row to check initial location
-            $firstRow = pg_fetch_assoc($result);
-            if ($firstRow) {
-                $firstProcessedRow = process_event_row($firstRow, false);
-                if ($firstProcessedRow !== null) {
-                    // Extract just the location name without date/time
-                    $locationPattern = '/Context new location:\s*([^,]+)/i';
-                    $cleanLocation = trim($firstRow['location'], "()");
-                    if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
-                        $initialLocation = trim($locationMatch[1]);
-                    } else {
-                        $holdPattern = '/Hold:\s*([^,]+)/i';
-                        if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
-                            $initialLocation = trim($holdMatch[1]);
-                        } else {
-                            $initialLocation = $cleanLocation;
-                        }
-                    }
-                    echo "<tr class='location-change-row'><td colspan='4'>Current Location: {$initialLocation}</td></tr>";
-                }
-                // Reset the result pointer again for the main loop
+            if ($shouldFetchEvents && $result) {
+                // Reset the result pointer to the beginning for table rendering
                 pg_result_seek($result, 0);
-            }
 
-            // Fetch and display each row in the table
-            while ($row = pg_fetch_assoc($result)) {
-                $processed_row = process_event_row($row, false); // false indicates HTML context
-                if ($processed_row === null) {
-                    continue; // Skip rows with types not in the allowed list
-                }
+                // Initialize variables
+                $previousLocation = null;
+                $hasEvents = false;
+                $locationHeader = '';
 
-                // Extract processed data
-                $data = $processed_row['Context'];
-                $people = $processed_row['Nearby People'];
-                $location = $processed_row['Location & Tamrielic Time'];
-                $timeDisplay = $processed_row['Time(UTC)'];
-                
-                // For Tamrielic mode, check if the event matches the selected date
-                if ($useTamrielicTime && isset($row['gamets']) && $row['gamets'] > 0) {
-                    $tamrielicDate = convert_gamets2skyrim_long_date_no_time($row['gamets']);
-                    if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $tamrielicDate, $matches)) {
-                        $eventDay = intval($matches[1]);
-                        $eventMonth = $matches[2];
-                        $eventYear = intval($matches[3]);
-                        
-                        // Only show events that match the current Tamrielic date
-                        if ($eventMonth !== $tamrielicMonths[$month] || $eventYear !== $year || $eventDay !== intval($_GET['day'] ?? 0)) {
-                            continue;
-                        }
-                    }
-                }
-                
-                // Check for location change
-                if ($previousLocation !== null && $previousLocation !== $location) {
-                    // Extract just the location name without date/time for the divider
-                    $locationPattern = '/Context new location:\s*([^,]+)/i';
-                    $cleanLocation = trim($row['location'], "()");
-                    if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
-                        $locationName = trim($locationMatch[1]);
-                    } else {
-                        $holdPattern = '/Hold:\s*([^,]+)/i';
-                        if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
-                            $locationName = trim($holdMatch[1]);
+                // Get the first row to check initial location
+                $firstRow = pg_fetch_assoc($result);
+                if ($firstRow) {
+                    $firstProcessedRow = process_event_row($firstRow, false);
+                    if ($firstProcessedRow !== null) {
+                        // Extract just the location name without date/time
+                        $locationPattern = '/Context new location:\s*([^,]+)/i';
+                        $cleanLocation = trim($firstRow['location'], "()");
+                        if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
+                            $initialLocation = trim($locationMatch[1]);
                         } else {
-                            $locationName = $cleanLocation;
+                            $holdPattern = '/Hold:\s*([^,]+)/i';
+                            if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
+                                $initialLocation = trim($holdMatch[1]);
+                            } else {
+                                $initialLocation = $cleanLocation;
+                            }
                         }
+                        $locationHeader = "<tr class='location-change-row'><td colspan='4'>Current Location: {$initialLocation}</td></tr>";
                     }
-                    // Output location change row with simplified location
-                    echo "<tr class='location-change-row'><td colspan='4'>Location Change: {$locationName}</td></tr>";
-                }
-                
-                // Update previous location
-                $previousLocation = $location;
-                
-                // Convert timestamp to game time
-                $gameTimeDisplay = "";
-                if (isset($row['gamets']) && $row['gamets'] > 0) {
-                    $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['gamets']);
+                    // Reset the result pointer again for the main loop
+                    pg_result_seek($result, 0);
                 }
 
-                // Output the table row
-                echo "<tr><td>{$data}</td><td>{$people}</td><td>{$gameTimeDisplay}</td><td>{$timeDisplay}</td></tr>";
+                // Buffer the output
+                ob_start();
+
+                // Fetch and display each row in the table
+                while ($row = pg_fetch_assoc($result)) {
+                    $processed_row = process_event_row($row, false);
+                    if ($processed_row === null) {
+                        continue;
+                    }
+
+                    // Extract processed data
+                    $data = $processed_row['Context'];
+                    $people = $processed_row['Nearby People'];
+                    $location = $processed_row['Location & Tamrielic Time'];
+                    $timeDisplay = $processed_row['Time(UTC)'];
+                    
+                    // For Tamrielic mode, check if the event matches the selected date
+                    if ($useTamrielicTime && isset($row['gamets']) && $row['gamets'] > 0) {
+                        $tamrielicDate = convert_gamets2skyrim_long_date_no_time($row['gamets']);
+                        if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $tamrielicDate, $matches)) {
+                            $eventDay = intval($matches[1]);
+                            $eventMonth = $matches[2];
+                            $eventYear = intval($matches[3]);
+                            
+                            // Only show events that match the current Tamrielic date
+                            if ($eventMonth !== $tamrielicMonths[$month] || $eventYear !== $year || $eventDay !== intval($_GET['day'] ?? 0)) {
+                                continue;
+                            }
+                        }
+                    }
+                    
+                    // We have at least one event to display
+                    if (!$hasEvents) {
+                        $hasEvents = true;
+                        // Output the location header only when we have events
+                        echo $locationHeader;
+                    }
+                    
+                    // Check for location change
+                    if ($previousLocation !== null && $previousLocation !== $location) {
+                        // Extract just the location name without date/time for the divider
+                        $locationPattern = '/Context new location:\s*([^,]+)/i';
+                        $cleanLocation = trim($row['location'], "()");
+                        if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
+                            $locationName = trim($locationMatch[1]);
+                        } else {
+                            $holdPattern = '/Hold:\s*([^,]+)/i';
+                            if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
+                                $locationName = trim($holdMatch[1]);
+                            } else {
+                                $locationName = $cleanLocation;
+                            }
+                        }
+                        // Output location change row with simplified location
+                        echo "<tr class='location-change-row'><td colspan='4'>Location Change: {$locationName}</td></tr>";
+                    }
+                    
+                    // Update previous location
+                    $previousLocation = $location;
+                    
+                    // Convert timestamp to game time
+                    $gameTimeDisplay = "";
+                    if (isset($row['gamets']) && $row['gamets'] > 0) {
+                        $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['gamets']);
+                    }
+
+                    // Output the table row
+                    echo "<tr><td>{$data}</td><td>{$people}</td><td>{$gameTimeDisplay}</td><td>{$timeDisplay}</td></tr>";
+                }
+
+                // If no events were found, display a message
+                if (!$hasEvents) {
+                    echo "<tr><td colspan='4' style='text-align: center; padding: 20px;'>No events found for this date.</td></tr>";
+                }
+
+                // Get the buffered content
+                $tableContent = ob_get_clean();
+                echo $tableContent;
+            } else {
+                echo "<tr><td colspan='4' style='text-align: center; padding: 20px;'>Select a date to view events.</td></tr>";
             }
             ?>
         </table>
