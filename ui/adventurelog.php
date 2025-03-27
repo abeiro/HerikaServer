@@ -344,7 +344,29 @@ $tamrielicMonths = [
     12 => 'Evening Star'
 ];
 
+// Define Tamrielic month lengths
+$tamrielicMonthLengths = [
+    1 => 31, // Morning Star
+    2 => 28, // Sun's Dawn
+    3 => 31, // First Seed
+    4 => 30, // Rain's Hand
+    5 => 31, // Second Seed
+    6 => 30, // Mid Year
+    7 => 31, // Sun's Height
+    8 => 31, // Last Seed
+    9 => 30, // Hearthfire
+    10 => 31, // Frost Fall
+    11 => 30, // Sun's Dusk
+    12 => 31  // Evening Star
+];
+
 $tamrielicMonthToNumber = array_flip($tamrielicMonths);
+
+// Function to get days in a Tamrielic month
+function get_tamrielic_days_in_month($month) {
+    global $tamrielicMonthLengths;
+    return $tamrielicMonthLengths[$month] ?? 30;
+}
 
 // Get current game timestamp if in Tamrielic mode
 $currentGameDate = null;
@@ -357,10 +379,11 @@ if ($useTamrielicTime) {
     if (isset($_GET['month']) && isset($_GET['year'])) {
         $currentTamrielicMonth = $tamrielicMonths[$month] ?? 'Morning Star';
         $currentTamrielicYear = $year; // Use the year from URL instead of hardcoding to 201
+        error_log("Debug - Using URL parameters: month={$currentTamrielicMonth}, year={$currentTamrielicYear}");
     } else {
         // Otherwise, get the current game date
         $currentGameQuery = "
-            SELECT gamets, localts
+            SELECT gamets, localts, type, data, people, location
             FROM {$schema}.eventlog
             WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
             ORDER BY localts DESC
@@ -371,6 +394,10 @@ if ($useTamrielicTime) {
             $currentGameRow = pg_fetch_assoc($currentGameResult);
             if ($currentGameRow && isset($currentGameRow['gamets']) && $currentGameRow['gamets'] > 0) {
                 $currentGameDate = convert_gamets2skyrim_long_date_no_time($currentGameRow['gamets']);
+                error_log("Debug - Current game date: {$currentGameDate}");
+                error_log("Debug - Raw gamets: {$currentGameRow['gamets']}");
+                error_log("Debug - Raw location: {$currentGameRow['location']}");
+                
                 // Extract month and year from Tamrielic date
                 if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $currentGameDate, $matches)) {
                     $day = $matches[1];
@@ -380,6 +407,7 @@ if ($useTamrielicTime) {
                     $currentTamrielicMonth = $monthName;
                     $currentTamrielicYear = $year;
                     $currentTamrielicDay = $day;
+                    error_log("Debug - Extracted Tamrielic date: day={$day}, month={$monthName}, year={$year}");
                 }
             }
         }
@@ -389,6 +417,9 @@ if ($useTamrielicTime) {
 // Validate month and year
 $month = ($month >= 1 && $month <= 12) ? $month : date('n');
 $year = ($year >= 1970 && $year <= 2100) ? $year : date('Y');
+
+error_log("Debug - Final month/year values: month={$month}, year={$year}");
+error_log("Debug - Tamrielic month name: {$tamrielicMonths[$month]}");
 
 // Create DateTime objects in UTC
 $dtStartOfMonth = new DateTime("{$year}-{$month}-01 00:00:00", new DateTimeZone('UTC'));
@@ -404,7 +435,11 @@ $allDatesQuery = "
     SELECT DISTINCT 
         to_char(to_timestamp(localts::double precision) AT TIME ZONE 'UTC', 'YYYY-MM-DD') as event_date,
         gamets,
-        localts
+        localts,
+        type,
+        data,
+        people,
+        location
     FROM {$schema}.eventlog
     WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
     AND (
@@ -417,8 +452,10 @@ $allDatesQuery = "
                 to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfMonth) AND to_timestamp($endOfMonth)
         END
     )
-    ORDER BY event_date ASC
+    ORDER BY localts ASC
 ";
+
+error_log("Debug - SQL Query: {$allDatesQuery}");
 
 $allDatesResult = pg_query($conn, $allDatesQuery);
 
@@ -427,9 +464,7 @@ if ($allDatesResult) {
         if ($useTamrielicTime && isset($dateRow['gamets']) && $dateRow['gamets'] > 0) {
             // Convert gamets to Tamrielic date
             $tamrielicDate = convert_gamets2skyrim_long_date_no_time($dateRow['gamets']);
-            // Add debug logging
             error_log("Debug - Processing event: Gregorian={$dateRow['event_date']}, Tamrielic={$tamrielicDate}, gamets={$dateRow['gamets']}");
-            error_log("Debug - Current month={$month}, year={$year}, tamrielicMonth={$tamrielicMonths[$month]}");
             
             // Extract Tamrielic date components
             if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $tamrielicDate, $matches)) {
@@ -438,18 +473,22 @@ if ($allDatesResult) {
                 $eventYear = intval($matches[3]);
                 
                 error_log("Debug - Extracted: day={$eventDay}, month={$eventMonth}, year={$eventYear}");
-                error_log("Debug - Comparing: eventMonth={$eventMonth} with currentMonth={$tamrielicMonths[$month]}");
-                error_log("Debug - Comparing: eventYear={$eventYear} with currentYear={$year}");
+                error_log("Debug - Current month={$month}, year={$year}, tamrielicMonth={$tamrielicMonths[$month]}");
                 
                 // Only add the event if it matches the current Tamrielic month and year
                 if ($eventMonth === $tamrielicMonths[$month] && $eventYear == $year) {
-                    error_log("Debug - Adding event to allEventDates");
+                    error_log("Debug - Adding event to allEventDates for day {$eventDay}");
                     $allEventDates[] = [
                         'gregorian' => $dateRow['event_date'],
                         'tamrielic' => $tamrielicDate,
+                        'tamrielic_month' => $eventMonth,
                         'gamets' => $dateRow['gamets'],
                         'localts' => $dateRow['localts'],
-                        'day' => $eventDay
+                        'day' => $eventDay,
+                        'type' => $dateRow['type'],
+                        'data' => $dateRow['data'],
+                        'people' => $dateRow['people'],
+                        'location' => $dateRow['location']
                     ];
                 }
             }
@@ -458,15 +497,17 @@ if ($allDatesResult) {
                 'gregorian' => $dateRow['event_date'],
                 'tamrielic' => null,
                 'gamets' => null,
-                'localts' => $dateRow['localts']
+                'localts' => $dateRow['localts'],
+                'type' => $dateRow['type'],
+                'data' => $dateRow['data'],
+                'people' => $dateRow['people'],
+                'location' => $dateRow['location']
             ];
         }
     }
     
-    // Add debug logging for final allEventDates array
     error_log("Debug - Final allEventDates array: " . print_r($allEventDates, true));
 } else {
-    // Handle query error
     echo "<div class='message'>Error fetching event dates: " . pg_last_error($conn) . "</div>";
 }
 
@@ -483,19 +524,20 @@ if ($allDatesResult) {
 function renderCalendar($month, $year, $eventDates, $useTamrielicTime = false, $currentGameDate = null) {
     global $tamrielicMonths, $tamrielicMonthToNumber;
     
-    // Add debug logging at the start of renderCalendar
     error_log("Debug - renderCalendar called with: month={$month}, year={$year}, useTamrielicTime={$useTamrielicTime}");
     error_log("Debug - eventDates array: " . print_r($eventDates, true));
     
-    // Days of the week
-    $daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // Days of the week - use Tamrielic names if in Tamrielic mode
+    $daysOfWeek = $useTamrielicTime ? 
+        ['Sundas', 'Morndas', 'Tirdas', 'Middas', 'Turdas', 'Fredas', 'Loredas'] :
+        ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     // First day of the month
     $firstDayTimestamp = strtotime("$year-$month-01 UTC");
     $firstDayOfWeek = date('w', $firstDayTimestamp);
 
     // Number of days in the month
-    $daysInMonth = date('t', $firstDayTimestamp);
+    $daysInMonth = $useTamrielicTime ? get_tamrielic_days_in_month($month) : date('t', $firstDayTimestamp);
 
     // Start building the HTML table
     $calendar = "<table class='calendar'>";
@@ -524,16 +566,17 @@ function renderCalendar($month, $year, $eventDates, $useTamrielicTime = false, $
         $eventDate = null;
         foreach ($eventDates as $event) {
             if ($useTamrielicTime) {
-                // For Tamrielic mode, check if the event's day matches
-                error_log("Debug - Checking Tamrielic event: day={$day}, event day={$event['day']}");
-                if (isset($event['day']) && $event['day'] === $day) {
+                error_log("Debug - Checking Tamrielic event: day={$day}, event day={$event['day']}, month={$month}, event month=" . (isset($event['tamrielic_month']) ? $event['tamrielic_month'] : 'none'));
+                if (isset($event['day']) && 
+                    $event['day'] === $day && 
+                    isset($event['tamrielic_month']) && 
+                    $event['tamrielic_month'] === $tamrielicMonths[$month]) {
                     $hasEvent = true;
                     $eventDate = $event;
                     error_log("Debug - Found matching Tamrielic event for day {$day}");
                     break;
                 }
             } else {
-                // For Gregorian mode, check if the event's Gregorian date matches
                 if ($event['gregorian'] === $currentDate) {
                     $hasEvent = true;
                     $eventDate = $event;
@@ -552,10 +595,7 @@ function renderCalendar($month, $year, $eventDates, $useTamrielicTime = false, $
                 $currentMonthName = $matches[2];
                 $currentYear = $matches[3];
                 
-                // Convert Tamrielic month name to number
-                $currentMonth = $tamrielicMonthToNumber[$currentMonthName] ?? 0;
-                
-                if ($currentMonth === $month && $currentYear === $year && $currentDay === $day) {
+                if ($currentMonthName === $tamrielicMonths[$month] && $currentYear === $year && $currentDay === $day) {
                     $class .= " current-date";
                 }
             }
@@ -564,10 +604,8 @@ function renderCalendar($month, $year, $eventDates, $useTamrielicTime = false, $
         // Link to view events for the selected date
         if ($hasEvent) {
             if ($useTamrielicTime) {
-                // For Tamrielic mode, use the Gregorian date from the event
-                $link = "<a href='?date={$eventDate['gregorian']}&month={$month}&year={$year}&tamrielic=true'>{$day}</a>";
+                $link = "<a href='?date={$eventDate['gregorian']}&month={$month}&year={$year}&tamrielic=true&day={$day}'>{$day}</a>";
             } else {
-                // For Gregorian mode, use the current date
                 $link = "<a href='?date={$currentDate}&month={$month}&year={$year}'>{$day}</a>";
             }
         } else {
@@ -577,7 +615,7 @@ function renderCalendar($month, $year, $eventDates, $useTamrielicTime = false, $
         // Highlight the day if it has an event
         $calendar .= "<td class='{$class}'>{$link}</td>";
 
-        // If the current day is Saturday, start a new row
+        // If the current day is Saturday/Loredas, start a new row
         if ((($day + $firstDayOfWeek) % 7) == 0 && $day != $daysInMonth) {
             $calendar .= "</tr><tr>";
         }
@@ -621,7 +659,16 @@ $query = "
     SELECT type, data, people, location, localts, gamets
     FROM {$schema}.eventlog
     WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-    AND to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
+    AND (
+        CASE 
+            WHEN " . ($useTamrielicTime ? 'true' : 'false') . " THEN
+                -- For Tamrielic mode, we'll filter in PHP instead of SQL
+                true
+            ELSE
+                -- For Gregorian mode, use localts
+                to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
+        END
+    )
     ORDER BY localts ASC
 ";
 
@@ -652,6 +699,7 @@ if ($firstRow) {
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
+            table-layout: fixed; /* This ensures equal column widths */
         }
 
         .calendar th, .calendar td {
@@ -660,11 +708,21 @@ if ($firstRow) {
             text-align: center;
             vertical-align: middle;
             position: relative;
+            width: 14.28%; /* 100% / 7 days = 14.28% */
+            min-width: 100px; /* Minimum width to prevent too narrow cells */
         }
 
         .calendar th {
             background-color: #3a3a3a;
             color: #f8f9fa;
+            white-space: nowrap; /* Prevent day names from wrapping */
+            overflow: hidden; /* Hide overflow text */
+            text-overflow: ellipsis; /* Show ellipsis for overflow */
+        }
+
+        .calendar td {
+            aspect-ratio: 1; /* Make cells square */
+            height: 100px; /* Fixed height for cells */
         }
 
         .calendar td.has-event {
@@ -674,11 +732,14 @@ if ($firstRow) {
         .calendar td a {
             color: inherit;
             text-decoration: none;
-            display: block;
+            display: flex; /* Changed from block to flex */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
             width: 100%;
             height: 100%;
             text-align: center;
             padding: 5px;
+            box-sizing: border-box;
         }
 
         .calendar td.has-event a {
@@ -688,6 +749,9 @@ if ($firstRow) {
             border-radius: 5px;
             box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
             transition: all 0.3s ease-in-out;
+            display: flex; /* Ensure flex is applied to event buttons too */
+            justify-content: center;
+            align-items: center;
         }
 
         .calendar td.has-event a:hover {
@@ -709,6 +773,11 @@ if ($firstRow) {
             font-size: 1.5em;
             min-width: 200px;
             text-align: center;
+            display: inline-block; /* Changed from default to inline-block */
+            width: 300px; /* Fixed width for the month/year text */
+            white-space: nowrap; /* Prevent text wrapping */
+            overflow: hidden; /* Hide overflow */
+            text-overflow: ellipsis; /* Show ellipsis for overflow */
         }
 
         .calendar-navigation a {
@@ -1033,6 +1102,21 @@ if ($firstRow) {
                 $location = $processed_row['Location & Tamrielic Time'];
                 $timeDisplay = $processed_row['Time(UTC)'];
                 
+                // For Tamrielic mode, check if the event matches the selected date
+                if ($useTamrielicTime && isset($row['gamets']) && $row['gamets'] > 0) {
+                    $tamrielicDate = convert_gamets2skyrim_long_date_no_time($row['gamets']);
+                    if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $tamrielicDate, $matches)) {
+                        $eventDay = intval($matches[1]);
+                        $eventMonth = $matches[2];
+                        $eventYear = intval($matches[3]);
+                        
+                        // Only show events that match the current Tamrielic date
+                        if ($eventMonth !== $tamrielicMonths[$month] || $eventYear !== $year || $eventDay !== intval($_GET['day'] ?? 0)) {
+                            continue;
+                        }
+                    }
+                }
+                
                 // Check for location change
                 if ($previousLocation !== null && $previousLocation !== $location) {
                     // Extract just the location name without date/time for the divider
@@ -1061,7 +1145,7 @@ if ($firstRow) {
                     $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['gamets']);
                 }
 
-                // **Output the table row**
+                // Output the table row
                 echo "<tr><td>{$data}</td><td>{$people}</td><td>{$gameTimeDisplay}</td><td>{$timeDisplay}</td></tr>";
             }
             ?>
