@@ -325,6 +325,67 @@ $year = isset($_GET['month']) && isset($_GET['year'])
     ? sanitize_int($_GET['year'], date('Y')) 
     : date('Y');
 
+// Add Tamrielic mode toggle
+$useTamrielicTime = isset($_GET['tamrielic']) && $_GET['tamrielic'] === 'true';
+
+// Define Tamrielic month mapping
+$tamrielicMonths = [
+    1 => 'Morning Star',
+    2 => "Sun's Dawn",
+    3 => 'First Seed',
+    4 => "Rain's Hand",
+    5 => 'Second Seed',
+    6 => 'Mid Year',
+    7 => "Sun's Height",
+    8 => 'Last Seed',
+    9 => 'Hearthfire',
+    10 => 'Frost Fall',
+    11 => "Sun's Dusk",
+    12 => 'Evening Star'
+];
+
+$tamrielicMonthToNumber = array_flip($tamrielicMonths);
+
+// Get current game timestamp if in Tamrielic mode
+$currentGameDate = null;
+$currentTamrielicMonth = null;
+$currentTamrielicYear = null;
+$currentTamrielicDay = null;
+
+if ($useTamrielicTime) {
+    // If we have month and year parameters, use them to set the current Tamrielic month
+    if (isset($_GET['month']) && isset($_GET['year'])) {
+        $currentTamrielicMonth = $tamrielicMonths[$month] ?? 'Morning Star';
+        $currentTamrielicYear = $year; // Use the year from URL instead of hardcoding to 201
+    } else {
+        // Otherwise, get the current game date
+        $currentGameQuery = "
+            SELECT gamets, localts
+            FROM {$schema}.eventlog
+            WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+            ORDER BY localts DESC
+            LIMIT 1
+        ";
+        $currentGameResult = pg_query($conn, $currentGameQuery);
+        if ($currentGameResult) {
+            $currentGameRow = pg_fetch_assoc($currentGameResult);
+            if ($currentGameRow && isset($currentGameRow['gamets']) && $currentGameRow['gamets'] > 0) {
+                $currentGameDate = convert_gamets2skyrim_long_date_no_time($currentGameRow['gamets']);
+                // Extract month and year from Tamrielic date
+                if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $currentGameDate, $matches)) {
+                    $day = $matches[1];
+                    $monthName = $matches[2];
+                    $year = $matches[3]; // Use the year from the game date
+                    $month = $tamrielicMonthToNumber[$monthName] ?? date('n');
+                    $currentTamrielicMonth = $monthName;
+                    $currentTamrielicYear = $year;
+                    $currentTamrielicDay = $day;
+                }
+            }
+        }
+    }
+}
+
 // Validate month and year
 $month = ($month >= 1 && $month <= 12) ? $month : date('n');
 $year = ($year >= 1970 && $year <= 2100) ? $year : date('Y');
@@ -340,10 +401,22 @@ $allEventDates = [];
 
 // Prepare the SQL query with explicit casting to double precision
 $allDatesQuery = "
-    SELECT DISTINCT to_char(to_timestamp(localts::double precision) AT TIME ZONE 'UTC', 'YYYY-MM-DD') as event_date
+    SELECT DISTINCT 
+        to_char(to_timestamp(localts::double precision) AT TIME ZONE 'UTC', 'YYYY-MM-DD') as event_date,
+        gamets,
+        localts
     FROM {$schema}.eventlog
     WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-    AND to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfMonth) AND to_timestamp($endOfMonth)
+    AND (
+        CASE 
+            WHEN " . ($useTamrielicTime ? 'true' : 'false') . " THEN
+                -- For Tamrielic mode, we'll filter in PHP instead of SQL
+                true
+            ELSE
+                -- For Gregorian mode, use localts
+                to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfMonth) AND to_timestamp($endOfMonth)
+        END
+    )
     ORDER BY event_date ASC
 ";
 
@@ -351,8 +424,47 @@ $allDatesResult = pg_query($conn, $allDatesQuery);
 
 if ($allDatesResult) {
     while ($dateRow = pg_fetch_assoc($allDatesResult)) {
-        $allEventDates[] = $dateRow['event_date'];
+        if ($useTamrielicTime && isset($dateRow['gamets']) && $dateRow['gamets'] > 0) {
+            // Convert gamets to Tamrielic date
+            $tamrielicDate = convert_gamets2skyrim_long_date_no_time($dateRow['gamets']);
+            // Add debug logging
+            error_log("Debug - Processing event: Gregorian={$dateRow['event_date']}, Tamrielic={$tamrielicDate}, gamets={$dateRow['gamets']}");
+            error_log("Debug - Current month={$month}, year={$year}, tamrielicMonth={$tamrielicMonths[$month]}");
+            
+            // Extract Tamrielic date components
+            if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $tamrielicDate, $matches)) {
+                $eventDay = intval($matches[1]);
+                $eventMonth = $matches[2];
+                $eventYear = intval($matches[3]);
+                
+                error_log("Debug - Extracted: day={$eventDay}, month={$eventMonth}, year={$eventYear}");
+                error_log("Debug - Comparing: eventMonth={$eventMonth} with currentMonth={$tamrielicMonths[$month]}");
+                error_log("Debug - Comparing: eventYear={$eventYear} with currentYear={$year}");
+                
+                // Only add the event if it matches the current Tamrielic month and year
+                if ($eventMonth === $tamrielicMonths[$month] && $eventYear == $year) {
+                    error_log("Debug - Adding event to allEventDates");
+                    $allEventDates[] = [
+                        'gregorian' => $dateRow['event_date'],
+                        'tamrielic' => $tamrielicDate,
+                        'gamets' => $dateRow['gamets'],
+                        'localts' => $dateRow['localts'],
+                        'day' => $eventDay
+                    ];
+                }
+            }
+        } else {
+            $allEventDates[] = [
+                'gregorian' => $dateRow['event_date'],
+                'tamrielic' => null,
+                'gamets' => null,
+                'localts' => $dateRow['localts']
+            ];
+        }
     }
+    
+    // Add debug logging for final allEventDates array
+    error_log("Debug - Final allEventDates array: " . print_r($allEventDates, true));
 } else {
     // Handle query error
     echo "<div class='message'>Error fetching event dates: " . pg_last_error($conn) . "</div>";
@@ -363,16 +475,24 @@ if ($allDatesResult) {
  *
  * @param int $month The month for the calendar (1-12).
  * @param int $year The year for the calendar (e.g., 2024).
- * @param array $eventDates Array of dates (YYYY-MM-DD) that have events.
+ * @param array $eventDates Array of dates that have events.
+ * @param bool $useTamrielicTime Whether to use Tamrielic time.
+ * @param string|null $currentGameDate The current game date in Tamrielic format.
  * @return string HTML string representing the calendar.
  */
-function renderCalendar($month, $year, $eventDates) {
+function renderCalendar($month, $year, $eventDates, $useTamrielicTime = false, $currentGameDate = null) {
+    global $tamrielicMonths, $tamrielicMonthToNumber;
+    
+    // Add debug logging at the start of renderCalendar
+    error_log("Debug - renderCalendar called with: month={$month}, year={$year}, useTamrielicTime={$useTamrielicTime}");
+    error_log("Debug - eventDates array: " . print_r($eventDates, true));
+    
     // Days of the week
     $daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     // First day of the month
     $firstDayTimestamp = strtotime("$year-$month-01 UTC");
-    $firstDayOfWeek = date('w', $firstDayTimestamp); // 0 (for Sunday) through 6 (for Saturday)
+    $firstDayOfWeek = date('w', $firstDayTimestamp);
 
     // Number of days in the month
     $daysInMonth = date('t', $firstDayTimestamp);
@@ -400,13 +520,59 @@ function renderCalendar($month, $year, $eventDates) {
         $currentDate = sprintf("%04d-%02d-%02d", $year, $month, $day);
 
         // Check if the current date has an event
-        $hasEvent = in_array($currentDate, $eventDates);
+        $hasEvent = false;
+        $eventDate = null;
+        foreach ($eventDates as $event) {
+            if ($useTamrielicTime) {
+                // For Tamrielic mode, check if the event's day matches
+                error_log("Debug - Checking Tamrielic event: day={$day}, event day={$event['day']}");
+                if (isset($event['day']) && $event['day'] === $day) {
+                    $hasEvent = true;
+                    $eventDate = $event;
+                    error_log("Debug - Found matching Tamrielic event for day {$day}");
+                    break;
+                }
+            } else {
+                // For Gregorian mode, check if the event's Gregorian date matches
+                if ($event['gregorian'] === $currentDate) {
+                    $hasEvent = true;
+                    $eventDate = $event;
+                    break;
+                }
+            }
+        }
 
         // Add a CSS class if there's an event
         $class = $hasEvent ? "has-event" : "";
 
+        // Check if this is the current game date in Tamrielic mode
+        if ($useTamrielicTime && $currentGameDate) {
+            if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $currentGameDate, $matches)) {
+                $currentDay = intval($matches[1]);
+                $currentMonthName = $matches[2];
+                $currentYear = $matches[3];
+                
+                // Convert Tamrielic month name to number
+                $currentMonth = $tamrielicMonthToNumber[$currentMonthName] ?? 0;
+                
+                if ($currentMonth === $month && $currentYear === $year && $currentDay === $day) {
+                    $class .= " current-date";
+                }
+            }
+        }
+
         // Link to view events for the selected date
-        $link = "<a href='?date={$currentDate}&month={$month}&year={$year}'>{$day}</a>";
+        if ($hasEvent) {
+            if ($useTamrielicTime) {
+                // For Tamrielic mode, use the Gregorian date from the event
+                $link = "<a href='?date={$eventDate['gregorian']}&month={$month}&year={$year}&tamrielic=true'>{$day}</a>";
+            } else {
+                // For Gregorian mode, use the current date
+                $link = "<a href='?date={$currentDate}&month={$month}&year={$year}'>{$day}</a>";
+            }
+        } else {
+            $link = "<span>{$day}</span>";
+        }
 
         // Highlight the day if it has an event
         $calendar .= "<td class='{$class}'>{$link}</td>";
@@ -601,6 +767,51 @@ if ($firstRow) {
             padding-left: 10px;
             max-width: 1600px;
         }
+
+        /* Calendar Mode Toggle */
+        .calendar-mode-toggle {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .calendar-mode-toggle .btn-base {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-mode-toggle .btn-primary {
+            background-color: #007bff;
+            color: white;
+            border: 2px solid #0056b3;
+        }
+
+        .calendar-mode-toggle .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: 2px solid #545b62;
+        }
+
+        .calendar-mode-toggle .btn-base:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .calendar td.current-date a {
+            background-color: #28a745 !important;
+            color: white !important;
+            border: 2px solid #1e7e34 !important;
+            font-weight: bold;
+        }
+
+        .calendar td.current-date.has-event a {
+            background-color: #28a745 !important;
+            color: white !important;
+            border: 2px solid #1e7e34 !important;
+        }
     </style>
 </head>
 <body>
@@ -659,39 +870,84 @@ if ($firstRow) {
         renderHeader();
         ?>
 
+        <!-- Add the toggle button before the calendar navigation -->
+        <div class="calendar-mode-toggle">
+            <form method="get" style="display: inline;">
+                <?php
+                // Preserve current month and year in the form
+                if (isset($_GET['month'])) echo "<input type='hidden' name='month' value='" . htmlspecialchars($_GET['month']) . "'>";
+                if (isset($_GET['year'])) echo "<input type='hidden' name='year' value='" . htmlspecialchars($_GET['year']) . "'>";
+                if (isset($_GET['date'])) echo "<input type='hidden' name='date' value='" . htmlspecialchars($_GET['date']) . "'>";
+                ?>
+                <button type="submit" name="tamrielic" value="<?php echo $useTamrielicTime ? 'false' : 'true'; ?>" class="btn-base <?php echo $useTamrielicTime ? 'btn-primary' : 'btn-secondary'; ?>">
+                    <?php echo $useTamrielicTime ? 'Switch to Gregorian Calendar' : 'Switch to Tamrielic Calendar'; ?>
+                </button>
+            </form>
+        </div>
+
         <!-- Calendar Navigation -->
         <div class="calendar-navigation">
             <?php
             // Calculate previous and next month and year
-            $prevMonth = $month - 1;
-            $prevYear = $year;
-            if ($prevMonth < 1) {
-                $prevMonth = 12;
-                $prevYear--;
+            if ($useTamrielicTime) {
+                // For Tamrielic mode, we need to handle the month names
+                $currentMonthNum = $tamrielicMonthToNumber[$currentTamrielicMonth] ?? 1;
+                
+                // Calculate previous month
+                $prevMonthNum = $currentMonthNum - 1;
+                if ($prevMonthNum < 1) {
+                    $prevMonthNum = 12;
+                    $prevYear = $currentTamrielicYear - 1; // Decrement year when going from Morning Star to Evening Star
+                } else {
+                    $prevYear = $currentTamrielicYear;
+                }
+                $prevMonthName = $tamrielicMonths[$prevMonthNum];
+                
+                // Calculate next month
+                $nextMonthNum = $currentMonthNum + 1;
+                if ($nextMonthNum > 12) {
+                    $nextMonthNum = 1;
+                    $nextYear = $currentTamrielicYear + 1; // Increment year when going from Evening Star to Morning Star
+                } else {
+                    $nextYear = $currentTamrielicYear;
+                }
+                $nextMonthName = $tamrielicMonths[$nextMonthNum];
+                
+                // Link to previous month
+                echo "<a href='?month={$prevMonthNum}&year={$prevYear}&tamrielic=true' class='btn-primary'>&laquo; {$prevMonthName}</a>";
+                
+                // Display current month and year
+                echo "<span><b>{$currentTamrielicMonth} 4E {$currentTamrielicYear}</b></span>";
+                
+                // Link to next month
+                echo "<a href='?month={$nextMonthNum}&year={$nextYear}&tamrielic=true' class='btn-primary'>{$nextMonthName} &raquo;</a>";
+            } else {
+                // Original Gregorian calendar navigation
+                $prevMonth = $month - 1;
+                $prevYear = $year;
+                if ($prevMonth < 1) {
+                    $prevMonth = 12;
+                    $prevYear--;
+                }
+
+                $nextMonth = $month + 1;
+                $nextYear = $year;
+                if ($nextMonth > 12) {
+                    $nextMonth = 1;
+                    $nextYear++;
+                }
+
+                echo "<a href='?month={$prevMonth}&year={$prevYear}' class='btn-primary'>&laquo; Previous Month</a>";
+                $monthName = date('F', strtotime("$year-$month-01 UTC"));
+                echo "<span><b>{$monthName} {$year}</b></span>";
+                echo "<a href='?month={$nextMonth}&year={$nextYear}' class='btn-primary'>Next Month &raquo;</a>";
             }
-
-            $nextMonth = $month + 1;
-            $nextYear = $year;
-            if ($nextMonth > 12) {
-                $nextMonth = 1;
-                $nextYear++;
-            }
-
-            // Link to previous month with btn-primary class
-            echo "<a href='?month={$prevMonth}&year={$prevYear}' class='btn-primary'>&laquo; Previous Month</a>";
-
-            // Display current month and year
-            $monthName = date('F', strtotime("$year-$month-01 UTC"));
-            echo "<span><b>{$monthName} {$year}</b></span>";
-
-            // Link to next month with btn-primary class
-            echo "<a href='?month={$nextMonth}&year={$nextYear}' class='btn-primary'>Next Month &raquo;</a>";
             ?>
         </div>
 
         <!-- Render the Calendar -->
         <?php
-        echo renderCalendar($month, $year, $allEventDates);
+        echo renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $currentGameDate);
         ?>
 
         <!-- Event Table -->
