@@ -400,11 +400,17 @@ $allDatesQuery = "
         data,
         people,
         location,
-        to_char(to_timestamp(localts::double precision) AT TIME ZONE 'UTC', 'YYYY-MM-DD') as date
+        to_char(to_timestamp(CAST(localts AS bigint)), 'YYYY-MM-DD') as date,
+        CASE 
+            WHEN " . ($useTamrielicTime ? 'true' : 'false') . " THEN
+                gamets
+            ELSE
+                localts
+        END as sort_field
     FROM {$schema}.eventlog
     WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
     AND gamets > 0
-    ORDER BY gamets ASC
+    ORDER BY sort_field ASC
 ";
 
 error_log("Debug - SQL Query: {$allDatesQuery}");
@@ -415,47 +421,59 @@ if ($allDatesResult) {
     error_log("Debug - Processing events for month: {$tamrielicMonths[$month]}");
     error_log("Debug - Looking for events in year: {$year}");
     
-    // Get the anchor date timestamp
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00');
-    error_log("Debug - Skyrim anchor date timestamp: {$skyrim_start_timestamp}");
-    
     while ($dateRow = pg_fetch_assoc($allDatesResult)) {
-        if (isset($dateRow['gamets']) && $dateRow['gamets'] > 0) {
-            $gamets = floatval($dateRow['gamets']);
-            $f_seconds = $gamets * 0.00864;
-            $ts_time = $skyrim_start_timestamp + intval($f_seconds);
-            
-            // Extract date components using the timestamp
-            $eventDay = intval(date('d', $ts_time));
-            $eventMonth = month2str_skyrim_month(date('m', $ts_time));
-            $eventYear = intval(ltrim(date('Y', $ts_time), '0'));
-            
-            error_log("Debug - Event date components: day={$eventDay}, month={$eventMonth}, year={$eventYear}");
-            error_log("Debug - Comparing with: month={$tamrielicMonths[$month]}, year={$year}");
-            
-            // Only add the event if it matches the current Tamrielic month and year
-            if ($eventMonth === $tamrielicMonths[$month] && $eventYear == $year) {
-                error_log("Debug - ✓ Match found! Adding event for day {$eventDay}");
-                $allEventDates[] = [
-                    'tamrielic_date' => convert_gamets2skyrim_long_date_no_time($gamets),
-                    'tamrielic_month' => $eventMonth,
-                    'gamets' => $gamets,
-                    'localts' => $dateRow['localts'],
-                    'day' => $eventDay,
-                    'type' => $dateRow['type'],
-                    'data' => $dateRow['data'],
-                    'people' => $dateRow['people'],
-                    'location' => $dateRow['location']
-                ];
-            } else {
-                error_log("Debug - ✗ No match: Event month/year ({$eventMonth}/{$eventYear}) doesn't match current ({$tamrielicMonths[$month]}/{$year})");
+        if (!$useTamrielicTime) {
+            // Regular calendar mode - use localts
+            if (isset($dateRow['localts']) && $dateRow['localts'] > 0) {
+                $eventDate = new DateTime("@" . $dateRow['localts']);
+                $eventDate->setTimezone(new DateTimeZone('UTC'));
+                $eventMonth = (int)$eventDate->format('n');
+                $eventYear = (int)$eventDate->format('Y');
+                $eventDay = (int)$eventDate->format('j');
+                
+                if ($eventMonth == $month && $eventYear == $year) {
+                    $allEventDates[] = [
+                        'date' => $dateRow['date'],
+                        'day' => $eventDay,
+                        'localts' => $dateRow['localts'],
+                        'type' => $dateRow['type'],
+                        'data' => $dateRow['data'],
+                        'people' => $dateRow['people'],
+                        'location' => $dateRow['location']
+                    ];
+                }
+            }
+        } else {
+            // Tamrielic calendar mode - use gamets
+            if (isset($dateRow['gamets']) && $dateRow['gamets'] > 0) {
+                $gamets = floatval($dateRow['gamets']);
+                $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00');
+                $f_seconds = $gamets * 0.00864;
+                $ts_time = $skyrim_start_timestamp + intval($f_seconds);
+                
+                $eventDay = intval(date('d', $ts_time));
+                $eventMonth = intval(date('m', $ts_time));
+                $eventYear = intval(ltrim(date('Y', $ts_time), '0'));
+                
+                error_log("Debug - Event found: Month={$eventMonth}, Year={$eventYear}, Day={$eventDay}");
+                error_log("Debug - Looking for: Month={$month}, Year={$year}");
+                
+                if ($eventMonth == $month && $eventYear == $year) {
+                    error_log("Debug - Adding event for day {$eventDay}");
+                    $allEventDates[] = [
+                        'tamrielic_date' => convert_gamets2skyrim_long_date_no_time($gamets),
+                        'tamrielic_month' => $tamrielicMonths[$eventMonth],
+                        'gamets' => $gamets,
+                        'localts' => $dateRow['localts'],
+                        'day' => $eventDay,
+                        'type' => $dateRow['type'],
+                        'data' => $dateRow['data'],
+                        'people' => $dateRow['people'],
+                        'location' => $dateRow['location']
+                    ];
+                }
             }
         }
-    }
-    
-    error_log("Debug - Total events found: " . count($allEventDates));
-    foreach ($allEventDates as $event) {
-        error_log("Debug - Event in array: day={$event['day']}, month={$event['tamrielic_month']}, year={$year}");
     }
 } else {
     echo "<div class='message'>Error fetching event dates: " . pg_last_error($conn) . "</div>";
@@ -477,27 +495,24 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
     // Get the first day of the month
     if ($useTamrielicTime) {
         // For Tamrielic calendar, we calculate based on Last Seed 17th being Sundas
-        $daysInMonth = 30; // All Tamrielic months are 30 days
+        $daysInMonth = get_tamrielic_days_in_month($month);
         $currentMonthName = $tamrielicMonths[$month] ?? 'Last Seed';
         
         // Calculate days since Last Seed 17th
         $daysSinceAnchor = 0;
         if ($month == 8) { // Last Seed
-            // The 17th is Sundas, so count backwards 16 days
-            // This means the 1st of Last Seed is 16 days before a Sundas
-            // If 17th is Sundas (0), then 1st is (0 - 16 + 7) % 7 = 5 (Fredas)
             $firstDay = 5; // 1st of Last Seed is always Fredas
         } else {
             // For other months, calculate based on Last Seed
             if ($month > 8) {
                 // Count forward from Last Seed
                 for ($i = 8; $i < $month; $i++) {
-                    $daysSinceAnchor += 30;
+                    $daysSinceAnchor += get_tamrielic_days_in_month($i);
                 }
             } else {
                 // Count backward from Last Seed
                 for ($i = 8; $i > $month; $i--) {
-                    $daysSinceAnchor -= 30;
+                    $daysSinceAnchor -= get_tamrielic_days_in_month($i);
                 }
             }
             // Add the offset from Last Seed 1st (which is Fredas)
@@ -521,8 +536,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                 // Generate the date string and URL parameters
                 if ($useTamrielicTime) {
                     $dateStr = sprintf("%dth of %s, 4E %d", $dayCount, $currentMonthName, $year);
-                    $urlParams = sprintf("date=%s&month=%d&year=%d&tamrielic=true&day=%d",
-                        urlencode($dateStr),
+                    $urlParams = sprintf("tamrielic=true&month=%d&year=%d&day=%d",
                         $month,
                         $year,
                         $dayCount
@@ -543,6 +557,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                         // Compare Tamrielic dates
                         $eventDay = isset($eventDate['day']) ? $eventDate['day'] : null;
                         if ($eventDay == $dayCount) {
+                            error_log("Debug - Found event for day {$dayCount}");
                             $hasEvents = true;
                             break;
                         }
@@ -955,23 +970,33 @@ if ($firstRow) {
          * @return void
          */
         function renderCalendarModeButtons($useTamrielicTime) {
-            // For Tamrielic mode, only use the tamrielic flag
-            $tamrielicUrl = '?tamrielic=true';
+            global $month, $year;
             
-            // For regular mode, use no parameters
-            $regularUrl = '?';
+            // For regular mode, use current real date if not in Tamrielic mode
+            $regularMonth = $useTamrielicTime ? date('n') : $month;
+            $regularYear = $useTamrielicTime ? date('Y') : $year;
+            
+            // For Tamrielic mode, default to Last Seed 201 if coming from regular mode
+            $tamrielicMonth = !$useTamrielicTime ? 8 : $month;
+            $tamrielicYear = !$useTamrielicTime ? 201 : $year;
             
             echo '<div class="calendar-mode-toggle">';
+            
             // Regular Calendar button
             echo '<form method="get" style="display: inline; margin-right: 10px;">';
+            echo '<input type="hidden" name="month" value="' . $regularMonth . '">';
+            echo '<input type="hidden" name="year" value="' . $regularYear . '">';
             echo '<button type="submit" class="btn-base ' . (!$useTamrielicTime ? 'btn-primary' : 'btn-secondary') . '">Regular Calendar</button>';
             echo '</form>';
             
             // Tamrielic Calendar button
             echo '<form method="get" style="display: inline;">';
             echo '<input type="hidden" name="tamrielic" value="true">';
+            echo '<input type="hidden" name="month" value="' . $tamrielicMonth . '">';
+            echo '<input type="hidden" name="year" value="' . $tamrielicYear . '">';
             echo '<button type="submit" class="btn-base ' . ($useTamrielicTime ? 'btn-primary' : 'btn-secondary') . '">Tamrielic Calendar</button>';
             echo '</form>';
+            
             echo '</div>';
         }
 
