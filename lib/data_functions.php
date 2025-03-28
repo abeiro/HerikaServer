@@ -2181,8 +2181,10 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
 
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
-        Logger::info(DMgetCurrentModelFile()." ".$path."data/CurrentModel_".md5($npcname).".json");
-        copy(DMgetCurrentModelFile(),$path."data/CurrentModel_".md5($npcname).".json");
+        $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
+        Logger::info(DMgetCurrentModelFile()." ".$currentModelFilePath);
+        copy(DMgetCurrentModelFile(),$currentModelFilePath);
+        chmod($currentModelFilePath, "775");
 
         
          // Character Map file
