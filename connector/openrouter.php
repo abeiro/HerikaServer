@@ -113,9 +113,9 @@ class openrouter
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
         
-        
-        
-        $data["max_tokens"]+=0;
+        if (isset($data["max_tokens"])) {
+            $data["max_tokens"]+=0;
+        }
         
         $headers = array(
             'Content-Type: application/json',
