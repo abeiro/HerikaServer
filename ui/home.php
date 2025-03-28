@@ -361,11 +361,97 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 font-size: 0.8em;
             }
         }
+
+        /* Dashboard specific styles */
+        .dashboard-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 0 20px;
+        }
+
+        .dashboard-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: #2d2d2d;
+            color: #f8f9fa;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            border: 1px solid #3a3a3a;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .dashboard-btn:hover {
+            background: #3a3a3a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .dashboard-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .dashboard-btn .btn-icon {
+            margin-right: 8px;
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-buttons {
+                gap: 8px;
+            }
+            
+            .dashboard-btn {
+                padding: 6px 12px;
+                font-size: 0.8em;
+            }
+        }
     </style>
 </head>
 <body>
     <main class="container">
         <h1>📊 Dwemer Dashboard</h1>
+
+        <div class="dashboard-buttons">
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?table=eventlog'" class="dashboard-btn">
+                <span class="btn-icon">📜</span> Events
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?table=log'" class="dashboard-btn">
+                <span class="btn-icon">📋</span> Response Log
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php'" class="dashboard-btn">
+                <span class="btn-icon">🧙</span> Configuration Wizard
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/npc_upload.php'" class="dashboard-btn">
+                <span class="btn-icon">🧑</span> NPC Biography Management
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/oghma_upload.php'" class="dashboard-btn">
+                <span class="btn-icon">📙</span> Oghma Management
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/diarylog.php'" class="dashboard-btn">
+                <span class="btn-icon">📖</span> Diaries
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/adventurelog.php'" class="dashboard-btn">
+                <span class="btn-icon">⚔</span> Adventure Log
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'" class="dashboard-btn">
+                <span class="btn-icon">🔌</span> Server Plugins
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/dwemer-diagnostics.php'" class="dashboard-btn">
+                <span class="btn-icon">🤖</span> Dwemer AI Diagnostics (WIP)
+            </button>
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/tests/apache2err.php'" class="dashboard-btn">
+                <span class="btn-icon">🌲</span> Server Logs
+            </button>
+        </div>
 
         <div class="dashboard-container">
             <?php
@@ -469,9 +555,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 
                 // Get current AI objective information
                 $currentMission = fetch_widget_stats($conn, "
-                    SELECT description
+                    SELECT description, localts, gamets
                     FROM {$schema}.currentmission
-                    ORDER BY id DESC
+                    WHERE description IS NOT NULL
+                    ORDER BY localts DESC
                 ");
                 
                 // Debug logging
@@ -480,17 +567,25 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 $currentMissionContent = "<div class='quest-list'>
                     <h4>Active AI Objectives</h4>
                     <table class='widget-table'>
-                        <tr><th>Description</th></tr>";
+                        <tr><th>Description</th><th>Time (UTC)</th><th><a href='https://en.uesp.net/wiki/Lore:Calendar' target='_blank'>Tamrielic Time</a></th></tr>";
                 
                 if (!isset($currentMission['error']) && !empty($currentMission)) {
                     foreach ($currentMission as $mission) {
+                        $time = new DateTime("@{$mission['localts']}");
+                        $time->setTimezone(new DateTimeZone('UTC'));
+                        $tamrielicTime = '';
+                        if (isset($mission['gamets']) && $mission['gamets'] > 0) {
+                            $tamrielicTime = convert_gamets2skyrim_long_date2($mission['gamets']);
+                        }
                         $currentMissionContent .= "<tr>
                             <td>" . htmlspecialchars($mission['description']) . "</td>
+                            <td>{$time->format('M j, Y H:i')}</td>
+                            <td>{$tamrielicTime}</td>
                         </tr>";
                     }
                 } else {
                     error_log("Current Mission Error or Empty: " . print_r($currentMission, true));
-                    $currentMissionContent .= "<tr><td style='text-align: center;'>No active objectives</td></tr>";
+                    $currentMissionContent .= "<tr><td colspan='3' style='text-align: center;'>No active objectives</td></tr>";
                 }
                 
                 $currentMissionContent .= "</table></div>";
@@ -549,7 +644,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     }
                     $eventsTable .= "<tr>
                         <td>" . htmlspecialchars($event['data']) . "</td>
-                        <td>{$time->format('H:i:s')}</td>
+                        <td>{$time->format('M j, Y H:i')}</td>
                         <td>{$tamrielicTime}</td>
                     </tr>";
                 }
@@ -561,15 +656,20 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
             // 3. Stats Widget
             // First check which tables exist
-            $tableCheck = fetch_widget_stats($conn, "
+            $tableCheckQuery = "
                 SELECT table_name 
                 FROM information_schema.tables 
                 WHERE table_schema = '{$schema}'
-                AND table_name IN ('diarylog', 'oghma', 'eventlog', 'memory_summary', 'book', 'quests', 'conf_opts', 'books', 'currentmission')
-            ");
+                AND table_name IN ('diarylog', 'oghma', 'eventlog', 'memory_summary', 'book', 'quests', 'conf_opts', 'books', 'currentmission')";
+            
+            error_log("Table Check Query: " . $tableCheckQuery);
+            
+            $tableCheck = fetch_widget_stats($conn, $tableCheckQuery);
+            error_log("Table Check Results: " . print_r($tableCheck, true));
             
             if (!isset($tableCheck['error'])) {
                 $existingTables = array_column($tableCheck, 'table_name');
+                error_log("Existing Tables: " . print_r($existingTables, true));
                 
                 // Build the count query only for existing tables
                 $countQueries = [];
@@ -605,19 +705,25 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <div class='widget-stats'>
                                 " . (in_array('diarylog', $existingTables) ? "
                                 <div class='stat-card'>
-                                    <div class='stat-value'>{$stats[0]['diary_entries']}</div>
-                                    <div class='stat-label'>Diary Entries</div>
-                                </div>" : "") . "
+                                    <div class='stat-value'>{$stats[0]['total_events']}</div>
+                                <div class='stat-label'>Total Events</div>
+                                </div>
                                 " . (in_array('oghma', $existingTables) ? "
                                 <div class='stat-card'>
                                     <div class='stat-value'>{$stats[0]['oghma_entries']}</div>
                                     <div class='stat-label'>Oghma Entries</div>
                                 </div>" : "") . "
-                                " . (in_array('eventlog', $existingTables) ? "
+                                " . (in_array('memory_summary', $existingTables) ? "
                                 <div class='stat-card'>
-                                    <div class='stat-value'>{$stats[0]['total_events']}</div>
-                                    <div class='stat-label'>Total Events</div>
-                                </div>
+                                    <div class='stat-value'>{$stats[0]['memory_summaries']}</div>
+                                    <div class='stat-label'>Memory Summaries</div>
+                                </div>" : "") . "
+                                <div class='stat-card'>
+                                    <div class='stat-value'>{$stats[0]['diary_entries']}</div>
+                                    <div class='stat-label'>Diary Entries</div>
+                                </div>" : "") . "
+
+                                " . (in_array('eventlog', $existingTables) ? "
                                 <div class='stat-card'>
                                     <div class='stat-value'>{$stats[0]['total_deaths']}</div>
                                     <div class='stat-label'>Entity Deaths</div>
@@ -625,11 +731,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 <div class='stat-card'>
                                     <div class='stat-value'>{$stats[0]['items_found']}</div>
                                     <div class='stat-label'>Items Found</div>
-                                </div>" : "") . "
-                                " . (in_array('memory_summary', $existingTables) ? "
-                                <div class='stat-card'>
-                                    <div class='stat-value'>{$stats[0]['memory_summaries']}</div>
-                                    <div class='stat-label'>Memory Summaries</div>
                                 </div>" : "") . "
                                 " . (in_array('book', $existingTables) ? "
                                 <div class='stat-card'>
@@ -641,12 +742,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     <div class='stat-value'>{$stats[0]['books_summarized']}</div>
                                     <div class='stat-label'>Books Read</div>
                                 </div>" : "") . "
-                                " . (in_array('quests', $existingTables) ? "
-                                <div class='stat-card'>
-                                    <div class='stat-value'>{$stats[0]['current_quests']}</div>
-                                    <div class='stat-label'>Active Quests</div>
-                                </div>" : "") . "
-                                " . (in_array('combined_npc_templates', $existingTables) ? "" : "") . "
                             </div>
                         ");
                     } else {
