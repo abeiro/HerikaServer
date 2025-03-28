@@ -8,6 +8,7 @@ ini_set('display_errors', '1');
 // Paths
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $enginePath = $rootPath . ".." . DIRECTORY_SEPARATOR;
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 // Database connection details
 $host = 'localhost';
@@ -83,7 +84,7 @@ try {
 
     // Debug: Output first part of SQL content
     $debugSqlPreview = substr($sqlContent, 0, 500);
-    error_log("SQL Preview: " . $debugSqlPreview);
+    Logger::debug("SQL Preview: " . $debugSqlPreview);
 
     // Execute the SQL directly
     $result = pg_query($conn, $sqlContent);

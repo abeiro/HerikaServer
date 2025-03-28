@@ -11,6 +11,7 @@ $webRoot = rtrim($webRoot, '/');
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."logger.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
@@ -27,17 +28,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 $debugPaneLink = false;
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
-if (isset($_SESSION["PROFILE"])) {
-    require_once($_SESSION["PROFILE"]);
-}
-
-$pattern = '/conf_([a-f0-9]+)\.php/';
-preg_match($pattern, basename($_SESSION["PROFILE"]), $matches);
-$hash = $matches[1];    
-
 $db=new sql();
 $res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");
 $last_gamets=$res[0]["last_gamets"]+1;
+
+// Extract hash from profile filename if it exists
+$hash = '';
+if (isset($_SESSION["PROFILE"])) {
+    $pattern = '/conf_([a-f0-9]+)\.php/';
+    if (preg_match($pattern, basename($_SESSION["PROFILE"]), $matches)) {
+        $hash = $matches[1];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -256,6 +258,7 @@ $last_gamets=$res[0]["last_gamets"]+1;
         <h2>💬 CHIM Chat Testing</h2>
         <h3>Current Character: <b><?php echo $GLOBALS["HERIKA_NAME"]; ?></b><h3>
         <h3>This is just for testing AI responses, do not use this as an indication of roleplay quality.</h3>
+        <h4>Currently with the default profile, use any other character instead.</h4>
         <div id='chatWindow'></div>
 
         <form action='index.php' method='post' id="chatForm">

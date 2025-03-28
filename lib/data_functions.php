@@ -416,7 +416,7 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
                 
         $orderedData = array_slice($lastDialogFull, $lastNelements);
         
-        error_log("Using NPC data retriever");
+        Logger::info("Using NPC data retriever");
         
         
         return $orderedData;
@@ -1063,12 +1063,12 @@ function DataGetCurrentTask()
 
     $results = $db->fetchAll("SElECT  distinct name,briefing as description,gamets FROM quests order by gamets desc");
     if (!$results) {
-        error_log("No quests ".__FILE__);
+        Logger::info("No quests ".__FILE__);
         return $data;
     }
     
     if (sizeof($results)>2) {
-        error_log("Too much quests ".__FILE__);
+        Logger::info("Too much quests ".__FILE__);
         return $data;
     }
 
@@ -1145,15 +1145,15 @@ function DataLastKnowDate()
         if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
             return $matches[0][0];
         } else {
-            error_log("DataLastKnowDate: NO match found");
+            Logger::info("DataLastKnowDate: NO match found");
             return "";
         }
     } else { // ok, db is updated with new dts functions
         if (isset($lastLoc[0]["data"]) && (strlen($lastLoc[0]["data"])>0)) {
-            error_log(" dbg DataLastKnowDate: {$lastLoc[0]["data"]} ");
+            Logger::debug("DataLastKnowDate: {$lastLoc[0]["data"]} ");
             return $lastLoc[0]["data"];
         } else {
-            error_log(" ERROR in DataLastKnowDate: NO match found");
+            Logger::error("DataLastKnowDate: NO match found");
         }
     }
     return "";
@@ -1191,7 +1191,7 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
     }
     
     if (!$hold) {
-        $re = '/Context location: ([\w\ \']*)/';
+        $re = '/Context (?:new )?location: ([\w\ \']*)/';
         preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
         $GLOBALS["LAST_KNOW_LOCATION_HUMAN"]=$matches[1][0];
         return $matches[1][0];
@@ -1222,27 +1222,27 @@ function PackIntoSummary()
     $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
 
     $results = $db->query("insert into memory_summary select * from ( 
-								select max(gamets) as gamets_truncated,count(*) as n,
+                                select max(gamets) as gamets_truncated,count(*) as n,
                                 STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
                                 NULL as summary,'dialogue' as classifier,max(uid) as uid
-								from memory_v
-								where 
-								message not like 'Dear Diary%'
-								group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
-							  ) as T where gamets_truncated>$maxRow
-							");
+                                from memory_v
+                                where 
+                                message not like 'Dear Diary%'
+                                group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
+                              ) as T where gamets_truncated>$maxRow
+                            ");
     
-    error_log("Main insert done");
+    Logger::info("Main insert done");
     //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
     
     $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-								select gamets,1,message,message,'diary',uid,speaker
-								from memory
-								where event='diary'
-								and gamets>$maxRow
-							");
+                                select gamets,1,message,message,'diary',uid,speaker
+                                from memory
+                                where event='diary'
+                                and gamets>$maxRow
+                            ");
 
-    error_log("Diary insert done");
+    Logger::info("Diary insert done");
 
     
     $people=$db->fetchAll("SELECT distinct(data) as npc from eventlog where type='addnpc'");
@@ -1425,7 +1425,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         
     } else if ($GLOBALS["MINIME_T5"]) {
         // MiniMe keyword extraction
-        error_log("Using minime-t5 context");
+        Logger::info("Using minime-t5 context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
@@ -1482,13 +1482,13 @@ function DataSearchMemory($rawstring,$npcfilter) {
 
             $kwStringAny=implode(" | ",$result);
             $kwStringAll=implode(" & ",$result);
-            error_log("CONTEXT SEARCH KEYWORDS FROM MINIBOT: ".print_r($result,true));
+            Logger::debug("CONTEXT SEARCH KEYWORDS FROM MINIBOT: ".print_r($result,true));
         }
         
     } 
 
     if (empty($kwStringAll)) {
-        error_log("Using dumb context");
+        Logger::info("Using dumb context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
@@ -1516,7 +1516,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
 
         $kwStringAny=implode(" | ",$result);
         $kwStringAll=implode(" & ",$result);
-        error_log("CONTEXT SEARCH KEYWORDS FROM DUMB: ".print_r($result,true));
+        Logger::debug("CONTEXT SEARCH KEYWORDS FROM DUMB: ".print_r($result,true));
     }
         
     
@@ -1529,7 +1529,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         FROM memory_summary A
         where native_vec @@to_tsquery('$kwStringAny')
         and not (native_vec @@to_tsquery('#Reminiscence'))
-        and companions like '%$npcfilter%'
+        and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
 
         ORDER BY rank_all DESC, rank_any DESC;
         ");
@@ -1621,14 +1621,14 @@ function call_llm() {
         $ERROR_TRIGGERED=true;
         @ob_end_flush();
 
-        error_log(print_r(error_get_last(), true));
+        Logger::error(print_r(error_get_last(), true));
         return false;
     }
 
     // Check for error response code
     $statusCode = method_exists($connectionHandler, 'getHttpStatusCode') ? $connectionHandler->getHttpStatusCode() : 200;
     if ($statusCode >= 300) {
-        error_log("LLM provider error response code: $statusCode");
+        Logger::error("LLM provider error response code: $statusCode");
         return false;
     }
 
@@ -1648,7 +1648,7 @@ function call_llm() {
 
         $tmpData=$connectionHandler->process();
         if ($tmpData==-1 || (isset($GLOBALS["VALIDATE_LLM_OUTPUT_FNCT"]) && !$GLOBALS["VALIDATE_LLM_OUTPUT_FNCT"]($tmpData))) {
-            error_log("Invalid JSON Output.");
+            Logger::warn("Invalid JSON Output.");
             $outputWasValid=false;
             $breakFlag=true;
         }
@@ -1693,7 +1693,7 @@ function call_llm() {
 
                     if ($user_input_after[0]["N"]>0) {
                         die('X-CUSTOM-CLOSE');
-                        error_log("Generation stopped because user_input. ".__LINE__);
+                        Logger::info("Generation stopped because user_input. ".__LINE__);
                         // Abort , user input detected
                     }
 
@@ -1703,7 +1703,7 @@ function call_llm() {
     
     
     if (trim($buffer)) {
-        error_log("REMAINING DATA <$buffer>");
+        Logger::info("REMAINING DATA <$buffer>");
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
         $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
         $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
@@ -1900,7 +1900,7 @@ function GetAnimationHex($mood)
         
     } else if ($mood=="drunk") {
         // No animation :(
-        error_log("Using filter for mood drunk");
+        Logger::info("Using filter for mood drunk");
         $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=0.65';
         return "DrunkStart";
         
@@ -2029,7 +2029,9 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         $cn=$db->escape("Voicetype/$codename");
         $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
         $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
-        $voicetype=explode("\\",$voicetypeString);
+        if ($voicetypeString) {
+            $voicetype=explode("\\",$voicetypeString);
+        }
     
         $xttsid=$db->fetchAll("SELECT xtts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
         $melottsid=$db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
@@ -2057,10 +2059,10 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
         } else {
-            error_log("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
+            Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             if (!isset($npcTemlate[0])) {
-                error_log("No trl found, using standard template");
+                Logger::info("No trl found, using standard template");
                 $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
                 $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
                 $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
@@ -2074,7 +2076,9 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $cn=$db->escape("Nametype/$codename");
             $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
             $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
-            $voicetype=explode("\\",$voicetypeString);
+            if ($voicetypeString) {
+                $voicetype=explode("\\",$voicetypeString);
+            }
         }
 
         // 1. Save the file lines
@@ -2133,6 +2137,15 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         }
 
         // XTTS voiceid override from table. if fails then xtts voicelogic pick
+        $voiceid = isset($voicetype) && sizeof($voicetype) >= 4 ? $voicetype[3] : "";
+        if (!$voiceid && (
+            (empty($xttsid[0]['xtts_voiceid']) && $voicelogic === "voicetype") ||
+            empty($melottsid[0]['melotts_voiceid']) ||
+            empty($xvasynthid[0]['xvasynth_voiceid']))
+        ) {
+            Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
+        }
+
         if (!empty($xttsid[0]['xtts_voiceid'])) {
             file_put_contents(
                 $newFile,
@@ -2141,8 +2154,8 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             );
         } else {
             if ($voicelogic === "voicetype") {
-                file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . strtolower($voicetype[3]) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
-                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . strtolower($voicetype[3]) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
+                file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
+                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
             } else {
                 file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
                 file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
@@ -2153,7 +2166,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             // Use the melotts_voiceid value
             file_put_contents($newFile,'$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
         } else {
-            file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voicetype[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+            file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
         //xvansynth logic from override table
@@ -2162,14 +2175,16 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             file_put_contents($newFile,'$TTS["XVASYNTH"]["model"]=\'' . strtolower($xvasnythid[0]['xvasynth_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
         }
         else {
-            file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_' . strtolower($voicetype[3]).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+            file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_' . strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
 
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
-        error_log(DMgetCurrentModelFile()." ".$path."data/CurrentModel_".md5($npcname).".json");
-        copy(DMgetCurrentModelFile(),$path."data/CurrentModel_".md5($npcname).".json");
+        $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
+        Logger::info(DMgetCurrentModelFile()." ".$currentModelFilePath);
+        copy(DMgetCurrentModelFile(),$currentModelFilePath);
+        chmod($currentModelFilePath, "775");
 
         
          // Character Map file
@@ -2179,7 +2194,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             if (!$characterMap)
                 $characterMap=[];
 
-            error_log("Loading character map: ".sizeof($characterMap));
+            Logger::info("Loading character map: ".sizeof($characterMap));
         }
 
 

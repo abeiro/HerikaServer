@@ -16,7 +16,6 @@ $password = 'dwemer';
 
 // Include game timestamp utilities
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/utils_game_timestamp.php");
-require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
 
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -26,13 +25,52 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "📆CHIM Adventure Log";
+$TITLE = "📔CHIM Diaries";
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
 
 if (!$conn) {
     echo "<div class='message'>Failed to connect to database: " . pg_last_error() . "</div>";
+    exit;
+}
+
+// Handle diary entry updates via POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Get POST data
+    $rowid = filter_input(INPUT_POST, 'rowid', FILTER_VALIDATE_INT);
+    $topic = filter_input(INPUT_POST, 'topic', FILTER_SANITIZE_STRING);
+    $content = filter_input(INPUT_POST, 'content', FILTER_SANITIZE_STRING);
+
+    // Validate required fields
+    if (!$rowid || !$topic || !$content) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing required fields']);
+        exit;
+    }
+
+    // Update the diary entry
+    $query = "
+        UPDATE {$schema}.diarylog 
+        SET 
+            topic = $1,
+            content = $2
+        WHERE rowid = $3
+    ";
+
+    $result = pg_query_params($conn, $query, [
+        $topic,
+        $content,
+        $rowid
+    ]);
+
+    if ($result) {
+        http_response_code(200);
+        echo json_encode(['success' => true]);
+    } else {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to update entry: ' . pg_last_error($conn)]);
+    }
     exit;
 }
 
@@ -43,116 +81,53 @@ function sanitize_int($value, $default) {
 }
 
 /**
- * Function to process a single event row into formatted data.
+ * Function to process a single diary row into formatted data.
  *
  * @param array $row The associative array representing a database row.
  * @param bool $for_csv Indicates whether the output is for CSV (true) or HTML (false).
- * @return array|null An associative array with keys: Context, Nearby People, Location & Tamrielic Time, Time(UTC).
+ * @return array|null An associative array with formatted data.
  */
-function process_event_row($row, $for_csv = false) {
-    // **Format 'localts' into a readable UTC date format**
+function process_diary_row($row, $for_csv = false) {
+    // Format 'localts' into a readable UTC date format
     $timestamp = (int)$row['localts'];
 
     if ($timestamp > 0) {
-        // Using DateTime for better control
-        $dt = new DateTime("@$timestamp"); // The @ symbol tells DateTime to interpret as Unix timestamp
+        $dt = new DateTime("@$timestamp");
         $dt->setTimezone(new DateTimeZone('UTC'));
         $timeDisplay = $dt->format('d-m-Y H:i:s');
     } else {
         $timeDisplay = $row['localts'];
     }
 
-    // Add debug logging for gamets conversion
-    if (isset($row['gamets']) && $row['gamets'] > 0) {
-        error_log("Debug - Raw gamets: " . $row['gamets']);
-        error_log("Debug - Converted time: " . convert_gamets2skyrim_long_date2($row['gamets']));
-        error_log("Debug - Raw location: " . $row['location']);
-    }
+    // Process tags
+    $tags = !empty($row['tags']) ? trim($row['tags'], '|') : '';
+    $tagsList = !empty($tags) ? explode('|', $tags) : [];
+    $formattedTags = implode(', ', array_filter($tagsList));
 
-    // **Step 1: Check the 'type' column**
-    $type = $row['type'];
+    // Process people
+    $people = !empty($row['people']) ? trim($row['people'], '|') : '';
+    $peopleList = !empty($people) ? explode('|', $people) : [];
+    $formattedPeople = implode(', ', array_filter($peopleList));
 
-    // Define the allowed types
-    $allowedTypes = ['im_alive', 'chat', 'infoaction','rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend'];
-
-    // If the type is not in the allowed list, return null to skip
-    if (!in_array($type, $allowedTypes)) {
-        return null;
-    }
-
-    // **Raw values**
-    $rawData = $row['data'];
-    $rawPeople = $row['people'];
-    $rawLocation = $row['location'];
-    $rawLocalts = $row['localts']; // Original localts timestamp
-
-    // Step 1: Clean the raw location by removing surrounding parentheses
-    $cleanLocation = trim($rawLocation, "()");
-
-    // Step 2: Initialize the variable to hold the combined display
-    $locationDisplay = '';
-
-    // Step 3: Extract the Date and Time
-    // Updated regex to match 'current date' followed by multiple date components
-    $datePattern = '/current date\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^,]+)/i';
-    if (preg_match($datePattern, $cleanLocation, $dateMatch)) {
-        // Combine the captured groups to form the complete date string
-        // $dateMatch[1] = Loredas
-        // $dateMatch[2] = 11:15 PM
-        // $dateMatch[3] = 14th of First Seed
-        // $dateMatch[4] = 4E 202
-        $dateDisplay = trim("{$dateMatch[1]}, {$dateMatch[2]}, {$dateMatch[3]}, {$dateMatch[4]}");
-    } else {
-        // Handle cases where date/time information is missing
-        $dateDisplay = 'Unknown Date';
-    }
-
-    // Step 4: Extract the Location and Combine with Date/Time
-    // Updated regex to match 'Context new location:'
-    $locationPattern = '/Context new location:\s*([^,]+)/i';
-    if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
-        // Successfully matched 'Context new location'
-        $location = trim($locationMatch[1]);
-        $locationDisplay = "{$location} - {$dateDisplay}";
-    } else {
-        // Fallback to 'Hold' if 'Context new location' is not found
-        $holdPattern = '/Hold:\s*([^,]+)/i';
-        if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
-            $hold = trim($holdMatch[1]);
-            $locationDisplay = "{$hold} - {$dateDisplay}";
-        } else {
-            // Fallback to the entire cleanLocation if both extractions fail
-            $locationDisplay = "{$cleanLocation} - {$dateDisplay}";
-        }
-    }
-
-    // **Transform people**
-    // Remove leading/trailing pipes and spaces, then split by '|'
-    $cleanPeople = trim($rawPeople, "|() ");
-    $peopleList = array_filter(explode("|", $cleanPeople), 'strlen');
-    $people = implode(", ", $peopleList);
-
-    // Get the speaker (first person in the list) for row grouping
-    $speaker = !empty($peopleList) ? $peopleList[0] : 'Narrator';
-
-    // Use raw data directly for Context, just remove location context if present
-    $data = preg_replace('/\(Context location:[^)]+\)/i', '', $rawData);
-    $data = trim($data);
+    // Clean and format location
+    $location = trim($row['location'], "()");
 
     if (!$for_csv) {
-        // **Escape HTML for safety only if not exporting to CSV**
-        $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
-        $people = htmlspecialchars($people, ENT_QUOTES, 'UTF-8');
-        $locationDisplay = htmlspecialchars($locationDisplay, ENT_QUOTES, 'UTF-8');
+        // Escape HTML for safety
+        $row['topic'] = htmlspecialchars($row['topic'], ENT_QUOTES, 'UTF-8');
+        $row['content'] = htmlspecialchars($row['content'], ENT_QUOTES, 'UTF-8');
+        $formattedTags = htmlspecialchars($formattedTags, ENT_QUOTES, 'UTF-8');
+        $formattedPeople = htmlspecialchars($formattedPeople, ENT_QUOTES, 'UTF-8');
+        $location = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
         $timeDisplay = htmlspecialchars($timeDisplay, ENT_QUOTES, 'UTF-8');
     }
 
-    // Return the processed data
+    // Return the processed data with separate Topic and Content
     return [
-        'Context' => $data,
-        'Speaker' => $speaker, // Keep speaker for row grouping
-        'Nearby People' => $people,
-        'Location & Tamrielic Time' => $locationDisplay,
+        'Topic' => $row['topic'],
+        'Content' => $row['content'],
+        'Nearby People' => $formattedPeople,
+        'Location & Tamrielic Time' => $location,
         'Time(UTC)' => $timeDisplay
     ];
 }
@@ -182,11 +157,10 @@ function handle_csv_export($conn, $schema) {
                         exit;
                     }
                 } else {
-                    // Get the most recent date from the eventlog
+                    // Get the most recent date from the diarylog
                     $latestDateQuery = "
                         SELECT to_char(to_timestamp(localts::double precision) AT TIME ZONE 'UTC', 'YYYY-MM-DD') as event_date
-                        FROM {$schema}.eventlog
-                        WHERE type IN ('im_alive', 'chat','infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+                        FROM {$schema}.diarylog
                         ORDER BY localts DESC
                         LIMIT 1
                     ";
@@ -217,18 +191,16 @@ function handle_csv_export($conn, $schema) {
 
                 // Prepare the SQL query with explicit casting to double precision
                 $query = "
-                    SELECT type, data, people, location, localts, gamets
-                    FROM {$schema}.eventlog
-                    WHERE type IN ('im_alive', 'chat','infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-                    AND to_timestamp(localts::double precision) BETWEEN to_timestamp($startOfDay) AND to_timestamp($endOfDay)
+                    SELECT topic, content, tags, people, location, localts, gamets
+                    FROM {$schema}.diarylog
+                    WHERE localts >= $startOfDay AND localts <= $endOfDay
                     ORDER BY localts ASC
                 ";
             } elseif ($exportType === 'all_csv') {
                 // Export CSV for all data without date filtering
                 $query = "
-                    SELECT type, data, people, location, localts, gamets
-                    FROM {$schema}.eventlog
-                    WHERE type IN ('im_alive', 'chat','infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
+                    SELECT topic, content, tags, people, location, localts, gamets
+                    FROM {$schema}.diarylog
                     ORDER BY localts ASC
                 ";
             }
@@ -260,14 +232,14 @@ function handle_csv_export($conn, $schema) {
             $output = fopen('php://output', 'w');
 
             // Output the column headings matching the table
-            fputcsv($output, ['Context', 'Nearby People', 'Location & Tamrielic Time', 'Time(UTC)']);
+            fputcsv($output, ['Topic', 'Content', 'Author', 'Tamrielic Time', 'Time(UTC)']);
 
             // Initialize previous location for tracking changes
             $previousLocation = null;
 
             // Fetch and process each row, then write to the CSV
             while ($row = pg_fetch_assoc($result)) {
-                $processed_row = process_event_row($row, true); // true indicates CSV context
+                $processed_row = process_diary_row($row, true); // true indicates CSV context
                 if ($processed_row !== null) {
                     // Check for location change
                     if ($previousLocation !== null && $previousLocation !== $processed_row['Location & Tamrielic Time']) {
@@ -285,17 +257,24 @@ function handle_csv_export($conn, $schema) {
                             }
                         }
                         // Write location change as a special row
-                        fputcsv($output, ['', '', 'Location Change: ' . $locationName, '']);
+                        fputcsv($output, ['Location Change:', $locationName, '', '', '']);
                     }
                     
                     // Update previous location
                     $previousLocation = $processed_row['Location & Tamrielic Time'];
 
+                    // Convert gamets to Tamrielic time for the CSV
+                    $tamrielicTime = "";
+                    if (isset($row['gamets']) && $row['gamets'] > 0) {
+                        $tamrielicTime = convert_gamets2skyrim_long_date2($row['gamets']);
+                    }
+
                     // Write the actual event row
                     fputcsv($output, [
-                        $processed_row['Context'],
+                        $processed_row['Topic'],
+                        $processed_row['Content'],
                         $processed_row['Nearby People'],
-                        $processed_row['Location & Tamrielic Time'],
+                        $tamrielicTime,
                         $processed_row['Time(UTC)']
                     ]);
                 }
@@ -396,13 +375,33 @@ if ($useTamrielicTime) {
     }
 }
 
+// Get all diary entries for the current month to highlight calendar days
+$allEventDates = array();
+if ($useTamrielicTime) {
+    $sql = "SELECT DISTINCT 
+            EXTRACT(DAY FROM gamets) as day,
+            EXTRACT(MONTH FROM gamets) as month,
+            EXTRACT(YEAR FROM gamets) as year
+            FROM {$schema}.diarylog 
+            WHERE EXTRACT(MONTH FROM gamets) = $month 
+            AND EXTRACT(YEAR FROM gamets) = $year";
+} else {
+    $sql = "SELECT DISTINCT 
+            TO_CHAR(localts AT TIME ZONE 'UTC', 'YYYY-MM-DD') as date
+            FROM {$schema}.diarylog 
+            WHERE EXTRACT(MONTH FROM localts AT TIME ZONE 'UTC') = $month 
+            AND EXTRACT(YEAR FROM localts AT TIME ZONE 'UTC') = $year";
+}
+
 // Prepare the SQL query with explicit casting to double precision
 $allDatesQuery = "
     SELECT DISTINCT 
+        rowid,
         gamets,
         localts,
-        type,
-        data,
+        topic,
+        content,
+        tags,
         people,
         location,
         to_char(to_timestamp(CAST(localts AS bigint)), 'YYYY-MM-DD') as date,
@@ -412,9 +411,8 @@ $allDatesQuery = "
             ELSE
                 localts
         END as sort_field
-    FROM {$schema}.eventlog
-    WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-    AND gamets > 0
+    FROM {$schema}.diarylog
+    WHERE gamets > 0
     ORDER BY sort_field ASC
 ";
 
@@ -666,10 +664,9 @@ if ($shouldFetchEvents) {
 
     // Modify the SQL query to fetch records for the selected day with explicit casting
     $query = "
-        SELECT type, data, people, location, localts, gamets
-        FROM {$schema}.eventlog
-        WHERE type IN ('im_alive', 'chat', 'infoaction', 'rpg_word', 'rpg_lvlup', 'rechat', 'quest', 'itemfound', 'inputtext', 'goodnight', 'goodmorning', 'ginputtext', 'death', 'combatendmighty', 'combatend')
-        AND (
+        SELECT rowid, topic, content, tags, people, location, localts, gamets
+        FROM {$schema}.diarylog
+        WHERE (
             CASE 
                 WHEN " . ($useTamrielicTime ? 'true' : 'false') . " THEN
                     -- For Tamrielic mode, we'll filter in PHP instead of SQL
@@ -697,7 +694,7 @@ if ($shouldFetchEvents) {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
-    <title>📆CHIM Adventure Log</title>
+    <title>📔CHIM Diary Log</title>
     <style>
         /* Adventure Log specific styles */
         .calendar {
@@ -814,6 +811,10 @@ if ($shouldFetchEvents) {
             gap: 10px;
         }
 
+        .csv-buttons button {
+            min-width: 200px; /* Set minimum width for consistency */
+        }
+
         /* Event table specific styles */
         .event-table {
             width: 100%;
@@ -837,8 +838,9 @@ if ($shouldFetchEvents) {
         }
 
         /* Column widths for event table */
-        .col-context { width: 55%; }
-        .col-people { width: 20%; }
+        .col-topic { width: 15%; }
+        .col-content { width: 50%; }
+        .col-people { width: 10%; }
         .col-gamets { width: 15%; }
         .col-time { width: 10%; font-family: monospace; font-size: 0.9em; }
 
@@ -909,23 +911,172 @@ if ($shouldFetchEvents) {
             border: 2px solid #1e7e34 !important;
         }
 
-        .event-table tr {
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #2c2c2c;
+            margin: 15vh auto;
+            padding: 30px;
+            border: 1px solid #555;
+            width: 90%;
+            max-width: 1200px;
+            border-radius: 8px;
+            position: relative;
+            color: #f8f9fa;
+        }
+
+        .close {
+            color: #aaa;
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            margin-top: 20px;
+        }
+
+        .edit-form label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 5px; /* Added margin bottom */
+            color: #f8f9fa;
+            font-size: 1.1em; /* Increased font size */
+        }
+
+        .edit-form input[type="text"],
+        .edit-form textarea {
+            width: 100%;
+            padding: 12px; /* Increased padding */
+            margin-top: 5px;
+            background-color: #3a3a3a;
+            border: 1px solid #555;
+            color: #f8f9fa;
+            border-radius: 4px;
+            font-size: 1.1em; /* Increased font size */
+        }
+
+        .edit-form input[type="text"] {
+            height: 40px; /* Increased height for topic field */
+        }
+
+        .edit-form textarea {
+            min-height: 400px; /* Significantly increased from 150px */
+            resize: vertical;
+            line-height: 1.5; /* Better line spacing for readability */
+            font-family: inherit; /* Use the same font as the rest of the site */
+        }
+
+        .entry-cell {
+            cursor: pointer;
             transition: background-color 0.2s;
+            vertical-align: top;
+            padding: 12px;
+            word-break: break-word;
         }
 
-        .event-table tr.speaker-even {
-            background-color: #1a1a1a;  /* Original black color */
+        .entry-cell:hover {
+            background-color: #444444;
         }
 
-        .event-table tr.speaker-odd {
-            background-color: #2d2d2d;  /* Original grey color */
+        /* Topic cell specific styles */
+        .col-topic {
+            font-weight: bold;
+            color: #add8e6; /* Light blue color for topics */
         }
     </style>
 </head>
 <body>
+    <!-- Add modal HTML -->
+    <div id="entryModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Diary Entry</h2>
+            <div class="modal-body">
+                <form id="editForm" class="edit-form">
+                    <input type="hidden" id="entryId" name="rowid">
+                    
+                    <label for="topic">Topic:</label>
+                    <input type="text" id="topic" name="topic" required>
+                    
+                    <label for="content">Content:</label>
+                    <textarea id="content" name="content" required></textarea>
+                    
+                    <button type="submit" class="btn-save">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functionality
+        const modal = document.getElementById('entryModal');
+        const closeBtn = document.getElementsByClassName('close')[0];
+        const editForm = document.getElementById('editForm');
+
+        // Close modal when clicking X or outside
+        closeBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Function to open modal with entry data
+        function openEntryModal(entryData) {
+            document.getElementById('entryId').value = entryData.rowid;
+            document.getElementById('topic').value = entryData.topic;
+            document.getElementById('content').value = entryData.content;
+            modal.style.display = 'block';
+        }
+
+        // Handle form submission
+        editForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(editForm);
+            
+            try {
+                const response = await fetch('diarylog.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    modal.style.display = 'none';
+                    // Reload the page to show updated content
+                    window.location.reload();
+                } else {
+                    alert('Error updating entry');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating entry');
+            }
+        };
+    </script>
+
     <main class="container">
-        <h1>📆CHIM Adventure Log</h1>
-        <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
+        <h1>📔CHIM Diaries</h1>
+        <h3>View and edit any CHIM diary entry.</h3>
 
         <?php
         function renderHeader() {
@@ -949,7 +1100,7 @@ if ($shouldFetchEvents) {
             foreach ($currentCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
             }
-            echo "<button type='submit' class='btn-base btn-save'>Download Current Date</button>";
+            echo "<button type='submit' class='btn-save'>Download Today's Diaries</button>";
             echo "</form>";
 
             $allCsvParams = ['export' => 'all_csv'];
@@ -966,7 +1117,7 @@ if ($shouldFetchEvents) {
             foreach ($allCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
             }
-            echo "<button type='submit' class='btn-base btn-save'>Download Entire Adventure Log</button>";
+            echo "<button type='submit' class='btn-save'>Download All Diary Entries</button>";
             echo "</form>";
 
             echo "</div>";
@@ -1074,14 +1225,16 @@ if ($shouldFetchEvents) {
         <!-- Event Table -->
         <table class="event-table" id="event-table">
             <colgroup>
-                <col class="col-context">
+                <col class="col-topic">
+                <col class="col-content">
                 <col class="col-people">
                 <col class="col-gamets">
                 <col class="col-time">
             </colgroup>
             <tr>
-                <th>Context</th>
-                <th>Nearby People</th>
+                <th>Topic</th>
+                <th>Content</th>
+                <th>Author</th>
                 <th><a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a></th>
                 <th>Time (UTC)</th>
             </tr>
@@ -1092,50 +1245,21 @@ if ($shouldFetchEvents) {
 
                 // Initialize variables
                 $hasEvents = false;
-                $currentSpeaker = null;
-                $speakerGroup = 0;
-                $previousLocation = null;
-                $locationHeader = '';
-
-                // Get the first row to check initial location
-                $firstRow = pg_fetch_assoc($result);
-                if ($firstRow) {
-                    $firstProcessedRow = process_event_row($firstRow, false);
-                    if ($firstProcessedRow !== null) {
-                        // Extract just the location name without date/time
-                        $locationPattern = '/Context new location:\s*([^,]+)/i';
-                        $cleanLocation = trim($firstRow['location'], "()");
-                        if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
-                            $initialLocation = trim($locationMatch[1]);
-                        } else {
-                            $holdPattern = '/Hold:\s*([^,]+)/i';
-                            if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
-                                $initialLocation = trim($holdMatch[1]);
-                            } else {
-                                $initialLocation = $cleanLocation;
-                            }
-                        }
-                        $locationHeader = "<tr class='location-change-row'><td colspan='4'>Current Location: {$initialLocation}</td></tr>";
-                    }
-                    // Reset the result pointer again for the main loop
-                    pg_result_seek($result, 0);
-                }
 
                 // Buffer the output
                 ob_start();
 
                 // Fetch and display each row in the table
                 while ($row = pg_fetch_assoc($result)) {
-                    $processed_row = process_event_row($row, false);
+                    $processed_row = process_diary_row($row, false);
                     if ($processed_row === null) {
                         continue;
                     }
 
                     // Extract processed data
-                    $data = $processed_row['Context'];
-                    $speaker = $processed_row['Speaker'];
+                    $topic = htmlspecialchars_decode($row['topic']);
+                    $content = htmlspecialchars_decode($row['content']);
                     $people = $processed_row['Nearby People'];
-                    $location = $processed_row['Location & Tamrielic Time'];
                     $timeDisplay = $processed_row['Time(UTC)'];
                     
                     // For Tamrielic mode, check if the event matches the selected date
@@ -1154,48 +1278,7 @@ if ($shouldFetchEvents) {
                     }
                     
                     // We have at least one event to display
-                    if (!$hasEvents) {
-                        $hasEvents = true;
-                        // Output the location header only when we have events
-                        echo $locationHeader;
-                    }
-                    
-                    // Check for location change
-                    if ($previousLocation !== null && $previousLocation !== $location) {
-                        // Extract just the location name without date/time for the divider
-                        $locationPattern = '/Context new location:\s*([^,]+)/i';
-                        $cleanLocation = trim($row['location'], "()");
-                        if (preg_match($locationPattern, $cleanLocation, $locationMatch)) {
-                            $locationName = trim($locationMatch[1]);
-                        } else {
-                            $holdPattern = '/Hold:\s*([^,]+)/i';
-                            if (preg_match($holdPattern, $cleanLocation, $holdMatch)) {
-                                $locationName = trim($holdMatch[1]);
-                            } else {
-                                $locationName = $cleanLocation;
-                            }
-                        }
-                        // Output location change row with simplified location
-                        echo "<tr class='location-change-row'><td colspan='4'>Location Change: {$locationName}</td></tr>";
-                    }
-                    
-                    // Update previous location
-                    $previousLocation = $location;
-                    
-                    // Check if speaker changed
-                    // Extract speaker from the data content
-                    $speakerFromData = '';
-                    if (preg_match('/^([^:]+):/', $data, $matches)) {
-                        $speakerFromData = trim($matches[1]);
-                    }
-                    
-                    // Use extracted speaker if available, otherwise use the one from people list
-                    $effectiveSpeaker = $speakerFromData ?: $speaker;
-                    
-                    if ($currentSpeaker !== $effectiveSpeaker) {
-                        $currentSpeaker = $effectiveSpeaker;
-                        $speakerGroup++;
-                    }
+                    $hasEvents = true;
                     
                     // Convert timestamp to game time
                     $gameTimeDisplay = "";
@@ -1203,21 +1286,34 @@ if ($shouldFetchEvents) {
                         $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['gamets']);
                     }
 
-                    // Output the table row with speaker-based styling
-                    $rowClass = ($speakerGroup % 2 === 0) ? 'speaker-even' : 'speaker-odd';
-                    echo "<tr class='{$rowClass}'><td>{$data}</td><td>{$people}</td><td>{$gameTimeDisplay}</td><td>{$timeDisplay}</td></tr>";
+                    // Output the table row with clickable cells for both topic and content
+                    echo "<tr>
+                            <td class='entry-cell' onclick='openEntryModal(" . json_encode([
+                                'rowid' => $row['rowid'],
+                                'topic' => $topic,
+                                'content' => $content
+                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$topic}</td>
+                            <td class='entry-cell' onclick='openEntryModal(" . json_encode([
+                                'rowid' => $row['rowid'],
+                                'topic' => $topic,
+                                'content' => $content
+                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$content}</td>
+                            <td>{$people}</td>
+                            <td>{$gameTimeDisplay}</td>
+                            <td>{$timeDisplay}</td>
+                          </tr>";
                 }
 
                 // If no events were found, display a message
                 if (!$hasEvents) {
-                    echo "<tr><td colspan='4' style='text-align: center; padding: 20px;'>No events found for this date.</td></tr>";
+                    echo "<tr><td colspan='5' style='text-align: center; padding: 20px;'>No diary entries found for this date.</td></tr>";
                 }
 
                 // Get the buffered content
                 $tableContent = ob_get_clean();
                 echo $tableContent;
             } else {
-                echo "<tr><td colspan='4' style='text-align: center; padding: 20px;'>Select a date to view events.</td></tr>";
+                echo "<tr><td colspan='5' style='text-align: center; padding: 20px;'>Select a date to view diary entries.</td></tr>";
             }
             ?>
         </table>

@@ -60,7 +60,7 @@ function tts($textString, $mood , $stringforhash) {
 			'sessionId'=> 12345//$responseJ["session_id"]
 		);
 		
-		error_log("Using voice: $voiceFile");
+		Logger::info("Using voice: $voiceFile");
 		
 		$options = array(
 			'http' => array(

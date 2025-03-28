@@ -95,7 +95,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </a>
                         </li>-->
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG! ARE YOU SURE???')">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG! EVENTS ARE USED FOR CONTEXT. ARE YOU SURE?')">
                             Delete All Events
                         </a>
                         </li>
@@ -104,12 +104,12 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <!-- Second Category Header -->
                         <li><h6 class="dropdown-header">Response Log Management</h6></li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?cleanlog=true" title="Clean AI Log table" onclick="return confirm('This will clear all the entries in the AI Log. ARE YOU SURE?')">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?cleanlog=true" title="Clean AI Log table." onclick="return confirm('This will clear all the entries in the Response Log. ARE YOU SURE?')">
                             Clean Response Log
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?export=log" title="Export AI Log table (debugging purposes)." target="_blank">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?export=log" title="Export Response Log (debugging purposes)." target="_blank">
                             Export Response Log
                         </a>
                         </li>
@@ -129,7 +129,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Character Profiles</h6></li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_conf.php" target="_blank" title="Exports current character profiles into a ZIP file.">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_conf.php" target="_blank" title="Exports all current character profiles into a ZIP file.">
                             Backup Character Profiles
                         </a>
                         </li>
@@ -139,12 +139,12 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/delete_conf.php" target="_blank" title="Deletes all character profiles apart from the default." onclick="return confirm('This will delete ALL profiles. LOCKED ONES WILL NOT BE DELETED! You can not reverse this operation. ARE YOU SURE???')">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/delete_conf.php" target="_blank" title="Deletes all character profiles apart from  locked ones or the default." onclick="return confirm('This will delete ALL profiles. We recommend you backup your profiles first. Locked profiles will not be deleted. You can not reverse this operation, ARE YOU SURE?')">
                             Delete All Character Profiles
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="#" onclick="regenerateCharacterMap(); return false;" title="Use only if you deleted character_map.json!">
+                        <a class="dropdown-item" href="#" onclick="regenerateCharacterMap(); return false;" title="Regenerates character map if profiles become out of sync.">
                             Regenerate Character Map
                         </a>
                         </li>
@@ -152,7 +152,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Database Operations</h6></li>
                         <li>
-                        <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User/password is 'dwemer'">
+                        <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User & Password is 'dwemer'">
                             <strong>Database Manager (Both User & Password = dwemer)</strong>
                         </a>
                         </li>
@@ -218,12 +218,12 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/conf_wizard.php">Configuration Wizard</a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/npc_upload.php" title="Edit NPC biographies entries">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/npc_upload.php" title="Edit NPC biographies entries.">
                             NPC Biography Management
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/oghma_upload.php" title="Edit Oghma Infinium entries">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/oghma_upload.php" title="Edit Oghma Infinium entries.">
                             Oghma Infinium Management
                         </a>
                         </li>
@@ -242,12 +242,12 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">TTS Voice Management</h6></li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS FastAPI voices"rel="noopener noreferrer">
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS FastAPI voices."rel="noopener noreferrer">
                             CHIM XTTS Management
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices" target="_blank">
+                        <a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices." target="_blank">
                             Mimic3 Management
                         </a>
                         </li>
@@ -292,6 +292,9 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php">Server Logs</a>
                     </li>
                     <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/dwemer-diagnostics.php">Dwemer AI Diagnostics</a>
+                    </li>
+                    <li>
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
                     </li>
                     <!--<li>
@@ -304,7 +307,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
                     <ul class="dropdown-menu">
                         <li><h6 class="dropdown-header">Immersion Tools</h6></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/diary" target="_blank">AI Diary</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/diarylog.php">CHIM Diaries</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/adventurelog.php">Adventure Log</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/chat-testing.php">Chat Testing</a></li>
                         <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
@@ -342,7 +345,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         " 
                         onmouseover="this.style.backgroundColor='#c82333';"
                         onmouseout="this.style.backgroundColor='#dc3545';"
-                        onclick="if (confirm('This will wipe and reinstall the entire database!!! ARE YOU SURE?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }"
+                        onclick="if (confirm('This will wipe and reinstall the entire database to the default configuration. ARE YOU SURE?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }"
                         title="Fully reinstalls the CHIM Database.">
                             <strong>Factory Reset Server Database</strong>
                         </button>

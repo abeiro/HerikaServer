@@ -147,7 +147,7 @@ class openrouterjson
         foreach ($contextDataOrig as $n=>$element) {
             
             if (!is_array($element)) {
-                error_log("Warning: $n=>$element was not an array");
+                Logger::debug("$n=>$element was not an array");
                 continue;
 
             }
@@ -161,7 +161,7 @@ class openrouterjson
                         if (strpos($element["content"], "##") === false) { //is not memory mark
                             $this->_websearch = false; //previous web search was found in context history, do not repeat the search 
                             $GLOBALS["FUNCTIONS_ARE_ENABLED"] = $this->_webbackup_func;
-                            error_log(" - dbg - online FALSE, {$n}/{$n_ctxsize} line: ".$element["content"]);
+                            Logger::debug("online FALSE, {$n}/{$n_ctxsize} line: ".$element["content"]);
                         }
                     }
                 }
@@ -172,7 +172,7 @@ class openrouterjson
                     $this->_websearch = true;
                     $GLOBALS["FUNCTIONS_ARE_ENABLED"] = false;
                     $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] = false;
-                    error_log(" - dbg - online TRUE, {$n}/{$n_ctxsize} src: " . $this->_websearch_text);
+                    Logger::debug("online TRUE, {$n}/{$n_ctxsize} src: " . $this->_websearch_text);
                 }
             } // --- end online search 
             
@@ -201,7 +201,7 @@ class openrouterjson
                     
                 } else if ($element["role"]=="user") {
                     if (empty($element["content"])) {
-                        error_log("Empty element[content]".__FILE__." ".__LINE__);
+                        Logger::debug("Empty element[content]".__FILE__." ".__LINE__);
                         //unset($contextData[$n]);
                     } else
                         $contextDataCopy[]=$element;
@@ -414,7 +414,7 @@ class openrouterjson
         $this->_reasoning = $this->isReasoningModel($this->_model);
         if ($this->_reasoning) { // add parameter to hide <think> content
             $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
-            error_log(" dbg reasoning " . $this->_model);
+            Logger::debug(" dbg reasoning " . $this->_model);
         }
 
         if ($this->_websearch) { // online search request 
@@ -500,7 +500,7 @@ class openrouterjson
         $this->primary_handler = $this->send($url, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
-            error_log(print_r($error,true));
+            Logger::error(print_r($error,true));
 
             if ($GLOBALS["db"]) {
                 $GLOBALS["db"]->insert(
@@ -586,12 +586,12 @@ class openrouterjson
         if ($this->isDone()) {
             if (!$this->_buffer || empty(trim($this->_buffer))) {
                 $line = "";    
-                error_log("LLM didn't output anything");
+                Logger::warn("LLM didn't output anything");
             }
         } else {
             if ((time()-$GLOBALS["patch_openrouter_timeout"])>60) {
                 $this->_rawbuffer.="Error, timeout when receiving data from LLM";
-                error_log("Error, timeout when receiving data from LLM");
+                Logger::error("Error, timeout when receiving data from LLM");
                 $this->_forcedClose=true;
                 return -1;
             }
@@ -603,7 +603,7 @@ class openrouterjson
         
         // Check for error response
         if (strpos($line, '"error"') !== false) {
-            error_log("Error response from LLM: $line");
+            Logger::error("Error response from LLM: $line");
             return -1;
         }
         
@@ -713,7 +713,7 @@ class openrouterjson
         global $alreadysent;
 
         if ($this->_functionName) {
-            error_log("Old function scheme");
+            Logger::info("Old function scheme");
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
                 $parameter = current($parameterArr); // Only support for one parameter
@@ -726,7 +726,7 @@ class openrouterjson
                 }
 
                 $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             } else 
                 return null;
         } else {
@@ -747,19 +747,19 @@ class openrouterjson
                         $functionDef=findFunctionByName(trim($parsedResponse["action"]));
                         if ($functionDef) {
                             $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                            if (@strlen($functionDef["parameters"]["required"][0])>0) {
+                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
                                 if (!empty($parsedResponse["target"])) {
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
-                                    error_log("Missing required parameter");
+                                    Logger::warn("Missing required parameter");
                                 }
                                     
                             } else {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
                         } elseif ($parsedResponse["action"] != "Talk") {
-                            error_log("Function not found for {$parsedResponse["action"]}");
+                            Logger::warn("Function not found for {$parsedResponse["action"]}");
                         }
                         
                         //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
@@ -768,14 +768,14 @@ class openrouterjson
                         $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
                     
                     } else {
-                          error_log("Function not found for {$parsedResponse["action"]} already sent");
+                         Logger::warn("Function not found for {$parsedResponse["action"]} already sent");
                     }
                         
                 }
                 
-                @ob_flush();    
+                if (ob_get_level()) @ob_flush();
             } else {
-                error_log("No actions");
+                Logger::info("No actions");
                 return [];
             }
         }

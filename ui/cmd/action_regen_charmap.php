@@ -28,7 +28,7 @@ file_put_contents($enginePath . "conf".DIRECTORY_SEPARATOR."character_map.json",
     
 echo json_encode([
     'success' => true,
-    'message' => 'Character map has been successfully regenerated'
+    'message' => 'Character map has been successfully regenerated!'
 ]);
 
 ?>

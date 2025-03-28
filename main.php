@@ -23,6 +23,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
 
 
@@ -71,7 +72,7 @@ if (!isset($FUNCTIONS_ARE_ENABLED)) {
 
 
 
-while (!getenv('PHPUNIT_TEST') && @ob_end_clean())	;
+while (!getenv('PHPUNIT_TEST') && ob_get_length() && ob_end_clean())	;
 ignore_user_abort(true);
 set_time_limit(1200);
 
@@ -154,7 +155,7 @@ if (!in_array($gameRequest[0],$fast_commands)) {
         //error_log("Audit: Waiting for lock: {$gameRequest[0]}");
         usleep(1000);
     }
-    error_log("Audit:Lock adquired by {$gameRequest[0]}");
+    Logger::info("Audit:Lock acquired by {$gameRequest[0]}");
 } 
 
 // adnpc has its custom semaphore, as it write files
@@ -255,7 +256,7 @@ $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
     // When chatnf_book (make the AI to read a book), will override profile and will select default one
-    error_log("Override conf with default");
+    Logger::info("Override conf with default");
     require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
     $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 }
@@ -315,13 +316,13 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 
         // Update the timestamp in the database to the current time
         $currentTimestamp = time();
-        $GLOBALS["db"]->delete("conf_opts", "id='NARRATOR_WELCOME_TIMESTAMP'");
-        $GLOBALS["db"]->insert(
+        $GLOBALS["db"]->upsertRowOnConflict(
             "conf_opts",
             array(
                 "id"    => "NARRATOR_WELCOME_TIMESTAMP",
                 "value" => $currentTimestamp
-            )
+            ),
+            'id'
         );
 
         // If cooldown has passed, allow execution and disable functions
@@ -380,17 +381,17 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     //RECHAT. Must choose if we continue conversation or no.
     $rechatHistory=DataRechatHistory();
     
-    if (sizeof($rechatHistory)>($GLOBALS["RECHAT_H"]))    {   // TOO MUCH RECHAT
-        error_log("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
+    if (sizeof($rechatHistory)>(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
+        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
         sem_release($semaphore);
-        while(@ob_end_clean());
+        while(ob_get_length() && ob_end_clean());
         require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
         die();
     }
     
     $rndNumber = rand(1, 100);
-    if ($rndNumber <= $GLOBALS["RECHAT_P"]) {
+    if ($rndNumber <= intval($GLOBALS["RECHAT_P"])) {
         // Process Oghma for rechat events using NPC's last dialogue
         if ($GLOBALS["MINIME_T5"] && isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
                 require(__DIR__."/processor/oghma.php"); // Process Oghma
@@ -404,14 +405,14 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context
         sem_release($semaphore);
-        error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
+        Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         sleep(1);
         while (sem_acquire($semaphore,true)!=true)  {
             $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
             if (isset($user_input_after[0]))
                 if (isset($user_input_after[0]["N"]))
                     if ($user_input_after[0]["N"]>0) {
-                        error_log("Generation stopped because user_input. ".__LINE__);
+                        Logger::info("Generation stopped because user_input. ".__LINE__);
                         die();// Abort rechat
                     }
 
@@ -456,7 +457,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
 */
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"]) && preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {
     echo "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
-    @ob_flush();
+    if (ob_get_level()) @ob_flush();
     $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
 }
 
@@ -535,7 +536,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
         }
         $GLOBALS["COMMAND_PROMPT"].=$task;
     } else {
-        error_log("Task avoided {$GLOBALS["IS_NPC"]} ");
+        Logger::info("Task avoided {$GLOBALS["IS_NPC"]} ");
     }
 }
 
@@ -611,7 +612,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                         'time'=>$preCommand["elapsed_time"]
                     )
                 );
-                error_log("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
+                Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
                 $memoryInjectionCtx=[]; // Disable memorie when command.
                 $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
                 $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
@@ -696,7 +697,7 @@ if ($gameRequest[0] == "funcret") {
                     $prompt=[];
                 }
                 array_splice($prompt, -1, 0, $memoryInjectionCtx); // add memory as second-to-last entry
-                error_log("Injected memory");
+                Logger::info("Injected memory");
             }
             $FUNCTIONS_ARE_ENABLED=false;
             $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
@@ -717,7 +718,7 @@ if ($gameRequest[0] == "funcret") {
             $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
             if (sizeof($memoryInjectionCtx)>0) {
                 array_splice($prompt, -1, 0, $memoryInjectionCtx); // add memory as second-to-last entry
-                error_log("Injected memory");
+                Logger::info("Injected memory");
             }
             
         } else
@@ -739,15 +740,15 @@ CALL INITIALIZATION
 ***********************/
 
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
-	die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector.".PHP_EOL);
+    die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector.".PHP_EOL);
 } else {
 
-	require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
+    require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 }
 
 $outputWasValid = call_llm();
 if (!$outputWasValid) {
-    error_log("Warning: LLM returned invalid output.");
+    Logger::warn("LLM returned invalid output.");
     if (isset($GLOBALS["LLM_RETRY_FNCT"])) {
         $GLOBALS["LLM_RETRY_FNCT"]();
     }
@@ -821,7 +822,7 @@ if (sizeof($talkedSoFar) == 0) {
             );
             /*
             $db->insert(
-			'diarylogv2',
+            'diarylogv2',
                 array(
                     'topic' => ($topic),
                     'content' => (implode(" ", $talkedSoFar)),
@@ -833,7 +834,7 @@ if (sizeof($talkedSoFar) == 0) {
             */
             // Log Memory also.
             if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
-	            logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
+                logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
             returnLines([$RESPONSE_OK_NOTED]);
 
         } else {
@@ -870,7 +871,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
-while(!getenv("PHPUNIT_TEST") && @ob_end_clean());
+while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_clean());
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 
 

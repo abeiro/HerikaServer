@@ -28,20 +28,20 @@ class sql
 
     public function insert($table, $data)
     {
-		$i=0;
+        $i=0;
         $columns = implode(', ', array_keys($data));
-		foreach (array_keys($data) as $d) {
-			$values[]='$'.(++$i);
-		}
+        foreach (array_keys($data) as $d) {
+            $values[]='$'.(++$i);
+        }
         $values = implode(', ', $values);
 
         $query = "INSERT INTO $table ($columns) VALUES ($values)";
-		//error_log($query);
+        //error_log($query);
         $params = array_values($data);
         //error_log(print_r($params,true));
         $result = pg_query_params(self::$link, $query, $params);
         if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
     }
 
@@ -66,7 +66,7 @@ class sql
     {
         $result = pg_query(self::$link, $sqlquery);
         if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
     }
 
@@ -74,7 +74,7 @@ class sql
     {
         $result = pg_query(self::$link, $q);
         if (!$result) {
-            error_log(pg_last_error(self::$link));
+            Logger::error(pg_last_error(self::$link));
             return [];
         }
 
@@ -91,7 +91,7 @@ class sql
     {
         $result = pg_query(self::$link, $q);
         if (!$result) {
-            error_log(pg_last_error(self::$link));
+            Logger::error(pg_last_error(self::$link));
             return [];
         }
 
@@ -135,7 +135,7 @@ class sql
         
         $result = pg_query_params(self::$link, $query, $params);
         if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
     }
 
@@ -145,7 +145,7 @@ class sql
             $checkResult = pg_query(self::$link, $checkQuery);
 
             if (!$checkResult) {
-                error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+                Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
                 return false;
             }
 
@@ -183,7 +183,7 @@ class sql
             // Execute the query
             $result = pg_query_params(self::$link, $query, $params);
             if (!$result) {
-                error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+                Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
                 return false;
             }
 
@@ -268,9 +268,43 @@ class sql
         } catch (Exception $e) {
             // Rollback on error
             pg_query(self::$link, "ROLLBACK");
-            error_log($e->getMessage() . print_r(debug_backtrace(), true));
+            Logger::error($e->getMessage() . print_r(debug_backtrace(), true));
             return false;
         }
+    }
+
+    // an upsert that completes in one query. Good for simple cases when a constraint can be used
+    public function upsertRowOnConflict($tableName, $data, $conflictTarget) {
+        // Prepare the column names for the INSERT statement.
+        $columns = implode(', ', array_keys($data));
+    
+        // Take care of escaping here instead of requiring it before every upsert call
+        $values = array_map(function($value) {
+            return pg_escape_literal(self::$link, $value);
+        }, array_values($data));
+        $valuesString = implode(', ', $values);
+    
+        // EXCLUDED refers to the row that was attempted to be inserted.
+        // This loop constructs "column = EXCLUDED.column" for each column in the data.
+        $updateStatements = [];
+        foreach ($data as $column => $value) {
+            $updateStatements[] = "$column = EXCLUDED.$column";
+        }
+        $updateString = implode(', ', $updateStatements);
+    
+        // ON CONFLICT ... DO UPDATE is effectively an upsert
+        // If the constraint in $conflictTarget is violated during the insert, an update will be done instead
+        $sqlquery = "INSERT INTO $tableName ($columns) VALUES ($valuesString) " .
+                    "ON CONFLICT ($conflictTarget) DO UPDATE SET $updateString;";
+    
+        $result = pg_query(self::$link, $sqlquery);
+    
+        if (!$result) {
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            return false; // Indicate failure
+        }
+    
+        return true; // Indicate success
     }
 
 }

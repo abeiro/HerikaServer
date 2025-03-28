@@ -19,6 +19,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.cl
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."rolemaster_helpers.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 $db=new sql();
 $MUST_END=false;
@@ -123,7 +124,7 @@ foreach ($quest["initial_data"] as $n=>$step) {
                     if (is_array($spawned)&& ($spawned[0]["n"]>0)) {
                         $quest["items"][$step["id"]]["status"]="spawned";
                     } else {
-                        error_log("Item $cn still not spawned");
+                        Logger::info("Item $cn still not spawned");
                         $MUST_END=true;
                         break;
                     }
@@ -160,7 +161,7 @@ if (isset($quest["items"])) {
 
             $spawned=$GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where type='status_msg' and data like '%spawned%@$cn%error%' and localts>={$quest["start_ts"]}");
             if (is_array($spawned)&& ($spawned[0]["n"]>0)) {
-                error_log("Items could not be spawned. MUST CANCEL NOW");
+                Logger::warn("Items could not be spawned. MUST CANCEL NOW");
                 $MUST_END=true;
             } 
         }
@@ -216,9 +217,9 @@ if ((isset($quest["GLOBAL_LAST_LLM_CALL"])&&$quest["GLOBAL_LAST_LLM_CALL"]!=0)&&
     if (($lastEvent[0]["n"]-$lastChat[0]["m"])>20) {  // 20 seconds of silence
         $quest["GLOBAL_LAST_LLM_CALL"]=0;
         $N_TOPIC_ELEMENTS=0;
-        error_log("Silence detected {$lastEvent[0]["n"]}-{$lastChat[0]["m"]}");
+        Logger::info("Silence detected {$lastEvent[0]["n"]}-{$lastChat[0]["m"]}");
     } else 
-        error_log("Last talk {$lastEvent[0]["n"]}-{$lastChat[0]["m"]}\t".($lastEvent[0]["n"]-$lastChat[0]["m"])." secs");
+        Logger::info("Last talk {$lastEvent[0]["n"]}-{$lastChat[0]["m"]}\t".($lastEvent[0]["n"]-$lastChat[0]["m"])." secs");
 }
 
 // Parse current instantiated quest
@@ -235,7 +236,7 @@ if (!$MUST_END) {
             //error_log("select count(*) as n from eventlog where type='infonpc' and data like '%{$cn}(dead)%'");
             if (is_array($moved)&& ($moved[0]["n"]>0)) {
                 $quest["stages"][$n]["status"]=5;
-                error_log($quest["stages"][$n]["label"]." skipped because NPC is dead");
+                Logger::info($quest["stages"][$n]["label"]." skipped because NPC is dead");
                 continue;
 
             }
@@ -295,7 +296,7 @@ if (!$MUST_END) {
                     )
                 );
 
-                error_log("DONE 2");
+                Logger::debug("DONE 2");
                 $quest["stages"][$n]["status"]=1;
                 break;
 
@@ -506,10 +507,10 @@ if (!$MUST_END) {
         if ($stage["label"]=="ToGoAway") {
 
             if (isset($stage["parent_stage"])) {
-                error_log("Using branch {$localbranch} / {$stage["branch"]}");
+                Logger::info("Using branch {$localbranch} / {$stage["branch"]}");
                 if ($localbranch!=$stage["branch"]) {
                     $quest["stages"][$n]["status"]=5;
-                    error_log($quest["stages"][$n]["label"]." skipped");
+                    Logger::info($quest["stages"][$n]["label"]." skipped");
                     continue;
                 }
             }
@@ -624,10 +625,10 @@ if (!$MUST_END) {
         if ($stage["label"]=="CombatPlayer") {
 
             if (isset($stage["parent_stage"])) {
-                error_log("{$localbranch} vs {$stage["branch"]}");
+                Logger::info("{$localbranch} vs {$stage["branch"]}");
                 if ($localbranch!=$stage["branch"]) {
                     $quest["stages"][$n]["status"]=5;
-                    error_log($quest["stages"][$n]["label"]." skipped");
+                    Logger::info($quest["stages"][$n]["label"]." skipped");
                     continue;
                 }
             }
@@ -717,10 +718,10 @@ if (!$MUST_END) {
             $character=$characters[$stage["char_ref"]];
 
             if (isset($stage["parent_stage"])) {
-                error_log("{$localbranch} vs {$stage["branch"]}");
+                Logger::info("{$localbranch} vs {$stage["branch"]}");
                 if ($localbranch!=$stage["branch"]) {
                     $quest["stages"][$n]["status"]=5;
-                    error_log($quest["stages"][$n]["label"]." skipped");
+                    Logger::info($quest["stages"][$n]["label"]." skipped");
                     continue;
                 }
             }
@@ -754,7 +755,7 @@ if (!$MUST_END) {
                     
                 }
                 if (isset($quest["stages"][$n]["last_check"]) && ($GLOBALS["gameRequest"][2]-$quest["stages"][$n]["last_check"])>= 120 * SECOND_GAMETS_MULT * $N_TOPIC_ELEMENTS * $TALK_SPEED ) {
-                    error_log("Enforcing ask for gold");
+                    Logger::info("Enforcing ask for gold");
 
                     if ($quest["stages"][$n]["checked_times"]>3) {
                         $quest["stages"][$n]["status"]=4;
@@ -798,10 +799,10 @@ if (!$MUST_END) {
             }
 
             if (isset($stage["parent_stage"])) {
-                error_log("{$localbranch} vs {$stage["branch"]}");
+                Logger::info("{$localbranch} vs {$stage["branch"]}");
                 if ($localbranch!=$stage["branch"]) {
                     $quest["stages"][$n]["status"]=5;
-                    error_log($quest["stages"][$n]["label"]." skipped");
+                    Logger::info($quest["stages"][$n]["label"]." skipped");
                     continue;
                 }
             }
@@ -978,7 +979,7 @@ if (!$MUST_END) {
 
 
                     } else if ($topiCall["missing"]=="skip"){ // Will jump to check later
-                        error_log("Skip");
+                        Logger::info("Skip");
                     } else {
                         $quest["GLOBAL_LAST_LLM_CALL"]=time();
                         echo "Topic not covered yet {$topiCall["res"]}".PHP_EOL;
@@ -1045,10 +1046,10 @@ if (!$MUST_END) {
         if ($stage["label"]=="TellTopicToNPC") {
 
             if (isset($stage["parent_stage"])) {
-                error_log("{$localbranch} vs {$stage["branch"]}");
+                Logger::info("{$localbranch} vs {$stage["branch"]}");
                 if ($localbranch!=$stage["branch"]) {
                     $quest["stages"][$n]["status"]=5;
-                    error_log($quest["stages"][$n]["label"]." skipped");
+                    Logger::info($quest["stages"][$n]["label"]." skipped");
                     continue;
                 }
             }
@@ -1134,7 +1135,7 @@ if (!$MUST_END) {
                         $quest["GLOBAL_LAST_LLM_CALL"]=time();    
 
                     } else if ($topiCall["missing"]=="skip"){ // Will jump to check later
-                        error_log("Skip");
+                        Logger::info("Skip");
                     } else {
                         $quest["GLOBAL_LAST_LLM_CALL"]=time();
                         echo "Topic not covered yet {$topiCall["res"]}".PHP_EOL;
