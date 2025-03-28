@@ -2184,8 +2184,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
         Logger::info(DMgetCurrentModelFile()." ".$currentModelFilePath);
         copy(DMgetCurrentModelFile(),$currentModelFilePath);
-        chmod($currentModelFilePath, "775");
-
+        shell_exec("chmod 775 $currentModelFilePath");
         
          // Character Map file
         if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json")) {
