@@ -51,23 +51,23 @@ class Logger {
     }
 
     public static function trace($message, $logFile = self::DEFAULT_LOG) {
-        Logger::log("trace", $message, $logFile);
+        self::log("trace", $message, $logFile);
     }
 
     public static function debug($message, $logFile = self::DEFAULT_LOG) {
-        Logger::log("debug", $message, $logFile);
+        self::log("debug", $message, $logFile);
     }
 
     public static function info($message, $logFile = self::DEFAULT_LOG) {
-        Logger::log("info", $message, $logFile);
+        self::log("info", $message, $logFile);
     }
 
     public static function warn($message, $logFile = self::DEFAULT_LOG) {
-        Logger::log("warn", $message, $logFile);
+        self::log("warn", $message, $logFile);
     }
 
     public static function error($message, $logFile = self::DEFAULT_LOG) {
-        Logger::log("error", $message, $logFile);
+        self::log("error", $message, $logFile);
     }
 
     // write uncaught errors to the CHIM log in addition to the apache log
@@ -95,12 +95,15 @@ class Logger {
                 break;
         }
 
-        $timestamp = self::$_timestampFormat ? "[".date(self::$_timestampFormat)."] " : "";
-        $logEntry = "{$timestamp}[{$level}] %s in %s on line %d\n";
-        $formattedMessage = sprintf($logEntry, $errstr, $errfile, $errline);
+        // obey the minimum log level for the CHIM log (but still write uncaught errors to the apache log)
+        if (self::shouldLog($level)) {
+            $timestamp = self::$_timestampFormat ? "[".date(self::$_timestampFormat)."] " : "";
+            $logEntry = "{$timestamp}[{$level}] %s in %s on line %d\n";
+            $formattedMessage = sprintf($logEntry, $errstr, $errfile, $errline);
 
-        // write to the default log file (avoid error_log here because it would duplicate the message)
-        file_put_contents(self::DEFAULT_LOG, $formattedMessage, FILE_APPEND);
+            // write to the default log file (avoid error_log here because it would duplicate the message)
+            file_put_contents(self::DEFAULT_LOG, $formattedMessage, FILE_APPEND);
+        }
 
         // return false to allow PHP's default error handler to run as well
         return false;
