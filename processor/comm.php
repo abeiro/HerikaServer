@@ -7,7 +7,7 @@ $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
     // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
     if ($gameRequest[2] == "10000000") {
-        error_log("Ignoring init with a gamets of 10000000.");
+        Logger::warn("Ignoring init with a gamets of 10000000.");
         $MUST_END=true;
         return;
     }
@@ -51,7 +51,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         )
     );
     
-    error_log("INIT PROCESSING ".(time()-$now).PHP_EOL);
+    Logger::trace("INIT PROCESSING ".(time()-$now));
     // Delete TTS(STT cache
     $directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache";
 
@@ -76,7 +76,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         closedir($handle);
     }
     
-    error_log("POST INIT PROCESSING ".(time()-$now).PHP_EOL);
+    Logger::trace("POST INIT PROCESSING ".(time()-$now));
     $MUST_END=true;
 
 
@@ -250,7 +250,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             )
         );
     } else {
-        error_log(__FILE__." data was not an array");
+        Logger::error(__FILE__." data was not an array");
 
     }
     $MUST_END=true;
@@ -441,13 +441,13 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     // logEvent($gameRequest);
 
     $vars=explode("@",$gameRequest[3]);
-    $db->delete("conf_opts", "id='".$db->escape($vars[0])."'");
-    $db->insert(
+    $db->upsertRowOnConflict(
         'conf_opts',
         array(
-                'id' => $vars[0],
-                'value' => $vars[1]
-            )
+            'id' => $vars[0],
+            'value' => $vars[1]
+        ),
+        "id"
     );
     
     
@@ -538,7 +538,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         
         $partyConf=DataGetCurrentPartyConf();
 		$partyConfA=json_decode($partyConf,true);
-		error_log($partyConf);
+		Logger::debug($partyConf);
 		// Use the global DYNAMIC_PROMPT
         $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
 

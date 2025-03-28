@@ -263,8 +263,8 @@ class openai
                 
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
-                error_log(print_r(error_get_last(),true));
-                return null;
+            Logger::error(print_r(error_get_last(),true));
+            return null;
         }
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
@@ -344,7 +344,7 @@ class openai
                 }
 
                 $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             }
 
         }
@@ -381,7 +381,7 @@ class openai
                 }
 
                 $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             } else 
                 return null;
         }

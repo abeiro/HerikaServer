@@ -87,7 +87,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 		if (strpos($returnFunction[3],"Error")!==false) {
 			$GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;	// RE-Enable functions	// Endless loop if enabled
 			$request="Specify a valid target:(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";	
-			error_log("Request function again {$returnFunction[3]}");
+			Logger::info("Request function again {$returnFunction[3]}");
 		}
 		
 	}  else {
@@ -116,7 +116,10 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	
 } else if ($gameRequest[0] == "diary") {
 	$request = selectRandomInArray($PROMPTS["diary"]["cue"]);
-	$GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];
+
+	if (isset($GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"])) {
+		$GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];
+	}
 
 	logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["HERIKA_NAME"],
         "(Important note: Something important happened here for {$GLOBALS["PLAYER_NAME"]} on {$sk_date}. You should use the tag #PlotRelevantEvent)",

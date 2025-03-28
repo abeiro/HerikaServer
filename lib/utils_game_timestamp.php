@@ -747,7 +747,7 @@ function DataLastKnownGameTS() {
 
     $lastLoc=$db->fetchAll("SELECT gamets FROM eventlog WHERE (gamets > 0) ORDER BY gamets desc, ts desc LIMIT 1");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        error_log(" error DataLastKnownGameTS: NO match found");
+        Logger::warn("DataLastKnownGameTS: NO match found");
     } else { // ok 
         if (isset($lastLoc[0]["gamets"]) && (strlen($lastLoc[0]["gamets"])>0)) {
             $f_gamets = floatval($lastLoc[0]["gamets"]);
@@ -756,7 +756,7 @@ function DataLastKnownGameTS() {
                 return $f_gamets;
             }
         } else {
-            error_log(" ERROR in DataLastKnownGameTS: NO match found");
+            Logger::warn("DataLastKnownGameTS: NO match found");
         }
     }
     return 0.0;
@@ -782,7 +782,7 @@ function DataLastKnownGameTS_record() {
         " FROM eventlog WHERE (gamets > 0) ORDER BY gamets desc, ts desc LIMIT 1");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         $arr_result["exitcode"] = -1;
-        error_log(" error DataLastKnownGameTS_record: NO match found");
+        Logger::warn("DataLastKnownGameTS_record: NO match found");
     } else { // ok 
         if (isset($lastLoc[0]["gamets"]) && (strlen($lastLoc[0]["gamets"])>0)) {
             $f_gamets = floatval($lastLoc[0]["gamets"]);
@@ -800,7 +800,7 @@ function DataLastKnownGameTS_record() {
             }
         } else {
             $arr_result["exitcode"] = -2;
-            error_log(" ERROR in DataLastKnownGameTS_record: NO match found");
+            Logger::warn("DataLastKnownGameTS_record: NO match found");
         }
     }
     return $arr_result;
@@ -975,7 +975,7 @@ function gamets2str_datetime_full_test($gamets=986414848, $gamets2=16414848) {
         */
         $s2ins .= "\r\n --- dbg end";
         
-        error_log($s2ins);
+        Logger::debug($s2ins);
     }
     return $s2ins;
 }

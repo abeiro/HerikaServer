@@ -63,7 +63,7 @@ function itt($file,$hints)
         );
     }
     return $response["content"];
-    error_log($responseRaw);
+    Logger::debug($responseRaw);
 
 }
 ?>
