@@ -861,13 +861,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     
                     // Convert to format needed for word cloud
                     $words = array_map(function($word, $count) {
-                        return ['text' => $word, 'size' => log($count * 10) * 10 + 10];
+                        return ['text' => $word, 'size' => log($count * 5) * 8 + 20, 'count' => $count];
                     }, array_keys($wordFrequencies), array_values($wordFrequencies));
 
                     echo render_widget('Most Used Words', "
                         <script src='https://d3js.org/d3.v7.min.js'></script>
                         <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
                         <div class='word-cloud-container'>
+                            <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: #ff00c6; height: 30px; font-weight: bold;'></div>
                             <svg id='word-cloud' style='width: 100%; height: 500px;'></svg>
                         </div>
                         <style>
@@ -875,7 +876,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 background: #1a1a1a;
                                 border-radius: 8px;
                                 padding: 20px;
-                                margin-top: 20px;
+                                position: relative;
                             }
                             .word-cloud-text {
                                 font-family: 'Arial', sans-serif;
@@ -888,6 +889,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         </style>
                         <script>
                             const words = " . json_encode($words) . ";
+                            const display = document.getElementById('word-count-display');
                             
                             // Color scale for words based on frequency
                             const color = d3.scaleOrdinal()
@@ -918,7 +920,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     .attr('class', 'word-cloud-text')
                                     .attr('text-anchor', 'middle')
                                     .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
-                                    .text(d => d.text);
+                                    .text(d => d.text)
+                                    .on('mouseover', function(event, d) {
+                                        display.textContent = d.text + ' [' + d.count + ']';
+                                        d3.select(this).style('opacity', 0.7);
+                                    })
+                                    .on('mouseout', function() {
+                                        display.textContent = '';
+                                        d3.select(this).style('opacity', 1);
+                                    });
                             }
 
                             // Start the layout
