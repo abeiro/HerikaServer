@@ -37,7 +37,31 @@ if (!$conn) {
 
 // Handle diary entry updates via POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get POST data
+    // Check for delete action
+    if (isset($_POST['action']) && $_POST['action'] === 'delete') {
+        $rowid = filter_input(INPUT_POST, 'rowid', FILTER_VALIDATE_INT);
+        
+        if (!$rowid) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid row ID']);
+            exit;
+        }
+
+        // Delete the diary entry
+        $query = "DELETE FROM {$schema}.diarylog WHERE rowid = $1";
+        $result = pg_query_params($conn, $query, [$rowid]);
+
+        if ($result) {
+            http_response_code(200);
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to delete entry: ' . pg_last_error($conn)]);
+        }
+        exit;
+    }
+
+    // Existing update logic
     $rowid = filter_input(INPUT_POST, 'rowid', FILTER_VALIDATE_INT);
     $topic = filter_input(INPUT_POST, 'topic', FILTER_SANITIZE_STRING);
     $content = filter_input(INPUT_POST, 'content', FILTER_SANITIZE_STRING);
@@ -912,10 +936,10 @@ if ($shouldFetchEvents) {
 
         /* Column widths for event table */
         .col-people { width: 10%; }
-        .col-content { width: 55%; }
+        .col-content { width: 60%; }
         .col-gamets { width: 15%; }
         .col-time { width: 10%; font-family: monospace; font-size: 0.9em; }
-        .col-actions { width: 10%; }
+        .col-actions { width: 5%; }
 
         /* Location change row styles */
         .location-change-row {
@@ -1244,6 +1268,28 @@ if ($shouldFetchEvents) {
                 alert('Error updating entry');
             }
         };
+
+        // Add delete function to existing script
+        async function deleteEntry(rowid) {
+            try {
+                const response = await fetch('diarylog.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'action=delete&rowid=' + rowid
+                });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Error deleting entry');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting entry');
+            }
+        }
     </script>
 
     <main class="container">
@@ -1471,6 +1517,11 @@ if ($shouldFetchEvents) {
                 error_log("Retrieved entries: " . print_r($entries, true));
                 
                 if (!empty($entries)) {
+                    // Sort entries by localts in descending order
+                    usort($entries, function($a, $b) {
+                        return $b['localts'] - $a['localts'];
+                    });
+                    
                     foreach ($entries as $row) {
                         $processed_row = process_diary_row($row, false);
                         if ($processed_row === null) {
@@ -1500,6 +1551,7 @@ if ($shouldFetchEvents) {
                                         'topic' => $topic,
                                         'content' => $content
                                     ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")' class='action-button edit'>Edit</button>
+                                    <button onclick='if(confirm(\"Are you sure you want to delete this entry?\")) { deleteEntry(" . $row['rowid'] . "); }' class='btn-danger'>Delete</button>
                                 </td>
                               </tr>";
                     }
@@ -1566,6 +1618,7 @@ if ($shouldFetchEvents) {
                                     'topic' => $topic,
                                     'content' => $content
                                 ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")' class='action-button edit'>Edit</button>
+                                <button onclick='if(confirm(\"Are you sure you want to delete this entry?\")) { deleteEntry(" . $row['rowid'] . "); }' class='btn-danger'>Delete</button>
                             </td>
                           </tr>";
                 }
