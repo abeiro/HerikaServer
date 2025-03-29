@@ -911,9 +911,8 @@ if ($shouldFetchEvents) {
         }
 
         /* Column widths for event table */
-        .col-topic { width: 15%; }
-        .col-content { width: 50%; }
         .col-people { width: 10%; }
+        .col-content { width: 65%; }
         .col-gamets { width: 15%; }
         .col-time { width: 10%; font-family: monospace; font-size: 0.9em; }
 
@@ -1434,16 +1433,14 @@ if ($shouldFetchEvents) {
         <!-- Event Table -->
         <table class="event-table" id="event-table">
             <colgroup>
-                <col class="col-topic">
-                <col class="col-content">
                 <col class="col-people">
+                <col class="col-content">
                 <col class="col-gamets">
                 <col class="col-time">
             </colgroup>
             <tr>
-                <th>Topic</th>
-                <th>Content</th>
                 <th>Author</th>
+                <th>Content</th>
                 <th><a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a></th>
                 <th>Time (UTC)</th>
             </tr>
@@ -1475,17 +1472,12 @@ if ($shouldFetchEvents) {
                         }
 
                         echo "<tr>
-                                <td class='entry-cell' onclick='openEntryModal(" . json_encode([
-                                    'rowid' => $row['rowid'],
-                                    'topic' => $topic,
-                                    'content' => $content
-                                ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$topic}</td>
+                                <td>{$people}</td>
                                 <td class='entry-cell' onclick='openEntryModal(" . json_encode([
                                     'rowid' => $row['rowid'],
                                     'topic' => $topic,
                                     'content' => $content
                                 ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$content}</td>
-                                <td>{$people}</td>
                                 <td>{$gameTimeDisplay}</td>
                                 <td>{$timeDisplay}</td>
                               </tr>";
@@ -1543,17 +1535,12 @@ if ($shouldFetchEvents) {
 
                     // Output the table row with clickable cells for both topic and content
                     echo "<tr>
-                            <td class='entry-cell' onclick='openEntryModal(" . json_encode([
-                                'rowid' => $row['rowid'],
-                                'topic' => $topic,
-                                'content' => $content
-                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$topic}</td>
+                            <td>{$people}</td>
                             <td class='entry-cell' onclick='openEntryModal(" . json_encode([
                                 'rowid' => $row['rowid'],
                                 'topic' => $topic,
                                 'content' => $content
                             ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$content}</td>
-                            <td>{$people}</td>
                             <td>{$gameTimeDisplay}</td>
                             <td>{$timeDisplay}</td>
                           </tr>";
