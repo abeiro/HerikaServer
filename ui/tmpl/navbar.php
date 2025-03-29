@@ -24,7 +24,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
         <div class="container-fluid mx-1">
             <!-- PLEASE LEAVE THIS LINK TO index.php, as database update checks are being made there -->
             <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="CHIM Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> CHIM</a> -->
-            <a class="navbar-brand mr-2 Title" href="<?php echo $webRoot; ?>/ui/index.php" title="Go to Home Page" style="text-decoration: none;">
+            <a class="navbar-brand mr-2 Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
                 <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
                 <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
             </a> 

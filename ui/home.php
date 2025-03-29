@@ -35,6 +35,41 @@ if (!$conn) {
     exit;
 }
 
+// Create database wrapper class for db_updates.php
+class sql {
+    private $conn;
+    
+    public function __construct() {
+        global $conn;
+        $this->conn = $conn;
+    }
+    
+    public function fetchAll($query) {
+        $result = pg_query($this->conn, $query);
+        if (!$result) {
+            return [];
+        }
+        $rows = [];
+        while ($row = pg_fetch_assoc($result)) {
+            $rows[] = $row;
+        }
+        return $rows;
+    }
+    
+    public function execQuery($query) {
+        return pg_query($this->conn, $query);
+    }
+}
+
+$db = new sql();
+
+/* Check for database updates only in index.php with no parms*/
+if (sizeof($_GET)==0) {
+    require_once(__DIR__."/../debug/db_updates.php");
+    require_once(__DIR__."/../debug/npc_removal.php");
+}
+/* END of check database for updates */
+
 // Function to sanitize and validate integers
 function sanitize_int($value, $default) {
     $value = filter_var($value, FILTER_VALIDATE_INT);
@@ -42,7 +77,7 @@ function sanitize_int($value, $default) {
 }
 
 /**
- * Function to render a widget
+ * Function to render a widget  
  * 
  * @param string $title The widget title
  * @param string $content The widget content
@@ -193,7 +228,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         .stat-value {
             font-size: 1.5em;
             font-weight: bold;
-            color: #007bff;
+            color: #ff00c6;
         }
 
         .stat-label {
@@ -306,7 +341,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         }
 
         .stat-item .stat-value {
-            color: #007bff;
+            color: #ff00c6;
             font-weight: bold;
             font-size: 0.9em;
             min-width: 40px;
@@ -698,7 +733,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 }
                 
                 if (!empty($countQueries)) {
-                    $stats = fetch_widget_stats($conn, "SELECT " . implode(", ", $countQueries));
+                    $stats = fetch_widget_stats($conn, "SELECT " . implode(", ", $countQueries) . ", 
+                        (SELECT COALESCE(COUNT(*), 0) FROM {$schema}.eventlog WHERE type = 'inputtext') as player_inputs");
                     
                     if (!isset($stats['error'])) {
                         echo render_widget('CHIM Stats', "
@@ -706,7 +742,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 " . (in_array('diarylog', $existingTables) ? "
                                 <div class='stat-card'>
                                     <div class='stat-value'>{$stats[0]['total_events']}</div>
-                                <div class='stat-label'>Total Events</div>
+                                    <div class='stat-label'>Total Events</div>
                                 </div>
                                 " . (in_array('oghma', $existingTables) ? "
                                 <div class='stat-card'>
@@ -742,11 +778,162 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     <div class='stat-value'>{$stats[0]['books_summarized']}</div>
                                     <div class='stat-label'>Books Read</div>
                                 </div>" : "") . "
+                                                                <div class='stat-card'>
+                                    <div class='stat-value'>{$stats[0]['player_inputs']}</div>
+                                    <div class='stat-label'>Player Messages</div>
+                                </div>
                             </div>
                         ");
                     } else {
                         error_log("Stats count error: " . print_r($stats['error'], true));
                     }
+                }
+
+                // Add General Statistics Widget
+                $generalStats = fetch_widget_stats($conn, "
+                    SELECT data
+                    FROM {$schema}.eventlog 
+                    WHERE type = 'chat'
+                ");
+
+                if (!isset($generalStats['error']) && !empty($generalStats)) {
+                    // Process the chat messages to extract just the dialogue
+                    $processedText = [];
+                    foreach ($generalStats as $row) {
+                        $text = $row['data'];
+                        
+                        // Remove context information in parentheses
+                        $text = preg_replace('/\([^)]+\)/', '', $text);
+                        
+                        // Remove character name before colon
+                        $text = preg_replace('/^[^:]+:/', '', $text);
+                        
+                        // Clean up the text
+                        $text = trim($text);
+                        
+                        // Convert to lowercase
+                        $text = strtolower($text);
+                        
+                        // Remove all punctuation except apostrophes
+                        $text = preg_replace('/[^\w\s\']/', '', $text);
+                        
+                        // Clean up any standalone or multiple apostrophes
+                        $text = preg_replace('/\s\'|\'(\s|$)|(\'+)/', ' ', $text);
+                        
+                        // Split into words
+                        $words = preg_split('/\s+/', $text);
+                        
+                        // Filter out stop words and short words
+                        $words = array_filter($words, function($word) {
+                            $stopWords = [
+                                'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 
+                                'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at', 'this', 'but', 'his', 
+                                'by', 'from', 'they', 'we', 'say', 'her', 'she', 'or', 'an', 'will', 'my', 
+                                'one', 'all', 'would', 'there', 'their', 'what', 'so', 'up', 'out', 'if', 
+                                'about', 'who', 'get', 'which', 'go', 'me', 'when', 'make', 'can', 'like', 
+                                'time', 'no', 'just', 'him', 'know', 'take', 'people', 'into', 'year', 'your', 
+                                'good', 'some', 'could', 'them', 'see', 'other', 'than', 'then', 'now', 'look', 
+                                'only', 'come', 'its', 'over', 'think', 'also', 'back', 'after', 'use', 'two', 
+                                'how', 'our', 'work', 'first', 'well', 'way', 'even', 'new', 'want', 'because', 
+                                'any', 'these', 'give', 'day', 'most', 'us', 'im', 'ive', 'are', 'was', 'been',
+                                'had', 'has', 'yes', 'no', 'ok', 'okay', 'oh', 'ah', 'hmm', 'uh', 'er', 'um',
+                                'whats', 'thats', 'youre', 'dont', 'cant', 'wont', 'shouldnt', 'couldnt',
+                                'wouldnt', 'lets', 'theres', 'heres', 'wheres', 'whos', 'nobodys', 'everybodys',
+                                'talking', 'talk', 'said', 'says', 'tell', 'told', 'went', 'gone', 'coming',
+                                'going', 'doing', 'done', 'being', 'having', 'getting', 'putting', 'taking',
+                                'making', 'finding', 'found', 'made', 'put', 'took', 'got', 'get', 'goes',
+                                'went', 'come', 'came', 'goes', 'going'
+                            ];
+                            return strlen($word) > 2 && !in_array($word, $stopWords);
+                        });
+                        
+                        if (!empty($words)) {
+                            $processedText = array_merge($processedText, $words);
+                        }
+                    }
+
+                    // Count word frequencies
+                    $wordFrequencies = array_count_values($processedText);
+                    arsort($wordFrequencies);
+                    
+                    // Take top 100 words
+                    $wordFrequencies = array_slice($wordFrequencies, 0, 100, true);
+                    
+                    // Convert to format needed for word cloud
+                    $words = array_map(function($word, $count) {
+                        return ['text' => $word, 'size' => log($count * 10) * 10 + 10];
+                    }, array_keys($wordFrequencies), array_values($wordFrequencies));
+
+                    echo render_widget('Most Used Words', "
+                        <script src='https://d3js.org/d3.v7.min.js'></script>
+                        <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
+                        <div class='word-cloud-container'>
+                            <svg id='word-cloud' style='width: 100%; height: 500px;'></svg>
+                        </div>
+                        <style>
+                            .word-cloud-container {
+                                background: #1a1a1a;
+                                border-radius: 8px;
+                                padding: 20px;
+                                margin-top: 20px;
+                            }
+                            .word-cloud-text {
+                                font-family: 'Arial', sans-serif;
+                                cursor: pointer;
+                                transition: opacity 0.3s;
+                            }
+                            .word-cloud-text:hover {
+                                opacity: 0.7;
+                            }
+                        </style>
+                        <script>
+                            const words = " . json_encode($words) . ";
+                            
+                            // Color scale for words based on frequency
+                            const color = d3.scaleOrdinal()
+                                .range(['#ff00c6', '#ff33d1', '#ff66dc', '#ff99e7', '#ffccf2']);
+
+                            // Create the word cloud layout
+                            const layout = d3.layout.cloud()
+                                .size([document.getElementById('word-cloud').clientWidth, 500])
+                                .words(words)
+                                .padding(5)
+                                .rotate(() => 0)
+                                .font('Arial')
+                                .fontSize(d => d.size)
+                                .on('end', draw);
+
+                            // Function to draw the word cloud
+                            function draw(words) {
+                                d3.select('#word-cloud')
+                                    .append('g')
+                                    .attr('transform', 'translate(' + layout.size()[0] / 2 + ',' + layout.size()[1] / 2 + ')')
+                                    .selectAll('text')
+                                    .data(words)
+                                    .enter()
+                                    .append('text')
+                                    .style('font-size', d => d.size + 'px')
+                                    .style('font-family', 'Arial')
+                                    .style('fill', (d, i) => color(i % 5))
+                                    .attr('class', 'word-cloud-text')
+                                    .attr('text-anchor', 'middle')
+                                    .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
+                                    .text(d => d.text);
+                            }
+
+                            // Start the layout
+                            layout.start();
+
+                            // Resize handler
+                            window.addEventListener('resize', () => {
+                                const svg = document.getElementById('word-cloud');
+                                if (svg) {
+                                    svg.innerHTML = '';
+                                    layout.size([svg.clientWidth, 500]).start();
+                                }
+                            });
+                        </script>
+                    ", 'default', ['class' => 'widget-skyrim-stats']);
                 }
 
                 // Add Skyrim Stats Widget
