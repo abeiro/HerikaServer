@@ -912,9 +912,10 @@ if ($shouldFetchEvents) {
 
         /* Column widths for event table */
         .col-people { width: 10%; }
-        .col-content { width: 65%; }
+        .col-content { width: 55%; }
         .col-gamets { width: 15%; }
         .col-time { width: 10%; font-family: monospace; font-size: 0.9em; }
+        .col-actions { width: 10%; }
 
         /* Location change row styles */
         .location-change-row {
@@ -1159,6 +1160,23 @@ if ($shouldFetchEvents) {
             font-size: 1.2em;
             text-align: center;
         }
+
+        /* Add styles for the edit button */
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
@@ -1170,9 +1188,7 @@ if ($shouldFetchEvents) {
             <div class="modal-body">
                 <form id="editForm" class="edit-form">
                     <input type="hidden" id="entryId" name="rowid">
-                    
-                    <label for="topic">Topic:</label>
-                    <input type="text" id="topic" name="topic" required>
+                    <input type="hidden" id="topic" name="topic">
                     
                     <label for="content">Content:</label>
                     <textarea id="content" name="content" required></textarea>
@@ -1189,20 +1205,20 @@ if ($shouldFetchEvents) {
         const closeBtn = document.getElementsByClassName('close')[0];
         const editForm = document.getElementById('editForm');
 
+        // Function to open modal with entry data
+        function openEntryModal(data) {
+            document.getElementById('entryId').value = data.rowid;
+            document.getElementById('topic').value = data.topic;
+            document.getElementById('content').value = data.content;
+            modal.style.display = 'block';
+        }
+
         // Close modal when clicking X or outside
         closeBtn.onclick = () => modal.style.display = 'none';
         window.onclick = (event) => {
             if (event.target === modal) {
                 modal.style.display = 'none';
             }
-        }
-
-        // Function to open modal with entry data
-        function openEntryModal(entryData) {
-            document.getElementById('entryId').value = entryData.rowid;
-            document.getElementById('topic').value = entryData.topic;
-            document.getElementById('content').value = entryData.content;
-            modal.style.display = 'block';
         }
 
         // Handle form submission
@@ -1437,12 +1453,14 @@ if ($shouldFetchEvents) {
                 <col class="col-content">
                 <col class="col-gamets">
                 <col class="col-time">
+                <col class="col-actions">
             </colgroup>
             <tr>
                 <th>Author</th>
                 <th>Content</th>
                 <th><a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a></th>
                 <th>Time (UTC)</th>
+                <th>Actions</th>
             </tr>
             <?php
             if (isset($_GET['filter']) && $_GET['filter'] === 'people' && isset($_GET['person'])) {
@@ -1473,13 +1491,16 @@ if ($shouldFetchEvents) {
 
                         echo "<tr>
                                 <td>{$people}</td>
-                                <td class='entry-cell' onclick='openEntryModal(" . json_encode([
-                                    'rowid' => $row['rowid'],
-                                    'topic' => $topic,
-                                    'content' => $content
-                                ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$content}</td>
+                                <td class='entry-cell'>{$content}</td>
                                 <td>{$gameTimeDisplay}</td>
                                 <td>{$timeDisplay}</td>
+                                <td>
+                                    <button onclick='openEntryModal(" . json_encode([
+                                        'rowid' => $row['rowid'],
+                                        'topic' => $topic,
+                                        'content' => $content
+                                    ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")' class='action-button edit'>Edit</button>
+                                </td>
                               </tr>";
                     }
                 } else {
@@ -1536,13 +1557,16 @@ if ($shouldFetchEvents) {
                     // Output the table row with clickable cells for both topic and content
                     echo "<tr>
                             <td>{$people}</td>
-                            <td class='entry-cell' onclick='openEntryModal(" . json_encode([
-                                'rowid' => $row['rowid'],
-                                'topic' => $topic,
-                                'content' => $content
-                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$content}</td>
+                            <td class='entry-cell'>{$content}</td>
                             <td>{$gameTimeDisplay}</td>
                             <td>{$timeDisplay}</td>
+                            <td>
+                                <button onclick='openEntryModal(" . json_encode([
+                                    'rowid' => $row['rowid'],
+                                    'topic' => $topic,
+                                    'content' => $content
+                                ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")' class='action-button edit'>Edit</button>
+                            </td>
                           </tr>";
                 }
 
