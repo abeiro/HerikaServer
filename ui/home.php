@@ -130,7 +130,15 @@ ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 ?>
-<!-- Ensure main.css is loaded after any reboot.css -->
+<style>
+@font-face {
+    font-family: 'SkyrimBooks_Handwritten_Bold';
+    src: url('/HerikaServer/ui/css/font/SkyrimBooks_Handwritten_Bold-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+</style>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <?php
 
@@ -519,7 +527,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 $realTimeElapsedStr = rtrim($realTimeElapsedStr, ', ');
                 
                 // Format last played time in a more readable way
-                $lastPlayed = $lastEvent->format('M j, Y g:i A');
+                $lastPlayed = $lastEvent->format('jS F, Y, H:i');
                 
                 // Get in-game time using the last gamets
                 $inGameTime = '';
@@ -614,7 +622,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         }
                         $currentMissionContent .= "<tr>
                             <td>" . htmlspecialchars($mission['description']) . "</td>
-                            <td>{$time->format('M j, Y H:i')}</td>
+                            <td>{$time->format('jS F, Y, H:i')}</td>
                             <td>{$tamrielicTime}</td>
                         </tr>";
                     }
@@ -668,7 +676,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             
             if (!isset($recentEvents['error'])) {
                 $eventsTable = "<table class='widget-table'>
-                    <tr><th>Dialogue</th><th>Time (UTC)</th><th><a href='https://en.uesp.net/wiki/Lore:Calendar' target='_blank'>Tamrielic Time</a></th></tr>";
+                    <tr>
+                        <th style='width: 50%;'>Dialogue</th>
+                        <th style='width: 25%;'>Time (UTC)</th>
+                        <th style='width: 25%;'><a href='https://en.uesp.net/wiki/Lore:Calendar' target='_blank'>Tamrielic Time</a></th>
+                    </tr>";
                 
                 foreach ($recentEvents as $event) {
                     $time = new DateTime("@{$event['localts']}");
@@ -678,9 +690,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         $tamrielicTime = convert_gamets2skyrim_long_date2($event['gamets']);
                     }
                     $eventsTable .= "<tr>
-                        <td>" . htmlspecialchars($event['data']) . "</td>
-                        <td>{$time->format('M j, Y H:i')}</td>
-                        <td>{$tamrielicTime}</td>
+                        <td style='width: 50%;'>" . htmlspecialchars($event['data']) . "</td>
+                        <td style='width: 25%;'>{$time->format('jS F, Y, H:i')}</td>
+                        <td style='width: 25%;'>{$tamrielicTime}</td>
                     </tr>";
                 }
                 
@@ -789,7 +801,46 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     }
                 }
 
-                // Add General Statistics Widget
+                // Latest Diary Entry Widget
+                $latestDiary = fetch_widget_stats($conn, "
+                SELECT topic, content, people as author, localts, gamets
+                FROM {$schema}.diarylog
+                ORDER BY localts DESC
+                LIMIT 1
+                ");
+
+                $diaryContent = "";
+                if (!isset($latestDiary['error']) && !empty($latestDiary)) {
+                    $time = new DateTime("@{$latestDiary[0]['localts']}");
+                    $time->setTimezone(new DateTimeZone('UTC'));
+                    $tamrielicTime = '';
+                    if (isset($latestDiary[0]['gamets']) && $latestDiary[0]['gamets'] > 0) {
+                        $tamrielicTime = convert_gamets2skyrim_long_date2($latestDiary[0]['gamets']);
+                    }
+                    
+                    $diaryContent = "
+                        <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto;'>
+                            <div style='background: url(\"/HerikaServer/ui/images/paper.jpg\") center/cover; padding: 40px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);'>
+                                <div style='color: #000; line-height: 1.4; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>
+                                    <div style='font-size: 1.1em; margin-bottom: 10px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>{$tamrielicTime}</div>
+                                    <div style='font-size: 1.4em; margin-bottom: 5px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['topic']) . "</div>
+                                    <div style='font-size: 1.1em; margin-bottom: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>Written by " . htmlspecialchars($latestDiary[0]['author']) . "</div>
+                                    <div style='font-size: 1.2em; padding-top: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['content']) . "</div>
+                                </div>
+                            </div>
+                        </div>";
+                } else {
+                    $diaryContent = "
+                        <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto; text-align: center;'>
+                            <div style='color: #6c757d; font-size: 1.2em; padding: 40px 20px;'>
+                                No diary entries found yet. Your adventures will be recorded here as you journey through Tamriel.
+                            </div>
+                        </div>";
+                }
+                
+                echo render_widget('Latest Diary Entry', $diaryContent, 'default', ['class' => 'widget-skyrim-stats']);
+
+                // Word Map
                 $generalStats = fetch_widget_stats($conn, "
                     SELECT data
                     FROM {$schema}.eventlog 
