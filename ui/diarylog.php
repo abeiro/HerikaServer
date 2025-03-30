@@ -314,12 +314,12 @@ function handle_csv_export($conn, $schema) {
             header('Content-Type: text/csv; charset=utf-8');
             if ($is_specific_date) {
                 if (isset($_GET['date'])) {
-                    header('Content-Disposition: attachment; filename=adventure_log_' . $selectedDate . '.csv');
+                    header('Content-Disposition: attachment; filename=diary_log_' . $selectedDate . '.csv');
                 } else {
-                    header('Content-Disposition: attachment; filename=adventure_log_latest.csv');
+                    header('Content-Disposition: attachment; filename=diary_log_latest.csv');
                 }
             } else {
-                header('Content-Disposition: attachment; filename=adventure_log_full.csv');
+                header('Content-Disposition: attachment; filename=diary_log_full.csv');
             }
 
             // Add BOM for Excel compatibility
@@ -329,7 +329,7 @@ function handle_csv_export($conn, $schema) {
             $output = fopen('php://output', 'w');
 
             // Output the column headings matching the table
-            fputcsv($output, ['Topic', 'Content', 'Author', 'Tamrielic Time', 'Time(UTC)']);
+            fputcsv($output, ['Author', 'Content', 'Tamrielic Time', 'Time(UTC)']);
 
             // Initialize previous location for tracking changes
             $previousLocation = null;
@@ -354,7 +354,7 @@ function handle_csv_export($conn, $schema) {
                             }
                         }
                         // Write location change as a special row
-                        fputcsv($output, ['Location Change:', $locationName, '', '', '']);
+                        fputcsv($output, ['Location Change:', $locationName, '', '']);
                     }
                     
                     // Update previous location
@@ -366,11 +366,10 @@ function handle_csv_export($conn, $schema) {
                         $tamrielicTime = convert_gamets2skyrim_long_date2($row['gamets']);
                     }
 
-                    // Write the actual event row
+                    // Write the actual event row with reordered columns
                     fputcsv($output, [
-                        $processed_row['Topic'],
-                        $processed_row['Content'],
                         $processed_row['Nearby People'],
+                        $processed_row['Content'],
                         $tamrielicTime,
                         $processed_row['Time(UTC)']
                     ]);
@@ -1423,7 +1422,7 @@ if ($shouldFetchEvents) {
             foreach ($currentCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
             }
-            echo "<button type='submit' class='btn-save'>Download Today's Diaries</button>";
+            echo "<button type='submit' class='btn-save'>Download Current Diaries</button>";
             echo "</form>";
 
             $allCsvParams = ['export' => 'all_csv'];
