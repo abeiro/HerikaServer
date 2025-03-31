@@ -172,8 +172,16 @@ if (php_sapi_name() != "cli") {
         echo '<div class="message">Sending <code>' . htmlspecialchars($testFile) . '</code></div>';
 
         // Define the expected transcription
-        $expected_transcription = "Welcome to the jungle, we've got fun and games.";
-        echo '<div class="message">Expected result: "<em>' . htmlspecialchars($expected_transcription) . '</em>"</div>';
+        $expected_transcription = "The Great War is long past. It's time the Empire and the Aldmeri Dominion put aside their differences. Prosperity is good for everyone.";
+        echo '<div class="message">Expected result: "<em>' . htmlspecialchars($expected_transcription) . '</em>" <button onclick="playAudio()" style="background: none; color: #4CAF50; border: none; padding: 0; cursor: pointer; margin-left: 10px; font-size: 20px;">▶</button></div>';
+        echo '<audio id="testAudio" preload="auto"><source src="../../debug/data/test.wav" type="audio/wav"></audio>';
+        echo '<script>
+            function playAudio() {
+                var audio = document.getElementById("testAudio");
+                audio.currentTime = 0;
+                audio.play();
+            }
+        </script>';
 
         echo '<div class="status"><span class="label">Obtaining transcription from STT service...</span></div>';
 
@@ -233,7 +241,7 @@ if (php_sapi_name() != "cli") {
     // Running from CLI
     if (!isset($argv[1])) {
         echo "Sending " . __DIR__ . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav" . PHP_EOL;
-        $expected_transcription = "Welcome to the jungle, we've got fun and games.";
+        $expected_transcription = "The Great War is long past. It's time the Empire and the Aldmeri Dominion put aside their differences. Prosperity is good for everyone.";
         echo "Expected result: '" . $expected_transcription . "'" . PHP_EOL;
         echo "Obtaining transcription from STT service.... ";
 
