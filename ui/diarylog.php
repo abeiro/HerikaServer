@@ -1634,7 +1634,8 @@ if ($shouldFetchEvents) {
                         }
 
                         $topic = htmlspecialchars_decode($row['topic']);
-                        $content = htmlspecialchars_decode($row['content']);
+                        $rawContent = $row['content']; // Store raw content without nl2br
+                        $displayContent = nl2br($row['content']); // Format for display
                         $people = $processed_row['Nearby People'];
                         $timeDisplay = $processed_row['Time(UTC)'];
                         
@@ -1649,15 +1650,15 @@ if ($shouldFetchEvents) {
                                 <td class='entry-cell' onclick='openEntryModal(" . json_encode([
                                     'rowid' => $row['rowid'],
                                     'topic' => $topic,
-                                    'content' => $content
-                                ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$content}</td>
+                                    'content' => $displayContent
+                                ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$displayContent}</td>
                                 <td>{$gameTimeDisplay}</td>
                                 <td>{$timeDisplay}</td>
                                 <td>
                                     <button onclick='openEditModal(" . json_encode([
                                         'rowid' => $row['rowid'],
                                         'topic' => $topic,
-                                        'content' => $content
+                                        'content' => $rawContent
                                     ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")' class='action-button edit'>Edit</button>
                                     <button onclick='if(confirm(\"Are you sure you want to delete this entry?\")) { deleteEntry(" . $row['rowid'] . "); }' class='btn-danger'>Delete</button>
                                 </td>
@@ -1686,7 +1687,8 @@ if ($shouldFetchEvents) {
 
                     // Extract processed data
                     $topic = htmlspecialchars_decode($row['topic']);
-                    $content = htmlspecialchars_decode($row['content']);
+                    $rawContent = $row['content']; // Store raw content without nl2br
+                    $displayContent = nl2br($row['content']); // Format for display
                     $people = $processed_row['Nearby People'];
                     $timeDisplay = $processed_row['Time(UTC)'];
                     
@@ -1720,15 +1722,15 @@ if ($shouldFetchEvents) {
                             <td class='entry-cell' onclick='openEntryModal(" . json_encode([
                                 'rowid' => $row['rowid'],
                                 'topic' => $topic,
-                                'content' => $content
-                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$content}</td>
+                                'content' => $displayContent
+                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$displayContent}</td>
                             <td>{$gameTimeDisplay}</td>
                             <td>{$timeDisplay}</td>
                             <td>
                                 <button onclick='openEditModal(" . json_encode([
                                     'rowid' => $row['rowid'],
                                     'topic' => $topic,
-                                    'content' => $content
+                                    'content' => $rawContent
                                 ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")' class='action-button edit'>Edit</button>
                                 <button onclick='if(confirm(\"Are you sure you want to delete this entry?\")) { deleteEntry(" . $row['rowid'] . "); }' class='btn-danger'>Delete</button>
                             </td>
