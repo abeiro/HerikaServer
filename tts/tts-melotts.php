@@ -68,7 +68,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 
     if (empty($voice))
-        error_log("Error, voiceid is no set");
+        Logger::error("voiceid is no set");
 
     $cleanString = $textString; 
     if (function_exists('adjust_pronunciation')) {
@@ -79,7 +79,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
         //error_log("melotts pronunciation_adjust_enabled: " . ($b_ok ? "YES" : "NO"));
         if ($b_ok) 
             $cleanString = adjust_pronunciation($textString); // adjust English mispronunciations.
-    } else error_log("melotts info: pronunciation adjustments NOT defined.");
+    } else Logger::warn("melotts info: pronunciation adjustments NOT defined.");
 
     $finalData =["speaker"=>"$voice","text"=>"$cleanString","language"=>"EN","speed"=>$speed];
     //print_r($finalData);

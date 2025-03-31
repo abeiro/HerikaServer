@@ -41,7 +41,7 @@ class sql
         //error_log(print_r($params,true));
         $result = pg_query_params(self::$link, $query, $params);
         if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
     }
 
@@ -66,7 +66,7 @@ class sql
     {
         $result = pg_query(self::$link, $sqlquery);
         if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
     }
 
@@ -74,7 +74,7 @@ class sql
     {
         $result = pg_query(self::$link, $q);
         if (!$result) {
-            error_log(pg_last_error(self::$link));
+            Logger::error(pg_last_error(self::$link));
             return [];
         }
 
@@ -91,7 +91,7 @@ class sql
     {
         $result = pg_query(self::$link, $q);
         if (!$result) {
-            error_log(pg_last_error(self::$link));
+            Logger::error(pg_last_error(self::$link));
             return [];
         }
 
@@ -135,7 +135,7 @@ class sql
         
         $result = pg_query_params(self::$link, $query, $params);
         if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
     }
 
@@ -145,7 +145,7 @@ class sql
         $checkResult = pg_query(self::$link, $checkQuery);
 
         if (!$checkResult) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
             return false;
         }
 
@@ -183,7 +183,7 @@ class sql
         // Execute the query
         $result = pg_query_params(self::$link, $query, $params);
         if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
             return false;
         }
 
@@ -268,7 +268,7 @@ class sql
         } catch (Exception $e) {
             // Rollback on error
             pg_query(self::$link, "ROLLBACK");
-            error_log($e->getMessage() . print_r(debug_backtrace(), true));
+            Logger::error($e->getMessage() . print_r(debug_backtrace(), true));
             return false;
         }
     }
@@ -300,7 +300,7 @@ class sql
         $result = pg_query(self::$link, $sqlquery);
     
         if (!$result) {
-            error_log(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
             return false; // Indicate failure
         }
     

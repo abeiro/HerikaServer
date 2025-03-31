@@ -110,7 +110,7 @@ class anthropic
         $this->primary_handler = fopen($url, 'r', false, $context);
 
         if (!$this->primary_handler) {
-            error_log(print_r(error_get_last(), true));
+            Logger::error(print_r(error_get_last(), true));
             return null;
         }
 

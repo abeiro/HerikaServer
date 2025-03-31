@@ -51,6 +51,7 @@ function DMsetCurrentModel($model) {
         
     $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
 
+    shell_exec("chmod 775 $file");
     $cmj=file_put_contents($file,json_encode($model));
 
 }

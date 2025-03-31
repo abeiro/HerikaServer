@@ -16,6 +16,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.cl
 require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 
 
@@ -25,12 +26,12 @@ $gameRequest=["inputtext"];
 $profile=md5("default");
 
 if (file_exists($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php")) {
-    error_log("PROFILE: {$profile}");
+    Logger::debug("PROFILE: {$profile}");
     $GLOBALS["active_profile"]=$profile;
     require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php");
 
 } else 
-    error_log($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php");
+    Logger::debug($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php");
 
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 
@@ -40,7 +41,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
     die("Choose a LLM model and connector.".PHP_EOL);
 
 } else {
-    error_log("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
+    Logger::debug("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
     require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 
 

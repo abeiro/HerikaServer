@@ -45,7 +45,7 @@ class web_connector
 
         $this->conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
         if (!$this->conn) {
-            error_log("Failed to connect to PostgreSQL database!");
+            Logger::error("Failed to connect to PostgreSQL database!");
         }
     }
 
@@ -61,7 +61,7 @@ class web_connector
                   ORDER BY id ASC";
         $stmt = pg_prepare($this->conn, self::FETCH_RESPONSE_STATEMENT, $query);
         if (!$stmt) {
-            error_log("Error preparing statement: " . pg_last_error($this->conn));
+            Logger::error("Error preparing statement: " . pg_last_error($this->conn));
         }
     }
 
@@ -137,7 +137,7 @@ class web_connector
         $result = pg_query($this->conn, $query);
 
         if (!$result) {
-            error_log("Error sending message to websocket queue: " . pg_last_error($this->conn));
+            Logger::error("Error sending message to websocket queue: " . pg_last_error($this->conn));
             return false;
         }
 
@@ -145,7 +145,7 @@ class web_connector
         if ($insertRow && isset($insertRow['id'])) {
             $this->last_message_id = (int)$insertRow['id'];
         } else {
-            error_log("Could not retrieve the newly inserted message's ID.");
+            Logger::error("Could not retrieve the newly inserted message's ID.");
             return false;
         }
 
@@ -176,7 +176,7 @@ class web_connector
         $result = pg_execute($this->conn, self::FETCH_RESPONSE_STATEMENT, $params);
 
         if (!$result) {
-            error_log("Error fetching messages from websocket queue: " . pg_last_error($this->conn));
+            Logger::error("Error fetching messages from websocket queue: " . pg_last_error($this->conn));
             return "";
         }
 
@@ -273,7 +273,7 @@ class web_connector
         $result = pg_execute($this->conn, self::FETCH_RESPONSE_STATEMENT, $params);
 
         if (!$result) {
-            error_log("Error fetching messages from websocket queue in isDone: " . pg_last_error($this->conn));
+            Logger::error("Error fetching messages from websocket queue in isDone: " . pg_last_error($this->conn));
             return true; 
         }
 

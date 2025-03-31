@@ -3,6 +3,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
 
 $TITLE = "🌲 CHIM Server Logs";
 
@@ -123,14 +124,14 @@ function createLogsZip() {
     // Create new zip archive
     $zip = new ZipArchive();
     if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
-        error_log("Failed to create zip file");
+        Logger::error("Failed to create zip file");
         return false;
     }
 
     // Add all .log files from the log directory
     $files = glob($logPath . DIRECTORY_SEPARATOR . '*.log');
     if (empty($files)) {
-        error_log("No log files found in " . $logPath);
+        Logger::warn("No log files found in " . $logPath);
         $zip->close();
         return false;
     }
@@ -142,10 +143,10 @@ function createLogsZip() {
             if ($zip->addFile($file, $relativePath)) {
                 $addedFiles++;
             } else {
-                error_log("Failed to add file to zip: " . $file);
+                Logger::warn("Failed to add file to zip: " . $file);
             }
         } else {
-            error_log("File not readable: " . $file);
+            Logger::warn("File not readable: " . $file);
         }
     }
 
@@ -153,7 +154,7 @@ function createLogsZip() {
 
     // Check if we actually added any files
     if ($addedFiles === 0) {
-        error_log("No files were added to the zip");
+        Logger::warn("No files were added to the zip");
         if (file_exists($zipPath)) {
             unlink($zipPath);
         }
@@ -162,7 +163,7 @@ function createLogsZip() {
 
     // Verify the zip file exists and is readable
     if (!file_exists($zipPath) || !is_readable($zipPath)) {
-        error_log("Created zip file is not accessible");
+        Logger::error("Created zip file is not accessible");
         return false;
     }
 

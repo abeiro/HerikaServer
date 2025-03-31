@@ -118,7 +118,7 @@ function ttsMimicOld($textString, $mood = "cheerful", $stringforhash='')
    
     $startTimeTrans = microtime(true);
     shell_exec("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname 2>/dev/null >/dev/null");
-    error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ");
+    Logger::debug("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ");
     $endTimeTrans = microtime(true)-$startTimeTrans;
     
     file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");

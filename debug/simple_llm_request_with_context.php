@@ -24,15 +24,16 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 if (isset($argv[2])) {
     if (file_exists($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$argv[2]}.php")) {
-        error_log("PROFILE: {$argv[2]}");
+        Logger::debug("PROFILE: {$argv[2]}");
         $GLOBALS["active_profile"]=$argv[2];
         require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$argv[2]}.php");
 
     } else 
-        error_log($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$argv[2]}.php");
+        Logger::debug($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$argv[2]}.php");
     
     $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 
@@ -47,7 +48,7 @@ $FUNCTIONS_ARE_ENABLED=false;
 
 $gameRequest=[];
 
-error_log(__LINE__." " .(microtime(true) - $startTime));
+Logger::debug(__LINE__." " .(microtime(true) - $startTime));
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
     die("Choose a LLM model and connector.".PHP_EOL);
 
@@ -64,7 +65,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
     $request=$argv[1];
     require($enginePath.DIRECTORY_SEPARATOR."prompt.includes.php");
 
-    error_log($GLOBALS["HERIKA_NAME"]);
+    Logger::debug($GLOBALS["HERIKA_NAME"]);
     $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 
     $GLOBALS["gameRequest"]=$gameRequest;
@@ -76,7 +77,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
     } else
         $GLOBALS["IS_NPC"]=true;
     
-    error_log($GLOBALS["CACHE_PARTY"]);
+    Logger::debug($GLOBALS["CACHE_PARTY"]);
 
     
 
@@ -134,15 +135,15 @@ else {
     $contextData = array_merge($head, ($contextDataFull), $prompt);
     
 
-    error_log(__LINE__." " .(microtime(true) - $startTime));    
+    Logger::debug(__LINE__." " .(microtime(true) - $startTime));    
     
     $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
     $connectionHandler->open($contextData,[]);
     
-    error_log(__LINE__." " .(microtime(true) - $startTime));
+    Logger::debug(__LINE__." " .(microtime(true) - $startTime));
     
     //print_r($contextData);
-    error_log("FUNCTIONS_ARE_ENABLED $FUNCTIONS_ARE_ENABLED");
+    Logger::debug("FUNCTIONS_ARE_ENABLED $FUNCTIONS_ARE_ENABLED");
     $buffer="";
     $totalBuffer="";
     $breakFlag=false;
@@ -173,11 +174,11 @@ else {
             $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
             
             if ($gameRequest[0] != "diary") {
-                error_log("[PRE-TTS] Line output:".(microtime(true) - $startTime));
+                Logger::debug("[PRE-TTS] Line output:".(microtime(true) - $startTime));
                 echo "\033[1;33m";
                 returnLines($sentences);
                 echo "\033[0m";
-                error_log("[POST-TTS] Line output:".(microtime(true) - $startTime));
+                Logger::debug("[POST-TTS] Line output:".(microtime(true) - $startTime));
             } else {
                 $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
             }
@@ -195,10 +196,10 @@ else {
         $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
         $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
         if ($gameRequest[0] != "diary") {
-            error_log("[PRE-TTS] Line output:".(microtime(true) - $startTime));
+            Logger::debug("[PRE-TTS] Line output:".(microtime(true) - $startTime));
             echo "\033[1;33m";
             returnLines($sentences);
-            error_log("[POST-TTS] Line output:".(microtime(true) - $startTime));
+            Logger::debug("[POST-TTS] Line output:".(microtime(true) - $startTime));
             echo "\033[0m2";
         } else {
             $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
@@ -207,7 +208,7 @@ else {
         $totalProcessedData.=trim($buffer);
     }
     
-     error_log("End:" .(microtime(true) - $startTime));
+    Logger::debug("End:" .(microtime(true) - $startTime));
 
      $GLOBALS["_JSON_BUFFER"]=[];   // reset json buffer. we need to full parse again.
      $actions=$connectionHandler->processActions();
