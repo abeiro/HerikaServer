@@ -65,7 +65,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         if (is_array($resultArray) && isset($resultArray[0])) {
             $filePath = $resultArray[0];
         } else {
-            error_log("could not upload {$voice}.wav to zonos_gradio");
+            Logger::error("could not upload {$voice}.wav to zonos_gradio");
             return false;
         }
 
@@ -212,10 +212,10 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         }
         
         // Log the emotion values being used
-        error_log("Using emotions for TTS generation (mood: $mood):");
+        Logger::trace("Using emotions for TTS generation (mood: $mood):");
         foreach ($emotions as $emotion => $value) {
             $emotion_name = str_replace("response_tone_", "", $emotion);
-            error_log("Emotion: $emotion_name: $value");
+            Logger::trace("Emotion: $emotion_name: $value");
         }
 
         $data = array(
@@ -276,7 +276,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         // response is something like {"event_id":"randomalphanumeric"}
         $respObj = json_decode($response);
         if (!$respObj) {
-            error_log("could not generate audio from zonos_gradio");
+            Logger::error("could not generate audio from zonos_gradio");
             return false;
         }
 
@@ -297,7 +297,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         $jsonString = substr($response, $startPos, ($endPos - $startPos) + 1);
         $respObj = json_decode($jsonString);
         if (!$respObj) {
-            error_log("could not retrieve generate_audio results from zonos_gradio");
+            Logger::error("could not retrieve generate_audio results from zonos_gradio");
             return false;
         }
 

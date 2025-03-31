@@ -57,7 +57,7 @@ class sql
         // Execute the prepared statement
         $result = $stmt->execute();
         if (!$result) {
-            error_log(self::$link->lastErrorMsg().debug_backtrace());
+            Logger::error(self::$link->lastErrorMsg().debug_backtrace());
 
         }
 
@@ -83,7 +83,7 @@ class sql
     {
         $result=self::$link->exec($sqlquery);
         if (!$result) {
-            error_log(self::$link->lastErrorMsg().print_r(debug_backtrace(), true));
+            Logger::error(self::$link->lastErrorMsg().print_r(debug_backtrace(), true));
         }
     }
 

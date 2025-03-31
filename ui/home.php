@@ -16,6 +16,7 @@ $password = 'dwemer';
 
 // Include game timestamp utilities
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/utils_game_timestamp.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
 
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];

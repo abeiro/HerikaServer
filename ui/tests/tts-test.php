@@ -1,6 +1,7 @@
 <?php
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
 
 $TITLE = "🔊CHIM - TTS Test - CHIM Server";
 
