@@ -106,8 +106,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         $taskId = uniqid();
         
         // Format action string with the actual instruction text
-        //$action = make_replacements("rolecommand|Instruction@{$characterName}@{$instruction}@$taskId");
-        $action = make_replacements("rolecommand|Suggestion@{$characterName}@{$instruction}@$taskId");
+        $action = make_replacements("rolecommand|Instruction@{$characterName}@{$instruction}@$taskId");
+        //$action = make_replacements("rolecommand|Suggestion@{$characterName}@{$instruction}@$taskId");
     
         // Insert into the database
         $GLOBALS["db"]->insert(
