@@ -977,7 +977,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="chat-section">
             <div class="help-section">
-                <h3>🔍 Dwemer AI Diagnostics</h3>
+                <h3>🔍 Dwemer AI Diagnostics (WIP)</h3>
                 <p>A tool to have an AI scan through the CHIM database. Just ask it a question!</p>
                 <p>OpenRouter only, configure in settings.</p>
             </div>

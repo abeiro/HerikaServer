@@ -53,11 +53,11 @@ function cleanResponse($rawResponse)
     // Any bracket { or }]
     $rawResponse = strtr($rawResponse, array("{" => "", "}" => ""));
 
-    if (strpos($rawResponse, "(Context location") !== false) {
+    if (strpos($rawResponse, "(Context location") !== false || strpos($rawResponse, "(Context new location") !== false) {
         $rawResponseSplited = explode(":", $rawResponse);
-        $toSplit = $rawResponseSplited[2];
-    } elseif (strpos($rawResponse, "(Context new location") !== false) {
-        $rawResponseSplited = explode(":", $rawResponse);
+        if (!isset($rawResponseSplited[2])) {
+            Logger::warn("Could not extract speech from raw response: $rawResponse");
+        }
         $toSplit = $rawResponseSplited[2];
     } else {
         $toSplit = $rawResponse;
