@@ -826,9 +826,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto;'>
                             <div style='background: url(\"/HerikaServer/ui/images/paper.jpg\") center/cover; padding: 40px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);'>
                                 <div style='color: #000; line-height: 1.4; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>
-                                    <div style='font-size: 1.1em; margin-bottom: 10px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>{$tamrielicTime}</div>
-                                    <div style='font-size: 1.4em; margin-bottom: 5px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['topic']) . "</div>
-                                    <div style='font-size: 1.1em; margin-bottom: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>Written by " . htmlspecialchars($latestDiary[0]['author']) . "</div>
+                                    <div style='font-size: 1.1em; margin-bottom: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['author']) . "</div>
                                     <div style='font-size: 1.2em; padding-top: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['content']) . "</div>
                                 </div>
                             </div>

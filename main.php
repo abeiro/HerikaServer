@@ -23,7 +23,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php"); 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
 
 
@@ -806,13 +806,31 @@ if (sizeof($talkedSoFar) == 0) {
         if ($gameRequest[0] == "diary") {
             $topic=DataLastKnowDate();
             $location=DataLastKnownLocation();
+            
+            // Format diary content into paragraphs
+            $formattedContent = "";
+            $currentParagraph = [];
+            $sentenceCount = 0;
+            
+            foreach ($talkedSoFar as $sentence) {
+                $currentParagraph[] = $sentence;
+                $sentenceCount++;
+                
+                // Start new paragraph if we have 2-4 sentences or this is the last sentence
+                if ($sentenceCount >= 2 && $sentenceCount <= 4 || $sentence === end($talkedSoFar)) {
+                    $formattedContent .= implode(" ", $currentParagraph) . "\n\n";
+                    $currentParagraph = [];
+                    $sentenceCount = 0;
+                }
+            }
+            
             $db->insert(
                 'diarylog',
                 array(
                     'ts' => $gameRequest[1],
                     'gamets' => $gameRequest[2],
                     'topic' => "$topic",
-                    'content' => (implode(" ", $talkedSoFar)),
+                    'content' => trim($formattedContent),
                     'tags' => "Pending",
                     'people' => $GLOBALS["HERIKA_NAME"],
                     'location' => "$location",
