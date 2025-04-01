@@ -1404,7 +1404,7 @@ function DataBeingsInCloseRange()
     $beingsArray=explode("/",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
-        if (strpos($v,")")===false) 
+        if (strpos($v,"dead)")===false) 
             if (strpos($v,"Horse")!==0) 
                 if (strpos($v,"Chicken")!==0) 
                     $beingsArrayNew[]=$v;
