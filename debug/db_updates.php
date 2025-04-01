@@ -945,4 +945,11 @@ if ($checkVersion("questlog")<20250310001) {
     Logger::info("Applied patch questlog 20250310001");
 }
 
+// fix for memory_summary missing companions
+if ($checkVersion("memory_summary")<20250331001) {
+    $db->execQuery("UPDATE memory_summary set companions = NULL WHERE companions = '';");
+    $updateVersion("memory_summary",20250331001);
+    Logger::info("Applied patch memory_summary 20250331001");
+}
+
 ?>

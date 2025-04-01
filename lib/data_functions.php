@@ -1331,7 +1331,7 @@ function PackIntoSummary()
     Logger::info("Diary insert done");
 
     
-    $people=$db->fetchAll("SELECT distinct(data) as npc from eventlog where type='addnpc'");
+    $people=$db->fetchAll("SELECT distinct split_part(data, '@', 1) as npc from eventlog where type='addnpc'");
     $addednpc=[];
     foreach ($people as $p)
         $addednpc[]=$p["npc"];
