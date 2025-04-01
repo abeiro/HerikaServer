@@ -108,6 +108,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                       implode('<br>', $errors) . '</div>';
         }
     }
+    // Reset button
+    elseif (isset($_POST['reset'])) {
+        // Reset the content to basic configuration
+        $content = "<?php\n?>";
+        
+        // Save the new content back to the file
+        if (file_put_contents($file_path, $content) !== false) {
+            // Instead of reloading, redirect to the same page
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        } else {
+            $message = '<div class="error-message">Error resetting the file.</div>';
+        }
+    }
     // View prompts button
     elseif (isset($_POST['view_prompts'])) {
         // Handle view_prompts
@@ -222,10 +236,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div id="toast" class="toast-notification">
             <span class="message"></span>
         </div>
-
+        <h4 style="color: yellow;"><b>Warning:</b> For Advanced Users Only! Misconfigurations can cause CHIM to break in unexpected ways...</h4>
         <p>
             By making your own <b>prompts_custom.php</b> file you can make edits to how AI NPCs respond to triggered events.
-            For example, you can adjust how AI NPCs write their diary entries, what they say during bored events, and more!
         </p>
         <p>
             The contents of this file overwrites whatever is in the standard <code>prompts.php</code>, meaning you can safely make edits to it without breaking it when CHIM updates.
@@ -242,6 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="button-group">
                 <input type="submit" name="save" value="Save" class="action-button upload-csv">
                 <input type="submit" name="validate" value="Validate" class="action-button edit">
+                <input type="submit" name="reset" value="Reset" class="action-button btn-danger" onclick="return confirmReset()">
             </div>
             <p>
             Click the <b>Validate</b> button to confirm the file is in proper format. Then click <b>Save</b>. 
@@ -324,6 +338,11 @@ $PROMPTS["diary"]=[
     <script>
     let editor;
     let isPromptsVisible = <?php echo isset($prompts_content) ? 'true' : 'false' ?>;
+
+    // Confirmation function for reset
+    function confirmReset() {
+        return confirm("Warning: All custom prompts configurations will be lost. Are you sure you want to continue?");
+    }
 
     // Toast notification function
     function showToast(message, duration = 5000) {

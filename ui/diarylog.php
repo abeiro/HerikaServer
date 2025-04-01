@@ -37,7 +37,31 @@ if (!$conn) {
 
 // Handle diary entry updates via POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get POST data
+    // Check for delete action
+    if (isset($_POST['action']) && $_POST['action'] === 'delete') {
+        $rowid = filter_input(INPUT_POST, 'rowid', FILTER_VALIDATE_INT);
+        
+        if (!$rowid) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid row ID']);
+            exit;
+        }
+
+        // Delete the diary entry
+        $query = "DELETE FROM {$schema}.diarylog WHERE rowid = $1";
+        $result = pg_query_params($conn, $query, [$rowid]);
+
+        if ($result) {
+            http_response_code(200);
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to delete entry: ' . pg_last_error($conn)]);
+        }
+        exit;
+    }
+
+    // Existing update logic
     $rowid = filter_input(INPUT_POST, 'rowid', FILTER_VALIDATE_INT);
     $topic = filter_input(INPUT_POST, 'topic', FILTER_SANITIZE_STRING);
     $content = filter_input(INPUT_POST, 'content', FILTER_SANITIZE_STRING);
@@ -78,6 +102,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 function sanitize_int($value, $default) {
     $value = filter_var($value, FILTER_VALIDATE_INT);
     return ($value !== false) ? $value : $default;
+}
+
+/**
+ * Function to get list of people with their diary entry counts
+ * 
+ * @param resource $conn Database connection
+ * @param string $schema Database schema
+ * @return array Array of people with their entry counts
+ */
+function getPeopleList($conn, $schema) {
+    $query = "
+        WITH split_people AS (
+            SELECT 
+                d.rowid,
+                trim(unnest(string_to_array(trim(d.people, '|'), '|'))) as person
+            FROM {$schema}.diarylog d
+            WHERE d.people IS NOT NULL AND d.people != ''
+        )
+        SELECT 
+            person,
+            COUNT(DISTINCT rowid) as entry_count
+        FROM split_people
+        WHERE person != ''
+        GROUP BY person
+        ORDER BY entry_count DESC, person ASC
+    ";
+    
+    $result = pg_query($conn, $query);
+    $peopleList = [];
+    
+    if ($result) {
+        while ($row = pg_fetch_assoc($result)) {
+            $peopleList[] = $row;
+        }
+    }
+    
+    return $peopleList;
+}
+
+/**
+ * Function to get diary entries by person
+ * 
+ * @param resource $conn Database connection
+ * @param string $schema Database schema
+ * @param string $person Person name to filter by
+ * @return array Array of diary entries
+ */
+function getEntriesByPerson($conn, $schema, $person) {
+    // Debug log
+    error_log("Searching for person: " . $person);
+    
+    $query = "
+        SELECT rowid, topic, content, tags, people, location, localts, gamets
+        FROM {$schema}.diarylog
+        WHERE people LIKE $1
+        ORDER BY localts DESC
+    ";
+    
+    $result = pg_query_params($conn, $query, ['%' . $person . '%']);
+    
+    if (!$result) {
+        error_log("Query error: " . pg_last_error($conn));
+        return [];
+    }
+    
+    $entries = [];
+    while ($row = pg_fetch_assoc($result)) {
+        error_log("Found entry with people: " . $row['people']);
+        $entries[] = $row;
+    }
+    
+    error_log("Found " . count($entries) . " entries for person: " . $person);
+    return $entries;
 }
 
 /**
@@ -217,12 +314,12 @@ function handle_csv_export($conn, $schema) {
             header('Content-Type: text/csv; charset=utf-8');
             if ($is_specific_date) {
                 if (isset($_GET['date'])) {
-                    header('Content-Disposition: attachment; filename=adventure_log_' . $selectedDate . '.csv');
+                    header('Content-Disposition: attachment; filename=diary_log_' . $selectedDate . '.csv');
                 } else {
-                    header('Content-Disposition: attachment; filename=adventure_log_latest.csv');
+                    header('Content-Disposition: attachment; filename=diary_log_latest.csv');
                 }
             } else {
-                header('Content-Disposition: attachment; filename=adventure_log_full.csv');
+                header('Content-Disposition: attachment; filename=diary_log_full.csv');
             }
 
             // Add BOM for Excel compatibility
@@ -232,7 +329,7 @@ function handle_csv_export($conn, $schema) {
             $output = fopen('php://output', 'w');
 
             // Output the column headings matching the table
-            fputcsv($output, ['Topic', 'Content', 'Author', 'Tamrielic Time', 'Time(UTC)']);
+            fputcsv($output, ['Author', 'Content', 'Tamrielic Time', 'Time(UTC)']);
 
             // Initialize previous location for tracking changes
             $previousLocation = null;
@@ -257,7 +354,7 @@ function handle_csv_export($conn, $schema) {
                             }
                         }
                         // Write location change as a special row
-                        fputcsv($output, ['Location Change:', $locationName, '', '', '']);
+                        fputcsv($output, ['Location Change:', $locationName, '', '']);
                     }
                     
                     // Update previous location
@@ -269,11 +366,10 @@ function handle_csv_export($conn, $schema) {
                         $tamrielicTime = convert_gamets2skyrim_long_date2($row['gamets']);
                     }
 
-                    // Write the actual event row
+                    // Write the actual event row with reordered columns
                     fputcsv($output, [
-                        $processed_row['Topic'],
-                        $processed_row['Content'],
                         $processed_row['Nearby People'],
+                        $processed_row['Content'],
                         $tamrielicTime,
                         $processed_row['Time(UTC)']
                     ]);
@@ -696,6 +792,15 @@ if ($shouldFetchEvents) {
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
     <title>📔CHIM Diary Log</title>
     <style>
+        /* Add font-face declaration */
+        @font-face {
+            font-family: 'SkyrimBooks_Handwritten_Bold';
+            src: url('/HerikaServer/ui/css/font/SkyrimBooks_Handwritten_Bold-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
         /* Adventure Log specific styles */
         .calendar {
             width: 100%;
@@ -838,11 +943,11 @@ if ($shouldFetchEvents) {
         }
 
         /* Column widths for event table */
-        .col-topic { width: 15%; }
-        .col-content { width: 50%; }
         .col-people { width: 10%; }
+        .col-content { width: 60%; }
         .col-gamets { width: 15%; }
         .col-time { width: 10%; font-family: monospace; font-size: 0.9em; }
+        .col-actions { width: 5%; }
 
         /* Location change row styles */
         .location-change-row {
@@ -925,103 +1030,272 @@ if ($shouldFetchEvents) {
         }
 
         .modal-content {
-            background-color: #2c2c2c;
-            margin: 15vh auto;
-            padding: 30px;
-            border: 1px solid #555;
+            background-color: #3a3a3a;
+            margin: 200px auto;
+            padding: 25px;
             width: 90%;
             max-width: 1200px;
             border-radius: 8px;
             position: relative;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
             color: #f8f9fa;
+            margin: 0;
+            font-size: 1.5em;
         }
 
         .close {
-            color: #aaa;
             position: absolute;
-            right: 20px;
+            right: 15px;
             top: 15px;
-            font-size: 28px;
-            font-weight: bold;
+            width: 30px;
+            height: 30px;
+            background: #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 24px;
             cursor: pointer;
+            z-index: 1;
+            transition: all 0.3s ease;
+            border: none;
+            padding: 0;
             line-height: 1;
         }
 
         .close:hover {
-            color: #fff;
+            background: #444;
+            transform: scale(1.1);
         }
 
         .modal-body {
-            margin-top: 20px;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+            padding-right: 15px;
         }
 
-        .edit-form label {
-            display: block;
-            margin-top: 10px;
-            margin-bottom: 5px; /* Added margin bottom */
-            color: #f8f9fa;
-            font-size: 1.1em; /* Increased font size */
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            position: sticky;
+            bottom: 0;
+            background: #3a3a3a;
+            border-top: 1px solid #3a3a3a;
         }
 
-        .edit-form input[type="text"],
+        /* View modal specific styles */
+        .diary-paper {
+            background: url("/HerikaServer/ui/images/paper.jpg") center/cover;
+            padding: 40px;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            color: #000;
+            line-height: 1.4;
+            margin: 20px 0;
+        }
+
+        .diary-author {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;
+        }
+
+        .diary-content {
+            font-size: 1.2em;
+            padding-top: 15px;
+            font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;
+        }
+
+        /* Edit modal specific styles */
+        .edit-form {
+            width: 100%;
+        }
+
         .edit-form textarea {
             width: 100%;
-            padding: 12px; /* Increased padding */
-            margin-top: 5px;
-            background-color: #3a3a3a;
-            border: 1px solid #555;
-            color: #f8f9fa;
+            min-height: 400px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #2d2d2d;
+            border: 1px solid #3a3a3a;
             border-radius: 4px;
-            font-size: 1.1em; /* Increased font size */
-        }
-
-        .edit-form input[type="text"] {
-            height: 40px; /* Increased height for topic field */
-        }
-
-        .edit-form textarea {
-            min-height: 400px; /* Significantly increased from 150px */
+            color: #fff;
+            font-size: 1.1em;
             resize: vertical;
-            line-height: 1.5; /* Better line spacing for readability */
-            font-family: inherit; /* Use the same font as the rest of the site */
         }
 
+        .edit-form textarea:focus {
+            outline: none;
+            border-color: #ff00c6;
+            box-shadow: 0 0 0 2px rgba(255, 0, 198, 0.2);
+        }
+
+        /* Add styles for people filter */
+        .people-list {
+            display: none; /* Hidden by default */
+            margin: 20px auto;
+            padding: 20px;
+            background: #2d2d2d;
+            border-radius: 8px;
+            max-width: 600px; /* Limit width of the list */
+        }
+
+        .people-list.active {
+            display: block;
+        }
+
+        .people-list form {
+            margin: 0;
+            padding: 0;
+        }
+
+        .people-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            margin: 5px 0;
+            background: #3a3a3a;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            width: 100%;
+            color: #f8f9fa;
+            font-size: 1em;
+            text-align: left;
+        }
+
+        .people-item:hover {
+            background: #4a4a4a;
+            transform: translateX(5px);
+        }
+
+        .people-count {
+            background: #007bff;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+
+        .calendar-container {
+            transition: all 0.3s ease;
+        }
+
+        .calendar-container.hidden {
+            display: none;
+        }
+
+        /* Add a search box for people */
+        .people-search {
+            margin-bottom: 15px;
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #f8f9fa;
+            font-size: 1em;
+        }
+
+        .people-search:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
+        /* Add section title */
+        .people-list-title {
+            margin: 0 0 15px 0;
+            color: #f8f9fa;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        /* Add styles for the edit button */
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Content column hover effect */
         .entry-cell {
             cursor: pointer;
-            transition: background-color 0.2s;
-            vertical-align: top;
-            padding: 12px;
-            word-break: break-word;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
         .entry-cell:hover {
-            background-color: #444444;
+            background-color: rgba(90, 90, 90, 0.1);
+            box-shadow: inset 0 0 0 1px rgba(83, 83, 83, 0.3);
         }
 
-        /* Topic cell specific styles */
-        .col-topic {
-            font-weight: bold;
-            color: #add8e6; /* Light blue color for topics */
+        .entry-cell:hover::after {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
-    <!-- Add modal HTML -->
-    <div id="entryModal" class="modal">
+    <!-- View Modal -->
+    <div id="viewModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Edit Diary Entry</h2>
+            <div class="modal-body">
+                <div class="diary-paper">
+                    <div class="diary-author" id="modalAuthor"></div>
+                    <div class="diary-content" id="modalContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Diary Entry</h2>
+                <span class="close">&times;</span>
+            </div>
             <div class="modal-body">
                 <form id="editForm" class="edit-form">
                     <input type="hidden" id="entryId" name="rowid">
-                    
-                    <label for="topic">Topic:</label>
-                    <input type="text" id="topic" name="topic" required>
-                    
-                    <label for="content">Content:</label>
+                    <input type="hidden" id="topic" name="topic">
                     <textarea id="content" name="content" required></textarea>
-                    
-                    <button type="submit" class="btn-save">Save Changes</button>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn-save">Save Changes</button>
+                        <button type="button" onclick="if(confirm('Are you sure you want to delete this entry?')) { deleteEntry(currentEntryData.rowid); }" class="btn-danger">Delete Entry</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -1029,24 +1303,50 @@ if ($shouldFetchEvents) {
 
     <script>
         // Modal functionality
-        const modal = document.getElementById('entryModal');
-        const closeBtn = document.getElementsByClassName('close')[0];
+        const viewModal = document.getElementById('viewModal');
+        const editModal = document.getElementById('editModal');
+        const closeBtns = document.getElementsByClassName('close');
         const editForm = document.getElementById('editForm');
+        let currentEntryData = null;
 
-        // Close modal when clicking X or outside
-        closeBtn.onclick = () => modal.style.display = 'none';
-        window.onclick = (event) => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
+        // Function to open view modal with entry data
+        function openEntryModal(data) {
+            currentEntryData = data;
+            // Get the exact content from the table cell to maintain formatting
+            const row = document.querySelector(`tr[data-rowid="${data.rowid}"]`);
+            const authorCell = row.querySelector('td:first-child');
+            const contentCell = row.querySelector('td.entry-cell');
+            
+            document.getElementById('modalAuthor').textContent = authorCell.textContent;
+            document.getElementById('modalContent').textContent = contentCell.textContent;
+            document.getElementById('modalContent').style.whiteSpace = 'pre-wrap';
+            viewModal.style.display = 'block';
         }
 
-        // Function to open modal with entry data
-        function openEntryModal(entryData) {
-            document.getElementById('entryId').value = entryData.rowid;
-            document.getElementById('topic').value = entryData.topic;
-            document.getElementById('content').value = entryData.content;
-            modal.style.display = 'block';
+        // Function to open edit modal
+        function openEditModal(data) {
+            currentEntryData = data;
+            document.getElementById('entryId').value = data.rowid;
+            document.getElementById('topic').value = data.topic;
+            document.getElementById('content').value = data.content;
+            editModal.style.display = 'block';
+        }
+
+        // Close modals when clicking X or outside
+        Array.from(closeBtns).forEach(btn => {
+            btn.onclick = function() {
+                viewModal.style.display = 'none';
+                editModal.style.display = 'none';
+            }
+        });
+
+        window.onclick = (event) => {
+            if (event.target === viewModal) {
+                viewModal.style.display = 'none';
+            }
+            if (event.target === editModal) {
+                editModal.style.display = 'none';
+            }
         }
 
         // Handle form submission
@@ -1061,8 +1361,7 @@ if ($shouldFetchEvents) {
                 });
                 
                 if (response.ok) {
-                    modal.style.display = 'none';
-                    // Reload the page to show updated content
+                    editModal.style.display = 'none';
                     window.location.reload();
                 } else {
                     alert('Error updating entry');
@@ -1072,6 +1371,29 @@ if ($shouldFetchEvents) {
                 alert('Error updating entry');
             }
         };
+
+        // Delete function
+        async function deleteEntry(rowid) {
+            try {
+                const response = await fetch('diarylog.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'action=delete&rowid=' + rowid
+                });
+                
+                if (response.ok) {
+                    editModal.style.display = 'none';
+                    window.location.reload();
+                } else {
+                    alert('Error deleting entry');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting entry');
+            }
+        }
     </script>
 
     <main class="container">
@@ -1100,7 +1422,7 @@ if ($shouldFetchEvents) {
             foreach ($currentCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
             }
-            echo "<button type='submit' class='btn-save'>Download Today's Diaries</button>";
+            echo "<button type='submit' class='btn-save'>Download Current Diaries</button>";
             echo "</form>";
 
             $allCsvParams = ['export' => 'all_csv'];
@@ -1129,17 +1451,25 @@ if ($shouldFetchEvents) {
          * @return void
          */
         function renderCalendarModeButtons($useTamrielicTime) {
+            $filterMode = isset($_GET['filter']) && $_GET['filter'] === 'people';
+            
             echo '<div class="calendar-mode-toggle">';
             
-            // Regular Calendar button - always goes to base URL
+            // Regular Calendar button
             echo '<form method="get" style="display: inline; margin-right: 10px;">';
-            echo '<button type="submit" class="btn-base ' . (!$useTamrielicTime ? 'btn-primary' : 'btn-secondary') . '">Regular Calendar</button>';
+            echo '<button type="submit" class="btn-base ' . (!$useTamrielicTime && !$filterMode ? 'btn-primary' : 'btn-secondary') . '">Regular Calendar</button>';
             echo '</form>';
             
-            // Tamrielic Calendar button - just adds tamrielic=true
-            echo '<form method="get" style="display: inline;">';
+            // Tamrielic Calendar button
+            echo '<form method="get" style="display: inline; margin-right: 10px;">';
             echo '<input type="hidden" name="tamrielic" value="true">';
-            echo '<button type="submit" class="btn-base ' . ($useTamrielicTime ? 'btn-primary' : 'btn-secondary') . '">Tamrielic Calendar</button>';
+            echo '<button type="submit" class="btn-base ' . ($useTamrielicTime && !$filterMode ? 'btn-primary' : 'btn-secondary') . '">Tamrielic Calendar</button>';
+            echo '</form>';
+
+            // Filter by Person button
+            echo '<form method="get" style="display: inline;">';
+            echo '<input type="hidden" name="filter" value="people">';
+            echo '<button type="submit" class="btn-base ' . ($filterMode ? 'btn-primary' : 'btn-secondary') . '">Filter by Person</button>';
             echo '</form>';
             
             echo '</div>';
@@ -1152,94 +1482,193 @@ if ($shouldFetchEvents) {
         <!-- Add the toggle buttons before the calendar navigation -->
         <?php renderCalendarModeButtons($useTamrielicTime); ?>
 
-        <!-- Calendar Navigation -->
-        <div class="calendar-navigation">
-            <?php
-            // Calculate previous and next month and year
-            if ($useTamrielicTime) {
-                // For Tamrielic mode, we need to handle the month names
-                $currentMonthNum = array_search($currentTamrielicMonth, $tamrielicMonths) ?: 8;
-                
-                // Calculate previous month
-                $prevMonthNum = $currentMonthNum - 1;
-                if ($prevMonthNum < 1) {
-                    $prevMonthNum = 12;
-                    $prevYear = $currentTamrielicYear - 1;
+        <!-- Add People List Section -->
+        <?php if (isset($_GET['filter']) && $_GET['filter'] === 'people'): ?>
+            <div class="people-list active">
+                <input type="text" class="people-search" placeholder="Search people..." onkeyup="filterPeople(this.value)">
+                <?php
+                $peopleList = getPeopleList($conn, $schema);
+                if (!empty($peopleList)) {
+                    foreach ($peopleList as $person) {
+                        $encodedPerson = urlencode($person['person']);
+                        echo "<form method='get' style='margin: 0;'>";
+                        echo "<input type='hidden' name='filter' value='people'>";
+                        echo "<input type='hidden' name='person' value='{$encodedPerson}'>";
+                        echo "<button type='submit' class='people-item'>";
+                        echo "<span>" . htmlspecialchars($person['person']) . "</span>";
+                        echo "<span class='people-count'>" . $person['entry_count'] . "</span>";
+                        echo "</button>";
+                        echo "</form>";
+                    }
                 } else {
-                    $prevYear = $currentTamrielicYear;
+                    echo "<p>No people found in diary entries.</p>";
                 }
-                $prevMonthName = $tamrielicMonths[$prevMonthNum];
+                ?>
+            </div>
+            <script>
+            function filterPeople(searchText) {
+                const peopleItems = document.querySelectorAll('.people-item');
+                searchText = searchText.toLowerCase();
                 
-                // Calculate next month
-                $nextMonthNum = $currentMonthNum + 1;
-                if ($nextMonthNum > 12) {
-                    $nextMonthNum = 1;
-                    $nextYear = $currentTamrielicYear + 1;
-                } else {
-                    $nextYear = $currentTamrielicYear;
-                }
-                $nextMonthName = $tamrielicMonths[$nextMonthNum];
-                
-                // Link to previous month
-                echo "<a href='?month={$prevMonthNum}&year={$prevYear}&tamrielic=true' class='btn-primary'>&laquo; {$prevMonthName}</a>";
-                
-                // Display current month and year
-                echo "<span><b>{$currentTamrielicMonth}, 4E {$currentTamrielicYear}</b></span>";
-                
-                // Link to next month
-                echo "<a href='?month={$nextMonthNum}&year={$nextYear}&tamrielic=true' class='btn-primary'>{$nextMonthName} &raquo;</a>";
-            } else {
-                // Original Gregorian calendar navigation
-                $prevMonth = $month - 1;
-                $prevYear = $year;
-                if ($prevMonth < 1) {
-                    $prevMonth = 12;
-                    $prevYear--;
-                }
-
-                $nextMonth = $month + 1;
-                $nextYear = $year;
-                if ($nextMonth > 12) {
-                    $nextMonth = 1;
-                    $nextYear++;
-                }
-
-                // Get month names for navigation
-                $prevMonthName = date('F', strtotime("$prevYear-$prevMonth-01 UTC"));
-                $nextMonthName = date('F', strtotime("$nextYear-$nextMonth-01 UTC"));
-                $currentMonthName = date('F', strtotime("$year-$month-01 UTC"));
-
-                echo "<a href='?month={$prevMonth}&year={$prevYear}' class='btn-primary'>&laquo; {$prevMonthName}</a>";
-                echo "<span><b>{$currentMonthName} {$year}</b></span>";
-                echo "<a href='?month={$nextMonth}&year={$nextYear}' class='btn-primary'>{$nextMonthName} &raquo;</a>";
+                peopleItems.forEach(item => {
+                    const personName = item.querySelector('span').textContent.toLowerCase();
+                    const form = item.closest('form');
+                    if (personName.includes(searchText)) {
+                        form.style.display = '';
+                    } else {
+                        form.style.display = 'none';
+                    }
+                });
             }
+            </script>
+        <?php endif; ?>
+
+        <!-- Calendar Container -->
+        <div class="calendar-container <?php echo (isset($_GET['filter']) && $_GET['filter'] === 'people') ? 'hidden' : ''; ?>">
+            <!-- Calendar Navigation -->
+            <div class="calendar-navigation">
+                <?php
+                // Calculate previous and next month and year
+                if ($useTamrielicTime) {
+                    // For Tamrielic mode, we need to handle the month names
+                    $currentMonthNum = array_search($currentTamrielicMonth, $tamrielicMonths) ?: 8;
+                    
+                    // Calculate previous month
+                    $prevMonthNum = $currentMonthNum - 1;
+                    if ($prevMonthNum < 1) {
+                        $prevMonthNum = 12;
+                        $prevYear = $currentTamrielicYear - 1;
+                    } else {
+                        $prevYear = $currentTamrielicYear;
+                    }
+                    $prevMonthName = $tamrielicMonths[$prevMonthNum];
+                    
+                    // Calculate next month
+                    $nextMonthNum = $currentMonthNum + 1;
+                    if ($nextMonthNum > 12) {
+                        $nextMonthNum = 1;
+                        $nextYear = $currentTamrielicYear + 1;
+                    } else {
+                        $nextYear = $currentTamrielicYear;
+                    }
+                    $nextMonthName = $tamrielicMonths[$nextMonthNum];
+                    
+                    // Link to previous month
+                    echo "<a href='?month={$prevMonthNum}&year={$prevYear}&tamrielic=true' class='btn-primary'>&laquo; {$prevMonthName}</a>";
+                    
+                    // Display current month and year
+                    echo "<span><b>{$currentTamrielicMonth}, 4E {$currentTamrielicYear}</b></span>";
+                    
+                    // Link to next month
+                    echo "<a href='?month={$nextMonthNum}&year={$nextYear}&tamrielic=true' class='btn-primary'>{$nextMonthName} &raquo;</a>";
+                } else {
+                    // Original Gregorian calendar navigation
+                    $prevMonth = $month - 1;
+                    $prevYear = $year;
+                    if ($prevMonth < 1) {
+                        $prevMonth = 12;
+                        $prevYear--;
+                    }
+
+                    $nextMonth = $month + 1;
+                    $nextYear = $year;
+                    if ($nextMonth > 12) {
+                        $nextMonth = 1;
+                        $nextYear++;
+                    }
+
+                    // Get month names for navigation
+                    $prevMonthName = date('F', strtotime("$prevYear-$prevMonth-01 UTC"));
+                    $nextMonthName = date('F', strtotime("$nextYear-$nextMonth-01 UTC"));
+                    $currentMonthName = date('F', strtotime("$year-$month-01 UTC"));
+
+                    echo "<a href='?month={$prevMonth}&year={$prevYear}' class='btn-primary'>&laquo; {$prevMonthName}</a>";
+                    echo "<span><b>{$currentMonthName} {$year}</b></span>";
+                    echo "<a href='?month={$nextMonth}&year={$nextYear}' class='btn-primary'>{$nextMonthName} &raquo;</a>";
+                }
+                ?>
+            </div>
+
+            <!-- Render the Calendar -->
+            <?php
+            $calendarArray = renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamrielicMonths);
+            echo renderCalendarHTML($calendarArray, $useTamrielicTime);
             ?>
         </div>
-
-        <!-- Render the Calendar -->
-        <?php
-        $calendarArray = renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamrielicMonths);
-        echo renderCalendarHTML($calendarArray, $useTamrielicTime);
-        ?>
 
         <!-- Event Table -->
         <table class="event-table" id="event-table">
             <colgroup>
-                <col class="col-topic">
-                <col class="col-content">
                 <col class="col-people">
+                <col class="col-content">
                 <col class="col-gamets">
                 <col class="col-time">
+                <col class="col-actions">
             </colgroup>
             <tr>
-                <th>Topic</th>
-                <th>Content</th>
                 <th>Author</th>
+                <th>Content</th>
                 <th><a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a></th>
                 <th>Time (UTC)</th>
+                <th>Actions</th>
             </tr>
             <?php
-            if ($shouldFetchEvents && $result) {
+            if (isset($_GET['filter']) && $_GET['filter'] === 'people' && isset($_GET['person'])) {
+                error_log("Filtering by person: " . urldecode($_GET['person']));
+                
+                // Get entries for the selected person
+                $entries = getEntriesByPerson($conn, $schema, urldecode($_GET['person']));
+                error_log("Retrieved entries: " . print_r($entries, true));
+                
+                if (!empty($entries)) {
+                    // Sort entries by localts in descending order
+                    usort($entries, function($a, $b) {
+                        return $b['localts'] - $a['localts'];
+                    });
+                    
+                    foreach ($entries as $row) {
+                        $processed_row = process_diary_row($row, false);
+                        if ($processed_row === null) {
+                            error_log("Skipping null processed row");
+                            continue;
+                        }
+
+                        $topic = htmlspecialchars_decode($row['topic']);
+                        $rawContent = $row['content']; // Store raw content without nl2br
+                        $displayContent = nl2br($row['content']); // Format for display
+                        $people = $processed_row['Nearby People'];
+                        $timeDisplay = $processed_row['Time(UTC)'];
+                        
+                        // Convert timestamp to game time
+                        $gameTimeDisplay = "";
+                        if (isset($row['gamets']) && $row['gamets'] > 0) {
+                            $gameTimeDisplay = convert_gamets2skyrim_long_date2($row['gamets']);
+                        }
+
+                        echo "<tr data-rowid='{$row['rowid']}'>
+                                <td>{$people}</td>
+                                <td class='entry-cell' onclick='openEntryModal(" . json_encode([
+                                    'rowid' => $row['rowid'],
+                                    'topic' => $topic,
+                                    'content' => $displayContent
+                                ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$displayContent}</td>
+                                <td>{$gameTimeDisplay}</td>
+                                <td>{$timeDisplay}</td>
+                                <td>
+                                    <button onclick='openEditModal(" . json_encode([
+                                        'rowid' => $row['rowid'],
+                                        'topic' => $topic,
+                                        'content' => $rawContent
+                                    ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")' class='action-button edit'>Edit</button>
+                                    <button onclick='if(confirm(\"Are you sure you want to delete this entry?\")) { deleteEntry(" . $row['rowid'] . "); }' class='btn-danger'>Delete</button>
+                                </td>
+                              </tr>";
+                    }
+                } else {
+                    error_log("No entries found for person");
+                    echo "<tr><td colspan='5' style='text-align: center; padding: 20px;'>No diary entries found for this person.</td></tr>";
+                }
+            } elseif ($shouldFetchEvents && $result) {
                 // Reset the result pointer to the beginning for table rendering
                 pg_result_seek($result, 0);
 
@@ -1258,7 +1687,8 @@ if ($shouldFetchEvents) {
 
                     // Extract processed data
                     $topic = htmlspecialchars_decode($row['topic']);
-                    $content = htmlspecialchars_decode($row['content']);
+                    $rawContent = $row['content']; // Store raw content without nl2br
+                    $displayContent = nl2br($row['content']); // Format for display
                     $people = $processed_row['Nearby People'];
                     $timeDisplay = $processed_row['Time(UTC)'];
                     
@@ -1287,20 +1717,23 @@ if ($shouldFetchEvents) {
                     }
 
                     // Output the table row with clickable cells for both topic and content
-                    echo "<tr>
-                            <td class='entry-cell' onclick='openEntryModal(" . json_encode([
-                                'rowid' => $row['rowid'],
-                                'topic' => $topic,
-                                'content' => $content
-                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$topic}</td>
-                            <td class='entry-cell' onclick='openEntryModal(" . json_encode([
-                                'rowid' => $row['rowid'],
-                                'topic' => $topic,
-                                'content' => $content
-                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$content}</td>
+                    echo "<tr data-rowid='{$row['rowid']}'>
                             <td>{$people}</td>
+                            <td class='entry-cell' onclick='openEntryModal(" . json_encode([
+                                'rowid' => $row['rowid'],
+                                'topic' => $topic,
+                                'content' => $displayContent
+                            ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")'>{$displayContent}</td>
                             <td>{$gameTimeDisplay}</td>
                             <td>{$timeDisplay}</td>
+                            <td>
+                                <button onclick='openEditModal(" . json_encode([
+                                    'rowid' => $row['rowid'],
+                                    'topic' => $topic,
+                                    'content' => $rawContent
+                                ], JSON_HEX_APOS | JSON_HEX_QUOT) . ")' class='action-button edit'>Edit</button>
+                                <button onclick='if(confirm(\"Are you sure you want to delete this entry?\")) { deleteEntry(" . $row['rowid'] . "); }' class='btn-danger'>Delete</button>
+                            </td>
                           </tr>";
                 }
 
