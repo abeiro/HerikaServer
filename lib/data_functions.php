@@ -46,7 +46,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
 
         if ($lastData != md5($row["data"])) {
             if ((strpos($row["data"], "{$GLOBALS["HERIKA_NAME"]}:") !== false) || ((strpos($row["data"], "{$GLOBALS["PLAYER_NAME"]}:") !== false))) {
-                $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location.. from Herikas lines.
+                $pattern = "/\(Context location:[^)]+\)/"; // Remove only the exact context location pattern
                 $replacement = "";
                 $row["data"] = preg_replace($pattern, $replacement, $row["data"]); // // assistant vs user war
                 if ((strpos($row["data"], "{$GLOBALS["HERIKA_NAME"]}:") !== false)) {
@@ -655,7 +655,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
                 $lastDialogFullCopy[]=$line;
                 continue;
             }
-            $pattern = "/\([^)]*Context location[^)]*\)/"; 
+            $pattern = "/\(Context location:[^)]+\)/"; 
             $cleanedText = trim(preg_replace($pattern, "", $line["content"])); // Remove context location always for assistant
             // This breaks with spaces?
             $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
@@ -866,7 +866,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
     // Compact Herika's lines
     foreach ($lastDialogFull as $n => $line) {
         if ($line["role"] == "assistant") {
-            $pattern = "/\([^)]*Context location[^)]*\)/";
+            $pattern = "/\(Context location:[^)]+\)/";
             $cleanedText = trim(preg_replace($pattern, "", $line["content"])); // Remove context location always for assistant
             // This breaks with spaces?
             $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
@@ -1429,7 +1429,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+        $pattern = "/\(Context location:[^)]+\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                     
@@ -1492,7 +1492,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+        $pattern = "/\(Context location:[^)]+\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                     
