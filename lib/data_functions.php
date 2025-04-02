@@ -109,7 +109,7 @@ function DataLastInfoFor($actor, $lastNelements = -2)
 
     // Remove Context Location part when repeated
     foreach ($lastDialog as $k => $message) {
-        preg_match('/\(Context location: (.*)\)/', $message['content'], $matches);
+        preg_match('/\(Context location: (.*?)\)/', $message['content'], $matches);
         $current_location = isset($matches[1]) ? $matches[1] : null;
         if ($current_location === $last_location) {
             $message['content'] = preg_replace('/\(Context location: (.*?)\)/', '', $message['content']);
@@ -1113,10 +1113,10 @@ function DataLastRetFunc($actor, $lastNelements = -2)
 
     // Remove Context Location part when repeated
     foreach ($lastDialog as $k => $message) {
-        preg_match('/\(Context location: (.*)\)/', $message['content'], $matches);
+        preg_match('/\(Context location: (.*?)\)/', $message['content'], $matches);
         $current_location = isset($matches[1]) ? $matches[1] : null;
         if ($current_location === $last_location) {
-            $message['content'] = preg_replace('/\(Context location: (.*)\)/', '', $message['content']);
+            $message['content'] = preg_replace('/\(Context location: (.*?)\)/', '', $message['content']);
         } else {
             $last_location = $current_location;
         }
