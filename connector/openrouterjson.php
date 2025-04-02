@@ -330,6 +330,9 @@ class openrouterjson
                     
             ];
             
+            if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
+                $contextExamples=[];
+            }
             $finalContextDataWithExamples=[];
             foreach ($contextData as $n=>$final) {
                 if ($final["role"]=="system") {
