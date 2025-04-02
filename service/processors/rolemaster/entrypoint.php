@@ -3,7 +3,7 @@
 $enginePath = $GLOBALS["ENGINE_ROOT"];
 
 /* Connector to use */
-$file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel.json';
+$file = $GLOBALS["ENGINE_ROOT"].'data'.DIRECTORY_SEPARATOR.'CurrentModel_.json';
 $modelContents = file_get_contents($file);
 logMsg("Current AI Model is set to $modelContents.");
 
