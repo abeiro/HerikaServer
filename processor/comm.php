@@ -184,21 +184,23 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 
 
 } elseif ($gameRequest[0] == "_uquest") {
+    error_reporting(E_ALL);
 
     $questParsedData = explode("@",$gameRequest[3]);
-    
+    print_r($questParsedData);
     if (!empty($questParsedData[0])) {
         $data=array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'localts' => time(),
-            'briefing' => $questParsedData[2],
-            'data' => $questParsedData[2],
-            'id_quest'=>$questParsedData[0]
+                'briefing' => $questParsedData[2],
+                'data' => $questParsedData[2]
         );
         
-        $db->insert('questlog',$data);
+        $db->updateRow('quests',$data," id_quest='{$questParsedData[0]}' ");
 
+        require_once(__DIR__.DIRECTORY_SEPARATOR."quest_oghma_sync.php");
+        // After updating quest, sync with oghma if stage info available
+        if (isset($questParsedData[1])) {
+            dynamicOghma($questParsedData[0], intval($questParsedData[1]));
+        }
     }
     $MUST_END=true;
 
