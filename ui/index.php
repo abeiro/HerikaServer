@@ -1067,7 +1067,7 @@ $debugPaneLink = true;
                 echo '<td>' . htmlspecialchars($description) . '</td>';
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<button onclick="window.location.href=\'' . htmlspecialchars($configUrl) . '\'" class="btn-base btn-save target="_blank">Configure Plugin</button>';
+                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Configure Plugin</button>';
                 } else {
                     echo 'No Plugin Page';
                 }
