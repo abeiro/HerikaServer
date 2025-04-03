@@ -835,7 +835,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     $diaryContent = "
                         <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto; text-align: center;'>
                             <div style='color: #6c757d; font-size: 1.2em; padding: 40px 20px;'>
-                                No diary entries found yet. Your adventures will be recorded here as you journey through Tamriel.
+                                No diary entries found yet. Make sure to use the Diary hotkey!
                             </div>
                         </div>";
                 }
