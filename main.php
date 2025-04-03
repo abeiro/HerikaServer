@@ -585,6 +585,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
+// MINIME_T5 STUFF
+
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
     if ($GLOBALS["MINIME_T5"]) {

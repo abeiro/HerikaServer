@@ -436,8 +436,8 @@ function removeEmptyElements(array $array): array {
     });
 }
 
-function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
-{
+
+function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     global $db;
 
@@ -607,14 +607,12 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     }
 
+    return $lastDialogFull;
 
-    // if (($currentGameTs-$row["gamets"])>600) {
+}
 
+function compactHistoricContext($lastDialogFull) {
 
-    //}
-
-  
-    // Compact current talking NPC lines
     $lastrole="";
     $bufferHerika=[];
     $lastDialogFullCopy=[];
@@ -748,11 +746,14 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     else 
         $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
 
-    
-      
 
-    // Replace roles for user.
-    foreach ($lastDialogFull as $n => $line) {
+    return $lastDialogFull;
+}
+
+function replaceRoles($lastDialogFull,$actor,$lastNelements) {
+
+     // Replace roles for user.
+     foreach ($lastDialogFull as $n => $line) {
         if ($line["role"] == "player") {
             $lastDialogFull[$n]["role"] = "user";
         } else if (strpos($line["role"],"npc")===0) {
@@ -793,6 +794,17 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     file_put_contents(__DIR__."/../log/context_for_$actor.txt",print_r($orderedData,true));
     return $orderedData;
+
+}
+
+function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
+{
+
+    $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
+    $ctx2=compactHistoricContext($ctx1);
+    $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
+      
+    return $ctx3;
 
 }
 
