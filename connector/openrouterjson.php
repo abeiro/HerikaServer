@@ -238,7 +238,7 @@ class openrouterjson
         
         $contextData=$contextDataCopy;
         
-        if (!$assistantAppearedInhistory) {
+        if (!$assistantAppearedInhistory) { // is this still needed?
             // EXAMPLES
             $contextExamples[]= [
                 'role' => 'user', 
