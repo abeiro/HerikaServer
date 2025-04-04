@@ -5,6 +5,17 @@ ini_set('display_errors', 'On');
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
 require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
 
+// Database connection details
+$host = 'localhost';
+$port = '5432';
+$dbname = 'dwemer';
+$schema = 'public';
+$username = 'dwemer';
+$password = 'dwemer';
+
+// Connect to the database
+$conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
+
 $TITLE = "🌲 CHIM Server Logs";
 
 ob_start();
@@ -718,6 +729,50 @@ if (isset($_GET['download_logs'])) {
 
         <div class="log-section">
             <?php
+            // Display Request Errors from audit_request table
+            if ($conn) {
+                $result = pg_query($conn, "
+                    SELECT request, result, created_at
+                    FROM {$schema}.audit_request
+                    WHERE result != 'OK'
+                    ORDER BY created_at DESC
+                    LIMIT 100
+                ");
+
+                if ($result) {
+                    echo '<div class="section-header">';
+                    echo "<h2>Request Errors (audit_request Table)</h2>";
+                    echo '<button class="expand-button" onclick="openModal(\'requestErrorsModal\', \'requestErrorsContainer\')">';
+                    echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+                    echo '</button>';
+                    echo '</div>';
+                    echo '<div class="search-container">';
+                    echo '<input type="text" class="search-input" placeholder="Search in Request Errors..." data-target="requestErrorsContainer">';
+                    echo '</div>';
+                    echo '<div class="log-container" id="requestErrorsContainer">';
+                    
+                    while ($error = pg_fetch_assoc($result)) {
+                        $time = new DateTime($error['created_at']);
+                        $time->setTimezone(new DateTimeZone('UTC'));
+                        $timestamp = $time->format('Y-m-d H:i:s');
+                        
+                        echo '<div class="log-entry error-entry">';
+                        echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                        echo '<div class="error-message">';
+                        echo 'Request: ' . htmlspecialchars($error['request']) . '<br>';
+                        echo 'Result: ' . htmlspecialchars($error['result']);
+                        echo '</div>';
+                        echo '</div>';
+                    }
+                    
+                    echo '</div>';
+                }
+            }
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
             // Display Debug Stream log
             readRegularLog($debugStreamLogPath, "Debug Stream Log (debugstream.log)");
             ?>
@@ -843,6 +898,22 @@ if (isset($_GET['download_logs'])) {
         </div>
         <div class="modal-body">
             <div id="DebugStreamLogdebugstreamlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Request Errors Modal -->
+<div id="requestErrorsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Request Errors</h2>
+            <button class="close-modal" onclick="closeModal('requestErrorsModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Request Errors..." data-target="requestErrorsModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="requestErrorsModalContent"></div>
         </div>
     </div>
 </div>
@@ -1049,6 +1120,11 @@ document.querySelectorAll('.log-container').forEach(container => {
 </script>
 
 <?php
+// Close database connection if it exists
+if (isset($conn)) {
+    pg_close($conn);
+}
+
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/footer.html");
 
 $buffer = ob_get_contents();
