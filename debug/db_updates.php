@@ -952,4 +952,10 @@ if ($checkVersion("memory_summary")<20250331001) {
     Logger::info("Applied patch memory_summary 20250331001");
 }
 
+if ($checkVersion("oghma_dynamic")<20250310001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_dynamic.sql"));
+    $updateVersion("oghma_dynamic",20250310001);
+    error_log("Applied patch oghma_dynamic 20250310001");
+}
+
 ?>

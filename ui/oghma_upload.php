@@ -236,6 +236,99 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 }
 
 /********************************************************************
+ *  3.5) DYNAMIC CSV UPLOAD AND EXAMPLE
+ ********************************************************************/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_dynamic_csv'])) {
+    if (isset($_FILES['dynamic_csv_file']) && $_FILES['dynamic_csv_file']['error'] === UPLOAD_ERR_OK) {
+        $fileTmpPath = $_FILES['dynamic_csv_file']['tmp_name'];
+        $fileName    = $_FILES['dynamic_csv_file']['name'];
+
+        $allowedfileExtensions = array('csv');
+        $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
+
+        if (in_array($fileExtension, $allowedfileExtensions)) {
+            if (($handle = fopen($fileTmpPath, 'r')) !== false) {
+                // Skip header row
+                fgetcsv($handle, 1000, ',');
+
+                $rowCount = 0;
+                while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                    $id_quest             = trim($data[0] ?? '');
+                    $stage                = intval($data[1] ?? 0);
+                    $topic                = strtolower(trim($data[2] ?? ''));
+                    $topic_desc           = $data[3] ?? '';
+                    $knowledge_class      = $data[4] ?? '';
+                    $topic_desc_basic     = $data[5] ?? '';
+                    $knowledge_class_basic= $data[6] ?? '';
+                    $tags                 = $data[7] ?? '';
+                    $category             = $data[8] ?? '';
+
+                    if (!empty($id_quest) && !empty($topic)) {
+                        $query = "
+                            INSERT INTO $schema.oghma_dynamic (
+                                id_quest,
+                                stage,
+                                topic,
+                                topic_desc,
+                                knowledge_class,
+                                topic_desc_basic,
+                                knowledge_class_basic,
+                                tags,
+                                category
+                            )
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        ";
+                        
+                        $result = pg_query_params($conn, $query, [
+                            $id_quest,
+                            $stage,
+                            $topic,
+                            $topic_desc,
+                            $knowledge_class,
+                            $topic_desc_basic,
+                            $knowledge_class_basic,
+                            $tags,
+                            $category
+                        ]);
+
+                        if ($result) {
+                            $rowCount++;
+                        } else {
+                            $message .= "<p>Error processing row with quest ID '$id_quest': " . pg_last_error($conn) . "</p>";
+                        }
+                    } else {
+                        $message .= "<p>Skipping empty or invalid row (Quest ID/Topic missing).</p>";
+                    }
+                }
+                fclose($handle);
+
+                $message .= "<p>$rowCount dynamic entries inserted successfully from the CSV file.</p>";
+            } else {
+                $message .= '<p>Error opening the CSV file.</p>';
+            }
+        } else {
+            $message .= '<p>Upload failed. Allowed file types: ' . implode(',', $allowedfileExtensions) . '</p>';
+        }
+    } else {
+        $message .= '<p>No file uploaded or there was an upload error.</p>';
+    }
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'download_dynamic_example') {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="oghma_dynamic_example.csv"');
+    header('Expires: 0');
+    header('Cache-Control: must-revalidate');
+    header('Pragma: public');
+    
+    // Example content with header and two sample entries
+    echo "id_quest,stage,topic,topic_desc,knowledge_class,topic_desc_basic,knowledge_class_basic,tags,category\n";
+    echo "TutorialBlacksmithing,1,blacksmithing,The art of blacksmithing involves crafting weapons and armor at a forge.,blacksmith;craftsman,Basic knowledge about forging metal items.,,,Skills\n";
+    echo "MQ101,10,helgen_attack,A dragon attacked the town of Helgen during an Imperial execution.,guard;soldier,A dragon destroyed Helgen.,,,Events\n";
+    exit;
+}
+
+/********************************************************************
  *  4) DELETE ALL
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all') {
@@ -349,6 +442,146 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     } else {
         $message .= '<p>Topic and Topic Description cannot be empty when saving.</p>';
+    }
+}
+
+/********************************************************************
+ *  ADD NEW DYNAMIC ENTRY
+ ********************************************************************/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_dynamic'])) {
+    // Collect and sanitize form inputs
+    $id_quest             = htmlspecialchars($_POST['id_quest']             ?? '');
+    $stage                = intval($_POST['stage']                          ?? 0);
+    $topic                = htmlspecialchars($_POST['dynamic_topic']        ?? '');
+    $topic_desc           = htmlspecialchars($_POST['dynamic_topic_desc']   ?? '');
+    $knowledge_class      = htmlspecialchars($_POST['dynamic_knowledge_class']      ?? '');
+    $topic_desc_basic     = htmlspecialchars($_POST['dynamic_topic_desc_basic']     ?? '');
+    $knowledge_class_basic= htmlspecialchars($_POST['dynamic_knowledge_class_basic']?? '');
+    $tags                 = htmlspecialchars($_POST['dynamic_tags']                 ?? '');
+    $category             = htmlspecialchars($_POST['dynamic_category']             ?? '');
+
+    if (!empty($id_quest) && !empty($topic)) {
+        $query = "
+            INSERT INTO $schema.oghma_dynamic (
+                id_quest,
+                stage,
+                topic,
+                topic_desc,
+                knowledge_class,
+                topic_desc_basic,
+                knowledge_class_basic,
+                tags,
+                category
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ";
+        
+        $result = pg_query_params($conn, $query, [
+            $id_quest,
+            $stage,
+            $topic,
+            $topic_desc,
+            $knowledge_class,
+            $topic_desc_basic,
+            $knowledge_class_basic,
+            $tags,
+            $category
+        ]);
+
+        if ($result) {
+            $message .= "<p>Dynamic entry added successfully!</p>";
+        } else {
+            $message .= "<p>Error adding dynamic entry: " . pg_last_error($conn) . "</p>";
+        }
+    } else {
+        $message .= '<p>Please fill in at least the "Quest ID" and "Topic" fields.</p>';
+    }
+}
+
+/********************************************************************
+ *  DELETE DYNAMIC ENTRY
+ ********************************************************************/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_dynamic') {
+    $id = intval($_POST['dynamic_id'] ?? 0);
+    
+    if ($id > 0) {
+        $query = "DELETE FROM {$schema}.oghma_dynamic WHERE id = $1";
+        $result = pg_query_params($conn, $query, [$id]);
+
+        if ($result) {
+            $message .= "<p>Dynamic entry has been deleted successfully.</p>";
+        } else {
+            $message .= "<p>Error deleting dynamic entry: " . pg_last_error($conn) . "</p>";
+        }
+    } else {
+        $message .= "<p>Invalid dynamic entry ID specified for deletion.</p>";
+    }
+}
+
+/********************************************************************
+ *  UPDATE DYNAMIC ENTRY
+ ********************************************************************/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_dynamic') {
+    $id = intval($_POST['dynamic_id'] ?? 0);
+    $id_quest = htmlspecialchars($_POST['dynamic_quest_new'] ?? '');
+    $stage = intval($_POST['dynamic_stage_new'] ?? 0);
+    $topic = htmlspecialchars($_POST['dynamic_topic_new'] ?? '');
+    $topic_desc = htmlspecialchars($_POST['dynamic_topic_desc_new'] ?? '');
+    $knowledge_class = htmlspecialchars($_POST['dynamic_knowledge_class_new'] ?? '');
+    $topic_desc_basic = htmlspecialchars($_POST['dynamic_topic_desc_basic_new'] ?? '');
+    $knowledge_class_basic = htmlspecialchars($_POST['dynamic_knowledge_class_basic_new'] ?? '');
+    $tags = htmlspecialchars($_POST['dynamic_tags_new'] ?? '');
+    $category = htmlspecialchars($_POST['dynamic_category_new'] ?? '');
+
+    if ($id > 0 && !empty($id_quest) && !empty($topic)) {
+        $query = "
+            UPDATE $schema.oghma_dynamic 
+            SET id_quest = $1,
+                stage = $2,
+                topic = $3,
+                topic_desc = $4,
+                knowledge_class = $5,
+                topic_desc_basic = $6,
+                knowledge_class_basic = $7,
+                tags = $8,
+                category = $9
+            WHERE id = $10
+        ";
+
+        $result = pg_query_params($conn, $query, [
+            $id_quest,
+            $stage,
+            $topic,
+            $topic_desc,
+            $knowledge_class,
+            $topic_desc_basic,
+            $knowledge_class_basic,
+            $tags,
+            $category,
+            $id
+        ]);
+
+        if ($result) {
+            $message .= "<p>Dynamic entry updated successfully!</p>";
+        } else {
+            $message .= "<p>Error updating dynamic entry: " . pg_last_error($conn) . "</p>";
+        }
+    } else {
+        $message .= "<p>Please ensure all required fields are filled in.</p>";
+    }
+}
+
+/********************************************************************
+ *  DELETE ALL DYNAMIC ENTRIES
+ ********************************************************************/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all_dynamic') {
+    $truncateQuery = "TRUNCATE TABLE {$schema}.oghma_dynamic RESTART IDENTITY";
+    $truncateResult = pg_query($conn, $truncateQuery);
+
+    if ($truncateResult) {
+        $message .= "<p style='color: #ff6464; font-weight: bold;'>All Dynamic Oghma entries have been deleted successfully.</p>";
+    } else {
+        $message .= "<p>Error deleting dynamic entries: " . pg_last_error($conn) . "</p>";
     }
 }
 
@@ -496,6 +729,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </div>
 
     <br>
+    
 
 
 <?php
@@ -706,6 +940,149 @@ if ($result) {
     echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
 }
 
+// Add Dynamic Oghma Entries Section
+echo '<br><br>';
+echo '<h1>Dynamic Oghma</h1>';
+echo '<p>Entires in the Dynamic Oghma table will update the Oghma table above whenever the quest ID & stage ID for a quest is reached.</p>';
+echo '<p>Any changes from a topic in this table will override whatever is in the Oghma table.</p>';
+echo '<p>You can leave cells empty so they do not overwrite specific info from the Oghma table.</p>';
+echo '<p>You also can introduce new topics to the Oghma table as well.</p>';
+echo '<p>It is currently empty by default. We need your help adding more entries!</p>';
+echo '<p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Would you like to know more?</a></p>';
+echo '<br>';
+echo '<h1>Batch Upload</h1>';
+echo '<div class="form-container">';
+echo '<form action="" method="post" enctype="multipart/form-data">';
+echo '<div>';
+echo '<label for="dynamic_csv_file">Select .csv file to upload dynamic entries:</label>';
+echo '<br>';
+echo '<input type="file" name="dynamic_csv_file" id="dynamic_csv_file" accept=".csv" required>';
+echo '</div>';
+echo '<div class="button-group">';
+echo '<input type="submit" name="submit_dynamic_csv" value="Upload CSV" class="action-button upload-csv">';
+echo '<a href="../data/oghma_dynamic_example.csv" class="action-button download-csv">Download Example CSV</a>';
+echo '</div>';
+echo '</form>';
+echo '<p>You can verify that the entries have been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma_dynamic</b></p>';
+echo '<p>You see what quests CHIM have detected by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> questlog</b></p>';
+echo '<p>All uploaded entries will be saved into the <code>oghma_dynamic</code> table.</p>';
+echo '<br>';
+echo '<form action="" method="post">';
+echo '<input type="hidden" name="action" value="delete_all_dynamic">';
+echo '<input type="submit" class="btn-danger" value="Delete All Dynamic Entries" onclick="return confirm(\'Are you sure you want to delete ALL dynamic entries? This cannot be undone!\');">';
+echo '</form>';
+echo '<br>';
+echo '</div>';
+echo '<br>';
+echo '<br>';
+echo '<h1>Dynamic Oghma Entries</h1>';
+echo '<div class="action-container">';
+echo '<button onclick="openNewDynamicEntryModal()" class="action-button add-new">Add New Dynamic Entry</button>';
+echo '</div>';
+
+// Fetch categories for dynamic entries
+$dynamicCatQuery = "SELECT DISTINCT category FROM $schema.oghma_dynamic WHERE category IS NOT NULL AND category <> '' ORDER BY category";
+$dynamicCatResult = pg_query($conn, $dynamicCatQuery);
+$dynamicCategories = [];
+if ($dynamicCatResult) {
+    while ($row = pg_fetch_assoc($dynamicCatResult)) {
+        $dynamicCategories[] = $row['category'];
+    }
+}
+
+// Get selected category for dynamic entries
+$selectedDynamicCategory = $_GET['dynamic_cat'] ?? '';
+
+// Filter buttons for dynamic entries
+echo '<div class="filter-buttons">';
+echo '<a class="alphabet-button" href="?' . (isset($_GET['cat']) ? 'cat=' . urlencode($_GET['cat']) . '&' : '') . '#dynamic">All Categories</a>';
+foreach ($dynamicCategories as $cat) {
+    $catEncoded = urlencode($cat);
+    $style = ($selectedDynamicCategory === $cat) ? 'style="background-color:#0056b3;"' : '';
+    echo "<a class=\"alphabet-button\" $style href=\"?" . (isset($_GET['cat']) ? 'cat=' . urlencode($_GET['cat']) . '&' : '') . "dynamic_cat=$catEncoded#dynamic\">" . htmlspecialchars($cat) . "</a>";
+}
+echo '</div><br>';
+
+// Query for dynamic entries with category filter
+$dynamicQuery = "
+    SELECT id, id_quest, stage, topic, topic_desc, knowledge_class, topic_desc_basic,
+           knowledge_class_basic, tags, category
+    FROM $schema.oghma_dynamic
+";
+
+if ($selectedDynamicCategory) {
+    $dynamicQuery .= " WHERE category = $1
+    ORDER BY id_quest, stage ASC";
+    $dynamicResult = pg_query_params($conn, $dynamicQuery, [$selectedDynamicCategory]);
+} else {
+    $dynamicQuery .= " ORDER BY id_quest, stage ASC";
+    $dynamicResult = pg_query($conn, $dynamicQuery);
+}
+
+echo '<div class="table-container">';
+echo '<table>';
+echo '<tr>
+        <th>Quest ID</th>
+        <th>Stage</th>
+        <th>Topic</th>
+        <th>Topic Description</th>
+        <th>Knowledge Class</th>
+        <th>Topic Description (Basic)</th>
+        <th>Knowledge Class (Basic)</th>
+        <th>Tags</th>
+        <th>Category</th>
+        <th>Action</th>
+      </tr>';
+
+if ($dynamicResult) {
+    $rowCount = 0;
+    while ($row = pg_fetch_assoc($dynamicResult)) {
+        echo '<tr>';
+        echo '<td>' . htmlspecialchars($row['id_quest'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['stage'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['topic'] ?? '') . '</td>';
+        echo '<td>' . nl2br(htmlspecialchars($row['topic_desc'] ?? '')) . '</td>';
+        echo '<td>' . nl2br(htmlspecialchars($row['knowledge_class'] ?? '')) . '</td>';
+        echo '<td>' . nl2br(htmlspecialchars($row['topic_desc_basic'] ?? '')) . '</td>';
+        echo '<td>' . nl2br(htmlspecialchars($row['knowledge_class_basic'] ?? '')) . '</td>';
+        echo '<td>' . nl2br(htmlspecialchars($row['tags'] ?? '')) . '</td>';
+        echo '<td>' . nl2br(htmlspecialchars($row['category'] ?? '')) . '</td>';
+        
+        // Add edit button column
+        echo '<td style="white-space: nowrap;">';
+        echo '<div style="display: flex; gap: 4px;">';
+        echo '<button onclick="openDynamicEditModal(' . 
+            htmlspecialchars(json_encode([
+                'id' => $row['id'],
+                'id_quest' => $row['id_quest'],
+                'stage' => $row['stage'],
+                'topic' => $row['topic'],
+                'topic_desc' => $row['topic_desc'],
+                'knowledge_class' => $row['knowledge_class'],
+                'topic_desc_basic' => $row['topic_desc_basic'],
+                'knowledge_class_basic' => $row['knowledge_class_basic'],
+                'tags' => $row['tags'],
+                'category' => $row['category']
+            ]), ENT_QUOTES, 'UTF-8') . 
+            ')" class="action-button edit">Edit</button>';
+        echo '</div>';
+        echo '</td>';
+        echo '</tr>';
+        $rowCount++;
+    }
+
+    echo '</table>';
+    echo '</div>';
+
+    if ($rowCount === 0) {
+        echo '<p>No dynamic entries found.</p>';
+    }
+} else {
+    echo '<p>Error fetching Dynamic Oghma entries: ' . pg_last_error($conn) . '</p>';
+}
+
+
+
 pg_close($conn);
 ?>
 
@@ -739,7 +1116,7 @@ pg_close($conn);
                 
 
                 <label for="edit_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. It is recommended for most basic articles to leave it blank. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic_new" id="edit_knowledge_class_basic">
 
                 <label for="edit_tags">Tags:</label>
@@ -800,6 +1177,118 @@ pg_close($conn);
                 <div class="modal-footer">
                     <button type="submit" class="btn-save">Save</button>
                     <button type="button" onclick="closeNewEntryModal()" class="btn-base btn-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="newDynamicEntryModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2 class="modal-title">Add New Dynamic Oghma Entry</h2>
+            <p>You can leave sections blank so it does not overwrite the existing info in the Oghma Table!</p>
+        </div>
+        <div class="modal-body">
+            <form action="" method="post">
+                <input type="hidden" name="submit_dynamic" value="1">
+
+                <label for="id_quest">Quest ID (required):</label>
+                <small>The quest ID to trigger the dynamic entry.</small>
+                <input type="text" name="id_quest" id="id_quest" required>
+
+                <label for="stage">Quest Stage (required):</label>
+                <small>The stage ID from the quest to trigger the dynamic entry.</small>
+                <input type="number" name="stage" id="stage" value="0">
+
+                <label for="dynamic_topic">Topic (required):</label>
+                <small>Topic that will be updated or added in the main Oghma table.</small>
+                <input type="text" name="dynamic_topic" id="dynamic_topic" required>
+
+                <label for="dynamic_topic_desc">Topic Description:</label>
+                <small>Advanced knowledge information on the subject.</small>
+                <textarea name="dynamic_topic_desc" id="dynamic_topic_desc" rows="5"></textarea>
+
+                <label for="dynamic_knowledge_class">Knowledge Class:</label>
+                <small>Who should have access to this advanced knowledge. Must be comma seperated.</small>
+                <input type="text" name="dynamic_knowledge_class" id="dynamic_knowledge_class">
+
+                <label for="dynamic_topic_desc_basic">Topic Description (Basic):</label>
+                <small>Basic information about the subject.</small>
+                <textarea name="dynamic_topic_desc_basic" id="dynamic_topic_desc_basic" rows="5"></textarea>
+
+                <label for="dynamic_knowledge_class_basic">Knowledge Class (Basic):</label>
+                <small>Who should have access to this basic knowledge. Leave blank to allow all NPCs to know this. Must be comma seperated.</small>
+                <input type="text" name="dynamic_knowledge_class_basic" id="dynamic_knowledge_class_basic">
+
+                <label for="dynamic_tags">Tags:</label>
+                <small>Additional search tags.</small>
+                <input type="text" name="dynamic_tags" id="dynamic_tags">
+
+                <label for="dynamic_category">Category:</label>
+                <small>Category for organization.</small>
+                <input type="text" name="dynamic_category" id="dynamic_category">
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn-save">Save</button>
+                    <button type="button" onclick="closeNewDynamicEntryModal()" class="btn-base btn-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="editDynamicModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit Dynamic Oghma Entry</h2>
+            <p>You can leave sections blank so it does not overwrite the existing info in the Oghma Table!</p>
+        </div>
+        <div class="modal-body">
+            <form action="" method="post">
+                <input type="hidden" name="action" value="update_dynamic">
+                <input type="hidden" name="dynamic_id" id="edit_dynamic_id">
+
+                <label for="edit_dynamic_quest">Quest ID (required):</label>
+                <small>The quest ID to trigger the dynamic entry.</small>
+                <input type="text" name="dynamic_quest_new" id="edit_dynamic_quest" required>
+
+                <label for="edit_dynamic_stage">Quest Stage (required):</label>
+                <small>The stage ID from the quest to trigger the dynamic entry.</small>
+                <input type="number" name="dynamic_stage_new" id="edit_dynamic_stage" value="0" required>
+
+                <label for="edit_dynamic_topic">Topic (required):</label>
+                <small>Topic that will be updated or added in the main Oghma table.</small>
+                <input type="text" name="dynamic_topic_new" id="edit_dynamic_topic" required>
+
+                <label for="edit_dynamic_topic_desc">Topic Description:</label>
+                <small>Advanced knowledge information on the subject.</small>
+                <textarea name="dynamic_topic_desc_new" id="edit_dynamic_topic_desc" rows="5"></textarea>
+
+                <label for="edit_dynamic_knowledge_class">Knowledge Class:</label>
+                <small>Who should have access to this advanced knowledge. Must be comma separated.</small>
+                <input type="text" name="dynamic_knowledge_class_new" id="edit_dynamic_knowledge_class">
+
+                <label for="edit_dynamic_topic_desc_basic">Topic Description (Basic):</label>
+                <small>Basic information about the subject.</small>
+                <textarea name="dynamic_topic_desc_basic_new" id="edit_dynamic_topic_desc_basic" rows="5"></textarea>
+
+                <label for="edit_dynamic_knowledge_class_basic">Knowledge Class (Basic):</label>
+                <small>Who should have access to this basic knowledge. Leave blank to allow all NPCs to know this. Must be comma separated.</small>
+                <input type="text" name="dynamic_knowledge_class_basic_new" id="edit_dynamic_knowledge_class_basic">
+
+                <label for="edit_dynamic_tags">Tags:</label>
+                <small>Additional search tags.</small>
+                <input type="text" name="dynamic_tags_new" id="edit_dynamic_tags">
+
+                <label for="edit_dynamic_category">Category:</label>
+                <small>Category for organization.</small>
+                <input type="text" name="dynamic_category_new" id="edit_dynamic_category">
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn-save">Save Changes</button>
+                    <button type="button" onclick="deleteDynamicEntry()" class="btn-danger">Delete</button>
+                    <button type="button" onclick="closeDynamicEditModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
         </div>
@@ -926,6 +1415,62 @@ document.addEventListener('DOMContentLoaded', function() {
     showToast(<?php echo json_encode(strip_tags($message)); ?>);
 });
 <?php endif; ?>
+
+function openNewDynamicEntryModal() {
+    document.getElementById("newDynamicEntryModal").style.display = "block";
+    document.body.style.overflow = "hidden";
+}
+
+function closeNewDynamicEntryModal() {
+    document.getElementById("newDynamicEntryModal").style.display = "none";
+    document.body.style.overflow = "auto";
+}
+
+function openDynamicEditModal(data) {
+    try {
+        const decodeHTML = (html) => {
+            const txt = document.createElement('textarea');
+            txt.innerHTML = html;
+            return txt.value;
+        };
+
+        document.getElementById("edit_dynamic_id").value = decodeHTML(data.id);
+        document.getElementById("edit_dynamic_quest").value = decodeHTML(data.id_quest);
+        document.getElementById("edit_dynamic_stage").value = decodeHTML(data.stage);
+        document.getElementById("edit_dynamic_topic").value = decodeHTML(data.topic);
+        document.getElementById("edit_dynamic_topic_desc").value = decodeHTML(data.topic_desc);
+        document.getElementById("edit_dynamic_knowledge_class").value = decodeHTML(data.knowledge_class);
+        document.getElementById("edit_dynamic_topic_desc_basic").value = decodeHTML(data.topic_desc_basic);
+        document.getElementById("edit_dynamic_knowledge_class_basic").value = decodeHTML(data.knowledge_class_basic);
+        document.getElementById("edit_dynamic_tags").value = decodeHTML(data.tags);
+        document.getElementById("edit_dynamic_category").value = decodeHTML(data.category);
+        
+        document.getElementById("editDynamicModal").style.display = "block";
+        document.body.style.overflow = "hidden";
+    } catch (error) {
+        console.error('Error in openDynamicEditModal:', error);
+        alert('There was an error opening the edit form. Please try again.');
+    }
+}
+
+function closeDynamicEditModal() {
+    document.getElementById("editDynamicModal").style.display = "none";
+    document.body.style.overflow = "auto";
+}
+
+function deleteDynamicEntry() {
+    const id = document.getElementById('edit_dynamic_id').value;
+    if (confirm("Are you sure you want to delete this dynamic entry?")) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `
+            <input type="hidden" name="action" value="delete_dynamic">
+            <input type="hidden" name="dynamic_id" value="${id}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
 </script>
 </main>
 
