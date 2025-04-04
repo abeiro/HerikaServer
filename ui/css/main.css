@@ -1477,8 +1477,7 @@ code {
 
 /* Highlighted date style */
 .has-event a {
-    background-color: #007bff !important; /* Blue background matching buttons */
-    color: white !important;
+    background-color: #007bff;
     text-decoration: none; /* Ensures no underline */
     display: block; /* Make the link fill the cell */
     width: 100%; /* Full width of the parent cell */
@@ -1494,7 +1493,7 @@ code {
 
 /* Extra hover event */
 .has-event a:hover {
-    background-color: #0056b3 !important; /* Darker blue on hover */
-    color: #ffcc00 !important; /* Yellow text for contrast */
+    background-color: #0056b3; /* Darker blue on hover */
+    color: #ffcc00; /* Yellow text for contrast */
     transition: all 0.2s ease-in-out; /* Smooth hover animation */
 }
