@@ -360,7 +360,7 @@ body.overlay-active {
 
 /* NPC Profile Button */
 .btn-npcprofile {
-    background-color: rgb(242, 124, 17, 0.8);
+    background-color: rgb(212, 94, 0, 0.9);
     color: #ffffff;
     padding: 10px 20px;
     border: 1px solid rgba(138, 155, 182, 0.3);
@@ -384,7 +384,7 @@ body.overlay-active {
 }
 
 .btn-npcprofile:hover {
-    background-color: rgb(212, 94, 0, 0.9);
+    background-color: rgba(182, 85, 6, 0.9);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
                 inset 0 1px rgba(255, 255, 255, 0.15);
@@ -473,7 +473,7 @@ body {
 /* AI Service Toggle Button */
 .ai-service-toggle {
     padding: 6px 12px;
-    background-color: rgb(242, 124, 17, 0.8);
+    background-color: rgb(212, 94, 0, 0.9);
     color: #ffffff;
     border: 1px solid rgba(138, 155, 182, 0.3);
     border-radius: 8px;
@@ -495,7 +495,7 @@ body {
 }
 
 .ai-service-toggle:hover {
-    background-color: rgb(212, 94, 0, 0.9);
+    background-color: rgba(182, 85, 6, 0.9);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
                 inset 0 1px rgba(255, 255, 255, 0.15);
