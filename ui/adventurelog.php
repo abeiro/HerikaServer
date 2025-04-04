@@ -317,6 +317,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 ?>
 <!-- Ensure main.css is loaded after any reboot.css -->
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/diary_adventure.css">
 <?php
 
 $debugPaneLink = false;
@@ -432,14 +433,12 @@ if ($allDatesResult) {
             if (isset($dateRow['localts']) && $dateRow['localts'] > 0) {
                 $eventDate = new DateTime("@" . $dateRow['localts']);
                 $eventDate->setTimezone(new DateTimeZone('UTC'));
-                $eventMonth = (int)$eventDate->format('n');
-                $eventYear = (int)$eventDate->format('Y');
-                $eventDay = (int)$eventDate->format('j');
+                $eventDate->format('Y-m-d');
                 
-                if ($eventMonth == $month && $eventYear == $year) {
+                if ($eventDate->format('n') == $month && $eventDate->format('Y') == $year) {
                     $allEventDates[] = [
                         'date' => $dateRow['date'],
-                        'day' => $eventDay,
+                        'day' => $eventDate->format('j'),
                         'localts' => $dateRow['localts'],
                         'type' => $dateRow['type'],
                         'data' => $dateRow['data'],
@@ -698,229 +697,6 @@ if ($shouldFetchEvents) {
 <head>
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
     <title>📆CHIM Adventure Log</title>
-    <style>
-        /* Adventure Log specific styles */
-        .calendar {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            table-layout: fixed; /* This ensures equal column widths */
-        }
-
-        .calendar th, .calendar td {
-            border: 1px solid #555555;
-            padding: 10px;
-            text-align: center;
-            vertical-align: middle;
-            position: relative;
-            width: 14.28%; /* 100% / 7 days = 14.28% */
-            min-width: 100px; /* Minimum width to prevent too narrow cells */
-        }
-
-        .calendar th {
-            background-color: #3a3a3a;
-            color: #f8f9fa;
-            white-space: nowrap; /* Prevent day names from wrapping */
-            overflow: hidden; /* Hide overflow text */
-            text-overflow: ellipsis; /* Show ellipsis for overflow */
-        }
-
-        .calendar td {
-            aspect-ratio: 1; /* Make cells square */
-            height: 100px; /* Fixed height for cells */
-        }
-
-        .calendar td.has-event {
-            color: #ffffff;
-        }
-
-        .calendar td a {
-            color: inherit;
-            text-decoration: none;
-            display: flex; /* Changed from block to flex */
-            justify-content: center; /* Center horizontally */
-            align-items: center; /* Center vertically */
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-
-        .calendar td.has-event a {
-            background-color: #007bff;
-            color: white;
-            border: 2px solid white;
-            border-radius: 5px;
-            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease-in-out;
-            display: flex; /* Ensure flex is applied to event buttons too */
-            justify-content: center;
-            align-items: center;
-        }
-
-        .calendar td.has-event a:hover {
-            background-color: #0056b3;
-            color: #ffcc00;
-        }
-
-        .calendar-navigation {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 20px 0;
-            gap: 10px;
-        }
-
-        .calendar-navigation span {
-            padding: 0 15px;
-            color: #f8f9fa;
-            font-size: 1.5em;
-            min-width: 200px;
-            text-align: center;
-            display: inline-block; /* Changed from default to inline-block */
-            width: 300px; /* Fixed width for the month/year text */
-            white-space: nowrap; /* Prevent text wrapping */
-            overflow: hidden; /* Hide overflow */
-            text-overflow: ellipsis; /* Show ellipsis for overflow */
-        }
-
-        .calendar-navigation a {
-            min-width: 150px;
-            text-align: center;
-            display: inline-block;
-            padding: 8px 15px;
-            text-decoration: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
-            border: 2px solid #0056b3;
-            transition: all 0.3s ease;
-        }
-
-        .calendar-navigation a:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        /* CSV Buttons Container */
-        .csv-buttons {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 10px;
-            gap: 10px;
-        }
-
-        /* Event table specific styles */
-        .event-table {
-            width: 100%;
-            margin-top: 20px;
-            scroll-margin-top: 200px; /* Add scroll margin for navbar */
-        }
-
-        .event-table th {
-            background-color: #3a3a3a;
-            color: #f8f9fa;
-            padding: 12px;
-        }
-
-        .event-table td {
-            padding: 12px;
-            word-wrap: break-word;
-        }
-
-        .event-table tr:nth-child(even) {
-            background-color: #3a3a3a;
-        }
-
-        /* Column widths for event table */
-        .col-context { width: 55%; }
-        .col-people { width: 20%; }
-        .col-gamets { width: 15%; }
-        .col-time { width: 10%; font-family: monospace; font-size: 0.9em; }
-
-        /* Location change row styles */
-        .location-change-row {
-            background-color: #2c3e50 !important;
-            color: #ecf0f1;
-            font-weight: bold;
-            text-align: center;
-            padding: 8px;
-        }
-
-        .location-change-row td {
-            padding: 8px;
-            border-top: 2px solid #34495e;
-            border-bottom: 2px solid #34495e;
-        }
-
-        /* Main container padding */
-        main.container {
-            padding-bottom: 40px; /* Reduced space for footer */
-            padding-left: 10px;
-            max-width: 1600px;
-        }
-
-        /* Calendar Mode Toggle */
-        .calendar-mode-toggle {
-            display: flex;
-            justify-content: center;
-            margin: 20px 0;
-        }
-
-        .calendar-mode-toggle .btn-base {
-            padding: 10px 20px;
-            font-size: 1.1em;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .calendar-mode-toggle .btn-primary {
-            background-color: #007bff;
-            color: white;
-            border: 2px solid #0056b3;
-        }
-
-        .calendar-mode-toggle .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-            border: 2px solid #545b62;
-        }
-
-        .calendar-mode-toggle .btn-base:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .calendar td.current-date a {
-            background-color: #28a745 !important;
-            color: white !important;
-            border: 2px solid #1e7e34 !important;
-            font-weight: bold;
-        }
-
-        .calendar td.current-date.has-event a {
-            background-color: #28a745 !important;
-            color: white !important;
-            border: 2px solid #1e7e34 !important;
-        }
-
-        .event-table tr {
-            transition: background-color 0.2s;
-        }
-
-        .event-table tr.speaker-even {
-            background-color: #1a1a1a;  /* Original black color */
-        }
-
-        .event-table tr.speaker-odd {
-            background-color: #2d2d2d;  /* Original grey color */
-        }
-    </style>
 </head>
 <body>
     <main class="container">
