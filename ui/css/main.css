@@ -360,7 +360,7 @@ nav {
 
 .conf-item label {
     display: block;
-    color: #ff00c6;
+    color: rgb(242, 124, 17);
     margin-bottom: 5px;
 }
 
@@ -772,7 +772,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* Boolean Input Styling */
 .conf-item[data-type="boolean"] {
-    color: #ff00c6;
+    color: rgb(242, 124, 17);
 }
 
 .conf-item[data-type="boolean"] label[for] {

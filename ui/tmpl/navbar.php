@@ -655,11 +655,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="copy-to-all-profiles-btn">Copy to All Profiles</button>
         </form><br/>';
         echo " <strong>TTS:</strong> ";
-        echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:#ff00c6">' . $TTSFUNCTION . '</strong>'; 
+        echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:rgb(242, 124, 17)">' . $TTSFUNCTION . '</strong>'; 
         echo " <strong>STT:</strong> ";
-        echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true)  : '<strong style="color:#ff00c6">' . $STTFUNCTION . '</strong>' ; 
+        echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true)  : '<strong style="color:rgb(242, 124, 17)">' . $STTFUNCTION . '</strong>' ; 
         echo " <strong>ITT:</strong> ";
-        echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true)  : '<strong style="color:#ff00c6">'  .$ITTFUNCTION . '</strong>' ; 
+        echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true)  : '<strong style="color:rgb(242, 124, 17)">'  .$ITTFUNCTION . '</strong>' ; 
         ?>
     </div>
     </div>

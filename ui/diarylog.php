@@ -1134,8 +1134,8 @@ if ($shouldFetchEvents) {
 
         .edit-form textarea:focus {
             outline: none;
-            border-color: #ff00c6;
-            box-shadow: 0 0 0 2px rgba(255, 0, 198, 0.2);
+            border-color: rgb(242, 124, 17);
+            box-shadow: 0 0 0 2px rgba(242, 124, 17, 0.2);
         }
 
         /* Add styles for people filter */
