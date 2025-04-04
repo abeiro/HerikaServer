@@ -753,6 +753,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         (SELECT COALESCE(COUNT(*), 0) FROM {$schema}.eventlog WHERE type = 'inputtext') as player_inputs");
                     
                     if (!isset($stats['error'])) {
+                        // Add LLM requests count query
+                        $llmStats = fetch_widget_stats($conn, "
+                            SELECT 
+                                SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
+                                SUM(CASE WHEN result != 'Ok' THEN 1 ELSE 0 END) as llm_requests_failed
+                            FROM {$schema}.audit_request 
+                            WHERE created_at >= NOW() - INTERVAL '24 HOURS'
+                        ");
+
                         echo render_widget('CHIM Stats', "
                             <div class='widget-stats'>
                                 " . (in_array('diarylog', $existingTables) ? "
@@ -794,9 +803,17 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     <div class='stat-value'>{$stats[0]['books_summarized']}</div>
                                     <div class='stat-label'>Books Read</div>
                                 </div>" : "") . "
-                                                                <div class='stat-card'>
+                                <div class='stat-card'>
                                     <div class='stat-value'>{$stats[0]['player_inputs']}</div>
                                     <div class='stat-label'>Player Messages</div>
+                                </div>
+                                <div class='stat-card'>
+                                    <div class='stat-value'>" . (isset($llmStats[0]['llm_requests_success']) ? $llmStats[0]['llm_requests_success'] : '0') . "</div>
+                                    <div class='stat-label'>Successful LLM Requests (24h)</div>
+                                </div>
+                                <div class='stat-card'>
+                                    <div class='stat-value'>" . (isset($llmStats[0]['llm_requests_failed']) ? $llmStats[0]['llm_requests_failed'] : '0') . "</div>
+                                    <div class='stat-label'>Failed LLM Requests (24h)</div>
                                 </div>
                             </div>
                         ");
