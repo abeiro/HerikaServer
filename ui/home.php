@@ -237,7 +237,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         .stat-value {
             font-size: 1.5em;
             font-weight: bold;
-            color: #d4804d;
+            color: rgb(212, 94, 0, 0.9);
         }
 
         .stat-label {
@@ -350,7 +350,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         }
 
         .stat-item .stat-value {
-            color: #d4804d;
+            color: rgb(212, 94, 0, 0.9);
             font-weight: bold;
             font-size: 0.9em;
             min-width: 40px;
@@ -1033,7 +1033,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         <script src='https://d3js.org/d3.v7.min.js'></script>
                         <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
                         <div class='word-cloud-container'>
-                            <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: #d4804d; height: 30px; font-weight: bold;'></div>
+                            <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: rgb(212, 94, 0, 0.9); height: 30px; font-weight: bold;'></div>
                             <svg id='word-cloud' style='width: 100%; height: 500px;'></svg>
                         </div>
                         <style>
