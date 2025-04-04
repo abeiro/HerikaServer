@@ -237,7 +237,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         .stat-value {
             font-size: 1.5em;
             font-weight: bold;
-            color: #ff00c6;
+            color: #d4804d;
         }
 
         .stat-label {
@@ -350,7 +350,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         }
 
         .stat-item .stat-value {
-            color: #ff00c6;
+            color: #d4804d;
             font-weight: bold;
             font-size: 0.9em;
             min-width: 40px;
@@ -470,7 +470,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
         .stat-card.double-width:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(255, 0, 198, 0.2);
+            box-shadow: 0 4px 15px rgba(242, 124, 17, 0.2);
             background: #333333;
         }
 
@@ -1033,7 +1033,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         <script src='https://d3js.org/d3.v7.min.js'></script>
                         <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
                         <div class='word-cloud-container'>
-                            <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: #ff00c6; height: 30px; font-weight: bold;'></div>
+                            <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: #d4804d; height: 30px; font-weight: bold;'></div>
                             <svg id='word-cloud' style='width: 100%; height: 500px;'></svg>
                         </div>
                         <style>
@@ -1058,7 +1058,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             
                             // Color scale for words based on frequency
                             const color = d3.scaleOrdinal()
-                                .range(['#ff00c6', '#ff33d1', '#ff66dc', '#ff99e7', '#ffccf2']);
+                                .range(['rgb(242, 124, 17)', 'rgb(242, 144, 47)', 'rgb(242, 164, 77)', 'rgb(242, 184, 107)', 'rgb(242, 204, 137)']);
 
                             // Create the word cloud layout
                             const layout = d3.layout.cloud()
