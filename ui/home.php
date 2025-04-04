@@ -458,6 +458,39 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 font-size: 0.8em;
             }
         }
+
+        .stat-card.double-width {
+            grid-column: span 2;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card.double-width .stat-value {
+            font-size: 1.8em;
+        }
+
+        .stat-card.double-width:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 0, 198, 0.2);
+            background: #333333;
+        }
+
+        .stat-card.double-width:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(255, 0, 198, 0.1);
+        }
+
+        .stat-card.double-width::after {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.9em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card.double-width:hover::after {
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -753,14 +786,47 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         (SELECT COALESCE(COUNT(*), 0) FROM {$schema}.eventlog WHERE type = 'inputtext') as player_inputs");
                     
                     if (!isset($stats['error'])) {
-                        // Add LLM requests count query
-                        $llmStats = fetch_widget_stats($conn, "
+                        // Add LLM requests count queries for all time periods
+                        $llmStats24h = fetch_widget_stats($conn, "
                             SELECT 
                                 SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
-                                SUM(CASE WHEN result != 'Ok' THEN 1 ELSE 0 END) as llm_requests_failed
+                                COUNT(*) as total_requests
                             FROM {$schema}.audit_request 
                             WHERE created_at >= NOW() - INTERVAL '24 HOURS'
                         ");
+
+                        $llmStats72h = fetch_widget_stats($conn, "
+                            SELECT 
+                                SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
+                                COUNT(*) as total_requests
+                            FROM {$schema}.audit_request 
+                            WHERE created_at >= NOW() - INTERVAL '72 HOURS'
+                        ");
+
+                        $llmStats1w = fetch_widget_stats($conn, "
+                            SELECT 
+                                SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
+                                COUNT(*) as total_requests
+                            FROM {$schema}.audit_request 
+                            WHERE created_at >= NOW() - INTERVAL '7 DAYS'
+                        ");
+
+                        $llmStatsLifetime = fetch_widget_stats($conn, "
+                            SELECT 
+                                SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
+                                COUNT(*) as total_requests
+                            FROM {$schema}.audit_request
+                        ");
+
+                        function formatLLMStats($stats) {
+                            if (isset($stats[0]['llm_requests_success']) && isset($stats[0]['total_requests'])) {
+                                $success = $stats[0]['llm_requests_success'];
+                                $total = $stats[0]['total_requests'];
+                                $percentage = $total > 0 ? round(($success / $total) * 100) : 0;
+                                return "{$success}/{$total} ({$percentage}%)";
+                            }
+                            return '0/0 (0%)';
+                        }
 
                         echo render_widget('CHIM Stats', "
                             <div class='widget-stats'>
@@ -807,14 +873,43 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     <div class='stat-value'>{$stats[0]['player_inputs']}</div>
                                     <div class='stat-label'>Player Messages</div>
                                 </div>
-                                <div class='stat-card'>
-                                    <div class='stat-value'>" . (isset($llmStats[0]['llm_requests_success']) ? $llmStats[0]['llm_requests_success'] : '0') . "</div>
-                                    <div class='stat-label'>Successful LLM Requests (24h)</div>
+                                <div class='stat-card double-width' id='llm-stats-card' style='cursor: pointer; position: relative;'>
+                                    <div class='stat-value'>
+                                        <span id='llm-stats-24h'>" . formatLLMStats($llmStats24h) . "</span>
+                                        <span id='llm-stats-72h' style='display: none;'>" . formatLLMStats($llmStats72h) . "</span>
+                                        <span id='llm-stats-1w' style='display: none;'>" . formatLLMStats($llmStats1w) . "</span>
+                                        <span id='llm-stats-lifetime' style='display: none;'>" . formatLLMStats($llmStatsLifetime) . "</span>
+                                    </div>
+                                    <div class='stat-label'>
+                                        <span id='llm-label-24h'>LLM Requests Success Rate (24h)</span>
+                                        <span id='llm-label-72h' style='display: none;'>LLM Requests Success Rate (72h)</span>
+                                        <span id='llm-label-1w' style='display: none;'>LLM Requests Success Rate (1w)</span>
+                                        <span id='llm-label-lifetime' style='display: none;'>LLM Requests Success Rate (lifetime)</span>
+                                    </div>
                                 </div>
-                                <div class='stat-card'>
-                                    <div class='stat-value'>" . (isset($llmStats[0]['llm_requests_failed']) ? $llmStats[0]['llm_requests_failed'] : '0') . "</div>
-                                    <div class='stat-label'>Failed LLM Requests (24h)</div>
-                                </div>
+                                <script>
+                                    document.getElementById('llm-stats-card').addEventListener('click', function() {
+                                        const periods = ['24h', '72h', '1w', 'lifetime'];
+                                        let currentIndex = 0;
+                                        
+                                        // Find which period is currently shown
+                                        for (let i = 0; i < periods.length; i++) {
+                                            if (document.getElementById('llm-stats-' + periods[i]).style.display !== 'none') {
+                                                currentIndex = i;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        // Hide current period
+                                        document.getElementById('llm-stats-' + periods[currentIndex]).style.display = 'none';
+                                        document.getElementById('llm-label-' + periods[currentIndex]).style.display = 'none';
+                                        
+                                        // Show next period
+                                        const nextIndex = (currentIndex + 1) % periods.length;
+                                        document.getElementById('llm-stats-' + periods[nextIndex]).style.display = 'inline';
+                                        document.getElementById('llm-label-' + periods[nextIndex]).style.display = 'inline';
+                                    });
+                                </script>
                             </div>
                         ");
                     } else {
