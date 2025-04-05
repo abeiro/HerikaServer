@@ -16,9 +16,12 @@ function conf_loader_load() {
 		$pluginConfigs = glob($confDir . "*_conf.php");
 		foreach ($pluginConfigs as $pluginConfig) {
 			include_once $pluginConfig;
-			$schemaFunc = "get_{$pluginName}_schema";
+			$schemaFunc = "get_" . basename($pluginConfig, "_conf.php") . "_schema";
 			if (function_exists($schemaFunc)) {
-				$pluginSchemas[$pluginName] = $schemaFunc();
+				$pluginSchemas[$pluginName] = array_merge(
+					$pluginSchemas[$pluginName] ?? [],
+					$schemaFunc()
+				);
 			}
 		}
 	}
@@ -62,21 +65,21 @@ function conf_loader_load() {
 		}
 	}
 
-	// Merge plugin schemas into confMap, pulling values from $GLOBALS
+	// Merge plugin schemas into confMap, pulling values from $GLOBALS or defaults
 	foreach ($pluginSchemas as $pluginName => $pluginSchema) {
 		foreach ($pluginSchema as $name => $definition) {
 			if (isset($definition["type"])) {
-				$definition["currentValue"] = $GLOBALS[$name] ?? null;
+				$definition["currentValue"] = $GLOBALS[$name] ?? $definition["default"] ?? null;
 				$confMap[$name] = $definition;
 			} else if (is_array($definition)) {
 				foreach ($definition as $name2 => $definition2) {
 					if (isset($definition2["type"])) {
-						$definition2["currentValue"] = $GLOBALS[$name][$name2] ?? null;
+						$definition2["currentValue"] = $GLOBALS[$name][$name2] ?? $definition2["default"] ?? null;
 						$confMap["$name $name2"] = $definition2;
 					} else if (is_array($definition2)) {
 						foreach ($definition2 as $name3 => $definition3) {
 							if (isset($definition3["type"])) {
-								$definition3["currentValue"] = $GLOBALS[$name][$name2][$name3] ?? null;
+								$definition3["currentValue"] = $GLOBALS[$name][$name2][$name3] ?? $definition3["default"] ?? null;
 								$confMap["$name $name2 $name3"] = $definition3;
 							}
 						}
@@ -105,7 +108,7 @@ function conf_loader_load_titles() {
 		$pluginConfigs = glob($confDir . "*_conf.php");
 		foreach ($pluginConfigs as $pluginConfig) {
 			include_once $pluginConfig;
-			$schemaFunc = "get_{$pluginName}_schema";
+			$schemaFunc = "get_" . basename($pluginConfig, "_conf.php") . "_schema";
 			if (function_exists($schemaFunc)) {
 				$pluginSchema = $schemaFunc();
 				foreach ($pluginSchema as $name => $definition) {
@@ -171,7 +174,7 @@ function conf_loader_load_schema() {
 		$pluginConfigs = glob($confDir . "*_conf.php");
 		foreach ($pluginConfigs as $pluginConfig) {
 			include_once $pluginConfig;
-			$schemaFunc = "get_{$pluginName}_schema";
+			$schemaFunc = "get_" . basename($pluginConfig, "_conf.php") . "_schema";
 			if (function_exists($schemaFunc)) {
 				$pluginSchema = $schemaFunc();
 				foreach ($pluginSchema as $name => $definition) {
