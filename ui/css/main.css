@@ -186,45 +186,40 @@ a .bi-trash {
 }
 
 .action-button.edit {
-    background-color: rgba(23, 162, 184, 0.8);
+    background-color: #097b8d;
     border-color: rgba(138, 155, 182, 0.3);
 }
 
 .action-button.edit:hover {
-    background-color: rgba(33, 172, 194, 0.9);
+    background-color: #076674;
 }
 
 .action-button.add-new,
 .action-button.upload-csv {
-    background-color: rgba(32, 122, 74, 0.8);
-    border-color: rgba(72, 187, 120, 0.3);
+    background-color: #176529;
 }
 
 .action-button.add-new:hover,
 .action-button.upload-csv:hover {
-    background-color: rgba(42, 142, 94, 0.9);
+    background-color: #125121;
 }
 
 .action-button.download-csv {
-    background-color: rgba(37, 99, 235, 0.8);
-    border-color: rgba(96, 165, 250, 0.3);
+    background-color: rgb(1 53 166 / 90%);
 }
 
 .action-button.download-csv:hover {
-    background-color: rgba(47, 109, 245, 0.9);
+    background-color: rgb(1 43 135 / 95%);
 }
 
 /* Alphabet button styles */
 .alphabet-button {
-    padding: 6px 10px;
-    font-size: 13px;
-    margin: 2px;
-    background-color: rgba(37, 99, 235, 0.8);
-    border-color: rgba(96, 165, 250, 0.3);
+    background-color: rgba(0, 0, 0, 0.85);
+    border-color: rgba(75, 75, 75, 0.3);
 }
 
 .alphabet-button:hover {
-    background-color: rgba(47, 109, 245, 0.9);
+    background-color: rgba(25, 25, 25, 0.95);
 }
 
 /* Copy button styles */
@@ -360,7 +355,7 @@ nav {
 
 .conf-item label {
     display: block;
-    color: #ff00c6;
+    color: rgb(242, 124, 17);
     margin-bottom: 5px;
 }
 
@@ -772,7 +767,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* Boolean Input Styling */
 .conf-item[data-type="boolean"] {
-    color: #ff00c6;
+    color: rgb(242, 124, 17);
 }
 
 .conf-item[data-type="boolean"] label[for] {
@@ -820,7 +815,6 @@ input[type="range"]::-webkit-slider-thumb {
     padding: 8px 12px;
     color: #ffffff;
     border-radius: 4px;
-    border: 1px solid #ffffff;
     text-decoration: none;
     font-weight: bold;
     cursor: pointer;
@@ -833,31 +827,31 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .action-button.edit {
-    background-color: #17a2b8;
+    background-color: #097b8d;
 }
 .action-button.edit:hover {
-    background-color: #138496;
+    background-color: #076674;
 }
 
 .action-button.add-new {
-    background-color: #28a745;
+    background-color: #176529;
 }
 .action-button.add-new:hover {
-    background-color: #218838;
+    background-color: #125121;
 }
 
 .action-button.upload-csv {
-    background-color: #28a745;
+    background-color: #176529;
 }
 .action-button.upload-csv:hover {
-    background-color: #218838;
+    background-color: #125121;
 }
 
 .action-button.download-csv {
-    background-color: #007bff;
+    background-color: rgb(1 53 166 / 90%);
 }
 .action-button.download-csv:hover {
-    background-color: #0056b3;
+    background-color: rgb(1 43 135 / 95%);
 }
 
 /* File input styling */
@@ -1071,12 +1065,12 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-save {
-    background-color: rgba(42, 142, 94, 0.9);
+    background-color: #176529;
     border-color: rgba(72, 187, 120, 0.3);
 }
 
 .btn-save:hover {
-    background-color: rgba(32, 122, 74, 0.8);
+    background-color: #125121;
     border-color: rgba(72, 187, 120, 0.4);
 }
 
@@ -1092,7 +1086,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-primary {
-    background-color: rgba(47, 109, 245, 0.9);
+    background-color: rgb(1 53 166 / 90%);
     border-color: rgba(96, 165, 250, 0.3);
     background-image: linear-gradient(180deg, 
                       rgba(255, 255, 255, 0.08) 0%,
@@ -1100,7 +1094,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-primary:hover {
-    background-color: rgba(37, 99, 235, 0.8);
+    background-color: rgb(1 43 135 / 95%);
     border-color: rgba(96, 165, 250, 0.4);
 }
 
@@ -1216,15 +1210,15 @@ code {
     margin-bottom: 5px;
     padding: 6px 10px;
     color: #ffffff;
-    background-color: #007bff;
+    background-color: rgba(0, 0, 0, 0.85);
     text-decoration: none;
     border-radius: 4px;
     font-weight: bold;
-    border: 1px solid #FFFFFF;
+    border: 1px solid rgba(75, 75, 75, 0.3);
 }
 
 .alphabet-button:hover {
-    background-color: #0056b3;
+    background-color: rgba(25, 25, 25, 0.95);
     color: #ffffff;
     text-decoration: none;
 }
@@ -1483,8 +1477,7 @@ code {
 
 /* Highlighted date style */
 .has-event a {
-    background-color: #007bff !important; /* Blue background matching buttons */
-    color: white !important;
+    background-color: #007bff;
     text-decoration: none; /* Ensures no underline */
     display: block; /* Make the link fill the cell */
     width: 100%; /* Full width of the parent cell */
@@ -1500,7 +1493,7 @@ code {
 
 /* Extra hover event */
 .has-event a:hover {
-    background-color: #0056b3 !important; /* Darker blue on hover */
-    color: #ffcc00 !important; /* Yellow text for contrast */
+    background-color: #0056b3; /* Darker blue on hover */
+    color: #ffcc00; /* Yellow text for contrast */
     transition: all 0.2s ease-in-out; /* Smooth hover animation */
 }
