@@ -1066,6 +1066,6 @@ if (isset($semaphore) && $semaphore)
 
 while(@ob_end_clean());
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
-
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"postrequest.php");
 
 ?>
