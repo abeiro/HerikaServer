@@ -6,6 +6,6 @@ $_SESSION["OPTION_TO_SHOW"]=$_GET["c"];
 
 setcookie("OPTION_TO_SHOW", $_GET["c"]);
 
-header("Location: {$_SERVER["HTTP_REFERER"]}");
+header("Location: conf_wizard.php");
 die();
 ?>

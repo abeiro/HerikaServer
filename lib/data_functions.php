@@ -607,6 +607,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     }
 
+
     return $lastDialogFull;
 
 }
@@ -747,6 +748,7 @@ function compactHistoricContext($lastDialogFull) {
         $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
 
 
+   
     return $lastDialogFull;
 }
 
