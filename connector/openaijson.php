@@ -145,7 +145,7 @@ class openaijson
                     $assistantAppearedInhistory=true;
                     if (isset($element["tool_calls"])) {
                         $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
-                        $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
+                        $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}, #RESULT#";
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
@@ -198,7 +198,7 @@ class openaijson
                             $pb["system"].=$element["content"]."\n";
                             
                            
-                            if (strpos($element["content"],"Error")===0) {
+                            if (strpos($element["content"],"error")===0) {
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
                                 $contextDataCopy[]=[
                                     "role"=>"user",
