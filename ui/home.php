@@ -237,7 +237,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         .stat-value {
             font-size: 1.5em;
             font-weight: bold;
-            color: #ff00c6;
+            color: rgb(212, 94, 0, 0.9);
         }
 
         .stat-label {
@@ -350,7 +350,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         }
 
         .stat-item .stat-value {
-            color: #ff00c6;
+            color: rgb(212, 94, 0, 0.9);
             font-weight: bold;
             font-size: 0.9em;
             min-width: 40px;
@@ -457,6 +457,39 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 padding: 6px 12px;
                 font-size: 0.8em;
             }
+        }
+
+        .stat-card.double-width {
+            grid-column: span 2;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card.double-width .stat-value {
+            font-size: 1.8em;
+        }
+
+        .stat-card.double-width:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(242, 124, 17, 0.2);
+            background: #333333;
+        }
+
+        .stat-card.double-width:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(255, 0, 198, 0.1);
+        }
+
+        .stat-card.double-width::after {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.9em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card.double-width:hover::after {
+            opacity: 0.7;
         }
     </style>
 </head>
@@ -753,6 +786,48 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         (SELECT COALESCE(COUNT(*), 0) FROM {$schema}.eventlog WHERE type = 'inputtext') as player_inputs");
                     
                     if (!isset($stats['error'])) {
+                        // Add LLM requests count queries for all time periods
+                        $llmStats24h = fetch_widget_stats($conn, "
+                            SELECT 
+                                SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
+                                COUNT(*) as total_requests
+                            FROM {$schema}.audit_request 
+                            WHERE created_at >= NOW() - INTERVAL '24 HOURS'
+                        ");
+
+                        $llmStats72h = fetch_widget_stats($conn, "
+                            SELECT 
+                                SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
+                                COUNT(*) as total_requests
+                            FROM {$schema}.audit_request 
+                            WHERE created_at >= NOW() - INTERVAL '72 HOURS'
+                        ");
+
+                        $llmStats1w = fetch_widget_stats($conn, "
+                            SELECT 
+                                SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
+                                COUNT(*) as total_requests
+                            FROM {$schema}.audit_request 
+                            WHERE created_at >= NOW() - INTERVAL '7 DAYS'
+                        ");
+
+                        $llmStatsLifetime = fetch_widget_stats($conn, "
+                            SELECT 
+                                SUM(CASE WHEN result = 'Ok' THEN 1 ELSE 0 END) as llm_requests_success,
+                                COUNT(*) as total_requests
+                            FROM {$schema}.audit_request
+                        ");
+
+                        function formatLLMStats($stats) {
+                            if (isset($stats[0]['llm_requests_success']) && isset($stats[0]['total_requests'])) {
+                                $success = $stats[0]['llm_requests_success'];
+                                $total = $stats[0]['total_requests'];
+                                $percentage = $total > 0 ? round(($success / $total) * 100) : 0;
+                                return "{$success}/{$total} ({$percentage}%)";
+                            }
+                            return '0/0 (0%)';
+                        }
+
                         echo render_widget('CHIM Stats', "
                             <div class='widget-stats'>
                                 " . (in_array('diarylog', $existingTables) ? "
@@ -794,10 +869,47 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     <div class='stat-value'>{$stats[0]['books_summarized']}</div>
                                     <div class='stat-label'>Books Read</div>
                                 </div>" : "") . "
-                                                                <div class='stat-card'>
+                                <div class='stat-card'>
                                     <div class='stat-value'>{$stats[0]['player_inputs']}</div>
                                     <div class='stat-label'>Player Messages</div>
                                 </div>
+                                <div class='stat-card double-width' id='llm-stats-card' style='cursor: pointer; position: relative;'>
+                                    <div class='stat-value'>
+                                        <span id='llm-stats-24h'>" . formatLLMStats($llmStats24h) . "</span>
+                                        <span id='llm-stats-72h' style='display: none;'>" . formatLLMStats($llmStats72h) . "</span>
+                                        <span id='llm-stats-1w' style='display: none;'>" . formatLLMStats($llmStats1w) . "</span>
+                                        <span id='llm-stats-lifetime' style='display: none;'>" . formatLLMStats($llmStatsLifetime) . "</span>
+                                    </div>
+                                    <div class='stat-label'>
+                                        <span id='llm-label-24h'>LLM Requests Success Rate (24h)</span>
+                                        <span id='llm-label-72h' style='display: none;'>LLM Requests Success Rate (72h)</span>
+                                        <span id='llm-label-1w' style='display: none;'>LLM Requests Success Rate (1w)</span>
+                                        <span id='llm-label-lifetime' style='display: none;'>LLM Requests Success Rate (lifetime)</span>
+                                    </div>
+                                </div>
+                                <script>
+                                    document.getElementById('llm-stats-card').addEventListener('click', function() {
+                                        const periods = ['24h', '72h', '1w', 'lifetime'];
+                                        let currentIndex = 0;
+                                        
+                                        // Find which period is currently shown
+                                        for (let i = 0; i < periods.length; i++) {
+                                            if (document.getElementById('llm-stats-' + periods[i]).style.display !== 'none') {
+                                                currentIndex = i;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        // Hide current period
+                                        document.getElementById('llm-stats-' + periods[currentIndex]).style.display = 'none';
+                                        document.getElementById('llm-label-' + periods[currentIndex]).style.display = 'none';
+                                        
+                                        // Show next period
+                                        const nextIndex = (currentIndex + 1) % periods.length;
+                                        document.getElementById('llm-stats-' + periods[nextIndex]).style.display = 'inline';
+                                        document.getElementById('llm-label-' + periods[nextIndex]).style.display = 'inline';
+                                    });
+                                </script>
                             </div>
                         ");
                     } else {
@@ -827,7 +939,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <div style='background: url(\"/HerikaServer/ui/images/paper.jpg\") center/cover; padding: 40px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);'>
                                 <div style='color: #000; line-height: 1.4; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>
                                     <div style='font-size: 1.1em; margin-bottom: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['author']) . "</div>
-                                    <div style='font-size: 1.2em; padding-top: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['content']) . "</div>
+                                    <div style='font-size: 1.2em; padding-top: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . nl2br($latestDiary[0]['content']) . "</div>
                                 </div>
                             </div>
                         </div>";
@@ -835,7 +947,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     $diaryContent = "
                         <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto; text-align: center;'>
                             <div style='color: #6c757d; font-size: 1.2em; padding: 40px 20px;'>
-                                No diary entries found yet. Your adventures will be recorded here as you journey through Tamriel.
+                                No diary entries found yet. Make sure to use the Diary hotkey!
                             </div>
                         </div>";
                 }
@@ -921,7 +1033,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         <script src='https://d3js.org/d3.v7.min.js'></script>
                         <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
                         <div class='word-cloud-container'>
-                            <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: #ff00c6; height: 30px; font-weight: bold;'></div>
+                            <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: rgb(212, 94, 0, 0.9); height: 30px; font-weight: bold;'></div>
                             <svg id='word-cloud' style='width: 100%; height: 500px;'></svg>
                         </div>
                         <style>
@@ -946,7 +1058,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             
                             // Color scale for words based on frequency
                             const color = d3.scaleOrdinal()
-                                .range(['#ff00c6', '#ff33d1', '#ff66dc', '#ff99e7', '#ffccf2']);
+                                .range(['rgb(242, 124, 17)', 'rgb(242, 144, 47)', 'rgb(242, 164, 77)', 'rgb(242, 184, 107)', 'rgb(242, 204, 137)']);
 
                             // Create the word cloud layout
                             const layout = d3.layout.cloud()

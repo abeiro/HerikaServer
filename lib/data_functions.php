@@ -44,7 +44,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
 
         if ($lastData != md5($row["data"])) {
             if ((strpos($row["data"], "{$GLOBALS["HERIKA_NAME"]}:") !== false) || ((strpos($row["data"], "{$GLOBALS["PLAYER_NAME"]}:") !== false))) {
-                $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location.. from Herikas lines.
+                $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
                 $replacement = "";
                 $row["data"] = preg_replace($pattern, $replacement, $row["data"]); // // assistant vs user war
                 if ((strpos($row["data"], "{$GLOBALS["HERIKA_NAME"]}:") !== false)) {
@@ -515,8 +515,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         // Figure out location form location field, and only add to context if changed    
         $printLocation=false;
         $string = $row["location"];
-        preg_match('/Context\s*(new\s*)?location:\s*([^$,]+)/', $string, $locationMatch);
-        preg_match('/Hold:\s*([^$,\)]+)/', $string, $holdMatch);
+        preg_match('/Context\s*(new\s*)?location:\s*([^$,]+?)/', $string, $locationMatch);
+        preg_match('/Hold:\s*([^$,\)]+?)/', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
             //error_log(print_r($string,true));
@@ -882,7 +882,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
         }
 
         if (!$writeLocation) {
-            $pattern = "/\([^)]*Context location[^)]*\)/";
+            $pattern = "/\([^)]*Context location[^)]*?\)/";
             $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
         }
 
@@ -966,7 +966,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
     // Compact Herika's lines
     foreach ($lastDialogFull as $n => $line) {
         if ($line["role"] == "assistant") {
-            $pattern = "/\([^)]*Context location[^)]*\)/";
+            $pattern = "/\(Context location:[^)]+?\)/";
             $cleanedText = trim(preg_replace($pattern, "", $line["content"])); // Remove context location always for assistant
             // This breaks with spaces?
             $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
@@ -1213,10 +1213,10 @@ function DataLastRetFunc($actor, $lastNelements = -2)
 
     // Remove Context Location part when repeated
     foreach ($lastDialog as $k => $message) {
-        preg_match('/\(Context location: (.*)\)/', $message['content'], $matches);
+        preg_match('/\(Context location: [^)]+?\)/', $message['content'], $matches);
         $current_location = isset($matches[1]) ? $matches[1] : null;
         if ($current_location === $last_location) {
-            $message['content'] = preg_replace('/\(Context location: (.*)\)/', '', $message['content']);
+            $message['content'] = preg_replace('/\(Context location: [^)]+?\)/', '', $message['content']);
         } else {
             $last_location = $current_location;
         }
@@ -1530,7 +1530,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+        $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                     
@@ -1593,7 +1593,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-        $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
+        $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                     
