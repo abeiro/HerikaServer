@@ -1,5 +1,7 @@
 <?php 
 
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
+
 $checkVersion = function($tablename) {
     global $db;
     $query = "
