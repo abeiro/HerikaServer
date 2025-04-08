@@ -940,6 +940,7 @@ if ($result) {
     echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
 }
 
+/* Dynamic Oghma Section - Commented out
 // Add Dynamic Oghma Entries Section
 echo '<br><br>';
 echo '<h1>Dynamic Oghma</h1>';
@@ -1080,8 +1081,7 @@ if ($dynamicResult) {
 } else {
     echo '<p>Error fetching Dynamic Oghma entries: ' . pg_last_error($conn) . '</p>';
 }
-
-
+*/
 
 pg_close($conn);
 ?>
