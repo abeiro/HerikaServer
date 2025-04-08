@@ -632,7 +632,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 require(__DIR__."/processor/oghma.php");
 
 if (sizeof($memoryInjectionCtx)>0) {
-    // Persist memory injetction
+    // Persist memory injection
     $gameRequestCopy=$gameRequest;
     $gameRequestCopy[0]="infoaction";
     $gameRequestCopy[3]=$memoryInjectionCtx[0]["content"];

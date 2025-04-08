@@ -1061,6 +1061,7 @@ $debugPaneLink = true;
                 $name = $manifest['name'] ?? $folder;
                 $description = $manifest['description'] ?? 'No description available';
                 $configUrl = $manifest['config_url'] ?? '';
+                $installUrl = $manifest['install_url'] ?? '';
     
                 echo '<tr>';
                 echo '<td>' . htmlspecialchars($name) . '</td>';
@@ -1071,6 +1072,13 @@ $debugPaneLink = true;
                 } else {
                     echo 'No Plugin Page';
                 }
+                
+                if (!empty($installUrl)) {
+                    echo '<button onclick="window.open(\'' . htmlspecialchars($installUrl) . '\', \'_blank\')" class="btn-base btn-save">Install Plugin</button>';
+                } else {
+                    echo 'No Plugin Page';
+                }
+
                 echo '</td>';
                 echo '<td>' . renderDeleteButton($folder, $name) . '</td>';
                 echo '</tr>';
