@@ -278,7 +278,7 @@ final class DynamicProfileTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"user", "content"=>"* Dialogue history:\nPrisoner:I'm going to bed now.  (talking to Unit Test)  (at Riften ,Hold: The Rift)\nUnit Test:Good night.  (talking to Prisoner)\n"];
+                $expectedPrompt = ["role"=>"user", "content"=>"* Dialogue history:\nPrisoner:I'm going to bed now.  (talking to Unit Test)  (at Riften ,Hold: The Rift) (on date 0201-08-17 at 00:00:00)\nUnit Test:Good night.  (talking to Prisoner)\n"];
                 $this->expectPromptInContext($streamContext, $expectedPrompt);
                 
                 return true;

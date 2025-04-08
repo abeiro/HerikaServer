@@ -10,7 +10,7 @@ final class MemoryTest extends DatabaseTestCase
     {
         // default test config
         require("conf.php");
-		$GLOBALS["MINIME_T5"] = false;
+        $GLOBALS["MINIME_T5"] = false;
 
         $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
         $GLOBALS["mockConnectorSend"]->expects($this->once())
@@ -19,7 +19,7 @@ final class MemoryTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $options = stream_context_get_options($streamContext);
-				$this->assertStringNotContainsString("remembers this:", $options['http']['content']);
+                $this->assertStringNotContainsString("remembers this:", $options['http']['content']);
                 return true;
             })
         )
@@ -37,10 +37,10 @@ final class MemoryTest extends DatabaseTestCase
     {
         // default test config
         require("conf.php");
-		$GLOBALS["MINIME_T5"] = false;
+        $GLOBALS["MINIME_T5"] = false;
 
-		// add summarized memory
-		$this->insertPotionMemory();
+        // add summarized memory
+        $this->insertPotionMemory();
 
         $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
         $GLOBALS["mockConnectorSend"]->expects($this->once())
@@ -49,7 +49,7 @@ final class MemoryTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $options = stream_context_get_options($streamContext);
-				$this->assertStringNotContainsString("remembers this:", $options['http']['content']);
+                $this->assertStringNotContainsString("remembers this:", $options['http']['content']);
                 return true;
             })
         )
@@ -67,10 +67,10 @@ final class MemoryTest extends DatabaseTestCase
     {
         // default test config
         require("conf.php");
-		$GLOBALS["MINIME_T5"] = false;
+        $GLOBALS["MINIME_T5"] = false;
 
-		// add summarized memory
-		$this->insertPotionMemory();
+        // add summarized memory
+        $this->insertPotionMemory();
 
         $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
         $GLOBALS["mockConnectorSend"]->expects($this->once())
@@ -78,7 +78,7 @@ final class MemoryTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"user", "content"=>"##\nMEMORY\n: The Narrator remembers this: [0 days ago ....  #Summary: Prisoner attempted to buy strong potions from a merchant but was rudely turned away.\\n\\n]\n##\n"];
+                $expectedPrompt = ["role"=>"user", "content"=>"##\nMEMORY\n: The Narrator remembers this: [0 hours ago ... #Summary: Prisoner attempted to buy strong potions from a merchant but was rudely turned away.\\n\\n]\n##\n"];
                 $this->expectPromptInContext($streamContext, $expectedPrompt);
                 return true;
             })
@@ -97,7 +97,7 @@ final class MemoryTest extends DatabaseTestCase
     {
         // default test config
         require("conf.php");
-		
+        
         $GLOBALS["mockMinimeExtract"] = function($text) {
             return '{"is_memory_recall": "Yes", "generated_tags": "Ale|Town", "elapsed_time": "0.05 seconds"}';
         };
@@ -109,7 +109,7 @@ final class MemoryTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $options = stream_context_get_options($streamContext);
-				$this->assertStringNotContainsString("remembers this:", $options['http']['content']);
+                $this->assertStringNotContainsString("remembers this:", $options['http']['content']);
                 return true;
             })
         )
@@ -128,9 +128,9 @@ final class MemoryTest extends DatabaseTestCase
         // default test config
         require("conf.php");
 
-		// add summarized memory
-		$this->insertPotionMemory();
-		
+        // add summarized memory
+        $this->insertPotionMemory();
+        
         $GLOBALS["mockMinimeExtract"] = function($text) {
             return '{"is_memory_recall": "Yes", "generated_tags": "Ale|Town", "elapsed_time": "0.05 seconds"}';
         };
@@ -142,7 +142,7 @@ final class MemoryTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $options = stream_context_get_options($streamContext);
-				$this->assertStringNotContainsString("remembers this:", $options['http']['content']);
+                $this->assertStringNotContainsString("remembers this:", $options['http']['content']);
                 return true;
             })
         )
@@ -161,9 +161,9 @@ final class MemoryTest extends DatabaseTestCase
         // default test config
         require("conf.php");
 
-		// add summarized memory
-		$this->insertPotionMemory();
-		
+        // add summarized memory
+        $this->insertPotionMemory();
+        
         $GLOBALS["mockMinimeExtract"] = function($text) {
             return '{"is_memory_recall": "Yes", "generated_tags": "Potions|Town", "elapsed_time": "0.05 seconds"}';
         };
@@ -174,7 +174,7 @@ final class MemoryTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"user", "content"=>"##\nMEMORY\n: The Narrator remembers this: [0 days ago ....  #Summary: Prisoner attempted to buy strong potions from a merchant but was rudely turned away.\\n\\n]\n##\n"];
+                $expectedPrompt = ["role"=>"user", "content"=>"##\nMEMORY\n: The Narrator remembers this: [0 hours ago ... #Summary: Prisoner attempted to buy strong potions from a merchant but was rudely turned away.\\n\\n]\n##\n"];
                 $this->expectPromptInContext($streamContext, $expectedPrompt);
                 return true;
             })
@@ -194,13 +194,13 @@ final class MemoryTest extends DatabaseTestCase
         // default test config
         require("conf.php");
 
-		// add summarized memory
-		$this->insertPotionMemory();
-		
+        // add summarized memory
+        $this->insertPotionMemory();
+        
         $GLOBALS["HERIKA_NAME"]="Unit Test";
         $GLOBALS["HERIKA_PERS"]="You are a Unit Test.";
 
-		// should not be used, but if it is then generate tags
+        // should not be used, but if it is then generate tags
         $GLOBALS["mockMinimeExtract"] = function($text) {
             return '{"is_memory_recall": "Yes", "generated_tags": "Potions|Town", "elapsed_time": "0.05 seconds"}';
         };
@@ -212,16 +212,16 @@ final class MemoryTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $options = stream_context_get_options($streamContext);
-				$this->assertStringNotContainsString("remembers this:", $options['http']['content']);
+                $this->assertStringNotContainsString("remembers this:", $options['http']['content']);
                 return true;
             })
         )
         ->willReturnCallback(function($url, $context) {
             $response = 'data: {"choices":[{"delta":{"content": "{\"character\": \"Unit Test\", \"listener\": \"Prisoner\", \"message\": \"You should have tried buying some weaker potions\", \"mood\": \"default\", \"action\": \"Talk\", \"target\": \"Prisoner\"}"}}]}';
-			$resourceMock = fopen('php://temp', 'r+');
-			fwrite($resourceMock, $response);
-			rewind($resourceMock);
-			return $resourceMock;
+            $resourceMock = fopen('php://temp', 'r+');
+            fwrite($resourceMock, $response);
+            rewind($resourceMock);
+            return $resourceMock;
         });
 
         // comm.php?data=bored|100|200|Unit Test (base64 encoded)
@@ -266,23 +266,23 @@ final class MemoryTest extends DatabaseTestCase
         return $resourceMock;
     }
 
-	private function insertPotionMemory() {
-		$testDb = new sql();
-		$testDb->insert(
-			'memory_summary',
-			array(
-				'gamets_truncated' => 0,
-				'n' => 0,
-				'packed_message' => '(Context Location:Riften ,Hold: The Rift) Prisoner: Potion seller. I need your strongest potions.\n'.
-					'(Context Location:Riften ,Hold: The Rift) Potion Seller: You can\'t handle my strongest potions, traveler.',
-				'summary' => '#Summary: Prisoner attempted to buy strong potions from a merchant but was rudely turned away.\n\n'.
-					'#Tags: #PotionSeller #Potions',
-				'uid' => 0,
-				'companions' => 'Unit Test,Potion Seller',
-				'tags' => '#PotionSeller #Potions',
-				'native_vec'=> "'potion':2A,9B,22B 'seller':1A,21B"
-			)
-		);
-		$testDb->close();
-	}
+    private function insertPotionMemory() {
+        $testDb = new sql();
+        $testDb->insert(
+            'memory_summary',
+            array(
+                'gamets_truncated' => 0,
+                'n' => 0,
+                'packed_message' => '(Context Location:Riften ,Hold: The Rift) Prisoner: Potion seller. I need your strongest potions.\n'.
+                    '(Context Location:Riften ,Hold: The Rift) Potion Seller: You can\'t handle my strongest potions, traveler.',
+                'summary' => '#Summary: Prisoner attempted to buy strong potions from a merchant but was rudely turned away.\n\n'.
+                    '#Tags: #PotionSeller #Potions',
+                'uid' => 0,
+                'companions' => 'Unit Test,Potion Seller',
+                'tags' => '#PotionSeller #Potions',
+                'native_vec'=> "'potion':2A,9B,22B 'seller':1A,21B"
+            )
+        );
+        $testDb->close();
+    }
 }
