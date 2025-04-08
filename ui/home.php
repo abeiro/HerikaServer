@@ -687,14 +687,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 <td>Current In-Game Time</td>
                                 <td>{$inGameTime}</td>
                             </tr>
-                            <tr>
-                                <td>Tamrielic Days Elapsed</td>
-                                <td>{$totalTimeElapsed}</td>
-                            </tr>
-                            <tr>
-                                <td>Real Time Elapsed</td>
-                                <td>{$realTimeElapsedStr}</td>
-                            </tr>
                         </table>
                     </div>
                     {$questsContent}
