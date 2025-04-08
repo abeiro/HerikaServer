@@ -196,7 +196,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         
         $db->updateRow('quests',$data," id_quest='{$questParsedData[0]}' ");
 
-        require_once(__DIR__.DIRECTORY_SEPARATOR."quest_oghma_sync.php");
+        require_once(__DIR__.DIRECTORY_SEPARATOR."dynamicoghma.php");
         // After updating quest, sync with oghma if stage info available
         if (isset($questParsedData[1])) {
             dynamicOghma($questParsedData[0], intval($questParsedData[1]));
