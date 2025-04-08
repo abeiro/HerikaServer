@@ -18,7 +18,9 @@ class openaijson
     private $_buffer;
     private $_stopProc;
     private $_is_groq_com;
+    private $_is_streaming;
     private $_is_reasoning;
+    private $_model;
     public $_extractedbuffer;
 
     public function __construct()
@@ -28,23 +30,34 @@ class openaijson
         $this->_stopProc=false;
         $this->_extractedbuffer="";
         $this->_is_groq_com=false;
+        $this->_is_streaming=true;
         $this->_is_reasoning=false;
+        $this->_model="";
         require_once(__DIR__."/__jpd.php");
     }
 
     private function isReasoningModel($s_model) {
+        $b_res = false;
         if (strlen($s_model) > 0) {
             $i_pos = stripos($s_model, "deepseek-r");
             if ($i_pos === false) 
-                $i_pos = stripos($s_model, "qwen-qwq-32b");
+                $i_pos = stripos($s_model, "qwq-32b");
+            $b_res = (!($i_pos === false));
+            //qvq-max  aion-1 glm-zero-preview
         }
-        return (!($i_pos === false));
+        return $b_res;
     }
 
     public function open($contextData, $customParms)
     {
         $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
-        $this->_is_groq_com = (strpos($url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
+
+        $this->_is_groq_com = (stripos($url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
+        if ($this->_is_groq_com) 
+            $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'llama-3.3-70b-versatile';
+        else
+            $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini';
+        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
 
@@ -86,31 +99,18 @@ class openaijson
         if ($this->_is_groq_com) { // --- exception made for groq.com - JSON need pretty print
             $contextData[]=[
                 'role' => 'user',
-                'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) 
+                'content' => "{$prefix}. $speechReinforcement Use only this JSON object to give your answer and do not send any other characters outside of this JSON structure: ".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) 
             ];
         } else {
             $contextData[]=[
                 'role' => 'user',
-                'content' => "{$prefix}. $speechReinforcement Use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"])
+                'content' => "{$prefix}. $speechReinforcement Use only this JSON object to give your answer and do not send any other characters outside of this JSON structure: ".json_encode($GLOBALS["responseTemplate"])
             ];
         }
     
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            // there is a double inclusion, part of command_prompt is already included in content from main.php
-            if (isset($GLOBALS["COMMAND_PROMPT_FUNCTIONS"])) {
-                $s_mark = $GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
-                $s_cprompt = $GLOBALS["COMMAND_PROMPT"];
-                $s_ctx = $contextData[0]["content"];
-                if (!(stripos($s_ctx, $s_mark) === false)) {
-                    $i_pos = stripos($s_cprompt, $s_mark); 
-                    if ((!($i_pos === false)) && ($i_pos > 0)) {
-                        $i_len = strlen($s_mark);
-                        $s_cprompt = substr($GLOBALS["COMMAND_PROMPT"], $i_pos + $i_len );
-                    }
-                }
-            }
-            $contextData[0]["content"].=$s_cprompt;
-        } 
+            $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
+        }
 
         $pb=[];
         $pb["user"]="";
@@ -167,10 +167,11 @@ class openaijson
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
-                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                        "#TARGET#"=>current($localArguments),
-                                        ]);
-                        
+                        if (isset($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName])) {
+                            $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
+                                            "#TARGET#"=>current($localArguments),
+                                            ]);
+                        }
                         $contextDataCopy[]=[
                                 "role"=>"assistant",
                                 "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
@@ -282,11 +283,12 @@ class openaijson
         if ($this->_is_groq_com) { // --- exception made for groq.com
 
             if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
+            $this->_is_streaming = false;
 
             $data = array(
-                'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'llama-3.3-70b-versatile',
+                'model' => $this->_model,
                 'messages' => $contextData,
-                'stream' => false, // groq can't stream for JSON
+                'stream' => $this->_is_streaming, // groq can't stream for JSON
                 'max_completion_tokens' => $MAX_TOKENS,
                 'temperature' => $temperature,
                 'top_p' => $top_p,
@@ -295,8 +297,6 @@ class openaijson
                 'response_format'=>["type"=>"json_object"]
             );
 
-
-            $this->_is_reasoning = $this->isReasoningModel($data["model"]); // check if resoning model
 
             if ($this->_is_reasoning) { 
             /*  a reasoning model need "reasoning_format" parameter: 
@@ -309,10 +309,11 @@ class openaijson
         
         } else { // --- normal flow (not groq)
         
+            $this->_is_streaming = true;
             $data = array(
                 'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini',
                 'messages' => $contextData,
-                'stream' => true,
+                'stream' => $this->_is_streaming,
                 'max_completion_tokens'=>$MAX_TOKENS,
                 'temperature' => $temperature,
                 'top_p' => $top_p,
@@ -328,6 +329,11 @@ class openaijson
             if (strpos($url, "mistral") === false) {
                 $data["presence_penalty"]=$presence_penalty;
                 $data["frequency_penalty"]=$frequency_penalty;
+            }
+
+            if ($this->_is_reasoning) { // there is no rule accepted by all providers 
+                $data['reasoning_format'] = "hidden"; // parameter for deepseek-r1 
+                $data["chat_format"]="tidy"; //parameter for qwq reasoning
             }
       
         } // --- endif groq
@@ -373,7 +379,7 @@ class openaijson
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
-            Logger::error(print_r($error,true));
+            Logger::error(trim(print_r($error,true)));
 
             if ($GLOBALS["db"]) {
                 $GLOBALS["db"]->insert(
@@ -449,7 +455,7 @@ class openaijson
         
         file_put_contents(__DIR__."/../log/debugStream.log", $line, FILE_APPEND);
 
-        if ($this->_is_groq_com) { // --- exception for groq.com
+        if (!$this->_is_streaming) { // --- not streaming, catch all 
 
             $data=json_decode($line, true);
 
@@ -463,7 +469,7 @@ class openaijson
                 $totalBuffer .= $msg;
             }
      
-        } else { // --- normal flow not groq.com
+        } else { // --- normal streaming flow 
 
             $data=json_decode(substr($line, 6), true);
 
@@ -476,7 +482,7 @@ class openaijson
                 }
                 $totalBuffer.=$data["choices"][0]["delta"]["content"];
             }
-        } // --- endif groq.com
+        } // --- endif is_streaming 
 
         $buffer="";
 
@@ -559,6 +565,8 @@ class openaijson
             $parsedResponse=__jpd_decode_lazy($this->_buffer);   // USE JPD_LAZY?
             if (is_array($parsedResponse)) {
                 if (!empty($parsedResponse["action"])) {
+                    if (!isset($parsedResponse["target"]))    
+                        $parsedResponse["target"] = "";
                     if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
                         
                         $functionDef=findFunctionByName($parsedResponse["action"]);
@@ -569,7 +577,7 @@ class openaijson
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
-                                    Logger::warn("Missing required parameter");
+                                    Logger::warn("Missing required parameter: target");
                                 }
                                     
                             } else {
