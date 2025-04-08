@@ -233,4 +233,67 @@ main.container {
     padding-bottom: 40px;
     padding-left: 10px;
     max-width: 1600px;
+}
+
+/* People List Styles */
+.people-list {
+    background-color: #3a3a3a;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 100%;
+}
+
+.people-search {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 2px solid #555555;
+    border-radius: 6px;
+    background-color: #4a4a4a;
+    color: #f8f9fa;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.people-search:focus {
+    outline: none;
+    border-color: rgb(212, 94, 0);
+}
+
+.people-list form {
+    margin: 8px 0;
+}
+
+.people-item {
+    width: 100%;
+    padding: 12px 20px;
+    background-color: #4a4a4a;
+    border: 2px solid #555555;
+    border-radius: 6px;
+    color: #f8f9fa;
+    font-size: 16px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.people-item:hover {
+    background-color: #555555;
+    border-color: rgb(212, 94, 0);
+    transform: translateX(5px);
+}
+
+.people-count {
+    background-color: rgb(212, 94, 0);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
 } 
