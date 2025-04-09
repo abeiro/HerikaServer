@@ -57,9 +57,13 @@
     border-radius: 5px;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease-in-out;
-    display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
 }
 
 .calendar td.has-event a:hover {
@@ -67,6 +71,21 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     color: white;
+}
+
+.calendar td.has-event a:hover::after {
+    content: attr(data-event-count) " entries";
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 4;
 }
 
 .calendar td.current-date a {
@@ -223,9 +242,7 @@
 }
 
 .location-change-row td {
-    padding: 8px;
-    border-top: 2px solid #34495e;
-    border-bottom: 2px solid #34495e;
+    background-color: #34495e
 }
 
 /* Main container padding */

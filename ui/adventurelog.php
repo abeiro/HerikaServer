@@ -556,6 +556,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
 
                 // Check if there are events for this day
                 $hasEvents = false;
+                $eventCount = 0;
                 foreach ($allEventDates as $eventDate) {
                     if ($useTamrielicTime) {
                         // Compare Tamrielic dates
@@ -563,13 +564,13 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                         if ($eventDay == $dayCount) {
                             error_log("Debug - Found event for day {$dayCount}");
                             $hasEvents = true;
-                            break;
+                            $eventCount++;
                         }
                     } else {
                         // Compare Gregorian dates
                         if (isset($eventDate['date']) && $eventDate['date'] === $dateStr) {
                             $hasEvents = true;
-                            break;
+                            $eventCount++;
                         }
                     }
                 }
@@ -578,7 +579,8 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                 $calendar[$weekCount][$i] = array(
                     'day' => $dayCount,
                     'url' => "?$urlParams",
-                    'hasEvents' => $hasEvents
+                    'hasEvents' => $hasEvents,
+                    'eventCount' => $eventCount
                 );
                 
                 $dayCount++;
@@ -619,7 +621,7 @@ function renderCalendarHTML($calendar, $useTamrielicTime) {
                 $class = $day['hasEvents'] ? 'has-event' : '';
                 $dayNum = $day['day'];
                 if ($day['hasEvents']) {
-                    $html .= "<td class='{$class}'><a href='{$day['url']}#event-table'>{$dayNum}</a></td>";
+                    $html .= "<td class='{$class}'><a href='{$day['url']}#event-table' data-event-count='{$day['eventCount']}'>{$dayNum}</a></td>";
                 } else {
                     $html .= "<td class='{$class}'><span>{$dayNum}</span></td>";
                 }
