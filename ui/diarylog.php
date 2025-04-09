@@ -1162,6 +1162,174 @@ if ($shouldFetchEvents) {
         // **Close Database Connection**
         pg_close($conn);
         ?>
+
+        <!-- Edit Modal -->
+        <div id="editModal" class="modal-backdrop">
+            <div class="modal-container">
+                <h2>Edit Entry</h2>
+                <form id="editForm" onsubmit="return saveEntry(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="editRowId" name="rowid">
+                        <input type="hidden" id="editTopic" name="topic">
+                        <div class="conf-item">
+                            <label for="editContent">Content:</label>
+                            <small>Edit the content of the diary entry below.</small>
+                            <textarea id="editContent" name="content" rows="10" class="form-control"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="button-group">
+                            <button type="button" onclick="closeEditModal()" class="btn-cancel">Cancel</button>
+                            <button type="submit" class="btn-save">Save Changes</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Entry View Modal -->
+        <div id="entryModal" class="modal-backdrop">
+            <div class="modal-container">
+                <h2 id="entryModalTitle"></h2>
+                <div id="entryModalContent" class="entry-content"></div>
+                <div class="button-group">
+                    <button onclick="closeEntryModal()" class="btn-cancel">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Debug function to help us see what data we're receiving
+            function debugLog(data) {
+                console.log('Data received:', data);
+            }
+
+            function openEditModal(data) {
+                debugLog(data);
+                const modal = document.getElementById('editModal');
+                const rowIdInput = document.getElementById('editRowId');
+                const topicInput = document.getElementById('editTopic');
+                const contentInput = document.getElementById('editContent');
+
+                if (!modal || !rowIdInput || !topicInput || !contentInput) {
+                    console.error('Required modal elements not found');
+                    return;
+                }
+
+                try {
+                    // If data is a string (JSON), parse it
+                    const entryData = typeof data === 'string' ? JSON.parse(data) : data;
+                    
+                    rowIdInput.value = entryData.rowid;
+                    topicInput.value = entryData.topic || ''; // Keep topic in hidden field
+                    contentInput.value = entryData.content || '';
+                    
+                    modal.style.display = 'block';
+                } catch (error) {
+                    console.error('Error opening edit modal:', error);
+                }
+            }
+
+            function closeEditModal() {
+                const modal = document.getElementById('editModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            }
+
+            function openEntryModal(data) {
+                debugLog(data);
+                const modal = document.getElementById('entryModal');
+                const title = document.getElementById('entryModalTitle');
+                const content = document.getElementById('entryModalContent');
+
+                if (!modal || !title || !content) {
+                    console.error('Required modal elements not found');
+                    return;
+                }
+
+                try {
+                    // If data is a string (JSON), parse it
+                    const entryData = typeof data === 'string' ? JSON.parse(data) : data;
+                    
+                    title.textContent = entryData.topic || '';
+                    content.innerHTML = entryData.content || '';
+                    
+                    modal.style.display = 'block';
+                } catch (error) {
+                    console.error('Error opening entry modal:', error);
+                }
+            }
+
+            function closeEntryModal() {
+                const modal = document.getElementById('entryModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            }
+
+            async function saveEntry(event) {
+                event.preventDefault();
+                const form = event.target;
+                const formData = new FormData(form);
+
+                try {
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        closeEditModal();
+                        window.location.reload();
+                    } else {
+                        alert('Failed to save changes: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error saving entry:', error);
+                    alert('Failed to save changes. Please try again.');
+                }
+                return false;
+            }
+
+            async function deleteEntry(rowid) {
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'delete');
+                    formData.append('rowid', rowid);
+
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Failed to delete entry: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error deleting entry:', error);
+                    alert('Failed to delete entry. Please try again.');
+                }
+            }
+
+            // Close modals when clicking outside
+            window.onclick = function(event) {
+                const editModal = document.getElementById('editModal');
+                const entryModal = document.getElementById('entryModal');
+                if (event.target === editModal) {
+                    closeEditModal();
+                } else if (event.target === entryModal) {
+                    closeEntryModal();
+                }
+            }
+
+            // Add this to check if the script is loaded
+            console.log('Modal script loaded');
+        </script>
     </main>
 </body>
 <?php

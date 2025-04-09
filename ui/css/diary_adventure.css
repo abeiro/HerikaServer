@@ -322,4 +322,44 @@ main.container {
 
 .calendar-container.hidden {
     display: none;
+}
+
+/* Modal Styles */
+.modal-body {
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    padding-right: 15px;
+}
+
+/* Form field spacing */
+.modal-body label {
+    display: block;
+    margin-top: 15px;
+    color: #ff00c6;
+    font-weight: bold;
+}
+
+.modal-body small {
+    display: block;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.modal-body input[type="text"],
+.modal-body textarea {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: #3a3a3a;
+    padding: 15px 0;
+    margin-top: 20px;
+    border-top: 1px solid #4a4a4a;
 } 
+
+.conf-item textarea {
+    min-height: 600px;
+}
