@@ -405,7 +405,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     .modal-body label {
         display: block;
         margin-top: 15px;
-        color: #ff00c6;
+        color: rgb(242, 124, 17);
         font-weight: bold;
     }
 
