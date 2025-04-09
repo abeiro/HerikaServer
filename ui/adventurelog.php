@@ -215,7 +215,7 @@ function handle_csv_export($conn, $schema) {
                 $dtSelectedEnd->modify('+1 day')->modify('-1 second');
                 $endOfDay = $dtSelectedEnd->getTimestamp();
 
-                // Prepare the SQL query with explicit casting to double precision
+                // Prepare the SQL query with explicit casting
                 $query = "
                     SELECT type, data, people, location, localts, gamets
                     FROM {$schema}.eventlog
@@ -568,9 +568,16 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                         }
                     } else {
                         // Compare Gregorian dates
-                        if (isset($eventDate['date']) && $eventDate['date'] === $dateStr) {
-                            $hasEvents = true;
-                            $eventCount++;
+                        if (isset($eventDate['localts'])) {
+                            $eventDateTime = new DateTime("@{$eventDate['localts']}");
+                            $eventDateTime->setTimezone(new DateTimeZone('UTC'));
+                            $eventDateStr = $eventDateTime->format('Y-m-d');
+                            
+                            if ($eventDateStr === $dateStr) {
+                                $hasEvents = true;
+                                $eventCount++;
+                                error_log("Debug - Found event for date {$dateStr}");
+                            }
                         }
                     }
                 }
@@ -666,6 +673,10 @@ if ($shouldFetchEvents) {
     }
 
     // Modify the SQL query to fetch records for the selected day with explicit casting
+    error_log("Debug - Selected date: " . $selectedDate);
+    error_log("Debug - Start of day: " . $startOfDay);
+    error_log("Debug - End of day: " . $endOfDay);
+
     $query = "
         SELECT type, data, people, location, localts, gamets
         FROM {$schema}.eventlog
@@ -676,19 +687,25 @@ if ($shouldFetchEvents) {
                     -- For Tamrielic mode, we'll filter in PHP instead of SQL
                     gamets > 0
                 ELSE
-                    -- For Gregorian mode, use localts
-                    localts >= " . (isset($startOfDay) ? $startOfDay : 0) . " AND localts <= " . (isset($endOfDay) ? $endOfDay : 0) . "
+                    -- For Gregorian mode, use localts with proper timestamp conversion
+                    localts >= " . (isset($startOfDay) ? $startOfDay : 0) . " 
+                    AND localts < " . (isset($endOfDay) ? $endOfDay : 0) . "
             END
         )
         ORDER BY localts ASC
     ";
 
+    error_log("Debug - SQL Query: " . $query);
     $result = pg_query($conn, $query);
 
     if (!$result) {
         echo "<div class='message'>Query error: " . pg_last_error($conn) . "</div>";
         exit;
     }
+
+    // Log the number of rows returned
+    $numRows = pg_num_rows($result);
+    error_log("Debug - Number of rows returned: " . $numRows);
 } else {
     $result = false;
 }
