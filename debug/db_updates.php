@@ -960,4 +960,6 @@ if ($checkVersion("oghma_dynamic")<20250310001) {
     error_log("Applied patch oghma_dynamic 20250310001");
 }
 
+Logger::info(__FILE__." update file processed");
+
 ?>

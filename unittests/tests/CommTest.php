@@ -275,7 +275,7 @@ final class CommTest extends DatabaseTestCase
                 $options = stream_context_get_options($streamContext);
                 $content = json_decode($options['http']['content']);
                 foreach ($content->messages as $actual) {
-                    if (isset($actual->role) && $actual->role === "user" && isset($actual->content) && strpos($actual->content, "Choose coherent ACTION to obey Prisoner..  Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure: ") === 0)
+                    if (isset($actual->role) && $actual->role === "user" && isset($actual->content) && strpos($actual->content, ".  Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure: ") === 0)
                     {
                         $jsonString = preg_match('/\{(.*)\}/', $actual->content, $matches);
                         $jsonString = $matches[0];
@@ -286,10 +286,10 @@ final class CommTest extends DatabaseTestCase
                         $data['mood'] = implode('|', $moodArray);
                         $jsonString = json_encode($data);
 
-                        $actual->content = "Choose coherent ACTION to obey Prisoner..  Use this JSON object to give your answer: {$jsonString}";
+                        $actual->content = ".  Use this JSON object to give your answer: {$jsonString}";
                         $expected = [
                             "role"=>"user",
-                            "content"=>"Choose coherent ACTION to obey Prisoner..  Use this JSON object to give your answer: {\"character\":\"The Narrator\",\"listener\":\"specify who The Narrator is talking to\",\"mood\":\"amused|assertive|assisting|default|irritated|kindly|lovely|mocking|neutral|playful|sarcastic|sardonic|sassy|seductive|sexy|smirking|smug|teasing\",\"action\":\"\",\"target\":\"action's target|destination name\",\"message\":\"lines of dialogue\"}"
+                            "content"=>".  Use this JSON object to give your answer: {\"character\":\"The Narrator\",\"listener\":\"specify who The Narrator is talking to\",\"mood\":\"amused|assertive|assisting|default|irritated|kindly|lovely|mocking|neutral|playful|sarcastic|sardonic|sassy|seductive|sexy|smirking|smug|teasing\",\"action\":\"\",\"target\":\"action's target|destination name\",\"message\":\"lines of dialogue\"}"
                         ];
                         $this->assertEquals(json_encode($expected), json_encode($actual));
                         return true;

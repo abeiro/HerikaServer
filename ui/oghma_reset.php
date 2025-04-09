@@ -7,8 +7,7 @@ ini_set('display_errors', '1');
 
 // Paths
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$enginePath = $rootPath . ".." . DIRECTORY_SEPARATOR;
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 
 // Database connection details
 $host = 'localhost';

@@ -1076,7 +1076,7 @@ $debugPaneLink = true;
                 if (!empty($installUrl)) {
                     echo '<button onclick="window.open(\'' . htmlspecialchars($installUrl) . '\', \'_blank\')" class="btn-base btn-save">Install Plugin</button>';
                 } else {
-                    echo 'No Plugin Page';
+                    echo '';
                 }
 
                 echo '</td>';
