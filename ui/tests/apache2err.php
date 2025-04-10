@@ -128,7 +128,7 @@ function readRegularLog($logPath, $logName) {
 
         echo '</div>';
     } else {
-        echo '<p class="error-message">Log file not found or not readable at: ' . htmlspecialchars($logPath) . '</p>';
+        echo '<p class="error-message">Log file not generated yet for: ' . htmlspecialchars($logPath) . '</p>';
     }
 }
 
@@ -728,6 +728,28 @@ if (isset($_GET['download_logs'])) {
             font-size: 0.85em;
             white-space: nowrap;
         }
+
+        /* Audit request table specific styles */
+        #requestErrorsContainer .log-entry {
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        #requestErrorsContainer .timestamp {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        #requestErrorsContainer .error-message {
+            width: 100%;
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.4;
+        }
+
+        #requestErrorsContainer .error-message br {
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -838,10 +860,10 @@ if (isset($_GET['download_logs'])) {
                         $timestamp = $time->format('Y-m-d H:i:s');
                         
                         echo '<div class="log-entry error-entry">';
-                        echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                        echo '<div class="timestamp">' . htmlspecialchars($timestamp) . ' UTC</div>';
                         echo '<div class="error-message">';
-                        echo 'Request: ' . htmlspecialchars($error['request']) . '<br>';
-                        echo 'Result: ' . htmlspecialchars($error['result']);
+                        echo '<strong>Request:</strong> ' . htmlspecialchars($error['request']) . '<br>';
+                        echo '<strong>Result:</strong> ' . htmlspecialchars($error['result']);
                         echo '</div>';
                         echo '</div>';
                     }
