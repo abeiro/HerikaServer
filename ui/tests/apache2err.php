@@ -87,31 +87,38 @@ function readErrorLog($errorLogPath, $logType) {
         
         foreach ($errorLog as $line) {
             // Match any Apache log entry with timestamp and module
-            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\]/', $line)) {
-                // Extract timestamp if it exists
-                $timestamp = '';
-                if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
-                    $timestamp = $matches[1];
+            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\]/', $line, $matches)) {
+                $timestamp = $matches[1];
+                $module = $matches[2];
+
+                // Determine the log level
+                $levelClass = '';
+                if (stripos($line, ':error]') !== false || stripos($line, ' error:') !== false) {
+                    $levelClass = 'error-level';
+                    $level = 'ERROR';
+                } elseif (stripos($line, ':warn]') !== false || stripos($line, ':warning]') !== false || stripos($line, ' warn:') !== false) {
+                    $levelClass = 'warn-level';
+                    $level = 'WARN';
+                } elseif (stripos($line, ':notice]') !== false) {
+                    $levelClass = 'info-level';
+                    $level = 'NOTICE';
+                } else {
+                    $levelClass = 'debug-level';
+                    $level = 'INFO';
                 }
 
                 // Format the log entry
-                $logEntry = '<div class="log-entry';
-                
-                // Add error-entry class if it's an error or notice
-                if (stripos($line, ':error]') !== false || stripos($line, ' error:') !== false) {
-                    $logEntry .= ' error-entry';
-                }
-                $logEntry .= '">';
-                
-                if ($timestamp) {
-                    $logEntry .= '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
-                }
-                
-                $message = trim($line);
-                $logEntry .= '<div class="error-message">' . htmlspecialchars($message) . '</div>';
-                $logEntry .= '</div>';
-                
-                echo $logEntry;
+                echo '<div class="log-entry ' . $levelClass . '">';
+                echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                echo '<div class="log-level">' . htmlspecialchars($level) . '</div>';
+                echo '<div class="log-module">' . htmlspecialchars($module) . '</div>';
+                echo '<div class="log-message">' . htmlspecialchars(preg_replace('/^\[.*?\]\s+\[.*?\]\s+\[.*?\]\s+/', '', $line)) . '</div>';
+                echo '</div>';
+            } else {
+                // Fallback for lines that don't match the expected format
+                echo '<div class="log-entry">';
+                echo '<div class="log-message">' . htmlspecialchars($line) . '</div>';
+                echo '</div>';
             }
         }
         echo '</div>';
@@ -124,29 +131,58 @@ function readErrorLog($errorLogPath, $logType) {
 function readRegularLog($logPath, $logName) {
     if (file_exists($logPath) && is_readable($logPath)) {
         $log = tail($logPath, 500);
-        $log = implode("\n", $log); // Join the lines back together
         $sanitizedId = sanitizeId($logName);
 
         echo '<div class="section-header">';
         echo "<h2>$logName</h2>";
         echo '<button class="expand-button" onclick="openModal(\'' . $sanitizedId . 'Modal\', \'' . $sanitizedId . 'Container\')">';
         echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
-        echo '';
         echo '</button>';
         echo '</div>';
         echo '<div class="search-container">';
         echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . $sanitizedId . 'Container">';
         echo '</div>';
         echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
-        echo '<div class="log-entry regular-entry">';
-        
-        if (strpos($logName, 'LLM Context') !== false) {
-            echo '<pre class="log-content">' . htmlspecialchars($log) . '</pre>';
-        } else {
-            echo '<pre class="log-content">' . htmlspecialchars($log) . '</pre>';
+
+        foreach ($log as $line) {
+            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\](.*)$/', $line, $matches)) {
+                $timestamp = $matches[1];
+                $level = strtolower(trim($matches[2]));
+                $message = trim($matches[3]);
+
+                $levelClass = '';
+                switch ($level) {
+                    case 'error':
+                        $levelClass = 'error-level';
+                        break;
+                    case 'warn':
+                    case 'warning':
+                        $levelClass = 'warn-level';
+                        break;
+                    case 'info':
+                        $levelClass = 'info-level';
+                        break;
+                    case 'debug':
+                        $levelClass = 'debug-level';
+                        break;
+                    case 'trace':
+                        $levelClass = 'trace-level';
+                        break;
+                }
+
+                echo '<div class="log-entry ' . $levelClass . '">';
+                echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                echo '<div class="log-level">' . htmlspecialchars($level) . '</div>';
+                echo '<div class="log-message">' . htmlspecialchars($message) . '</div>';
+                echo '</div>';
+            } else {
+                // Fallback for lines that don't match the expected format
+                echo '<div class="log-entry">';
+                echo '<div class="log-message">' . htmlspecialchars($line) . '</div>';
+                echo '</div>';
+            }
         }
-        
-        echo '</div>';
+
         echo '</div>';
     } else {
         echo '<p class="error-message">Log file not found or not readable at: ' . htmlspecialchars($logPath) . '</p>';
@@ -349,44 +385,74 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-entry {
-            padding: 8px;
-            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 6px 10px;
             border-radius: 4px;
+            margin-bottom: 4px;
             background-color: #2c2c2c;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .log-entry.error-entry {
-            border-left: 4px solid #dc3545;
-        }
-
-        .log-entry.regular-entry {
-            border-left: 4px solid #17a2b8;
+            font-family: monospace;
         }
 
         .timestamp {
             color: #888;
-            font-size: 0.9em;
-            margin-bottom: 5px;
+            white-space: nowrap;
         }
 
-        .error-message {
-            color: #dc3545;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
+        .log-level {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            min-width: 50px;
+            text-align: center;
         }
 
-        .log-content {
-            font-family: monospace;
-            white-space: pre-wrap;
-            line-height: 1.4;
-            margin: 0;
-            color: #f8f9fa;
-            height: 100%;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            font-size: 13px;
+        .log-message {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .error-level {
+            border-left: 4px solid #dc3545;
+        }
+        .error-level .log-level {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .warn-level {
+            border-left: 4px solid #ffc107;
+        }
+        .warn-level .log-level {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .info-level {
+            border-left: 4px solid #17a2b8;
+        }
+        .info-level .log-level {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .debug-level {
+            border-left: 4px solid #6c757d;
+        }
+        .debug-level .log-level {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .trace-level {
+            border-left: 4px solid #28a745;
+        }
+        .trace-level .log-level {
+            background-color: #28a745;
+            color: white;
         }
 
         @media (max-width: 1200px) {
@@ -678,6 +744,15 @@ if (isset($_GET['download_logs'])) {
             display: flex;
             align-items: center;
             justify-content: space-between;
+        }
+
+        .log-module {
+            color: #aaa;
+            padding: 2px 6px;
+            background-color: #333;
+            border-radius: 3px;
+            font-size: 0.85em;
+            white-space: nowrap;
         }
     </style>
 </head>
