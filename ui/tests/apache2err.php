@@ -35,11 +35,44 @@ $sttLogPath = $logPath . 'stt.log';
 $visionLogPath = $logPath . 'vision.log';
 $debugStreamLogPath = $logPath . 'debugstream.log';
 
+// Function to get the last N lines of a file
+function tail($filepath, $lines = 500) {
+    $file = @fopen($filepath, "r");
+    if (!$file) {
+        return [];
+    }
+
+    $buffer = 4096;
+    $output = [];
+    $chunk = "";
+
+    fseek($file, -1, SEEK_END);
+    $pos = ftell($file);
+
+    while ($pos > 0 && count($output) < $lines) {
+        $len = min($pos, $buffer);
+        $pos -= $len;
+        fseek($file, $pos);
+        $chunk = fread($file, $len) . $chunk;
+        
+        while (($nl = strrpos($chunk, "\n")) !== false && count($output) < $lines) {
+            array_unshift($output, substr($chunk, $nl + 1));
+            $chunk = substr($chunk, 0, $nl);
+        }
+    }
+
+    if ($chunk !== "" && count($output) < $lines) {
+        array_unshift($output, $chunk);
+    }
+
+    fclose($file);
+    return array_slice($output, 0, $lines);
+}
+
 // Function to read and filter the error log from a given path
 function readErrorLog($errorLogPath, $logType) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
-        $errorLog = file($errorLogPath);
-        $errorLog = array_reverse($errorLog);
+        $errorLog = tail($errorLogPath, 500);
 
         echo '<div class="section-header">';
         echo "<h2>$logType</h2>";
@@ -53,28 +86,28 @@ function readErrorLog($errorLogPath, $logType) {
         echo '<div class="log-container" id="errorLogContainer">';
         
         foreach ($errorLog as $line) {
-            if (strpos($line, '[php:error]') !== false && stripos($line, 'warning') === false) {
+            // Match any Apache log entry with timestamp and module
+            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\]/', $line)) {
                 // Extract timestamp if it exists
                 $timestamp = '';
-                if (preg_match('/\[(.*?)\]/', $line, $matches)) {
+                if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
                     $timestamp = $matches[1];
-                    try {
-                        $date = new DateTime($timestamp);
-                        $timestamp = $date->format('Y-m-d H:i:s');
-                    } catch (Exception $e) {
-                        // Keep original timestamp if parsing fails
-                    }
                 }
 
                 // Format the log entry
-                $logEntry = '<div class="log-entry error-entry">';
+                $logEntry = '<div class="log-entry';
+                
+                // Add error-entry class if it's an error or notice
+                if (stripos($line, ':error]') !== false || stripos($line, ' error:') !== false) {
+                    $logEntry .= ' error-entry';
+                }
+                $logEntry .= '">';
+                
                 if ($timestamp) {
                     $logEntry .= '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
                 }
                 
-                $message = preg_replace('/\[(.*?)\]/', '', $line);
-                $message = trim($message);
-                
+                $message = trim($line);
                 $logEntry .= '<div class="error-message">' . htmlspecialchars($message) . '</div>';
                 $logEntry .= '</div>';
                 
@@ -90,9 +123,8 @@ function readErrorLog($errorLogPath, $logType) {
 // Function to read regular log files
 function readRegularLog($logPath, $logName) {
     if (file_exists($logPath) && is_readable($logPath)) {
-        $log = file($logPath);
-        $log = array_reverse($log); // Reverse the array to show latest entries first
-        $log = implode('', $log); // Join the lines back together
+        $log = tail($logPath, 500);
+        $log = implode("\n", $log); // Join the lines back together
         $sanitizedId = sanitizeId($logName);
 
         echo '<div class="section-header">';
@@ -675,7 +707,7 @@ if (isset($_GET['download_logs'])) {
             Download All Logs
         </button>
     </div>
-    <h2>Logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
+    <h2>Last 500 lines from each log are displayed here.The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
 
     <div class="grid-container" id="logGrid">
         <div class="log-section">
