@@ -364,6 +364,10 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
         </ul>
     </div>
 
+    <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal';">
+        v1.1.1.3
+    </div>
+
     <div class="social-links">
         <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
             <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
@@ -489,8 +493,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <meta charset="UTF-8">
         <title>Profile Selection Overlay</title>
         <style>
-
-            
+            @font-face {
+                font-family: 'MagicCardsNormal';
+                src: url('../css/font/MagicCardsNormal.ttf') format('truetype');
+            }
         </style>
     </head>
     <body>
