@@ -13,6 +13,7 @@ $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."logger.php");
 
 $TITLE = "💬 CHIM Chat Testing";
 
@@ -81,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Ensure the upload directory exists
             if (!file_exists($uploadFileDir)) {
-                error_log("Creating $uploadFileDir");
+                Logger::info("Creating $uploadFileDir");
                 mkdir($uploadFileDir, 0755, true);
             }
 

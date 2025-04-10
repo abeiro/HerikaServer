@@ -11,6 +11,7 @@ $webRoot = rtrim($webRoot, '/');
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."logger.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");

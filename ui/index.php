@@ -854,7 +854,7 @@ $debugPaneLink = true;
                     <span class='summary-content'>" . htmlspecialchars($row['tags']) . "</span>
                 </div>
                 <div class='summary-section'>
-                    <span class='summary-label'>Companions:</span>
+                    <span class='summary-label'>People:</span>
                     <span class='summary-content'>" . htmlspecialchars($row['companions']) . "</span>
                 </div>
                 <div class='button-group' style='margin-top: 10px;'>
@@ -877,7 +877,7 @@ $debugPaneLink = true;
                 <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['summary']) . "</textarea>
                 <label>Tags:</label>
                 <input type='text' name='tags' class='edit-input form-control' value='" . htmlspecialchars($row['tags']) . "'>
-                <label>Companions:</label>
+                <label>People:</label>
                 <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions']) . "'>
                 <div class='button-group' style='margin-top: 10px;'>
                     <button type='submit' class='btn-base action-button add-new'>Save</button>
@@ -1067,7 +1067,7 @@ $debugPaneLink = true;
                 echo '<td>' . htmlspecialchars($description) . '</td>';
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<button onclick="window.location.href=\'' . htmlspecialchars($configUrl) . '\'" class="btn-base btn-save target="_blank">Configure Plugin</button>';
+                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Configure Plugin</button>';
                 } else {
                     echo 'No Plugin Page';
                 }

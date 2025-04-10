@@ -21,7 +21,7 @@ class openrouterjson
     private $_rawbuffer;
     private $_forcedClose=false;
     private $_model="";
-    private $_reasoning=false;
+    private $_is_reasoning=false;
     private $_websearch=false;
     private $_websearch_text="";
     private $_websearch_index=0;
@@ -35,7 +35,7 @@ class openrouterjson
         $this->_extractedbuffer="";
         $this->_forcedClose=false;
         $this->_model="";
-        $this->_reasoning=false;
+        $this->_is_reasoning=false;
         $this->_websearch=false;
         $this->_websearch_text="";
         $this->_websearch_index=0;
@@ -45,7 +45,7 @@ class openrouterjson
 
 
     private function isWebSearchInMessage($s_msg="") {
-        $i_pos = false;
+        $b_res = false;
         if (strlen($s_msg) > 7) {
             $i_pos = stripos($s_msg, "Skyrim search");
             if ($i_pos === false) 
@@ -56,17 +56,18 @@ class openrouterjson
                 $i_pos = stripos($s_msg, "Search Elder Scrolls");
             if ($i_pos === false) 
                 $i_pos = stripos($s_msg, "Find knowledge in Elder Scrolls");
+            $b_res = (!($i_pos === false));
         }
-        return (!($i_pos === false));
+        return $b_res;
     }
 
 
     private function isReasoningModel($s_model="") { //recognize a reasoning model that can hide <think> cot part with dedicated parameters
-        $i_pos = false;
+        $b_res = false;
         if (strlen($s_model) > 0) {
             $i_pos = stripos($s_model, "deepseek-r"); 
             if ($i_pos === false) 
-                $i_pos = stripos($s_model, "qwq-32b"); //OR
+                $i_pos = stripos($s_model, "qwq-32b"); 
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "sonar-reasoning");
             if ($i_pos === false) 
@@ -79,17 +80,24 @@ class openrouterjson
                 $i_pos = stripos($s_model, "dolphin3.0-r1-mistral");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "aion-1.0");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "reka-flash-3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "olympiccoder-");
+
+            $b_res = (!($i_pos === false));
         }
-        return (!($i_pos === false));
+        return $b_res;
     }
    
     
     public function open($contextData, $customParms)
     {
         $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
+        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'meta-llama/llama-3.3-70b-instruct';
+        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
-        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'nvidia/llama-3.1-nemotron-70b-instruct';
 
 
         /***
@@ -147,7 +155,7 @@ class openrouterjson
         foreach ($contextDataOrig as $n=>$element) {
             
             if (!is_array($element)) {
-                error_log("Warning: $n=>$element was not an array");
+                Logger::debug("$n=>$element was not an array");
                 continue;
 
             }
@@ -161,7 +169,7 @@ class openrouterjson
                         if (strpos($element["content"], "##") === false) { //is not memory mark
                             $this->_websearch = false; //previous web search was found in context history, do not repeat the search 
                             $GLOBALS["FUNCTIONS_ARE_ENABLED"] = $this->_webbackup_func;
-                            error_log(" - dbg - online FALSE, {$n}/{$n_ctxsize} line: ".$element["content"]);
+                            Logger::debug("online FALSE, {$n}/{$n_ctxsize} line: ".$element["content"]);
                         }
                     }
                 }
@@ -172,7 +180,7 @@ class openrouterjson
                     $this->_websearch = true;
                     $GLOBALS["FUNCTIONS_ARE_ENABLED"] = false;
                     $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] = false;
-                    error_log(" - dbg - online TRUE, {$n}/{$n_ctxsize} src: " . $this->_websearch_text);
+                    Logger::debug("online TRUE, {$n}/{$n_ctxsize} src: " . $this->_websearch_text);
                 }
             } // --- end online search 
             
@@ -201,7 +209,7 @@ class openrouterjson
                     
                 } else if ($element["role"]=="user") {
                     if (empty($element["content"])) {
-                        error_log("Empty element[content]".__FILE__." ".__LINE__);
+                        Logger::debug("Empty element[content]".__FILE__." ".__LINE__);
                         //unset($contextData[$n]);
                     } else
                         $contextDataCopy[]=$element;
@@ -216,10 +224,11 @@ class openrouterjson
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
-                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
+                        if (isset($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName])) {
+                            $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
                                         "#TARGET#"=>current($localArguments),
                                         ]);
-                        
+                        }
                         $contextDataCopy[]=[
                                 "role"=>"assistant",
                                 "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
@@ -330,6 +339,10 @@ class openrouterjson
                     
             ];
             
+            if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
+                $contextExamples=[];
+            }
+
             $finalContextDataWithExamples=[];
             foreach ($contextData as $n=>$final) {
                 if ($final["role"]=="system") {
@@ -411,15 +424,16 @@ class openrouterjson
             
         $data["transforms"]=[];
 
-        $this->_reasoning = $this->isReasoningModel($this->_model);
-        if ($this->_reasoning) { // add parameter to hide <think> content
+        if ($this->_is_reasoning) { // add parameter to hide <think> content
             $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
-            error_log(" dbg reasoning " . $this->_model);
+            //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
+            //Logger::debug("reasoning " . $this->_model);
         }
 
         if ($this->_websearch) { // online search request 
 
-            $sx = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'meta-llama/llama-3.3-70b-instruct';
+            $sx = $this->_model;
             if (strpos($sx, ":online") === false) 
                 $sx = $sx . ":online";   
             $this->_model = $sx;
@@ -500,7 +514,7 @@ class openrouterjson
         $this->primary_handler = $this->send($url, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
-            error_log(print_r($error,true));
+            Logger::error(trim(print_r($error,true)));
 
             if ($GLOBALS["db"]) {
                 $GLOBALS["db"]->insert(
@@ -586,12 +600,12 @@ class openrouterjson
         if ($this->isDone()) {
             if (!$this->_buffer || empty(trim($this->_buffer))) {
                 $line = "";    
-                error_log("LLM didn't output anything");
+                Logger::warn("LLM didn't output anything");
             }
         } else {
             if ((time()-$GLOBALS["patch_openrouter_timeout"])>60) {
                 $this->_rawbuffer.="Error, timeout when receiving data from LLM";
-                error_log("Error, timeout when receiving data from LLM");
+                Logger::error("Error, timeout when receiving data from LLM");
                 $this->_forcedClose=true;
                 return -1;
             }
@@ -603,17 +617,25 @@ class openrouterjson
         
         // Check for error response
         if (strpos($line, '"error"') !== false) {
-            error_log("Error response from LLM: $line");
+            Logger::error("Error response from LLM: $line");
             return -1;
         }
         
         $data=json_decode(substr($line, 6), true);
+
+        if ($this->_is_reasoning)
+            $buffer_preamble=4096; // some reasoning models output CoT part before JSON
+        elseif ($this->_websearch)
+            $buffer_preamble=256; 
+        else
+            $buffer_preamble=64; //was 10, 10 is not enough, some LLMs output a prefix tag/markup before JSON or "here is your JSON ..."
+
         if (isset($data["choices"][0]["delta"]["content"])) {
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
                 $buffer.=$data["choices"][0]["delta"]["content"];
                 $this->_buffer.=$data["choices"][0]["delta"]["content"];
                 // Check to see if we've received something that looks like it starts with a JSON object
-                if (strlen($this->_buffer)>64 && strpos($this->_buffer, '{') === false) { //10 is not enough, some LLMs output a prefix tag/markup before JSON or "here is your JSON ..."
+                if (strlen($this->_buffer)>$buffer_preamble && strpos($this->_buffer, '{') === false) { 
                     return -1;
                 }
 
@@ -713,7 +735,7 @@ class openrouterjson
         global $alreadysent;
 
         if ($this->_functionName) {
-            error_log("Old function scheme");
+            Logger::info("Old function scheme");
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
                 $parameter = current($parameterArr); // Only support for one parameter
@@ -726,7 +748,7 @@ class openrouterjson
                 }
 
                 $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             } else 
                 return null;
         } else {
@@ -740,6 +762,9 @@ class openrouterjson
                 if (isset($parsedResponse[0]["action"])) {
                     $parsedResponse=$parsedResponse[0];
                 }
+
+                if (!isset($parsedResponse["target"]))    
+                    $parsedResponse["target"] = "";
                 
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
@@ -747,19 +772,19 @@ class openrouterjson
                         $functionDef=findFunctionByName(trim($parsedResponse["action"]));
                         if ($functionDef) {
                             $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                            if (@strlen($functionDef["parameters"]["required"][0])>0) {
+                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
                                 if (!empty($parsedResponse["target"])) {
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
-                                    error_log("Missing required parameter");
+                                    Logger::warn("Missing required parameter: target");
                                 }
                                     
                             } else {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
                         } elseif ($parsedResponse["action"] != "Talk") {
-                            error_log("Function not found for {$parsedResponse["action"]}");
+                            Logger::warn("Function not found for {$parsedResponse["action"]}");
                         }
                         
                         //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
@@ -768,14 +793,14 @@ class openrouterjson
                         $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
                     
                     } else {
-                          error_log("Function not found for {$parsedResponse["action"]} already sent");
+                         Logger::warn("Function not found for {$parsedResponse["action"]} already sent");
                     }
                         
                 }
                 
-                @ob_flush();    
+                if (ob_get_level()) @ob_flush();
             } else {
-                error_log("No actions");
+                Logger::info("No actions");
                 return [];
             }
         }

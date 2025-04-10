@@ -18,7 +18,8 @@ class openai
     private $_stopProc;
     private $_buffer;
     private $_is_groq_com;
-
+    private $_is_reasoning;
+    private $_model;
 
 
     public function __construct()
@@ -26,16 +27,34 @@ class openai
         $this->name="openai";
         $this->_commandBuffer=[];
         $this->_stopProc=false;
-
+        $this->_is_groq_com=false;
+        $this->_is_reasoning=false;
+        $this->_model="";
     }
 
+    private function isReasoningModel($s_model) {
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            $i_pos = stripos($s_model, "deepseek-r");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-32b");
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
 
     public function open($contextData, $customParms)
     {
         $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
-        $this->_is_groq_com = (strpos($url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
 
-        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+        $this->_is_groq_com = (stripos($url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
+        if ($this->_is_groq_com) 
+            $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'llama-3.3-70b-versatile';
+        else
+            $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini';
+        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+
+        $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
 
 
@@ -156,7 +175,7 @@ class openai
             if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
 
             $data = array( 
-                'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'llama-3.3-70b-versatile', 
+                'model' => $this->_model,
                 'messages' => $contextData, 
                 'stream' => true, 
                 'max_completion_tokens'=> $MAX_TOKENS,  
@@ -166,13 +185,12 @@ class openai
                 'frequency_penalty' => $frequency_penalty 
             );
                 
-            if (!(stripos($data["model"],"deepseek-r1") === false)) { 
-            /*  deepseek r1 need "reasoning_format" parameter: 
+            if ($this->_is_reasoning) { 
+            /*  a reasoning model need "reasoning_format" parameter: 
                 parsed  - Separates reasoning into a dedicated field while keeping the response concise.
                 raw     - Includes reasoning within <think> tags in the content.
                 hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
                 $data['reasoning_format'] = "hidden";  
-                //error_log(" deepseek-r1: " . print_r($data,false));
             }
 
             if (isset($customParms["MAX_TOKENS"])) {
@@ -193,9 +211,8 @@ class openai
         } else { // --- normal flow (not groq)
 
             $data = array(
-                'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini',
-                'messages' =>
-                    $contextData,
+                'model' => $this->_model,
+                'messages' => $contextData,
                 'stream' => true,
                 'max_completion_tokens'=>$MAX_TOKENS,
                 'temperature' => $temperature, 
@@ -221,6 +238,11 @@ class openai
                     unset($data["max_completion_tokens"]);
                 } else
                     $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
+            }
+
+            if ($this->_is_reasoning) { // there is no rule accepted by all providers but also there is no error if these parameters are present
+                $data['reasoning_format'] = "hidden"; 
+                $data["chat_format"]="tidy"; 
             }
 
             if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -263,8 +285,8 @@ class openai
                 
         $this->primary_handler = fopen($url, 'r', false, $context);
         if (!$this->primary_handler) {
-                error_log(print_r(error_get_last(),true));
-                return null;
+            Logger::error(print_r(error_get_last(),true));
+            return null;
         }
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
@@ -344,7 +366,7 @@ class openai
                 }
 
                 $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             }
 
         }
@@ -381,7 +403,7 @@ class openai
                 }
 
                 $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-                @ob_flush();
+                if (ob_get_level()) @ob_flush();
             } else 
                 return null;
         }

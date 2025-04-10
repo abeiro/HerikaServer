@@ -10,6 +10,7 @@ require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be 
 require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib".DIRECTORY_SEPARATOR."fuz_convert.php"); // API KEY must be there
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 $GLOBALS["AUDIT_RUNID_REQUEST"]="vsx";
 
@@ -53,6 +54,33 @@ if ($voicelogic === 'voicetype') {
     );
 
     $db->close();
+
+    // update voiceid in the conf file if it is still blank (because the npc was added before they spoke)
+    $replaceBlankVoiceID = function($ttsName, $voiceid, $confFilePath) {
+        $pattern = '/\$TTS\[\"'.$ttsName.'\"\]\[\"voiceid\"\]\s*=\s*(".*"|\'.*\');/';
+        $confContent = file_get_contents($confFilePath);
+        preg_match_all($pattern, $confContent, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+
+        if (!empty($matches)) {
+            $lastMatch = end($matches);
+
+            // only replace if the last voiceid is blank
+            if ($lastMatch[1][0] == "''" || $lastMatch[1][0] == '""') {
+                $startPosition = $lastMatch[0][1];
+                $length = strlen($lastMatch[0][0]);
+                $replacement = "\$TTS[\"$ttsName\"][\"voiceid\"]='$voiceid';";
+                $updatedContent = substr_replace($confContent, $replacement, $startPosition, $length);
+                file_put_contents($confFilePath, $updatedContent);
+            }
+        }
+    };
+
+    $hashedname=md5($_GET["codename"]);
+    $confFilePath = __DIR__.DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR."conf_$hashedname.php";
+    if (file_exists($confFilePath)) {
+        $replaceBlankVoiceID("XTTSFASTAPI", $codename, $confFilePath);
+        $replaceBlankVoiceID("ZONOS_GRADIO", $codename, $confFilePath);
+    }
 
 } else {
   $codename = npcNameToCodename($_GET["codename"]);
@@ -105,12 +133,12 @@ if (!$already) {
         die("VSX error, no data given");
 
     if (filesize($_FILES["file"]["tmp_name"])==0) {
-        error_log("Empty file {$_FILES["file"]["tmp_name"]}");
+        Logger::error("Empty file {$_FILES["file"]["tmp_name"]}");
         die();
     }
 
     
-    error_log("Received sample: {$_GET["oname"]}");
+    Logger::info("Received sample: {$_GET["oname"]}");
 
     if (strpos($_GET["oname"],".fuz")) {
         $finalFile=fuzToWav($finalName);
@@ -129,7 +157,7 @@ if (!$already) {
   }
 
 } else {
-  error_log("Empty file {$_FILES["file"]["tmp_name"]} already exists at {$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
+  Logger::info("Empty file {$_FILES["file"]["tmp_name"]} already exists at {$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
   
 }
 

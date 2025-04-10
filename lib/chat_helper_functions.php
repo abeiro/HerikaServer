@@ -53,11 +53,11 @@ function cleanResponse($rawResponse)
     // Any bracket { or }]
     $rawResponse = strtr($rawResponse, array("{" => "", "}" => ""));
 
-    if (strpos($rawResponse, "(Context location") !== false) {
+    if (strpos($rawResponse, "(Context location") !== false || strpos($rawResponse, "(Context new location") !== false) {
         $rawResponseSplited = explode(":", $rawResponse);
-        $toSplit = $rawResponseSplited[2];
-    } elseif (strpos($rawResponse, "(Context new location") !== false) {
-        $rawResponseSplited = explode(":", $rawResponse);
+        if (!isset($rawResponseSplited[2])) {
+            Logger::warn("Could not extract speech from raw response: $rawResponse");
+        }
         $toSplit = $rawResponseSplited[2];
     } else {
         $toSplit = $rawResponse;
@@ -507,7 +507,7 @@ function returnLines($lines,$writeOutput=true)
             }
         }
 
-        error_log("Speech sent for {$GLOBALS["HERIKA_NAME"]}, generator {$GLOBALS["TTSFUNCTION"]}, size: ".strlen($responseText). "  '".substr($responseText,0,10)."'");
+        Logger::info("Speech sent for {$GLOBALS["HERIKA_NAME"]}, generator {$GLOBALS["TTSFUNCTION"]}, size: ".strlen($responseText). "  '".substr($responseText,0,10)."'");
         $elapsedTimeTTS=microtime(true) - $startTime;
 
         $outBuffer = array(
@@ -551,7 +551,7 @@ function returnLines($lines,$writeOutput=true)
                 
                 $listenerFix2=explode(",",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix2) && (sizeof($listenerFix2)>1)) {
-                    error_log("Applying listenerFix2");
+                    Logger::info("Applying listenerFix2");
                     $GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[0]);
                 }
 
@@ -565,7 +565,7 @@ function returnLines($lines,$writeOutput=true)
             else
                 echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
             
-            @ob_flush();
+            if (ob_get_level()) @ob_flush();
             @flush();
         }
 
@@ -1201,7 +1201,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && !$GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] ) {
-        error_log("MEMORY_EMBEDDING disabled");
+        Logger::debug("MEMORY_EMBEDDING disabled");
         return "";
     }
 
@@ -1217,7 +1217,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
    
     
     if (isset($memories[0])) {
-        error_log(print_r($memories[0],true));
+        Logger::trace(print_r($memories[0],true));
 
         if (($memories[0]["rank_any"]==$memories[0]["rank_all"])&&($memories[0]["rank_any"]>0.25)) {
             
@@ -1452,7 +1452,7 @@ function containsJapanese($string) {
 
 function convertJapaneseTextToLatin($jpText) {
     if (!file_exists("/home/dwemer/kakasi/")) {
-        error_log("Error: could not convert Japanese to Romaji because Kakasi is not installed. Lip sync will not work.");
+        Logger::warn("Error: could not convert Japanese to Romaji because Kakasi is not installed. Lip sync will not work.");
         return "";
     }
     $venvPath = "/home/dwemer/kakasi/kakasi_env/bin/python3";

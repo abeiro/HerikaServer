@@ -92,11 +92,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     label {
-        color: #ff00c6;
+        color: rgb(242, 124, 17);
     }
 
     p.conf-item {
-        color: #ff00c6;
+        color: rgb(242, 124, 17);
     }
 
     p.conf-item input[type=radio] + label {

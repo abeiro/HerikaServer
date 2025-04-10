@@ -186,45 +186,40 @@ a .bi-trash {
 }
 
 .action-button.edit {
-    background-color: rgba(23, 162, 184, 0.8);
+    background-color: #097b8d;
     border-color: rgba(138, 155, 182, 0.3);
 }
 
 .action-button.edit:hover {
-    background-color: rgba(33, 172, 194, 0.9);
+    background-color: #076674;
 }
 
 .action-button.add-new,
 .action-button.upload-csv {
-    background-color: rgba(32, 122, 74, 0.8);
-    border-color: rgba(72, 187, 120, 0.3);
+    background-color: #176529;
 }
 
 .action-button.add-new:hover,
 .action-button.upload-csv:hover {
-    background-color: rgba(42, 142, 94, 0.9);
+    background-color: #125121;
 }
 
 .action-button.download-csv {
-    background-color: rgba(37, 99, 235, 0.8);
-    border-color: rgba(96, 165, 250, 0.3);
+    background-color: rgb(1 53 166 / 90%);
 }
 
 .action-button.download-csv:hover {
-    background-color: rgba(47, 109, 245, 0.9);
+    background-color: rgb(1 43 135 / 95%);
 }
 
 /* Alphabet button styles */
 .alphabet-button {
-    padding: 6px 10px;
-    font-size: 13px;
-    margin: 2px;
-    background-color: rgba(37, 99, 235, 0.8);
-    border-color: rgba(96, 165, 250, 0.3);
+    background-color: rgba(0, 0, 0, 0.85);
+    border-color: rgba(75, 75, 75, 0.3);
 }
 
 .alphabet-button:hover {
-    background-color: rgba(47, 109, 245, 0.9);
+    background-color: rgba(25, 25, 25, 0.95);
 }
 
 /* Copy button styles */
@@ -360,7 +355,7 @@ nav {
 
 .conf-item label {
     display: block;
-    color: #ff00c6;
+    color: rgb(242, 124, 17);
     margin-bottom: 5px;
 }
 
@@ -772,7 +767,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* Boolean Input Styling */
 .conf-item[data-type="boolean"] {
-    color: #ff00c6;
+    color: rgb(242, 124, 17);
 }
 
 .conf-item[data-type="boolean"] label[for] {
@@ -820,7 +815,6 @@ input[type="range"]::-webkit-slider-thumb {
     padding: 8px 12px;
     color: #ffffff;
     border-radius: 4px;
-    border: 1px solid #ffffff;
     text-decoration: none;
     font-weight: bold;
     cursor: pointer;
@@ -833,31 +827,31 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .action-button.edit {
-    background-color: #17a2b8;
+    background-color: #097b8d;
 }
 .action-button.edit:hover {
-    background-color: #138496;
+    background-color: #076674;
 }
 
 .action-button.add-new {
-    background-color: #28a745;
+    background-color: #176529;
 }
 .action-button.add-new:hover {
-    background-color: #218838;
+    background-color: #125121;
 }
 
 .action-button.upload-csv {
-    background-color: #28a745;
+    background-color: #176529;
 }
 .action-button.upload-csv:hover {
-    background-color: #218838;
+    background-color: #125121;
 }
 
 .action-button.download-csv {
-    background-color: #007bff;
+    background-color: rgb(1 53 166 / 90%);
 }
 .action-button.download-csv:hover {
-    background-color: #0056b3;
+    background-color: rgb(1 43 135 / 95%);
 }
 
 /* File input styling */
@@ -1071,12 +1065,12 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-save {
-    background-color: rgba(42, 142, 94, 0.9);
+    background-color: #176529;
     border-color: rgba(72, 187, 120, 0.3);
 }
 
 .btn-save:hover {
-    background-color: rgba(32, 122, 74, 0.8);
+    background-color: #125121;
     border-color: rgba(72, 187, 120, 0.4);
 }
 
@@ -1092,7 +1086,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-primary {
-    background-color: rgba(47, 109, 245, 0.9);
+    background-color: rgb(1 53 166 / 90%);
     border-color: rgba(96, 165, 250, 0.3);
     background-image: linear-gradient(180deg, 
                       rgba(255, 255, 255, 0.08) 0%,
@@ -1100,7 +1094,7 @@ input[type="file"]::-moz-file-upload-button:hover {
 }
 
 .btn-primary:hover {
-    background-color: rgba(37, 99, 235, 0.8);
+    background-color: rgb(1 43 135 / 95%);
     border-color: rgba(96, 165, 250, 0.4);
 }
 
@@ -1216,15 +1210,15 @@ code {
     margin-bottom: 5px;
     padding: 6px 10px;
     color: #ffffff;
-    background-color: #007bff;
+    background-color: rgba(0, 0, 0, 0.85);
     text-decoration: none;
     border-radius: 4px;
     font-weight: bold;
-    border: 1px solid #FFFFFF;
+    border: 1px solid rgba(75, 75, 75, 0.3);
 }
 
 .alphabet-button:hover {
-    background-color: #0056b3;
+    background-color: rgba(25, 25, 25, 0.95);
     color: #ffffff;
     text-decoration: none;
 }
@@ -1402,105 +1396,3 @@ code {
     margin: 5px 10px; /* Consistent spacing between CSV buttons */
 }
 
-/* Calendar Styles */
-.calendar {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-}
-
-.calendar th, .calendar td {
-    border: 1px solid #555555;
-    padding: 10px;
-    text-align: center;
-    vertical-align: middle;
-    position: relative; /* For tooltip positioning */
-}
-
-.calendar th {
-    background-color: #3a3a3a;
-    color: #f8f9fa;
-}
-
-.calendar td.has-event {
-    color: #ffffff; /* White text for contrast */
-}
-
-.calendar td.has-event a {
-    color: #ffffff;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.calendar td a {
-    display: block;
-    width: 100%;
-    height: 100%;
-    text-decoration: none;
-    color: inherit;
-}
-
-/* Tooltip text */
-.calendar td a::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 120%; /* Position above the date */
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #333333;
-    color: #ffffff;
-    padding: 5px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease;
-    font-size: 12px;
-    z-index: 10;
-}
-
-.calendar td.has-event a:hover::after {
-    opacity: 1;
-    visibility: visible;
-}
-
-.calendar-navigation {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 20px 0;
-}
-
-.calendar-navigation a {
-    margin: 0 10px;
-    padding: 8px 12px;
-    background-color: #007bff;
-    color: #ffffff;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-}
-
-/* Highlighted date style */
-.has-event a {
-    background-color: #007bff !important; /* Blue background matching buttons */
-    color: white !important;
-    text-decoration: none; /* Ensures no underline */
-    display: block; /* Make the link fill the cell */
-    width: 100%; /* Full width of the parent cell */
-    height: 100%; /* Full height of the parent cell */
-    text-align: center; /* Center align the text */
-    line-height: 1.5; /* Ensures vertical alignment if needed */
-    box-sizing: border-box; /* Include padding and borders in size */
-    border: 2px solid white; /* White border around the link */
-    border-radius: 5px; /* Rounded corners for a smooth look */
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
-    transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
-}
-
-/* Extra hover event */
-.has-event a:hover {
-    background-color: #0056b3 !important; /* Darker blue on hover */
-    color: #ffcc00 !important; /* Yellow text for contrast */
-    transition: all 0.2s ease-in-out; /* Smooth hover animation */
-}

@@ -66,7 +66,7 @@ function xtts_fastapi_settings($settings) {
 
 	if ($result === FALSE) {
 		// Handle error
-		error_log("Error occurred.".__FILE__);
+		Logger::error("Error occurred.".__FILE__);
 	} else {
 		;//ok
 	}
@@ -185,7 +185,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 		if ($response === FALSE) {
 			// Handle error
-			error_log("Error occurred.".__FILE__);
+			Logger::error("Error occurred.".__FILE__);
 			
 			// Lets try to use standard scheme:
 			$codename = str_replace(" ", "_", mb_strtolower($GLOBALS["HERIKA_NAME"], 'UTF-8'));

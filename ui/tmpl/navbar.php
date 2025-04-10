@@ -24,7 +24,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
         <div class="container-fluid mx-1">
             <!-- PLEASE LEAVE THIS LINK TO index.php, as database update checks are being made there -->
             <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="CHIM Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> CHIM</a> -->
-            <a class="navbar-brand mr-2 Title" href="<?php echo $webRoot; ?>/ui/index.php" title="Go to Home Page" style="text-decoration: none;">
+            <a class="navbar-brand mr-2 Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
                 <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
                 <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
             </a> 
@@ -58,9 +58,6 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <li><h6 class="dropdown-header">Logs</h6></li>
                     <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=log">Response Log</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=diarylog">Diary Log</a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=books">Book Log</a>
@@ -292,6 +289,9 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php">Server Logs</a>
                     </li>
                     <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/dwemer-diagnostics.php">Dwemer AI Diagnostics</a>
+                    </li>
+                    <li>
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
                     </li>
                     <!--<li>
@@ -304,7 +304,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
                     <ul class="dropdown-menu">
                         <li><h6 class="dropdown-header">Immersion Tools</h6></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/diary" target="_blank">AI Diary</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/diarylog.php">CHIM Diaries</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/adventurelog.php">Adventure Log</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/chat-testing.php">Chat Testing</a></li>
                         <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
@@ -357,11 +357,15 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <li><h6 class="dropdown-header">GUIDES</h6></li>
                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?notes=true'>CHIM 101 Quick Guide</a></li>
                     <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">CHIM Manual</a></li>
-                    <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">AI/LLM Supported Models List</a></li>
-                    <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1yhMcH9BgwNWsUjz0r_CzJblZzc_ud8qmyJnAYpbfxMA/edit?gid=0#gid=0" target="_blank">AI/LLM Tier List</a></li>    
+                    <!--<li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">AI/LLM Supported Models List</a></li>-->
+                    <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1yhMcH9BgwNWsUjz0r_CzJblZzc_ud8qmyJnAYpbfxMA/edit?gid=0#gid=0" target="_blank">AI/LLM Tier List</a></li>
                 </ul>
             </li>
         </ul>
+    </div>
+
+    <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal';">
+        v1.1.1.3
     </div>
 
     <div class="social-links">
@@ -489,8 +493,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <meta charset="UTF-8">
         <title>Profile Selection Overlay</title>
         <style>
-
-            
+            @font-face {
+                font-family: 'MagicCardsNormal';
+                src: url('../css/font/MagicCardsNormal.ttf') format('truetype');
+            }
         </style>
     </head>
     <body>
@@ -655,11 +661,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="copy-to-all-profiles-btn">Copy to All Profiles</button>
         </form><br/>';
         echo " <strong>TTS:</strong> ";
-        echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:#ff00c6">' . $TTSFUNCTION . '</strong>'; 
+        echo is_array($TTSFUNCTION) ?  print_r($TTSFUNCTION, true)  : '<strong style="color:rgb(242, 124, 17)">' . $TTSFUNCTION . '</strong>'; 
         echo " <strong>STT:</strong> ";
-        echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true)  : '<strong style="color:#ff00c6">' . $STTFUNCTION . '</strong>' ; 
+        echo is_array($STTFUNCTION) ?  print_r($STTFUNCTION, true)  : '<strong style="color:rgb(242, 124, 17)">' . $STTFUNCTION . '</strong>' ; 
         echo " <strong>ITT:</strong> ";
-        echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true)  : '<strong style="color:#ff00c6">'  .$ITTFUNCTION . '</strong>' ; 
+        echo is_array($ITTFUNCTION) ?  print_r($ITTFUNCTION, true)  : '<strong style="color:rgb(242, 124, 17)">'  .$ITTFUNCTION . '</strong>' ; 
         ?>
     </div>
     </div>

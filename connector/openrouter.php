@@ -113,9 +113,9 @@ class openrouter
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
         
-        
-        
-        $data["max_tokens"]+=0;
+        if (isset($data["max_tokens"])) {
+            $data["max_tokens"]+=0;
+        }
         
         $headers = array(
             'Content-Type: application/json',
@@ -202,7 +202,7 @@ class openrouter
             }
 
             $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-            @ob_flush();
+            if (ob_get_level()) @ob_flush();
 
         }
 
@@ -234,7 +234,7 @@ class openrouter
             }
 
             $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
-            @ob_flush();
+            if (ob_get_level()) @ob_flush();
         }
 
         return $this->_commandBuffer;

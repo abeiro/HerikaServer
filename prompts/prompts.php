@@ -100,7 +100,7 @@ $PROMPTS=array(
 
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} comment about {$GLOBALS["PLAYER_NAME"]}s time asleep. {$GLOBALS["TEMPLATE_DIALOG"]}"],
-        "player_request"=>["(waking up after sleep). ahhhh  "],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} wakes up from sleeping. ahhhh"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("sleep", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
 

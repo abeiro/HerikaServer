@@ -1,5 +1,7 @@
 <?php 
 
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
+
 $checkVersion = function($tablename) {
     global $db;
     $query = "
@@ -20,7 +22,7 @@ $updateVersion = function($tablename,$version) {
     global $db;
     $db->execQuery("INSERT INTO public.database_versioning SELECT '$tablename',$version where not exists (SELECT 1 from public.database_versioning where tablename='$tablename')");
     $db->execQuery("UPDATE public.database_versioning set version=$version WHERE tablename='$tablename'");
-    error_log("TABLE $tablename updated to version $version");
+    Logger::info("TABLE $tablename updated to version $version");
 };
 
 /////////////////////////
@@ -296,7 +298,7 @@ if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
         $n++;
 
     }
-    error_log("Silent npc_name patch applied ($n npcs patched).If yu see this message too many times,probably some NPC are dupped in your database");
+    Logger::info("Silent npc_name patch applied ($n npcs patched). If you see this message too many times, some NPCs are probably duped in your database");
 }
 
 $query = "SELECT 1 as bad_syntax_exists  FROM npc_templates_custom WHERE  npc_name LIKE '%' || CHR(39) || '%'";
@@ -313,7 +315,7 @@ if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
         $db->execQuery("update npc_templates_custom set npc_name='$cn' where npc_name='$on'");
 
     }
-    error_log("Silent npc_templates_custom patch applied");
+    Logger::info("Silent npc_templates_custom patch applied");
 }
 
 
@@ -557,7 +559,7 @@ if ($checkVersion("npc_templates_custom")<20250211001) {
 
     $updateVersion("npc_templates_custom",20250211001);
     $updateVersion("combined_npc_templates",20250211001);
-    error_log("Applied patch 20250211001");
+    Logger::info("Applied patch 20250211001");
 }
 
 //----------------------------------------------------
@@ -566,7 +568,7 @@ if ($checkVersion("npc_templates_custom")<20250211001) {
 //----------------------------------------------------
 
 if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
-    error_log(" try patch: sql_gamets_convert_functions 20250218001 - dbg -");
+    Logger::debug(" try patch: sql_gamets_convert_functions 20250218001");
 
     $db->execQuery("DROP VIEW IF EXISTS public.speech_view;");
     $db->execQuery("DROP VIEW IF EXISTS public.eventlog_view;");
@@ -729,11 +731,11 @@ if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
     
     $updateVersion("sql_gamets_convert_functions",20250218001);
     $updateVersion("sql_gamets_convert_functions",20250218001);
-    error_log("Applied patch: sql_gamets_convert_functions 20250218001 - dbg -");
+    Logger::debug("Applied patch: sql_gamets_convert_functions 20250218001");
 }
 
 if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
-    error_log(" try patch: sql_gamets_convert_functions 2 20250226001 - dbg -");
+    Logger::debug(" try patch: sql_gamets_convert_functions 2 20250226001");
 
     $db->execQuery("DROP FUNCTION IF EXISTS public.convert_gamets2skyrim_date_fmt(gamets bigint, s_format text) CASCADE;");
     $db->execQuery("DROP FUNCTION IF EXISTS public.convert_gamets2skyrim_long_date2_nt(gamets bigint) CASCADE;");
@@ -906,7 +908,7 @@ if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
 
     $updateVersion("sql_gamets_convert_functions",20250226001);
     $updateVersion("sql_gamets_convert_functions",20250226001);
-    error_log("Applied patch: sql_gamets_convert_functions 2 20250226001 - dbg -");
+    Logger::debug("Applied patch: sql_gamets_convert_functions 2 20250226001");
 }
 
 //----------------------------------------------------
@@ -923,7 +925,7 @@ if ($checkVersion("npc_templates")<20250302001) {
     $db->execQuery($query);
     $db->execQuery(file_get_contents(__DIR__."/../data/npc_templates_20250302001.sql"));
     $updateVersion("npc_templates",20250302001);
-    error_log("Applied patch npc_templates 20250302001");
+    Logger::info("Applied patch npc_templates 20250302001");
 }
 
 if ($checkVersion("oghma")<20250902002) {
@@ -933,7 +935,7 @@ if ($checkVersion("oghma")<20250902002) {
     $db->execQuery(file_get_contents(__DIR__."/../data/oghma_20250302001.sql"));
     
     $updateVersion("oghma",20250902002);
-    error_log("Applied patch oghma 20250902002");
+    Logger::info("Applied patch oghma 20250902002");
 }
 
 if ($checkVersion("questlog")<20250310001) {
@@ -942,7 +944,20 @@ if ($checkVersion("questlog")<20250310001) {
 
 
     $updateVersion("questlog",20250310001);
-    error_log("Applied patch questlog 20250310001");
+    Logger::info("Applied patch questlog 20250310001");
+}
+
+// fix for memory_summary missing companions
+if ($checkVersion("memory_summary")<20250331001) {
+    $db->execQuery("UPDATE memory_summary set companions = NULL WHERE companions = '';");
+    $updateVersion("memory_summary",20250331001);
+    Logger::info("Applied patch memory_summary 20250331001");
+}
+
+if ($checkVersion("oghma_dynamic")<20250310001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/oghma_dynamic.sql"));
+    $updateVersion("oghma_dynamic",20250310001);
+    error_log("Applied patch oghma_dynamic 20250310001");
 }
 
 ?>
