@@ -36,7 +36,7 @@ $visionLogPath = $logPath . 'vision.log';
 $debugStreamLogPath = $logPath . 'debugstream.log';
 
 // Function to get the last N lines of a file
-function tail($filepath, $lines = 500) {
+function tail($filepath, $lines = 2000) {
     $file = @fopen($filepath, "r");
     if (!$file) {
         return [];
@@ -66,71 +66,14 @@ function tail($filepath, $lines = 500) {
     }
 
     fclose($file);
-    return array_slice($output, 0, $lines);
-}
-
-// Function to read and filter the error log from a given path
-function readErrorLog($errorLogPath, $logType) {
-    if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
-        $errorLog = tail($errorLogPath, 500);
-
-        echo '<div class="section-header">';
-        echo "<h2>$logType</h2>";
-        echo '<button class="expand-button" onclick="openModal(\'errorLogModal\', \'errorLogContainer\')">';
-        echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
-        echo '</button>';
-        echo '</div>';
-        echo '<div class="search-container">';
-        echo '<input type="text" class="search-input" placeholder="Search in Apache Error Log..." data-target="errorLogContainer">';
-        echo '</div>';
-        echo '<div class="log-container" id="errorLogContainer">';
-        
-        foreach ($errorLog as $line) {
-            // Match any Apache log entry with timestamp and module
-            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\]/', $line, $matches)) {
-                $timestamp = $matches[1];
-                $module = $matches[2];
-
-                // Determine the log level
-                $levelClass = '';
-                if (stripos($line, ':error]') !== false || stripos($line, ' error:') !== false) {
-                    $levelClass = 'error-level';
-                    $level = 'ERROR';
-                } elseif (stripos($line, ':warn]') !== false || stripos($line, ':warning]') !== false || stripos($line, ' warn:') !== false) {
-                    $levelClass = 'warn-level';
-                    $level = 'WARN';
-                } elseif (stripos($line, ':notice]') !== false) {
-                    $levelClass = 'info-level';
-                    $level = 'NOTICE';
-                } else {
-                    $levelClass = 'debug-level';
-                    $level = 'INFO';
-                }
-
-                // Format the log entry
-                echo '<div class="log-entry ' . $levelClass . '">';
-                echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
-                echo '<div class="log-level">' . htmlspecialchars($level) . '</div>';
-                echo '<div class="log-module">' . htmlspecialchars($module) . '</div>';
-                echo '<div class="log-message">' . htmlspecialchars(preg_replace('/^\[.*?\]\s+\[.*?\]\s+\[.*?\]\s+/', '', $line)) . '</div>';
-                echo '</div>';
-            } else {
-                // Fallback for lines that don't match the expected format
-                echo '<div class="log-entry">';
-                echo '<div class="log-message">' . htmlspecialchars($line) . '</div>';
-                echo '</div>';
-            }
-        }
-        echo '</div>';
-    } else {
-        echo '<p class="error-message">Error log file not found or not readable at: ' . htmlspecialchars($errorLogPath) . '</p>';
-    }
+    // Return the last N lines in reverse order (newest first)
+    return array_reverse(array_slice($output, 0, $lines));
 }
 
 // Function to read regular log files
 function readRegularLog($logPath, $logName) {
     if (file_exists($logPath) && is_readable($logPath)) {
-        $log = tail($logPath, 500);
+        $log = tail($logPath, 2000); // Ensure we're getting 2000 lines
         $sanitizedId = sanitizeId($logName);
 
         echo '<div class="section-header">';
@@ -186,6 +129,46 @@ function readRegularLog($logPath, $logName) {
         echo '</div>';
     } else {
         echo '<p class="error-message">Log file not found or not readable at: ' . htmlspecialchars($logPath) . '</p>';
+    }
+}
+
+// Function to read and filter the error log from a given path
+function readErrorLog($errorLogPath, $logType) {
+    if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
+        $errorLog = tail($errorLogPath, 2000); // Ensure we're getting 2000 lines
+
+        echo '<div class="section-header">';
+        echo "<h2>$logType</h2>";
+        echo '<button class="expand-button" onclick="openModal(\'errorLogModal\', \'errorLogContainer\')">';
+        echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+        echo '</button>';
+        echo '</div>';
+        echo '<div class="search-container">';
+        echo '<input type="text" class="search-input" placeholder="Search in Apache Error Log..." data-target="errorLogContainer">';
+        echo '</div>';
+        echo '<div class="log-container" id="errorLogContainer">';
+        
+        foreach ($errorLog as $line) {
+            // Match any Apache log entry with timestamp and module
+            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\]/', $line, $matches)) {
+                $timestamp = $matches[1];
+                $module = $matches[2];
+
+                // Only show actual errors
+                if (stripos($line, ':error]') !== false || stripos($line, ' error:') !== false) {
+                    // Format the log entry
+                    echo '<div class="log-entry error-level">';
+                    echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                    echo '<div class="log-level">ERROR</div>';
+                    echo '<div class="log-module">' . htmlspecialchars($module) . '</div>';
+                    echo '<div class="log-message">' . htmlspecialchars(preg_replace('/^\[.*?\]\s+\[.*?\]\s+\[.*?\]\s+/', '', $line)) . '</div>';
+                    echo '</div>';
+                }
+            }
+        }
+        echo '</div>';
+    } else {
+        echo '<p class="error-message">Error log file not found or not readable at: ' . htmlspecialchars($errorLogPath) . '</p>';
     }
 }
 
@@ -326,7 +309,7 @@ if (isset($_GET['download_logs'])) {
 
         .grid-container {
             display: grid;
-            gap: 10px;
+            gap: 20px;
             width: 100%;
             margin: 0 auto;
             box-sizing: border-box;
@@ -342,21 +325,12 @@ if (isset($_GET['download_logs'])) {
             flex-direction: column;
             min-width: 0;
             position: relative;
-            resize: both;
-            overflow: auto;
             min-height: 300px;
             min-width: 300px;
         }
 
         .log-section::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            bottom: 0;
-            width: 15px;
-            height: 15px;
-            cursor: se-resize;
-            background: linear-gradient(135deg, transparent 50%, #444 50%);
+            content: none;
         }
 
         h2 {
@@ -782,13 +756,13 @@ if (isset($_GET['download_logs'])) {
             Download All Logs
         </button>
     </div>
-    <h2>Last 500 lines from each log are displayed here.The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
+    <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
 
     <div class="grid-container" id="logGrid">
         <div class="log-section">
             <?php
             // Display Apache error log
-            readErrorLog($distroLogPath, "Apache Error Log (apache_error.log)");
+            readErrorLog($distroLogPath, "Apache Log [Errors Only] (apache_error.log)");
             ?>
         </div>
 
