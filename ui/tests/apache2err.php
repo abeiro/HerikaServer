@@ -35,11 +35,107 @@ $sttLogPath = $logPath . 'stt.log';
 $visionLogPath = $logPath . 'vision.log';
 $debugStreamLogPath = $logPath . 'debugstream.log';
 
+// Function to get the last N lines of a file
+function tail($filepath, $lines = 2000) {
+    $file = @fopen($filepath, "r");
+    if (!$file) {
+        return [];
+    }
+
+    $buffer = 4096;
+    $output = [];
+    $chunk = "";
+
+    fseek($file, -1, SEEK_END);
+    $pos = ftell($file);
+
+    while ($pos > 0 && count($output) < $lines) {
+        $len = min($pos, $buffer);
+        $pos -= $len;
+        fseek($file, $pos);
+        $chunk = fread($file, $len) . $chunk;
+        
+        while (($nl = strrpos($chunk, "\n")) !== false && count($output) < $lines) {
+            array_unshift($output, substr($chunk, $nl + 1));
+            $chunk = substr($chunk, 0, $nl);
+        }
+    }
+
+    if ($chunk !== "" && count($output) < $lines) {
+        array_unshift($output, $chunk);
+    }
+
+    fclose($file);
+    // Return the last N lines in reverse order (newest first)
+    return array_reverse(array_slice($output, 0, $lines));
+}
+
+// Function to read regular log files
+function readRegularLog($logPath, $logName) {
+    if (file_exists($logPath) && is_readable($logPath)) {
+        $log = tail($logPath, 2000); // Ensure we're getting 2000 lines
+        $sanitizedId = sanitizeId($logName);
+
+        echo '<div class="section-header">';
+        echo "<h2>$logName</h2>";
+        echo '<button class="expand-button" onclick="openModal(\'' . $sanitizedId . 'Modal\', \'' . $sanitizedId . 'Container\')">';
+        echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+        echo '</button>';
+        echo '</div>';
+        echo '<div class="search-container">';
+        echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . $sanitizedId . 'Container">';
+        echo '</div>';
+        echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
+
+        foreach ($log as $line) {
+            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\](.*)$/', $line, $matches)) {
+                $timestamp = $matches[1];
+                $level = strtolower(trim($matches[2]));
+                $message = trim($matches[3]);
+
+                $levelClass = '';
+                switch ($level) {
+                    case 'error':
+                        $levelClass = 'error-level';
+                        break;
+                    case 'warn':
+                    case 'warning':
+                        $levelClass = 'warn-level';
+                        break;
+                    case 'info':
+                        $levelClass = 'info-level';
+                        break;
+                    case 'debug':
+                        $levelClass = 'debug-level';
+                        break;
+                    case 'trace':
+                        $levelClass = 'trace-level';
+                        break;
+                }
+
+                echo '<div class="log-entry ' . $levelClass . '">';
+                echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                echo '<div class="log-level">' . htmlspecialchars($level) . '</div>';
+                echo '<div class="log-message">' . htmlspecialchars($message) . '</div>';
+                echo '</div>';
+            } else {
+                // Fallback for lines that don't match the expected format
+                echo '<div class="log-entry">';
+                echo '<div class="log-message">' . htmlspecialchars($line) . '</div>';
+                echo '</div>';
+            }
+        }
+
+        echo '</div>';
+    } else {
+        echo '<p class="error-message">Log file not generated yet for: ' . htmlspecialchars($logPath) . '</p>';
+    }
+}
+
 // Function to read and filter the error log from a given path
 function readErrorLog($errorLogPath, $logType) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
-        $errorLog = file($errorLogPath);
-        $errorLog = array_reverse($errorLog);
+        $errorLog = tail($errorLogPath, 2000); // Ensure we're getting 2000 lines
 
         echo '<div class="section-header">';
         echo "<h2>$logType</h2>";
@@ -53,71 +149,26 @@ function readErrorLog($errorLogPath, $logType) {
         echo '<div class="log-container" id="errorLogContainer">';
         
         foreach ($errorLog as $line) {
-            if (strpos($line, '[php:error]') !== false && stripos($line, 'warning') === false) {
-                // Extract timestamp if it exists
-                $timestamp = '';
-                if (preg_match('/\[(.*?)\]/', $line, $matches)) {
-                    $timestamp = $matches[1];
-                    try {
-                        $date = new DateTime($timestamp);
-                        $timestamp = $date->format('Y-m-d H:i:s');
-                    } catch (Exception $e) {
-                        // Keep original timestamp if parsing fails
-                    }
-                }
+            // Match any Apache log entry with timestamp and module
+            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\]/', $line, $matches)) {
+                $timestamp = $matches[1];
+                $module = $matches[2];
 
-                // Format the log entry
-                $logEntry = '<div class="log-entry error-entry">';
-                if ($timestamp) {
-                    $logEntry .= '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                // Only show actual errors
+                if (stripos($line, ':error]') !== false || stripos($line, ' error:') !== false) {
+                    // Format the log entry
+                    echo '<div class="log-entry error-level">';
+                    echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                    echo '<div class="log-level">ERROR</div>';
+                    echo '<div class="log-module">' . htmlspecialchars($module) . '</div>';
+                    echo '<div class="log-message">' . htmlspecialchars(preg_replace('/^\[.*?\]\s+\[.*?\]\s+\[.*?\]\s+/', '', $line)) . '</div>';
+                    echo '</div>';
                 }
-                
-                $message = preg_replace('/\[(.*?)\]/', '', $line);
-                $message = trim($message);
-                
-                $logEntry .= '<div class="error-message">' . htmlspecialchars($message) . '</div>';
-                $logEntry .= '</div>';
-                
-                echo $logEntry;
             }
         }
         echo '</div>';
     } else {
         echo '<p class="error-message">Error log file not found or not readable at: ' . htmlspecialchars($errorLogPath) . '</p>';
-    }
-}
-
-// Function to read regular log files
-function readRegularLog($logPath, $logName) {
-    if (file_exists($logPath) && is_readable($logPath)) {
-        $log = file($logPath);
-        $log = array_reverse($log); // Reverse the array to show latest entries first
-        $log = implode('', $log); // Join the lines back together
-        $sanitizedId = sanitizeId($logName);
-
-        echo '<div class="section-header">';
-        echo "<h2>$logName</h2>";
-        echo '<button class="expand-button" onclick="openModal(\'' . $sanitizedId . 'Modal\', \'' . $sanitizedId . 'Container\')">';
-        echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
-        echo '';
-        echo '</button>';
-        echo '</div>';
-        echo '<div class="search-container">';
-        echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . $sanitizedId . 'Container">';
-        echo '</div>';
-        echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
-        echo '<div class="log-entry regular-entry">';
-        
-        if (strpos($logName, 'LLM Context') !== false) {
-            echo '<pre class="log-content">' . htmlspecialchars($log) . '</pre>';
-        } else {
-            echo '<pre class="log-content">' . htmlspecialchars($log) . '</pre>';
-        }
-        
-        echo '</div>';
-        echo '</div>';
-    } else {
-        echo '<p class="error-message">Log file not found or not readable at: ' . htmlspecialchars($logPath) . '</p>';
     }
 }
 
@@ -258,7 +309,7 @@ if (isset($_GET['download_logs'])) {
 
         .grid-container {
             display: grid;
-            gap: 10px;
+            gap: 20px;
             width: 100%;
             margin: 0 auto;
             box-sizing: border-box;
@@ -274,21 +325,12 @@ if (isset($_GET['download_logs'])) {
             flex-direction: column;
             min-width: 0;
             position: relative;
-            resize: both;
-            overflow: auto;
             min-height: 300px;
             min-width: 300px;
         }
 
         .log-section::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            bottom: 0;
-            width: 15px;
-            height: 15px;
-            cursor: se-resize;
-            background: linear-gradient(135deg, transparent 50%, #444 50%);
+            content: none;
         }
 
         h2 {
@@ -317,44 +359,74 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-entry {
-            padding: 8px;
-            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 6px 10px;
             border-radius: 4px;
+            margin-bottom: 4px;
             background-color: #2c2c2c;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .log-entry.error-entry {
-            border-left: 4px solid #dc3545;
-        }
-
-        .log-entry.regular-entry {
-            border-left: 4px solid #17a2b8;
+            font-family: monospace;
         }
 
         .timestamp {
             color: #888;
-            font-size: 0.9em;
-            margin-bottom: 5px;
+            white-space: nowrap;
         }
 
-        .error-message {
-            color: #dc3545;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
+        .log-level {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            min-width: 50px;
+            text-align: center;
         }
 
-        .log-content {
-            font-family: monospace;
-            white-space: pre-wrap;
-            line-height: 1.4;
-            margin: 0;
-            color: #f8f9fa;
-            height: 100%;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            font-size: 13px;
+        .log-message {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .error-level {
+            border-left: 4px solid #dc3545;
+        }
+        .error-level .log-level {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .warn-level {
+            border-left: 4px solid #ffc107;
+        }
+        .warn-level .log-level {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .info-level {
+            border-left: 4px solid #17a2b8;
+        }
+        .info-level .log-level {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .debug-level {
+            border-left: 4px solid #6c757d;
+        }
+        .debug-level .log-level {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .trace-level {
+            border-left: 4px solid #28a745;
+        }
+        .trace-level .log-level {
+            background-color: #28a745;
+            color: white;
         }
 
         @media (max-width: 1200px) {
@@ -647,6 +719,37 @@ if (isset($_GET['download_logs'])) {
             align-items: center;
             justify-content: space-between;
         }
+
+        .log-module {
+            color: #aaa;
+            padding: 2px 6px;
+            background-color: #333;
+            border-radius: 3px;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+
+        /* Audit request table specific styles */
+        #requestErrorsContainer .log-entry {
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        #requestErrorsContainer .timestamp {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        #requestErrorsContainer .error-message {
+            width: 100%;
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.4;
+        }
+
+        #requestErrorsContainer .error-message br {
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -675,13 +778,13 @@ if (isset($_GET['download_logs'])) {
             Download All Logs
         </button>
     </div>
-    <h2>Logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
+    <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
 
     <div class="grid-container" id="logGrid">
         <div class="log-section">
             <?php
             // Display Apache error log
-            readErrorLog($distroLogPath, "Apache Error Log (apache_error.log)");
+            readErrorLog($distroLogPath, "Apache Log [Errors Only] (apache_error.log)");
             ?>
         </div>
 
@@ -757,10 +860,10 @@ if (isset($_GET['download_logs'])) {
                         $timestamp = $time->format('Y-m-d H:i:s');
                         
                         echo '<div class="log-entry error-entry">';
-                        echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
+                        echo '<div class="timestamp">' . htmlspecialchars($timestamp) . ' UTC</div>';
                         echo '<div class="error-message">';
-                        echo 'Request: ' . htmlspecialchars($error['request']) . '<br>';
-                        echo 'Result: ' . htmlspecialchars($error['result']);
+                        echo '<strong>Request:</strong> ' . htmlspecialchars($error['request']) . '<br>';
+                        echo '<strong>Result:</strong> ' . htmlspecialchars($error['result']);
                         echo '</div>';
                         echo '</div>';
                     }

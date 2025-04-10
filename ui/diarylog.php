@@ -652,6 +652,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
 
                 // Check if there are events for this day
                 $hasEvents = false;
+                $eventCount = 0;
                 foreach ($allEventDates as $eventDate) {
                     if ($useTamrielicTime) {
                         // Compare Tamrielic dates
@@ -659,13 +660,20 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                         if ($eventDay == $dayCount) {
                             error_log("Debug - Found event for day {$dayCount}");
                             $hasEvents = true;
-                            break;
+                            $eventCount++;
                         }
                     } else {
                         // Compare Gregorian dates
-                        if (isset($eventDate['date']) && $eventDate['date'] === $dateStr) {
-                            $hasEvents = true;
-                            break;
+                        if (isset($eventDate['localts'])) {
+                            $eventDateTime = new DateTime("@{$eventDate['localts']}");
+                            $eventDateTime->setTimezone(new DateTimeZone('UTC'));
+                            $eventDateStr = $eventDateTime->format('Y-m-d');
+                            
+                            if ($eventDateStr === $dateStr) {
+                                $hasEvents = true;
+                                $eventCount++;
+                                error_log("Debug - Found event for date {$dateStr}");
+                            }
                         }
                     }
                 }
@@ -674,7 +682,8 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                 $calendar[$weekCount][$i] = array(
                     'day' => $dayCount,
                     'url' => "?$urlParams",
-                    'hasEvents' => $hasEvents
+                    'hasEvents' => $hasEvents,
+                    'eventCount' => $eventCount
                 );
                 
                 $dayCount++;
@@ -715,7 +724,7 @@ function renderCalendarHTML($calendar, $useTamrielicTime) {
                 $class = $day['hasEvents'] ? 'has-event' : '';
                 $dayNum = $day['day'];
                 if ($day['hasEvents']) {
-                    $html .= "<td class='{$class}'><a href='{$day['url']}#event-table'>{$dayNum}</a></td>";
+                    $html .= "<td class='{$class}'><a href='{$day['url']}#event-table' data-event-count='{$day['eventCount']}'>{$dayNum}</a></td>";
                 } else {
                     $html .= "<td class='{$class}'><span>{$dayNum}</span></td>";
                 }
@@ -1153,6 +1162,170 @@ if ($shouldFetchEvents) {
         // **Close Database Connection**
         pg_close($conn);
         ?>
+
+        <!-- Edit Modal -->
+        <div id="editModal" class="modal-backdrop">
+            <div class="modal-container">
+                <h2>Edit Entry</h2>
+                <form id="editForm" onsubmit="return saveEntry(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="editRowId" name="rowid">
+                        <input type="hidden" id="editTopic" name="topic">
+                        <label for="editContent">Content:</label>
+                        <small>Edit the content of the diary entry below.</small>
+                        <textarea id="editContent" name="content"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="button-group">
+                            <button type="submit" class="btn-save">Save Changes</button>
+                            <button type="button" onclick="closeEditModal()" class="btn-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Entry View Modal -->
+        <div id="entryModal" class="modal-backdrop">
+            <div class="modal-container">
+                <div id="entryModalContent" class="entry-content"></div>
+            </div>
+        </div>
+
+        <script>
+            // Debug function to help us see what data we're receiving
+            function debugLog(data) {
+                console.log('Data received:', data);
+            }
+
+            function openEntryModal(data) {
+                debugLog(data);
+                const modal = document.getElementById('entryModal');
+                const content = document.getElementById('entryModalContent');
+
+                if (!modal || !content) {
+                    console.error('Required modal elements not found');
+                    return;
+                }
+
+                try {
+                    const entryData = typeof data === 'string' ? JSON.parse(data) : data;
+                    content.innerHTML = entryData.content || '';
+                    modal.style.display = 'block';
+                    document.body.classList.add('modal-open');
+                    // Focus on the modal content
+                    content.focus();
+                } catch (error) {
+                    console.error('Error opening entry modal:', error);
+                }
+            }
+
+            function closeEntryModal() {
+                const modal = document.getElementById('entryModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            }
+
+            function openEditModal(data) {
+                debugLog(data);
+                const modal = document.getElementById('editModal');
+                const rowIdInput = document.getElementById('editRowId');
+                const topicInput = document.getElementById('editTopic');
+                const contentInput = document.getElementById('editContent');
+
+                if (!modal || !rowIdInput || !topicInput || !contentInput) {
+                    console.error('Required modal elements not found');
+                    return;
+                }
+
+                try {
+                    const entryData = typeof data === 'string' ? JSON.parse(data) : data;
+                    
+                    rowIdInput.value = entryData.rowid;
+                    topicInput.value = entryData.topic || '';
+                    contentInput.value = entryData.content || '';
+                    
+                    modal.style.display = 'block';
+                    document.body.classList.add('modal-open');
+                    // Focus on the content textarea
+                    contentInput.focus();
+                } catch (error) {
+                    console.error('Error opening edit modal:', error);
+                }
+            }
+
+            function closeEditModal() {
+                const modal = document.getElementById('editModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            }
+
+            async function saveEntry(event) {
+                event.preventDefault();
+                const form = event.target;
+                const formData = new FormData(form);
+
+                try {
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        closeEditModal();
+                        window.location.reload();
+                    } else {
+                        alert('Failed to save changes: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error saving entry:', error);
+                    alert('Failed to save changes. Please try again.');
+                }
+                return false;
+            }
+
+            async function deleteEntry(rowid) {
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'delete');
+                    formData.append('rowid', rowid);
+
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Failed to delete entry: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error deleting entry:', error);
+                    alert('Failed to delete entry. Please try again.');
+                }
+            }
+
+            // Close modals when clicking outside
+            window.onclick = function(event) {
+                const editModal = document.getElementById('editModal');
+                const entryModal = document.getElementById('entryModal');
+                if (event.target === editModal) {
+                    closeEditModal();
+                } else if (event.target === entryModal) {
+                    closeEntryModal();
+                }
+            }
+
+            // Add this to check if the script is loaded
+            console.log('Modal script loaded');
+        </script>
     </main>
 </body>
 <?php
