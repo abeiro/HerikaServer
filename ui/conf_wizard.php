@@ -546,9 +546,11 @@ foreach ($currentConf as $pname=>$parms) {
         echo "</select><span>{$parms["description"]}</span></p>";
         
     }  else if ($parms["type"]=="util") {
-        $checkButton="<button class='' type='button' onclick=\"callHelper('{$parms["action"]}')\">{$parms["name"]}</button>";
-        echo "<p class='conf-item'>$checkButton<span>{$parms["description"]}</span></p>".PHP_EOL;
-        
+        // Skip rendering the autofill parameter buttons
+        if (strpos($fieldName, "get_parms") === false) {
+            $checkButton="<button class='' type='button' onclick=\"callHelper('{$parms["action"]}')\">{$parms["name"]}</button>";
+            echo "<p class='conf-item'>$checkButton<span>{$parms["description"]}</span></p>".PHP_EOL;
+        }
     } else if ($parms["type"]=="ormodellist") {
         $jsid=strtr($fieldName,["@"=>"_"]);
         $checkButton="<button class='url' type='button' onclick=\"callHelperModel('choices$jsid','$jsid')\">Get Model List</button>";

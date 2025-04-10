@@ -84,7 +84,8 @@ class openrouterjson
                 $i_pos = stripos($s_model, "reka-flash-3");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "olympiccoder-");
-
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "grok-3-mini"); 
             $b_res = (!($i_pos === false));
         }
         return $b_res;
@@ -526,9 +527,11 @@ class openrouterjson
             }
             return null;
         } else {
-            if ($this->getHttpStatusCode() >= 300) {
+            $status_code = $this->getHttpStatusCode();
+            if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
-                $error_message = "Request to openrouterjson connector failed: {$status_line}.\nResponse body: {$response}";
+                //$error_message = "Request to openrouterjson connector failed: {$status_line}.\nResponse body: {$response}";
+                $error_message = "Request to openrouterjson connector failed: {$status_code}.\nResponse body: {$response}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
@@ -636,6 +639,7 @@ class openrouterjson
                 $this->_buffer.=$data["choices"][0]["delta"]["content"];
                 // Check to see if we've received something that looks like it starts with a JSON object
                 if (strlen($this->_buffer)>$buffer_preamble && strpos($this->_buffer, '{') === false) { 
+                    Logger::error("Error decoding JSON from LLM output: can't find JSON start mark after reading {$buffer_preamble} characters. LLM didn't output proper JSON object or there is a long non-JSON preamble.");
                     return -1;
                 }
 
