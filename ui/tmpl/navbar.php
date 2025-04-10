@@ -522,9 +522,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Profile Selection Form -->
                 <form action="<?php 
-                    // Check if current page is index.php
+                    // Check if current page is index.php or home.php
                     $currentPage = basename($_SERVER['PHP_SELF']);
-                    echo htmlspecialchars(($currentPage === 'index.php') ? $webRoot . '/ui/conf_wizard.php' : $_SERVER['PHP_SELF']); 
+                    echo htmlspecialchars(($currentPage === 'index.php' || $currentPage === 'home.php') ? $webRoot . '/ui/conf_wizard.php' : $_SERVER['PHP_SELF']); 
                 ?>" method="POST" id="formprofile">
                     <div class="options-container">
                         <?php foreach ($OPTIONS as $op): ?>
@@ -614,19 +614,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <button
                 class="config-depth-btn basic <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'basic') ? 'active' : ''; ?>"
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=basic'">
+                onclick="fetch('<?php echo $webRoot; ?>/ui/set_option_conf.php?c=basic').then(() => location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php')">
                 Basic
             </button>
             
             <button
                 class="config-depth-btn advanced <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'pro') ? 'active' : ''; ?>"
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=pro'">
+                onclick="fetch('<?php echo $webRoot; ?>/ui/set_option_conf.php?c=pro').then(() => location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php')">
                 Advanced
             </button>
             
             <button
                 class="config-depth-btn experimental <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'wip') ? 'active' : ''; ?>"
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=wip'">
+                onclick="fetch('<?php echo $webRoot; ?>/ui/set_option_conf.php?c=wip').then(() => location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php')">
                 Experimental
             </button>
         </div>
