@@ -951,6 +951,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     SELECT data
                     FROM {$schema}.eventlog 
                     WHERE type = 'chat'
+                    ORDER BY localts DESC
+                    LIMIT 10000
                 ");
 
                 if (!isset($generalStats['error']) && !empty($generalStats)) {
@@ -1021,7 +1023,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         return ['text' => $word, 'size' => log($count * 5) * 8 + 20, 'count' => $count];
                     }, array_keys($wordFrequencies), array_values($wordFrequencies));
 
-                    echo render_widget('Most Used Words', "
+                    echo render_widget('Recent Most Used Words', "
                         <script src='https://d3js.org/d3.v7.min.js'></script>
                         <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
                         <div class='word-cloud-container'>
