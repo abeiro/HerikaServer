@@ -325,10 +325,14 @@ main.container {
 }
 
 /* Modal Styles */
-.modal-body {
-    max-height: calc(100vh - 300px);
-    overflow-y: auto;
-    padding-right: 15px;
+.modal-container {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 180px auto 40px auto !important;
+    max-width: 800px !important;
+    width: 90% !important;
 }
 
 /* Form field spacing */
@@ -340,24 +344,24 @@ main.container {
 }
 
 .modal-body small {
-    display: block;
-    color: #888;
-    margin-bottom: 5px;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    padding-right: 15px;
 }
 
 .modal-body input[type="text"],
 .modal-body textarea {
     width: 100%;
     margin-bottom: 15px;
+    height: 400px;
 }
 
 .modal-footer {
     position: sticky;
     bottom: 0;
     background: #3a3a3a;
-    padding: 15px 0;
-    margin-top: 20px;
     border-top: 1px solid #4a4a4a;
+
 } 
 
 .conf-item textarea {

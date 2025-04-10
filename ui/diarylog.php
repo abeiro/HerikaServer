@@ -1171,16 +1171,14 @@ if ($shouldFetchEvents) {
                     <div class="modal-body">
                         <input type="hidden" id="editRowId" name="rowid">
                         <input type="hidden" id="editTopic" name="topic">
-                        <div class="conf-item">
-                            <label for="editContent">Content:</label>
-                            <small>Edit the content of the diary entry below.</small>
-                            <textarea id="editContent" name="content" rows="10" class="form-control"></textarea>
-                        </div>
+                        <label for="editContent">Content:</label>
+                        <small>Edit the content of the diary entry below.</small>
+                        <textarea id="editContent" name="content"></textarea>
                     </div>
                     <div class="modal-footer">
                         <div class="button-group">
-                            <button type="button" onclick="closeEditModal()" class="btn-cancel">Cancel</button>
                             <button type="submit" class="btn-save">Save Changes</button>
+                            <button type="button" onclick="closeEditModal()" class="btn-cancel">Cancel</button>
                         </div>
                     </div>
                 </form>
