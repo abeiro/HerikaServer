@@ -1188,11 +1188,7 @@ if ($shouldFetchEvents) {
         <!-- Entry View Modal -->
         <div id="entryModal" class="modal-backdrop">
             <div class="modal-container">
-                <h2 id="entryModalTitle"></h2>
                 <div id="entryModalContent" class="entry-content"></div>
-                <div class="button-group">
-                    <button onclick="closeEntryModal()" class="btn-cancel">Close</button>
-                </div>
             </div>
         </div>
 
@@ -1200,6 +1196,36 @@ if ($shouldFetchEvents) {
             // Debug function to help us see what data we're receiving
             function debugLog(data) {
                 console.log('Data received:', data);
+            }
+
+            function openEntryModal(data) {
+                debugLog(data);
+                const modal = document.getElementById('entryModal');
+                const content = document.getElementById('entryModalContent');
+
+                if (!modal || !content) {
+                    console.error('Required modal elements not found');
+                    return;
+                }
+
+                try {
+                    const entryData = typeof data === 'string' ? JSON.parse(data) : data;
+                    content.innerHTML = entryData.content || '';
+                    modal.style.display = 'block';
+                    document.body.classList.add('modal-open');
+                    // Focus on the modal content
+                    content.focus();
+                } catch (error) {
+                    console.error('Error opening entry modal:', error);
+                }
+            }
+
+            function closeEntryModal() {
+                const modal = document.getElementById('entryModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
             }
 
             function openEditModal(data) {
@@ -1215,14 +1241,16 @@ if ($shouldFetchEvents) {
                 }
 
                 try {
-                    // If data is a string (JSON), parse it
                     const entryData = typeof data === 'string' ? JSON.parse(data) : data;
                     
                     rowIdInput.value = entryData.rowid;
-                    topicInput.value = entryData.topic || ''; // Keep topic in hidden field
+                    topicInput.value = entryData.topic || '';
                     contentInput.value = entryData.content || '';
                     
                     modal.style.display = 'block';
+                    document.body.classList.add('modal-open');
+                    // Focus on the content textarea
+                    contentInput.focus();
                 } catch (error) {
                     console.error('Error opening edit modal:', error);
                 }
@@ -1232,37 +1260,7 @@ if ($shouldFetchEvents) {
                 const modal = document.getElementById('editModal');
                 if (modal) {
                     modal.style.display = 'none';
-                }
-            }
-
-            function openEntryModal(data) {
-                debugLog(data);
-                const modal = document.getElementById('entryModal');
-                const title = document.getElementById('entryModalTitle');
-                const content = document.getElementById('entryModalContent');
-
-                if (!modal || !title || !content) {
-                    console.error('Required modal elements not found');
-                    return;
-                }
-
-                try {
-                    // If data is a string (JSON), parse it
-                    const entryData = typeof data === 'string' ? JSON.parse(data) : data;
-                    
-                    title.textContent = entryData.topic || '';
-                    content.innerHTML = entryData.content || '';
-                    
-                    modal.style.display = 'block';
-                } catch (error) {
-                    console.error('Error opening entry modal:', error);
-                }
-            }
-
-            function closeEntryModal() {
-                const modal = document.getElementById('entryModal');
-                if (modal) {
-                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
                 }
             }
 
