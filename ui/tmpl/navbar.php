@@ -30,7 +30,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
             </a> 
             
             <a class="navbar-brand mr-2 button" href="<?php echo $webRoot; ?>/ui/index.php?togglemodel=true" title="Click to change active connector" style="display:none">
-            <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>-->
+            <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel_.json'), true)); ?>-->
             </a>
             
 
