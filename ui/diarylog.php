@@ -209,20 +209,26 @@ function process_diary_row($row, $for_csv = false) {
     // Clean and format location
     $location = trim($row['location'], "()");
 
-    if (!$for_csv) {
-        // Escape HTML for safety
-        $row['topic'] = htmlspecialchars($row['topic'], ENT_QUOTES, 'UTF-8');
-        $row['content'] = htmlspecialchars($row['content'], ENT_QUOTES, 'UTF-8');
+    if ($for_csv) {
+        // For CSV, decode HTML entities and clean up the content
+        $topic = html_entity_decode($row['topic'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $content = html_entity_decode($row['content'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $formattedTags = html_entity_decode($formattedTags, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $formattedPeople = html_entity_decode($formattedPeople, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $location = html_entity_decode($location, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    } else {
+        // For HTML display, escape HTML entities
+        $topic = htmlspecialchars($row['topic'], ENT_QUOTES, 'UTF-8');
+        $content = htmlspecialchars($row['content'], ENT_QUOTES, 'UTF-8');
         $formattedTags = htmlspecialchars($formattedTags, ENT_QUOTES, 'UTF-8');
         $formattedPeople = htmlspecialchars($formattedPeople, ENT_QUOTES, 'UTF-8');
         $location = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
-        $timeDisplay = htmlspecialchars($timeDisplay, ENT_QUOTES, 'UTF-8');
     }
 
     // Return the processed data with separate Topic and Content
     return [
-        'Topic' => $row['topic'],
-        'Content' => $row['content'],
+        'Topic' => $topic,
+        'Content' => $content,
         'Nearby People' => $formattedPeople,
         'Location & Tamrielic Time' => $location,
         'Time(UTC)' => $timeDisplay
@@ -231,6 +237,22 @@ function process_diary_row($row, $for_csv = false) {
 
 // Function to handle CSV export
 function handle_csv_export($conn, $schema) {
+    // Define Tamrielic month mapping
+    $tamrielicMonths = [
+        1 => 'Morning Star',
+        2 => "Sun's Dawn",
+        3 => 'First Seed',
+        4 => "Rain's Hand",
+        5 => 'Second Seed',
+        6 => 'Mid Year',
+        7 => "Sun's Height",
+        8 => 'Last Seed',
+        9 => 'Hearthfire',
+        10 => 'Frost Fall',
+        11 => "Sun's Dusk",
+        12 => 'Evening Star'
+    ];
+
     if (isset($_GET['export'])) {
         $exportType = $_GET['export'];
 
@@ -240,69 +262,63 @@ function handle_csv_export($conn, $schema) {
                 ob_end_clean();
             }
 
-            $is_specific_date = ($exportType === 'csv');
+            // Build the query based on the current view
+            if ($exportType === 'csv') {
+                // Determine which view we're in
+                $isPersonFilter = isset($_GET['filter']) && $_GET['filter'] === 'people' && isset($_GET['person']);
+                $isTamrielicView = isset($_GET['tamrielic']) && $_GET['tamrielic'] === 'true';
+                $isRegularCalendar = isset($_GET['date']);
 
-            if ($is_specific_date) {
-                // Get the selected date from URL or latest date if not specified
-                if (isset($_GET['date'])) {
-                    $selectedDate = $_GET['date'];
-                    // Validate the selected date format (YYYY-MM-DD)
-                    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
-                        // Invalid date format
-                        header("HTTP/1.1 400 Bad Request");
-                        echo "Invalid date format.";
-                        exit;
-                    }
-                } else {
-                    // Get the most recent date from the diarylog
-                    $latestDateQuery = "
-                        SELECT to_char(to_timestamp(localts::double precision) AT TIME ZONE 'UTC', 'YYYY-MM-DD') as event_date
+                if ($isPersonFilter) {
+                    // People filter mode - get entries for specific person
+                    $person = urldecode($_GET['person']);
+                    $query = "
+                        SELECT rowid, topic, content, tags, people, location, localts, gamets
                         FROM {$schema}.diarylog
+                        WHERE people LIKE '%' || $1 || '%'
                         ORDER BY localts DESC
-                        LIMIT 1
                     ";
-                    
-                    $latestDateResult = pg_query($conn, $latestDateQuery);
-                    if (!$latestDateResult) {
-                        header("HTTP/1.1 500 Internal Server Error");
-                        echo "Error fetching latest date: " . pg_last_error($conn);
-                        exit;
-                    }
-                    
-                    $latestDateRow = pg_fetch_assoc($latestDateResult);
-                    if (!$latestDateRow) {
-                        header("HTTP/1.1 404 Not Found");
-                        echo "No events found in the adventure log.";
-                        exit;
-                    }
-                    
-                    $selectedDate = $latestDateRow['event_date'];
+                    $result = pg_query_params($conn, $query, [$person]);
+                } elseif ($isTamrielicView && isset($_GET['month']) && isset($_GET['year']) && isset($_GET['day'])) {
+                    // Tamrielic calendar mode
+                    $query = "
+                        SELECT rowid, topic, content, tags, people, location, localts, gamets
+                        FROM {$schema}.diarylog
+                        WHERE gamets > 0
+                        ORDER BY gamets ASC
+                    ";
+                    $result = pg_query($conn, $query);
+                } elseif ($isRegularCalendar) {
+                    // Regular calendar mode
+                    $selectedDate = $_GET['date'];
+                    $dtSelected = new DateTime($selectedDate . ' 00:00:00', new DateTimeZone('UTC'));
+                    $startOfDay = $dtSelected->getTimestamp();
+                    $dtSelectedEnd = clone $dtSelected;
+                    $dtSelectedEnd->modify('+1 day')->modify('-1 second');
+                    $endOfDay = $dtSelectedEnd->getTimestamp();
+
+                    $query = "
+                        SELECT rowid, topic, content, tags, people, location, localts, gamets
+                        FROM {$schema}.diarylog
+                        WHERE localts >= $1 AND localts <= $2
+                        ORDER BY localts ASC
+                    ";
+                    $result = pg_query_params($conn, $query, [$startOfDay, $endOfDay]);
+                } else {
+                    // No valid view selected
+                    header("HTTP/1.1 400 Bad Request");
+                    echo "Please select a date, person, or Tamrielic date to view entries.";
+                    exit;
                 }
-
-                // Calculate the start and end timestamps for the selected day in UTC
-                $dtSelected = new DateTime($selectedDate . ' 00:00:00', new DateTimeZone('UTC'));
-                $startOfDay = $dtSelected->getTimestamp();
-                $dtSelectedEnd = clone $dtSelected;
-                $dtSelectedEnd->modify('+1 day')->modify('-1 second');
-                $endOfDay = $dtSelectedEnd->getTimestamp();
-
-                // Prepare the SQL query with explicit casting to double precision
+            } else {
+                // Export all entries
                 $query = "
-                    SELECT topic, content, tags, people, location, localts, gamets
-                    FROM {$schema}.diarylog
-                    WHERE localts >= $startOfDay AND localts <= $endOfDay
-                    ORDER BY localts ASC
-                ";
-            } elseif ($exportType === 'all_csv') {
-                // Export CSV for all data without date filtering
-                $query = "
-                    SELECT topic, content, tags, people, location, localts, gamets
+                    SELECT rowid, topic, content, tags, people, location, localts, gamets
                     FROM {$schema}.diarylog
                     ORDER BY localts ASC
                 ";
+                $result = pg_query($conn, $query);
             }
-
-            $result = pg_query($conn, $query);
 
             if (!$result) {
                 header("HTTP/1.1 500 Internal Server Error");
@@ -312,15 +328,24 @@ function handle_csv_export($conn, $schema) {
 
             // Set headers to prompt file download
             header('Content-Type: text/csv; charset=utf-8');
-            if ($is_specific_date) {
-                if (isset($_GET['date'])) {
-                    header('Content-Disposition: attachment; filename=diary_log_' . $selectedDate . '.csv');
+            if ($exportType === 'csv') {
+                if (isset($_GET['filter']) && $_GET['filter'] === 'people' && isset($_GET['person'])) {
+                    $filename = 'diary_log_' . urlencode($_GET['person']) . '.csv';
+                } else if (isset($_GET['tamrielic']) && $_GET['tamrielic'] === 'true') {
+                    $filename = sprintf('diary_log_%dth_%s_4E%d.csv', 
+                        intval($_GET['day']), 
+                        $tamrielicMonths[intval($_GET['month'])], 
+                        intval($_GET['year'])
+                    );
+                } else if (isset($_GET['date'])) {
+                    $filename = 'diary_log_' . $_GET['date'] . '.csv';
                 } else {
-                    header('Content-Disposition: attachment; filename=diary_log_latest.csv');
+                    $filename = 'diary_log_current.csv';
                 }
             } else {
-                header('Content-Disposition: attachment; filename=diary_log_full.csv');
+                $filename = 'diary_log_full.csv';
             }
+            header('Content-Disposition: attachment; filename=' . $filename);
 
             // Add BOM for Excel compatibility
             fprintf($output = fopen('php://output', 'w'), chr(0xEF).chr(0xBB).chr(0xBF));
@@ -338,6 +363,26 @@ function handle_csv_export($conn, $schema) {
             while ($row = pg_fetch_assoc($result)) {
                 $processed_row = process_diary_row($row, true); // true indicates CSV context
                 if ($processed_row !== null) {
+                    // For Tamrielic mode, filter entries to match the selected date
+                    if (isset($_GET['tamrielic']) && $_GET['tamrielic'] === 'true' && 
+                        isset($_GET['month']) && isset($_GET['year']) && isset($_GET['day'])) {
+                        if (isset($row['gamets']) && $row['gamets'] > 0) {
+                            $tamrielicDate = convert_gamets2skyrim_long_date_no_time($row['gamets']);
+                            if (preg_match('/(\d+)th of ([^,]+), 4E (\d+)/', $tamrielicDate, $matches)) {
+                                $eventDay = intval($matches[1]);
+                                $eventMonth = $matches[2];
+                                $eventYear = intval($matches[3]);
+                                
+                                // Skip entries that don't match the current Tamrielic date
+                                if ($eventMonth !== $tamrielicMonths[intval($_GET['month'])] || 
+                                    $eventYear !== intval($_GET['year']) || 
+                                    $eventDay !== intval($_GET['day'])) {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+
                     // Check for location change
                     if ($previousLocation !== null && $previousLocation !== $processed_row['Location & Tamrielic Time']) {
                         // Extract just the location name without date/time
@@ -811,20 +856,11 @@ if ($shouldFetchEvents) {
         function renderHeader() {
             echo "<div class='csv-buttons'>";
             
-            $currentCsvParams = [];
-            if (isset($_GET['date'])) {
-                $currentCsvParams['date'] = $_GET['date'];
-            }
+            // Preserve all current GET parameters for the current view download
+            $currentCsvParams = $_GET;
             $currentCsvParams['export'] = 'csv';
-            if (isset($_GET['month'])) {
-                $currentCsvParams['month'] = $_GET['month'];
-            }
-            if (isset($_GET['year'])) {
-                $currentCsvParams['year'] = $_GET['year'];
-            }
-            $currentCsvQuery = http_build_query($currentCsvParams);
-
-            // Form for current date download
+            
+            // Form for current date/view download
             echo "<form method='get' style='display: inline;'>";
             foreach ($currentCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
@@ -832,6 +868,7 @@ if ($shouldFetchEvents) {
             echo "<button type='submit' class='btn-save'>Download Current Diaries</button>";
             echo "</form>";
 
+            // For all entries, only preserve month and year if they exist
             $allCsvParams = ['export' => 'all_csv'];
             if (isset($_GET['month'])) {
                 $allCsvParams['month'] = $_GET['month'];
@@ -839,7 +876,6 @@ if ($shouldFetchEvents) {
             if (isset($_GET['year'])) {
                 $allCsvParams['year'] = $_GET['year'];
             }
-            $allCsvQuery = http_build_query($allCsvParams);
 
             // Form for all data download
             echo "<form method='get' style='display: inline;'>";
