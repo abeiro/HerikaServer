@@ -525,15 +525,15 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         $printLocation=false;
         
         $string = $row["location"];
-        preg_match('/Context\s*(new\s*)?location:\s*([^$,]+?)/', $string, $locationMatch);
-        preg_match('/Hold:\s*([^$,\)]+?)/', $string, $holdMatch);
+        preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $string, $locationMatch);
+        preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
             //error_log(print_r($string,true));
             $locationFinal=$lastlocation;
         } else {
             $hold = trim($holdMatch[1]);
-            $location = trim($locationMatch[2]);
+            $location = trim($locationMatch[1]);
             $locationFinal="$location, hold: $hold";
         }
         
