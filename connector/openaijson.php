@@ -42,8 +42,17 @@ class openaijson
             $i_pos = stripos($s_model, "deepseek-r");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwq-32b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-max");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "aion-1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, ":thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-reasoning");
             $b_res = (!($i_pos === false));
-            //qvq-max  aion-1 glm-zero-preview
         }
         return $b_res;
     }
