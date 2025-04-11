@@ -86,6 +86,12 @@ class openrouterjson
                 $i_pos = stripos($s_model, "olympiccoder-");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "grok-3-mini"); 
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, ":thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-reasoning");
             $b_res = (!($i_pos === false));
         }
         return $b_res;
