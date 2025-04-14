@@ -46,9 +46,9 @@
       "model": {"type":"ormodellist","description":"<strong>Must be JSON/Instruct type of Model!</strong><br>FREE MODELS ARE NOT RECOMMENDED!<br>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Leave blank unless you want to manually select a provider from OpenRouter. It is case sensitive!","helpurl":"https://openrouter.ai/docs/provider-routing"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
-      "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for high randomness in AI response (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms1": {"type":"util","userlvl":"wip","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","userlvl":"wip","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","userlvl":"wip","description":"Autofill parameter settings for the currently selected model for high randomness in AI response (P90)","action":"action_openrouterjson_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
       "temperature": {"type":"number","description":"Temperature [0-2]","helpurl":"https://openrouter.ai/docs#format"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"Presence Penalty [(-2)-2]","helpurl":"https://openrouter.ai/docs#format"},
       "frequency_penalty": {"userlvl":"pro","type":"number","description":"Frequency Penalty [(-2)-2]","helpurl":"https://openrouter.ai/docs#format"},
@@ -83,9 +83,9 @@
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, diary entries, and dynamic profile updates."},
       "xreferer": {"userlvl":"wip","type":"string","description":"Stub needed header. Keep default."},
       "xtitle": {"userlvl":"wip","type":"string","description":"Stub needed header. Keep default."},
-      "get_parms1": {"type":"util","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouter_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms5": {"type":"util","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouter_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
-      "get_parms9": {"type":"util","description":"Autofill parameter settings for the currently selected model for high randomness in AI response (P90)","action":"action_openrouter_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"}
+      "get_parms1": {"type":"util","userlvl":"wip","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouter_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms5": {"type":"util","userlvl":"wip","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouter_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
+      "get_parms9": {"type":"util","userlvl":"wip","description":"Autofill parameter settings for the currently selected model for high randomness in AI response (P90)","action":"action_openrouter_get_parm_p1.php?P=90","name":"Autofill Parameters: High Randomness","helpurl":"https://openrouter.ai/docs/parameters"}
     },
     "openaijson": {
       "_title":"OpenAI/ChatGPT API (JSON)",

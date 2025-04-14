@@ -30,7 +30,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
             </a> 
             
             <a class="navbar-brand mr-2 button" href="<?php echo $webRoot; ?>/ui/index.php?togglemodel=true" title="Click to change active connector" style="display:none">
-            <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel.json'), true)); ?>-->
+            <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel_.json'), true)); ?>-->
             </a>
             
 
@@ -364,6 +364,10 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
         </ul>
     </div>
 
+    <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal';">
+        v1.1.1.3
+    </div>
+
     <div class="social-links">
         <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
             <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
@@ -489,8 +493,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <meta charset="UTF-8">
         <title>Profile Selection Overlay</title>
         <style>
-
-            
+            @font-face {
+                font-family: 'MagicCardsNormal';
+                src: url('../css/font/MagicCardsNormal.ttf') format('truetype');
+            }
         </style>
     </head>
     <body>
@@ -516,9 +522,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Profile Selection Form -->
                 <form action="<?php 
-                    // Check if current page is index.php
+                    // Check if current page is index.php or home.php
                     $currentPage = basename($_SERVER['PHP_SELF']);
-                    echo htmlspecialchars(($currentPage === 'index.php') ? $webRoot . '/ui/conf_wizard.php' : $_SERVER['PHP_SELF']); 
+                    echo htmlspecialchars(($currentPage === 'index.php' || $currentPage === 'home.php') ? $webRoot . '/ui/conf_wizard.php' : $_SERVER['PHP_SELF']); 
                 ?>" method="POST" id="formprofile">
                     <div class="options-container">
                         <?php foreach ($OPTIONS as $op): ?>
@@ -608,19 +614,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <button
                 class="config-depth-btn basic <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'basic') ? 'active' : ''; ?>"
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=basic'">
+                onclick="fetch('<?php echo $webRoot; ?>/ui/set_option_conf.php?c=basic').then(() => location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php')">
                 Basic
             </button>
             
             <button
                 class="config-depth-btn advanced <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'pro') ? 'active' : ''; ?>"
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=pro'">
+                onclick="fetch('<?php echo $webRoot; ?>/ui/set_option_conf.php?c=pro').then(() => location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php')">
                 Advanced
             </button>
             
             <button
                 class="config-depth-btn experimental <?php echo ($_SESSION['OPTION_TO_SHOW'] == 'wip') ? 'active' : ''; ?>"
-                onclick="location.href='<?php echo $webRoot; ?>/ui/set_option_conf.php?c=wip'">
+                onclick="fetch('<?php echo $webRoot; ?>/ui/set_option_conf.php?c=wip').then(() => location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php')">
                 Experimental
             </button>
         </div>
