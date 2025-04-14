@@ -1053,30 +1053,30 @@ $debugPaneLink = true;
             return 'Cannot be deleted';
         }
 
+        $installed_plugins=[];
         // In the manifest.json exists case
         foreach ($pluginFolders as $folder) {
             $manifestPath = $pluginFoldersRoot . $folder . '/manifest.json';
             if (file_exists($manifestPath)) {
+                
                 $manifest = json_decode(file_get_contents($manifestPath), true);
                 $name = $manifest['name'] ?? $folder;
                 $description = $manifest['description'] ?? 'No description available';
                 $configUrl = $manifest['config_url'] ?? '';
-                $installUrl = $manifest['install_url'] ?? '';
-    
+                
+                $installed_plugins[]=$name;
+
                 echo '<tr>';
                 echo '<td>' . htmlspecialchars($name) . '</td>';
                 echo '<td>' . htmlspecialchars($description) . '</td>';
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Configure Plugin</button>';
+                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Plugin Backend</button>';
+                    if (isset($manifest['schema_version']) && $manifest['schema_version']==2) {
+                        echo '<button onclick="window.open(\'' . htmlspecialchars("/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$manifest['name']}&GITHUB_REPO={$manifest['git_repo']}") . '\', \'_blank\')" class="btn-base btn-save">Update plugin</button>';
+                    }
                 } else {
                     echo 'No Plugin Page';
-                }
-                
-                if (!empty($installUrl)) {
-                    echo '<button onclick="window.open(\'' . htmlspecialchars($installUrl) . '\', \'_blank\')" class="btn-base btn-save">Install Plugin</button>';
-                } else {
-                    echo '';
                 }
 
                 echo '</td>';
@@ -1091,6 +1091,51 @@ $debugPaneLink = true;
             }
         }
         echo '</table>';
+
+        // Plugin repo
+        $pluginRepository=[];
+        $pluginRepository["twitch-bot"]= array(
+            "name" => "twitch-bot",
+            "description" => "Allows viewers to control AI NPC's via twitch chat",
+            "git_repo" => "RANGROO/CHIM-Twitch-Bot",
+        );
+
+        // Remove installed plugins from list
+        foreach ($installed_plugins as $pluginKey) {
+            unset($pluginRepository[$pluginKey]);
+        }
+
+        echo '<table border="1">';
+        echo '<tr>
+                <th>Plugin</th>
+                <th>Description</th>
+                <th>Plugin Menu</th>
+            </tr>';
+
+        foreach ($pluginRepository as $plugin) {
+            
+                $name = $plugin['name'];
+                $description = $plugin['description'] ?? 'No description available';
+                $configUrl =  "/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$plugin['name']}&GITHUB_REPO={$plugin['git_repo']}";
+    
+                echo '<tr>';
+                echo '<td>' . htmlspecialchars($name) . '</td>';
+                echo '<td>' . htmlspecialchars($description) . '</td>';
+                echo '<td>';
+                if (!empty($configUrl)) {
+                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Install Plugin</button>';
+                } else {
+                    echo 'No Plugin Page';
+                }
+
+                echo '</td>';
+                echo '</tr>';
+
+        }
+        echo '</table>';
+
+
+
     
         // Add the "CHIM Plugins" title
         echo '<br>';
