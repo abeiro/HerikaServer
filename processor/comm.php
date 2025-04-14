@@ -51,6 +51,17 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         )
     );
     
+    if (isset($gameRequest[3]) && $gameRequest[3]) {
+        $db->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "plugin_dll_version",
+                'value' =>$gameRequest[3]
+            ),
+            "id"
+        );
+    }
+
     Logger::trace("INIT PROCESSING ".(time()-$now));
     // Delete TTS(STT cache
     $directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache";

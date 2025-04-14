@@ -15,8 +15,9 @@ ignore_user_abort(true);
 // Expected format input|ts|gamets|PLAYER_NAME::
 $gameRequest = explode("|", $receivedData);
 
-$userWish=escapeshellarg($gameRequest[3]);
+$userWish=explode(":",$gameRequest[3]);
 $output='';
-exec("php /var/www/html/HerikaServer/service/manager.php rolemaster $userWish", $output, $returnCode);
+$instruction=escapeshellarg("Suggestion: {$userWish[1]}");
+exec("php /var/www/html/HerikaServer/service/manager.php rolemaster \"$instruction\"", $output, $returnCode);
 
 ?>

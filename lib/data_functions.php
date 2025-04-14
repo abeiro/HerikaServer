@@ -141,7 +141,7 @@ function DataLastInfoFor($actor, $lastNelements = -2,$addNPCDescriptions=false,$
     // Rolemaster notes
     
     $timeCut=time();
-    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where localts+ttl<$timeCut");
+    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where localts+ttl>$timeCut");
     if (isset($rolemasterNotes[0])) {
         $lastDialog[] = array('role' => 'user', 'content' => "# SCENE NOTES \n## {$rolemasterNotes[0]["data"]}");
     }
