@@ -344,8 +344,8 @@ class openrouterjson
         $headers = array(
             'Content-Type: application/json',
             "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
-            "HTTP-Referer:  https://www.nexusmods.com/skyrimspecialedition/mods/126330",
-            "X-Title: CHIM"
+            "HTTP-Referer:  https://dwemerdynamics.com/",
+            "X-Title: Dwemer Dynamics"
         );
 
         $options = array(

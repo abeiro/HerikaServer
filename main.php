@@ -20,7 +20,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php"); 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
