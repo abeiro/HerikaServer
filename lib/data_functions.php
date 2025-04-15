@@ -1567,33 +1567,43 @@ function DataSearchMemory($rawstring,$npcfilter) {
             return "";
         } else {
         
-            $altKeywords=explode(" ",lastNames(15,["inputtext"]));
-            $altKeywords=[];
-            $keywords=explode("|",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
-            array_merge($keywords,$altKeywords);
-            $kw=[];
-           
-            foreach ($keywords as $tag) {
-                if (strlen($tag)<4)
-                    continue;
+            if (isset($reponse["version"]) && $reponse["version"]==2) {
+                $altKeywords=explode(" ",lastNames(15,["inputtext"]));
+                $altKeywords=[];
+                $keywords=explode(" ",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
+                $kwStringAny=implode(" | ",$keywords);
+                $kwStringAll=implode(" & ",$keywords);
+                $result = array_unique($keywords);
+            } else {
+                $altKeywords=explode(" ",lastNames(15,["inputtext"]));
+                $altKeywords=[];
+                $keywords=explode("|",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
+                array_merge($keywords,$altKeywords);
+                $kw=[];
+            
+                foreach ($keywords as $tag) {
+                    if (strlen($tag)<4)
+                        continue;
 
-                $lkwPre="";
-                foreach (explode(" ",$tag) as $stag) {
-                    $lkwPre.=ucfirst($stag);
+                    
+                    $lkwPre="";
+                    foreach (explode(" ",$tag) as $stag) {
+                        $lkwPre.=ucfirst($stag);
+                    }
+                    
+                    //$lkw=hashtagify($tag);    
+                    $lkw="#$lkwPre";
+                    
+                    if ($lkw) {
+                        $kw=array_merge($kw,explode(" ",$lkw));
+                    }
                 }
-                
-                //$lkw=hashtagify($tag);    
-                $lkw="#$lkwPre";
-                
-                if ($lkw) {
-                    $kw=array_merge($kw,explode(" ",$lkw));
-                }
+                $result = array_unique($kw);
+
+                $kwStringAny=implode(" | ",$result);
+                $kwStringAll=implode(" & ",$result);
             }
-            $result = array_unique($kw);
-
-            $kwStringAny=implode(" | ",$result);
-            $kwStringAll=implode(" & ",$result);
-            Logger::debug("CONTEXT SEARCH KEYWORDS FROM MINIBOT: ".print_r($result,true));
+            Logger::debug("CONTEXT SEARCH KEYWORDS FROM MINIME: ".print_r($result,true));
         }
         
     } 

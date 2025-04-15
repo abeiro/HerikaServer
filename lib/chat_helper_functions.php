@@ -1213,6 +1213,8 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     if ($npc=="The Narrator") { // Narrator knows all
        $npc=""; 
     }
+
+    $contextKeywords  = implode(" ", lastKeyWordsContext(5,$npc));
     $memories=DataSearchMemory($gameRequest[3],$npc);
    
     
@@ -1374,7 +1376,7 @@ function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
 
 }
 
-function logEvent($dataArray)
+function logEvent($dataArray,$forcePeople='')
 {
     global $db;
 
@@ -1399,7 +1401,7 @@ function logEvent($dataArray)
             'data' => $dataArray[3],
             'sess' => 'pending',
             'localts' => time(),
-            'people'=> $GLOBALS["CACHE_PEOPLE"],
+            'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE"],
             'location'=>$GLOBALS["CACHE_LOCATION"],
             'party'=>$GLOBALS["CACHE_PARTY"]
         )
