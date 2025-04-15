@@ -1215,7 +1215,12 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     }
 
     $contextKeywords  = implode(" ", lastKeyWordsContext(5,$npc));
-    $memories=DataSearchMemory($gameRequest[3],$npc);
+
+    if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+        $memories=DataSearchMemoryByVector($gameRequest[3],$npc);
+    } else {
+        $memories=DataSearchMemory($gameRequest[3],$npc);
+    }
    
     
     if (isset($memories[0])) {

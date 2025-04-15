@@ -1675,6 +1675,84 @@ function DataSearchMemory($rawstring,$npcfilter) {
     
 }
 
+
+function DataSearchMemoryByVector($rawstring,$npcfilter) {
+    
+  
+        Logger::info("Using DataSearchMemoryByVector");
+        $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+
+        $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
+        $replacement = "";
+        $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
+                    
+        $pattern = '/\(talking to [^()]+\)/i';
+        $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+
+        $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
+
+
+        $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+        $data = [
+            'text' => $TEST_TEXT." ".$contextKeywords
+        ];
+
+        // Convert to JSON
+        $options = [
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Content-Type: application/json\r\n" .
+                            "Accept: application/json\r\n",
+                'content' => json_encode($data),
+                'ignore_errors' => true // to capture error messages if any
+            ]
+        ];
+
+        // Create context and send the request
+        $context  = stream_context_create($options);
+        $response = file_get_contents($url, false, $context);
+
+        // Output the response
+        if ($response === false) {
+            Logger::error("Request failed.\n");
+        } else {
+            Logger::info("Request done:\n");
+
+        }
+
+        $vector=json_decode($response,true);
+        $vectorString="'[".implode(",",$vector["embedding"])."]'";
+    
+        $memory=$GLOBALS["db"]->fetchAll("
+             SELECT summary, 
+                       embedding <-> $vectorString as distance
+                FROM public.memory_summary 
+                WHERE embedding IS NOT NULL
+                ORDER BY embedding <-> $vectorString
+                LIMIT 5 OFFSET 0
+            ");
+                
+        if (!isset($memory[0]))
+            $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
+
+        $GLOBALS["db"]->insert(
+                'audit_memory',
+                array(
+                    'input' => $TEST_TEXT,
+                    'keywords' =>'text2vec search /'.$contextKeywords,
+                    'rank_any'=> $memory[0]["distance"],
+                    'rank_all'=>$memory[0]["distance"],
+                    'memory'=>$memory[0]["summary"],
+                    'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
+                )
+            );
+            
+    
+    return $memory;
+    
+}
+
 function FastCallOAI($question) {
     
     $call["messages"]=[

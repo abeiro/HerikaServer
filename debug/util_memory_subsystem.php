@@ -17,7 +17,7 @@ if (!isset($GLOBALS["DBDRIVER"])) {
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
@@ -53,7 +53,14 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
         $db=new sql();
    
-        $res=DataSearchMemory($argv[2],'',$argv[3]);
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Using pgvector search";
+            $res=DataSearchMemoryByVector($argv[2],'');
+        }
+        else {
+            echo "Using fts search";
+            $res=DataSearchMemory($argv[2],'');
+        }
 
         print_r($res[0]);
         
@@ -61,16 +68,15 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
     } elseif ($argv[1]=="sync") {
         
-        die("Sync is disabled atm. Will be enabled (maybe) in future releases. PostgreSQL pgvector will take care :)");
-        echo "Creating memories".PHP_EOL;
+        echo "Creating vectors for memories".PHP_EOL;
         ;
         $db = new sql();
-        $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null");
+        $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null and embedding is null");
         $counter=0;
         foreach ($results as $row) {
             
             $TEST_TEXT=$row["content"];
-            storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE vecotr in memory_summary
+            storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE embedding in memory_summary
 
             $counter++;
             
