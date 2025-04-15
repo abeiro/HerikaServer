@@ -540,29 +540,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 }
 
 // Offer memory in CONTEXT 
-/*
-if (!(isset($GLOBALS["MEMORY_INJECTION_ON"]) || (!$GLOBALS["MEMORY_INJECTION_ON"]))) {
-    $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]=false;
-}
 
-$memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
-if ($memoryInjection) {
-    
-    //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
-    $memoryInjectionCtx[]= array('role' => 'user', 'content' => "#MEMORY: [$memoryInjection]");
-    $contextDataHistoric=array_merge($memoryInjectionCtx,$contextDataHistoric);
-
-    if (isset($GLOBALS["USE_MEMORY_STATEMENT_DELETE"]) && $GLOBALS["USE_MEMORY_STATEMENT_DELETE"] ) {
-        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
-    }
-    //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
-    
-} else {
-    
-    $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
-        
-}
-*/   
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
 
@@ -584,7 +562,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
-// MINIME_T5 STUFF
+// MINIME_T5 STUFF, command assiastant
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
@@ -636,7 +614,7 @@ if (sizeof($memoryInjectionCtx)>0) {
     $gameRequestCopy=$gameRequest;
     $gameRequestCopy[0]="infoaction";
     $gameRequestCopy[3]=$memoryInjectionCtx[0]["content"];
-    logEvent($gameRequestCopy);
+    logEvent($gameRequestCopy,$GLOBALS["HERIKA_NAME"]);// Memory log only avaibale to current NPC.
 }
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);

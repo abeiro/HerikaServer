@@ -20,6 +20,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
 
 
 if (!isset($argv[1])) {
@@ -113,7 +114,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 				
 				$gameRequest=["summary"];	// Fake a diary call.
 				
-				$CLFORMAT="#Summary: {summary of events and dialogues}\r\n#Tags: {list of relevant twitter-like hashtags}";
+				$CLFORMAT="#Summary: {summary of events and dialogues}\r\n#Tags: {list of relevant twitter-like hashtags, include location names, enemies names, other NPC names}";
                 IF (isset($GLOBALS["CORE_LANG"])) {
                     if ($GLOBALS["CORE_LANG"]=="es") {
                         $CLFORMAT.=" GENERA EL CONTENIDO Y LOS TAGS EN ESPAÑOL";
