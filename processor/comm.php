@@ -210,7 +210,10 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         );
         
         $db->insert('questlog',$data);
-
+        
+        // Include and call dynamicoghma.php after questlog entry
+        require_once(__DIR__.DIRECTORY_SEPARATOR."dynamicoghma.php");
+        syncQuestWithOghma($questParsedData[0], $questParsedData[3]);
     }
     $MUST_END=true;
 
