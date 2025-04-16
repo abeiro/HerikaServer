@@ -67,20 +67,22 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         
 
     } elseif ($argv[1]=="sync") {
-        
-        echo "Creating vectors for memories".PHP_EOL;
-        ;
-        $db = new sql();
-        $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null and embedding is null");
-        $counter=0;
-        foreach ($results as $row) {
-            
-            $TEST_TEXT=$row["content"];
-            storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE embedding in memory_summary
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Creating vectors for memories".PHP_EOL;
+            ;
+            $db = new sql();
+            $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null and (embedding is null or native_vec is null)");
+            $counter=0;
+            foreach ($results as $row) {
+                
+                $TEST_TEXT=$row["content"];
+                storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE embedding in memory_summary
+                $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$row["rowid"]}");
 
-            $counter++;
-            
-            echo "Updated vector for  {$row["rowid"]} $counter\n";
+                $counter++;
+                
+                echo "Updated vector for  {$row["rowid"]} $counter\n";
+            }
         }
         
 
@@ -209,7 +211,10 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."',tags='".SQLite3::escapeString($tagsCol)."' where rowid={$uq["rowid"]}");
              $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$uq["rowid"]}");
 			 // UPDATE memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(tags, '')),'B')
-    
+             if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+                $TEST_TEXT=$uq["summary"];
+                storeMemory($uq["summary"], $uq["summary"], $uq["rowid"]); // JUST UPDATE embedding in memory_summary
+             }
     
             }
             $toUpdate=[];

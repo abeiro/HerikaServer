@@ -1695,7 +1695,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
 
         $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
         $data = [
-            'text' => $TEST_TEXT." ".$contextKeywords
+            'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
         ];
 
         // Convert to JSON
@@ -1729,6 +1729,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                        embedding <-> $vectorString as distance
                 FROM public.memory_summary 
                 WHERE embedding IS NOT NULL
+                and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
                 ORDER BY embedding <-> $vectorString
                 LIMIT 5 OFFSET 0
             ");
@@ -1741,8 +1742,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                 array(
                     'input' => $TEST_TEXT,
                     'keywords' =>'text2vec search /'.$contextKeywords,
-                    'rank_any'=> $memory[0]["distance"],
-                    'rank_all'=>$memory[0]["distance"],
+                    'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
+                    'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                     'memory'=>$memory[0]["summary"],
                     'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
                 )
