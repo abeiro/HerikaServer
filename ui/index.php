@@ -1096,8 +1096,10 @@ $debugPaneLink = true;
         $pluginRepository=[];
         $pluginRepository["twitch-bot"]= array(
             "name" => "twitch-bot",
-            "description" => "Allows viewers to control AI NPC's via twitch chat",
+            "description" => "Allows viewers to control AI NPC's via twitch chat.",
             "git_repo" => "RANGROO/CHIM-Twitch-Bot",
+            "github_url" => "https://github.com/RANGROO/CHIM-Twitch-Bot",
+            "mod_download_url" => "" 
         );
 
         // Remove installed plugins from list
@@ -1117,6 +1119,8 @@ $debugPaneLink = true;
                 $name = $plugin['name'];
                 $description = $plugin['description'] ?? 'No description available';
                 $configUrl =  "/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$plugin['name']}&GITHUB_REPO={$plugin['git_repo']}";
+                $githubUrl = $plugin['github_url'] ?? '';
+                $modDownloadUrl = $plugin['mod_download_url'] ?? '';
     
                 echo '<tr>';
                 echo '<td>' . htmlspecialchars($name) . '</td>';
@@ -1124,6 +1128,12 @@ $debugPaneLink = true;
                 echo '<td>';
                 if (!empty($configUrl)) {
                     echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Install Plugin</button>';
+                    if (!empty($githubUrl)) {
+                        echo ' <button onclick="window.open(\'' . htmlspecialchars($githubUrl) . '\', \'_blank\')" class="btn-base btn-primary">GitHub</button>';
+                    }
+                    if (!empty($modDownloadUrl)) {
+                        echo ' <button onclick="window.open(\'' . htmlspecialchars($modDownloadUrl) . '\', \'_blank\')" class="btn-base btn-primary">Mod Download</button>';
+                    }
                 } else {
                     echo 'No Plugin Page';
                 }
