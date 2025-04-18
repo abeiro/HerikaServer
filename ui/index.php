@@ -1037,6 +1037,7 @@ $debugPaneLink = true;
         echo '<tr>
                 <th>Plugin</th>
                 <th>Description</th>
+                <th>Version</th>
                 <th>Plugin Menu</th>
                 <th>Delete Plugin</th>
             </tr>';
@@ -1063,12 +1064,14 @@ $debugPaneLink = true;
                 $name = $manifest['name'] ?? $folder;
                 $description = $manifest['description'] ?? 'No description available';
                 $configUrl = $manifest['config_url'] ?? '';
+                $version = $manifest['version'] ?? '';
                 
                 $installed_plugins[]=$name;
 
                 echo '<tr>';
                 echo '<td>' . htmlspecialchars($name) . '</td>';
                 echo '<td>' . htmlspecialchars($description) . '</td>';
+                echo '<td>' . htmlspecialchars($version) . '</td>';
                 echo '<td>';
                 if (!empty($configUrl)) {
                     echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Plugin Backend</button>';
@@ -1085,7 +1088,9 @@ $debugPaneLink = true;
             } else {
                 echo '<tr>';
                 echo '<td>' . htmlspecialchars($folder) . '</td>';
-                echo '<td colspan="2">No manifest.json found</td>';
+                echo '<td>No manifest.json found</td>';
+                echo '<td></td>';
+                echo '<td>No Plugin Page</td>';
                 echo '<td>' . renderDeleteButton($folder) . '</td>';
                 echo '</tr>';
             }
