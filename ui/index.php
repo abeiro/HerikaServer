@@ -1000,7 +1000,7 @@ $debugPaneLink = true;
         table {
             border-collapse: collapse;
             margin-top: 10px;
-            width: 60%;
+            width: 80%;
         }
         table th, table td {
             padding: 10px;
@@ -1032,17 +1032,7 @@ $debugPaneLink = true;
         </form>';
         echo '</div>';
     
-        // Display installed plugins in a table
-        echo '<table border="1">';
-        echo '<tr>
-                <th>Plugin</th>
-                <th>Description</th>
-                <th>Version</th>
-                <th>Plugin Menu</th>
-                <th>Delete Plugin</th>
-            </tr>';
-
-        // Add function to handle delete button display
+        // Function to handle delete button display
         function renderDeleteButton($folder, $name = null) {
             if ($folder !== 'herika_heal' && $folder !== 'time_awareness') {
                 $displayName = $name ?? $folder;
@@ -1054,7 +1044,37 @@ $debugPaneLink = true;
             return 'Cannot be deleted';
         }
 
-        $installed_plugins=[];
+        // Function to get latest GitHub release version
+        function getLatestGithubRelease($repo) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, "https://api.github.com/repos/{$repo}/releases/latest");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'CHIM-Server');
+            $output = curl_exec($ch);
+            curl_close($ch);
+            
+            if ($output) {
+                $data = json_decode($output, true);
+                if (isset($data['tag_name'])) {
+                    return trim($data['tag_name'], 'v'); // Remove 'v' prefix if present
+                }
+            }
+            return '';
+        }
+
+        $installed_plugins = [];
+
+        // Display installed plugins in a table
+        echo '<table border="1">';
+        echo '<tr>
+                <th>Plugin</th>
+                <th>Description</th>
+                <th>Current Version</th>
+                <th>Latest Version</th>
+                <th>Plugin Menu</th>
+                <th>Delete Plugin</th>
+            </tr>';
+
         // In the manifest.json exists case
         foreach ($pluginFolders as $folder) {
             $manifestPath = $pluginFoldersRoot . $folder . '/manifest.json';
@@ -1065,6 +1085,13 @@ $debugPaneLink = true;
                 $description = $manifest['description'] ?? 'No description available';
                 $configUrl = $manifest['config_url'] ?? '';
                 $version = $manifest['version'] ?? '';
+                $gitRepo = $manifest['git_repo'] ?? '';
+                
+                // Get latest version if git repo is specified
+                $latestVersion = '';
+                if (!empty($gitRepo)) {
+                    $latestVersion = getLatestGithubRelease($gitRepo);
+                }
                 
                 $installed_plugins[]=$name;
 
@@ -1072,6 +1099,14 @@ $debugPaneLink = true;
                 echo '<td>' . htmlspecialchars($name) . '</td>';
                 echo '<td>' . htmlspecialchars($description) . '</td>';
                 echo '<td>' . htmlspecialchars($version) . '</td>';
+                
+                // Display latest version with color if different from current
+                if (!empty($latestVersion) && !empty($version) && version_compare($latestVersion, $version, '>')) {
+                    echo '<td style="color: #ff4444; font-weight: bold;">' . htmlspecialchars($latestVersion) . ' <span title="Update Available">⬆️</span></td>';
+                } else {
+                    echo '<td>' . htmlspecialchars($latestVersion) . '</td>';
+                }
+                
                 echo '<td>';
                 if (!empty($configUrl)) {
                     echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Plugin Backend</button>';
@@ -1090,12 +1125,19 @@ $debugPaneLink = true;
                 echo '<td>' . htmlspecialchars($folder) . '</td>';
                 echo '<td>No manifest.json found</td>';
                 echo '<td></td>';
+                echo '<td></td>';
                 echo '<td>No Plugin Page</td>';
                 echo '<td>' . renderDeleteButton($folder) . '</td>';
                 echo '</tr>';
             }
         }
         echo '</table>';
+
+        // Add the "CHIM Plugins" title
+        echo '<br>';
+        echo '<div style="display: flex; align-items: center; margin-top: 20px;">';
+        echo '<h1 style="margin-right: 10px;">CHIM Plugins Repository</h1>';
+        echo '</div>';
 
         // Plugin repo
         $pluginRepository=[];
@@ -1107,11 +1149,6 @@ $debugPaneLink = true;
             "mod_download_url" => "" 
         );
 
-        // Remove installed plugins from list
-        foreach ($installed_plugins as $pluginKey) {
-            unset($pluginRepository[$pluginKey]);
-        }
-
         echo '<table border="1">';
         echo '<tr>
                 <th>Plugin</th>
@@ -1120,44 +1157,33 @@ $debugPaneLink = true;
             </tr>';
 
         foreach ($pluginRepository as $plugin) {
-            
-                $name = $plugin['name'];
-                $description = $plugin['description'] ?? 'No description available';
-                $configUrl =  "/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$plugin['name']}&GITHUB_REPO={$plugin['git_repo']}";
-                $githubUrl = $plugin['github_url'] ?? '';
-                $modDownloadUrl = $plugin['mod_download_url'] ?? '';
-    
-                echo '<tr>';
-                echo '<td>' . htmlspecialchars($name) . '</td>';
-                echo '<td>' . htmlspecialchars($description) . '</td>';
-                echo '<td>';
-                if (!empty($configUrl)) {
-                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Install Plugin</button>';
-                    if (!empty($githubUrl)) {
-                        echo ' <button onclick="window.open(\'' . htmlspecialchars($githubUrl) . '\', \'_blank\')" class="btn-base btn-primary">GitHub</button>';
-                    }
-                    if (!empty($modDownloadUrl)) {
-                        echo ' <button onclick="window.open(\'' . htmlspecialchars($modDownloadUrl) . '\', \'_blank\')" class="btn-base btn-primary">Mod Download</button>';
-                    }
-                } else {
-                    echo 'No Plugin Page';
-                }
+            $name = $plugin['name'];
+            $description = $plugin['description'] ?? 'No description available';
+            $configUrl = "/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$plugin['name']}&GITHUB_REPO={$plugin['git_repo']}";
+            $githubUrl = $plugin['github_url'] ?? '';
+            $modDownloadUrl = $plugin['mod_download_url'] ?? '';
+            $isInstalled = in_array($name, $installed_plugins);
 
-                echo '</td>';
-                echo '</tr>';
-
+            echo '<tr>';
+            echo '<td>' . htmlspecialchars($name) . '</td>';
+            echo '<td>' . htmlspecialchars($description) . '</td>';
+            echo '<td>';
+            if ($isInstalled) {
+                echo '<button class="btn-base" disabled style="opacity: 0.6;">Already Installed</button>';
+            } else {
+                echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Install Plugin</button>';
+            }
+            if (!empty($githubUrl)) {
+                echo ' <button onclick="window.open(\'' . htmlspecialchars($githubUrl) . '\', \'_blank\')" class="btn-base btn-primary">GitHub</button>';
+            }
+            if (!empty($modDownloadUrl)) {
+                echo ' <button onclick="window.open(\'' . htmlspecialchars($modDownloadUrl) . '\', \'_blank\')" class="btn-base btn-primary">Mod Download</button>';
+            }
+            echo '</td>';
+            echo '</tr>';
         }
         echo '</table>';
 
-
-
-    
-        // Add the "CHIM Plugins" title
-        echo '<br>';
-        echo '<div style="display: flex; align-items: center; margin-top: 20px;">';
-        echo '<h1 style="margin-right: 10px;">CHIM Plugins Repository</h1>';
-        echo '</div>';
-    
         // Add basic information paragraph
         echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
         echo '<ul>';
