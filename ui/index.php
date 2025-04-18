@@ -1138,12 +1138,13 @@ $debugPaneLink = true;
         echo '<div style="display: flex; align-items: center; margin-top: 20px;">';
         echo '<h1 style="margin-right: 10px;">CHIM Plugins Repository</h1>';
         echo '</div>';
+        echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
 
         // Plugin repo
         $pluginRepository=[];
         $pluginRepository["twitch-bot"]= array(
             "name" => "twitch-bot",
-            "description" => "Allows viewers to control AI NPC's via twitch chat.",
+            "description" => "Allows viewers to control AI NPC's via Twitch chat.",
             "git_repo" => "RANGROO/CHIM-Twitch-Bot",
             "github_url" => "https://github.com/RANGROO/CHIM-Twitch-Bot",
             "mod_download_url" => "" 
@@ -1185,7 +1186,6 @@ $debugPaneLink = true;
         echo '</table>';
 
         // Add basic information paragraph
-        echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
         echo '<ul>';
         echo '<li>Download a plugin by clicking the <b>[Download PLUGIN NAME]</b> button.</li>';
         echo '<li>Click the associated <b>[Mod Download]</b> button for the plugin. Install it with your mod manager of choice.</li>';
@@ -1231,13 +1231,8 @@ $debugPaneLink = true;
     
         echo '</tr></table>';
         echo '<br>';
-        echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
-        echo '<p>Making a plugin will allow your mod events and actions to be seen by the AI NPCs.</p>';
-        echo '<p>You can even add scripted events that can be triggered by the AI.</p>';
-        echo '';
-        echo '<p>The herika_heal plugin provides an example of how our API works. Open Server Folder, under /ext.</p>';
-        echo '<p>Here is a link to the <a href="https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files" target="_blank">herika_heal example .ESP file (Optional Files)</a></p>';
-        echo '<button type="button" class="btn-primary" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
+        echo '<p>You can make your own plugin quite easily!</p>';
+        echo '<p><a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.f3vzr9prl1d6" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
         echo '</body>';
     }
 
