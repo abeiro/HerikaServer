@@ -37,9 +37,14 @@ function insertNoise($inputString, $noiseArray) {
     return implode(' ', $words);
 }
 
+function normalize_endpoint_url($url) {
+    // Remove trailing slashes
+    $url = rtrim($url, '/');
+    return $url;
+}
 
 function xtts_fastapi_settings($settings) {
-	$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/set_tts_settings';
+	$url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]).'/set_tts_settings';
 	$data = json_decode('{
 		"stream_chunk_size": 20,
 		"temperature": 0.9,
@@ -125,7 +130,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		
 	    $starTime = microtime(true);
 
-		$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]."/tts_to_audio/";
+		$url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])."/tts_to_audio";
 
 		// Request headers
 		$headers = array(
