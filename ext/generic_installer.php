@@ -3,6 +3,77 @@ ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
+/*******************************************************************************
+ * CHIM Plugin Database Migration System
+ * ===================================
+ * 
+ * This installer includes an automatic database migration system for plugins.
+ * It allows plugins to manage their own database schemas and updates safely.
+ * 
+ * How to Use Migrations in Your Plugin:
+ * -----------------------------------
+ * 1. Create a 'migrations' directory in your plugin's root folder:
+ *    my_plugin/
+ *    ├── migrations/
+ *    ├── manifest.json
+ *    └── other files...
+ * 
+ * 2. Add SQL migration files in the migrations directory:
+ *    - Name files with a numeric prefix for ordering
+ *    - Use .sql extension
+ *    - Example names:
+ *      001_initial_schema.sql
+ *      002_add_indexes.sql
+ *      003_add_new_feature.sql
+ * 
+ * 3. Write your SQL migrations:
+ *    -- Example migration file (001_initial_schema.sql):
+ *    CREATE TABLE IF NOT EXISTS my_plugin_data (
+ *        id SERIAL PRIMARY KEY,
+ *        name VARCHAR(255) NOT NULL,
+ *        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ *    );
+ * 
+ * How It Works:
+ * ------------
+ * 1. During plugin installation/update, the system:
+ *    - Checks for a 'migrations' directory
+ *    - Creates plugin_migrations table if it doesn't exist
+ *    - Reads all .sql files in the migrations directory
+ *    - Executes migrations in alphabetical order
+ * 
+ * 2. Migration tracking:
+ *    - Each executed migration is recorded in plugin_migrations table
+ *    - Migrations are tracked per plugin
+ *    - Migrations only run once, even on reinstall
+ * 
+ * Best Practices:
+ * -------------
+ * 1. Always use IF EXISTS/IF NOT EXISTS in your DDL statements
+ * 2. Make migrations idempotent (safe to run multiple times)
+ * 3. Never modify existing migration files after release
+ * 4. Add new migrations for schema changes
+ * 5. Use descriptive names for migration files
+ * 6. Test migrations on a development database first
+ * 
+ * Example Migration Files:
+ * ----------------------
+ * -- 001_initial_schema.sql
+ * CREATE TABLE IF NOT EXISTS my_plugin_users (
+ *     id SERIAL PRIMARY KEY,
+ *     username VARCHAR(255) NOT NULL
+ * );
+ * 
+ * -- 002_add_email_field.sql
+ * ALTER TABLE my_plugin_users 
+ * ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ * 
+ * -- 003_add_indexes.sql
+ * CREATE INDEX IF NOT EXISTS idx_username 
+ * ON my_plugin_users(username);
+ * 
+ ******************************************************************************/
+
 // Global configuration
 
 $PACKAGE_NAME = $_GET["PACKAGE_NAME"];
@@ -10,6 +81,116 @@ $GITHUB_REPO = $_GET["GITHUB_REPO"];
 $DOWNLOAD_URL = "https://github.com/" . $GITHUB_REPO . "/releases/latest/download/" . $PACKAGE_NAME . ".tar.gz";
 $TARGET_DIR = __DIR__ . "/" . $PACKAGE_NAME;
 $TEMP_DIR = "/tmp/";
+
+// Database configuration
+$DB_CONFIG = [
+    'host' => 'localhost',
+    'port' => '5432',
+    'dbname' => 'dwemer',
+    'schema' => 'public',
+    'username' => 'dwemer',
+    'password' => 'dwemer'
+];
+
+/**
+ * Establishes a database connection
+ * 
+ * @return resource|false PostgreSQL connection resource or false on failure
+ */
+function connectToDatabase() {
+    global $DB_CONFIG;
+    
+    $connStr = sprintf(
+        "host=%s port=%s dbname=%s user=%s password=%s",
+        $DB_CONFIG['host'],
+        $DB_CONFIG['port'],
+        $DB_CONFIG['dbname'],
+        $DB_CONFIG['username'],
+        $DB_CONFIG['password']
+    );
+    
+    $conn = pg_connect($connStr);
+    if (!$conn) {
+        throw new Exception("Failed to connect to database: " . pg_last_error());
+    }
+    return $conn;
+}
+
+/**
+ * Runs database migrations for a plugin
+ * 
+ * @param string $targetDir Directory containing the plugin
+ * @return bool True if migrations were successful, false otherwise
+ */
+function runDatabaseMigrations($targetDir) {
+    $migrationsDir = $targetDir . "/migrations";
+    if (!is_dir($migrationsDir)) {
+        echo "No migrations directory found, skipping database migrations.\n";
+        return true;
+    }
+
+    try {
+        $conn = connectToDatabase();
+        
+        // Create migrations table if it doesn't exist
+        $createTableSql = "
+            CREATE TABLE IF NOT EXISTS plugin_migrations (
+                plugin_name VARCHAR(255),
+                migration_name VARCHAR(255),
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (plugin_name, migration_name)
+            )
+        ";
+        pg_query($conn, $createTableSql);
+
+        // Get list of migration files
+        $migrations = glob($migrationsDir . "/*.sql");
+        if (empty($migrations)) {
+            echo "No migration files found in $migrationsDir\n";
+            return true;
+        }
+
+        // Sort migrations by filename
+        sort($migrations);
+        
+        global $PACKAGE_NAME;
+        foreach ($migrations as $migrationFile) {
+            $migrationName = basename($migrationFile);
+            
+            // Check if migration has been executed
+            $checkSql = "
+                SELECT 1 FROM plugin_migrations 
+                WHERE plugin_name = $1 AND migration_name = $2
+            ";
+            $result = pg_query_params($conn, $checkSql, [$PACKAGE_NAME, $migrationName]);
+            
+            if (pg_num_rows($result) === 0) {
+                echo "Running migration: $migrationName\n";
+                
+                // Read and execute migration file
+                $sql = file_get_contents($migrationFile);
+                pg_query($conn, $sql);
+                
+                // Record migration
+                $recordSql = "
+                    INSERT INTO plugin_migrations (plugin_name, migration_name)
+                    VALUES ($1, $2)
+                ";
+                pg_query_params($conn, $recordSql, [$PACKAGE_NAME, $migrationName]);
+                
+                echo "Migration completed: $migrationName\n";
+            } else {
+                echo "Skipping already executed migration: $migrationName\n";
+            }
+        }
+        
+        pg_close($conn);
+        return true;
+    } catch (Exception $e) {
+        echo "Error running migrations: " . $e->getMessage() . "\n";
+        return false;
+    }
+}
 
 /**
  * Ensures the target directory exists and is writable
@@ -179,6 +360,12 @@ function installPackage($downloadUrl, $targetDir, $tempDir, $packageName) {
         
         if ($extractStatus !== 0) {
             throw new Exception("Failed to extract archive. Command returned status: " . $extractStatus);
+        }
+
+        // Run database migrations if they exist
+        echo "Checking for database migrations...\n";
+        if (!runDatabaseMigrations($targetDir)) {
+            throw new Exception("Failed to run database migrations");
         }
 
         // Install dependencies if composer.json exists
