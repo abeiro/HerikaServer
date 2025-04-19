@@ -66,14 +66,13 @@ function checkLocalVersion($targetDir) {
 }
 
 /**
- * Gets the latest version from GitHub
+ * Gets the latest version from GitHub by checking manifest.json
  * 
  * @param string $githubRepo Repository in format owner/repo
  * @return string|false Returns version string or false on failure
- * uses release name for version control.
  */
 function getRemoteVersion($githubRepo) {
-    $apiUrl = "https://api.github.com/repos/" . $githubRepo . "/releases/latest";
+    $apiUrl = "https://api.github.com/repos/" . $githubRepo . "/contents/manifest.json";
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $apiUrl);
@@ -96,7 +95,15 @@ function getRemoteVersion($githubRepo) {
         return false;
     }
     
-    return $data['tag_name'];
+    // GitHub API returns file content as base64 encoded
+    $manifestContent = base64_decode($data['content']);
+    $manifest = json_decode($manifestContent, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE || !isset($manifest['version'])) {
+        return false;
+    }
+    
+    return $manifest['version'];
 }
 
 /**
