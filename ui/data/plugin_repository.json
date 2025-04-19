@@ -1,0 +1,11 @@
+{
+    "plugins": {
+        "twitch-bot": {
+            "name": "twitch-bot",
+            "description": "Allows viewers to control AI NPC's via Twitch chat.",
+            "git_repo": "RANGROO/CHIM-Twitch-Bot",
+            "github_url": "https://github.com/RANGROO/CHIM-Twitch-Bot",
+            "mod_download_url": ""
+        }
+    }
+} 

@@ -1149,15 +1149,16 @@ $debugPaneLink = true;
         echo '</div>';
         echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
 
-        // Plugin repo
-        $pluginRepository=[];
-        $pluginRepository["twitch-bot"]= array(
-            "name" => "twitch-bot",
-            "description" => "Allows viewers to control AI NPC's via Twitch chat.",
-            "git_repo" => "RANGROO/CHIM-Twitch-Bot",
-            "github_url" => "https://github.com/RANGROO/CHIM-Twitch-Bot",
-            "mod_download_url" => "" 
-        );
+        // Load plugin repository data from JSON file
+        $pluginRepositoryFile = __DIR__ . '/data/plugin_repository.json';
+        $pluginRepository = [];
+        
+        if (file_exists($pluginRepositoryFile)) {
+            $jsonData = json_decode(file_get_contents($pluginRepositoryFile), true);
+            if ($jsonData && isset($jsonData['plugins'])) {
+                $pluginRepository = $jsonData['plugins'];
+            }
+        }
 
         echo '<table border="1">';
         echo '<tr>
