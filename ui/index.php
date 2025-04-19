@@ -1047,16 +1047,25 @@ $debugPaneLink = true;
         // Function to get latest GitHub release version
         function getLatestGithubRelease($repo) {
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "https://api.github.com/repos/{$repo}/releases/latest");
+            curl_setopt($ch, CURLOPT_URL, "https://api.github.com/repos/{$repo}/contents/manifest.json");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_USERAGENT, 'CHIM-Server');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: application/vnd.github.v3+json'
+            ]);
             $output = curl_exec($ch);
             curl_close($ch);
             
             if ($output) {
                 $data = json_decode($output, true);
-                if (isset($data['tag_name'])) {
-                    return trim($data['tag_name'], 'v'); // Remove 'v' prefix if present
+                if (isset($data['content'])) {
+                    // GitHub API returns file content as base64 encoded
+                    $manifestContent = base64_decode($data['content']);
+                    $manifest = json_decode($manifestContent, true);
+                    
+                    if ($manifest && isset($manifest['version'])) {
+                        return $manifest['version'];
+                    }
                 }
             }
             return '';
@@ -1109,7 +1118,7 @@ $debugPaneLink = true;
                 
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Plugin Backend</button>';
+                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-primary">Plugin Page</button>';
                     if (isset($manifest['schema_version']) && $manifest['schema_version']==2) {
                         echo '<button onclick="window.open(\'' . htmlspecialchars("/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$manifest['name']}&GITHUB_REPO={$manifest['git_repo']}") . '\', \'_blank\')" class="btn-base btn-save">Update plugin</button>';
                     }
@@ -1140,15 +1149,16 @@ $debugPaneLink = true;
         echo '</div>';
         echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
 
-        // Plugin repo
-        $pluginRepository=[];
-        $pluginRepository["twitch-bot"]= array(
-            "name" => "twitch-bot",
-            "description" => "Allows viewers to control AI NPC's via Twitch chat.",
-            "git_repo" => "RANGROO/CHIM-Twitch-Bot",
-            "github_url" => "https://github.com/RANGROO/CHIM-Twitch-Bot",
-            "mod_download_url" => "" 
-        );
+        // Load plugin repository data from JSON file
+        $pluginRepositoryFile = __DIR__ . '/data/plugin_repository.json';
+        $pluginRepository = [];
+        
+        if (file_exists($pluginRepositoryFile)) {
+            $jsonData = json_decode(file_get_contents($pluginRepositoryFile), true);
+            if ($jsonData && isset($jsonData['plugins'])) {
+                $pluginRepository = $jsonData['plugins'];
+            }
+        }
 
         echo '<table border="1">';
         echo '<tr>
