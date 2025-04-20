@@ -60,6 +60,10 @@ class sql {
     public function execQuery($query) {
         return pg_query($this->conn, $query);
     }
+
+    public function escape($str) {
+        return pg_escape_string($this->conn, $str);
+    }
 }
 
 $db = new sql();
@@ -115,15 +119,19 @@ function render_widget($title, $content, $type = 'default', $options = []) {
 function fetch_widget_stats($conn, $query, $options = []) {
     $result = pg_query($conn, $query);
     if (!$result) {
+        error_log("Database query error: " . pg_last_error($conn));
         return ['error' => pg_last_error($conn)];
     }
     
     $stats = [];
     while ($row = pg_fetch_assoc($result)) {
-        $stats[] = $row;
+        if ($row !== false) {  // Check if row is valid
+            $stats[] = $row;
+        }
     }
     
-    return $stats;
+    // If no rows were found, return an empty array instead of false
+    return !empty($stats) ? $stats : [];
 }
 
 // Start output buffering
@@ -587,21 +595,20 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 // Get quest information
                 // First check if quests table exists and has data
                 $questsCheck = fetch_widget_stats($conn, "
-                    SELECT COUNT(*) as count
-                    FROM {$schema}.quests
-                ");
+                    SELECT EXISTS (
+                        SELECT 1 
+                        FROM information_schema.tables 
+                        WHERE table_schema = '{$schema}' 
+                        AND table_name = 'quests'
+                    ) as table_exists"
+                );
                 
-                error_log("Quests table check: " . print_r($questsCheck, true));
-                
-                if (!isset($questsCheck['error']) && isset($questsCheck[0]['count'])) {
+                if (!isset($questsCheck['error']) && !empty($questsCheck) && isset($questsCheck[0]['table_exists']) && $questsCheck[0]['table_exists'] === 't') {
                     $questTable = fetch_widget_stats($conn, "
                         SELECT name as quest_name, briefing
                         FROM {$schema}.quests
                         ORDER BY name
                     ");
-                    
-                    // Debug logging for quests
-                    error_log("Quests Query Results: " . print_r($questTable, true));
                     
                     $questsContent = "<div class='quest-list'>
                         <h4>Current Quests</h4>
@@ -609,22 +616,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <tr><th>Quest Name</th><th>Briefing</th></tr>";
                     
                     if (!isset($questTable['error']) && !empty($questTable)) {
-                        error_log("Found " . count($questTable) . " quests");
                         foreach ($questTable as $quest) {
-                            error_log("Processing quest: " . print_r($quest, true));
                             $questsContent .= "<tr>
                                 <td>" . htmlspecialchars($quest['quest_name']) . "</td>
                                 <td>" . htmlspecialchars($quest['briefing']) . "</td>
                             </tr>";
                         }
                     } else {
-                        error_log("No quests found or error: " . print_r($questTable, true));
                         $questsContent .= "<tr><td colspan='2' style='text-align: center;'>No active quests</td></tr>";
                     }
                     
                     $questsContent .= "</table></div>";
                 } else {
-                    error_log("Quests table check error: " . print_r($questsCheck, true));
                     $questsContent = "<div class='quest-list'>
                         <h4>Current Quests</h4>
                         <table class='widget-table'>
@@ -686,14 +689,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <tr>
                                 <td>Current In-Game Time</td>
                                 <td>{$inGameTime}</td>
-                            </tr>
-                            <tr>
-                                <td>Tamrielic Days Elapsed</td>
-                                <td>{$totalTimeElapsed}</td>
-                            </tr>
-                            <tr>
-                                <td>Real Time Elapsed</td>
-                                <td>{$realTimeElapsedStr}</td>
                             </tr>
                         </table>
                     </div>
@@ -959,6 +954,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     SELECT data
                     FROM {$schema}.eventlog 
                     WHERE type = 'chat'
+                    ORDER BY localts DESC
+                    LIMIT 10000
                 ");
 
                 if (!isset($generalStats['error']) && !empty($generalStats)) {
@@ -1029,7 +1026,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         return ['text' => $word, 'size' => log($count * 5) * 8 + 20, 'count' => $count];
                     }, array_keys($wordFrequencies), array_values($wordFrequencies));
 
-                    echo render_widget('Most Used Words', "
+                    echo render_widget('Recent Most Used Words', "
                         <script src='https://d3js.org/d3.v7.min.js'></script>
                         <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
                         <div class='word-cloud-container'>

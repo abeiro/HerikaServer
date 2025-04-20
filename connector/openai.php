@@ -18,7 +18,18 @@ class openai
     private $_stopProc;
     private $_buffer;
     private $_is_groq_com;
-
+    private $_is_nanogpt_com;
+    private $_is_x_ai;
+    private $_is_mistral_ai;
+    private $_is_streaming;
+    private $_is_reasoning;
+    private $_use_tools;
+    private $_model;
+    private $_url;
+    private $_remove_cot;
+    private $_cot_tag_base;
+    private $_output_buffer; 
+    private $_timeout;
 
 
     public function __construct()
@@ -26,16 +37,85 @@ class openai
         $this->name="openai";
         $this->_commandBuffer=[];
         $this->_stopProc=false;
-
+        $this->_is_groq_com=false;
+        $this->_is_nanogpt_com=false;
+        $this->_is_x_ai=false;
+        $this->_is_mistral_ai=false;
+        $this->_is_streaming=true;
+        $this->_is_reasoning=false;
+        $this->_use_tools=true;
+        $this->_model="";
+        $this->_url="";
+        $this->_remove_cot=true;
+        $this->_cot_tag_base="think";
+        $this->_output_buffer="";
+        $this->_timeout=30;
     }
 
+    private function isReasoningModel($s_model) {
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            $i_pos = stripos($s_model, "deepseek-r");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-32b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-max");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "aion-1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "grok-3-mini");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, ":thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-reasoning");
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+    private function init_connector() {
+        $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
+        if (strlen($this->_url) < 6)
+            Logger::error("{$this->name} connector - missing url!");
+
+        $this->_use_tools = (isset($GLOBALS["CONNECTOR"][$this->name]["use_tools"])) ? $GLOBALS["CONNECTOR"][$this->name]["use_tools"] : true;
+        $this->_remove_cot = (isset($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"])) ? $GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] : true;
+
+        $default_model = 'gpt-4o-mini';
+
+        $this->_is_groq_com = (stripos($this->_url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
+        if ($this->_is_groq_com) {
+            $default_model = 'meta-llama/llama-4-scout-17b-16e-instruct';
+            $this->_use_tools = false; 
+            $this->_remove_cot = false; // no need to clean output, reasoning models on groq won't output CoT if parameter reasoning_format = hidden
+        } else {
+            $this->_is_nanogpt_com = (stripos($this->_url, "nano-gpt.com") > 0 ); //https://nano-gpt.com/api/v1/chat/completions
+            if ($this->_is_nanogpt_com) {    
+                $default_model = 'meta-llama/llama-4-scout';
+            } else {
+                $this->_is_x_ai = (stripos($this->_url, "x.ai") > 0 ); // https://api.x.ai/v1/chat/completions
+                if ($this->_is_x_ai) {    
+                    $default_model = 'grok-3-mini-beta';
+                } else {
+                    $this->_is_mistral_ai = (stripos($this->_url, "mistral.ai") > 0 ); //https://api.mistral.ai/v1/chat/completions
+                    if ($this->_is_mistral_ai)    
+                        $default_model = 'mistral-small-latest';
+                }
+            }
+        }
+
+        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : $default_model;
+        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+        $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
+    }
 
     public function open($contextData, $customParms)
     {
-        $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
-        $this->_is_groq_com = (strpos($url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
+        $this->init_connector();
 
-        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+        $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
 
 
@@ -149,80 +229,69 @@ class openai
         if ($top_p > 1) $top_p = 1.0;
         else if ($top_p < 0.0) $top_p = 0.0; 
 
+        $data = array(
+            'model' => $this->_model,
+            'messages' => $contextData,
+            'stream' => $this->_is_streaming, 
+            'max_completion_tokens' => $MAX_TOKENS,
+            'temperature' => $temperature, 
+            'top_p' => $top_p, 
+            'presence_penalty' => $presence_penalty, 
+            'frequency_penalty' => $frequency_penalty 
+        );
 
-        if ($this->_is_groq_com) { // --- exception made for groq.com
+        if ($this->_is_groq_com) { // --- exception made for groq.com provider
             // this sequence send only content for chat completion
 
-            if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
+            if ($temperature < 0.000001) {
+                $temperature = 0.000001; // groq.com want temperature > 1e-8, never 0.0
+                $data['temperature'] = $temperature;
+            }
 
-            $data = array( 
-                'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'llama-3.3-70b-versatile', 
-                'messages' => $contextData, 
-                'stream' => true, 
-                'max_completion_tokens'=> $MAX_TOKENS,  
-                'temperature' => $temperature, 
-                'top_p' => $top_p, 
-                'presence_penalty' => $presence_penalty, 
-                'frequency_penalty' => $frequency_penalty 
-            );
-                
-            if (!(stripos($data["model"],"deepseek-r1") === false)) { 
-            /*  deepseek r1 need "reasoning_format" parameter: 
+            if ($this->_is_reasoning) { 
+            /*  a reasoning model need "reasoning_format" parameter: 
                 parsed  - Separates reasoning into a dedicated field while keeping the response concise.
                 raw     - Includes reasoning within <think> tags in the content.
                 hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
                 $data['reasoning_format'] = "hidden";  
-                //error_log(" deepseek-r1: " . print_r($data,false));
             }
-
-            if (isset($customParms["MAX_TOKENS"])) {
-                if ($customParms["MAX_TOKENS"]==0) {
-                    unset($data["max_completion_tokens"]); 
-                } elseif (isset($customParms["MAX_TOKENS"])) {
-                    $data["max_completion_tokens"]=$customParms["MAX_TOKENS"]+0;
-                }
-            }
-
-            if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-                if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                    unset($data["max_completion_tokens"]);
-                } else
-                    $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
-            }
-            
+           
         } else { // --- normal flow (not groq)
 
-            $data = array(
-                'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini',
-                'messages' =>
-                    $contextData,
-                'stream' => true,
-                'max_completion_tokens'=>$MAX_TOKENS,
-                'temperature' => $temperature, 
-                'top_p' => $top_p 
-            );
+            if ($this->_is_x_ai) {
+                unset($data["presence_penalty"]); 
+                unset($data["frequency_penalty"]);
+                
+            } elseif ($this->_is_mistral_ai) {
+                unset($data["presence_penalty"]); 
+                unset($data["frequency_penalty"]);
+            } 
 
-            // Mistral AI API does not support penalty params
-            if (strpos($url, "mistral") === false) {
-                $data["presence_penalty"]=$presence_penalty; 
-                $data["frequency_penalty"]=$frequency_penalty;
+            if (($this->_is_reasoning) && (!$this->_is_mistral_ai)) { // there is no rule accepted by all providers
+                $data["chat_format"]="tidy"; 
+                $data["reasoning_effort"] = "low";
+                $data['reasoning_format'] = "hidden"; 
             }
 
-            if (isset($customParms["MAX_TOKENS"])) {
-                if ($customParms["MAX_TOKENS"]==0) {
-                    unset($data["max_completion_tokens"]);
-                } elseif (isset($customParms["MAX_TOKENS"])) {
-                    $data["max_completion_tokens"]=$customParms["MAX_TOKENS"]+0;
-                }
-            }
+        } // --- endif provider
 
-            if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-                if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                    unset($data["max_completion_tokens"]);
-                } else
-                    $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
+        if (isset($customParms["MAX_TOKENS"])) {
+            if ($customParms["MAX_TOKENS"]==0) {
+                unset($data["max_completion_tokens"]); 
+            } elseif (isset($customParms["MAX_TOKENS"])) {
+                $data["max_completion_tokens"]=intval($customParms["MAX_TOKENS"]);
             }
+        }
 
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
+                unset($data["max_completion_tokens"]);
+            } else
+                $data["max_completion_tokens"]=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
+
+        if ($this->_use_tools) 
+        {
             if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                 foreach ($GLOBALS["FUNCTIONS"] as $function)
                     $data["tools"][]=["type"=>"function","function"=>$function];
@@ -230,13 +299,11 @@ class openai
                     $data["tool_choice"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
                 }
             }
+        }
 
-        } // --- endif groq
-
-        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_rray($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;
-
             }
         }
 
@@ -252,7 +319,7 @@ class openai
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout
             )
         );
 
@@ -261,7 +328,7 @@ class openai
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
                 
-        $this->primary_handler = fopen($url, 'r', false, $context);
+        $this->primary_handler = fopen($this->_url, 'r', false, $context);
         if (!$this->primary_handler) {
             Logger::error(print_r(error_get_last(),true));
             return null;
@@ -275,6 +342,69 @@ class openai
 
     }
 
+    private function removeChainOfThought($content) { 
+    // remove content between CoT tags
+        if (($this->_is_reasoning) && ($this->_remove_cot)) {
+            $this->_output_buffer .= $content; // collect content in a buffer
+
+            $crt_pos = 0;
+            $inside_cot = false;
+            $clean_buffer = "";
+            $this->_cot_tag_base="think";
+            $cot_tag = "<{$this->_cot_tag_base}>";
+            $cot_end_tag = "</{$this->_cot_tag_base}>";
+            
+            while (true) {
+                if (!$inside_cot) {
+                    // CoT opening tag could be <think> <thinking> or <reasoning>
+                    $cot_start = stripos($this->_output_buffer, $cot_tag, $crt_pos);
+                    if ($cot_start === false) {
+                        $cot_start = stripos($this->_output_buffer, "<thinking>", $crt_pos);
+                        if ($cot_start === false) {
+                            $cot_start = stripos($this->_output_buffer, "<reasoning>", $crt_pos);
+                            if ($cot_start === false) { // No CoT tags
+                                $clean_buffer .= substr($this->_output_buffer, $crt_pos);
+                                break;
+                            } else {
+                                $this->_cot_tag_base="reasoning";
+                                $cot_tag = "<reasoning>";
+                                $cot_end_tag = "</reasoning>";
+                            }
+                        } else {
+                            $this->_cot_tag_base="thinking";
+                            $cot_tag = "<thinking>";
+                            $cot_end_tag = "</thinking>";
+                        }
+                    }
+                    $cot_tag_len = strlen($cot_tag);
+
+                    // add content before the tag
+                    $clean_buffer .= substr($this->_output_buffer, $crt_pos, ($cot_start - $crt_pos));
+                    $crt_pos = $cot_start + $cot_tag_len; // move past CoT start tag
+                    $inside_cot = true;
+                } else {
+                    // check CoT closing tag
+                    $think_end = stripos($this->_output_buffer, $cot_end_tag, $crt_pos);
+                    if ($think_end === false) {
+                        // closing tag not found yet - need more chunks
+                        break;
+                    }
+                    // skip content between tags
+                    $crt_pos = $think_end + ($cot_tag_len + 1); // move past CoT end tag </...>
+                    $inside_cot = false;
+                }
+            }
+
+            if (!$inside_cot) { // if we've processed everything and nothing more is held in buffer
+                $this->_output_buffer = ""; // reset buffer if we've processed all complete tags
+                return $clean_buffer;
+            }
+            
+            return ""; // if still inside CoT tag or haven't completed processing, return empty and wait for more chunks
+        }
+
+        return $content; // not a reasoning model, return content w/o processing
+    }
 
     public function process()
     {
@@ -291,13 +421,14 @@ class openai
         $data=json_decode(substr($line, 6), true);
         if (isset($data["choices"][0]["delta"]["content"])) {
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
-                $buffer.=$data["choices"][0]["delta"]["content"];
-                $this->_numOutputTokens += 1;
-                $this->_buffer.=$buffer;
-
+                $clean_content = $this->removeChainOfThought($data["choices"][0]["delta"]["content"]); // remove CoT tags and thinking content
+                if (strlen($clean_content) > 0) {
+                    $buffer .= $clean_content;
+                    $this->_numOutputTokens += 1;
+                    $this->_buffer .= $clean_content;
+                }
             }
             $totalBuffer.=$data["choices"][0]["delta"]["content"];
-
         }
 
        
@@ -349,7 +480,17 @@ class openai
 
         }
 
-
+        // process any remaining reasoning content on stream completion
+        if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
+            if (!empty($this->_output_buffer)) {
+                $clean_remain = $this->removeChainOfThought("");
+                if (!empty($clean_remain)) {
+                    $buffer .= $clean_remain;
+                    $this->_buffer .= $clean_remain;
+                }
+                $this->_output_buffer = ""; // clear the buffer
+            }
+        }
 
         return $buffer;
     }
@@ -357,6 +498,15 @@ class openai
     // Method to close the data processing operation
     public function close()
     {
+        // process any remaining content in the reasoning buffer before closing
+        if ($this->_is_reasoning && !empty($this->_output_buffer)) {
+            // need another pass to clean up any remaining CoT tags
+            $pattern = '/<{$this->_cot_tag_base}>.*?<\/{$this->_cot_tag_base}>/is';
+            $cleaned_buffer = preg_replace($pattern, '', $this->_output_buffer);
+            $this->_buffer .= $cleaned_buffer;
+            $this->_output_buffer = "";
+        }
+        
         file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
 
         fclose($this->primary_handler);

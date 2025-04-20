@@ -854,7 +854,7 @@ $debugPaneLink = true;
                     <span class='summary-content'>" . htmlspecialchars($row['tags']) . "</span>
                 </div>
                 <div class='summary-section'>
-                    <span class='summary-label'>Companions:</span>
+                    <span class='summary-label'>People:</span>
                     <span class='summary-content'>" . htmlspecialchars($row['companions']) . "</span>
                 </div>
                 <div class='button-group' style='margin-top: 10px;'>
@@ -877,7 +877,7 @@ $debugPaneLink = true;
                 <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['summary']) . "</textarea>
                 <label>Tags:</label>
                 <input type='text' name='tags' class='edit-input form-control' value='" . htmlspecialchars($row['tags']) . "'>
-                <label>Companions:</label>
+                <label>People:</label>
                 <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions']) . "'>
                 <div class='button-group' style='margin-top: 10px;'>
                     <button type='submit' class='btn-base action-button add-new'>Save</button>
@@ -1000,7 +1000,7 @@ $debugPaneLink = true;
         table {
             border-collapse: collapse;
             margin-top: 10px;
-            width: 60%;
+            width: 80%;
         }
         table th, table td {
             padding: 10px;
@@ -1032,16 +1032,7 @@ $debugPaneLink = true;
         </form>';
         echo '</div>';
     
-        // Display installed plugins in a table
-        echo '<table border="1">';
-        echo '<tr>
-                <th>Plugin</th>
-                <th>Description</th>
-                <th>Plugin Menu</th>
-                <th>Delete Plugin</th>
-            </tr>';
-
-        // Add function to handle delete button display
+        // Function to handle delete button display
         function renderDeleteButton($folder, $name = null) {
             if ($folder !== 'herika_heal' && $folder !== 'time_awareness') {
                 $displayName = $name ?? $folder;
@@ -1053,45 +1044,158 @@ $debugPaneLink = true;
             return 'Cannot be deleted';
         }
 
+        // Function to get latest GitHub release version
+        function getLatestGithubRelease($repo) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, "https://api.github.com/repos/{$repo}/contents/manifest.json");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'CHIM-Server');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: application/vnd.github.v3+json'
+            ]);
+            $output = curl_exec($ch);
+            curl_close($ch);
+            
+            if ($output) {
+                $data = json_decode($output, true);
+                if (isset($data['content'])) {
+                    // GitHub API returns file content as base64 encoded
+                    $manifestContent = base64_decode($data['content']);
+                    $manifest = json_decode($manifestContent, true);
+                    
+                    if ($manifest && isset($manifest['version'])) {
+                        return $manifest['version'];
+                    }
+                }
+            }
+            return '';
+        }
+
+        $installed_plugins = [];
+
+        // Display installed plugins in a table
+        echo '<table border="1">';
+        echo '<tr>
+                <th>Plugin</th>
+                <th>Description</th>
+                <th>Current Version</th>
+                <th>Latest Version</th>
+                <th>Plugin Menu</th>
+                <th>Delete Plugin</th>
+            </tr>';
+
         // In the manifest.json exists case
         foreach ($pluginFolders as $folder) {
             $manifestPath = $pluginFoldersRoot . $folder . '/manifest.json';
             if (file_exists($manifestPath)) {
+                
                 $manifest = json_decode(file_get_contents($manifestPath), true);
                 $name = $manifest['name'] ?? $folder;
                 $description = $manifest['description'] ?? 'No description available';
                 $configUrl = $manifest['config_url'] ?? '';
-    
+                $version = $manifest['version'] ?? '';
+                $gitRepo = $manifest['git_repo'] ?? '';
+                
+                // Get latest version if git repo is specified
+                $latestVersion = '';
+                if (!empty($gitRepo)) {
+                    $latestVersion = getLatestGithubRelease($gitRepo);
+                }
+                
+                $installed_plugins[]=$name;
+
                 echo '<tr>';
                 echo '<td>' . htmlspecialchars($name) . '</td>';
                 echo '<td>' . htmlspecialchars($description) . '</td>';
+                echo '<td>' . htmlspecialchars($version) . '</td>';
+                
+                // Display latest version with color if different from current
+                if (!empty($latestVersion) && !empty($version) && version_compare($latestVersion, $version, '>')) {
+                    echo '<td style="color: #ff4444; font-weight: bold;">' . htmlspecialchars($latestVersion) . ' <span title="Update Available">⬆️</span></td>';
+                } else {
+                    echo '<td>' . htmlspecialchars($latestVersion) . '</td>';
+                }
+                
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Configure Plugin</button>';
+                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-primary">Plugin Page</button>';
+                    if (isset($manifest['schema_version']) && $manifest['schema_version']==2) {
+                        echo '<button onclick="window.open(\'' . htmlspecialchars("/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$manifest['name']}&GITHUB_REPO={$manifest['git_repo']}") . '\', \'_blank\')" class="btn-base btn-save">Update plugin</button>';
+                    }
                 } else {
                     echo 'No Plugin Page';
                 }
+
                 echo '</td>';
                 echo '<td>' . renderDeleteButton($folder, $name) . '</td>';
                 echo '</tr>';
             } else {
                 echo '<tr>';
                 echo '<td>' . htmlspecialchars($folder) . '</td>';
-                echo '<td colspan="2">No manifest.json found</td>';
+                echo '<td>No manifest.json found</td>';
+                echo '<td></td>';
+                echo '<td></td>';
+                echo '<td>No Plugin Page</td>';
                 echo '<td>' . renderDeleteButton($folder) . '</td>';
                 echo '</tr>';
             }
         }
         echo '</table>';
-    
+
         // Add the "CHIM Plugins" title
         echo '<br>';
         echo '<div style="display: flex; align-items: center; margin-top: 20px;">';
         echo '<h1 style="margin-right: 10px;">CHIM Plugins Repository</h1>';
         echo '</div>';
-    
-        // Add basic information paragraph
         echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
+
+        // Load plugin repository data from JSON file
+        $pluginRepositoryFile = __DIR__ . '/data/plugin_repository.json';
+        $pluginRepository = [];
+        
+        if (file_exists($pluginRepositoryFile)) {
+            $jsonData = json_decode(file_get_contents($pluginRepositoryFile), true);
+            if ($jsonData && isset($jsonData['plugins'])) {
+                $pluginRepository = $jsonData['plugins'];
+            }
+        }
+
+        echo '<table border="1">';
+        echo '<tr>
+                <th>Plugin</th>
+                <th>Description</th>
+                <th>Plugin Menu</th>
+            </tr>';
+
+        foreach ($pluginRepository as $plugin) {
+            $name = $plugin['name'];
+            $description = $plugin['description'] ?? 'No description available';
+            $configUrl = "/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$plugin['name']}&GITHUB_REPO={$plugin['git_repo']}";
+            $githubUrl = $plugin['github_url'] ?? '';
+            $modDownloadUrl = $plugin['mod_download_url'] ?? '';
+            $isInstalled = in_array($name, $installed_plugins);
+
+            echo '<tr>';
+            echo '<td>' . htmlspecialchars($name) . '</td>';
+            echo '<td>' . htmlspecialchars($description) . '</td>';
+            echo '<td>';
+            if ($isInstalled) {
+                echo '<button class="btn-base" disabled style="opacity: 0.6;">Already Installed</button>';
+            } else {
+                echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Install Plugin</button>';
+            }
+            if (!empty($githubUrl)) {
+                echo ' <button onclick="window.open(\'' . htmlspecialchars($githubUrl) . '\', \'_blank\')" class="btn-base btn-primary">GitHub</button>';
+            }
+            if (!empty($modDownloadUrl)) {
+                echo ' <button onclick="window.open(\'' . htmlspecialchars($modDownloadUrl) . '\', \'_blank\')" class="btn-base btn-primary">Mod Download</button>';
+            }
+            echo '</td>';
+            echo '</tr>';
+        }
+        echo '</table>';
+
+        // Add basic information paragraph
         echo '<ul>';
         echo '<li>Download a plugin by clicking the <b>[Download PLUGIN NAME]</b> button.</li>';
         echo '<li>Click the associated <b>[Mod Download]</b> button for the plugin. Install it with your mod manager of choice.</li>';
@@ -1137,13 +1241,8 @@ $debugPaneLink = true;
     
         echo '</tr></table>';
         echo '<br>';
-        echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
-        echo '<p>Making a plugin will allow your mod events and actions to be seen by the AI NPCs.</p>';
-        echo '<p>You can even add scripted events that can be triggered by the AI.</p>';
-        echo '';
-        echo '<p>The herika_heal plugin provides an example of how our API works. Open Server Folder, under /ext.</p>';
-        echo '<p>Here is a link to the <a href="https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files" target="_blank">herika_heal example .ESP file (Optional Files)</a></p>';
-        echo '<button type="button" class="btn-primary" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
+        echo '<p>You can make your own plugin quite easily!</p>';
+        echo '<p><a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.f3vzr9prl1d6" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
         echo '</body>';
     }
 

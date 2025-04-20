@@ -12,6 +12,12 @@ require_once($path . "lib".DIRECTORY_SEPARATOR."fuz_convert.php"); // API KEY mu
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
+function normalize_endpoint_url($url) {
+    // Remove trailing slashes
+    $url = rtrim($url, '/');
+    return $url;
+}
+
 $GLOBALS["AUDIT_RUNID_REQUEST"]="vsx";
 
 // Put info into DB asap
@@ -115,7 +121,7 @@ if (strpos($_GET["oname"],".fuz"))  {
 
 
 
-$already=file_exists("{$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
+$already=file_exists(normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])."/sample/$codename.wav");
 $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["tmp_name"]).".$ext";
 @copy($_FILES["file"]["tmp_name"] ,$finalName);
 
@@ -157,7 +163,7 @@ if (!$already) {
   }
 
 } else {
-  Logger::info("Empty file {$_FILES["file"]["tmp_name"]} already exists at {$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]}/sample/$codename.wav");
+  Logger::info("Empty file {$_FILES["file"]["tmp_name"]} already exists at ".normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])."/sample/$codename.wav");
   
 }
 
@@ -169,7 +175,7 @@ if ($already) {
 // Lets store voice files
 @copy($finalFile,$path."data/voices/$codename.wav");
 
-$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/upload_sample';
+$url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]).'/upload_sample';
 $curl = curl_init();
 
 // Set cURL options

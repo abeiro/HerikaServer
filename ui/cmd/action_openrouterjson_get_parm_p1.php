@@ -27,7 +27,9 @@ if ($method === 'POST') {
     
     // Perform the HTTP POST request
     $response = file_get_contents($url, false, $context);
-  
+    
+    error_log(print_r($response,true));
+
     $responseData=json_decode($response,true);
     if ($_GET["P"]==10) {
       $responseParsed["CONNECTOR@openrouterjson@frequency_penalty"]=$responseData["data"]["frequency_penalty_p10"];

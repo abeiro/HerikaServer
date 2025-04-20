@@ -1213,7 +1213,14 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     if ($npc=="The Narrator") { // Narrator knows all
        $npc=""; 
     }
-    $memories=DataSearchMemory($gameRequest[3],$npc);
+
+    $contextKeywords  = implode(" ", lastKeyWordsContext(5,$npc));
+
+    if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+        $memories=DataSearchMemoryByVector($gameRequest[3],$npc);
+    } else {
+        $memories=DataSearchMemory($gameRequest[3],$npc);
+    }
    
     
     if (isset($memories[0])) {
@@ -1374,12 +1381,12 @@ function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
 
 }
 
-function logEvent($dataArray)
+function logEvent($dataArray,$forcePeople='')
 {
     global $db;
 
     if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange(); // DataBeingsInRange() won't work as depends on user input
     } 
     
     if (!isset($GLOBALS["CACHE_LOCATION"])) {
@@ -1399,7 +1406,7 @@ function logEvent($dataArray)
             'data' => $dataArray[3],
             'sess' => 'pending',
             'localts' => time(),
-            'people'=> $GLOBALS["CACHE_PEOPLE"],
+            'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE"],
             'location'=>$GLOBALS["CACHE_LOCATION"],
             'party'=>$GLOBALS["CACHE_PARTY"]
         )

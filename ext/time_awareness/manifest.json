@@ -1,4 +1,5 @@
 {
     "name":"time_awareness",
-    "description":"Plugin for the TIME_AWARNESS Configuration Wizard option."
+    "description":"Plugin for the TIME_AWARNESS Configuration Wizard option.",
+    "version":"1.0.0"
 }

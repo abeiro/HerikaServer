@@ -12,17 +12,17 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         return;
     }
     $now=time();
-    $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
+    $db->delete("eventlog", "gamets>={$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
     //$db->delete("eventlog", "type='playerinfo'");
     //$db->delete("quests", "1=1");
-    $db->delete("speech", "gamets>{$gameRequest[2]}  ");
+    $db->delete("speech", "gamets>={$gameRequest[2]}  ");
     $db->delete("speech", "localts>$now ");
-    $db->delete("currentmission", "gamets>{$gameRequest[2]}  ");
+    $db->delete("currentmission", "gamets>={$gameRequest[2]}  ");
     $db->delete("currentmission", "localts>$now   ");
-    $db->delete("diarylog", "gamets>{$gameRequest[2]}  ");
-    $db->delete("diarylog", "localts>$now ");
-    $db->delete("books", "gamets>{$gameRequest[2]}  ");
+    $db->delete("diarylog", "gamets>={$gameRequest[2]}  ");
+    $db->delete("diarylog", "localts>=0$now ");
+    $db->delete("books", "gamets>=0{$gameRequest[2]}  ");
     $db->delete("books", "localts>$now ");
     $db->delete("responselog", " 1=1 ");
 
@@ -51,6 +51,17 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         )
     );
     
+    if (isset($gameRequest[3]) && $gameRequest[3]) {
+        $db->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "plugin_dll_version",
+                'value' =>$gameRequest[3]
+            ),
+            "id"
+        );
+    }
+
     Logger::trace("INIT PROCESSING ".(time()-$now));
     // Delete TTS(STT cache
     $directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache";
@@ -184,23 +195,25 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 
 
 } elseif ($gameRequest[0] == "_uquest") {
-    error_reporting(E_ALL);
-
+    
     $questParsedData = explode("@",$gameRequest[3]);
-    print_r($questParsedData);
+    
     if (!empty($questParsedData[0])) {
         $data=array(
-                'briefing' => $questParsedData[2],
-                'data' => $questParsedData[2]
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'localts' => time(),
+            'briefing' => $questParsedData[2],
+            'data' => $questParsedData[2],
+            'id_quest'=>$questParsedData[0],
+            'stage'=>$questParsedData[3]
         );
         
-        $db->updateRow('quests',$data," id_quest='{$questParsedData[0]}' ");
-
-        require_once(__DIR__.DIRECTORY_SEPARATOR."quest_oghma_sync.php");
-        // After updating quest, sync with oghma if stage info available
-        if (isset($questParsedData[1])) {
-            dynamicOghma($questParsedData[0], intval($questParsedData[1]));
-        }
+        $db->insert('questlog',$data);
+        
+        // Include and call dynamicoghma.php after questlog entry
+        require_once(__DIR__.DIRECTORY_SEPARATOR."dynamicoghma.php");
+        syncQuestWithOghma($questParsedData[0], $questParsedData[3]);
     }
     $MUST_END=true;
 

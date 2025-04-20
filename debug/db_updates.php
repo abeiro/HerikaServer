@@ -1,5 +1,7 @@
 <?php 
 
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
+
 $checkVersion = function($tablename) {
     global $db;
     $query = "
@@ -957,5 +959,14 @@ if ($checkVersion("oghma_dynamic")<20250310001) {
     $updateVersion("oghma_dynamic",20250310001);
     error_log("Applied patch oghma_dynamic 20250310001");
 }
+
+if ($checkVersion("rolemaster")<20250414001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/rolemaster.sql"));
+    $updateVersion("rolemaster",20250414001);
+    error_log("Applied patch rolemaster 20250414001");
+}
+
+
+Logger::info(__FILE__." update file processed");
 
 ?>

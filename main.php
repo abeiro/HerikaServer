@@ -21,7 +21,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.ph
 require_once($path . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php"); 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
@@ -37,8 +37,8 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 
     $latsRid=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0");
     $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$latsRid[0]["rowid"]}");
-    $res[0]["ts"]=$res[0]["ts"]+0;
-    $res[0]["gamets"]=$res[0]["ts"]+0;
+    $res[0]["ts"]=$res[0]["ts"]+1;
+    $res[0]["gamets"]=$res[0]["gamets"]+1;
         
     
         
@@ -403,10 +403,10 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     
     
     if (sizeof($rechatHistory)>1) {
-        // Lets make rechat wait a bit, so events while NPCs are speaking get into context
+        // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
         sem_release($semaphore);
-        Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
-        sleep(1);
+        error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
+        
         while (sem_acquire($semaphore,true)!=true)  {
             $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
             if (isset($user_input_after[0]))
@@ -420,7 +420,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction') ";  // Use prechat
+    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
 
@@ -469,7 +469,7 @@ if (!isset($GLOBALS["CACHE_LOCATION"])) {
 }     
 
 if (!isset($GLOBALS["CACHE_PARTY"])) {
-        $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
+    $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
 if (in_array($gameRequest[0],["inputtext_s"])) {    // I stealth and targetet follower, CACHE_PEOPLE will only contain target NPC
@@ -541,29 +541,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 }
 
 // Offer memory in CONTEXT 
-/*
-if (!(isset($GLOBALS["MEMORY_INJECTION_ON"]) || (!$GLOBALS["MEMORY_INJECTION_ON"]))) {
-    $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]=false;
-}
 
-$memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
-if ($memoryInjection) {
-    
-    //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
-    $memoryInjectionCtx[]= array('role' => 'user', 'content' => "#MEMORY: [$memoryInjection]");
-    $contextDataHistoric=array_merge($memoryInjectionCtx,$contextDataHistoric);
-
-    if (isset($GLOBALS["USE_MEMORY_STATEMENT_DELETE"]) && $GLOBALS["USE_MEMORY_STATEMENT_DELETE"] ) {
-        $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
-    }
-    //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
-    
-} else {
-    
-    $request=str_replace($GLOBALS["MEMORY_STATEMENT"],"",$request);
-        
-}
-*/   
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
 
@@ -584,6 +562,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
+
+// MINIME_T5 STUFF, command assiastant
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
@@ -631,11 +611,11 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 require(__DIR__."/processor/oghma.php");
 
 if (sizeof($memoryInjectionCtx)>0) {
-    // Persist memory injetction
+    // Persist memory injection
     $gameRequestCopy=$gameRequest;
     $gameRequestCopy[0]="infoaction";
     $gameRequestCopy[3]=$memoryInjectionCtx[0]["content"];
-    logEvent($gameRequestCopy);
+    logEvent($gameRequestCopy,$GLOBALS["HERIKA_NAME"]);// Memory log only avaibale to current NPC.
 }
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
@@ -721,8 +701,10 @@ if ($gameRequest[0] == "funcret") {
                 Logger::info("Injected memory");
             }
             
-        } else
+        } else {
+            error_log("CRITICAL? :: Empty request , prompt empty");
             $prompt=[];
+        }
     }
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);

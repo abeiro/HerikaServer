@@ -5,8 +5,6 @@ require_once("utils.php");
 // used for openai_token_count table
 
 
-
-
 function DataDequeue()
 {
     global $db;
@@ -89,47 +87,67 @@ function DataLastDataFor($actor, $lastNelements = -10)
 
 }
 
-function DataLastInfoFor($actor, $lastNelements = -2)
+function DataLastInfoFor($actor, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
-    global $db;
-    $lastDialogFull = array();
-    $results = $db->fetchAll("select  case when type like 'info%' then 'The Narrator:' else '' end||a.data  as data  FROM  eventlog a 
-    WHERE data like '%$actor%' and type in ('infoloc','infonpc','location')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
-    $lastData = "";
-    foreach ($results as $row) {
-        if ($lastData != md5($row["data"])) {
-            $lastDialogFull[] = array('role' => 'user', 'content' => $row["data"]);
+   
+    $followers=[];
+    $actorsInRange=strtr(DataBeingsInCloseRange(),["|"=>"\n* "]);
+    // Actors
+    if ($actorsInRange && $addNPCDescriptions) {
+        $actorDetailedList=explode("|",DataBeingsInCloseRange());
+        $actorDetailedListWithProfile=[];
+        foreach ($actorDetailedList as $actor) {
+            if (empty($actor))
+                continue;
+            if ($excludeBusy)
+                if ((strpos($actor,"(busy)")>0)||(strpos($actor,"(dead)")>0))
+                    continue;
+
+            if ($actor==$GLOBALS["PLAYER_NAME"]) 
+                $actorDetailedListWithProfile[]="$actor: player character";
+            else {
+                
+                $actorName = preg_replace("/\s*\(.*?\)\s*/", "", $actor);
+                $codename = npcNameToCodename($actorName);
+                $npcknowledge=$GLOBALS["db"]->fetchAll("SELECT COALESCE(NULLIF(trim(npc_dynamic), ''), npc_misc) as npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
+                if (isset($npcknowledge[0]))
+                    $actorDetailedListWithProfile[]="$actor: ".trim($npcknowledge[0]["npc_dynamic"]);
+                else
+                    $actorDetailedListWithProfile[]="$actor";
+            }
         }
-        $lastData = md5($row["data"]);
+        $actorsInRange=implode("\n## ",$actorDetailedListWithProfile);
+
     }
 
-    $lastDialogFullReversed = array_reverse($lastDialogFull);
-    $lastDialog = array_slice($lastDialogFullReversed, $lastNelements);
-    $last_location = null;
+    //Followers
+    foreach (json_decode(DataGetCurrentPartyConf(),JSON_OBJECT_AS_ARRAY) as $followername=>$followerdata) {
+        if (!$followername)
+            continue;
 
-    // Remove Context Location part when repeated
-    foreach ($lastDialog as $k => $message) {
-        preg_match('/\(Context location: [^)]+?\)/', $message['content'], $matches);
-        $current_location = isset($matches[1]) ? $matches[1] : null;
-        if ($current_location === $last_location) {
-            $message['content'] = preg_replace('/\(Context location: [^)]+?\)/', '', $message['content']);
-        } else {
-            $last_location = $current_location;
-        }
-        $lastDialog[$k]["content"] = $message['content'];
+        if ($followername==$GLOBALS["PLAYER_NAME"]) {
+            $followers[]="$followername (roleplayed by player)";
+        } else 
+            $followers[]="$followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
     }
 
+    $followers[]="{$GLOBALS["PLAYER_NAME"]}";
 
-    foreach ($lastDialog as $n => $line) {
+    $lastDialog[] = array('role' => 'user', 'content' => "# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange");
+    $lastDialog[] = array('role' => 'user', 'content' => "# PARTY STATUS\n## ". (implode("\n## ",$followers)));
 
-        $pattern = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:\w+)?(?:(?:st|nd|rd|th) of |\/)(.+), 4E (\d+)/u'; //extract also for months with apostrophe like Sun's Something
-        $replacement = 'Day name: $1, Hour: $2, Day Number: $3, Month: $4, 4th Era, Year: $5';
-        $result = preg_replace($pattern, $replacement, $line["content"]);
-        $lastDialogFull[$n]["content"] = $result;
+    $lastDialog[] = array('role' => 'user', 'content' => "# LOCATIONS OF INTEREST \n## ". (implode("\n## ",DataPosibleLocationsToGo())));
+ 
+    // Rolemaster notes
+    
+    $timeCut=time();
+    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where localts+ttl>$timeCut");
+    if (isset($rolemasterNotes[0])) {
+        $lastDialog[] = array('role' => 'user', 'content' => "# SCENE NOTES \n## {$rolemasterNotes[0]["data"]}");
     }
+        
 
-    $lastDialog[] = array('role' => 'user', 'content' => "Current followers:". (DataGetCurrentPartyConf()));
-     
+
     return $lastDialog;
 
 }
@@ -422,8 +440,14 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
         return $orderedData;
 }
 
-function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
-{
+function removeEmptyElements(array $array): array {
+    return array_filter($array, function($value) {
+        return !empty($value) || $value === 0 || $value === "0"; 
+    });
+}
+
+
+function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     global $db;
 
@@ -446,16 +470,18 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     $query="select  
     case 
-      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'The Narrator:'
-      when a.data like '%background chat%' then 'The Narrator: background dialogue: '
-      when type='book' then 'The Narrator: ({$playerEscaped} took the book ' 
+      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'CONTEXTI'
+      when a.data like '%background chat%' then 'BACKDIAG'
+      when type='book' then 'BOOKEVT' 
+      when type='quest' then 'QUEST' 
+      when type='itemfound' then 'ITEM' 
       else '' 
-    end||a.data  as data , gamets,localts,type,location
+    end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close'  and type<>'instruction'
-    and type<>'request'
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
+    and type<>'request' and type<>'playerinfo' and type<>'im_alive'
     ".(($actorEscaped)?" 
     and (people like '|%$actorEscaped%|' or people like '$actorEscaped') ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
@@ -475,10 +501,11 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     //$orderedData = array_slice($orderedData, $lastNelements);
 
+    
     $currentLocation = "";
     $writeLocation = true;
 
-    $lastSpeaker = "user";
+    $lastSpeaker = "";
     $buffer = [];
     $timeStampBuffer = [];
 
@@ -486,54 +513,27 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     $lastlocation="";
     foreach ($orderedData as $row) {
         $rowData = $row["data"];
-        // Extract location
-        
-        /*
-        $pattern = '/\(Context location: (.*?),(.*?)\)/';
-
-        if (preg_match($pattern, str_replace(" background dialogue", "", $rowData), $matches)) {
-
-            $contextLocation = $matches[0];
-            if ($currentLocation != $contextLocation) {
-                $currentLocation = $contextLocation;
-                $writeLocation = true;
-            } else {
-                $writeLocation = false;
-            }
-
-        } else {
-
-        }
-
-        if (!$writeLocation) {
-            $pattern = "/\([^)]*Context location[^)]*\)/";
-            $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
-        }*/
-
-        // Always remove location. Is a mess.
-        //$pattern = "/\([^)]*Context location[^)]*\)/";
-        
-         
         
         if ($rowData==="The Narrator:") // Hunt empty rows
             continue;
         
-        $pattern = "/\(Context location: [^)]+?\)/";
+        // Remove Context location from data
+        $pattern = '/\s*\(Context location: .*?\)/';
         if ($rowData)
-            $rowData = preg_replace($pattern, "", $rowData); // Remove context location if repeated
-        
+            $rowData = preg_replace($pattern, "", $rowData); 
+
+        // Figure out location form location field, and only add to context if changed    
         $printLocation=false;
-        
         $string = $row["location"];
-        preg_match('/Context\s*(new\s*)?location:\s*([^$,]+?)/', $string, $locationMatch);
-        preg_match('/Hold:\s*([^$,\)]+?)/', $string, $holdMatch);
+        preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $string, $locationMatch);
+        preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $string, $holdMatch);
         
         if (!isset($holdMatch[1])) {
             //error_log(print_r($string,true));
             $locationFinal=$lastlocation;
         } else {
             $hold = trim($holdMatch[1]);
-            $location = trim($locationMatch[2]);
+            $location = trim($locationMatch[1]);
             $locationFinal="$location, hold: $hold";
         }
         
@@ -543,7 +543,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
                 $printLocation=true;
             $currentLocation=$lastlocation;
         }
-            
+        
+        // Special case, logaction is the return data of an action call.
         if ($row["type"]=="logaction") {
             $logactionData=json_decode($rowData,true);
             if (is_array($logactionData)) {
@@ -552,77 +553,63 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
             }
         }
         
-        // This is used for compacting.
+        // Skip empty rows
         if (!$rowData)
             $rowData="";
         
+
+        // Figure out real speaker
         if (($row["type"]=="logaction") && (strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}") !== false))  {
             $speaker = "assistant";
             
         } else if ($row["type"]=="vision") {
             $speaker = "user";
             
-        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
+        }  else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
             $speaker = "assistant";
             
         } 
-         else if ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") !== false)) {
+         else if ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") === 0)) {
             $speaker = "player";
             
-        } else {
-            $speaker = "user";
+        } else if ((strpos($rowData, "The Narrator:") === 0)) {
+            $speaker = "narratorchat";
+            
+        } else if ($row["subtype"]=="BACKDIAG") {
+            $speaker = "backgroundchat";
+            
+        } else if ($row["subtype"]=="BOOKEVT") {
+            $speaker = "narratorci";
+            
+        } else if ($row["subtype"]=="CONTEXTI") {
+            $speaker = "narratorci";
+            
+        } else if ($row["subtype"]=="QUEST") {
+            $speaker = "narratorci";
+            
+        } else if ($row["subtype"]=="ITEM") {
+            $speaker = "narratorci";
+            
+        }  else {
+            
+            $speaker = "npc";
             
         }
-        
-        /*
-        if (!empty($actor)) {
-            if ( $row["type"]=="infonpc") {
-                $beingsPresent=$rowData;
-                continue;
-            }
-            if (empty($beingsPresent)) {
-                continue;
-            }
-         
-            if (strpos($beingsPresent,$actor)===false) {
-                continue;
-            }
-        } else {
-            if ( $row["type"]=="infonpc")   
-                continue;
-        }
-        */
 
-     
-        
-        if (($lastSpeaker == $speaker) && ($speaker == "assistant") && $row["type"]!="logaction") {
-            $buffer[] = $rowData;
-        } else if (($lastSpeaker == $speaker) && $row["type"]=="itemfound") {
-            $buffer[] = $rowData;
-        } else if ( $row["type"]=="logaction") {
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => $rowData);
-        } else {
-            if (sizeof($buffer) > 0) {
-                $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $buffer));
-            }
-            $buffer = [];
-            $buffer[] = $rowData;
-            $lastSpeaker = $speaker;
-        }
+        $lastSpeaker = $speaker;
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => trim($rowData));
 
-        //$lastDialogFull[] = array('role' => $speaker, 'content' => $rowData);
-        
-        if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])||(true)) {
-            $hoursAgo=round(($currentGameTs-$row["gamets"]) * 0.0000024, 0);
+        if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(false)) {
+            $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60 * 60 * 40), 0);
             //if ($hoursAgo>12) {
             if ($printLocation) {
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
                         if (DataLastKnownLocationHuman(false,true)==$currentLocation)   // Enforce current location.
-                            $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: LOCATION CHANGE, THIS IS THE CURRENT LOCATION: $currentLocation");
+                            $lastDialogFull[] = array('role' => "narratorci", 'content' => "LOCATION CHANGE, THIS IS THE CURRENT LOCATION: $currentLocation");
                         
                         else
-                            $lastDialogFull[] = array('role' => "user", 'content' => "The Narrator: LOCATION CHANGE to $currentLocation, timeline mark: $hoursAgo hours ago  ");
+                            $lastDialogFull[] = array('role' => "narratorci", 'content' => "LOCATION CHANGE to $currentLocation, timeline mark: $hoursAgo hours ago  ");
                     }
                 }
             }
@@ -630,24 +617,17 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     }
 
-    // if (($currentGameTs-$row["gamets"])>600) {
 
+    return $lastDialogFull;
 
-    //}
+}
 
-    // avoid creating empty content entry if no dialogue was found
-    if (sizeof($buffer) > 0) {
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $buffer));
-    }
-    if (sizeof($lastDialogFull) === 0) {
-        return [];
-    }
-    
-    // Compact Herika's lines
+function compactHistoricContext($lastDialogFull) {
+
     $lastrole="";
-    $bufferHerika="";
-    
-    
+    $bufferHerika=[];
+    $lastDialogFullCopy=[];
+ 
     foreach ($lastDialogFull as $n => $line) {
         if (($line["role"] == "assistant")) {
             $isJson=json_decode($line["content"],true);
@@ -655,21 +635,30 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
                 $lastDialogFullCopy[]=$line;
                 continue;
             }
-            $pattern = "/\(Context location:[^)]*?\)/"; 
-            $cleanedText = trim(preg_replace($pattern, "", $line["content"])); // Remove context location always for assistant
-            // This breaks with spaces?
-            $re = '/[^(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]) . ':)].*(' . strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-']) . ':)/m';
-            $subst = "";
-            $cleanedText = preg_replace($re, $subst, $cleanedText);
+            $cleanedText=$line["content"];
+           
+            $bufferHerika[]=$cleanedText;
+
             
-            
-            $cleanedText = removeTalkingToOccurrences($cleanedText);
-            
-            $bufferHerika.=$cleanedText;
         } else {
             if ($lastrole=="assistant") {
-                $lastDialogFullCopy[] = ["role"=>"assistant","content"=>$bufferHerika];
-                $bufferHerika="";
+                 // This breaks with spaces?
+                 $compactedBuffer="";
+                foreach ($bufferHerika as $m=>$singleline) {
+                    $compactedBuffer .=" ";
+                    if ($m>0) {
+                        //$regexpNpcName = strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]);
+                        preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $singleline, $matches);
+                        $extracted=$matches[1] ?? $singleline;
+                        $compactedBuffer .= trim(removeTalkingToOccurrences($extracted));
+
+                    } else 
+                        $compactedBuffer .= trim(removeTalkingToOccurrences($singleline));
+
+
+                }
+                $lastDialogFullCopy[] = ["role"=>"assistant","content"=>trim($compactedBuffer)];
+                $bufferHerika=[];
             }
             $lastDialogFullCopy[]=$line;
         } 
@@ -679,16 +668,124 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
         $lastrole=$line["role"];
     }
 
-    if ($bufferHerika) {
-        $lastDialogFullCopy[] = ["role"=>"assistant","content"=>$bufferHerika];
+    // Last entry
+    if (sizeof($bufferHerika)>0) {
+        foreach ($bufferHerika as $m=>$singleline) {
+            $compactedBuffer .=" ";
+            if ($m>0) {
+                //$regexpNpcName = strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]);
+                preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $singleline, $matches);
+                $extracted=$matches[1] ?? $singleline;
+                $compactedBuffer .= trim(removeTalkingToOccurrences($extracted));
+
+            } else 
+                $compactedBuffer .= trim(removeTalkingToOccurrences($singleline));
+
+
+        }
+        $lastDialogFullCopy[] = ["role"=>"assistant","content"=>trim($compactedBuffer)];
+        $bufferHerika=[];
     }
 
-    $lastDialogFull=$lastDialogFullCopy;
+    
+    
+    // Compact other info
+    $lastSpeaker = "";
+    $buffer = [];
+    $lastDialogFull=[];
 
-    // Replace player for user.
-    foreach ($lastDialogFull as $n => $line) {
+    foreach ($lastDialogFullCopy as $n => $line) {
+        $speaker=$line["role"];
+        
+        if ($speaker=="npc") { // Tricky npc could be any char
+            preg_match('/^([^:]+):/', $line["content"], $matches);
+            // Output the extracted name
+            $speakerNPC=$matches[1] ?? "";
+            $speaker="npc_$speakerNPC";
+        }
+
+        if ($lastSpeaker == $speaker) {
+            // Same speaker as last iteration, remove extra text
+            if (strpos($speaker,"npc")==0 || $speaker=="narratorchat") {
+                $matches = [];
+                
+                // Clean talking to and npc name , only leave it on first line
+                $matches = [];
+                preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $line["content"], $matches);
+                $buffer[]=$matches[1] ?? $line["content"];
+            } else 
+                $buffer[] = strtr($line["content"],["The Narrator:"=>"","{$GLOBALS["HERIKA_NAME"]}:"=>""]);
+        } else {
+            
+           
+
+            if (sizeof($buffer) > 0) {
+                if ($lastSpeaker=="narratorci")
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "* ".implode("\n* ", removeEmptyElements($buffer)));
+                else if ($lastSpeaker=="backgroundchat")
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)));
+                else 
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", removeEmptyElements($buffer)));
+            }
+            $buffer = [];
+            $buffer[] = $line["content"];
+            $lastSpeaker = $speaker;
+
+            if ($speaker=="assistant") {    //Leave as is
+                $lastDialogFull[] = $line;
+                $lastSpeaker = "";
+                $buffer = [];
+                continue;
+            }
+        }
+
+    }
+
+    // Clean empty entries
+    $bufferCopy=[];
+    foreach ($buffer as $n=>$bufferEntry) {
+        if (!empty(trim($bufferEntry)))
+            $bufferCopy[]=$bufferEntry;
+
+    }
+    // Last buffer, probably user input.
+
+    if ($lastSpeaker=="narratorci")
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $bufferCopy));
+    else if ($lastSpeaker=="backgroundchat")
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy));
+    else 
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
+
+
+   
+    return $lastDialogFull;
+}
+
+function replaceRoles($lastDialogFull,$actor,$lastNelements) {
+
+     // Replace roles for user.
+     foreach ($lastDialogFull as $n => $line) {
         if ($line["role"] == "player") {
             $lastDialogFull[$n]["role"] = "user";
+        } else if (strpos($line["role"],"npc")===0) {
+        
+            $lastDialogFull[$n]["role"] = "user";
+        
+        } else if ($line["role"] == "backgroundchat") {
+        
+            $lastDialogFull[$n]["role"] = "user";
+            $lastDialogFull[$n]["content"] = " (... ".PHP_EOL.$lastDialogFull[$n]["content"]."\n...)";
+
+        } else if ($line["role"] == "narratorci") {
+        
+            $lastDialogFull[$n]["role"] = "user";
+            $lastDialogFull[$n]["content"] = $lastDialogFull[$n]["content"]."\n";
+        
+        } else if ($line["role"] == "narratorchat") {
+
+            $lastDialogFull[$n]["role"] = "user";
+
         }
     }
 
@@ -703,10 +800,23 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     }
 
 
+
+
     $orderedData = array_slice($lastDialogFull, $lastNelements);
 
     file_put_contents(__DIR__."/../log/context_for_$actor.txt",print_r($orderedData,true));
     return $orderedData;
+
+}
+
+function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
+{
+
+    $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
+    $ctx2=compactHistoricContext($ctx1);
+    $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
+      
+    return $ctx3;
 
 }
 
@@ -1374,9 +1484,10 @@ function DataBeingsInRange()
         return "";
     }
     
-    $beings=strtr($lastLoc[0]["data"],["beings in range:"=>""]);
+    $beings=strtr($lastLoc[0]["data"],["(beings in range:"=>""]);
     $beingsArray=explode(",",$beings);
     $beingsArrayNew=[];
+    $beingsArrayNew[]="{$GLOBALS["PLAYER_NAME"]}";  // Add player to beings in range
     foreach ($beingsArray as $k=>$v) {
         if (strpos($v,")")===false) 
             if (strpos($v,"Horse")!==0) 
@@ -1404,7 +1515,7 @@ function DataBeingsInCloseRange()
     $beingsArray=explode("/",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
-        if (strpos($v,"dead)")===false) 
+        //if (strpos($v,")")===false) 
             if (strpos($v,"Horse")!==0) 
                 if (strpos($v,"Chicken")!==0) 
                     $beingsArrayNew[]=$v;
@@ -1456,33 +1567,43 @@ function DataSearchMemory($rawstring,$npcfilter) {
             return "";
         } else {
         
-            $altKeywords=explode(" ",lastNames(15,["inputtext"]));
-            $altKeywords=[];
-            $keywords=explode("|",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
-            array_merge($keywords,$altKeywords);
-            $kw=[];
-           
-            foreach ($keywords as $tag) {
-                if (strlen($tag)<4)
-                    continue;
+            if (isset($reponse["version"]) && $reponse["version"]==2) {
+                $altKeywords=explode(" ",lastNames(15,["inputtext"]));
+                $altKeywords=[];
+                $keywords=explode(" ",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
+                $kwStringAny=implode(" | ",$keywords);
+                $kwStringAll=implode(" & ",$keywords);
+                $result = array_unique($keywords);
+            } else {
+                $altKeywords=explode(" ",lastNames(15,["inputtext"]));
+                $altKeywords=[];
+                $keywords=explode("|",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
+                array_merge($keywords,$altKeywords);
+                $kw=[];
+            
+                foreach ($keywords as $tag) {
+                    if (strlen($tag)<4)
+                        continue;
 
-                $lkwPre="";
-                foreach (explode(" ",$tag) as $stag) {
-                    $lkwPre.=ucfirst($stag);
+                    
+                    $lkwPre="";
+                    foreach (explode(" ",$tag) as $stag) {
+                        $lkwPre.=ucfirst($stag);
+                    }
+                    
+                    //$lkw=hashtagify($tag);    
+                    $lkw="#$lkwPre";
+                    
+                    if ($lkw) {
+                        $kw=array_merge($kw,explode(" ",$lkw));
+                    }
                 }
-                
-                //$lkw=hashtagify($tag);    
-                $lkw="#$lkwPre";
-                
-                if ($lkw) {
-                    $kw=array_merge($kw,explode(" ",$lkw));
-                }
+                $result = array_unique($kw);
+
+                $kwStringAny=implode(" | ",$result);
+                $kwStringAll=implode(" & ",$result);
             }
-            $result = array_unique($kw);
-
-            $kwStringAny=implode(" | ",$result);
-            $kwStringAll=implode(" & ",$result);
-            Logger::debug("CONTEXT SEARCH KEYWORDS FROM MINIBOT: ".print_r($result,true));
+            Logger::debug("CONTEXT SEARCH KEYWORDS FROM MINIME: ".print_r($result,true));
         }
         
     } 
@@ -1546,6 +1667,85 @@ function DataSearchMemory($rawstring,$npcfilter) {
                     'rank_all'=>$memory[0]["rank_all"],
                     'memory'=>$memory[0]["summary"],
                     'time'=>isset($reponse["elapsed_time"])?$reponse["elapsed_time"]:"0 secs (internal)"
+                )
+            );
+            
+    
+    return $memory;
+    
+}
+
+
+function DataSearchMemoryByVector($rawstring,$npcfilter) {
+    
+  
+        Logger::info("Using DataSearchMemoryByVector");
+        $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+
+        $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
+        $replacement = "";
+        $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
+                    
+        $pattern = '/\(talking to [^()]+\)/i';
+        $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+
+        $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
+
+
+        $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+        $data = [
+            'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
+        ];
+
+        // Convert to JSON
+        $options = [
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Content-Type: application/json\r\n" .
+                            "Accept: application/json\r\n",
+                'content' => json_encode($data),
+                'ignore_errors' => true // to capture error messages if any
+            ]
+        ];
+
+        // Create context and send the request
+        $context  = stream_context_create($options);
+        $response = file_get_contents($url, false, $context);
+
+        // Output the response
+        if ($response === false) {
+            Logger::error("Request failed.\n");
+        } else {
+            Logger::info("Request done:\n");
+
+        }
+
+        $vector=json_decode($response,true);
+        $vectorString="'[".implode(",",$vector["embedding"])."]'";
+    
+        $memory=$GLOBALS["db"]->fetchAll("
+             SELECT summary, 
+                       embedding <-> $vectorString as distance
+                FROM public.memory_summary 
+                WHERE embedding IS NOT NULL
+                and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                ORDER BY embedding <-> $vectorString
+                LIMIT 5 OFFSET 0
+            ");
+                
+        if (!isset($memory[0]))
+            $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
+
+        $GLOBALS["db"]->insert(
+                'audit_memory',
+                array(
+                    'input' => $TEST_TEXT,
+                    'keywords' =>'text2vec search /'.$contextKeywords,
+                    'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
+                    'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
+                    'memory'=>$memory[0]["summary"],
+                    'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
                 )
             );
             
@@ -1985,6 +2185,7 @@ function GetExpression($mood) {
  }
 
  
+
 function isOk($arr) {
     if (is_array($arr))
         if (sizeof($arr)>0)

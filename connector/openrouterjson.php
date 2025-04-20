@@ -21,7 +21,7 @@ class openrouterjson
     private $_rawbuffer;
     private $_forcedClose=false;
     private $_model="";
-    private $_reasoning=false;
+    private $_is_reasoning=false;
     private $_websearch=false;
     private $_websearch_text="";
     private $_websearch_index=0;
@@ -35,7 +35,7 @@ class openrouterjson
         $this->_extractedbuffer="";
         $this->_forcedClose=false;
         $this->_model="";
-        $this->_reasoning=false;
+        $this->_is_reasoning=false;
         $this->_websearch=false;
         $this->_websearch_text="";
         $this->_websearch_index=0;
@@ -45,7 +45,7 @@ class openrouterjson
 
 
     private function isWebSearchInMessage($s_msg="") {
-        $i_pos = false;
+        $b_res = false;
         if (strlen($s_msg) > 7) {
             $i_pos = stripos($s_msg, "Skyrim search");
             if ($i_pos === false) 
@@ -56,17 +56,18 @@ class openrouterjson
                 $i_pos = stripos($s_msg, "Search Elder Scrolls");
             if ($i_pos === false) 
                 $i_pos = stripos($s_msg, "Find knowledge in Elder Scrolls");
+            $b_res = (!($i_pos === false));
         }
-        return (!($i_pos === false));
+        return $b_res;
     }
 
 
     private function isReasoningModel($s_model="") { //recognize a reasoning model that can hide <think> cot part with dedicated parameters
-        $i_pos = false;
+        $b_res = false;
         if (strlen($s_model) > 0) {
             $i_pos = stripos($s_model, "deepseek-r"); 
             if ($i_pos === false) 
-                $i_pos = stripos($s_model, "qwq-32b"); //OR
+                $i_pos = stripos($s_model, "qwq-32b"); 
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "sonar-reasoning");
             if ($i_pos === false) 
@@ -79,17 +80,31 @@ class openrouterjson
                 $i_pos = stripos($s_model, "dolphin3.0-r1-mistral");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "aion-1.0");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "reka-flash-3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "olympiccoder-");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "grok-3-mini"); 
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, ":thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-reasoning");
+            $b_res = (!($i_pos === false));
         }
-        return (!($i_pos === false));
+        return $b_res;
     }
    
     
     public function open($contextData, $customParms)
     {
         $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
+        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'meta-llama/llama-3.3-70b-instruct';
+        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
-        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'nvidia/llama-3.1-nemotron-70b-instruct';
 
 
         /***
@@ -216,10 +231,11 @@ class openrouterjson
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
-                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
+                        if (isset($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName])) {
+                            $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
                                         "#TARGET#"=>current($localArguments),
                                         ]);
-                        
+                        }
                         $contextDataCopy[]=[
                                 "role"=>"assistant",
                                 "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
@@ -317,7 +333,7 @@ class openrouterjson
         
         $contextData=$contextDataCopy;
         
-        if (!$assistantAppearedInhistory) {
+        if (!$assistantAppearedInhistory) { // is this still needed?
             // EXAMPLES
             $contextExamples[]= [
                 'role' => 'user', 
@@ -333,6 +349,7 @@ class openrouterjson
             if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
                 $contextExamples=[];
             }
+
             $finalContextDataWithExamples=[];
             foreach ($contextData as $n=>$final) {
                 if ($final["role"]=="system") {
@@ -414,15 +431,16 @@ class openrouterjson
             
         $data["transforms"]=[];
 
-        $this->_reasoning = $this->isReasoningModel($this->_model);
-        if ($this->_reasoning) { // add parameter to hide <think> content
+        if ($this->_is_reasoning) { // add parameter to hide <think> content
             $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
-            Logger::debug(" dbg reasoning " . $this->_model);
+            //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
+            //Logger::debug("reasoning " . $this->_model);
         }
 
         if ($this->_websearch) { // online search request 
 
-            $sx = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'meta-llama/llama-3.3-70b-instruct';
+            $sx = $this->_model;
             if (strpos($sx, ":online") === false) 
                 $sx = $sx . ":online";   
             $this->_model = $sx;
@@ -484,8 +502,8 @@ class openrouterjson
         $headers = array(
             'Content-Type: application/json',
             "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
-            "HTTP-Referer:  https://www.nexusmods.com/skyrimspecialedition/mods/126330",
-            "X-Title: CHIM"
+            "HTTP-Referer:  https://dwemerdynamics.com/",
+            "X-Title: Dwemer Dynamics"
         );
 
         $options = array(
@@ -503,7 +521,7 @@ class openrouterjson
         $this->primary_handler = $this->send($url, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
-            Logger::error(print_r($error,true));
+            Logger::error(trim(print_r($error,true)));
 
             if ($GLOBALS["db"]) {
                 $GLOBALS["db"]->insert(
@@ -515,9 +533,11 @@ class openrouterjson
             }
             return null;
         } else {
-            if ($this->getHttpStatusCode() >= 300) {
+            $status_code = $this->getHttpStatusCode();
+            if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
-                $error_message = "Request to openrouterjson connector failed: {$status_line}.\nResponse body: {$response}";
+                //$error_message = "Request to openrouterjson connector failed: {$status_line}.\nResponse body: {$response}";
+                $error_message = "Request to openrouterjson connector failed: {$status_code}.\nResponse body: {$response}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
@@ -611,12 +631,21 @@ class openrouterjson
         }
         
         $data=json_decode(substr($line, 6), true);
+
+        if ($this->_is_reasoning)
+            $buffer_preamble=4096; // some reasoning models output CoT part before JSON
+        elseif ($this->_websearch)
+            $buffer_preamble=256; 
+        else
+            $buffer_preamble=64; //was 10, 10 is not enough, some LLMs output a prefix tag/markup before JSON or "here is your JSON ..."
+
         if (isset($data["choices"][0]["delta"]["content"])) {
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
                 $buffer.=$data["choices"][0]["delta"]["content"];
                 $this->_buffer.=$data["choices"][0]["delta"]["content"];
                 // Check to see if we've received something that looks like it starts with a JSON object
-                if (strlen($this->_buffer)>64 && strpos($this->_buffer, '{') === false) { //10 is not enough, some LLMs output a prefix tag/markup before JSON or "here is your JSON ..."
+                if (strlen($this->_buffer)>$buffer_preamble && strpos($this->_buffer, '{') === false) { 
+                    Logger::error("Error decoding JSON from LLM output: can't find JSON start mark after reading {$buffer_preamble} characters. LLM didn't output proper JSON object or there is a long non-JSON preamble.");
                     return -1;
                 }
 
@@ -743,6 +772,9 @@ class openrouterjson
                 if (isset($parsedResponse[0]["action"])) {
                     $parsedResponse=$parsedResponse[0];
                 }
+
+                if (!isset($parsedResponse["target"]))    
+                    $parsedResponse["target"] = "";
                 
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
@@ -755,7 +787,7 @@ class openrouterjson
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
-                                    Logger::warn("Missing required parameter");
+                                    Logger::warn("Missing required parameter: target");
                                 }
                                     
                             } else {

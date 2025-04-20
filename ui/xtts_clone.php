@@ -24,9 +24,18 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+function normalize_endpoint_url($url) {
+    // Remove trailing slashes
+    $url = rtrim($url, '/');
+    return $url;
+}
+
 // Define the endpoint for the XTTS API
 if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]))
     $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = 'http://127.0.0.1:8020';
+
+// Normalize the endpoint URL
+$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]);
 
 // Initialize message variables
 $message = '';
@@ -73,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message .= "<p>.wav file has been uploaded to $destinationPath</p>";
 
                     // Prepare the cURL request
-                    $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/upload_sample';
+                    $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
                     $cfile = new CURLFile($destinationPath, $fileType, $fileName);
 
                     $postFields = array('wavFile' => $cfile);
@@ -108,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (isset($_POST["get_speakers"])) {
         // Prepare the cURL request for getting the speakers list
-        $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/speakers_list';
+        $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/speakers_list';
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -181,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message .= "<p>Error: $fileName is not a valid .wav file.</p>";
             } else {
                 // Prepare the cURL request
-                $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/upload_sample';
+                $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
                 $cfile = new CURLFile($filePath, $fileType, $fileName);
 
                 $postFields = array('wavFile' => $cfile);
@@ -219,8 +228,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Add the JavaScript functions
 ?>
 <script>
-    const API_ENDPOINT = <?php echo json_encode($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>;
+    const API_ENDPOINT = <?php echo json_encode(normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])); ?>;
     const WEB_ROOT = <?php echo json_encode($webRoot); ?>;
+
+    function normalizeUrl(url) {
+        return url.replace(/\/+$/, '');
+    }
 
     function showLoadingMessage() {
         document.getElementById('loading-overlay').style.display = 'block';
@@ -285,7 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     function testVoice(voiceName) {
-        const url = `${API_ENDPOINT}/tts_to_audio/`;
+        const url = `${normalizeUrl(API_ENDPOINT)}/tts_to_audio`;
         const data = {
             text: 'CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis',
             speaker_wav: voiceName,
@@ -493,7 +506,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
             </form>
             <br>
-            <p>Advanced XTTS configuration: <a href="<?php echo $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]; ?>/docs#" style="color: yellow;" target="_blank"><?php echo $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]; ?>/docs#</a></p>
+            <p>Advanced XTTS configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
 
         </div>
 
