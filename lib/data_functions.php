@@ -813,7 +813,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 {
 
     $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
-    $ctx2=compactHistoricContext($ctx1);
+    $ctx2=$ctx1; //compactHistoricContext($ctx1);
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
     return $ctx3;
