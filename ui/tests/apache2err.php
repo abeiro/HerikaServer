@@ -132,6 +132,100 @@ function readRegularLog($logPath, $logName) {
     }
 }
 
+// Function to read LLM output logs with timestamp grouping
+function readLLMOutputLog($logPath, $logName) {
+    if (file_exists($logPath) && is_readable($logPath)) {
+        $log = tail($logPath, 2000); // Ensure we're getting 2000 lines
+        $sanitizedId = sanitizeId($logName);
+
+        echo '<div class="section-header">';
+        echo "<h2>$logName</h2>";
+        echo '<button class="expand-button" onclick="openModal(\'' . $sanitizedId . 'Modal\', \'' . $sanitizedId . 'Container\')">';
+        echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+        echo '</button>';
+        echo '</div>';
+        echo '<div class="search-container">';
+        echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . $sanitizedId . 'Container">';
+        echo '</div>';
+        echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
+
+        $currentBlock = [];
+        $inBlock = false;
+        $blocks = [];
+
+        foreach ($log as $line) {
+            $line = trim($line);
+            
+            // Check for timestamp block start
+            if (preg_match('/^(?:==\s+)?(\d{4}-\d{2}-\d{2}T[\d:]+\+\d{2}:\d{2})\s+START$/', $line, $matches)) {
+                if ($inBlock && !empty($currentBlock)) {
+                    $blocks[] = $currentBlock;
+                }
+                $currentBlock = ['start_time' => $matches[1], 'content' => []];
+                $inBlock = true;
+                continue;
+            }
+            
+            // Check for end timestamp
+            if (preg_match('/^(\d{4}-\d{2}-\d{2}T[\d:]+\+\d{2}:\d{2})\s+END$/', $line, $matches)) {
+                if ($inBlock && !empty($currentBlock)) {
+                    $currentBlock['end_time'] = $matches[1];
+                    $blocks[] = $currentBlock;
+                }
+                $inBlock = false;
+                $currentBlock = [];
+                continue;
+            }
+            
+            // Skip the == markers
+            if ($line === '==' || empty($line)) {
+                continue;
+            }
+            
+            // Add content to current block
+            if ($inBlock && !empty($line)) {
+                $currentBlock['content'][] = $line;
+            }
+        }
+        
+        // Add any remaining block
+        if ($inBlock && !empty($currentBlock)) {
+            $blocks[] = $currentBlock;
+        }
+
+        // Output blocks in reverse order (newest first)
+        foreach (array_reverse($blocks) as $block) {
+            outputLLMBlock($block);
+        }
+
+        echo '</div>';
+    } else {
+        echo '<p class="error-message">Log file not generated yet for: ' . htmlspecialchars($logPath) . '</p>';
+    }
+}
+
+// Helper function to output an LLM block
+function outputLLMBlock($block) {
+    if (empty($block) || empty($block['content'])) return;
+    
+    echo '<div class="log-entry llm-block">';
+    echo '<div class="timestamp">';
+    echo '<span class="time-label">Start:</span> ' . htmlspecialchars($block['start_time']);
+    if (isset($block['end_time'])) {
+        echo ' <span class="time-separator">→</span> ';
+        echo '<span class="time-label">End:</span> ' . htmlspecialchars($block['end_time']);
+    }
+    echo '</div>';
+    echo '<div class="log-message">';
+    foreach ($block['content'] as $line) {
+        if (trim($line) !== '') {
+            echo '<div class="llm-content">' . htmlspecialchars($line) . '</div>';
+        }
+    }
+    echo '</div>';
+    echo '</div>';
+}
+
 // Function to read and filter the error log from a given path
 function readErrorLog($errorLogPath, $logType) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
@@ -356,6 +450,7 @@ if (isset($_GET['download_logs'])) {
             max-height: 600px;
             width: 100%;
             box-sizing: border-box;
+            text-align: left;
         }
 
         .log-entry {
@@ -367,6 +462,7 @@ if (isset($_GET['download_logs'])) {
             margin-bottom: 4px;
             background-color: #2c2c2c;
             font-family: monospace;
+            text-align: left;
         }
 
         .timestamp {
@@ -750,6 +846,57 @@ if (isset($_GET['download_logs'])) {
         #requestErrorsContainer .error-message br {
             margin-top: 4px;
         }
+
+        .llm-block {
+            border: 1px solid #444;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #2a2a2a;
+            text-align: left;
+            position: relative;
+        }
+
+        .llm-block .timestamp {
+            color: #888;
+            font-size: 0.85em;
+            padding: 4px 0;
+            background-color: #222;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            border: 1px solid #444;
+            text-align: center;
+            line-height: 1.2;
+            width: 100%;
+            display: block;
+        }
+
+        .time-label {
+            color: #aaa;
+            font-weight: bold;
+        }
+
+        .time-separator {
+            color: #666;
+            margin: 0 4px;
+        }
+
+        .llm-content {
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin: 5px 0;
+            text-align: left;
+            padding-left: 0;
+            font-size: 1em;
+            line-height: 1.4;
+        }
+
+        .llm-block .log-message {
+            margin-top: 8px;
+            text-align: left;
+            padding-left: 0;
+            border-top: 1px solid #444;
+            padding-top: 12px;
+        }
     </style>
 </head>
 <body>
@@ -798,7 +945,7 @@ if (isset($_GET['download_logs'])) {
         <div class="log-section">
             <?php
             // Display LLM output log
-            readRegularLog($llmOutputPath, "LLM Output (output_from_llm.log)");
+            readLLMOutputLog($llmOutputPath, "LLM Output (output_from_llm.log)");
             ?>
         </div>
 
@@ -1137,7 +1284,7 @@ document.querySelectorAll('.search-input').forEach(input => {
     input.addEventListener('input', performSearch);
 });
 
-// Modal functionality
+// Function to open modal with special handling for LLM output
 function openModal(modalId, sourceId) {
     const modal = document.getElementById(modalId);
     const contentId = modalId + 'Content';
@@ -1145,7 +1292,13 @@ function openModal(modalId, sourceId) {
     const sourceContainer = document.getElementById(sourceId);
     
     if (sourceContainer && modal) {
-        content.innerHTML = sourceContainer.innerHTML;
+        // Special handling for LLM output log
+        if (modalId === 'LLMOutputoutputfromllmlogModal') {
+            // Clone the content but preserve the block structure
+            content.innerHTML = sourceContainer.innerHTML;
+        } else {
+            content.innerHTML = sourceContainer.innerHTML;
+        }
         modal.style.display = 'block';
         
         // Initialize search functionality for the modal
@@ -1160,32 +1313,55 @@ function openModal(modalId, sourceId) {
                     return;
                 }
 
-                let regex;
-                try {
-                    const regexPattern = /^\/.+\/[gimuy]*$/;
-                    if (regexPattern.test(searchTerm)) {
-                        const parts = searchTerm.split('/');
-                        const flags = parts.pop();
-                        const pattern = parts.slice(1).join('/');
-                        regex = new RegExp(pattern, flags);
-                    } else {
-                        regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                if (modalId === 'LLMOutputoutputfromllmlogModal') {
+                    // Special search handling for LLM output blocks
+                    const blocks = content.querySelectorAll('.llm-block');
+                    blocks.forEach(block => {
+                        const blockText = block.textContent.toLowerCase();
+                        if (blockText.includes(searchTerm.toLowerCase())) {
+                            block.style.display = '';
+                            // Highlight the matching text
+                            const regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                            const messages = block.querySelectorAll('.llm-content');
+                            messages.forEach(msg => {
+                                const text = msg.textContent;
+                                if (text.match(regex)) {
+                                    msg.innerHTML = text.replace(regex, match => `<span class="highlight">${match}</span>`);
+                                }
+                            });
+                        } else {
+                            block.style.display = 'none';
+                        }
+                    });
+                } else {
+                    // Regular search for other logs
+                    let regex;
+                    try {
+                        const regexPattern = /^\/.+\/[gimuy]*$/;
+                        if (regexPattern.test(searchTerm)) {
+                            const parts = searchTerm.split('/');
+                            const flags = parts.pop();
+                            const pattern = parts.slice(1).join('/');
+                            regex = new RegExp(pattern, flags);
+                        } else {
+                            regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                        }
+                    } catch (e) {
+                        console.error('Invalid regex:', e);
+                        return;
                     }
-                } catch (e) {
-                    console.error('Invalid regex:', e);
-                    return;
-                }
 
-                const textContent = content.textContent;
-                const matches = textContent.match(regex);
-                
-                if (!matches) {
-                    content.innerHTML = '<div class="no-results">No matches found</div>';
-                    return;
-                }
+                    const textContent = content.textContent;
+                    const matches = textContent.match(regex);
+                    
+                    if (!matches) {
+                        content.innerHTML = '<div class="no-results">No matches found</div>';
+                        return;
+                    }
 
-                const highlightedContent = textContent.replace(regex, match => `<span class="highlight">${match}</span>`);
-                content.innerHTML = `<pre class="log-content">${highlightedContent}</pre>`;
+                    const highlightedContent = textContent.replace(regex, match => `<span class="highlight">${match}</span>`);
+                    content.innerHTML = `<pre class="log-content">${highlightedContent}</pre>`;
+                }
             });
         }
     }

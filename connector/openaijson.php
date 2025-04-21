@@ -510,10 +510,9 @@ class openaijson
             fclose($this->primary_handler);
         }
         
-        //file_put_contents(__DIR__."/../log/ouput_from_llm.log",$this->_buffer, FILE_APPEND | LOCK_EX);
-        file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
+        // Write the buffer to the log file without timestamp separators
+        file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
         return $this->_buffer;
-
     }
 
     // Method to close the data processing operation
