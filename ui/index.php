@@ -1047,16 +1047,25 @@ $debugPaneLink = true;
         // Function to get latest GitHub release version
         function getLatestGithubRelease($repo) {
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "https://api.github.com/repos/{$repo}/releases/latest");
+            curl_setopt($ch, CURLOPT_URL, "https://api.github.com/repos/{$repo}/contents/manifest.json");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_USERAGENT, 'CHIM-Server');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: application/vnd.github.v3+json'
+            ]);
             $output = curl_exec($ch);
             curl_close($ch);
             
             if ($output) {
                 $data = json_decode($output, true);
-                if (isset($data['tag_name'])) {
-                    return trim($data['tag_name'], 'v'); // Remove 'v' prefix if present
+                if (isset($data['content'])) {
+                    // GitHub API returns file content as base64 encoded
+                    $manifestContent = base64_decode($data['content']);
+                    $manifest = json_decode($manifestContent, true);
+                    
+                    if ($manifest && isset($manifest['version'])) {
+                        return $manifest['version'];
+                    }
                 }
             }
             return '';
@@ -1109,7 +1118,7 @@ $debugPaneLink = true;
                 
                 echo '<td>';
                 if (!empty($configUrl)) {
-                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-save">Plugin Backend</button>';
+                    echo '<button onclick="window.open(\'' . htmlspecialchars($configUrl) . '\', \'_blank\')" class="btn-base btn-primary">Plugin Page</button>';
                     if (isset($manifest['schema_version']) && $manifest['schema_version']==2) {
                         echo '<button onclick="window.open(\'' . htmlspecialchars("/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$manifest['name']}&GITHUB_REPO={$manifest['git_repo']}") . '\', \'_blank\')" class="btn-base btn-save">Update plugin</button>';
                     }
@@ -1138,16 +1147,18 @@ $debugPaneLink = true;
         echo '<div style="display: flex; align-items: center; margin-top: 20px;">';
         echo '<h1 style="margin-right: 10px;">CHIM Plugins Repository</h1>';
         echo '</div>';
+        echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
 
-        // Plugin repo
-        $pluginRepository=[];
-        $pluginRepository["twitch-bot"]= array(
-            "name" => "twitch-bot",
-            "description" => "Allows viewers to control AI NPC's via twitch chat.",
-            "git_repo" => "RANGROO/CHIM-Twitch-Bot",
-            "github_url" => "https://github.com/RANGROO/CHIM-Twitch-Bot",
-            "mod_download_url" => "" 
-        );
+        // Load plugin repository data from JSON file
+        $pluginRepositoryFile = __DIR__ . '/data/plugin_repository.json';
+        $pluginRepository = [];
+        
+        if (file_exists($pluginRepositoryFile)) {
+            $jsonData = json_decode(file_get_contents($pluginRepositoryFile), true);
+            if ($jsonData && isset($jsonData['plugins'])) {
+                $pluginRepository = $jsonData['plugins'];
+            }
+        }
 
         echo '<table border="1">';
         echo '<tr>
@@ -1185,7 +1196,6 @@ $debugPaneLink = true;
         echo '</table>';
 
         // Add basic information paragraph
-        echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
         echo '<ul>';
         echo '<li>Download a plugin by clicking the <b>[Download PLUGIN NAME]</b> button.</li>';
         echo '<li>Click the associated <b>[Mod Download]</b> button for the plugin. Install it with your mod manager of choice.</li>';
@@ -1231,13 +1241,8 @@ $debugPaneLink = true;
     
         echo '</tr></table>';
         echo '<br>';
-        echo '<p>If you are a mod developer you can make your own plugin quite easily!</p>';
-        echo '<p>Making a plugin will allow your mod events and actions to be seen by the AI NPCs.</p>';
-        echo '<p>You can even add scripted events that can be triggered by the AI.</p>';
-        echo '';
-        echo '<p>The herika_heal plugin provides an example of how our API works. Open Server Folder, under /ext.</p>';
-        echo '<p>Here is a link to the <a href="https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files" target="_blank">herika_heal example .ESP file (Optional Files)</a></p>';
-        echo '<button type="button" class="btn-primary" onclick="window.location.href=\'herika_heal_download.php\'">Download herika_heal</button>';
+        echo '<p>You can make your own plugin quite easily!</p>';
+        echo '<p><a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.f3vzr9prl1d6" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
         echo '</body>';
     }
 
