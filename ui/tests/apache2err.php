@@ -66,8 +66,8 @@ function tail($filepath, $lines = 2000) {
     }
 
     fclose($file);
-    // Return the last N lines in reverse order (newest first)
-    return array_reverse(array_slice($output, 0, $lines));
+    // Return the last N lines (already in reverse order - newest first)
+    return array_slice($output, 0, $lines);
 }
 
 // Function to read regular log files
@@ -222,6 +222,100 @@ function outputLLMBlock($block) {
             echo '<div class="llm-content">' . htmlspecialchars($line) . '</div>';
         }
     }
+    echo '</div>';
+    echo '</div>';
+}
+
+// Function to read LLM context logs with timestamp grouping
+function readLLMContextLog($logPath, $logName) {
+    if (file_exists($logPath) && is_readable($logPath)) {
+        $log = tail($logPath, 2000); // Get last 2000 lines
+        $sanitizedId = sanitizeId($logName);
+
+        echo '<div class="section-header">';
+        echo "<h2>$logName</h2>";
+        echo '<button class="expand-button" onclick="openModal(\'' . $sanitizedId . 'Modal\', \'' . $sanitizedId . 'Container\')">';
+        echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+        echo '</button>';
+        echo '</div>';
+        echo '<div class="search-container">';
+        echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . $sanitizedId . 'Container">';
+        echo '</div>';
+        echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
+
+        $blocks = [];
+        $currentBlock = null;
+        $currentContent = '';
+        $lastTimestamp = null;
+        $tempBlock = [];
+
+        // First pass: collect all blocks
+        foreach ($log as $line) {
+            $line = rtrim($line);
+            
+            if ($line === '=') {
+                if ($currentBlock && !empty($currentContent)) {
+                    $currentBlock['content'] = $currentContent;
+                    $tempBlock[] = $currentBlock;
+                    $currentContent = '';
+                }
+                continue;
+            }
+            
+            if (preg_match('/^\d{4}-\d{2}-\d{2}T[\d:]+\+\d{2}:\d{2}$/', $line)) {
+                if ($lastTimestamp !== $line) {
+                    if ($currentBlock && !empty($currentContent)) {
+                        $currentBlock['content'] = $currentContent;
+                        $tempBlock[] = $currentBlock;
+                    }
+                    $currentBlock = ['timestamp' => $line];
+                    $currentContent = '';
+                    $lastTimestamp = $line;
+                }
+                continue;
+            }
+            
+            if ($currentBlock && !empty($line)) {
+                $currentContent .= $line . "\n";
+            }
+        }
+        
+        // Add final block if exists
+        if ($currentBlock && !empty($currentContent)) {
+            $currentBlock['content'] = $currentContent;
+            $tempBlock[] = $currentBlock;
+        }
+
+        // Sort blocks by timestamp in descending order (newest first)
+        usort($tempBlock, function($a, $b) {
+            return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+        });
+
+        // Output sorted blocks
+        foreach ($tempBlock as $block) {
+            outputLLMContextBlock($block);
+        }
+
+        echo '</div>';
+    } else {
+        echo '<p class="error-message">Log file not found or not readable at: ' . htmlspecialchars($logPath) . '</p>';
+    }
+}
+
+// Helper function to output an LLM context block
+function outputLLMContextBlock($block) {
+    if (empty($block) || empty($block['content'])) return;
+    
+    echo '<div class="log-entry llm-block">';
+    echo '<div class="timestamp">';
+    echo '<span class="time-label">Time:</span> ' . htmlspecialchars($block['timestamp']);
+    echo '</div>';
+    echo '<div class="log-message">';
+    
+    // Format the content without syntax highlighting
+    $content = trim($block['content']);
+    echo '<pre class="llm-content">' . htmlspecialchars($content) . '</pre>';
+    
     echo '</div>';
     echo '</div>';
 }
@@ -387,14 +481,10 @@ if (isset($_GET['download_logs'])) {
             z-index: 100;
         }
 
-        /* Updated CSS for Dark Grey Background Theme */
+        /* Updated color scheme for a more mellow dark theme */
         body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c;
-            color: #f8f9fa;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
         }
 
         h1, h2 {
@@ -411,10 +501,11 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-section {
+            background-color: #252526;
+            border-color: #333333;
             border: 1px solid #444;
             border-radius: 8px;
             padding: 15px;
-            background-color: #2a2a2a;
             display: flex;
             flex-direction: column;
             min-width: 0;
@@ -438,10 +529,11 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-container {
+            background-color: #1e1e1e;
+            border-color: #333333;
             overflow-y: auto;
             overflow-x: hidden;
-            background-color: #1a1a1a;
-            color: #f8f9fa;
+            color: #d4d4d4;
             font-size: 13px;
             padding: 10px;
             border: 1px solid #555555;
@@ -454,13 +546,14 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-entry {
+            background-color: #252526;
+            border-left: none;
+            margin-bottom: 8px;
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             padding: 6px 10px;
             border-radius: 4px;
-            margin-bottom: 4px;
-            background-color: #2c2c2c;
             font-family: monospace;
             text-align: left;
         }
@@ -637,15 +730,15 @@ if (isset($_GET['download_logs'])) {
             padding: 8px;
             border: 1px solid #444;
             border-radius: 4px;
-            background-color: #1a1a1a;
-            color: #f8f9fa;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
             font-family: monospace;
             font-size: 14px;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #17a2b8;
+            border-color: #454545;
         }
 
         .regex-toggle {
@@ -686,8 +779,8 @@ if (isset($_GET['download_logs'])) {
             padding: 8px;
             border: 1px solid #444;
             border-radius: 4px;
-            background-color: #1a1a1a;
-            color: #f8f9fa;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
             font-size: 14px;
         }
 
@@ -708,7 +801,7 @@ if (isset($_GET['download_logs'])) {
 
         .modal-content {
             position: relative;
-            background-color: #2a2a2a;
+            background-color: #252526;
             margin: 0 auto;
             padding: 20px;
             width: 95%;
@@ -757,7 +850,7 @@ if (isset($_GET['download_logs'])) {
         .modal-search-container {
             margin: 0 0 15px 0;
             padding: 10px;
-            background-color: #1a1a1a;
+            background-color: #1e1e1e;
             border-radius: 4px;
             border: 1px solid #555555;
         }
@@ -767,19 +860,19 @@ if (isset($_GET['download_logs'])) {
             padding: 8px;
             border: 1px solid #444;
             border-radius: 4px;
-            background-color: #1a1a1a;
-            color: #f8f9fa;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
             font-family: monospace;
             font-size: 14px;
         }
 
         .modal-search-input:focus {
             outline: none;
-            border-color: #17a2b8;
+            border-color: #454545;
         }
 
         .modal-body {
-            background-color: #1a1a1a;
+            background-color: #1e1e1e;
             padding: 15px;
             border-radius: 4px;
             border: 1px solid #555555;
@@ -848,19 +941,20 @@ if (isset($_GET['download_logs'])) {
         }
 
         .llm-block {
-            border: 1px solid #444;
-            margin-bottom: 15px;
+            background-color: #252526;
+            border: 1px solid #333333;
+            margin-bottom: 12px;
             padding: 10px;
-            background-color: #2a2a2a;
             text-align: left;
             position: relative;
         }
 
         .llm-block .timestamp {
-            color: #888;
+            background-color: #1e1e1e;
+            border-color: #333333;
+            color: #808080;
             font-size: 0.85em;
             padding: 4px 0;
-            background-color: #222;
             border-radius: 4px;
             margin-bottom: 12px;
             border: 1px solid #444;
@@ -871,7 +965,7 @@ if (isset($_GET['download_logs'])) {
         }
 
         .time-label {
-            color: #aaa;
+            color: #808080;
             font-weight: bold;
         }
 
@@ -897,6 +991,30 @@ if (isset($_GET['download_logs'])) {
             border-top: 1px solid #444;
             padding-top: 12px;
         }
+
+        /* PHP array formatting styles */
+        .php-array {
+            background-color: #1e1e1e !important;
+            padding: 10px !important;
+            border-radius: 4px;
+            margin: 0 !important;
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            border: 1px solid #333333;
+        }
+
+        .php-array .html {
+            color: #d4d4d4 !important;
+            background-color: transparent !important;
+        }
+
+        /* More mellow syntax highlighting colors */
+        .php-array .default { color: #d4d4d4 !important; }
+        .php-array .keyword { color: #c586c0 !important; }
+        .php-array .string { color: #9cdcfe !important; }
+        .php-array .comment { color: #6a9955 !important; }
+        .php-array .number { color: #b5cea8 !important; }
     </style>
 </head>
 <body>
@@ -952,7 +1070,11 @@ if (isset($_GET['download_logs'])) {
         <div class="log-section">
             <?php
             // Display LLM context log
-            readRegularLog($llmContextPath, "LLM Context (context_sent_to_llm.log)");
+            if (file_exists($llmContextPath) && is_readable($llmContextPath)) {
+                readLLMContextLog($llmContextPath, "LLM Context (context_sent_to_llm.log)");
+            } else {
+                echo '<p class="error-message">Log file not found or not readable at: ' . htmlspecialchars($llmContextPath) . '</p>';
+            }
             ?>
         </div>
 
