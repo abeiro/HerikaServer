@@ -122,6 +122,7 @@ Scene Note: A brief description of the topic, mood, or idea introduced by the in
             preg_match('/Instruction for (.+?):\s*(.+?)\s*Scene Note:/s', $instruction, $matches);
             $characterName = trim($matches[1] ?? 'Unknown');
             $instructionText = trim($matches[2] ?? 'No instruction text');
+            $instructionText .= " (Use ACTIONS if needed) ";
         
             // Generate unique task ID
             $taskId = uniqid();
