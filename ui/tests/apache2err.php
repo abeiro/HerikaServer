@@ -73,7 +73,7 @@ function tail($filepath, $lines = 2000) {
 // Function to read regular log files
 function readRegularLog($logPath, $logName) {
     if (file_exists($logPath) && is_readable($logPath)) {
-        $log = tail($logPath, 2000); // Ensure we're getting 2000 lines
+        $log = tail($logPath, 2000); // Get last 2000 lines
         $sanitizedId = sanitizeId($logName);
 
         echo '<div class="section-header">';
@@ -87,14 +87,37 @@ function readRegularLog($logPath, $logName) {
         echo '</div>';
         echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
 
+        $entries = [];
         foreach ($log as $line) {
             if (preg_match('/^\[(.*?)\]\s+\[(.*?)\](.*)$/', $line, $matches)) {
                 $timestamp = $matches[1];
                 $level = strtolower(trim($matches[2]));
                 $message = trim($matches[3]);
 
-                $levelClass = '';
-                switch ($level) {
+                $entries[] = [
+                    'timestamp' => $timestamp,
+                    'level' => $level,
+                    'message' => $message,
+                    'raw_time' => strtotime($timestamp)
+                ];
+            } else {
+                // For lines that don't match the expected format
+                $entries[] = [
+                    'message' => $line,
+                    'raw_time' => 0  // Default timestamp for sorting
+                ];
+            }
+        }
+
+        // Sort entries by timestamp in descending order (newest first)
+        usort($entries, function($a, $b) {
+            return $b['raw_time'] - $a['raw_time'];
+        });
+
+        foreach ($entries as $entry) {
+            $levelClass = '';
+            if (isset($entry['level'])) {
+                switch ($entry['level']) {
                     case 'error':
                         $levelClass = 'error-level';
                         break;
@@ -114,14 +137,13 @@ function readRegularLog($logPath, $logName) {
                 }
 
                 echo '<div class="log-entry ' . $levelClass . '">';
-                echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
-                echo '<div class="log-level">' . htmlspecialchars($level) . '</div>';
-                echo '<div class="log-message">' . htmlspecialchars($message) . '</div>';
+                echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+                echo '<div class="log-level">' . htmlspecialchars($entry['level']) . '</div>';
+                echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
                 echo '</div>';
             } else {
-                // Fallback for lines that don't match the expected format
                 echo '<div class="log-entry">';
-                echo '<div class="log-message">' . htmlspecialchars($line) . '</div>';
+                echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
                 echo '</div>';
             }
         }
@@ -323,7 +345,7 @@ function outputLLMContextBlock($block) {
 // Function to read and filter the error log from a given path
 function readErrorLog($errorLogPath, $logType) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
-        $errorLog = tail($errorLogPath, 2000); // Ensure we're getting 2000 lines
+        $errorLog = tail($errorLogPath, 2000); // Get last 2000 lines
 
         echo '<div class="section-header">';
         echo "<h2>$logType</h2>";
@@ -336,6 +358,7 @@ function readErrorLog($errorLogPath, $logType) {
         echo '</div>';
         echo '<div class="log-container" id="errorLogContainer">';
         
+        $entries = [];
         foreach ($errorLog as $line) {
             // Match any Apache log entry with timestamp and module
             if (preg_match('/^\[(.*?)\]\s+\[(.*?)\]/', $line, $matches)) {
@@ -344,16 +367,30 @@ function readErrorLog($errorLogPath, $logType) {
 
                 // Only show actual errors
                 if (stripos($line, ':error]') !== false || stripos($line, ' error:') !== false) {
-                    // Format the log entry
-                    echo '<div class="log-entry error-level">';
-                    echo '<div class="timestamp">' . htmlspecialchars($timestamp) . '</div>';
-                    echo '<div class="log-level">ERROR</div>';
-                    echo '<div class="log-module">' . htmlspecialchars($module) . '</div>';
-                    echo '<div class="log-message">' . htmlspecialchars(preg_replace('/^\[.*?\]\s+\[.*?\]\s+\[.*?\]\s+/', '', $line)) . '</div>';
-                    echo '</div>';
+                    $entries[] = [
+                        'timestamp' => $timestamp,
+                        'module' => $module,
+                        'message' => preg_replace('/^\[.*?\]\s+\[.*?\]\s+\[.*?\]\s+/', '', $line),
+                        'raw_time' => strtotime($timestamp)
+                    ];
                 }
             }
         }
+
+        // Sort entries by timestamp in descending order (newest first)
+        usort($entries, function($a, $b) {
+            return $b['raw_time'] - $a['raw_time'];
+        });
+
+        foreach ($entries as $entry) {
+            echo '<div class="log-entry error-level">';
+            echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+            echo '<div class="log-level">ERROR</div>';
+            echo '<div class="log-module">' . htmlspecialchars($entry['module']) . '</div>';
+            echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
+            echo '</div>';
+        }
+        
         echo '</div>';
     } else {
         echo '<p class="error-message">Error log file not found or not readable at: ' . htmlspecialchars($errorLogPath) . '</p>';
@@ -761,10 +798,10 @@ if (isset($_GET['download_logs'])) {
         }
 
         .highlight {
-            background-color: #17a2b8;
-            color: #ffffff;
-            padding: 0 2px;
+            background-color: rgba(255, 255, 0, 0.3);
             border-radius: 2px;
+            padding: 0 2px;
+            margin: 0 -2px;
         }
 
         /* Grid layout controls */
@@ -1352,58 +1389,77 @@ document.getElementById('downloadLogs').addEventListener('click', function() {
 });
 
 // Search functionality
-document.querySelectorAll('.search-input').forEach(input => {
+document.querySelectorAll('.search-input, .modal-search-input').forEach(input => {
     const targetId = input.getAttribute('data-target');
     const container = document.getElementById(targetId);
     let originalContent = '';
+    let originalEntries = [];
 
     // Store original content when the page loads
     if (container) {
         originalContent = container.innerHTML;
+        // Handle different types of entries
+        if (targetId === 'requestErrorsContainer' || targetId === 'requestErrorsModalContent') {
+            originalEntries = Array.from(container.querySelectorAll('.error-entry'));
+        } else {
+            originalEntries = Array.from(container.querySelectorAll('.log-entry'));
+        }
     }
 
     function performSearch() {
         if (!container) return;
 
-        const searchTerm = input.value.trim();
+        const searchTerm = input.value.trim().toLowerCase();
+        
+        // If search is empty, restore original content
         if (!searchTerm) {
             container.innerHTML = originalContent;
             return;
         }
 
-        let regex;
-        try {
-            // Try to detect if the search term is a regex pattern
-            const regexPattern = /^\/.+\/[gimuy]*$/;
-            if (regexPattern.test(searchTerm)) {
-                // If it looks like a regex pattern (starts and ends with /), use it directly
-                const parts = searchTerm.split('/');
-                const flags = parts.pop();
-                const pattern = parts.slice(1).join('/');
-                regex = new RegExp(pattern, flags);
-            } else {
-                // Otherwise, escape special characters and use as plain text
-                regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        // Clear container but maintain original structure
+        container.innerHTML = '';
+        let hasMatches = false;
+
+        originalEntries.forEach(entry => {
+            const clone = entry.cloneNode(true);
+            const entryText = entry.textContent.toLowerCase();
+            
+            if (entryText.includes(searchTerm)) {
+                hasMatches = true;
+                if (targetId === 'requestErrorsContainer' || targetId === 'requestErrorsModalContent') {
+                    // Special handling for request errors
+                    const elements = clone.querySelectorAll('.timestamp, .error-message');
+                    elements.forEach(element => {
+                        const text = element.textContent;
+                        if (text.toLowerCase().includes(searchTerm)) {
+                            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                            element.innerHTML = text.replace(regex, '<span class="highlight">$1</span>');
+                        }
+                    });
+                } else {
+                    // Regular log entries
+                    const elements = clone.querySelectorAll('.log-message, .timestamp, .log-level, .log-module');
+                    elements.forEach(element => {
+                        const text = element.textContent;
+                        if (text.toLowerCase().includes(searchTerm)) {
+                            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                            element.innerHTML = text.replace(regex, '<span class="highlight">$1</span>');
+                        }
+                    });
+                }
+                container.appendChild(clone);
             }
-        } catch (e) {
-            console.error('Invalid regex:', e);
-            return;
-        }
+        });
 
-        const content = container.textContent;
-        const matches = content.match(regex);
-        
-        if (!matches) {
+        if (!hasMatches) {
             container.innerHTML = '<div class="no-results">No matches found</div>';
-            return;
         }
-
-        const highlightedContent = content.replace(regex, match => `<span class="highlight">${match}</span>`);
-        container.innerHTML = `<pre class="log-content">${highlightedContent}</pre>`;
     }
 
-    // Add event listener
+    // Add event listeners for both input and keyup events
     input.addEventListener('input', performSearch);
+    input.addEventListener('keyup', performSearch);
 });
 
 // Function to open modal with special handling for LLM output
@@ -1518,6 +1574,28 @@ document.querySelectorAll('.log-container').forEach(container => {
     const modalId = container.id.replace('Container', 'Modal');
     container.setAttribute('data-modal-target', modalId);
 });
+
+// Update the highlight style to be more subtle
+const style = document.createElement('style');
+style.textContent = `
+    .highlight {
+        background-color: rgba(255, 255, 0, 0.3);
+        border-radius: 2px;
+        padding: 0 2px;
+        margin: 0 -2px;
+    }
+    .log-entry, .error-entry {
+        width: 100%;
+    }
+    .log-message, .error-message {
+        width: auto;
+        flex: 1;
+    }
+    .error-entry .error-message strong {
+        margin-right: 5px;
+    }
+`;
+document.head.appendChild(style);
 </script>
 
 <?php
