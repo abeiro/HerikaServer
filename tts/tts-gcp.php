@@ -8,7 +8,7 @@ use Google\Cloud\TextToSpeech\V1\TextToSpeechClient;
 use Google\Cloud\TextToSpeech\V1\AudioEncoding;
 use Google\Cloud\TextToSpeech\V1\VoiceSelectionParams;
 
-function tts($textString, $mood = 'default', $stringforhash)
+$GLOBALS["TTS_IN_USE"]=function($textString, $mood = 'default', $stringforhash)
 {
   $startTime = microtime(true);
   $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
