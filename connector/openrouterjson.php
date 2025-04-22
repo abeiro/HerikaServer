@@ -720,21 +720,9 @@ class openrouterjson
             fclose($this->primary_handler);
         }
         
-        if (($this->_buffer==null) || (empty(trim($this->_buffer))) ) {
-
-            if ($GLOBALS["db"]) {
-                $GLOBALS["db"]->insert(
-                'audit_request',
-                    array(
-                        'request' => $this->_dataSent,
-                        'result' => $this->_rawbuffer
-                    ));
-            }
-        }
-        file_put_contents(__DIR__."/../log/output_from_llm.log","{$this->_buffer}\n\n".date(DATE_ATOM)." END\n==\n", FILE_APPEND);
+        // Write the buffer to the log file without timestamp separators
+        file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
         return $this->_buffer;
-
-
     }
 
    
