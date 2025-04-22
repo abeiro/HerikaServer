@@ -123,10 +123,7 @@ Scene Note: A brief description of the topic, mood, or idea introduced by the in
             $characterName = trim($matches[1] ?? 'Unknown');
             $instructionText = trim($matches[2] ?? 'No instruction text');
             $instructionText .= " (Use ACTIONS if needed) ";
-<<<<<<< HEAD
         
-=======
->>>>>>> cb8e76c5a9c21520346fbffc11aaca5369e8b7a1
             // Generate unique task ID
             $taskId = uniqid();
         

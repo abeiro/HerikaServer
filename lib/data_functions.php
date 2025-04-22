@@ -475,6 +475,9 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='book' then 'BOOKEVT' 
       when type='quest' then 'QUEST' 
       when type='itemfound' then 'ITEM' 
+      when type='rpg_word' then 'RPG_WORD' 
+      when type='rpg_lvl' then 'RPG_LVL' 
+      when type='rpg_shout' then 'RPG_SHOUT' 
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
@@ -572,7 +575,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
          else if ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") === 0)) {
             $speaker = "player";
             
-        } else if ((strpos($rowData, "The Narrator:") === 0)) {
+        } else if ((strpos($rowData, "The Narrator:") === 0) && $row["type"]=="chat") {
             $speaker = "narratorchat";
             
         } else if ($row["subtype"]=="BACKDIAG") {
@@ -590,26 +593,35 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ($row["subtype"]=="ITEM") {
             $speaker = "narratorci";
             
-        }  else {
+        } else if ($row["subtype"]=="RPG_WORD") {
+            $speaker = "narratorci";
+            
+        } else if ($row["subtype"]=="RPG_LVL") {
+            $speaker = "narratorci";
+            
+        } else if ($row["subtype"]=="RPG_SHOUT") {
+            $speaker = "narratorci";
+            
+        } else {
             
             $speaker = "npc";
             
         }
 
         $lastSpeaker = $speaker;
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => trim($rowData));
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker));
 
-        if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(false)) {
+        if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(true)) {
             $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60 * 60 * 40), 0);
             //if ($hoursAgo>12) {
             if ($printLocation) {
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
                         if (DataLastKnownLocationHuman(false,true)==$currentLocation)   // Enforce current location.
-                            $lastDialogFull[] = array('role' => "narratorci", 'content' => "LOCATION CHANGE, THIS IS THE CURRENT LOCATION: $currentLocation");
+                            $lastDialogFull[] = array('role' => "narratorloc", 'content' => "LOCATION CHANGE, THIS IS THE CURRENT LOCATION: $currentLocation");
                         
                         else
-                            $lastDialogFull[] = array('role' => "narratorci", 'content' => "LOCATION CHANGE to $currentLocation, timeline mark: $hoursAgo hours ago  ");
+                            $lastDialogFull[] = array('role' => "narratorloc", 'content' => "LOCATION CHANGE to $currentLocation, timeline mark: $hoursAgo hours ago  ");
                     }
                 }
             }
@@ -617,12 +629,13 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     }
 
+    file_put_contents(__DIR__."/../log/context_for_${actor}_stage_1_.txt",print_r($lastDialogFull,true));
 
     return $lastDialogFull;
 
 }
 
-function compactHistoricContext($lastDialogFull) {
+function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false) {
 
     $lastrole="";
     $bufferHerika=[];
@@ -694,6 +707,7 @@ function compactHistoricContext($lastDialogFull) {
     $buffer = [];
     $lastDialogFull=[];
 
+
     foreach ($lastDialogFullCopy as $n => $line) {
         $speaker=$line["role"];
         
@@ -703,25 +717,38 @@ function compactHistoricContext($lastDialogFull) {
             $speakerNPC=$matches[1] ?? "";
             $speaker="npc_$speakerNPC";
         }
+        
 
         if ($lastSpeaker == $speaker) {
             // Same speaker as last iteration, remove extra text
-            if (strpos($speaker,"npc")==0 || $speaker=="narratorchat") {
+            if (strpos($speaker,"npc") === 0 || $speaker == "narratorchat") {
                 $matches = [];
                 
                 // Clean talking to and npc name , only leave it on first line
                 $matches = [];
                 preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $line["content"], $matches);
                 $buffer[]=$matches[1] ?? $line["content"];
-            } else 
-                $buffer[] = strtr($line["content"],["The Narrator:"=>"","{$GLOBALS["HERIKA_NAME"]}:"=>""]);
+            } else {
+
+                if (!$compactContextInfo) {
+                    $lastDialogFull[]=array('role' => $lastSpeaker, 'content' => trim(isset($buffer[0])?$buffer[0]:$line["content"]));
+                    $buffer = [];
+                } else {
+                    $buffer[] = strtr($line["content"],["The Narrator:"=>"","{$GLOBALS["HERIKA_NAME"]}:"=>""]);
+                }
+                
+            }
         } else {
-            
-           
 
             if (sizeof($buffer) > 0) {
-                if ($lastSpeaker=="narratorci")
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "* ".implode("\n* ", removeEmptyElements($buffer)));
+                if ($lastSpeaker=="narratorci" || $lastSpeaker=="narratorloc") {
+                    if (!$compactContextInfo) {
+                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "".implode(" ", removeEmptyElements($buffer)));  // Should be only one line
+                    } else {
+                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "* ".implode("\n* ", removeEmptyElements($buffer))); 
+                    }
+
+                }
                 else if ($lastSpeaker=="backgroundchat")
                     $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)));
                 else 
@@ -748,17 +775,19 @@ function compactHistoricContext($lastDialogFull) {
             $bufferCopy[]=$bufferEntry;
 
     }
+
     // Last buffer, probably user input.
+    if (sizeof($bufferCopy)) {
+        if ($lastSpeaker=="narratorci" || $lastSpeaker=="narratorloc") 
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $bufferCopy));
+        else if ($lastSpeaker=="backgroundchat")
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy));
+        else 
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
+    }
 
-    if ($lastSpeaker=="narratorci")
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $bufferCopy));
-    else if ($lastSpeaker=="backgroundchat")
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy));
-    else 
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
 
-
-   
+    file_put_contents(__DIR__."/../log/context_for_${actor}_stage_2_.txt",print_r($lastDialogFull,true));
     return $lastDialogFull;
 }
 
@@ -783,6 +812,10 @@ function replaceRoles($lastDialogFull,$actor,$lastNelements) {
             $lastDialogFull[$n]["content"] = $lastDialogFull[$n]["content"]."\n";
         
         } else if ($line["role"] == "narratorchat") {
+
+            $lastDialogFull[$n]["role"] = "user";
+
+        } else if ($line["role"] == "narratorloc") {
 
             $lastDialogFull[$n]["role"] = "user";
 
@@ -813,7 +846,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 {
 
     $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
-    $ctx2=$ctx1; //compactHistoricContext($ctx1);
+    $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
     return $ctx3;
@@ -1565,7 +1598,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
                 )
             );
             return "";
-        } else {
+        } else  if (isset($reponse["is_memory_recall"])) {
         
             if (isset($reponse["version"]) && $reponse["version"]==2) {
                 $altKeywords=explode(" ",lastNames(15,["inputtext"]));

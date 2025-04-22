@@ -377,8 +377,9 @@ if (is_array($currentParty)) {
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
 
 if (in_array($gameRequest[0],["rechat"]) ) {
-    //die();
+    
     //RECHAT. Must choose if we continue conversation or no.
+
     $rechatHistory=DataRechatHistory();
     
     if (sizeof($rechatHistory)>(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
@@ -416,7 +417,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
                         die();// Abort rechat
                     }
 
-            usleep(1000);
+            usleep(100);
         }
     }
 

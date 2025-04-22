@@ -159,7 +159,7 @@
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -265,7 +265,7 @@
       "cfg_scale": {"userlvl":"wip", "type":"number","description":"CFG scale. Controls how closely the audio matches the sample voice. Higher numbers will be a closer match. [1.1 - 5]"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 

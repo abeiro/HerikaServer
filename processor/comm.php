@@ -377,6 +377,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         }
     }
 } elseif ($gameRequest[0] == "location") {
+    $GLOBALS["CACHE_LOCATION"]=$gameRequest[3];
     logEvent($gameRequest);
     $MUST_END=true;
 
