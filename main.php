@@ -406,7 +406,8 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
         sem_release($semaphore);
         error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
-        
+        // Check if this conflicts with smart rechat
+        // Is this doing something?
         while (sem_acquire($semaphore,true)!=true)  {
             $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
             if (isset($user_input_after[0]))
@@ -416,7 +417,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
                         die();// Abort rechat
                     }
 
-            usleep(100);
+            usleep(1000);
         }
     }
 
