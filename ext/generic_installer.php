@@ -72,6 +72,15 @@ error_reporting(E_ALL);
  * CREATE INDEX IF NOT EXISTS idx_username 
  * ON my_plugin_users(username);
  * 
+ * Notes on github plugin download
+ * 
+ * * Expects a file called <PACKAGE_NAME>.tar.gz on every release (ex. twitch-bot.tar.gz)
+ * * Work on github as usual. Once coding is done, update manifest.json version and push to github
+ * * Create a new release, tag must be a number (ex 1.0.3)
+ * * Make sure release has file <PACKAGE_NAME>.tar.gz. Download source code and upload it with that name.
+ * * Generic installer should care about the updating
+ * 
+ * ----------------------
  ******************************************************************************/
 
 // Global configuration
