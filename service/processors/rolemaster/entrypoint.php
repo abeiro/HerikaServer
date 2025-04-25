@@ -7,8 +7,14 @@ $enginePath = $GLOBALS["ENGINE_ROOT"];
 
 /* Connector to use */
 $file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel.json';
+;
 $modelContents = file_get_contents($file);
 logMsg("Current AI Model is set to $modelContents.");
+
+// Initialize function parameters before requiring functions.php
+$GLOBALS["FUNCTION_PARM_INSPECT"] = [];
+$GLOBALS["FUNCTION_PARM_MOVETO"] = [];
+$GLOBALS["F_NAMES"] = [];
 
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
@@ -16,7 +22,7 @@ require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib/rolemaster_helpers.php");
-
+require_once($enginePath . "functions/functions.php");
 
 $FUNCTIONS_ARE_ENABLED=false;
 
