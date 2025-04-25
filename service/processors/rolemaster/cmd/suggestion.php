@@ -29,7 +29,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
         $prompt[] = array('role' => 'system', 'content' => "I want you to read this gameplay transcription in Skyrim universe.");
         $prompt[] = array('role' => 'user', 'content' => $historyData);
-        $prompt[] = array('role' => 'user', 'content' =>"Now act as a movie director, give an instruction to a random actor to generate a dialogue. 
+        $prompt[] = array('role' => 'user', 'content' =>"Roleplay as a movie director, the user has just provided an instruction which you must follow. 
+        Do your best to achieve their request. 
 {$GLOBALS["argv"][3]}
 ({$GLOBALS["PLAYER_NAME"]},busy actors and far away actors are EXCLUDED!)
 This dialogue can introduce a new topic, keep talking about same topics, say someting new, or point to a enviromental action that has happened...be creative but logical. 
@@ -43,6 +44,7 @@ In addition, follow these general scene rules as a director:
  * If a character reuses the same argument too often, nudge the scene toward something new or reflective.
  * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.
  * Do not resolve everything neatly—keep room for ongoing tension or future continuation.
+ * Here are a list of actions that can be used: (".implode(", ", $ENABLED_FUNCTIONS).") (Choose a single action if appropiate)
 
 Format your output as:
 
