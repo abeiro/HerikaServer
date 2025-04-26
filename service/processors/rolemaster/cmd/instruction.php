@@ -29,8 +29,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
         $prompt[] = array('role' => 'system', 'content' => "I want you to read this gameplay transcription in Skyrim universe.");
         $prompt[] = array('role' => 'user', 'content' => $historyData);
-        $prompt[] = array('role' => 'user', 'content' =>"Roleplay as a movie director, the user has just provided an instruction which you must follow. 
-        Do your best to achieve their request. 
+        $prompt[] = array('role' => 'user', 'content' =>"Roleplay as a movie director, the user has just provided an instruction which you must follow. Do your best to achieve their request. 
 {$GLOBALS["argv"][3]}
 ({$GLOBALS["PLAYER_NAME"]},busy actors and far away actors are EXCLUDED!)
 This dialogue can introduce a new topic, keep talking about same topics, say someting new, or point to a enviromental action that has happened...be creative but logical. 
