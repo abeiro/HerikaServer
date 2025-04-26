@@ -365,7 +365,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
     </div>
 
     <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal';">
-        v1.1.1.3
+        v1.3.0
     </div>
 
     <div class="social-links">
