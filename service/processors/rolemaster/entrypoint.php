@@ -6,9 +6,9 @@ $GLOBALS["TASKS"]["rolemaster"]["fn"]=function() {
 $enginePath = $GLOBALS["ENGINE_ROOT"];
 
 /* Connector to use */
-$file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel.json';
+$file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel_.json';
 $modelContents = file_get_contents($file);
-logMsg("Current AI Model is set to $modelContents.");
+Logger::info("Current AI Model is set to $modelContents.");
 
 // Initialize function parameters before requiring functions.php
 $GLOBALS["FUNCTION_PARM_INSPECT"] = [];
@@ -25,17 +25,6 @@ require_once($enginePath . "functions/functions.php");
 
 $FUNCTIONS_ARE_ENABLED=false;
 
-
-$profile=md5("default");
-
-if (file_exists($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php")) {
-    logMsg("PROFILE: {$profile}");
-    $GLOBALS["active_profile"]=$profile;
-    require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php");
-
-} else 
-    logMsg("Profile does not exists:  $enginePath" . "conf".DIRECTORY_SEPARATOR."conf_{$profile}.php",S_LOG_ERROR);
-
 $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
 
 $GLOBALS["db"]=new sql();
@@ -45,15 +34,16 @@ $res=$GLOBALS["db"]->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  f
 $GLOBALS["gameRequest"]=["inputtext"];
 $GLOBALS["gameRequest"][2]=$res[0]["gamets"]+1;
 
-if ($GLOBALS["argv"][2]=="instruction")
+if ($GLOBALS["argv"][2]=="instruction") {
+    Logger::info("Loading instruction command");
     require_once("cmd" . DIRECTORY_SEPARATOR . "instruction.php");
-else if ($GLOBALS["argv"][2]=="suggestion")
+} else if ($GLOBALS["argv"][2]=="suggestion") {
+    Logger::info("Loading suggestion command");
     require_once("cmd" . DIRECTORY_SEPARATOR . "suggestion.php");
-else if ($GLOBALS["argv"][2]=="impersonation")
+} else if ($GLOBALS["argv"][2]=="impersonation") {
+    Logger::info("Loading impersonation command");
     require_once("cmd" . DIRECTORY_SEPARATOR . "impersonation.php");
-
-
-    
+}
 
 }
 ?>
