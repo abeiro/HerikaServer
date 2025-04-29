@@ -1,4 +1,5 @@
 <?php 
+require_once(__DIR__ . '/../../../../lib/logger.php');
 
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
         logMsg("Choose a LLM model and connector. Used '{$GLOBALS["CURRENT_CONNECTOR"]}'",S_LOG_CRITICAL);
@@ -135,4 +136,29 @@ Scene Note: A brief description of the topic, mood, or idea introduced by the in
         parseSceneNote($totalBuffer);
         
     }
-    ?>
+
+    if ($GLOBALS["argv"][3]) {
+        $speech=$GLOBALS["db"]->escape($GLOBALS["argv"][3]);
+    } else if ($_GET["speech"]) {
+        $speech=$GLOBALS["db"]->escape($_GET["speech"]);
+    } else {
+        Logger::error("No speech parameter provided for suggestion command");
+        die("No speech");
+    }
+
+    Logger::info("Processing suggestion command with speech: " . $speech);
+
+    $GLOBALS["db"]->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|Suggestion@$speech@inputtext",
+            'tag' => ""
+        )
+    );
+
+    Logger::info("Successfully logged suggestion command to responselog");
+?>
