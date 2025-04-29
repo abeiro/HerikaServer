@@ -1,12 +1,16 @@
 <?php 
+require_once(__DIR__ . '/../../../../lib/logger.php');
+
 if ($GLOBALS["argv"][3]) {
     $speech=$GLOBALS["db"]->escape($GLOBALS["argv"][3]);
 } else if ($_GET["speech"]) {
     $speech=$GLOBALS["db"]->escape($_GET["speech"]);
-} else
+} else {
+    Logger::error("No speech parameter provided for impersonation command");
     die("No speech");
+}
 
-
+Logger::info("Processing impersonation command with speech: " . $speech);
 
 $GLOBALS["db"]->insert(
     'responselog',
@@ -20,4 +24,5 @@ $GLOBALS["db"]->insert(
     )
 );
 
+Logger::info("Successfully logged impersonation command to responselog");
 ?>
