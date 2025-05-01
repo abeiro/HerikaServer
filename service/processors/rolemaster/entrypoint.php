@@ -21,13 +21,13 @@ require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib/rolemaster_helpers.php");
+
+$GLOBALS["db"]=new sql();
 require_once($enginePath . "functions/functions.php");
 
 $FUNCTIONS_ARE_ENABLED=false;
 
 $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
-
-$GLOBALS["db"]=new sql();
 
 // Some functions need this setted */
 $res=$GLOBALS["db"]->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog order by gamets desc limit 1 offset 0");
