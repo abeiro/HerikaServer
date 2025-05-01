@@ -54,10 +54,10 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
             $voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
         
-        $baseURL = $GLOBALS["TTS"]["ZONOS_GRADIO"]["endpoint"]."/gradio_api";
+        $baseURL = rtrim($GLOBALS["TTS"]["ZONOS_GRADIO"]["endpoint"], '/');
 
         $filePath = "/var/www/html/HerikaServer/data/voices/{$voice}.wav";
-        $uploadURL = "{$baseURL}/upload";
+        $uploadURL = "{$baseURL}/gradio_api/upload";
         $result = uploadFileToGradio($filePath, $uploadURL);
 
         // response is something like ["/tmp/gradio/randomalphanumeric/TheNarrator.wav"]
@@ -230,7 +230,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
                     "mime_type" => "audio/wav",
                     "orig_name" => "{$voice}.wav",
                     "path" => $filePath,
-                    "url" => "{$baseURL}/file={$filePath}"
+                    "url" => "{$baseURL}/gradio_api/file={$filePath}"
                 ),
                 null, // prefix audio (could use a 100ms silence wav for example)
                 $emotions["response_tone_happiness"],
@@ -272,7 +272,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
             )
         );
         $context = stream_context_create($options);
-        $response = file_get_contents("{$baseURL}/call/generate_audio", false, $context);
+        $response = file_get_contents("{$baseURL}/gradio_api/call/generate_audio", false, $context);
         // response is something like {"event_id":"randomalphanumeric"}
         $respObj = json_decode($response);
         if (!$respObj) {
@@ -289,7 +289,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
             )
         );
         $context = stream_context_create($options);
-        $response = file_get_contents("{$baseURL}/call/generate_audio/{$respObj->event_id}", false, $context);
+        $response = file_get_contents("{$baseURL}/gradio_api/call/generate_audio/{$respObj->event_id}", false, $context);
 
         // extract json from within the response
         $startPos = strpos($response, '{');
@@ -310,7 +310,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
             )
         );
         $context = stream_context_create($options);
-        $response = file_get_contents("{$baseURL}/file={$respObj->path}", false, $context);
+        $response = file_get_contents("{$baseURL}/gradio_api/file={$respObj->path}", false, $context);
 
         if (is_array($GLOBALS["TTS_FFMPEG_FILTERS"])) {
             $GLOBALS["TTS_FFMPEG_FILTERS"]["adelay"]="adelay=150|150";
