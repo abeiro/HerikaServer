@@ -4,6 +4,8 @@ require_once("utils.php");
 
 // used for openai_token_count table
 
+require_once("utils_game_timestamp.php");
+
 
 function DataDequeue()
 {
@@ -457,7 +459,12 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     $nRecordsLimit = 16 + (2 * abs($lastNelements)); // reduce the default 1000 recs loaded from db to a number proportional to context_history 
 
-    $currentGameTs=$GLOBALS["gameRequest"][2]+0;
+    if (isset($GLOBALS["gameRequest"][2])) { 
+        $currentGameTs=intval($GLOBALS["gameRequest"][2]);
+    } else {
+        $currentGameTs=intval(DataLastKnownGameTS());
+    }
+
     if ($GLOBALS["gameRequest"][0]=="chatnf_book") {
         $removeBooks="";
     } else {
@@ -612,7 +619,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker));
 
         if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(true)) {
-            $hoursAgo=round(($currentGameTs-$row["gamets"])/ (60 * 60 * 40), 0);
+            $hoursAgo=round(($currentGameTs-$row["gamets"])* 0.0000024, 0);
             //if ($hoursAgo>12) {
             if ($printLocation) {
                 if (!isset($timeStampBuffer[$hoursAgo])) {
@@ -629,7 +636,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     }
 
-    file_put_contents(__DIR__."/../log/context_for_${actor}_stage_1_.txt",print_r($lastDialogFull,true));
+    file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($lastDialogFull,true));
 
     return $lastDialogFull;
 
@@ -1980,7 +1987,7 @@ function call_llm() {
 
                 $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
                 echo implode("\r\n", $actions).PHP_EOL;
-                file_put_contents(__DIR__."/../log/ouput_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
+                file_put_contents(__DIR__."/../log/output_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
 
         }
     }
@@ -2015,6 +2022,41 @@ function AddFirstTimeMet($followerName,$momentum,$gamets,$ts) {
 
 
 }
+
+
+function DataRetrieveFirstTimeMet($s_player_name, $s_npc_name) {
+    global $db;
+
+	$s_res = "";
+
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0)) {
+		$db_rec = $db->fetchAll("SELECT speaker,listener,
+			convert_gamets2skyrim_date(gamets) as met_date,
+			convert_gamets2hours((SELECT MAX(gamets) FROM eventlog) - gamets) as hours_ago,
+			message,gamets,momentum,rowid  
+			FROM memory 
+			WHERE event = 'first_met' AND gamets > 0 AND
+			((speaker = '{$s_player_name}' AND listener = '$s_npc_name') OR
+			(listener = '{$s_player_name}' AND speaker = '$s_npc_name'))
+			ORDER BY rowid ASC LIMIT 2; ");
+		if (is_array($db_rec) && sizeof($db_rec)>0) {
+			$gts_met = $db_rec[0]['gamets'];
+			$s_met = $db_rec[0]['met_date'];
+			$hours_ago = intval($db_rec[0]['hours_ago']);
+			if ($hours_ago < 49)
+				$s_time_ago = "{$hours_ago} hours ago";
+			else {
+				$days_ago = intval($hours_ago / 24); 
+				$s_time_ago = "{$days_ago} days ago";
+			}
+			$s_res = "{$s_player_name} met {$s_npc_name} for the first time on {$s_met}, {$s_time_ago}.";
+		} else { 
+			Logger::info("DataRetrieveLastMet: NO match found");
+		}
+	}
+	return $s_res;
+}
+
 
 function GetAnimationHex($mood)
 {
@@ -2469,4 +2511,3 @@ function requireFilesRecursively($dir,$name) {
 
 
 ?>
-
