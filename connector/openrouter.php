@@ -12,21 +12,107 @@ class openrouter
     private $_commandBuffer;
     public $_extractedbuffer;
     private $_buffer;
+    private $_is_nanogpt_com;
+    private $_is_mistral_ai;
+    private $_is_streaming;
+    private $_is_reasoning;
+    private $_use_tools;
+    private $_model;
+    private $_url;
+    private $_remove_cot;
+    private $_cot_tag_base;
+    private $_output_buffer; 
+    private $_timeout;
 
 
     public function __construct()
     {
         $this->name="openrouter";
         $this->_commandBuffer=[];
+        $this->_extractedbuffer="";
+        $this->_buffer="";
+        $this->_is_nanogpt_com=false;
+        $this->_is_mistral_ai=false;
+        $this->_is_streaming=true;
+        $this->_is_reasoning=false;
+        $this->_use_tools=true;
+        $this->_model="";
+        $this->_url="";
+        $this->_remove_cot=true;
+        $this->_cot_tag_base="think";
+        $this->_output_buffer="";
+        $this->_timeout=30;
     }
 
+    private function isReasoningModel($s_model) {
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            $i_pos = stripos($s_model, "deepseek-r");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-32b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-max");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, ":thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-reasoning");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "grok-3-mini"); 
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "sonar-deep-research");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "r1-1776");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "dolphin3.0-r1-mistral");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "aion-1.0");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "reka-flash-3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "olympiccoder-");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "MAI-DS-R1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-235b-a22b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-30b-a3b");
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+    private function init_connector() {
+        $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
+        if (strlen($this->_url) < 6)
+            Logger::error("{$this->name} connector - missing url!");
+
+        $this->_use_tools = (isset($GLOBALS["CONNECTOR"][$this->name]["use_tools"])) ? $GLOBALS["CONNECTOR"][$this->name]["use_tools"] : true;
+        $this->_remove_cot = (isset($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"])) ? $GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] : true;
+
+        $default_model = 'meta-llama/llama-3.3-70b-instruct';
+
+        $this->_is_nanogpt_com = (stripos($this->_url, "nano-gpt.com") > 0 ); //https://nano-gpt.com/api/v1/chat/completions
+        if ($this->_is_nanogpt_com) {    
+            $default_model = 'meta-llama/llama-4-scout';
+        } else {
+            $this->_is_mistral_ai = (stripos($this->_url, "mistral.ai") > 0 ); //https://api.mistral.ai/v1/chat/completions
+            if ($this->_is_mistral_ai)    
+                $default_model = 'mistral-small-latest';
+        }
+
+        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : $default_model;
+        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+        $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
+    }
 
     public function open($contextData, $customParms)
     {
-        $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
 
-        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+        $this->init_connector();
 
+        $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
          /***
             In the realm of perfection, the demand to tailor context for every language model would be nonexistent.
@@ -55,23 +141,52 @@ class openrouter
         
         $contextData=$contextDataCopy;
 
+
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.5);
+        if ($temperature < 0.0) $temperature = 0.0;
+        else if ($temperature > 2.0) $temperature = 2.0; 
+
+        $presence_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ? : 0.0);
+        if ($presence_penalty < -2.0) $presence_penalty = -2.0;
+        else if ($presence_penalty > 2.0) $presence_penalty = 2.0; 
+
+        $frequency_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ? : 0.0); 
+        if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
+        else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
+
+        $repetition_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ? : 0.0);
+        if ($repetition_penalty < 0.0) $repetition_penalty = 0.0;
+        else if ($repetition_penalty > 2.0) $repetition_penalty = 2.0; 
+
+        $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
+        if ($top_p > 1) $top_p = 1.0;
+        else if ($top_p < 0.0) $top_p = 0.0; 
+
+        $min_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ? : 0.0);
+        if ($min_p > 1) $min_p = 1.0;
+        else if ($min_p < 0.0) $min_p = 0.0; 
+
+        $top_a = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ? : 0.0);
+        if ($top_a > 1) $top_a = 1.0;
+        else if ($top_a < 0.0) $top_a = 0.0; 
+
+        $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
+        if ($top_k < 0) $top_k = 0; 
+
         $data = array(
-            'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-3.5-turbo-0613',
-            'messages' =>
-                $contextData
-            ,
-            'stream' => true,
-            'max_tokens'=>$MAX_TOKENS,
-            'temperature' => floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?: 1),
-            'top_k' => floatval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ?: 0),
-            'top_p' => floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ?: 1),
-            'presence_penalty' => floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0),
-            'frequency_penalty' => floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0),
-            'repetition_penalty' => floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ?: 1.15),
-            'min_p' => floatval(($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ?: 0.1),
-            'top_a' => floatval(($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ?: 0),   
-            'transforms'=>[],
-            
+            'model' => $this->_model,
+            'messages' => $contextData,
+            'stream' => $this->_is_streaming, 
+            'max_tokens' => $MAX_TOKENS,
+            'temperature' => $temperature, 
+            'top_k' => $top_k,
+            'top_p' => $top_p, 
+            'min_p' => $min_p,
+            'top_a' => $top_a,
+            'presence_penalty' => $presence_penalty, 
+            'frequency_penalty' => $frequency_penalty, 
+            'repetition_penalty' => $repetition_penalty,
+            'transforms'=>[]
         );
 
         if (isset($GLOBALS["CONNECTOR"][$this->name]["stop"])&&sizeof($GLOBALS["CONNECTOR"][$this->name]["stop"])>0) {
@@ -79,7 +194,20 @@ class openrouter
         }
         // Override
 
+        if ($this->_is_mistral_ai) {
+            unset($data["presence_penalty"]); 
+            unset($data["frequency_penalty"]);
+        } 
 
+        if ($this->_is_reasoning) { // add parameter to hide <think> content
+            $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
+            //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
+            //Logger::debug("reasoning " . $this->_model);
+
+            if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
+                $data["enable_thinking"] = false;
+        }
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
@@ -109,13 +237,13 @@ class openrouter
 
         }
 
-        $data["transforms"]=[];
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+            }
+        }
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
-        
-        if (isset($data["max_tokens"])) {
-            $data["max_tokens"]+=0;
-        }
         
         $headers = array(
             'Content-Type: application/json',
@@ -129,7 +257,7 @@ class openrouter
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout
             )
         );
 
@@ -137,7 +265,7 @@ class openrouter
         
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
-        $this->primary_handler = $this->send($url, $context);
+        $this->primary_handler = $this->send($this->_url, $context);
 
         //tokenizePrompt(json_encode($data));
 
@@ -146,11 +274,74 @@ class openrouter
 
     }
 
-    public function send($url, $context) {
+    public function send($s_url, $context) {
         if (isset($GLOBALS['mockConnectorSend'])) {
-            return call_user_func($GLOBALS['mockConnectorSend'], $url, $context);
+            return call_user_func($GLOBALS['mockConnectorSend'], $s_url, $context);
         }
-        return fopen($url, 'r', false, $context);
+        return fopen($s_url, 'r', false, $context);
+    }
+
+    private function removeChainOfThought($content) { 
+    // remove content between CoT tags
+        if (($this->_is_reasoning) && ($this->_remove_cot)) {
+            $this->_output_buffer .= $content; // collect content in a buffer
+
+            $crt_pos = 0;
+            $inside_cot = false;
+            $clean_buffer = "";
+            $this->_cot_tag_base="think";
+            $cot_tag = "<{$this->_cot_tag_base}>";
+            $cot_end_tag = "</{$this->_cot_tag_base}>";
+            
+            while (true) {
+                if (!$inside_cot) {
+                    // CoT opening tag could be <think> <thinking> or <reasoning>
+                    $cot_start = stripos($this->_output_buffer, $cot_tag, $crt_pos);
+                    if ($cot_start === false) {
+                        $cot_start = stripos($this->_output_buffer, "<thinking>", $crt_pos);
+                        if ($cot_start === false) {
+                            $cot_start = stripos($this->_output_buffer, "<reasoning>", $crt_pos);
+                            if ($cot_start === false) { // No CoT tags
+                                $clean_buffer .= substr($this->_output_buffer, $crt_pos);
+                                break;
+                            } else {
+                                $this->_cot_tag_base="reasoning";
+                                $cot_tag = "<reasoning>";
+                                $cot_end_tag = "</reasoning>";
+                            }
+                        } else {
+                            $this->_cot_tag_base="thinking";
+                            $cot_tag = "<thinking>";
+                            $cot_end_tag = "</thinking>";
+                        }
+                    }
+                    $cot_tag_len = strlen($cot_tag);
+
+                    // add content before the tag
+                    $clean_buffer .= substr($this->_output_buffer, $crt_pos, ($cot_start - $crt_pos));
+                    $crt_pos = $cot_start + $cot_tag_len; // move past CoT start tag
+                    $inside_cot = true;
+                } else {
+                    // check CoT closing tag
+                    $think_end = stripos($this->_output_buffer, $cot_end_tag, $crt_pos);
+                    if ($think_end === false) {
+                        // closing tag not found yet - need more chunks
+                        break;
+                    }
+                    // skip content between tags
+                    $crt_pos = $think_end + ($cot_tag_len + 1); // move past CoT end tag </...>
+                    $inside_cot = false;
+                }
+            }
+
+            if (!$inside_cot) { // if we've processed everything and nothing more is held in buffer
+                $this->_output_buffer = ""; // reset buffer if we've processed all complete tags
+                return $clean_buffer;
+            }
+            
+            return ""; // if still inside CoT tag or haven't completed processing, return empty and wait for more chunks
+        }
+        return $content; // not a reasoning model, return content w/o processing
     }
 
     public function process()
@@ -165,15 +356,15 @@ class openrouter
 
         $data=json_decode(substr($line, 6), true);
         if (isset($data["choices"][0]["delta"]["content"])) {
-            //if (strlen(trim($data["choices"][0]["delta"]["content"]))>0) {
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
-                $buffer.=$data["choices"][0]["delta"]["content"];
-                //$numOutputTokens += 1;
-
+                $clean_content = $this->removeChainOfThought($data["choices"][0]["delta"]["content"]); // remove CoT tags and thinking content
+                if (strlen($clean_content) > 0) {
+                    $buffer .= $clean_content;
+                    //$this->_numOutputTokens += 1;
+                    $this->_buffer .= $clean_content;
+                }
             }
             $totalBuffer.=$data["choices"][0]["delta"]["content"];
-            $this->_buffer.=$data["choices"][0]["delta"]["content"];
-
         }
 
         if (isset($data["choices"][0]["delta"]["function_call"])) {
@@ -206,12 +397,33 @@ class openrouter
 
         }
 
+        // process any remaining reasoning content on stream completion
+        if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
+            if (!empty($this->_output_buffer)) {
+                $clean_remain = $this->removeChainOfThought("");
+                if (!empty($clean_remain)) {
+                    $buffer .= $clean_remain;
+                    $this->_buffer .= $clean_remain;
+                }
+                $this->_output_buffer = ""; // clear the buffer
+            }
+        }
+
         return $buffer;
     }
 
     // Method to close the data processing operation
     public function close()
     {
+        // process any remaining content in the reasoning buffer before closing
+        if ($this->_is_reasoning && !empty($this->_output_buffer)) {
+            // need another pass to clean up any remaining CoT tags
+            $pattern = '/<{$this->_cot_tag_base}>.*?<\/{$this->_cot_tag_base}>/is';
+            $cleaned_buffer = preg_replace($pattern, '', $this->_output_buffer);
+            $this->_buffer .= $cleaned_buffer;
+            $this->_output_buffer = "";
+        }
+
         fclose($this->primary_handler);
         file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
 
