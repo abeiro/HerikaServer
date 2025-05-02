@@ -87,14 +87,16 @@ function DataLastDataFor($actor, $lastNelements = -10)
 
 }
 
-function DataLastInfoFor($actor, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
+function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
    
     $followers=[];
-    $actorsInRange=strtr(DataBeingsInCloseRange(),["|"=>"\n* "]);
+    $actorsInRangeList=DataBeingsInCloseRange();
+    $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
+    $actorDetailedList=explode("|",$actorsInRangeList);
+
     // Actors
     if ($actorsInRange && $addNPCDescriptions) {
-        $actorDetailedList=explode("|",DataBeingsInCloseRange());
         $actorDetailedListWithProfile=[];
         foreach ($actorDetailedList as $actor) {
             if (empty($actor))
@@ -120,6 +122,31 @@ function DataLastInfoFor($actor, $lastNelements = -2,$addNPCDescriptions=false,$
 
     }
 
+    if ($actorsInRange && !$addNPCDescriptions && false) {
+
+        foreach ($actorDetailedList as $n=>$actor) {
+            if ($actor==$GLOBALS["HERIKA_NAME"]) 
+                continue;
+            if (empty($actor))
+                continue;
+
+            
+            $interactions=DirectConversationsWith($actor);
+            if ($interactions==0) {
+                $actorsInRangeListExpanded[]="$actor ({$GLOBALS["HERIKA_NAME"]} never talked to $actor before)";
+            } else if ($interactions<5) {
+                $actorsInRangeListExpanded[]="$actor ({$GLOBALS["HERIKA_NAME"]} has talked to $actor a couple of times before)";
+            } else {
+                $actorsInRangeListExpanded[]="$actor";
+            }
+
+        }
+
+        $actorsInRange=implode("\n## ",$actorsInRangeListExpanded);
+
+    }
+    
+    
     //Followers
     foreach (json_decode(DataGetCurrentPartyConf(),JSON_OBJECT_AS_ARRAY) as $followername=>$followerdata) {
         if (!$followername)
@@ -1560,6 +1587,26 @@ function DataBeingsInCloseRange()
     return "|".$beingsFormatted."|";
 }
 
+
+function DirectConversationsWith($actor)
+{
+
+    global $db;
+
+    $speakerprmt=$db->escape($GLOBALS["HERIKA_NAME"]);
+    $listenerprmt=$db->escape($actor);
+
+    
+    $lastLoc=$db->fetchAll("select  count(*) as N from speech where speaker='$speakerprmt' and listener='$listenerprmt' ");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    
+    return $lastLoc[0]["n"];
+    
+    
+}
+
 function DataSearchMemory($rawstring,$npcfilter) {
     
     //$kw=explode(" ",($rawstring));
@@ -1755,32 +1802,37 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
         }
 
         $vector=json_decode($response,true);
-        $vectorString="'[".implode(",",$vector["embedding"])."]'";
-    
-        $memory=$GLOBALS["db"]->fetchAll("
-             SELECT summary, 
-                       embedding <-> $vectorString as distance
-                FROM public.memory_summary 
-                WHERE embedding IS NOT NULL
-                and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
-                ORDER BY embedding <-> $vectorString
-                LIMIT 5 OFFSET 0
-            ");
-                
-        if (!isset($memory[0]))
-            $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
+        if (is_array($vector) && isset($vector["embedding"])) {
+            $vectorString="'[".implode(",",$vector["embedding"])."]'";
+   
+            $memory=$GLOBALS["db"]->fetchAll("
+                SELECT summary, 
+                        embedding <-> $vectorString as distance
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    ORDER BY embedding <-> $vectorString
+                    LIMIT 5 OFFSET 0
+                ");
+                    
+            if (!isset($memory[0]))
+                $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
 
-        $GLOBALS["db"]->insert(
-                'audit_memory',
-                array(
-                    'input' => $TEST_TEXT,
-                    'keywords' =>'text2vec search /'.$contextKeywords,
-                    'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
-                    'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
-                    'memory'=>$memory[0]["summary"],
-                    'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
-                )
-            );
+            $GLOBALS["db"]->insert(
+                    'audit_memory',
+                    array(
+                        'input' => $TEST_TEXT,
+                        'keywords' =>'text2vec search /'.$contextKeywords,
+                        'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
+                        'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
+                        'memory'=>$memory[0]["summary"],
+                        'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
+                    )
+                );
+            
+        } else {
+            return null;
+        }
             
     
     return $memory;
