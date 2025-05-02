@@ -1242,7 +1242,7 @@ $debugPaneLink = true;
         echo '</tr></table>';
         echo '<br>';
         echo '<p>You can make your own plugin quite easily!</p>';
-        echo '<p><a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.f3vzr9prl1d6" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
+        echo '<p><a href="https://dwemerdynamics.hostwiki.io/en/CHIM-Plugins" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
         echo '</body>';
     }
 

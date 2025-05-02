@@ -455,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <p>The <b>CHIM XTTS Voice Management</b> system allows you to manage custom voice samples for NPCs using the CHIM XTTS Server.</p>
         <p>This works differently from other TTS services - it requires voice samples to be uploaded and cached on the server.</p>
-        <p>For detailed information on how it works, please read our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.ojs1hcgp0qwl" style="color: yellow;" target="_blank" rel="noopener noreferrer">CHIM XTTS Voice Guide</a>.</p>
+        <p>For detailed information on how it works, please read our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts" style="color: yellow;" target="_blank" rel="noopener noreferrer">CHIM XTTS Voice Guide</a>.</p>
         <h3><strong>Ensure all voice sample filenames are lowercase and spaces are replaced with underscores (_).</strong></h3>
         <h4>Example: "Mjoll the Lioness" becomes "mjoll_the_lioness.wav"</h4>
 
@@ -501,7 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p><strong>Only required for online CHIM XTTS instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
-                <p>For cloud setup instructions, see our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.jl2x2nswa7az" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
                 <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
                 <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
             </form>

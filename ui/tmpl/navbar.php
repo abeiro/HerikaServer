@@ -356,7 +356,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                 <ul class="dropdown-menu">
                     <li><h6 class="dropdown-header">GUIDES</h6></li>
                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?notes=true'>CHIM 101 Quick Guide</a></li>
-                    <li><a class="dropdown-item" href='https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?usp=sharing' target="_blank">CHIM Manual</a></li>
+                    <li><a class="dropdown-item" href='https://dwemerdynamics.hostwiki.io/' target="_blank">CHIM Wiki</a></li>
                     <!--<li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">AI/LLM Supported Models List</a></li>-->
                     <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105" target="_blank">AI/LLM Tier List</a></li>
                 </ul>
