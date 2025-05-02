@@ -375,9 +375,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border-radius: 5px;
     }
 
-    .speakers-grid {
+    .voice-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 8px;
         margin-top: 10px;
     }
