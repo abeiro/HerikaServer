@@ -5,6 +5,7 @@ define("_MAXIMAL_DISTANCE_TO_BE_RELATED", 0.8);
 define("_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE", 3);
 
 require_once(__DIR__."/online_translation.php");
+require_once(__DIR__."/utils_game_timestamp.php");
 
 function randomReplaceShortWordsWithPoints($inputString, $distance)
 {
@@ -1397,22 +1398,31 @@ function logEvent($dataArray,$forcePeople='')
         $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
     }   
 
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $dataArray[1],
-            'gamets' => $dataArray[2],
-            'type' => $dataArray[0],
-            'data' => $dataArray[3],
-            'sess' => 'pending',
-            'localts' => time(),
-            'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE"],
-            'location'=>$GLOBALS["CACHE_LOCATION"],
-            'party'=>$GLOBALS["CACHE_PARTY"]
-        )
-    );
-}
+    if (!isset($dataArray)) { // function called without parameter values
+        Logger::error("logEvent: undefined input parameter");
+    } else {
+        if( (!isset($dataArray[2])) || ($dataArray[2] < 5) ) { // wrong game timestamp. Sometime this function is called with gamets 0 or 1 then successive incremented values 
+            $new_gts = DataLastKnownGameTS();    
+            Logger::error("logEvent: wrong game timestamp " . ($dataArray[2] ?? 0) . " replaced with " . $new_gts);
+            $dataArray[2] = $new_gts;
+        }
 
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $dataArray[1],
+                'gamets' => $dataArray[2],
+                'type' => $dataArray[0],
+                'data' => $dataArray[3],
+                'sess' => 'pending',
+                'localts' => time(),
+                'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE"],
+                'location'=>$GLOBALS["CACHE_LOCATION"],
+                'party'=>$GLOBALS["CACHE_PARTY"]
+            )
+        );
+    }
+}
 
 function selectRandomInArray($arraySource)
 {
