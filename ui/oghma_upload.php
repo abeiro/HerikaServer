@@ -97,11 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 SET native_vector = 
                       setweight(to_tsvector(coalesce(topic, '')), 'A')
                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                    || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                    || setweight(to_tsvector(coalesce(category, '')), 'D')
                 WHERE topic = $1
             ";
             $update_result = pg_query_params($conn, $update_query, [$topic]);
@@ -184,11 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 SET native_vector = 
                                       setweight(to_tsvector(coalesce(topic, '')), 'A')
                                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                                    || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
                                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                                    || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                                    || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                                    || setweight(to_tsvector(coalesce(category, '')), 'D')
                                 WHERE topic = $1
                             ";
                             pg_query_params($conn, $update_query, [$topic]);
@@ -420,11 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 SET native_vector = 
                       setweight(to_tsvector(coalesce(topic, '')), 'A')
                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                    || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                    || setweight(to_tsvector(coalesce(category, '')), 'D')
                 WHERE topic = $1
             ";
             pg_query_params($conn, $vector_sql, [$topic_new]);
