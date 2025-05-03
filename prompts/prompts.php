@@ -65,7 +65,6 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they like or dislike) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the last task we have completed) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about a recent rumor) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something that happened in your past) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about something theyre curious about regarding {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about current thoughts about {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about a random entity in the area) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -81,18 +80,11 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about a nearby creature or NPC) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about how the current location compares to another place) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about a lesson they learned in a place like this) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about a personal memory tied to a similar location) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about a feeling of deja vu) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the energy or atmosphere of the area) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about the practicality of this location as a base or camp) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about how the weather might affect your journey) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about the state of their gear or supplies) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they been thinking about lately) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about what it would be like to live here) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the danger or safety of this area) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about whether they like to revisit this place in the future) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they overheard earlier in the journey) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} makes a comment about their hopes for the rest of the journey) {$GLOBALS["TEMPLATE_DIALOG"]}"
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about something they overheard earlier) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} makes a comment about their hopes and dreams) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
         ,"extra" => ["dontuse" => (rand(0, 99) >= intval($GLOBALS["BORED_EVENT"]))]
