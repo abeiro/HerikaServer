@@ -485,6 +485,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <li>Bit Depth: 16-bit</li>
                 <li>Channels: Mono</li>
                 <li>Sample Rate: 20500Hz</li>
+                <li>Size: 5MB or less</li>
             </ul>
             <br>
             <h1>Current Voice List</h1>
