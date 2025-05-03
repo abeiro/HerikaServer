@@ -262,7 +262,8 @@
       "voiceid": {"userlvl":"wip", "type":"string","description":"Generated voice file name. Works the same as CHIM-XTTS voiceid and uses its voicelogic setting. Will only work with voices in your <a href='../data/voices' style='color: yellow;' target='_blank'>Voice Cache</a>."},
       "pitch_std": {"userlvl":"wip", "type":"number","description":"Pitch standard deviation [0-300]"},
       "speaking_rate": {"userlvl":"wip", "type":"number","description":"Speaking rate. Higher is faster. [5-30]"},
-      "cfg_scale": {"userlvl":"wip", "type":"number","description":"CFG scale. Controls how closely the audio matches the sample voice. Higher numbers will be a closer match. [1.1 - 5]"}
+      "cfg_scale": {"userlvl":"wip", "type":"number","description":"CFG scale. Controls how closely the audio matches the sample voice. Higher numbers will be a closer match. [1.1 - 5]"},
+      "cached_voice_path": {"userlvl":"wip", "type":"string","description":"Path to the sample audio stored in zonos. Leave as default; it is set automatically."}
     }
 },
   "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
