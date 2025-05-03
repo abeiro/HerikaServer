@@ -73,34 +73,31 @@ function syncQuestWithOghma($questId, $stage) {
                 }
             } else {
                 Logger::debug("Updating existing Oghma entry for topic: " . $dynamicRow['topic']);
-                // Topic exists - update only non-empty fields
+                // Topic exists - update only non-empty fields or clear if 'clearall'
                 $updateFields = [];
                 $updateValues = [];
                 $paramCount = 1;
 
-                if (!empty($dynamicRow['topic_desc'])) {
-                    $updateFields[] = "topic_desc = $" . $paramCount++;
-                    $updateValues[] = $dynamicRow['topic_desc'];
-                }
-                if (!empty($dynamicRow['knowledge_class'])) {
-                    $updateFields[] = "knowledge_class = $" . $paramCount++;
-                    $updateValues[] = $dynamicRow['knowledge_class'];
-                }
-                if (!empty($dynamicRow['topic_desc_basic'])) {
-                    $updateFields[] = "topic_desc_basic = $" . $paramCount++;
-                    $updateValues[] = $dynamicRow['topic_desc_basic'];
-                }
-                if (!empty($dynamicRow['knowledge_class_basic'])) {
-                    $updateFields[] = "knowledge_class_basic = $" . $paramCount++;
-                    $updateValues[] = $dynamicRow['knowledge_class_basic'];
-                }
-                if (!empty($dynamicRow['tags'])) {
-                    $updateFields[] = "tags = $" . $paramCount++;
-                    $updateValues[] = $dynamicRow['tags'];
-                }
-                if (!empty($dynamicRow['category'])) {
-                    $updateFields[] = "category = $" . $paramCount++;
-                    $updateValues[] = $dynamicRow['category'];
+                $fieldsToCheck = [
+                    'topic_desc', 'knowledge_class', 'topic_desc_basic', 
+                    'knowledge_class_basic', 'tags', 'category'
+                ];
+
+                foreach ($fieldsToCheck as $field) {
+                    if (isset($dynamicRow[$field])) { // Check if the key exists
+                        $value = $dynamicRow[$field];
+
+                        if ($value === 'clearall') {
+                            // Clear the field in oghma table
+                            $updateFields[] = "$field = $" . $paramCount++;
+                            $updateValues[] = null; // Use PHP null for SQL NULL
+                        } elseif (!empty($value)) {
+                            // Update with the non-empty value from oghma_dynamic
+                            $updateFields[] = "$field = $" . $paramCount++;
+                            $updateValues[] = $value;
+                        }
+                        // If $value is empty (but not 'clearall'), do nothing
+                    }
                 }
 
                 if (!empty($updateFields)) {
@@ -113,8 +110,10 @@ function syncQuestWithOghma($questId, $stage) {
                     $updateResult = pg_query_params($conn, $updateQuery, $updateValues);
                     if (!$updateResult) {
                         Logger::error("Error updating topic: " . pg_last_error($conn));
-                        continue;
+                        // Removed 'continue' as we are not inside the main loop here for this specific block
                     }
+                } else {
+                     Logger::debug("No fields to update or clear for existing topic: " . $dynamicRow['topic']);
                 }
             }
 
@@ -125,11 +124,7 @@ function syncQuestWithOghma($questId, $stage) {
                 SET native_vector = 
                     setweight(to_tsvector(coalesce(topic, '')), 'A')
                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                    || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                    || setweight(to_tsvector(coalesce(category, '')), 'D')
                 WHERE topic = $1
             ";
             $vectorResult = pg_query_params($conn, $vectorQuery, [$dynamicRow['topic']]);
