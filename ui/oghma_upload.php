@@ -946,6 +946,7 @@ echo '<h1>Dynamic Oghma</h1>';
 echo '<p>Entires in the Dynamic Oghma table will update the Oghma table above whenever the quest ID & stage ID for a quest is reached.</p>';
 echo '<p>Any changes from a topic in this table will override whatever is in the Oghma table.</p>';
 echo '<p>You can leave cells empty so they do not overwrite specific cells from the Oghma table.</p>';
+echo '<p>If a cell has the text "clearall" in it, it will clear that cell in the Oghma table.</p>';
 echo '<p>You also can introduce new topics to the Oghma table as well.</p>';
 echo '<p>It is currently empty by default. We need your help adding more entries!</p>';
 echo '<p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Would you like to know more?</a></p>';
