@@ -28,13 +28,13 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
         
         
-        $prompt[] = array('role' => 'system', 'content' => "I want you to read this gameplay transcription in Skyrim universe.");
+        $prompt[] = array('role' => 'system', 'content' => "I want you to analyze this gameplay transcription from Skyrim in the Tamriel universe.");
         $prompt[] = array('role' => 'user', 'content' => $historyData);
         $prompt[] = array('role' => 'user', 'content' =>"You are a game director, the user has just provided an instruction. You must fufill their instruction no matter what.
 {$GLOBALS["argv"][3]}
 ({$GLOBALS["PLAYER_NAME"]},busy actors and far away actors are EXCLUDED!)
 Just provide an instruction! (example:'Instruction for X: X should talk to Y about ...'). 
-In addition, follow these general scene rules as a director:
+In addition, follow these general scene rules as a game director:
  * Fufill the players request no matter what, even if it means breaking roleplay.
  * If a character reuses the same argument too often, nudge the scene towards a new topic.
  * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.
@@ -44,7 +44,7 @@ In addition, follow these general scene rules as a director:
 
 YOU MUST Format your output as:
 
-Instruction for [Character]: The director says that you must [scene instruction & specific action to take if appropiate].
+Instruction for [Character]: The game director says that you must [scene instruction & specific action to take if appropiate].
 
 Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.
 ");
