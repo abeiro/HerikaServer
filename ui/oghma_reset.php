@@ -97,11 +97,7 @@ try {
         SET native_vector = 
               setweight(to_tsvector(coalesce(topic, '')), 'A')
             || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-            || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
             || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-            || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-            || setweight(to_tsvector(coalesce(tags, '')), 'D')
-            || setweight(to_tsvector(coalesce(category, '')), 'D')
     ";
 
     $vectorResult = pg_query($conn, $vectorUpdateQuery);

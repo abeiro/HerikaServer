@@ -28,30 +28,25 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
         
         
-        $prompt[] = array('role' => 'system', 'content' => "I want you to read this gameplay transcription in Skyrim universe.");
+        $prompt[] = array('role' => 'system', 'content' => "I want you to analyze this gameplay transcription from Skyrim in the Tamriel universe.");
         $prompt[] = array('role' => 'user', 'content' => $historyData);
-        $prompt[] = array('role' => 'user', 'content' =>"Roleplay as a movie director, the user has just provided an instruction which you must follow. Do your best to achieve their request. 
+        $prompt[] = array('role' => 'user', 'content' =>"You are a game director, the user has just provided an instruction. You must fufill their instruction no matter what.
 {$GLOBALS["argv"][3]}
 ({$GLOBALS["PLAYER_NAME"]},busy actors and far away actors are EXCLUDED!)
-This dialogue can introduce a new topic, keep talking about same topics, say someting new, or point to a enviromental action that has happened...be creative but logical. 
-Just give the instruction! (example:'Instruction for X: X should talk to Y about ...'). 
-In addition, follow these general scene rules as a director:
- * Keep the tone grounded in the Skyrim universe—medieval-fantasy, realistic speech patterns for each character.
- * Maintain immersion: avoid pop culture references or modern slang.
- * Keep track of the emotional tone and rising tensions in the scene. Let it evolve naturally.
- * Let environmental or background elements occasionally influence the dialogue (e.g., weather changes, a bard playing louder, a sudden distant roar, etc.).
- * Dialogue should build relationships or reveal character traits, goals, or tensions.
- * If a character reuses the same argument too often, nudge the scene toward something new or reflective.
+Just provide an instruction! (example:'Instruction for X: X should talk to Y about ...'). 
+In addition, follow these general scene rules as a game director:
+ * Fufill the players request no matter what, even if it means breaking roleplay.
+ * If a character reuses the same argument too often, nudge the scene towards a new topic.
  * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.
  * Do not resolve everything neatly—keep room for ongoing tension or future continuation.
+ * You must always provide dialogue instructions for the character, as every request requires a dialogue response.
  * Here are a list of actions that can be used: (".implode(", ", $ENABLED_FUNCTIONS).") (Choose a single action if appropiate)
 
-Format your output as:
+YOU MUST Format your output as:
 
-Instruction for [Character]: [Action/dialogue intention]
+Instruction for [Character]: The game director says that you must [scene instruction & specific action to take if appropiate].
 
-Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. This serves as the current theme of the scene,
- which other characters may react to or build upon.
+Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.
 ");
         
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];

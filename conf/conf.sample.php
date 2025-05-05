@@ -5,7 +5,7 @@ $PLAYER_NAME="Prisoner"; //Player's current character name.
 $DBDRIVER="postgresql"; //Database - Do not change.
 $HERIKA_NAME="The Narrator"; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $LOCK_PROFILE=false; //NPC name. MUST MATCH their Skyrim in-game NPC name!
-$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim."; //System Prompt. Defines the rules of the roleplay.
+$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. If the game director gives you an instruction, you must follow it."; //System Prompt. Defines the rules of the roleplay.
 $PLAYER_BIOS="I'm #PLAYER_NAME#"; //Player character description. 
 $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. "
     . "You refer to yourself as 'The Narrator'. "

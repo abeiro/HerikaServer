@@ -1374,6 +1374,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             ?>
         </div>
 
+        <!-- Add c0da.es easter egg here -->
+        <div class="text-center my-5">
+            <div class="mt-4"><a href="https://c0da.es/" target="_blank" style="color:rgba(44,44,44,.1);font-size:.9em;transition:.5s" onmouseover="this.style.color='rgba(150,150,150,.3)'" onmouseout="this.style.color='rgba(44,44,44,.1)'">"world without wheel, charting zero deaths and echoes singing"</a></div>
+        </div>
+
         <?php
         // **Close Database Connection**
         pg_close($conn);
