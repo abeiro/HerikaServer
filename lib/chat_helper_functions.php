@@ -562,6 +562,7 @@ function returnLines($lines,$writeOutput=true)
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
                 $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
                 file_put_contents(__DIR__."/../log/output_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
+
             }
             else
                 echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";

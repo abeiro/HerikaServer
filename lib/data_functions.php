@@ -1984,8 +1984,9 @@ function call_llm() {
                 if (isset($user_input_after[0]["N"]))
 
                     if ($user_input_after[0]["N"]>0) {
-                        die('X-CUSTOM-CLOSE');
+                        
                         Logger::info("Generation stopped because user_input. ".__LINE__);
+                        die('X-CUSTOM-CLOSE');
                         // Abort , user input detected
                     }
 
@@ -2037,9 +2038,12 @@ function call_llm() {
                 }
             }
 
-                $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
-                echo implode("\r\n", $actions).PHP_EOL;
-                file_put_contents(__DIR__."/../log/output_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
+            $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
+            echo implode("\r\n", $actions).PHP_EOL;
+            // Enforce flush output
+            @ob_end_flush();
+            @flush();
+            file_put_contents(__DIR__."/../log/output_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
 
         }
     }
