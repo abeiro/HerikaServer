@@ -645,7 +645,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <textarea name="npc_dynamic" id="edit_npc_dynamic" rows="8"></textarea>
 
                 <label for="edit_npc_misc">NPC Misc:</label>
-                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here!</a></small>
+                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="edit_npc_misc">
 
                 <label for="edit_melotts_voiceid">Melotts Voice ID:</label>
