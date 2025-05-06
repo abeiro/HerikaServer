@@ -17,6 +17,13 @@
     // allow for edits to the json templates by extensions
     requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
 
+    if (isset($GLOBALS["HOOKS"]) && isset($GLOBALS["HOOKS"]["JSON_TEMPLATE"]) && is_array($GLOBALS["HOOKS"]["JSON_TEMPLATE"])) {
+        foreach ($GLOBALS["HOOKS"]["JSON_TEMPLATE"] as $hook) {
+            call_user_func($hook);
+
+        }
+    }
+
     // specify the available actions which will be made available in the context
     Function setActions() {
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {

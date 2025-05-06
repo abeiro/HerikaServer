@@ -16,6 +16,7 @@
   "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Roleplay Management"},
   "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability. Chance that an AI NPC will continue an ongoing conversation.<br>0 = Never | 50 = 50% | 100 = Always"},
   "BORED_EVENT": {"userlvl":"basic","type":"integer","description":"Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.<br>0 = Never | 50 = 50% | 100 = Always"},
+  "BORED_EVENT_SERVERSIDE": {"userlvl":"basic","type":"boolean","description":"Rolemaster will take care of bored event","scope":"global"},
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.<br>Higher Context = more tokens used and slower response time.<br><b>We recommend you do not go over 100</b>"},
   "ALIVE_MESSAGE": {"userlvl":"basic","type":"boolean","description":"Whether the <i>I am alive..</i> response will trigger whenever you activate an AI NPC."},
   "TIME_AWARENESS": {"userlvl":"pro","type":"boolean","description":"Whether the NPC will be aware of how long it has been since you last talked to them, or if you are talking for the first time."},

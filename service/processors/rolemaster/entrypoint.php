@@ -23,9 +23,12 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib/rolemaster_helpers.php");
 
 $GLOBALS["db"]=new sql();
-require_once($enginePath . "functions/functions.php");
+require($enginePath . "functions/functions.php");
 
-$FUNCTIONS_ARE_ENABLED=false;
+// Make functions.php data global
+
+$GLOBALS["HERIKA_NAME"]="selected actor";
+$GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;
 
 $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
 

@@ -359,4 +359,6 @@ $OGHMA_INFINIUM=false;
 
 $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dynamic profiles
 
+$BORED_EVENT_SERVERSIDE=false;
+
 ?>

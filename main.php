@@ -338,6 +338,13 @@ if (in_array($gameRequest[0],["bored"])) {
     $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
     logEvent($localGameRequest);
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
+
+    if ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
+        Logger::info("Redirecting bored event to rolemaster");
+        `php service/manager.php rolemaster instruction ""`;
+        die();
+
+    }
 }
 
 
@@ -452,6 +459,7 @@ $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was c
 
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
+
 
 
 /*

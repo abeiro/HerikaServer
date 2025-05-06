@@ -967,6 +967,11 @@ if ($checkVersion("rolemaster")<20250414001) {
 }
 
 
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"action\" TYPE text");
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"actor\" TYPE text");
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
+
+
 Logger::info(__FILE__." update file processed");
 
 ?>
