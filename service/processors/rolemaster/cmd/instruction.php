@@ -1,6 +1,9 @@
 <?php 
 require_once(__DIR__ . '/../../../../lib/logger.php');
 
+$GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
+
+
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
         logMsg("Choose a LLM model and connector. Used '{$GLOBALS["CURRENT_CONNECTOR"]}'",S_LOG_CRITICAL);
 
@@ -23,15 +26,38 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         }
 
         
-        $GLOBALS["HERIKA_NAME"]="random present actor";
-        $GLOBALS["HERIKA_PERS"]="";
+        // Function stuff        
+        $fnames=[];
+
+        foreach ($GLOBALS["F_NAMES"] as $functionCode=>$functionName) {
+            if (in_array($functionCode,$GLOBALS["ENABLED_FUNCTIONS"])) {
+                if ($functionCode!="OpenInventory" && $functionCode!="OpenInventory2") {
+                    $function=findFunctionByName($functionName);
+                    if ($function) {
+                        if ($function["name"]==$GLOBALS["F_NAMES"]["TravelTo"]) {
+                            $fnames[]=$GLOBALS["F_NAMES"]["$functionCode"]." (Starts travel to destination)";
+                        }
+                        else
+                            $fnames[]=$GLOBALS["F_NAMES"]["$functionCode"]." ({$function["description"]})";
+                        
+                    } else 
+                        $fnames[]=$GLOBALS["F_NAMES"]["$functionCode"];
+                    $GLOBALS["FUNCTION_SHORT_LIST"][]=$GLOBALS["F_NAMES"]["$functionCode"];
+                }
+            }
+        }
 
         
+        if (!$GLOBALS["argv"][3]) {
+            $sysprompt="You are a game director, you must create a instruction for any actor to generate new content/event.";
+        } else {
+            $sysprompt="You are a game director, the user has just made a wish: \"{$GLOBALS["argv"][3]}\". As game director, you now must issue an instruction to any actor to make this wish happen"; 
+        }
         
         $prompt[] = array('role' => 'system', 'content' => "I want you to analyze this gameplay transcription from Skyrim in the Tamriel universe.");
         $prompt[] = array('role' => 'user', 'content' => $historyData);
-        $prompt[] = array('role' => 'user', 'content' =>"You are a game director, the user has just provided an instruction. You must fufill their instruction no matter what.
-{$GLOBALS["argv"][3]}
+        $prompt[] = array('role' => 'user', 'content' =>"
+$sysprompt
 ({$GLOBALS["PLAYER_NAME"]},busy actors and far away actors are EXCLUDED!)
 Just provide an instruction! (example:'Instruction for X: X should talk to Y about ...'). 
 In addition, follow these general scene rules as a game director:
@@ -40,18 +66,27 @@ In addition, follow these general scene rules as a game director:
  * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.
  * Do not resolve everything neatly—keep room for ongoing tension or future continuation.
  * You must always provide dialogue instructions for the character, as every request requires a dialogue response.
- * Here are a list of actions that can be used: (".implode(", ", $ENABLED_FUNCTIONS).") (Choose a single action if appropiate)
-
-YOU MUST Format your output as:
-
-Instruction for [Character]: The game director says that you must [scene instruction & specific action to take if appropiate].
-
-Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.
+ * Here are a list of actions that can be used: \n  ** ".implode("\n** ", $fnames)." 
+ * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.
 ");
         
-        $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
         
-        $connectionHandler->open($prompt,["MAX_TOKENS"=>4000]);
+        
+        $customParm["response_format"]=["type"=>"json_object"];
+        $customParm["MAX_TOKENS"]=4000;
+        
+        $GLOBALS["HOOKS"]["JSON_TEMPLATE"][]=function() {
+            $GLOBALS["responseTemplate"] = [
+                "character"=>"selected actor's full name",
+                "instruction"=>"the instruction for the actor, what should be said or done. Use 3rd person here.",
+                "action"=>implode("|",$GLOBALS["FUNCTION_SHORT_LIST"]),
+                "target"=>"action's target",
+                "scene_note"=>""
+            ];
+        };
+
+        $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
+        $connectionHandler->open($prompt,$customParm);
 
         $buffer="";
         $totalBuffer="";
@@ -74,18 +109,18 @@ Scene Note: A brief description of the topic, mood, or idea introduced by the in
         
         $rawbuffer=$connectionHandler->close();
         
-        function parseInstruction($instruction) {
+        function parseInstruction($response) {
             // Extract the character name and the instruction line
-            preg_match('/Instruction for (.+?):\s*(.+?)\s*Scene Note:/s', $instruction, $matches);
-            $characterName = trim($matches[1] ?? 'Unknown');
-            $instructionText = trim($matches[2] ?? 'No instruction text');
-            $instructionText .= " (Use ACTIONS if needed) ";
+            
+            $characterName = trim($response["character"] ?? 'Unknown');
+            $instructionText = trim($response["instruction"] ?? 'No instruction text');
+            $action = $response["action"]?"{$response["action"]} {$response["target"]}":"";
         
             // Generate unique task ID
             $taskId = uniqid();
         
             // Format action string
-            $action = make_replacements("rolecommand|Instruction@{$characterName}@{$instructionText}@$taskId");
+            $roleMasterAction = make_replacements("rolecommand|Instruction@{$characterName}@{$instructionText} (must use ACTION $action)@$taskId");
         
             // Insert into database
             $GLOBALS["db"]->insert(
@@ -95,16 +130,17 @@ Scene Note: A brief description of the topic, mood, or idea introduced by the in
                     'sent' => 0,
                     'actor' => "rolemaster",
                     'text' => '',
-                    'action' => $action,
+                    'action' => $roleMasterAction,
                     'tag' => ""
                 )
             );
         }
 
-        function parseSceneNote($instruction) {
+        function parseSceneNote($response) {
             // Extract scene note after "Scene Note:"
-            preg_match('/Scene Note:\s*(.+)$/s', $instruction, $matches);
-            $noteContent = trim($matches[1] ?? 'No scene note content');
+            $characterName = trim($response["character"] ?? 'Unknown');
+            $noteContent = trim($response["scene_note"] ?? 'No instruction text');
+            
         
             // Generate unique task ID
             $taskId = uniqid();
@@ -126,9 +162,11 @@ Scene Note: A brief description of the topic, mood, or idea introduced by the in
         
         
 
-        logMsg($totalBuffer);
-        parseInstruction($totalBuffer);
-        parseSceneNote($totalBuffer);
+        
+        $response=json_decode($rawbuffer,true);
+        
+        parseInstruction($response);
+        parseSceneNote($response);
         
     }
 
@@ -142,7 +180,7 @@ Scene Note: A brief description of the topic, mood, or idea introduced by the in
     }
 
     Logger::info("Processing instruction command with speech: " . $speech);
-
+    /*
     $GLOBALS["db"]->insert(
         'responselog',
         array(
@@ -154,6 +192,7 @@ Scene Note: A brief description of the topic, mood, or idea introduced by the in
             'tag' => ""
         )
     );
+    */
 
     Logger::info("Successfully logged instruction command to responselog");
 ?>
