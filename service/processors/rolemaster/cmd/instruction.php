@@ -170,29 +170,6 @@ In addition, follow these general scene rules as a game director:
         
     }
 
-    if ($GLOBALS["argv"][3]) {
-        $speech=$GLOBALS["db"]->escape($GLOBALS["argv"][3]);
-    } else if ($_GET["speech"]) {
-        $speech=$GLOBALS["db"]->escape($_GET["speech"]);
-    } else {
-        Logger::error("No speech parameter provided for instruction command");
-        die("No speech");
-    }
-
-    Logger::info("Processing instruction command with speech: " . $speech);
-    /*
-    $GLOBALS["db"]->insert(
-        'responselog',
-        array(
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => "rolemaster",
-            'text' => "",
-            'action' => "rolecommand|Instruction@$speech@inputtext",
-            'tag' => ""
-        )
-    );
-    */
 
     Logger::info("Successfully logged instruction command to responselog");
 ?>
