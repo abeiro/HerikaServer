@@ -125,11 +125,12 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
         "(Important note: Something important happened here for {$GLOBALS["PLAYER_NAME"]} on {$sk_date}. You should use the tag #PlotRelevantEvent)",
         $momentum, $gameRequest[2],'diary_intent',$gameRequest[1]);
 
-} else if ($gameRequest[0] == "instruction" || $gameRequest[0] == "suggestion") {
-	// Override some descriptions when in instruction mode
-	require_once(__DIR__."/../functions/functions_instruction.php");
-
 } else {
+
+	if ($gameRequest[0] == "instruction" || $gameRequest[0] == "suggestion") {
+		// Override some descriptions when in instruction mode
+		require_once(__DIR__."/../functions/functions_instruction.php");
+	}
 
 	
 	if (isset($PROMPTS[$gameRequest[0]]["player_request"])) {
