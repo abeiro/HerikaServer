@@ -508,7 +508,7 @@ class openai
         }
         
         // Write the buffer to the log file without timestamp separators
-        file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm.log","{$this->_buffer}\n\n".date(DATE_ATOM)." END\n==\n", FILE_APPEND);
 
         fclose($this->primary_handler);
     }
