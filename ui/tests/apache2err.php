@@ -237,6 +237,7 @@ function outputLLMBlock($block) {
         echo ' <span class="time-separator">→</span> ';
         echo '<span class="time-label">End:</span> ' . htmlspecialchars($block['end_time']);
     }
+    echo '<span class="copy-llm-btn" title="Copy to clipboard">📋</span>';
     echo '</div>';
     echo '<div class="log-message">';
     foreach ($block['content'] as $line) {
@@ -331,6 +332,7 @@ function outputLLMContextBlock($block) {
     echo '<div class="log-entry llm-block">';
     echo '<div class="timestamp">';
     echo '<span class="time-label">Time:</span> ' . htmlspecialchars($block['timestamp']);
+    echo '<span class="copy-llm-btn" title="Copy to clipboard">📋</span>';
     echo '</div>';
     echo '<div class="log-message">';
     
@@ -1052,6 +1054,19 @@ if (isset($_GET['download_logs'])) {
         .php-array .string { color: #9cdcfe !important; }
         .php-array .comment { color: #6a9955 !important; }
         .php-array .number { color: #b5cea8 !important; }
+
+        .copy-llm-btn {
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 1.2em; /* Adjust size as needed */
+            display: inline-block;
+            vertical-align: middle;
+            user-select: none; /* Prevent text selection on click */
+        }
+
+        .copy-llm-btn:hover {
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -1596,6 +1611,56 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// JavaScript for copy to clipboard
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.addEventListener('click', function(event) {
+        if (event.target.classList.contains('copy-llm-btn')) {
+            const llmBlock = event.target.closest('.llm-block');
+            if (llmBlock) {
+                let contentToCopy = '';
+                // Try to find LLM output content (multiple divs)
+                const outputMessages = llmBlock.querySelectorAll('.log-message .llm-content');
+                if (outputMessages.length > 0) {
+                    outputMessages.forEach(msg => {
+                        contentToCopy += msg.textContent.trim() + '\n';
+                    });
+                } else {
+                    // Try to find LLM context content (preformatted text)
+                    const contextMessage = llmBlock.querySelector('.log-message pre.llm-content');
+                    if (contextMessage) {
+                        contentToCopy = contextMessage.textContent;
+                    }
+                }
+
+                contentToCopy = contentToCopy.trim();
+
+                if (contentToCopy) {
+                    navigator.clipboard.writeText(contentToCopy)
+                        .then(() => {
+                            event.target.textContent = '✅'; // Copied!
+                            setTimeout(() => {
+                                event.target.textContent = '📋'; // Reset icon
+                            }, 1500);
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy text: ', err);
+                            event.target.textContent = '❌'; // Error
+                             setTimeout(() => {
+                                event.target.textContent = '📋'; // Reset icon
+                            }, 1500);
+                        });
+                } else {
+                    console.warn('No content found to copy in LLM block:', llmBlock);
+                    event.target.textContent = '❓'; // No content
+                     setTimeout(() => {
+                        event.target.textContent = '📋'; // Reset icon
+                    }, 1500);
+                }
+            }
+        }
+    });
+});
 </script>
 
 <?php
