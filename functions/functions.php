@@ -593,6 +593,16 @@ function findFunctionByName($name) {
     return null; // Return null if function not found
 }
 
+function getFunctionByTrlName($searchValue) {
+    $keys = [];
+
+    foreach ($GLOBALS["F_NAMES"] as $key => $value) {
+        if ($value === $searchValue) {
+            return $key;
+        }
+    }
+    
+}
 
 function requireFunctionFilesRecursively($dir) {
     $files = scandir($dir);
