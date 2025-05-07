@@ -27,6 +27,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
         
         // Function stuff        
+        require($enginePath . "functions/functions_instruction.php");
         $fnames=[];
 
         foreach ($GLOBALS["F_NAMES"] as $functionCode=>$functionName) {
@@ -34,11 +35,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
                 if ($functionCode!="OpenInventory" && $functionCode!="OpenInventory2") {
                     $function=findFunctionByName($functionName);
                     if ($function) {
-                        if ($function["name"]==$GLOBALS["F_NAMES"]["TravelTo"]) {
-                            $fnames[]=$GLOBALS["F_NAMES"]["$functionCode"]." (Starts travel to destination)";
-                        }
-                        else
-                            $fnames[]=$GLOBALS["F_NAMES"]["$functionCode"]." ({$function["description"]})";
+                        $fnames[]=$GLOBALS["F_NAMES"]["$functionCode"]." ({$function["description"]})";
                         
                     } else 
                         $fnames[]=$GLOBALS["F_NAMES"]["$functionCode"];
