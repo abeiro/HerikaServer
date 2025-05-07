@@ -25,7 +25,7 @@ $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random c
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
-$ALIVE_MESSAGE=true; //Leave as is - read only
+$ALIVE_MESSAGE=false; //Leave as is - read only
 $TIME_AWARENESS=false; //Overwrites the prompt to the AI to make it more aware of the passage of time
 $MAX_WORDS_LIMIT=0; //Enforce a word limit for AI's responses. 0 = unlimited.
 $BOOK_EVENT_FULL=true; //Sends full contents of books to the AI
@@ -34,7 +34,7 @@ $NARRATOR_TALKS=true; //Enables the Narrator.
 $NARRATOR_WELCOME=true;
 $QUEST_COMMENT = false;
 $QUEST_COMMENT_CHANCE= "10%";
-$CURRENT_TASK=true; //Sends current plan/quest to the AI
+$CURRENT_TASK=false; //Sends current plan/quest to the AI
  //The Narrator will recap previous events after a save is loaded.
 $LANG_LLM_XTTS=false; //XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language.
 $HERIKA_ANIMATIONS=true; //Issues animations to AI driven NPCs.
