@@ -75,6 +75,24 @@ if (sizeof($_GET)==0) {
 }
 /* END of check database for updates */
 
+// Check if eventlog table exists and has data
+$hasEventLogData = false;
+$eventLogCheckQuery = "
+    SELECT EXISTS (
+        SELECT 1 
+        FROM information_schema.tables 
+        WHERE table_schema = '{$schema}' 
+        AND table_name = 'eventlog'
+    )";
+$eventLogExistsResult = pg_query($conn, $eventLogCheckQuery);
+if ($eventLogExistsResult && pg_fetch_result($eventLogExistsResult, 0, 0) === 't') {
+    $eventLogCountQuery = "SELECT 1 FROM {$schema}.eventlog LIMIT 1";
+    $eventLogCountResult = pg_query($conn, $eventLogCountQuery);
+    if ($eventLogCountResult && pg_num_rows($eventLogCountResult) > 0) {
+        $hasEventLogData = true;
+    }
+}
+
 // Function to sanitize and validate integers
 function sanitize_int($value, $default) {
     $value = filter_var($value, FILTER_VALIDATE_INT);
@@ -541,6 +559,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             </button>
         </div>
 
+        <?php if ($hasEventLogData): ?>
         <div class="dashboard-container">
             <?php
             // Example widgets - these can be moved to separate files later
@@ -1373,6 +1392,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             }
             ?>
         </div>
+        <?php else: ?>
+        <h1 class="welcome-message" style="text-align: center; padding: 40px 20px; color: #d4d4d4; font-size: 2.5em; line-height: 1.4; font-family: 'SkyrimBooks_Handwritten_Bold', Arial, sans-serif;">
+            Welcome to CHIM<br>
+            Load into Skyrim for the dashboard to populate
+        </h1>
+        <?php endif; ?>
 
         <!-- Add c0da.es easter egg here -->
         <div class="text-center my-5">
