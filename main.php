@@ -622,6 +622,13 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     }
 }
 
+if (in_array($gameRequest[0],["instruction"]) ) {
+    
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(optionally enforce dialogue by using action)";
+    
+}
+
 // Rolemaster stuff
 
 $namedKey="{$GLOBALS["HERIKA_NAME"]}_is_rolemastered";
