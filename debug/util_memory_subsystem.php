@@ -66,6 +66,21 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         
         
 
+    }  elseif ($argv[1]=="query_oghma") {
+        echo "Query memory for '{$argv[2]}'".PHP_EOL;
+
+        $db=new sql();
+   
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Using pgvector search";
+            $res=DataSearchOghmaByVector($argv[2],'');
+        }
+        
+
+        print_r($res[0]);
+        
+        
+
     } elseif ($argv[1]=="sync") {
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
             echo "Creating vectors for memories".PHP_EOL;
@@ -82,6 +97,26 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                 $counter++;
                 
                 echo "Updated vector for  {$row["rowid"]} $counter\n";
+            }
+        }
+        
+
+
+    } elseif ($argv[1]=="sync_oghma") {
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Creating vectors for memories".PHP_EOL;
+            ;
+            $db = new sql();
+            $results = $db->fetchAll("select topic,topic_desc from oghma where vector384 is null");
+            $counter=0;
+            foreach ($results as $row) {
+                
+                $TEST_TEXT=$row["topic_desc"];
+                storeMemoryOghma($TEST_TEXT, $TEST_TEXT, $row["topic"]); // JUST UPDATE embedding in memory_summary
+
+                $counter++;
+                
+                echo "Updated vector for  {$row["topic"]} $counter\n";
             }
         }
         
@@ -152,7 +187,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 								  'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. using this format:\n$CLFORMAT");
 
 				
-                $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"];
+                $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
 
                 $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
                 $connectionHandler->open($prompt, []);

@@ -96,60 +96,53 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     $actorsInRangeList=DataBeingsInCloseRange();
     $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
     $actorDetailedList=explode("|",$actorsInRangeList);
+    // Not always the same order
+    shuffle($actorDetailedList);
 
     // Actors
     if ($actorsInRange && $addNPCDescriptions) {
         $actorDetailedListWithProfile=[];
         foreach ($actorDetailedList as $actor) {
+            $actorName=str_replace("(far away)","",$actor);
             if (empty($actor))
                 continue;
             if ($excludeBusy)
                 if ((strpos($actor,"(busy)")>0)||(strpos($actor,"(dead)")>0))
                     continue;
 
+            if ($actorName==$GLOBALS["HERIKA_NAME"]) 
+                continue;
+
+            $interactions=DirectConversationsWith($actor);
+            if ($interactions==0) {
+                $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} never talked to $actorName before)";
+            } else if ($interactions<5) {
+                $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} has talked to $actorName a couple of times before)";
+            } else {
+                $ittext="";
+            }
+            
             if ($actor==$GLOBALS["PLAYER_NAME"]) 
                 $actorDetailedListWithProfile[]="$actor: player character";
             else {
                 
                 $actorName = preg_replace("/\s*\(.*?\)\s*/", "", $actor);
                 $codename = npcNameToCodename($actorName);
-                $npcknowledge=$GLOBALS["db"]->fetchAll("SELECT COALESCE(NULLIF(trim(npc_dynamic), ''), npc_misc) as npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
+                $npcknowledge=$GLOBALS["db"]->fetchAll("SELECT COALESCE(NULLIF(trim(npc_dynamic), ''), npc_misc) as npc_dynamic
+                 FROM combined_npc_templates where npc_name='$codename' and 1=2");// Disabled ATM
                 if (isset($npcknowledge[0]))
-                    $actorDetailedListWithProfile[]="$actor: ".trim($npcknowledge[0]["npc_dynamic"]);
+                    $actorDetailedListWithProfile[]="$actor:".trim($npcknowledge[0]["npc_dynamic"]." $ittext");
                 else
-                    $actorDetailedListWithProfile[]="$actor";
+                    $actorDetailedListWithProfile[]="$ittext";
             }
         }
         $actorsInRange=implode("\n## ",$actorDetailedListWithProfile);
 
     }
 
-    if ($actorsInRange && !$addNPCDescriptions && false) {
-
-        foreach ($actorDetailedList as $n=>$actor) {
-            if ($actor==$GLOBALS["HERIKA_NAME"]) 
-                continue;
-            if (empty($actor))
-                continue;
-
-            
-            $interactions=DirectConversationsWith($actor);
-            if ($interactions==0) {
-                $actorsInRangeListExpanded[]="$actor ({$GLOBALS["HERIKA_NAME"]} never talked to $actor before)";
-            } else if ($interactions<5) {
-                $actorsInRangeListExpanded[]="$actor ({$GLOBALS["HERIKA_NAME"]} has talked to $actor a couple of times before)";
-            } else {
-                $actorsInRangeListExpanded[]="$actor";
-            }
-
-        }
-
-        $actorsInRange=implode("\n## ",$actorsInRangeListExpanded);
-
-    }
-    
     
     //Followers
+
     foreach (json_decode(DataGetCurrentPartyConf(),JSON_OBJECT_AS_ARRAY) as $followername=>$followerdata) {
         if (!$followername)
             continue;
@@ -163,16 +156,21 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     $followers[]="{$GLOBALS["PLAYER_NAME"]}";
 
     $lastDialog[] = array('role' => 'user', 'content' => "# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange");
-    $lastDialog[] = array('role' => 'user', 'content' => "# PARTY STATUS\n## ". (implode("\n## ",$followers)));
+    
+    if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"])
+        $lastDialog[] = array('role' => 'user', 'content' => "# PARTY STATUS\n## ". (implode("\n## ",$followers)));
 
     $lastDialog[] = array('role' => 'user', 'content' => "# LOCATIONS OF INTEREST \n## ". (implode("\n## ",DataPosibleLocationsToGo())));
  
     // Rolemaster notes
     
     $timeCut=time();
-    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where localts+ttl>$timeCut");
-    if (isset($rolemasterNotes[0])) {
-        $lastDialog[] = array('role' => 'user', 'content' => "# SCENE NOTES \n## {$rolemasterNotes[0]["data"]}");
+    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where localts+ttl>$timeCut order by localts asc");
+    if (is_array($rolemasterNotes)) {
+        $notes=[];
+        foreach ($rolemasterNotes as $note)
+            $notes[]= $note["data"];
+        $lastDialog[] = array('role' => 'user', 'content' => "# SCENE NOTES \n## ".implode(".",$notes));
     }
         
 
@@ -512,6 +510,9 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='rpg_word' then 'RPG_WORD' 
       when type='rpg_lvl' then 'RPG_LVL' 
       when type='rpg_shout' then 'RPG_SHOUT' 
+      when type='death' then 'RPG_DEATH' 
+      when type='welcome' then 'RPG_SPAWN' 
+      when type='bleedout' then 'RPG_DEFEAT' 
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
@@ -633,8 +634,19 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ($row["subtype"]=="RPG_LVL") {
             $speaker = "narratorci";
             
+        } else if ($row["subtype"]=="RPG_SPAWN") {
+            $speaker = "narratorci";
+            
         } else if ($row["subtype"]=="RPG_SHOUT") {
             $speaker = "narratorci";
+            
+        } else if ($row["subtype"]=="RPG_DEATH") {
+            $speaker = "narratorci";
+            $rowData = strtoupper($rowData);
+            
+        } else if ($row["subtype"]=="RPG_DEFEAT") {
+            $speaker = "narratorci";
+            $rowData = strtoupper($rowData);
             
         } else {
             
@@ -821,7 +833,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
     }
 
 
-    file_put_contents(__DIR__."/../log/context_for_${actor}_stage_2_.txt",print_r($lastDialogFull,true));
+    file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_2_.txt",print_r($lastDialogFull,true));
     return $lastDialogFull;
 }
 
@@ -1824,7 +1836,11 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                     
             if (!isset($memory[0]))
                 $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
-
+            else {
+                 $memory[0]['rank_any']=(1.40-$memory[0]["distance"]);
+                 $memory[0]['rank_all']=(1.40-$memory[0]["distance"]);
+            }
+            
             $GLOBALS["db"]->insert(
                     'audit_memory',
                     array(
@@ -1844,6 +1860,97 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
     
     return $memory;
     
+}
+
+
+function DataSearchOghmaByVector($rawstring) {
+    
+  
+    Logger::info("Using DataSearchOghmaByVector");
+    $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+    $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+
+    $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
+    $replacement = "";
+    $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
+                
+    $pattern = '/\(talking to [^()]+\)/i';
+    $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+
+    $contextKeywords  = implode(" ", lastKeyWordsContext(5, "%"));
+
+
+    $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+    $data = [
+        'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
+    ];
+
+    // Convert to JSON
+    $options = [
+        'http' => [
+            'method'  => 'POST',
+            'header'  => "Content-Type: application/json\r\n" .
+                        "Accept: application/json\r\n",
+            'content' => json_encode($data),
+            'ignore_errors' => true // to capture error messages if any
+        ]
+    ];
+
+    // Create context and send the request
+    $context  = stream_context_create($options);
+    $response = file_get_contents($url, false, $context);
+
+    // Output the response
+    if ($response === false) {
+        Logger::error("Request failed.\n");
+    } else {
+        Logger::info("Request done: Searched: {$data["text"]}\n");
+
+    }
+
+    $vector=json_decode($response,true);
+    if (is_array($vector) && isset($vector["embedding"])) {
+        $vectorString="'[".implode(",",$vector["embedding"])."]'";
+
+        $memory=$GLOBALS["db"]->fetchAll("
+            SELECT  topic_desc,
+                                topic,
+                                knowledge_class,
+                                knowledge_class_basic,
+                                topic_desc_basic, 
+                    vector384 <-> $vectorString as distance
+                FROM public.oghma 
+                WHERE vector384 IS NOT NULL
+                ORDER BY vector384 <-> $vectorString
+                LIMIT 5 OFFSET 0
+            ");
+                
+        if (!isset($memory[0]))
+            $memory[0]=["combined_rank"=>null];
+        else {
+             $memory[0]['combined_rank']=(7.40-$memory[0]["distance"]);
+             $memory[0]['combined_rank']=(7.40-$memory[0]["distance"]);
+        }
+        
+        $GLOBALS["db"]->insert(
+                'audit_memory',
+                array(
+                    'input' => $TEST_TEXT,
+                    'keywords' =>'text2vec search /'.$contextKeywords,
+                    'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
+                    'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
+                    'memory'=>$memory[0]["summary"],
+                    'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
+                )
+            );
+        
+    } else {
+        return null;
+    }
+        
+
+    return $memory;
+
 }
 
 function FastCallOAI($question) {

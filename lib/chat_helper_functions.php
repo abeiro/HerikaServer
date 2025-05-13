@@ -552,8 +552,19 @@ function returnLines($lines,$writeOutput=true)
                 
                 $listenerFix2=explode(",",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix2) && (sizeof($listenerFix2)>1)) {
-                    Logger::info("Applying listenerFix2");
-                    $GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[0]);
+                    if (!isset($GLOBALS["SCRIPTLINE_LISTENER_CYCLE"])) {
+                        $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=0;
+                    } else
+                        $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]++;
+
+                    if ($GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]>(sizeof($listenerFix2)-1))
+                        $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=sizeof($listenerFix2)-1;
+
+                    Logger::info("Applying listenerFix2: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+                    $GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[ $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]]);
+                    // $GLOBALS["SCRIPTLINE_LISTENER"] = trim($listenerFix2[array_rand($listenerFix2)]); // Random
+                    
+
                 }
 
                 // convert Japanese to Latin characters for use with lip sync
@@ -715,6 +726,8 @@ function lastKeyWordsContext($n, $npcname='')
 
     $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) 
         order by gamets desc limit $m offset 0");
+    
+    
     $words=[];
     $uniqueArray=[];
     $uppercaseWords = [];

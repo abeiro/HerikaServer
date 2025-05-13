@@ -121,10 +121,12 @@ $PROMPTS=array(
             "GetDateTime"=>"({$GLOBALS["HERIKA_NAME"]} answers with the current date and time in short sentence){$GLOBALS["TEMPLATE_DIALOG"]}",
             "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} makes a comment about movement to the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
             "CheckInventory"=>"({$GLOBALS["HERIKA_NAME"]} talks about inventory and backpack items){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected){$GLOBALS["TEMPLATE_DIALOG"]}",
+            "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected, short speech){$GLOBALS["TEMPLATE_DIALOG"]}",
             "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests they have read in the quest journal){$GLOBALS["TEMPLATE_DIALOG"]}",
             "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "InspectSurroundings"=>"({$GLOBALS["HERIKA_NAME"]} talks about the entities detected){$GLOBALS["TEMPLATE_DIALOG"]}"
+            "InspectSurroundings"=>"({$GLOBALS["HERIKA_NAME"]} talks about seen actors, or to the actor its looking for){$GLOBALS["TEMPLATE_DIALOG"]}",
+            "GiveGoldTo"=>"({$GLOBALS["HERIKA_NAME"]} Talks about coins or gold given",
+            
             ]
     ],
     "lockpicked"=>[
@@ -146,7 +148,7 @@ $PROMPTS=array(
     ],
     "rechat"=>[ 
         "cue"=>[
-            "({$GLOBALS['HERIKA_NAME']} reflects on the topic with the last speaker.) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            /*"({$GLOBALS['HERIKA_NAME']} reflects on the topic with the last speaker.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} disagrees politely with the last speaker.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} offers an alternative perspective to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} shares a personal anecdote related to the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -166,7 +168,10 @@ $PROMPTS=array(
             "({$GLOBALS['HERIKA_NAME']} ties the conversation back to a previous discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} subtly shifts the focus of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} speculates about potential outcomes of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} warns about possible risks tied to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}"
+            "({$GLOBALS['HERIKA_NAME']} warns about possible risks tied to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",*/
+            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer, involve another actor, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']} {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
         
     ],
@@ -216,7 +221,11 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "instruction"=>[ 
-        "cue"=>["{$gameRequest[3]} {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "cue"=>["{$gameRequest[3]} write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
+        "player_request"=>["The Narrator: {$gameRequest[3]}"],
+    ],
+    "welcome"=>[ 
+        "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
 );

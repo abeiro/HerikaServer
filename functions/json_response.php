@@ -31,7 +31,7 @@
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
-                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"]) {
+                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"]) {
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $GLOBALS["COMMAND_PROMPT"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 }/* else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
@@ -60,7 +60,7 @@
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
@@ -70,7 +70,7 @@
             } else {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
@@ -81,7 +81,7 @@
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
@@ -91,7 +91,7 @@
             } else {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to",
+                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action's target|destination name",
@@ -133,7 +133,7 @@
                         ),
                         "listener" => array(
                             "type" => "string",
-                            "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to"
+                            "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                         ),
                         "message" => array(
                             "type" => "string",

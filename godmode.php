@@ -17,7 +17,7 @@ $gameRequest = explode("|", $receivedData);
 
 $userWish=explode(":",$gameRequest[3]);
 $output='';
-$instruction=escapeshellarg("Instruction you must follow and make a reality:{$userWish[1]}");
+$instruction=escapeshellarg("{$userWish[1]}");
 exec("php /var/www/html/HerikaServer/service/manager.php rolemaster instruction \"$instruction\"", $output, $returnCode);
 
 ?>

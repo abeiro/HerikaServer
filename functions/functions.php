@@ -27,9 +27,12 @@ $ENABLED_FUNCTIONS_LOCAL=[
     'TravelTo',
     'SearchMemory',
     'GiveItemToPlayer',
-    'TakeGoldFromPlayer',
+    'Ask',
     'FollowPlayer',
-    'ComeCloser'
+    'ComeCloser',
+    'Brawl',
+    'ReturnBackHome',
+    'GiveGoldTo'
 //    'WaitHere'
 ];
 
@@ -37,14 +40,14 @@ $GLOBALS["ENABLED_FUNCTIONS"]=$ENABLED_FUNCTIONS_LOCAL;
 
 // We must use internal keys here.
 
-$F_TRANSLATIONS_LOCAL["Inspect"]="Inspects a target character's OUTFIT and GEAR. JUST REPLY in a format similar to 'Let me see...' and then wait";
-$F_TRANSLATIONS_LOCAL["LookAt"]="LOOK at or INSPECT an NPC, Actor, or being OUTFIT and GEAR";
-$F_TRANSLATIONS_LOCAL["InspectSurroundings"]="Looks for entites, friendly or hostile, nearby";
+$F_TRANSLATIONS_LOCAL["Inspect"]="Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
+$F_TRANSLATIONS_LOCAL["LookAt"]="Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
+$F_TRANSLATIONS_LOCAL["InspectSurroundings"]="Looks for actors around.Wait for result to give a dialogue message";
 $F_TRANSLATIONS_LOCAL["MoveTo"]= "Move to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
-$F_TRANSLATIONS_LOCAL["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
-$F_TRANSLATIONS_LOCAL["OpenInventory2"]="Initiates trading, {$GLOBALS["PLAYER_NAME"]} must give items to {$GLOBALS["HERIKA_NAME"]}";
-$F_TRANSLATIONS_LOCAL["Attack"]="Attack with intetnion to kill an Actor, NPC or entity.";
-$F_TRANSLATIONS_LOCAL["AttackHunt"]="Hunt with intetion to kill an Actor, NPC or entity.";
+$F_TRANSLATIONS_LOCAL["OpenInventory"]="Initiates trading or exchange ITEMS with {$GLOBALS["PLAYER_NAME"]}.";
+$F_TRANSLATIONS_LOCAL["OpenInventory2"]="Initiates trading, {$GLOBALS["PLAYER_NAME"]} must give ITEMS to {$GLOBALS["HERIKA_NAME"]}";
+$F_TRANSLATIONS_LOCAL["Attack"]="Attack with intention to kill an Actor, NPC or entity.";
+$F_TRANSLATIONS_LOCAL["AttackHunt"]="Hunt with intention to kill an Actor, NPC or entity.";
 $F_TRANSLATIONS_LOCAL["Follow"]="Move to and follow a NPC, an actor or being";
 $F_TRANSLATIONS_LOCAL["CheckInventory"]="Search in {$GLOBALS["HERIKA_NAME"]}'s inventory, backpack or pocket. List their inventory contents";
 $F_TRANSLATIONS_LOCAL["SheatheWeapon"]="Sheates current weapon";
@@ -63,9 +66,12 @@ $F_TRANSLATIONS_LOCAL["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explici
 $F_TRANSLATIONS_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
 $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
-$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]} (property listener)";
+$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]} (property listener) once {$GLOBALS["PLAYER_NAME"]} is agree";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
+$F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
+$F_TRANSLATIONS_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
+$F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to an actor";
 
 $GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
 
@@ -99,7 +105,9 @@ $F_RETURNMESSAGES_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and stands 
 $F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
 $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
-$F_RETURNMESSAGES_LOCAL["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} aproaches {$GLOBALS["PLAYER_NAME"]}";
+$F_RETURNMESSAGES_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
+$F_RETURNMESSAGES_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} goes back home";
+$F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold to #TARGET#";
 
 $GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
 
@@ -108,7 +116,7 @@ $GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
 // What is this?. We can translate functions or give them a custom name. 
 // This array will handle translations. Plugin must receive the codename always.
 
-$F_NAMES_LOCAL["Inspect"]="Inspect";
+$F_NAMES_LOCAL["Inspect"]="InspectActor";
 $F_NAMES_LOCAL["LookAt"]="LookAt";
 $F_NAMES_LOCAL["InspectSurroundings"]="InspectSurroundings";
 $F_NAMES_LOCAL["MoveTo"]= "MoveTo";
@@ -134,9 +142,12 @@ $F_NAMES_LOCAL["TravelTo"]="LeadTheWayTo";
 $F_NAMES_LOCAL["SearchMemory"]="TryToRemember";
 $F_NAMES_LOCAL["WaitHere"]="WaitHere";
 $F_NAMES_LOCAL["GiveItemToPlayer"]="GiveItemToPlayer";
-$F_NAMES_LOCAL["TakeGoldFromPlayer"]="TakeGoldFromPlayer";
+$F_NAMES_LOCAL["TakeGoldFromPlayer"]="ReceiveCionsFromPlayer";
 $F_NAMES_LOCAL["FollowPlayer"]="FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"]="ComeCloser";
+$F_NAMES_LOCAL["Brawl"]="Fight";
+$F_NAMES_LOCAL["ReturnBackHome"]="Farewell";
+$F_NAMES_LOCAL["GiveGoldTo"]="GiveCoinsTo";
 
 $GLOBALS["F_NAMES"]=$F_NAMES_LOCAL;
 
@@ -547,11 +558,55 @@ $GLOBALS["FUNCTIONS"] = [
                 ]
             ],
             "required" => [""]
-    ]
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["Brawl"],
+        "description" => $F_TRANSLATIONS_LOCAL["Brawl"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Target NPC, Actor, or being",
+                ]
+            ],
+            "required" => ["target"],
+        ]
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["ReturnBackHome"],
+        "description" => $F_TRANSLATIONS_LOCAL["ReturnBackHome"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ]
+            ],
+            "required" => [""],
+        ]
+    ],
+    [
+    "name" => $F_NAMES_LOCAL["GiveGoldTo"],
+        "description" => $F_TRANSLATIONS_LOCAL["GiveGoldTo"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Target NPC, Actor, or being",
+                ]
+            ],
+            "required" => ["target"],
+        ]
+    ],
     
 ];
 
-
+// Mantain a copy of all functions define here
+foreach ($GLOBALS["FUNCTIONS"] as $n=>$functionEntry)
+    $GLOBALS["BASE_FUNCTIONS"][$functionEntry["name"]]=$GLOBALS["FUNCTIONS"][$n];
 
 // This function only is offered when SearchDiary
 $FUNCTIONS_GHOSTED_LOCAL =  [
@@ -621,6 +676,18 @@ function requireFunctionFilesRecursively($dir) {
     }
 }
 
+function unsetFunction($functionCodename) {
+    if (($key = array_search($functionCodename, $GLOBALS["ENABLED_FUNCTIONS"])) !== false) {
+        unset($GLOBALS["ENABLED_FUNCTIONS"][$key]);
+        
+    }
+
+    foreach ($GLOBALS["FUNCTIONS"] as $n=>$v)
+        if (!in_array(getFunctionCodeName($v["name"]),$GLOBALS["ENABLED_FUNCTIONS"])) {
+            unset($GLOBALS["FUNCTIONS"][$n]);
+        }
+}
+
 if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) { 
     $GLOBALS["ENABLED_FUNCTIONS"]=[
         'Inspect',
@@ -646,9 +713,11 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         //'StopWalk'
         'WaitHere',
         'ComeCloser',
-        //'GiveItemToPlayer',
-        //'TakeGoldFromPlayer',
-        //'FollowPlayer'
+        'GiveItemToPlayer',
+        'TakeGoldFromPlayer',
+        'FollowPlayer',
+        'Brawl',
+        'GiveGoldTo'
     ];
 } else {
     $GLOBALS["ENABLED_FUNCTIONS"]=[
@@ -671,14 +740,16 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'DecreaseWalkSpeed',
         'WaitHere',
         'SetCurrentTask',
-        //'GiveItemToPlayer',
-        //'TakeGoldFromPlayer'
+        'ComeCloser',
+        'GiveItemToPlayer',
+        'TakeGoldFromPlayer',
+        'Brawl',
+        'GiveGoldTo'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',
         //'StopWalk'
     ];
-
 }
 
 
@@ -693,8 +764,6 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS[
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
     require(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php");
 }
-
-
 
 // Delete non wanted functions    
 

@@ -145,7 +145,7 @@ class openrouterjson
         $zonosTones = $GLOBALS["TTSFUNCTION"] == "zonos_gradio" ? " (Response tones are mandatory in the response)" : "";
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
+            'content' => "{$prefix}. $speechReinforcement Use ONLY this JSON object to give your answer. ONLY 1 object.Do not send any other characters outside of this JSON structure$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
         ];
         $pb=[];
         $pb["user"]="";
@@ -722,6 +722,7 @@ class openrouterjson
         
         // Write the buffer to the log file without timestamp separators
         file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
         return $this->_buffer;
     }
 
