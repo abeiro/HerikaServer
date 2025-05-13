@@ -27,7 +27,6 @@ $ENABLED_FUNCTIONS_LOCAL=[
     'TravelTo',
     'SearchMemory',
     'GiveItemToPlayer',
-    'Ask',
     'FollowPlayer',
     'ComeCloser',
     'Brawl',
