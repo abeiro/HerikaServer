@@ -373,68 +373,59 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
     $pluginVersionDisplay = 'N/A'; // Default value
 
     // Attempt to use a global $db object if available and valid
-    if (isset($GLOBALS['db']) && is_object($GLOBALS['db']) && method_exists($GLOBALS['db'], 'fetchOne')) {
+    if (isset($GLOBALS['db']) && is_object($GLOBALS['db'])) {
         try {
-            $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
-                $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
+            if (method_exists($GLOBALS['db'], 'fetchOne')) {
+                $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+                if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
+                    $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
+                }
+            } elseif (method_exists($GLOBALS['db'], 'fetchAll')) {
+                // Fallback to fetchAll on global $db if fetchOne not found
+                $rows = $GLOBALS['db']->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
+                if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
+                    $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
+                }
             }
         } catch (Exception $e) {
+            // Just keep the default value and log the error
             error_log("Error fetching plugin version using global \$db: " . $e->getMessage());
         }
-    } elseif (isset($GLOBALS['db']) && is_object($GLOBALS['db']) && method_exists($GLOBALS['db'], 'fetchAll')) {
-        // Fallback to fetchAll on global $db if fetchOne not found (less ideal but a possibility)
+    } else {
+        // Only attempt to create a new DB connection if we don't already have a global one
+        // and only if we have all the required components
         try {
-            error_log("Global \$db missing fetchOne, trying fetchAll for plugin_dll_version.");
-            $rows = $GLOBALS['db']->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
-            if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
-                $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
+            if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
+                $dbDriverFile = BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
+                
+                // Only try to load the SQL class if it doesn't already exist
+                if (!class_exists('sql') && file_exists($dbDriverFile)) {
+                    @require_once($dbDriverFile);
+                }
+                
+                // Only create a new connection if the class was loaded successfully
+                if (class_exists('sql')) {
+                    // Suppress warnings/errors in this section as it's purely for UI decoration
+                    @$localDb = new sql();
+                    
+                    if ($localDb && is_object($localDb)) {
+                        if (method_exists($localDb, 'fetchOne')) {
+                            $pluginVersionRow = @$localDb->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+                            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
+                                $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
+                            }
+                        } elseif (method_exists($localDb, 'fetchAll')) {
+                            $rows = @$localDb->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
+                            if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
+                                $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
+                            }
+                        }
+                    }
+                }
             }
         } catch (Exception $e) {
-            error_log("Error fetching plugin version using global \$db with fetchAll: " . $e->getMessage());
-        }
-    } else {
-        // Fallback: If global $db is not available/usable, attempt to load conf and create a new instance.
-        // This is less reliable if class loading is problematic.
-        error_log("Global \$db not usable for plugin version, attempting local instantiation.");
-        if (defined('BASE_PATH') && !isset($GLOBALS["DBDRIVER"])) {
-            @include_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-        }
-
-        if (isset($GLOBALS["DBDRIVER"])) {
-            $dbDriverFile = BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
-            
-            if (!class_exists('sql')) {
-                if (file_exists($dbDriverFile)) {
-                    require_once($dbDriverFile);
-                }
-            }
-            
-            if (class_exists('sql')) {
-                try {
-                    $db = new sql();
-                    if (method_exists($db, 'fetchOne')) {
-                        $pluginVersionRow = $db->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-                        if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
-                            $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
-                        }
-                    } elseif (method_exists($db, 'fetchAll')) {
-                        error_log("Local \$db missing fetchOne, trying fetchAll for plugin_dll_version.");
-                        $rows = $db->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
-                        if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
-                            $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
-                        }
-                    } else {
-                        error_log("Local \$db instance created, but missing fetchOne and fetchAll.");
-                    }
-                } catch (Exception $e) {
-                    error_log("Error fetching plugin version with local \$db: " . $e->getMessage());
-                }
-            } else {
-                error_log("SQL class still not found after attempting to load driver [" . $GLOBALS["DBDRIVER"] . "].");
-            }
-        } else {
-            error_log("DBDRIVER global not set for fallback local instantiation.");
+            // Just continue with the default value
+            error_log("Error in navbar fallback DB connection: " . $e->getMessage());
         }
     }
     ?>
