@@ -25,6 +25,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("books", "gamets>=0{$gameRequest[2]}  ");
     $db->delete("books", "localts>$now ");
     $db->delete("responselog", " 1=1 ");
+    $db->delete("rolemaster", " 1=1 ");
 
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
         $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");

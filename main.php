@@ -12,6 +12,7 @@ define("MINIMUM_SENTENCE_SIZE", 50);
 date_default_timezone_set('Europe/Madrid');
 
 $GLOBALS["AVOID_TTS_CACHE"]=true;
+$GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
@@ -140,7 +141,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
-    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat"];
+    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -281,7 +282,7 @@ if ($gameRequest[0]=="diary") {
 
 // Exit if only a event info log.
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","goodnight","itemfound",
-    "travelcancel","infoplayer","infosave","status_msg","util_npcname"])) {
+    "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
@@ -348,7 +349,7 @@ if (in_array($gameRequest[0],["bored"])) {
 
 
 // Only allow functions when explicit request
-if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"])) {
+if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","welcome"])) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
@@ -356,6 +357,7 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
 if (in_array($gameRequest[0],["instruction"])) {
     $FUNCTIONS_ARE_ENABLED=true;
     $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
+    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 }
 
 if (in_array($gameRequest[0],["suggestion"])) {
@@ -428,8 +430,9 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction') ";  // Use prechat
+    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death') ";  // Use prechat
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
+   
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
 
 } else
@@ -464,10 +467,12 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
 /*
  Safe stop
 */
+error_log("Current STOPALL_MAGIC_WORD ".STOPALL_MAGIC_WORD);
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"]) && preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {
     echo "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
     @ob_flush();
     $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
+    
 }
 
 if (!isset($GLOBALS["CACHE_PEOPLE"])) {
@@ -534,7 +539,7 @@ else if ($GLOBALS["IS_NPC"]) {
 
 
 // Info about location and npcs in first position
-$contextDataWorld = DataLastInfoFor("", -2);
+$contextDataWorld = DataLastInfoFor("", -2,true);
 
 // Add current motto to COMMAND_PROMPT
 if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[0] != "diary") {
@@ -572,7 +577,65 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
+
+
+if (in_array($gameRequest[0],["rechat"]) ) {
+    // CHAOS mode
+    if (isset($GLOBALS["RECHAT_ALLOW_ACTIONS"]) && $GLOBALS["RECHAT_ALLOW_ACTIONS"]) {
+        $FUNCTIONS_ARE_ENABLED=true;
+        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(optionally enforce dialogue by using action)";
+        
+
+        // Unset some functin here
+        unsetFunction("ComeCloser");
+        unsetFunction("IncreaseWalkSpeed");
+        unsetFunction("DecreaseWalkSpeed");
+        
+        /* Change some functions here */ 
+        // We must use internal named keys here.
+
+        /*
+        $GLOBALS["F_TRANSLATIONS_NEW"]["Attack"]="Fight with another NPC to death";
+        $GLOBALS["F_NAMES_NEW"]["Attack"]="Fight";
+
+        foreach ($GLOBALS["FUNCTIONS"] as $n=>$f) {
+            $internalCode=getFunctionByTrlName($f["name"]);
+            if (isset($GLOBALS["F_TRANSLATIONS_NEW"][$internalCode]))
+                $GLOBALS["FUNCTIONS"][$n]["description"]=$GLOBALS["F_TRANSLATIONS_NEW"][$internalCode];
+
+            if (isset($GLOBALS["F_NAMES_NEW"][$internalCode]))
+                $GLOBALS["FUNCTIONS"][$n]["name"]=$GLOBALS["F_NAMES_NEW"][$internalCode];
+
+
+        }
+
+        foreach ($GLOBALS["F_TRANSLATIONS_NEW"] as $k=>$v) 
+            $GLOBALS["F_TRANSLATIONS"][$k]=$v;
+
+        foreach ($GLOBALS["F_NAMES_NEW"] as $k=>$v) 
+            $GLOBALS["F_NAMES"][$k]=$v;
+
+        unset($GLOBALS["F_TRANSLATIONS_NEW"]);
+        unset($GLOBALS["F_NAMES_NEW"]);
+        */    
+    }
+}
+
+// Rolemaster stuff
+
+$namedKey="{$GLOBALS["HERIKA_NAME"]}_is_rolemastered";
+$npcRoleMastered=$GLOBALS["db"]->fetchOne("select 1  as is_rolemastered from conf_opts where id='".$GLOBALS["db"]->escape($namedKey)."'");
+if (isset($npcRoleMastered["is_rolemastered"])) {
+    // ReturnBackHome is initially disabled. Les restore it form copy here. Only applies to rolemastered NPCs
+    $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
+    $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"][getFunctionTrlName("ReturnBackHome")];
+    error_log("{$GLOBALS["HERIKA_NAME"]}_is_rolemastered");
+} 
+
+
 // MINIME_T5 STUFF, command assiastant
+
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
@@ -613,6 +676,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 
     $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
 }
+
 
 
 // OGHMA STUFF

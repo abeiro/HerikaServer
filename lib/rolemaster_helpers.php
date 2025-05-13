@@ -778,6 +778,12 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
     /*
     SELECT STRING_AGG(formid,',') FROM "public"."npc_skyrim_data" where gender ilike 'male%' and race ilike 'nord%' and name='' and class ilike '%bandit%' and edid like 'Enc%' and achr='' and (not formid ilike '%0xDG%')  and (not  edid ilike '%magic%') 
     */
+
+    $class = strtolower($class);
+    $race = strtolower($race);
+    $gender = strtolower($gender);
+    $location = strtolower($location);
+
     $masterDataTemplates=$GLOBALS["npc_templates"];
     $masterData=$GLOBALS["npc_own_templates"];
     

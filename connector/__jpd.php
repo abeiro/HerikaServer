@@ -409,7 +409,9 @@ function __jpd_decode($inputString)
 
 /*
 $FATA = <<<EOIN
-("character": "Jenassa", "listener": "Volkur", "mood": "assertive", "action": "Attack", "target": "bandit", "message": "On it. But don't expect me to go easy on them.")
+```json
+{"character":"Mila Valentia","instruction":"Mila Valentia leans forward, her eyes sparkling with curiosity.  'You know,' she says, 'I've always wondered what it would be like to fight in a real brawl.  Do you think it's as exciting as it looks?'","action":"JustTalk","target":"Jon Battle-Born","scene_note":"Mila is trying to engage Jon in conversation about the upcoming brawl."}
+```
 EOIN;
 //$res= __jpd__extractContentBetweenBraces($FATA);
 //echo $res;

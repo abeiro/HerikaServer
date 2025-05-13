@@ -318,9 +318,11 @@ class openaijson
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
                 unset($data["max_completion_tokens"]);
+                
             } elseif (isset($customParms["MAX_TOKENS"])) {
                 $data["max_completion_tokens"]=$customParms["MAX_TOKENS"]+0;
             }
+            unset($customParms["MAX_TOKENS"]);
         }
 
         if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
@@ -333,6 +335,10 @@ class openaijson
 
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
+
+        foreach ($customParms as $k=>$v) {
+            $data[$k]=$v;
+        }
 
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
@@ -407,7 +413,7 @@ class openaijson
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
 
-        
+        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." START\n\n", FILE_APPEND);        
         return true;
 
     }
@@ -484,6 +490,10 @@ class openaijson
                         if (isset($finalData["listener"])) {
                             $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];
                         }
+                        if (isset($finalData["target"]) && !empty($finalData["target"]) && $finalData["action"]=="Talk") {
+                            // Cover the case where action is talk, and LLM hast pointed a target
+                            $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["target"];
+                        }
                         
                         if (isset($finalData["lang"])) {
                             $GLOBALS["LLM_LANG"]=$finalData["lang"];
@@ -512,6 +522,7 @@ class openaijson
         
         // Write the buffer to the log file without timestamp separators
         file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
         return $this->_buffer;
     }
 
