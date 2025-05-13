@@ -376,17 +376,17 @@ $debugPaneLink = true;
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='?table=eventlog&delete_last=20'\" 
                 class='btn-base btn-danger'>
-                Delete Last 20
+                Delete Lastest 20
             </button> ";
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='?table=eventlog&delete_last=50'\" 
                 class='btn-base btn-danger'>
-                Delete Last 50
+                Delete Lastest 50
             </button> ";
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='?table=eventlog&delete_last=100'\" 
                 class='btn-base btn-danger'>
-                Delete Last 100
+                Delete Lastest 100
             </button>";
         echo "</div>";
         
