@@ -922,10 +922,8 @@ if (sizeof($talkedSoFar) == 0) {
             if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
                 logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
 
-            if (Translation::isEnabled()) {
-                Translation::translate($RESPONSE_OK_NOTED);
-                Translation::$sentences = [Translation::$response];
-            }
+            Translation::translate($RESPONSE_OK_NOTED);
+            Translation::$sentences = [Translation::$response];
             returnLines([$RESPONSE_OK_NOTED]);
 
         } else {

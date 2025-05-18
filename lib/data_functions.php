@@ -2015,10 +2015,8 @@ function call_llm() {
                 'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
             )
         );
-        if (Translation::isEnabled()) {
-            Translation::translate($GLOBALS["ERROR_OPENAI"]);
-            Translation::$sentences = [Translation::$response];
-        }
+        Translation::translate($GLOBALS["ERROR_OPENAI"]);
+        Translation::$sentences = [Translation::$response];
         returnLines([$GLOBALS["ERROR_OPENAI"]]);
         
         $ERROR_TRIGGERED=true;
