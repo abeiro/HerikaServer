@@ -2015,6 +2015,8 @@ function call_llm() {
                 'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
             )
         );
+        Translation::translate($GLOBALS["ERROR_OPENAI"]);
+        Translation::$sentences = [Translation::$response];
         returnLines([$GLOBALS["ERROR_OPENAI"]]);
         
         $ERROR_TRIGGERED=true;
@@ -2063,8 +2065,13 @@ function call_llm() {
         $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
         if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
-                continue;
-            }
+            continue;
+        }
+
+        // disable streaming when translating to avoid sentence fragments getting translated
+        if (Translation::isEnabled()) {
+            continue;
+        }
 
         $position = findDotPosition($buffer);
 
@@ -2105,6 +2112,13 @@ function call_llm() {
     if (trim($buffer)) {
         Logger::info("REMAINING DATA <$buffer>");
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
+
+        if (Translation::isEnabled()) {
+            Translation::translate($buffer);
+            Translation::$sentences = split_sentences_stream(cleanResponse(trim(Translation::$response)));
+            Translation::normalizeArrays($sentences, Translation::$sentences);
+        }
+
         $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
         $GLOBALS["DEBUG_DATA"]["perf"][]=(microtime(true) - $startTime)." secs in openai stream";
         if ($gameRequest[0] != "diary") {
