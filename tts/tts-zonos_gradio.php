@@ -288,11 +288,13 @@ function getZonosEmotions($mood) {
     }
     
     // Log the emotion values being used
+    /*
     Logger::trace("Using emotions for TTS generation (mood: $mood):");
     foreach ($emotions as $emotion => $value) {
         $emotion_name = str_replace("response_tone_", "", $emotion);
         Logger::trace("Emotion: $emotion_name: $value");
     }
+    */
 
     return $emotions;
 }
