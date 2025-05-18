@@ -388,6 +388,23 @@ function getZonosFileContents($baseURL, $generatedAudioPath) {
     return file_get_contents("{$baseURL}/gradio_api/file={$generatedAudioPath}", false, $context);
 }
 
+// Applies substitutes for words Zonos has trouble pronouncing. Only affects pronunciation, not the subtitles in game
+function applyZonosWordSubstitutes($textString, $lang) {
+    // Add more to this list as needed.
+    $replacements = array(
+        "en-us" => [
+            "Jarl" => "Yarl"
+        ]
+    );
+    if (isset($replacements[$lang])) {
+        foreach ($replacements[$lang] as $from => $to) {
+            $textString = str_ireplace($from, $to, $textString);
+        }
+    }
+
+    return $textString;
+}
+
 $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         // skip generation if the generated audio already exists in cache
         if (isset($GLOBALS["AVOID_TTS_CACHE"]) && $GLOBALS["AVOID_TTS_CACHE"]===false )
@@ -399,6 +416,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         $emotions = getZonosEmotions($mood);
         $lang = getZonosLanguage();
         $voice = getZonosVoice();
+        $textString = applyZonosWordSubstitutes($textString, $GLOBALS["TTS"]["ZONOS_GRADIO"]["language"] ??= "en-us");
         
         $baseURL = rtrim($GLOBALS["TTS"]["ZONOS_GRADIO"]["endpoint"], '/');
         $voiceSamplePath = "/var/www/html/HerikaServer/data/voices/{$voice}.wav";
