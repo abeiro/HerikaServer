@@ -2,6 +2,7 @@
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
 require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."online_translation.php");
 
 $TITLE = "🔊CHIM - TTS Test - CHIM Server";
 
@@ -37,7 +38,7 @@ error_reporting(E_ALL);
 
 $testString = "In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
 
-if ($_POST["customstring"]) {
+if (isset($_POST["customstring"]) && $_POST["customstring"]) {
     $testString = $_POST["customstring"];
 }
 
@@ -48,6 +49,9 @@ require_once($enginePath . "prompt.includes.php");
 $GLOBALS["AVOID_TTS_CACHE"] = true;
 $DEBUG_DATA = [];
 $cleanString = $testString;
+
+Translation::translate($cleanString);
+Translation::$sentences = [Translation::$response];
 
 $melotts_pronunciation_file = $enginePath . "tts" . DIRECTORY_SEPARATOR ."tts-melotts_pronunciation.php";
 $b_conf_melotts = file_exists($melotts_pronunciation_file);
@@ -79,6 +83,11 @@ unset($db);
 
 $file = basename($GLOBALS["TRACK"]["FILES_GENERATED"][0]);
 $ts = time();
+
+if (Translation::isTextEnabled()) {
+    $testString = Translation::$response;;
+}
+
 ?>
 
 <link rel="stylesheet" href="../css/main.css">

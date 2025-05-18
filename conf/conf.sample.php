@@ -286,6 +286,16 @@ $TTS["ZONOS_GRADIO"]["cfg_scale"]=4.5;	//Context-free guidance scale
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
 
+//[Translation]
+//DeepL
+$TRANSLATION["DeepL"]["enabled"]=false; //enables translation service
+$TRANSLATION["DeepL"]["translate_text"]=false; //translate text
+$TRANSLATION["DeepL"]["translate_audio"]=false; //translate audio
+$TRANSLATION["DeepL"]["source_language"]="EN"; //source language
+$TRANSLATION["DeepL"]["target_language"]=""; //target language
+$TRANSLATION["DeepL"]["url"]="https://api-free.deepl.com/v2/translate"; //DeepL endpoint url
+$TRANSLATION["DeepL"]["API_KEY"]=""; //DeepL API key
+
 //[Speech-to-Text Service]
 $STTFUNCTION="whisper";
 

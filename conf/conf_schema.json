@@ -270,6 +270,19 @@
 },
   "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
+  "TRANSLATION_FUNCTION": {"type":"select","userlvl":"basic","scope":"global","values":["none","DeepL"],"description":"Translate subtitles and/or audio into a different language.","_title":"Translation Service"},
+  "TRANSLATION": {
+    "_title":"Translation Service",
+    "DeepL": {
+      "_title":"DeepL Settings",
+      "translate_text": {"type":"boolean","description":"Subtitles will be translated to the target language."},
+      "translate_audio": {"type":"boolean","description":"Audio will be translated to the target language."},
+      "source_language": {"type":"string","description":"Source language to be translated from. May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "target_language": {"type":"string","description":"Target language to be translated into.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "url": {"type":"url","scope":"global","description":"DeepL endpoint url. Default profile only.<br/>Free: https://api-free.deepl.com/v2/translate<br/>Pro: https://api.deepl.com/v2/translate"},
+      "API_KEY":{"type":"apikey","scope":"global","description":"DeepL api key. Default profile only.<br/>Required even when using the free version."}
+    }
+  },
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
