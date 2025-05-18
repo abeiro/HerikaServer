@@ -423,7 +423,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         $cachedVoicePath = $GLOBALS["TTS"]["ZONOS_GRADIO"]["cached_voice_path"] ??= "";
 
         // POST the voice sample to zonos if it doesn't already exist
-        if (!$cachedVoicePath || !isVoiceSampleCached($baseURL, $voiceSamplePath, $cachedVoicePath)) {
+        // but avoid caching the player_tts voice
+        if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]) || !$cachedVoicePath || !isVoiceSampleCached($baseURL, $voiceSamplePath, $cachedVoicePath)) {
             $respObj = uploadFileToGradio($baseURL, $voiceSamplePath);
             if (is_array($respObj) && isset($respObj[0])) {
                 $cachedVoicePath = $respObj[0];
@@ -433,7 +434,9 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
             }
 
             // save the path of the cached file to the npc's profile
-            setCachedVoicePath($cachedVoicePath);
+            if (!isset($GLOBALS["PATCH_OVERRIDE_VOICE"])) {
+                setCachedVoicePath($cachedVoicePath);
+            }
         }
 
         // POST request to /generate_audio
