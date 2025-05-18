@@ -50,7 +50,7 @@ class Translation {
     }
 
     public static function translate($message) {
-        if (self::isEnabled()) {
+        if (self::isTextEnabled() || self::isAudioEnabled()) {
             if ($GLOBALS["TRANSLATION_FUNCTION"] == "DeepL") {
                 self::$response = self::getDeepLTranslation($message);
             }
