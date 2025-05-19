@@ -37,6 +37,7 @@ class openai
         $this->name="openai";
         $this->_commandBuffer=[];
         $this->_stopProc=false;
+        $this->_buffer="";
         $this->_is_groq_com=false;
         $this->_is_nanogpt_com=false;
         $this->_is_x_ai=false;
@@ -70,6 +71,12 @@ class openai
                 $i_pos = stripos($s_model, ":thinking");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "-reasoning");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "MAI-DS-R1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-235b-a22b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-30b-a3b");
             $b_res = (!($i_pos === false));
         }
         return $b_res;
@@ -106,8 +113,10 @@ class openai
             }
         }
 
-        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : $default_model;
-        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+        $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+        $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
+        if (!$this->_is_reasoning)
+            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
         $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
     }
 
@@ -177,7 +186,7 @@ class openai
                     
                      if (!empty($element["content"])) {
                             $pb["system"].=$element["content"]."\n";
-                            if (strpos($element["content"],"Error")===false) {
+                            if (stripos($element["content"],"Error")===false) {
                                 $contextData[$n]=[
                                         "role"=>"user",
                                         "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
@@ -271,6 +280,8 @@ class openai
                 $data["chat_format"]="tidy"; 
                 $data["reasoning_effort"] = "low";
                 $data['reasoning_format'] = "hidden"; 
+                if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
+                    $data["enable_thinking"] = false;
             }
 
         } // --- endif provider
@@ -507,8 +518,9 @@ class openai
             $this->_output_buffer = "";
         }
         
-        // Write the buffer to the log file without timestamp separators
-        file_put_contents(__DIR__."/../log/output_from_llm.log","{$this->_buffer}\n\n".date(DATE_ATOM)." END\n==\n", FILE_APPEND);
+         // Write the buffer to the log file without timestamp separators
+        file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
 
         fclose($this->primary_handler);
     }

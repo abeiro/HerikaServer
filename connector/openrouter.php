@@ -102,8 +102,10 @@ class openrouter
                 $default_model = 'mistral-small-latest';
         }
 
-        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : $default_model;
-        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+        $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+        $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
+        if (!$this->_is_reasoning)
+            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
         $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
     }
 
@@ -142,7 +144,7 @@ class openrouter
         $contextData=$contextDataCopy;
 
 
-        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.5);
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
         if ($temperature < 0.0) $temperature = 0.0;
         else if ($temperature > 2.0) $temperature = 2.0; 
 
@@ -425,7 +427,9 @@ class openrouter
         }
 
         fclose($this->primary_handler);
-        file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
+        // Write the buffer to the log file without timestamp separators
+        file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
 
     }
 

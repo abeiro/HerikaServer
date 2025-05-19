@@ -20,12 +20,20 @@ class openrouterjson
     public $_extractedbuffer;
     private $_rawbuffer;
     private $_forcedClose=false;
+    private $_is_nanogpt_com;
+    private $_is_mistral_ai;
+    private $_is_streaming;
+    private $_is_reasoning;
     private $_model="";
-    private $_is_reasoning=false;
+    private $_url;
     private $_websearch=false;
     private $_websearch_text="";
     private $_websearch_index=0;
     private $_webbackup_func=false;
+    private $_remove_cot;
+    private $_cot_tag_base;
+    private $_output_buffer; 
+    private $_timeout;
 
     public function __construct()
     {
@@ -33,9 +41,18 @@ class openrouterjson
         $this->_commandBuffer=[];
         $this->_stopProc=false;
         $this->_extractedbuffer="";
+        $this->_buffer="";
         $this->_forcedClose=false;
+        $this->_is_nanogpt_com=false;
+        $this->_is_mistral_ai=false;
         $this->_model="";
+        $this->_url="";
+        $this->_is_streaming=true;
         $this->_is_reasoning=false;
+        $this->_remove_cot=true;
+        $this->_cot_tag_base="think";
+        $this->_output_buffer="";
+        $this->_timeout=30;
         $this->_websearch=false;
         $this->_websearch_text="";
         $this->_websearch_index=0;
@@ -69,11 +86,17 @@ class openrouterjson
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwq-32b"); 
             if ($i_pos === false) 
-                $i_pos = stripos($s_model, "sonar-reasoning");
+                $i_pos = stripos($s_model, "qwq-max");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, ":thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-reasoning");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "grok-3-mini"); 
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "sonar-deep-research");
-            if ($i_pos === false) 
-                $i_pos = stripos($s_model, "claude-3.7-sonnet");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "r1-1776");
             if ($i_pos === false) 
@@ -85,26 +108,47 @@ class openrouterjson
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "olympiccoder-");
             if ($i_pos === false) 
-                $i_pos = stripos($s_model, "grok-3-mini"); 
+                $i_pos = stripos($s_model, "MAI-DS-R1");
             if ($i_pos === false) 
-                $i_pos = stripos($s_model, "-thinking");
+                $i_pos = stripos($s_model, "qwen3-235b-a22b");
             if ($i_pos === false) 
-                $i_pos = stripos($s_model, ":thinking");
-            if ($i_pos === false) 
-                $i_pos = stripos($s_model, "-reasoning");
+                $i_pos = stripos($s_model, "qwen3-30b-a3b");
             $b_res = (!($i_pos === false));
         }
         return $b_res;
     }
    
+    private function init_connector() {
+        $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
+        if (strlen($this->_url) < 6)
+            Logger::error("{$this->name} connector - missing url!");
+
+        $this->_remove_cot = (isset($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"])) ? $GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] : true;
+
+        $default_model = 'meta-llama/llama-3.3-70b-instruct';
+
+        $this->_is_nanogpt_com = (stripos($this->_url, "nano-gpt.com") > 0 ); //https://nano-gpt.com/api/v1/chat/completions
+        if ($this->_is_nanogpt_com) {    
+            $default_model = 'meta-llama/llama-4-scout';
+        } else {
+            $this->_is_mistral_ai = (stripos($this->_url, "mistral.ai") > 0 ); //https://api.mistral.ai/v1/chat/completions
+            if ($this->_is_mistral_ai)    
+                $default_model = 'mistral-small-latest';
+        }
+
+        $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+        $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
+        if (!$this->_is_reasoning)
+            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+        $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
+    }   
     
     public function open($contextData, $customParms)
     {
-        $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
-        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'meta-llama/llama-3.3-70b-instruct';
-        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
 
-        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+        $this->init_connector();
+
+        $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
 
         /***
@@ -145,7 +189,7 @@ class openrouterjson
         $zonosTones = $GLOBALS["TTSFUNCTION"] == "zonos_gradio" ? " (Response tones are mandatory in the response)" : "";
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use ONLY this JSON object to give your answer. ONLY 1 object.Do not send any other characters outside of this JSON structure$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
+            'content' => "{$prefix}. $speechReinforcement Use ONLY this JSON object to give your answer. ONLY 1 object. Do not send any other characters outside of this JSON structure$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
         ];
         $pb=[];
         $pb["user"]="";
@@ -157,7 +201,7 @@ class openrouterjson
         $lastTargetBuffer="";
         $assistantRoleBuffer="";
         $n_ctxsize = sizeof($contextDataOrig); 
-        $this->_webbackup_func = $GLOBALS["FUNCTIONS_ARE_ENABLED"];
+        $this->_webbackup_func = $GLOBALS["FUNCTIONS_ARE_ENABLED"] ?: false;
 
         foreach ($contextDataOrig as $n=>$element) {
             
@@ -364,29 +408,55 @@ class openrouterjson
             $contextData=$finalContextDataWithExamples;
         }
 
-        
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
+        if ($temperature < 0.0) $temperature = 0.0;
+        else if ($temperature > 2.0) $temperature = 2.0; 
+
+        $presence_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ? : 0.0);
+        if ($presence_penalty < -2.0) $presence_penalty = -2.0;
+        else if ($presence_penalty > 2.0) $presence_penalty = 2.0; 
+
+        $frequency_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ? : 0.0); 
+        if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
+        else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
+
+        $repetition_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ? : 0.0);
+        if ($repetition_penalty < 0.0) $repetition_penalty = 0.0;
+        else if ($repetition_penalty > 2.0) $repetition_penalty = 2.0; 
+
+        $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
+        if ($top_p > 1) $top_p = 1.0;
+        else if ($top_p < 0.0) $top_p = 0.0; 
+
+        $min_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ? : 0.0);
+        if ($min_p > 1) $min_p = 1.0;
+        else if ($min_p < 0.0) $min_p = 0.0; 
+
+        $top_a = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ? : 0.0);
+        if ($top_a > 1) $top_a = 1.0;
+        else if ($top_a < 0.0) $top_a = 0.0; 
+
+        $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
+        if ($top_k < 0) $top_k = 0; 
         
         $data = array(
-            'model' => $this->_model, 
+            'model' => $this->_model,
             'messages' => $contextData,
-            'stream' => true,
-            'max_tokens'=>$MAX_TOKENS,
+            'stream' => $this->_is_streaming, 
+            'max_tokens' => $MAX_TOKENS,
+            'temperature' => $temperature, 
+            'top_k' => $top_k,
+            'top_p' => $top_p, 
+            'min_p' => $min_p,
+            'top_a' => $top_a,
+            'presence_penalty' => $presence_penalty, 
+            'frequency_penalty' => $frequency_penalty, 
+            'repetition_penalty' => $repetition_penalty,
             'stop'=>[
                     'USER',
                 ],
-            //'response_format'=>["type"=>"json_object"]
-            
+            'transforms'=>[]
         );
-        
-        
-        $data["temperature"]=floatval($GLOBALS["CONNECTOR"][$this->name]["temperature"]+0);
-        $data["frequency_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]+0);
-        $data["presence_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]+0);
-        $data["repetition_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]+0);
-        $data["min_p"]=floatval($GLOBALS["CONNECTOR"][$this->name]["min_p"]+0);
-        $data["top_a"]=floatval($GLOBALS["CONNECTOR"][$this->name]["top_a"]+0);
-        $data["top_k"]=floatval($GLOBALS["CONNECTOR"][$this->name]["top_k"]+0);
-        $data["top_p"]=floatval($GLOBALS["CONNECTOR"][$this->name]["top_p"]+0);
          
         if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
             if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
@@ -398,12 +468,10 @@ class openrouterjson
         
             
         // Mistral AI API does not support penalty params
-        if (strpos($url, "mistral") === false) {
-            $data["presence_penalty"]=floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0);
-            $data["frequency_penalty"]=floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0);
-        }
-  
-        
+        if ($this->_is_mistral_ai) {
+            unset($data["presence_penalty"]); 
+            unset($data["frequency_penalty"]);
+        } 
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
@@ -436,6 +504,10 @@ class openrouterjson
             //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
             //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
             //Logger::debug("reasoning " . $this->_model);
+            
+            if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
+                $data["enable_thinking"] = false;
+            }            
         }
 
         if ($this->_websearch) { // online search request 
@@ -511,14 +583,14 @@ class openrouterjson
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => 30,
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout,
                 "ignore_errors" => true
             )
         );
 
         $context = stream_context_create($options);
         
-        $this->primary_handler = $this->send($url, $context);
+        $this->primary_handler = $this->send($this->_url, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
             Logger::error(trim(print_r($error,true)));
