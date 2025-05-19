@@ -2207,14 +2207,17 @@ function DataRetrieveFirstTimeMet($s_player_name, $s_npc_name) {
 	$s_res = "";
 
 	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0)) {
+		$s_player = $db->escape($s_player_name);
+		$s_npc = $db->escape($s_npc_name);
+
 		$db_rec = $db->fetchAll("SELECT speaker,listener,
 			convert_gamets2skyrim_date(gamets) as met_date,
 			convert_gamets2hours((SELECT MAX(gamets) FROM eventlog) - gamets) as hours_ago,
 			message,gamets,momentum,rowid  
 			FROM memory 
 			WHERE event = 'first_met' AND gamets > 0 AND
-			((speaker = '{$s_player_name}' AND listener = '$s_npc_name') OR
-			(listener = '{$s_player_name}' AND speaker = '$s_npc_name'))
+			((speaker = '{$s_player}' AND listener = '$s_npc') OR
+			(listener = '{$s_player}' AND speaker = '$s_npc'))
 			ORDER BY rowid ASC LIMIT 2; ");
 		if (is_array($db_rec) && sizeof($db_rec)>0) {
 			$gts_met = $db_rec[0]['gamets'];
@@ -2226,9 +2229,75 @@ function DataRetrieveFirstTimeMet($s_player_name, $s_npc_name) {
 				$days_ago = intval($hours_ago / 24); 
 				$s_time_ago = "{$days_ago} days ago";
 			}
-			$s_res = "{$s_player_name} met {$s_npc_name} for the first time on {$s_met}, {$s_time_ago}.";
+			$s_res = "{$s_player} met {$s_npc} for the first time on {$s_met}, {$s_time_ago}.";
 		} else { 
 			Logger::info("DataRetrieveLastMet: NO match found");
+			$s_res = "There is no record of when {$s_player} met {$s_npc}.";
+		}
+	}
+	return $s_res;
+}
+
+
+function GetLastInteraction($s_player_name, $s_npc_name, $gts_now=0) {
+    global $db;
+	$i_res = 0;
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0)) {
+		if ($gts_now < 1)
+			$l_gamets = intval(DataLastKnownGameTS());
+		else 
+			$l_gamets = $gts_now;
+		$s_player = $db->escape($s_player_name);
+		$s_npc = $db->escape($s_npc_name);
+		$db_rec = $db->fetchAll("SELECT gamets FROM speech 
+        WHERE (gamets < {$l_gamets})  AND (gamets > 0) AND 
+          ((speaker = '{$s_player}' AND listener = '{$s_npc}') OR 
+          (listener = '{$s_player}' AND speaker = '{$s_npc}'))  
+        ORDER BY gamets DESC LIMIT 1 ");
+		if (is_array($db_rec) && sizeof($db_rec)>0) {
+			$i_res = $db_rec[0]['gamets'];
+		}
+	}
+	return $i_res;
+}
+
+
+function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
+    global $db;
+
+	$s_res = "";
+
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && (!($s_player_name == 'The Narrator')) && (!($s_npc_name == 'The Narrator'))) {
+		$crt_gamets = intval(DataLastKnownGameTS());
+		$s_player = $db->escape($s_player_name);
+		$s_npc = $db->escape($s_npc_name);
+		$gts_met = GetLastInteraction($s_player, $s_npc, $crt_gamets); 
+		if ($gts_met > 0) {
+			$s_date = gamets2str_format_date($gts_met, $dt_format = 'Y-m-d'); 
+			$gts_ago = $crt_gamets - $gts_met;
+			$hours_ago = convert_gamets2hours($gts_ago);
+			if ($hours_ago > 3) {
+				if ($hours_ago < 48) {
+					$s_res = "{$s_player} and {$s_npc} spoke last {$hours_ago} hours ago.";
+				} else {
+					$days_ago = convert_gamets2days($gts_ago);
+					if ($days_ago < 31) {
+						$s_res = "{$s_player} and {$s_npc} spoke last {$days_ago} days ago.";
+					} else {
+						$months_ago = intval($days_ago / 30);
+						if ($month_ago < 12) {
+							$s_res = "{$s_player} and {$s_npc} spoke last {$months_ago} months ago on {$s_date}.";
+						} else {
+							$s_res = "{$s_player} and {$s_npc} spoke last long time ago on {$s_date}.";
+						}
+					}
+				}	
+			} else {
+				$s_res = "{$s_player} and {$s_npc} spoke recently.";
+			}
+		} else { 
+			Logger::info("DataRetrieveLastTimeTalk: NO match found");
+			$s_res = "There is no record of when {$s_player_name} and {$s_npc_name} last spoke.";
 		}
 	}
 	return $s_res;
@@ -2637,7 +2706,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
         Logger::info(DMgetCurrentModelFile()." ".$currentModelFilePath);
         copy(DMgetCurrentModelFile(),$currentModelFilePath);
-        shell_exec("chmod 775 $currentModelFilePath");
+        shell_exec("chmod 0775 $currentModelFilePath");
         
          // Character Map file
         if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json")) {

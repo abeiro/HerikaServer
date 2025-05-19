@@ -361,6 +361,12 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105" target="_blank">AI/LLM Tier List</a></li>
                 </ul>
             </li>
+            <?php 
+            // menu extension - last list element
+            $plug_file = BASE_PATH . DIRECTORY_SEPARATOR . "ui" . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar_custom.php";
+            if (file_exists($plug_file)) 
+                include($plug_file); 
+            ?>                       
         </ul>
     </div>
 

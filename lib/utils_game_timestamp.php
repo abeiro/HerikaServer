@@ -742,24 +742,23 @@ function skyrim_month_explained($s_skyrim_month_name) {
 
 
 function DataLastKnownGameTS() {
-// retrieve gamets from most recent record in eventlog
+// retrieve gamets from eventlog
     global $db;
 
-    $lastLoc=$db->fetchAll("SELECT gamets FROM eventlog WHERE (gamets > 0) ORDER BY gamets desc, ts desc LIMIT 1");
+    $lastLoc=$db->fetchAll("SELECT MAX(gamets) AS m_gts FROM eventlog WHERE (gamets > 0)");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        Logger::warn("DataLastKnownGameTS: NO match found");
+        Logger::warn("DataLastKnownGameTS: NO record found");
     } else { // ok 
-        if (isset($lastLoc[0]["gamets"]) && (strlen($lastLoc[0]["gamets"])>0)) {
-            $f_gamets = floatval($lastLoc[0]["gamets"]);
-            if ($f_gamets > 0.0) {
-                //error_log(" dbg DataLastKnownGameTS: {$f_gamets} ");
-                return $f_gamets;
+        if (isset($lastLoc[0]["m_gts"]) && (strlen($lastLoc[0]["m_gts"])>0)) {
+            $i_gamets = intval($lastLoc[0]["m_gts"]);
+            if ($i_gamets > 0) {
+                return $i_gamets;
             }
         } else {
-            Logger::warn("DataLastKnownGameTS: NO match found");
+            Logger::error("DataLastKnownGameTS: NO game timestamp value found");
         }
     }
-    return 0.0;
+    return 0;
 }
 
 function DataLastKnownGameTS_record() {
