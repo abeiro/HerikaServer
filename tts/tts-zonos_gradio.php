@@ -3,6 +3,9 @@
 function getZonosLanguage() {
     $lang=isset($GLOBALS["TTS"]["FORCED_LANG_DEV"])?$GLOBALS["TTS"]["FORCED_LANG_DEV"]:$GLOBALS["TTS"]["ZONOS_GRADIO"]["language"];
 
+    if (isset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]))
+        $lang = $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];
+
     if (empty($lang)) {
         $lang=$GLOBALS["TTS"]["ZONOS_GRADIO"]["language"];
     }

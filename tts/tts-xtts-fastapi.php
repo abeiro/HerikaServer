@@ -146,7 +146,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 		}
 		
-		
+		if (isset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]))
+        	$lang=$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];
 
 		if (empty($lang))
 			$lang=$GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
