@@ -128,7 +128,7 @@ class openaijson
                 }
 
                 if ($element["role"]=="system") {
-                    
+                    // We should start chaging this to role=>"developer"
                     $pb["system"]=$element["content"]."\nThis is the script history for this story\n#CONTEXT_HISTORY\n";
                     $contextDataCopy[]=$element;
                     
