@@ -289,15 +289,22 @@ $TTS["ZONOS_GRADIO"]["cfg_scale"]=4.5;	//Context-free guidance scale
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
+$TTSFUNCTION_PLAYER_LANGUAGE="";
 
 //[Translation]
+$TRANSLATION_FUNCTION="none";
+//settings
+$TRANSLATION["settings"]["translate_audio"]=false; //translate audio
+$TRANSLATION["settings"]["translate_text"]=false; //translate text
+$TRANSLATION["settings"]["player_matches_npc"]=true; //player language matches npc
+$TRANSLATION["settings"]["translate_player_text"]=false; //translate player text
+$TRANSLATION["settings"]["translate_player_audio"]=false; //translate player audio
 //DeepL
-$TRANSLATION["DeepL"]["enabled"]=false; //enables translation service
-$TRANSLATION["DeepL"]["translate_text"]=false; //translate text
-$TRANSLATION["DeepL"]["translate_audio"]=false; //translate audio
 $TRANSLATION["DeepL"]["source_language"]=""; //source language
 $TRANSLATION["DeepL"]["target_language"]=""; //target language
 $TRANSLATION["DeepL"]["url"]="https://api-free.deepl.com/v2/translate"; //DeepL endpoint url
+$TRANSLATION["DeepL"]["player_source_language"]=""; //player source language
+$TRANSLATION["DeepL"]["player_target_language"]=""; //player target language
 $TRANSLATION["DeepL"]["API_KEY"]=""; //DeepL API key
 
 //[Speech-to-Text Service]

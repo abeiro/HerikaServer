@@ -34,6 +34,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
     }
     
+    if (isset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]))
+        $lang=$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];
 
     if (empty($lang))
         $lang=$GLOBALS["TTS"]["MELOTTS"]["language"];
@@ -81,7 +83,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
             $cleanString = adjust_pronunciation($textString); // adjust English mispronunciations.
     } else Logger::warn("melotts info: pronunciation adjustments NOT defined.");
 
-    $finalData =["speaker"=>"$voice","text"=>"$cleanString","language"=>"EN","speed"=>$speed];
+    $finalData =["speaker"=>"$voice","text"=>"$cleanString","language"=>$lang,"speed"=>$speed];
     //print_r($finalData);
 	
 	$options = array(
