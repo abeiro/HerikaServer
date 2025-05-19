@@ -295,9 +295,9 @@ function unmoodSentence($sentence) {
     global $forceMood;
     if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
         // Check to see if the LLM responded with the entire message in **'s.
-        if (str_starts_with($output, "*") && str_ends_with($output, "*")) {
-            $output = ltrim($output, "*");
-            $output = rtrim($output, "*");
+        if (str_starts_with($sentence, "*") && str_ends_with($sentence, "*")) {
+            $output = ltrim($sentence, "*");
+            $output = rtrim($sentence, "*");
         }
         else {
             $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
