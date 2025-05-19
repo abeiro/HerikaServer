@@ -115,15 +115,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
 
             $interactions=DirectConversationsWith($actor);
             if ($interactions==0) {
-                $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} never talked to $actorName before)";
+                $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} never talked to $actorName before, should refer to it as stranger/traveller...)";
             } else if ($interactions<5) {
                 $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} has talked to $actorName a couple of times before)";
             } else {
                 $ittext="";
             }
             
-            if ($actor==$GLOBALS["PLAYER_NAME"]) 
-                $actorDetailedListWithProfile[]="$actor: player character";
+            if ($actor==$GLOBALS["PLAYER_NAME"] && false) //PC as regular NPC
+                $actorDetailedListWithProfile[]="$actor: player character $ittext";
             else {
                 
                 $actorName = preg_replace("/\s*\(.*?\)\s*/", "", $actor);
@@ -676,7 +676,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     }
 
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($lastDialogFull,true));
-
+    file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($query,true),FILE_APPEND);
+    
     return $lastDialogFull;
 
 }
@@ -746,7 +747,8 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
         $bufferHerika=[];
     }
 
-    
+    // file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_5_.txt",print_r($lastDialogFullCopy,true));
+
     
     // Compact other info
     $lastSpeaker = "";
@@ -778,7 +780,11 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
 
                 if (!$compactContextInfo) {
                     $lastDialogFull[]=array('role' => $lastSpeaker, 'content' => trim(isset($buffer[0])?$buffer[0]:$line["content"]));
-                    $buffer = [];
+                    if (isset($buffer[0])) {
+                        $buffer = [];
+                        $buffer[] = $line["content"];
+                    } else
+                        $buffer = [];
                 } else {
                     $buffer[] = strtr($line["content"],["The Narrator:"=>"","{$GLOBALS["HERIKA_NAME"]}:"=>""]);
                 }
@@ -1606,6 +1612,54 @@ function DataBeingsInCloseRange()
     return "|".$beingsFormatted."|";
 }
 
+// Find actor name iwth closest name, useful to sanitize actions parameters
+function FindClosestActorName($actorName)
+{
+    global $db;
+
+    $lastLoc = $db->fetchAll("SELECT a.data AS data FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc) == 0) {
+        return "";
+    }
+
+    $beings = strtr($lastLoc[0]["data"], ["beings in range:" => ""]);
+    $beingsArray = explode("/", $beings);
+    $beingsArrayCleaned = [];
+
+    foreach ($beingsArray as $v) {
+        // Remove all text within parentheses and trim whitespace
+        $v = trim(preg_replace('/\s*\([^)]*\)/', '', $v));
+
+        // Exclude certain entities
+        if (strpos($v, "Horse") !== 0 && strpos($v, "Chicken") !== 0) {
+            $beingsArrayCleaned[] = $v;
+        }
+    }
+
+    if (empty($beingsArrayCleaned)) {
+        return "";
+    }
+
+    // Find the closest match using Levenshtein distance
+    $closest = null;
+    $shortest = -1;
+
+    foreach ($beingsArrayCleaned as $name) {
+        $lev = levenshtein($actorName, $name);
+
+        if ($lev == 0) {
+            return $name; // Exact match
+        }
+
+        if ($lev < $shortest || $shortest < 0) {
+            $closest = $name;
+            $shortest = $lev;
+        }
+    }
+
+    return $closest;
+}
+
 
 function DirectConversationsWith($actor)
 {
@@ -1825,7 +1879,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
             $vectorString="'[".implode(",",$vector["embedding"])."]'";
    
             $memory=$GLOBALS["db"]->fetchAll("
-                SELECT summary, 
+                SELECT summary, gamets_truncated,
                         embedding <-> $vectorString as distance
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
@@ -1834,8 +1888,10 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                     LIMIT 5 OFFSET 0
                 ");
                     
-            if (!isset($memory[0]))
+            if (!isset($memory[0])) {
                 $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
+                $memory[0]["distance"]=1.4;
+            }
             else {
                  $memory[0]['rank_any']=(1.40-$memory[0]["distance"]);
                  $memory[0]['rank_all']=(1.40-$memory[0]["distance"]);
@@ -1936,10 +1992,10 @@ function DataSearchOghmaByVector($rawstring) {
                 'audit_memory',
                 array(
                     'input' => $TEST_TEXT,
-                    'keywords' =>'text2vec search /'.$contextKeywords,
+                    'keywords' =>'text2vec oghma search /'.$contextKeywords,
                     'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                     'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
-                    'memory'=>$memory[0]["summary"],
+                    'memory'=>$memory[0]["topic"],
                     'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
                 )
             );
@@ -2140,6 +2196,194 @@ function call_llm() {
                             $mang2=explode(" and ",$mang1[0]);
                             $mang3=explode("(",$mang2[0]);
                             $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
+
+                        } else if ($actionParts2[0]=="Inspect") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $mang4=FindClosestActorName($mang3[0]);
+
+                            if ($mang4)
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Inspect@{$mang4}";
+                            else
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Inspect@{$mang3[0]}";
+
+                            error_log("[ACTION POSTFILTER GiveItemTo] $localtarget => {$mang3[0]} => $mang4");
+
+
+                        } else if ($actionParts2[0]=="GiveItemTo") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $mang4=FindClosestActorName($mang3[0]);
+                            error_log("[ACTION POSTFILTER GiveItemTo] $localtarget => {$mang3[0]} => $mang4");
+
+                            if ($mang4)
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveItemTo@{$mang4}";
+                            else
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveItemTo@{$mang3[0]}";
+
+                            error_log("[ACTION POSTFILTER GiveItemTo] $localtarget => {$mang3[0]} => $destination");
+
+
+                        } else if ($actionParts2[0]=="GiveGoldTo") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $mang4=FindClosestActorName($mang3[0]);
+                            error_log("[ACTION POSTFILTER GiveGoldTo] $localtarget => {$mang3[0]} => $$mang4");
+
+                            if ($mang4)
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$mang4}";
+                            else
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$mang3[0]}";
+
+                            error_log("[ACTION POSTFILTER GiveGoldTo] $localtarget => {$mang3[0]} => $destination");
+
+
+                        }  else if ($actionParts2[0]=="TradeItems") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+
+                            $mang4=FindClosestActorName($mang3[0]);
+
+                            error_log("[ACTION POSTFILTER TradeItems] $localtarget => {$mang3[0]} => $mang4");
+
+                            if ($mang4)
+                                $destination=$mang4;
+                            else
+                                $destination=$mang3[0];
+
+                            error_log("[ACTION POSTFILTER TradeItems] $localtarget => {$mang3[0]} => $destination");
+
+                            if ($destination!=$GLOBALS["PLAYER_NAME"])
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TradeItems@$destination";
+
+                        }  else if ($actionParts2[0]=="Follow") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $mang4=FindClosestActorName($mang3[0]);
+
+                            error_log("[ACTION POSTFILTER Follow] $localtarget =>  {$mang3[0]} => $mang4");
+
+                            if ($mang4)
+                                $destination=$mang4;
+                            else
+                                $destination=$mang3[0];
+                            if ($destination!=$GLOBALS["PLAYER_NAME"])
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Follow@$destination";
+                            else
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|FollowPlayer@";
+                            
+
+                            error_log("[ACTION POSTFILTER Follow] $localtarget => {$mang3[0]} => $destination");
+
+                        } else if ($actionParts2[0]=="TravelTo") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $mang4=explode("--",$mang3[0]);
+                            
+                            $destination=$mang4[0];
+
+                            error_log("[ACTION POSTFILTER TravelTo]  $localtarget => {$mang4[0]} => $destination");
+
+                            $destinationName=$GLOBALS["db"]->escape(trim($destination));
+                            $dbDestination=$GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+
+                            $contextDestinations=DataPosibleLocationsToGo();
+
+                            if (in_array($destination,$contextDestinations)) {
+                                error_log("[ACTION POSTFILTER TravelTo] Seemd valid (context destination): $localtarget => $destination");
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
+
+                            } else {
+                                if (isset($GLOBALS["NPC_ROLEMASTERED"]) && $GLOBALS["NPC_ROLEMASTERED"]) {
+                                    if (stripos($destination,"home")===0) {
+                                        // Rolemastered NPC wants to return back home
+                                        $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|ReturnBackHome@"; 
+                                        continue;
+
+                                    }
+
+                                } 
+                                if (is_array($dbDestination) && isset($dbDestination["formid"])) {
+                                    $destination=$dbDestination["formid"];
+                                    error_log("[ACTION POSTFILTER TravelTo] found database entry for $localtarget => $destination => {$dbDestination["name"]}, similarity ({$dbDestination["sim"]})");
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
+                                } else if (stripos($destination,"outside")!==false) {
+                                    $destination=DataLastKnownLocationHuman(true,false);
+                                    error_log("[ACTION POSTFILTER TravelTo] reference to outside detected , $localtarget => $destination");
+                                    
+                                } else
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
+                            }
+                            
+                        }  else if ($actionParts2[0]=="FollowPlayer") {
+                            
+                            error_log("[ACTION POSTFILTER FollowPlayer] Just Cleaning here");
+                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|FollowPlayer@";
+                            
+                        }  else if ($actionParts2[0]=="TakeGoldFromPlayer") {
+                            
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $mang4=explode("--",$mang3[0]);
+                            $destination=$mang4[0];
+
+                            error_log("[ACTION POSTFILTER TakeGoldFromPlayer] $localtarget=>$destination");
+
+                            if ($GLOBALS["SCRIPTLINE_LISTENER"]==$destination) {
+                                if ($destination!=$GLOBALS["PLAYER_NAME"]) {
+                                    // We can conclude AI is trying to take gold from other NPC 
+                                    // NO action in this case
+                                    $actions[$n]="";        
+                                }
+                            }
+                            
+                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@";
+                            
+                        }  else if ($actionParts2[0]=="ReturnBackHome") {
+                            
+                            error_log("[ACTION POSTFILTER ReturnBackHome] Just Cleaning here");
+                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|ReturnBackHome@";
+                            
+                        }  else if ($actionParts2[0]=="Brawl") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+
+                            $mang4=FindClosestActorName($mang3[0]);
+
+                            error_log("[ACTION POSTFILTER Brawl] $localtarget => {$mang3[0]} => $mang4");
+
+                            if ($mang4)
+                                $finaltarget=$mang4;
+                            else
+                                $finaltarget=$mang3[0];
+
+                            error_log("[ACTION POSTFILTER Brawl] $localtarget => {$mang3[0]} => $finaltarget");
+
+                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Brawl@$finaltarget";
+
                         }
                     }
                 }
@@ -2147,10 +2391,11 @@ function call_llm() {
 
             $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
             echo implode("\r\n", $actions).PHP_EOL;
+            
+            file_put_contents(__DIR__."/../log/output_to_plugin.log",implode("\r\n", $actions).PHP_EOL, FILE_APPEND | LOCK_EX);
             // Enforce flush output
             @ob_end_flush();
             @flush();
-            file_put_contents(__DIR__."/../log/output_to_plugin.log",implode("\r\n", $actions), FILE_APPEND | LOCK_EX);
 
         }
     }

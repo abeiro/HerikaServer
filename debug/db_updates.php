@@ -966,6 +966,11 @@ if ($checkVersion("rolemaster")<20250414001) {
     error_log("Applied patch rolemaster 20250414001");
 }
 
+if ($checkVersion("locations")<20250516001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/add_locations.sql"));
+    $updateVersion("locations",20250516001);
+    error_log("Applied patch locations 20250516001");
+}
 
 $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"action\" TYPE text");
 $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"actor\" TYPE text");

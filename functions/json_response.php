@@ -30,6 +30,8 @@
             //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 //$data["tools"][]=["type"=>"function","function"=>$function];
+                if (!$function)
+                    continue;
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"]) {
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
@@ -64,7 +66,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target|destination name",
+                    "target"=>"action's target actor| action's destination location name ",
                     "lang"=>"en|es"
                 ];
             } else {
@@ -74,7 +76,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target|destination name"
+                    "target"=>"action's target actor| action's destination location name "
                 ];
             }
         } else {
@@ -84,7 +86,7 @@
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target|destination name",
+                    "target"=>"action's target actor| action's destination location name ",
                     "lang"=>"en|es",
                     "message"=>"lines of dialogue"
                 ];
@@ -94,7 +96,7 @@
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target|destination name",
+                    "target"=>"action's target actor| action's destination location name ",
                     "message"=>"lines of dialogue"
                 ];
             }
@@ -161,7 +163,7 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                            "description" => "action's target|destination name"
+                            "description" => "action's target actor| action's destination location name "
                         )
                     ),
                     "required" => [

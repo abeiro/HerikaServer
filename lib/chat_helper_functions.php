@@ -319,7 +319,9 @@ function returnLines($lines,$writeOutput=true)
 
 
         $sentence=$output;
-
+        if ($GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"])
+            $GLOBALS["strip_emotes_from_output"]=true;
+        
         if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
             // Check to see if the LLM responded with the entire message in **'s.
             if (str_starts_with($output, "*") && str_ends_with($output, "*")) {
@@ -340,6 +342,7 @@ function returnLines($lines,$writeOutput=true)
                         "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
                         "*pant*"=>"",
                         "*cough*"=>"",
+                        "*spits*"=>"",
                         "*hiccup*"=>"",
                         "*whimper*"=>""
                         ]
@@ -530,7 +533,7 @@ function returnLines($lines,$writeOutput=true)
                  if (isset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) && $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) 
                      $GLOBALS["SCRIPTLINE_ANIMATION"]="";
                 else {
-                    if ((rand(0,4)!==0)){ // Will disable animations, 20% chance to trigger
+                    if ((rand(0,5)==0)){ // Will disable animations, 20% chance to trigger
                         $GLOBALS["SCRIPTLINE_ANIMATION"]="IdleDialogueExpressiveStart";
                     }
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
@@ -1266,6 +1269,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             $s_prefix = "{$daysAgo} days ago, on {$sk_date} ... ";
         } else {
             $s_prefix = "{$hoursAgo} hours ago ... ";
+            return "";// Do not offer memory if its recent
         }
         $pattern = '/#Tags:.*/';
         $replacement = '';

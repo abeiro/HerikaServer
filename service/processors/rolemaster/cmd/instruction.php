@@ -30,8 +30,11 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
         // Function stuff        
         require($enginePath . "functions/functions_instruction.php");
-        $fnames=[];
 
+        $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
+        $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
+
+        $fnames=[];
         foreach ($GLOBALS["F_NAMES"] as $functionCode=>$functionName) {
             if (in_array($functionCode,$GLOBALS["ENABLED_FUNCTIONS"])) {
                 if ($functionCode!="OpenInventory" && $functionCode!="OpenInventory2") {
@@ -46,17 +49,55 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             }
         }
 
-        
+$commonprompt='
+# Examples
+user request: actor a should discuss with actor b
+{
+  "character": "actor a",
+  "instruction": "actor a should confront actor b about a recent betrayal, accusing them of dishonesty.",
+  "action": "Fight",
+  "target": "actor b",
+  "scene_note": "actor a and actor b are in a heated discussion; other characters begin to take notice and prepare to intervene."
+}
+
+user request: actor a reveals a secret to actor b
+{
+  "character": "actor a",
+  "instruction": "actor a should reveal a hidden secret to actor b, hoping for support but fearing judgment.",
+  "action": "Talk",
+  "target": "actor b",
+  "scene_note": "actor b reacts strongly, emotions rising; an observer considers stepping in."
+}
+
+user request: actor a leaves the place
+{
+  "character": "actor a",
+  "instruction": "actor a should say goodbye to everyone, hinting that they may not return for a long time",
+  "action": "ExitLocation",
+  "target": "everyone",
+  "scene_note": "The mood is somber as actor a prepares to leave. Actor b watches in silence, perhaps with regret or longing."
+}
+
+(no user request, randomly generated content)
+{
+  "character": "actor a",
+  "instruction": "actor a should ask actor b for a few coins, claiming they desperately need a drink.",
+  "action": "Talk",
+  "target": "actor b",
+  "scene_note": "actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away."
+}
+
+';
         if (!$GLOBALS["argv"][3]) {
-            $sysprompt="You are a game director, you must create a instruction for any actor to generate new content/event.";
             $userprompt="";
+            $sysprompt="";
         } else {
-            $sysprompt="You are a game director, the user has just made a request: \"{$GLOBALS["argv"][3]}\". As game director, you now must issue an instruction to any actor to make this wish happen"; 
+            $sysprompt="user request: \"{$GLOBALS["argv"][3]}\". (As game director, you now must issue an instruction to any actor to make this wish happen. If user is addressing an actor, use instruction on it)"; 
             $userprompt="* Fufill the user's request no matter what, even if it means breaking roleplay.";
         }
         
-        $prompt[] = array('role' => 'system', 'content' => "I want you to analyze this gameplay transcription from Skyrim in the Tamriel universe.");
-        $prompt[] = array('role' => 'user', 'content' => $historyData);
+        $prompt[] = array('role' => 'system', 'content' => "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.$commonprompt");
+        $prompt[] = array('role' => 'user', 'content' => "# Contextual data\n$historyData");
         $prompt[] = array('role' => 'user', 'content' =>"
 $sysprompt
 ({$GLOBALS["PLAYER_NAME"]},busy actors and far away actors are EXCLUDED!)
@@ -173,7 +214,7 @@ In addition, follow these general scene rules as a game director:
         if (isset($response[0]) && is_array($response[0])) {
             $response=$response[0];
         }
-        
+        //print_r($response);
         parseInstruction($response);
         parseSceneNote($response);
         

@@ -56,6 +56,9 @@ $EMOTEMOODS="sassy,"
     . "neutral,"
     . "teasing,"
     . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+
+$REMOVE_ASTERISKS_FROM_OUTPUT=true;
+$ENFORCE_ACTIONS_PROMPT=false;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
 $DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA COMMENTARY I.E. NPC NAME. NO META-DATA, or DISCLAIMERS OF TASK! I.E. \"UPDATING NPC PROFILE\". Use concise, fragmented prose for the following output.) "
     . "Last in-game date/time found: [date or \"No date\"] "

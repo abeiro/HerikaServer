@@ -2,6 +2,7 @@
 require_once(__DIR__ . '/../../../../lib/logger.php');
 
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
+$GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
 
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
@@ -15,10 +16,11 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
         $contextDataHistoric =array_merge([["role"=>"user","content"=>"# HISTORIC DIALOGUE AND EVENTS IN CHRONOLOGICAL ORDER"]], $contextDataHistoric);
 
-        $contextDataWorld = DataLastInfoFor("", -2,$addNPCDescriptions=true,$excludeBusy=true);
+        $contextDataWorld = DataLastInfoFor("", -2,$addNPCDescriptions=false,$excludeBusy=true);
         $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
         $historyData="";
 
+            
         foreach ($contextDataFull as $element) {
         
             $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
@@ -26,10 +28,13 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         }
 
         
-        // Function stuff       
-        require($enginePath . "functions/functions_instruction.php"); 
-        $fnames=[];
+        // Function stuff        
+        require($enginePath . "functions/functions_instruction.php");
 
+        $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
+        $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
+
+        $fnames=[];
         foreach ($GLOBALS["F_NAMES"] as $functionCode=>$functionName) {
             if (in_array($functionCode,$GLOBALS["ENABLED_FUNCTIONS"])) {
                 if ($functionCode!="OpenInventory" && $functionCode!="OpenInventory2") {
@@ -44,27 +49,71 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             }
         }
 
-        
+$commonprompt='
+# Examples
+user request: actor a should discuss with actor b
+{
+  "character": "actor a",
+  "instruction": "actor a should confront actor b about a recent betrayal, accusing them of dishonesty.",
+  "action": "Fight",
+  "target": "actor b",
+  "scene_note": "actor a and actor b are in a heated discussion; other characters begin to take notice and prepare to intervene."
+}
+
+user request: actor a reveals a secret to actor b
+{
+  "character": "actor a",
+  "instruction": "actor a should reveal a hidden secret to actor b, hoping for support but fearing judgment.",
+  "action": "Talk",
+  "target": "actor b",
+  "scene_note": "actor b reacts strongly, emotions rising; an observer considers stepping in."
+}
+
+user request: actor a leaves the place
+{
+  "character": "actor a",
+  "instruction": "actor a should say goodbye to everyone, hinting that they may not return for a long time",
+  "action": "ExitLocation",
+  "target": "everyone",
+  "scene_note": "The mood is somber as actor a prepares to leave. Actor b watches in silence, perhaps with regret or longing."
+}
+
+(no user request, randomly generated content)
+{
+  "character": "actor a",
+  "instruction": "actor a should ask actor b for a few coins, claiming they desperately need a drink.",
+  "action": "Talk",
+  "target": "actor b",
+  "scene_note": "actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away."
+}
+
+';
         if (!$GLOBALS["argv"][3]) {
-            $sysprompt="You are a game director, you must create a instruction for any actor to generate new content/event.";
+            $userprompt="";
+            $sysprompt="";
         } else {
-            $sysprompt="You are a game director, the user has just made a wish: \"{$GLOBALS["argv"][3]}\". As game director, you now must issue an instruction to any actor to make this wish happen"; 
+            $sysprompt="user request: \"{$GLOBALS["argv"][3]}\". (As game director, you now must issue an instruction to any actor to make this wish happen. If user is addressing an actor, use instruction on it)"; 
+            $userprompt="* Fufill the user's request no matter what, even if it means breaking roleplay.";
         }
         
-        $prompt[] = array('role' => 'system', 'content' => "I want you to analyze this gameplay transcription from Skyrim in the Tamriel universe.");
-        $prompt[] = array('role' => 'user', 'content' => $historyData);
+        $prompt[] = array('role' => 'system', 'content' => "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.$commonprompt");
+        $prompt[] = array('role' => 'user', 'content' => "# Contextual data\n$historyData");
         $prompt[] = array('role' => 'user', 'content' =>"
 $sysprompt
 ({$GLOBALS["PLAYER_NAME"]},busy actors and far away actors are EXCLUDED!)
 Just provide an instruction! (example:'Instruction for X: X should talk to Y about ...'). 
 In addition, follow these general scene rules as a game director:
- * Fufill the players request no matter what, even if it means breaking roleplay.
+ $userprompt
+ * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.
+ * If there are more actors in the room, try to involve them in the conversation.
+ * When dialogue becomes repetitive, make a plot twist.
  * If a character reuses the same argument too often, nudge the scene towards a new topic.
  * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.
  * Do not resolve everything neatly—keep room for ongoing tension or future continuation.
  * You must always provide dialogue instructions for the character, as every request requires a dialogue response.
- * Here are a list of actions that can be used: \n  ** ".implode("\n** ", $fnames)." 
+ * Here are a list of actions that can be used: \n  ** ".implode("\n  ** ", $fnames)."\n  ** JustTalk 
  * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.
+ * If scene is getting boring, add a plot twist
 ");
         
         
@@ -78,7 +127,7 @@ In addition, follow these general scene rules as a game director:
                 "instruction"=>"the instruction for the actor, what should be said or done. Use 3rd person here.",
                 "action"=>implode("|",$GLOBALS["FUNCTION_SHORT_LIST"]),
                 "target"=>"action's target",
-                "scene_note"=>""
+                "scene_note"=>"Something other actors should know about the instruction, if the instruction also involves another actors"
             ];
         };
 
@@ -160,12 +209,17 @@ In addition, follow these general scene rules as a game director:
         
 
         
-        $response=json_decode($rawbuffer,true);
+        $response=__jpd_decode_lazy($rawbuffer);
         
+        if (isset($response[0]) && is_array($response[0])) {
+            $response=$response[0];
+        }
+        //print_r($response);
         parseInstruction($response);
         parseSceneNote($response);
         
     }
 
-    Logger::info("Successfully logged suggestion command to responselog");
+
+    Logger::info("Successfully logged instruction command to responselog");
 ?>

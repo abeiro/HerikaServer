@@ -499,6 +499,23 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "util_location_name")===0) {    // addnpc 
+    
+    
+    $splitNameBase=explode("/",$gameRequest[3]);
+    if ($splitNameBase[0] && $splitNameBase[1]) {
+        $db->insert(
+            'locations',
+            array(
+                'name' => $splitNameBase[0],
+                'formid' => $splitNameBase[1]
+            )
+        );
+    }
+
+    $MUST_END=true;
+    
+    
 } elseif (strpos($gameRequest[0], "updateprofile")===0) {    
     
     if (!$GLOBALS["DYNAMIC_PROFILE"]) {

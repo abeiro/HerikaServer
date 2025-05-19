@@ -32,7 +32,7 @@ if ($GLOBALS["MINIME_T5"]) {
             $currentOghmaTopic     = getArrayKey($currentOghmaTopic_req, "value");
 
             // Get location and context keywords
-            $locationCtx      = DataLastKnownLocationHuman(true);
+            $locationCtx      = DataLastKnownLocationHuman(false);
             $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
 
             // Build the user's knowledge array

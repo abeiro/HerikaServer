@@ -1,6 +1,5 @@
 <?php
 
-
 /* Definitions and main includes */
 error_reporting(E_ALL);
 
@@ -142,7 +141,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
-    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout"];
+    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout",
+    "util_location_name"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -427,7 +427,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
                         die();// Abort rechat
                     }
 
-            usleep(1000);
+            usleep(100);
         }
     }
 
@@ -558,7 +558,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 // Offer memory in CONTEXT 
 
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"]) ) {
 
     $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
     if (!empty($memoryInjection)) {
@@ -582,63 +582,84 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 if (in_array($gameRequest[0],["rechat"]) ) {
     // CHAOS mode
+    
     if (isset($GLOBALS["RECHAT_ALLOW_ACTIONS"]) && $GLOBALS["RECHAT_ALLOW_ACTIONS"]) {
         $FUNCTIONS_ARE_ENABLED=true;
-        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(optionally enforce dialogue by using action)";
-        
 
-        // Unset some functin here
+        if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
+            $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+        }
+        
+        // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
+        $GLOBALS['action_prompts']=[];
+        // Unset some functions here.
+       
+        unsetFunction("OpenInventory");
+        unsetFunction("TravelTo");
         unsetFunction("ComeCloser");
         unsetFunction("IncreaseWalkSpeed");
         unsetFunction("DecreaseWalkSpeed");
-        
-        /* Change some functions here */ 
-        // We must use internal named keys here.
+        unsetFunction("DecreaseWalkSpeed");
+        unsetFunction("OpenInventory2");
+        unsetFunction("FollowPlayer");// Will use generic Follow and postfilters
 
-        /*
-        $GLOBALS["F_TRANSLATIONS_NEW"]["Attack"]="Fight with another NPC to death";
-        $GLOBALS["F_NAMES_NEW"]["Attack"]="Fight";
+        // Change name of functions here
+        // Function clone and renaming
+        // ExchangeItems (trade with player) will be modified to TradeItems (roleplayed trade)
+        $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["OpenInventory"];
+        $NEWFUNCTION["name"]="TradeItems";
+        $NEWFUNCTION["description"]="{$GLOBALS["HERIKA_NAME"]} trade items with another actor. Amount and item will be infered from dialogue, so no need to specify";
+        $NEWFUNCTION["parameters"]["properties"]["target"]["description"]="Actor name to trade with";
+        $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
+        $GLOBALS["ENABLED_FUNCTIONS"][]="TradeItems";
+        $GLOBALS["F_NAMES"]["TradeItems"]="TradeItems";
 
-        foreach ($GLOBALS["FUNCTIONS"] as $n=>$f) {
-            $internalCode=getFunctionByTrlName($f["name"]);
-            if (isset($GLOBALS["F_TRANSLATIONS_NEW"][$internalCode]))
-                $GLOBALS["FUNCTIONS"][$n]["description"]=$GLOBALS["F_TRANSLATIONS_NEW"][$internalCode];
-
-            if (isset($GLOBALS["F_NAMES_NEW"][$internalCode]))
-                $GLOBALS["FUNCTIONS"][$n]["name"]=$GLOBALS["F_NAMES_NEW"][$internalCode];
-
-
+        if ($GLOBALS["IS_NPC"]) {
+            // TravelTo (lead the way to for player) will be modified to TravelTo (TravelTo) if no follower
+            $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["TravelTo"];
+            $NEWFUNCTION["name"]="TravelTo";
+            $NEWFUNCTION["description"]="{$GLOBALS["HERIKA_NAME"]} travels to location";
+            $NEWFUNCTION["parameters"]["properties"]["location"]["description"]="location name";
+            $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
+            $GLOBALS["ENABLED_FUNCTIONS"][]="TravelTo";
+            $GLOBALS["F_NAMES"]["TravelTo"]="TravelTo";
         }
 
-        foreach ($GLOBALS["F_TRANSLATIONS_NEW"] as $k=>$v) 
-            $GLOBALS["F_TRANSLATIONS"][$k]=$v;
 
-        foreach ($GLOBALS["F_NAMES_NEW"] as $k=>$v) 
-            $GLOBALS["F_NAMES"][$k]=$v;
-
-        unset($GLOBALS["F_TRANSLATIONS_NEW"]);
-        unset($GLOBALS["F_NAMES_NEW"]);
-        */    
+       
     }
 }
 
 if (in_array($gameRequest[0],["instruction"]) ) {
     
     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(optionally enforce dialogue by using action)";
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
     
 }
+
+if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+}
+
 
 // Rolemaster stuff
 
 $namedKey="{$GLOBALS["HERIKA_NAME"]}_is_rolemastered";
 $npcRoleMastered=$GLOBALS["db"]->fetchOne("select 1  as is_rolemastered from conf_opts where id='".$GLOBALS["db"]->escape($namedKey)."'");
 if (isset($npcRoleMastered["is_rolemastered"])) {
-    // ReturnBackHome is initially disabled. Les restore it form copy here. Only applies to rolemastered NPCs
+    // ReturnBackHome is initially disabled. Les restore it from copy here. Only applies to rolemastered NPCs
+    $GLOBALS["NPC_ROLEMASTERED"]=true;
     $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
-    $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"][getFunctionTrlName("ReturnBackHome")];
+    $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
     error_log("{$GLOBALS["HERIKA_NAME"]}_is_rolemastered");
+    if ((rand(0,5)!==0)){ // Remeber goal from time to time
+        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"].="(remember character's goal)";
+
+    }
 } 
 
 
@@ -655,28 +676,29 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
         $pattern = '/\(talking to [^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
         
-
-        $TEST_TEXT=strtr($TEST_TEXT,["."=>" ","{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $command=minimeCommand($TEST_TEXT);
-        if ($command && $command !== "null") {
-            $preCommand=json_decode($command,true);
-            if ($preCommand["is_command"]!="Talk") {
-                $GLOBALS["db"]->insert(
-                    'audit_memory',
-                    array(
-                        'input' => $TEST_TEXT,
-                        'keywords' =>'command offered',
-                        'rank_any'=> -1,
-                        'rank_all'=>-1,
-                        'memory'=>$preCommand["is_command"],
-                        'time'=>$preCommand["elapsed_time"]
-                    )
-                );
-                Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
-                $memoryInjectionCtx=[]; // Disable memorie when command.
-                $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
-                $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-            } 
+        if (!in_array($gameRequest[0],["rechat","instruction"]) ) {// Dont use minime command force on rechat.
+            $TEST_TEXT=strtr($TEST_TEXT,["."=>" ","{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+            $command=minimeCommand($TEST_TEXT);
+            if ($command && $command !== "null") {
+                $preCommand=json_decode($command,true);
+                if ($preCommand["is_command"]!="Talk") {
+                    $GLOBALS["db"]->insert(
+                        'audit_memory',
+                        array(
+                            'input' => $TEST_TEXT,
+                            'keywords' =>'command offered',
+                            'rank_any'=> -1,
+                            'rank_all'=>-1,
+                            'memory'=>$preCommand["is_command"],
+                            'time'=>$preCommand["elapsed_time"]
+                        )
+                    );
+                    Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
+                    $memoryInjectionCtx=[]; // Disable memorie when command.
+                    $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
+                    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+                } 
+            }
         }
 
        

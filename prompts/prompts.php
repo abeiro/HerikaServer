@@ -125,7 +125,8 @@ $PROMPTS=array(
             "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests they have read in the quest journal){$GLOBALS["TEMPLATE_DIALOG"]}",
             "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
             "InspectSurroundings"=>"({$GLOBALS["HERIKA_NAME"]} talks about seen actors, or to the actor its looking for){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "GiveGoldTo"=>"({$GLOBALS["HERIKA_NAME"]} Talks about coins or gold given",
+            "GiveGoldTo"=>"({$GLOBALS["HERIKA_NAME"]} Talks about coins or gold given.{$GLOBALS["TEMPLATE_DIALOG"]}",
+            "Brawl"=>"({$GLOBALS["HERIKA_NAME"]} {$GLOBALS["TEMPLATE_DIALOG"]}"
             
             ]
     ],
@@ -169,9 +170,9 @@ $PROMPTS=array(
             "({$GLOBALS['HERIKA_NAME']} subtly shifts the focus of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} speculates about potential outcomes of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} warns about possible risks tied to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",*/
-            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer, involve another actor, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']} {$GLOBALS["TEMPLATE_DIALOG"]}"
+            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action, involve another actor, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Focus speech and/or action only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
         
     ],
