@@ -288,11 +288,13 @@ function getZonosEmotions($mood) {
     }
     
     // Log the emotion values being used
+    /*
     Logger::trace("Using emotions for TTS generation (mood: $mood):");
     foreach ($emotions as $emotion => $value) {
         $emotion_name = str_replace("response_tone_", "", $emotion);
         Logger::trace("Emotion: $emotion_name: $value");
     }
+    */
 
     return $emotions;
 }
@@ -388,6 +390,23 @@ function getZonosFileContents($baseURL, $generatedAudioPath) {
     return file_get_contents("{$baseURL}/gradio_api/file={$generatedAudioPath}", false, $context);
 }
 
+// Applies substitutes for words Zonos has trouble pronouncing. Only affects pronunciation, not the subtitles in game
+function applyZonosWordSubstitutes($textString, $lang) {
+    // Add more to this list as needed.
+    $replacements = array(
+        "en-us" => [
+            "Jarl" => "Yarl"
+        ]
+    );
+    if (isset($replacements[$lang])) {
+        foreach ($replacements[$lang] as $from => $to) {
+            $textString = str_ireplace($from, $to, $textString);
+        }
+    }
+
+    return $textString;
+}
+
 $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         // skip generation if the generated audio already exists in cache
         if (isset($GLOBALS["AVOID_TTS_CACHE"]) && $GLOBALS["AVOID_TTS_CACHE"]===false )
@@ -399,13 +418,15 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
         $emotions = getZonosEmotions($mood);
         $lang = getZonosLanguage();
         $voice = getZonosVoice();
+        $textString = applyZonosWordSubstitutes($textString, $GLOBALS["TTS"]["ZONOS_GRADIO"]["language"] ??= "en-us");
         
         $baseURL = rtrim($GLOBALS["TTS"]["ZONOS_GRADIO"]["endpoint"], '/');
         $voiceSamplePath = "/var/www/html/HerikaServer/data/voices/{$voice}.wav";
         $cachedVoicePath = $GLOBALS["TTS"]["ZONOS_GRADIO"]["cached_voice_path"] ??= "";
 
         // POST the voice sample to zonos if it doesn't already exist
-        if (!$cachedVoicePath || !isVoiceSampleCached($baseURL, $voiceSamplePath, $cachedVoicePath)) {
+        // but avoid caching the player_tts voice
+        if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]) || !$cachedVoicePath || !isVoiceSampleCached($baseURL, $voiceSamplePath, $cachedVoicePath)) {
             $respObj = uploadFileToGradio($baseURL, $voiceSamplePath);
             if (is_array($respObj) && isset($respObj[0])) {
                 $cachedVoicePath = $respObj[0];
@@ -415,7 +436,9 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood, $stringforhash) {
             }
 
             // save the path of the cached file to the npc's profile
-            setCachedVoicePath($cachedVoicePath);
+            if (!isset($GLOBALS["PATCH_OVERRIDE_VOICE"])) {
+                setCachedVoicePath($cachedVoicePath);
+            }
         }
 
         // POST request to /generate_audio

@@ -121,7 +121,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <?php
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+
+$hide_navbar = ((isset($_GET["navbar"])) && ($_GET["navbar"] == "hidden"));
+if (!$hide_navbar) { 
+    include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+}
 
 // Remove redundant profile loading code here and go straight to lib loading
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
@@ -277,6 +281,8 @@ $debugPaneLink = true;
     }
 
     /* Actions */
+    if (file_exists("index_custom.php")) include_once("index_custom.php"); // custom actions extension
+    
     if ($_GET["table"] == "responselog") {
         $results = $db->fetchAll("select  A.*,ROWID FROM responselog a order by ROWID asc");
         echo "<h1 class='my-2'>Response Queue</h1>";
@@ -376,17 +382,17 @@ $debugPaneLink = true;
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='?table=eventlog&delete_last=20'\" 
                 class='btn-base btn-danger'>
-                Delete Last 20
+                Delete Lastest 20
             </button> ";
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='?table=eventlog&delete_last=50'\" 
                 class='btn-base btn-danger'>
-                Delete Last 50
+                Delete Lastest 50
             </button> ";
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='?table=eventlog&delete_last=100'\" 
                 class='btn-base btn-danger'>
-                Delete Last 100
+                Delete Lastest 100
             </button>";
         echo "</div>";
         

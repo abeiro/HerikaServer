@@ -231,8 +231,13 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     $GLOBALS["HERIKA_NAME"]="Player";
 
     // error_log("$cleaned_dialogue {$GLOBALS["TTSFUNCTION_PLAYER"]} {$GLOBALS["TTSFUNCTION"]} {$GLOBALS["PATCH_OVERRIDE_VOICE"]} override:{$OVERRIDES["TTSFUNCTION_PLAYER"]}");
+
+    Translation::translate($cleaned_dialogue);
+    Translation::$sentences = [Translation::$response];
+
     $ownspeech=returnlines([$cleaned_dialogue]);
     
+    Translation::reset();
     unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
     $GLOBALS["TTSFUNCTION"]=$origTTS;
     unset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]);
@@ -938,6 +943,9 @@ if (sizeof($talkedSoFar) == 0) {
             // Log Memory also.
             if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
                 logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
+
+            Translation::translate($RESPONSE_OK_NOTED);
+            Translation::$sentences = [Translation::$response];
             returnLines([$RESPONSE_OK_NOTED]);
 
         } else {

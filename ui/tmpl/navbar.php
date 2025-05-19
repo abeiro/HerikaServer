@@ -361,11 +361,84 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105" target="_blank">AI/LLM Tier List</a></li>
                 </ul>
             </li>
+            <?php 
+            // menu extension - last list element
+            $plug_file = BASE_PATH . DIRECTORY_SEPARATOR . "ui" . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar_custom.php";
+            if (file_exists($plug_file)) 
+                include($plug_file); 
+            ?>                       
         </ul>
     </div>
 
-    <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal';">
-        v1.3.0
+    <?php
+    // Ensure conf.php is loaded for $GLOBALS["DBDRIVER"] and other settings
+    if (defined('BASE_PATH') && !isset($GLOBALS["DBDRIVER"])) {
+        @include_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+    }
+
+    $pluginVersionDisplay = 'N/A'; // Default value
+
+    // Attempt to use a global $db object if available and valid
+    if (isset($GLOBALS['db']) && is_object($GLOBALS['db'])) {
+        try {
+            if (method_exists($GLOBALS['db'], 'fetchOne')) {
+                $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+                if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
+                    $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
+                }
+            } elseif (method_exists($GLOBALS['db'], 'fetchAll')) {
+                // Fallback to fetchAll on global $db if fetchOne not found
+                $rows = $GLOBALS['db']->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
+                if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
+                    $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
+                }
+            }
+        } catch (Exception $e) {
+            // Just keep the default value and log the error
+            error_log("Error fetching plugin version using global \$db: " . $e->getMessage());
+        }
+    } else {
+        // Only attempt to create a new DB connection if we don't already have a global one
+        // and only if we have all the required components
+        try {
+            if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
+                $dbDriverFile = BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
+                
+                // Only try to load the SQL class if it doesn't already exist
+                if (!class_exists('sql') && file_exists($dbDriverFile)) {
+                    @require_once($dbDriverFile);
+                }
+                
+                // Only create a new connection if the class was loaded successfully
+                if (class_exists('sql')) {
+                    // Suppress warnings/errors in this section as it's purely for UI decoration
+                    @$localDb = new sql();
+                    
+                    if ($localDb && is_object($localDb)) {
+                        if (method_exists($localDb, 'fetchOne')) {
+                            $pluginVersionRow = @$localDb->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+                            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
+                                $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
+                            }
+                        } elseif (method_exists($localDb, 'fetchAll')) {
+                            $rows = @$localDb->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
+                            if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
+                                $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            // Just continue with the default value
+            error_log("Error in navbar fallback DB connection: " . $e->getMessage());
+        }
+    }
+    ?>
+    <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal'; width: 120px;">
+        Server: v1.3.0
+        <br>
+        Plugin: <?php echo $pluginVersionDisplay; ?>
     </div>
 
     <div class="social-links">

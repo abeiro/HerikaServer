@@ -246,7 +246,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."',tags='".SQLite3::escapeString($tagsCol)."' where rowid={$uq["rowid"]}");
              $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$uq["rowid"]}");
 			 // UPDATE memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(tags, '')),'B')
-             if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+             if ((isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"])) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
                 $TEST_TEXT=$uq["summary"];
                 storeMemory($uq["summary"], $uq["summary"], $uq["rowid"]); // JUST UPDATE embedding in memory_summary
              }
