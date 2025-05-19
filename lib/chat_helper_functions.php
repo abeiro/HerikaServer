@@ -581,8 +581,13 @@ function returnLines($lines,$writeOutput=true)
                 if (Translation::isAudioEnabled() || Translation::isTextEnabled()) {
                     $responseTextPhonetic = $responseForTTS;
                 }
+                if (containsCyrillic($responseForTTS)) {
+                    $responseTextPhonetic = convertCyrillicTextToLatin($responseForTTS);
+                    Logger::debug("Transliterated Cyrillic text to: $responseTextPhonetic");
+                }
                 if (containsJapanese($responseForTTS)) {
                     $responseTextPhonetic = convertJapaneseTextToLatin($responseForTTS);
+                    Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
@@ -1489,6 +1494,15 @@ function prettyPrintJson($json )
 
 function startsWithUppercase($string) {
     return preg_match('/^[A-Z]/', $string);
+}
+
+function containsCyrillic($string) {
+    $pattern = '/[\p{Cyrillic}]/u';
+    return preg_match($pattern, $string);
+}
+
+function convertCyrillicTextToLatin($cyrillicText) {
+    return transliterator_transliterate('Russian-Latin/BGN', $cyrillicText);
 }
 
 function containsJapanese($string) {
