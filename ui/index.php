@@ -121,7 +121,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <?php
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+
+$hide_navbar = ((isset($_GET["navbar"])) && ($_GET["navbar"] == "hidden"));
+if (!$hide_navbar) { 
+    include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+}
 
 // Remove redundant profile loading code here and go straight to lib loading
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
@@ -277,6 +281,8 @@ $debugPaneLink = true;
     }
 
     /* Actions */
+    if (file_exists("index_custom.php")) include_once("index_custom.php"); // custom actions extension
+    
     if ($_GET["table"] == "responselog") {
         $results = $db->fetchAll("select  A.*,ROWID FROM responselog a order by ROWID asc");
         echo "<h1 class='my-2'>Response Queue</h1>";

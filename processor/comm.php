@@ -207,14 +207,14 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             'briefing' => $questParsedData[2],
             'data' => $questParsedData[2],
             'id_quest'=>$questParsedData[0],
-            'stage'=>$questParsedData[3]
+            'stage'=>($questParsedData[3] ?? null)
         );
         
         $db->insert('questlog',$data);
         
         // Include and call dynamicoghma.php after questlog entry
         require_once(__DIR__.DIRECTORY_SEPARATOR."dynamicoghma.php");
-        syncQuestWithOghma($questParsedData[0], $questParsedData[3]);
+        syncQuestWithOghma($questParsedData[0], ($questParsedData[3] ?? null));
     }
     $MUST_END=true;
 
