@@ -9,11 +9,27 @@ class Translation {
     }
 
     public static function isTextEnabled() {
-        return self::isEnabled() && $GLOBALS["TRANSLATION"][$GLOBALS["TRANSLATION_FUNCTION"]]["translate_text"];
+        return self::isEnabled() && !self::isPlayerTTS() && $GLOBALS["TRANSLATION"]["settings"]["translate_text"];
     }
 
     public static function isAudioEnabled() {
-        return self::isEnabled() && $GLOBALS["TRANSLATION"][$GLOBALS["TRANSLATION_FUNCTION"]]["translate_audio"];
+        return self::isEnabled() && !self::isPlayerTTS() && $GLOBALS["TRANSLATION"]["settings"]["translate_audio"];
+    }
+
+    public static function isSaveTranslationEnabled() {
+        return (self::isTextEnabled() || self::isAudioEnabled()) && $GLOBALS["TRANSLATION"]["settings"]["save_translated_text"];
+    }
+
+    public static function isPlayerAudioEnabled() {
+        return self::isEnabled() && self::isPlayerTTS() && $GLOBALS["TRANSLATION"]["settings"]["translate_player_audio"];
+    }
+
+    public static function isSavePlayerTranslationEnabled() {
+        return self::isPlayerAudioEnabled() && $GLOBALS["TRANSLATION"]["settings"]["save_translated_player_text"];
+    }
+
+    private static function isPlayerTTS() {
+        return isset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
     }
 
     public static function reset() {
@@ -50,7 +66,7 @@ class Translation {
     }
 
     public static function translate($message) {
-        if (self::isTextEnabled() || self::isAudioEnabled()) {
+        if (self::isTextEnabled() || self::isAudioEnabled() || self::isPlayerAudioEnabled()) {
             if ($GLOBALS["TRANSLATION_FUNCTION"] == "DeepL") {
                 self::$response = self::getDeepLTranslation($message);
             }
@@ -59,11 +75,30 @@ class Translation {
 
     private static function getDeepLTranslation($message) {
         // Data to be sent in the POST request
+        $context = "{$GLOBALS["HERIKA_NAME"]} is roleplaying in a game of Skyrim.\n";
+        $historical = [];
+        if (($GLOBALS["HERIKA_NAME"]=="The Narrator" || $GLOBALS["HERIKA_NAME"]=="Player")) {
+            $historical = buildHistoricContext("", -5);
+        } else {
+            $historical = buildHistoricContext("{$GLOBALS["HERIKA_NAME"]}", -5);
+        }
+        $cnt = 0;
+        foreach ($historical as $record) {
+            if (isset($record["content"]) && $record["content"] && $cnt <= 5) {
+                $context .= $record["content"]."\n";
+                $cnt++;
+            }
+        }
+
+        $target_lang = self::isPlayerTTS() ? $GLOBALS["TRANSLATION"]["DeepL"]["player_target_language"] : $GLOBALS["TRANSLATION"]["DeepL"]["target_language"];
+        $source_lang = self::isPlayerTTS() ? $GLOBALS["TRANSLATION"]["DeepL"]["player_source_language"] : $GLOBALS["TRANSLATION"]["DeepL"]["source_language"];
         $data = [
             'text' => [$message],
-            'target_lang' => $GLOBALS["TRANSLATION"]["DeepL"]["target_language"],
-            'source_lang' => $GLOBALS["TRANSLATION"]["DeepL"]["source_language"]
+            'context' => $context,
+            'target_lang' => $target_lang,
+            'source_lang' => $source_lang
         ];
+        Logger::debug($context);
     
         // Convert data to JSON format
         $jsonData = json_encode($data);
@@ -98,11 +133,44 @@ class Translation {
     
         // Return the translated text
         if (isset($responseData['translations'][0]['text'])) {
+            Logger::info("DeepL translation|{$message}|{$responseData['translations'][0]['text']}");
             return $responseData['translations'][0]['text'];
         } else {
             Logger::warn("DeepL response did not contain a translation.");
             return $message;
         }
+    }
+
+    public static function containsCyrillic($string) {
+        $pattern = '/[\p{Cyrillic}]/u';
+        return preg_match($pattern, $string);
+    }
+    
+    public static function convertCyrillicTextToLatin($cyrillicText) {
+        return transliterator_transliterate('Russian-Latin/BGN', $cyrillicText);
+    }
+    
+    public static function containsJapanese($string) {
+        $pattern = '/[\p{Hiragana}\p{Katakana}\p{Han}]/u';
+        return preg_match($pattern, $string);
+    }
+    
+    public static function convertJapaneseTextToLatin($jpText) {
+        if (!file_exists("/home/dwemer/kakasi/")) {
+            Logger::warn("Error: could not convert Japanese to Romaji because Kakasi is not installed. Lip sync will not work.");
+            return "";
+        }
+        $venvPath = "/home/dwemer/kakasi/kakasi_env/bin/python3";
+        $scriptPath = "/home/dwemer/kakasi/convert_to_romaji.py";
+    
+        // Escape the Japanese text to avoid issues with special characters
+        $escapedText = escapeshellarg($jpText);
+    
+        // Run the Python script using the virtual environment
+        $command = "$venvPath $scriptPath $escapedText";
+        $output = shell_exec($command);
+        $romaji = trim($output);
+        return $romaji;
     }
 }
 

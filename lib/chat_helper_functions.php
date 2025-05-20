@@ -411,11 +411,16 @@ function returnLines($lines,$writeOutput=true)
             Translation::$sentences[$n] = unmoodSentence(Translation::$sentences[$n]);
             Translation::$sentences[$n] = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', Translation::$sentences[$n]);
 
-            if (Translation::isAudioEnabled()) {
-                $responseForTTS = Translation::$sentences[$n]; // script for tts audio
+            if (Translation::isAudioEnabled() || Translation::isPlayerAudioEnabled()) {
+                $responseForTTS = Translation::$sentences[$n]; // script for TTS to generate audio from
             }
             if (Translation::isTextEnabled()) {
                 $responseForSubtitles = Translation::$sentences[$n]; // in-game subtitles
+            }
+            if (Translation::isSaveTranslationEnabled()) {
+                // replace the original speech with the translated text in the context history
+                $responseText = Translation::$sentences[$n];
+                $responseTextUnmooded = Translation::$sentences[$n];
             }
         }
 
@@ -581,12 +586,12 @@ function returnLines($lines,$writeOutput=true)
                 if (Translation::isAudioEnabled() || Translation::isTextEnabled()) {
                     $responseTextPhonetic = $responseForTTS;
                 }
-                if (containsCyrillic($responseForTTS)) {
-                    $responseTextPhonetic = convertCyrillicTextToLatin($responseForTTS);
+                if (Translation::containsCyrillic($responseForTTS)) {
+                    $responseTextPhonetic = Translation::convertCyrillicTextToLatin($responseForTTS);
                     Logger::debug("Transliterated Cyrillic text to: $responseTextPhonetic");
                 }
-                if (containsJapanese($responseForTTS)) {
-                    $responseTextPhonetic = convertJapaneseTextToLatin($responseForTTS);
+                if (Translation::containsJapanese($responseForTTS)) {
+                    $responseTextPhonetic = Translation::convertJapaneseTextToLatin($responseForTTS);
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
@@ -1494,36 +1499,4 @@ function prettyPrintJson($json )
 
 function startsWithUppercase($string) {
     return preg_match('/^[A-Z]/', $string);
-}
-
-function containsCyrillic($string) {
-    $pattern = '/[\p{Cyrillic}]/u';
-    return preg_match($pattern, $string);
-}
-
-function convertCyrillicTextToLatin($cyrillicText) {
-    return transliterator_transliterate('Russian-Latin/BGN', $cyrillicText);
-}
-
-function containsJapanese($string) {
-    $pattern = '/[\p{Hiragana}\p{Katakana}\p{Han}]/u';
-    return preg_match($pattern, $string);
-}
-
-function convertJapaneseTextToLatin($jpText) {
-    if (!file_exists("/home/dwemer/kakasi/")) {
-        Logger::warn("Error: could not convert Japanese to Romaji because Kakasi is not installed. Lip sync will not work.");
-        return "";
-    }
-    $venvPath = "/home/dwemer/kakasi/kakasi_env/bin/python3";
-    $scriptPath = "/home/dwemer/kakasi/convert_to_romaji.py";
-
-    // Escape the Japanese text to avoid issues with special characters
-    $escapedText = escapeshellarg($jpText);
-
-    // Run the Python script using the virtual environment
-    $command = "$venvPath $scriptPath $escapedText";
-    $output = shell_exec($command);
-    $romaji = trim($output);
-    return $romaji;
 }
