@@ -489,6 +489,8 @@ function hour2part_of_day($s_Hour) {
    
     $day_Morning = "morning";  //5 11
     $day_EarlyMorning = "early morning"; //5  8
+    $day_BeforeSunrise = "right before sunrise"; // sunrise at 5 am
+    $day_AfterSunrise = "right after sunrise"; // sunrise at 5 am
     $day_LateMorning = "late morning"; //11, 12
     $day_Noon = "noon"; //12
     $day_EarlyAfternoon = "early afternoon"; //13 14
@@ -496,6 +498,8 @@ function hour2part_of_day($s_Hour) {
     $day_LateAfternoon = "late afternoon"; //17
     $day_EarlyEvening = "early evening"; //17 18
     $day_Evening = "evening"; //17 21
+    $day_BeforeSunset = "right before sunset"; // sunset at 19
+    $day_AfterSunset = "right after sunset"; // sunset at 19
     $day_Night = "night"; //21 4
     $day_Midnight = "midnight"; //0  
     $day_AfterMidnight = "after midnight"; // 1
@@ -510,8 +514,8 @@ function hour2part_of_day($s_Hour) {
             case '01': $sRes = $day_AfterMidnight; break;
             case '02': $sRes = $day_Night; break;
             case '03': $sRes = $day_Night; break;
-            case '04': $sRes = $day_Night; break;
-            case '05': $sRes = $day_EarlyMorning; break;
+            case '04': $sRes = $day_Night . ", " . $day_BeforeSunrise; break;
+            case '05': $sRes = $day_EarlyMorning . ", " . $day_AfterSunrise; break;
             case '06': $sRes = $day_EarlyMorning; break;
             case '07': $sRes = $day_EarlyMorning; break;
             case '08': $sRes = $day_Morning; break;
@@ -524,8 +528,8 @@ function hour2part_of_day($s_Hour) {
             case '15': $sRes = $day_Afternoon; break;
             case '16': $sRes = $day_Afternoon; break;
             case '17': $sRes = $day_LateAfternoon; break;
-            case '18': $sRes = $day_EarlyEvening; break;
-            case '19': $sRes = $day_Evening; break;
+            case '18': $sRes = $day_EarlyEvening . ", " . $day_BeforeSunset; break;
+            case '19': $sRes = $day_Evening . ", " . $day_AfterSunset; break;
             case '20': $sRes = $day_Evening; break;
             case '21': $sRes = $day_Evening; break;
             case '22': $sRes = $day_Night; break;
@@ -811,25 +815,24 @@ function DataLastKnownGameTS_record() {
 
 
 function get_datetime_for_prompt() {
-//$FEATURES["MISC"]["ADD_TIME_MARKS"] should be enabled
 // always get most recent value of gamets from database    
 // require convert_gamets SQL functions in database
 
     $s2ins = "";
-    if (isset($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"]) && ($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])) {
-        $gamets_record = DataLastKnownGameTS_record();
-        if ((!is_array($gamets_record) || sizeof($gamets_record)==0) || ($gamets_record["exitcode"] < 0)) {
-            $s2ins = "";
-        } else {
-            $s2ins = 
-                "\n Current date and time in Skyrim: ".
-                $gamets_record["sk_long_date2"] . 
-                " or briefly ".
-                $gamets_record["sk_date"] . 
-                "\n Equivalent Gregorian date: ".
-                $gamets_record["sk_gregorian_date"] . "\n";
-        }
+
+    $gamets_record = DataLastKnownGameTS_record();
+    if ((!is_array($gamets_record) || sizeof($gamets_record)==0) || ($gamets_record["exitcode"] < 0)) {
+        $s2ins = "";
+    } else {
+        $s2ins = 
+            "\n Current date and time in Skyrim: ".
+            $gamets_record["sk_long_date2"] . 
+            " or briefly ".
+            $gamets_record["sk_date"] . 
+            "\n Equivalent Gregorian date: ".
+            $gamets_record["sk_gregorian_date"] . "\n";
     }
+
     return $s2ins;
 }
 
@@ -863,7 +866,7 @@ function gamets2str_datetime_for_prompt_explained($gamets, $b_include_gregorian=
         $s_gregorian_month = gamets2str_gregorian_month($f_gamets); 
         $s_month_explained = skyrim_month_explained($s_skyrim_month);
         //
-        $s2ins .= "\nCurrent date in Skyrim: {$s_date_long}. Short date: {$s_date}";
+        $s2ins .= "Current date in Skyrim: {$s_date_long}. Short date: {$s_date}";
         $s2ins .= "\n{$s_skyrim_month} ({$s_gregorian_month})";
         if ($b_include_month_explain) 
             $s2ins .= " is {$s_month_explained}.";
@@ -878,20 +881,19 @@ function gamets2str_datetime_for_prompt_explained($gamets, $b_include_gregorian=
 }
 
 function get_datetime_for_prompt_explained($gamets=0, $b_include_gregorian=true, $b_include_dow=true, $b_include_month_explain=true) {
-// $FEATURES["MISC"]["ADD_TIME_MARKS"] should be enabled
 // if $gamets is 0 or missing, get most recent value from database    
 
     $s2ins = "";
-    if (isset($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"]) && ($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])) {
-        if ($gamets > 0) { //use parameter
-            $f_gamets = floatval($gamets);
-        } else { // get from database
-            $f_gamets = DataLastKnownGameTS(); 
-        }
-        if ($f_gamets > 0.0) {
-            $s2ins = gamets2str_datetime_for_prompt_explained($f_gamets, $b_include_gregorian, $b_include_dow, $b_include_month_explain);
-        }
+
+    if ($gamets > 0) { //use parameter
+        $f_gamets = floatval($gamets);
+    } else { // get from database
+        $f_gamets = DataLastKnownGameTS(); 
     }
+    if ($f_gamets > 0.0) {
+        $s2ins = gamets2str_datetime_for_prompt_explained($f_gamets, $b_include_gregorian, $b_include_dow, $b_include_month_explain);
+    }
+
     return $s2ins;
 }
 

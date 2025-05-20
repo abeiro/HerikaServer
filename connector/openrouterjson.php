@@ -269,6 +269,7 @@ class openrouterjson
                     
                 } else if ($element["role"]=="assistant") {
                     $assistantAppearedInhistory=true;
+                    $dialogueTarget=extractDialogueTarget($element["content"]) ?? "none"; // moved here to be available in tool_calls 
                     if (isset($element["tool_calls"])) {
                         $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
                         $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
@@ -302,7 +303,7 @@ class openrouterjson
                         } else {
                             //error_log("#### ".$element["content"]);
                             $pb["system"].=$element["content"]."\n";
-                            $dialogueTarget=extractDialogueTarget($element["content"]);
+                            //$dialogueTarget=extractDialogueTarget($element["content"]); // moved up
                             // Trying to provide examples
                             if (true) {
                                 $assistantRoleBuffer.=$dialogueTarget["cleanedString"];                                
@@ -609,7 +610,7 @@ class openrouterjson
             if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
                 //$error_message = "Request to openrouterjson connector failed: {$status_line}.\nResponse body: {$response}";
-                $error_message = "Request to openrouterjson connector failed: {$status_code}.\nResponse body: {$response}";
+                $error_message = "Request to openrouterjson connector failed: {$status_code}.\n Response body: {$response}.\n model: {$this->_model}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
@@ -841,21 +842,21 @@ class openrouterjson
                     if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
                         
                         $functionDef=findFunctionByName(trim($parsedResponse["action"]));
-                        if ($functionDef) {
+                        if (isset($functionDef)) {
                             $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
                             if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
                                 if (!empty($parsedResponse["target"])) {
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
-                                    Logger::warn("Missing required parameter: target");
+                                    Logger::warn("openrouterjson: Missing required parameter: target");
                                 }
                                     
                             } else {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
                         } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("Function not found for {$parsedResponse["action"]}");
+                            Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]}");
                         }
                         
                         //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
@@ -864,7 +865,7 @@ class openrouterjson
                         $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
                     
                     } else {
-                         Logger::warn("Function not found for {$parsedResponse["action"]} already sent");
+                         Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]} already sent");
                     }
                         
                 }

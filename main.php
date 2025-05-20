@@ -427,7 +427,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
         sem_release($semaphore);
-        error_log("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
+        Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         // Check if this conflicts with smart rechat
         // Is this doing something?
         while (sem_acquire($semaphore,true)!=true)  {
@@ -480,7 +480,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
 /*
  Safe stop
 */
-error_log("Current STOPALL_MAGIC_WORD ".STOPALL_MAGIC_WORD);
+Logger::info("Current STOPALL_MAGIC_WORD ".STOPALL_MAGIC_WORD);
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"]) && preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {
     echo "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
     if (ob_get_level()) @ob_flush();
@@ -795,7 +795,7 @@ if ($gameRequest[0] == "funcret") {
             }
             
         } else {
-            error_log("CRITICAL? :: Empty request , prompt empty");
+            Logger::error("CRITICAL? :: Empty request, prompt empty. Type: {$gameRequest[0]} Connector: {$GLOBALS["CURRENT_CONNECTOR"]} ");
             $prompt=[];
         }
     }
