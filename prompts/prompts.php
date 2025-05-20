@@ -170,7 +170,7 @@ $PROMPTS=array(
             "({$GLOBALS['HERIKA_NAME']} subtly shifts the focus of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} speculates about potential outcomes of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} warns about possible risks tied to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",*/
-            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action, involve another actor, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action involving a third actor, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
             "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
             "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Focus speech and/or action only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]

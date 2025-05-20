@@ -3,7 +3,7 @@
 /* Definitions and main includes */
 error_reporting(E_ALL);
 
-@define("STOPALL_MAGIC_WORD", "/halt/i");
+@define("STOPALL_MAGIC_WORD", "/wake up/i");
 
 @define("MAXIMUM_SENTENCE_SIZE", 125);
 @define("MINIMUM_SENTENCE_SIZE", 50);
@@ -629,6 +629,10 @@ if (in_array($gameRequest[0],["rechat"]) ) {
             $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
             $GLOBALS["ENABLED_FUNCTIONS"][]="TravelTo";
             $GLOBALS["F_NAMES"]["TravelTo"]="TravelTo";
+        } else {
+            // Followers 
+            unsetFunction("TakeGoldFromPlayer");
+
         }
 
 
@@ -662,7 +666,7 @@ if (isset($npcRoleMastered["is_rolemastered"])) {
     if ((rand(0,5)!==0)){ // Remeber goal from time to time
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"].="(remember character's goal)";
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"].="(consider character's goal and traits)";
 
     }
 } 

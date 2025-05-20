@@ -317,8 +317,10 @@ function unmoodSentence($sentence) {
                     "*whimper*"=>""
                     ]
                     ); // Manual cases
-    
-    $sentence = preg_replace('/"/', '', $output); // Remove "
+
+    $cleaned = preg_replace('/\s*#ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
+
+    $sentence = preg_replace('/"/', '', $cleaned); // Remove "
 
     preg_match_all('/\((.*?)\)/', $sentence, $matches);
 

@@ -1660,6 +1660,48 @@ function FindClosestActorName($actorName)
     return $closest;
 }
 
+function FindClosestNPCName($actorName)
+{
+    global $db;
+
+    $lastLoc = $db->fetchAll("SELECT a.people AS data FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc) == 0) {
+        return "";
+    }
+
+    $beings = strtr($lastLoc[0]["people"], ["beings in range:" => ""]);
+    $beingsArray = explode("|", $beings);
+    $beingsArrayCleaned = [];
+
+    foreach ($beingsArray as $v) {
+        // Remove all text within parentheses and trim whitespace
+        $v = trim(preg_replace('/\s*\([^)]*\)/', '', $v));
+
+    }
+
+    if (empty($beingsArrayCleaned)) {
+        return "";
+    }
+
+    // Find the closest match using Levenshtein distance
+    $closest = null;
+    $shortest = -1;
+
+    foreach ($beingsArrayCleaned as $name) {
+        $lev = levenshtein($actorName, $name);
+
+        if ($lev == 0) {
+            return $name; // Exact match
+        }
+
+        if ($lev < $shortest || $shortest < 0) {
+            $closest = $name;
+            $shortest = $lev;
+        }
+    }
+
+    return $closest;
+}
 
 function DirectConversationsWith($actor)
 {
@@ -2204,12 +2246,21 @@ function call_llm() {
                     if (isset($actionParts2[1])) {
                         // Parameter part 
                         if ($actionParts2[0]=="Attack") {
-                            // Lets polish the parammeters
+                            // Lets polish the parameters
                             $localtarget=$actionParts2[1];
                             $mang1=explode(",",$localtarget);
                             $mang2=explode(" and ",$mang1[0]);
                             $mang3=explode("(",$mang2[0]);
-                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
+                            $mang4=FindClosestNPCName($mang3[0]);
+
+                            //$actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
+
+                            if ($mang4)
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang4}";
+                            else
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
+
+                            error_log("[ACTION POSTFILTER Attack] $localtarget => {$mang3[0]} => $mang4");
 
                         } else if ($actionParts2[0]=="Inspect") {
                             // Lets polish the parammeters

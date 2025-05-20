@@ -32,7 +32,8 @@ $ENABLED_FUNCTIONS_LOCAL=[
     'Brawl',
     'ReturnBackHome',
     'GiveGoldTo',
-    'GiveItemTo'
+    'GiveItemTo',
+    'GoToSleep'
 //    'WaitHere'
 ];
 
@@ -73,6 +74,7 @@ $F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} engages non lethtal co
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
 $F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives some gold/coins/septims to a single actor (target property is the actor). Amount will be infered from dialogue, so no need to specify";
 $F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives item to a single actor (target property is the actor). Amount and item will be infered from dialogue, so no need to specify";
+$F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 
 $GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
 
@@ -110,6 +112,7 @@ $F_RETURNMESSAGES_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} goes back home";
 $F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold to #TARGET#";
 $F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives items to #TARGET#";
+$F_RETURNMESSAGES_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 
 $GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
 
@@ -118,7 +121,7 @@ $GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
 // What is this?. We can translate functions or give them a custom name. 
 // This array will handle translations. Plugin must receive the codename always.
 
-$F_NAMES_LOCAL["Inspect"]="InspectActor";
+$F_NAMES_LOCAL["Inspect"]="Inspect";
 $F_NAMES_LOCAL["LookAt"]="LookAt";
 $F_NAMES_LOCAL["InspectSurroundings"]="InspectSurroundings";
 $F_NAMES_LOCAL["MoveTo"]= "MoveTo";
@@ -151,6 +154,8 @@ $F_NAMES_LOCAL["Brawl"]="Fight";
 $F_NAMES_LOCAL["ReturnBackHome"]="ExitLocation";
 $F_NAMES_LOCAL["GiveGoldTo"]="GiveCoinsTo";
 $F_NAMES_LOCAL["GiveItemTo"]="GiveItemToActor";
+$F_NAMES_LOCAL["GoToSleep"]="GoToSleep";
+
 
 $GLOBALS["F_NAMES"]=$F_NAMES_LOCAL;
 
@@ -618,6 +623,20 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => ["target"],
         ]
     ],
+    [
+        "name" => $F_NAMES_LOCAL["GoToSleep"],
+        "description" => $F_TRANSLATIONS_LOCAL["GoToSleep"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ]
+            ],
+            "required" => [""],
+        ]
+    ],
 ];
 
 // Mantain a copy of all functions defined here
@@ -763,7 +782,8 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'TakeGoldFromPlayer',
         'Brawl',
         'GiveGoldTo',
-        'GiveItemTo'
+        'GiveItemTo',
+        'GoToSleep'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',
