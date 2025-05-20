@@ -240,6 +240,9 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
     $ownspeech=returnlines([$cleaned_dialogue]);
     
+    if (Translation::isSavePlayerTranslationEnabled()) {
+        $gameRequest[3]=$GLOBALS["PLAYER_NAME"].":".Translation::$response;
+    }
     Translation::reset();
     unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
     unset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]);

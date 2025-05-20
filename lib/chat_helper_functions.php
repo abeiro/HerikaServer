@@ -411,11 +411,16 @@ function returnLines($lines,$writeOutput=true)
             Translation::$sentences[$n] = unmoodSentence(Translation::$sentences[$n]);
             Translation::$sentences[$n] = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', Translation::$sentences[$n]);
 
-            if (Translation::isAudioEnabled()) {
-                $responseForTTS = Translation::$sentences[$n]; // script for tts audio
+            if (Translation::isAudioEnabled() || Translation::isPlayerAudioEnabled()) {
+                $responseForTTS = Translation::$sentences[$n]; // script for TTS to generate audio from
             }
             if (Translation::isTextEnabled()) {
                 $responseForSubtitles = Translation::$sentences[$n]; // in-game subtitles
+            }
+            if (Translation::isSaveTranslationEnabled()) {
+                // replace the original speech with the translated text in the context history
+                $responseText = Translation::$sentences[$n];
+                $responseTextUnmooded = Translation::$sentences[$n];
             }
         }
 

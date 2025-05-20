@@ -296,9 +296,9 @@ $TRANSLATION_FUNCTION="none";
 //settings
 $TRANSLATION["settings"]["translate_audio"]=false; //translate audio
 $TRANSLATION["settings"]["translate_text"]=false; //translate text
-$TRANSLATION["settings"]["player_matches_npc"]=true; //player language matches npc
+$TRANSLATION["settings"]["save_translated_text"]=false; //replace npc's speech in context history with the translation
 $TRANSLATION["settings"]["translate_player_text"]=false; //translate player text
-$TRANSLATION["settings"]["translate_player_audio"]=false; //translate player audio
+$TRANSLATION["settings"]["save_translated_player_text"]=false; //replace player input in context history with the translation
 //DeepL
 $TRANSLATION["DeepL"]["source_language"]=""; //source language
 $TRANSLATION["DeepL"]["target_language"]=""; //target language
