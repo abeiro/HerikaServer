@@ -141,8 +141,10 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	else {
 		if (isset($PROMPTS[$gameRequest[0]]["cue"]))
 			$request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]); // Add support for arrays here	
-		else 
-			error_log("$request is empty! ");
+		else {
+			Logger::warn("Request cue is empty! - ".$gameRequest[0]." - ".print_r($PROMPTS[$gameRequest[0]],true)." - ".__FILE__.":".__LINE__);
+			$request = "{$GLOBALS["TEMPLATE_DIALOG"]}";
+		}
 	}
 }
 
