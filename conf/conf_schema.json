@@ -276,16 +276,25 @@
 },
   "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
-  "TRANSLATION_FUNCTION": {"type":"select","userlvl":"basic","scope":"global","values":["none","DeepL"],"description":"Translate subtitles and/or audio into a different language.","_title":"Translation Service"},
+  "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character.<br/>If blank, the NPC's TTS language will be used."},
+  "TRANSLATION_FUNCTION": {"type":"select","userlvl":"basic","values":["none","DeepL"],"description":"Translate subtitles and/or audio into a different language.","_title":"Translation Service"},
   "TRANSLATION": {
     "_title":"Translation Service",
+    "settings": {
+        "_title":"Translation Settings",
+        "translate_audio": {"type":"boolean","description":"This NPC's audio will be translated to the target language."},
+        "translate_text": {"type":"boolean","description":"This NPC's subtitles will be translated to the target language."},
+        "save_translated_text": {"type":"boolean","description":"Replaces the NPC's speech in the context history with the translation. Only used if translate_audio or translate_text is true."},
+        "translate_player_audio": {"type":"boolean","description":"When speaking to this NPC, Player TTS audio will be translated to the player target language."},
+        "save_translated_player_text": {"type":"boolean","description":"Replaces the player's input in the context history with the translation. Only used if translate_player_audio is true.<br/>Note: player subtitles are always displayed in their original language."}
+    },
     "DeepL": {
-      "_title":"DeepL Settings",
-      "translate_text": {"type":"boolean","description":"Subtitles will be translated to the target language."},
-      "translate_audio": {"type":"boolean","description":"Audio will be translated to the target language."},
-      "source_language": {"type":"string","description":"Source language to be translated from. May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
-      "target_language": {"type":"string","description":"Target language to be translated into. <strong>Required.</strong>","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "_title":"DeepL",
+      "source_language": {"type":"string","description":"This NPC's source language to be translated from. May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "target_language": {"type":"string","description":"This NPC's target language to be translated into. <strong>Required.</strong>","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
       "url": {"type":"url","scope":"global","description":"DeepL endpoint url. Default profile only.<br/>Free: https://api-free.deepl.com/v2/translate<br/>Pro: https://api.deepl.com/v2/translate"},
+      "player_source_language": {"type":"string","description":"Player's source language to be translated from. May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "player_target_language": {"type":"string","description":"Player's target language to be translated into.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
       "API_KEY":{"type":"apikey","scope":"global","description":"DeepL api key. Default profile only.<br/><strong>Required</strong> even when using the free version."}
     }
   },
