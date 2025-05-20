@@ -67,6 +67,10 @@ class Translation {
 
     public static function translate($message) {
         if (self::isTextEnabled() || self::isAudioEnabled() || self::isPlayerAudioEnabled()) {
+            // remove character name from start of the message
+            $message = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $message);
+
+            // get translation from the selected service
             if ($GLOBALS["TRANSLATION_FUNCTION"] == "DeepL") {
                 self::$response = self::getDeepLTranslation($message);
             }
