@@ -9,23 +9,23 @@ class Translation {
     }
 
     public static function isTextEnabled() {
-        return self::isEnabled() && $GLOBALS["TRANSLATION"]["settings"]["translate_text"];
+        return self::isEnabled() && !self::isPlayerTTS() && $GLOBALS["TRANSLATION"]["settings"]["translate_text"];
     }
 
     public static function isAudioEnabled() {
-        return self::isEnabled() && $GLOBALS["TRANSLATION"]["settings"]["translate_audio"];
+        return self::isEnabled() && !self::isPlayerTTS() && $GLOBALS["TRANSLATION"]["settings"]["translate_audio"];
     }
 
-    public static function isPlayerMatchesNPC() {
-        return self::isEnabled() && $GLOBALS["TRANSLATION"]["settings"]["player_matches_npc"];
-    }
-
-    public static function isPlayerTextEnabled() {
-        return self::isEnabled() && self::isPlayerMatchesNPC() && $GLOBALS["TRANSLATION"]["settings"]["translate_player_text"];
+    public static function isSaveTranslationEnabled() {
+        return (self::isTextEnabled() || self::isAudioEnabled()) && $GLOBALS["TRANSLATION"]["settings"]["save_translated_text"];
     }
 
     public static function isPlayerAudioEnabled() {
-        return self::isEnabled() && self::isPlayerMatchesNPC() && $GLOBALS["TRANSLATION"]["settings"]["translate_player_audio"];
+        return self::isEnabled() && self::isPlayerTTS() && $GLOBALS["TRANSLATION"]["settings"]["translate_player_audio"];
+    }
+
+    public static function isSavePlayerTranslationEnabled() {
+        return self::isPlayerAudioEnabled() && $GLOBALS["TRANSLATION"]["settings"]["save_translated_player_text"];
     }
 
     private static function isPlayerTTS() {
@@ -66,14 +66,7 @@ class Translation {
     }
 
     public static function translate($message) {
-        // 1 npc speaking
-        // 2. player tts match npc
-        // 3. player tts not match npc
-        if (
-            (!self::isPlayerTTS() && (self::isTextEnabled() || self::isAudioEnabled())) ||
-            (self::isPlayerTTS() && self::isPlayerMatchesNPC() && (self::isTextEnabled() || self::isAudioEnabled())) ||
-            (self::isPlayerTTS() && !self::isPlayerMatchesNPC() && (self::isPlayerTextEnabled() || self::isPlayerAudioEnabled()))
-        ) {
+        if (self::isTextEnabled() || self::isAudioEnabled() || self::isPlayerAudioEnabled()) {
             if ($GLOBALS["TRANSLATION_FUNCTION"] == "DeepL") {
                 self::$response = self::getDeepLTranslation($message);
             }
@@ -82,9 +75,9 @@ class Translation {
 
     private static function getDeepLTranslation($message) {
         // Data to be sent in the POST request
-        $context = "This text is from a roleplaying session set in Skyrim.\n";
+        $context = "{$GLOBALS["HERIKA_NAME"]} is roleplaying in a game of Skyrim.\n";
         $historical = [];
-        if (($GLOBALS["HERIKA_NAME"]=="The Narrator")) {
+        if (($GLOBALS["HERIKA_NAME"]=="The Narrator" || $GLOBALS["HERIKA_NAME"]=="Player")) {
             $historical = buildHistoricContext("", -5);
         } else {
             $historical = buildHistoricContext("{$GLOBALS["HERIKA_NAME"]}", -5);
@@ -97,8 +90,8 @@ class Translation {
             }
         }
 
-        $target_lang = self::isPlayerTTS() && !self::isPlayerMatchesNPC() ? $GLOBALS["TRANSLATION"]["DeepL"]["player_target_language"] : $GLOBALS["TRANSLATION"]["DeepL"]["target_language"];
-        $source_lang = self::isPlayerTTS() && !self::isPlayerMatchesNPC() ? $GLOBALS["TRANSLATION"]["DeepL"]["player_source_language"] : $GLOBALS["TRANSLATION"]["DeepL"]["source_language"];
+        $target_lang = self::isPlayerTTS() ? $GLOBALS["TRANSLATION"]["DeepL"]["player_target_language"] : $GLOBALS["TRANSLATION"]["DeepL"]["target_language"];
+        $source_lang = self::isPlayerTTS() ? $GLOBALS["TRANSLATION"]["DeepL"]["player_source_language"] : $GLOBALS["TRANSLATION"]["DeepL"]["source_language"];
         $data = [
             'text' => [$message],
             'context' => $context,
