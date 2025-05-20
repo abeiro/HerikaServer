@@ -76,6 +76,9 @@ class Translation {
     private static function getDeepLTranslation($message) {
         // Data to be sent in the POST request
         $context = "{$GLOBALS["HERIKA_NAME"]} is roleplaying in a game of Skyrim.\n";
+
+        // disabled for now, as this is causing artifacts in the translation. Might revisit it later
+        /*
         $historical = [];
         if (($GLOBALS["HERIKA_NAME"]=="The Narrator" || $GLOBALS["HERIKA_NAME"]=="Player")) {
             $historical = buildHistoricContext("", -5);
@@ -89,6 +92,7 @@ class Translation {
                 $cnt++;
             }
         }
+        */
 
         $target_lang = self::isPlayerTTS() ? $GLOBALS["TRANSLATION"]["DeepL"]["player_target_language"] : $GLOBALS["TRANSLATION"]["DeepL"]["target_language"];
         $source_lang = self::isPlayerTTS() ? $GLOBALS["TRANSLATION"]["DeepL"]["player_source_language"] : $GLOBALS["TRANSLATION"]["DeepL"]["source_language"];
@@ -98,7 +102,6 @@ class Translation {
             'target_lang' => $target_lang,
             'source_lang' => $source_lang
         ];
-        Logger::debug($context);
     
         // Convert data to JSON format
         $jsonData = json_encode($data);
