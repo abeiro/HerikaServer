@@ -268,10 +268,10 @@
     },
     "DeepL": {
       "_title":"DeepL",
-      "source_language": {"type":"string","description":"This NPC's source language to be translated from. May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "source_language": {"type":"string","description":"This NPC's source language to be translated from. This should be the language that the LLM responds with.<br/>May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
       "target_language": {"type":"string","description":"This NPC's target language to be translated into. <strong>Required.</strong>","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
       "url": {"type":"url","scope":"global","description":"DeepL endpoint url. Default profile only.<br/>Free: https://api-free.deepl.com/v2/translate<br/>Pro: https://api.deepl.com/v2/translate"},
-      "player_source_language": {"type":"string","description":"Player's source language to be translated from. May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "player_source_language": {"type":"string","description":"Player's source language to be translated from. This should be the language you speak with STT or input by text.<br/>May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
       "player_target_language": {"type":"string","description":"Player's target language to be translated into.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
       "API_KEY":{"type":"apikey","scope":"global","description":"DeepL api key. Default profile only.<br/><strong>Required</strong> even when using the free version."}
     }
