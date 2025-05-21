@@ -318,7 +318,8 @@ function unmoodSentence($sentence) {
                     ]
                     ); // Manual cases
 
-    $cleaned = preg_replace('/\s*#ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
+    //$cleaned = preg_replace('/\s*#ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
+    $cleaned = preg_replace('/\s*# ?ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
 
     $sentence = preg_replace('/"/', '', $cleaned); // Remove "
 

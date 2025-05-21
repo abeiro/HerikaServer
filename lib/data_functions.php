@@ -2238,8 +2238,9 @@ function call_llm() {
             // ACTION POST-FILTER
             
             if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-                
+                $copyActions=[];
                 foreach ($actions as $n=>$action) {
+                    $copyActions[$n]=$actions[$n];
                     $actionParts=explode("|",$action);
                     $actionParts2=explode("@",$actionParts[2]);
                     
@@ -2451,9 +2452,29 @@ function call_llm() {
 
                         }
                     }
+                    
                 }
             }
 
+            foreach ($actions as $n=>$singleaction) {
+                $actionPart=explode("|",$singleaction); 
+                $actionArg=explode("@",$actionPart[2]); 
+                
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => $actionArg[0],
+                        'fullcall' =>$singleaction,
+                        'actorname'=> $actionPart[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts'=>time(),
+                        'original'=>$copyActions[$n]
+                    )
+                );
+
+
+            }
             $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
             echo implode("\r\n", $actions).PHP_EOL;
             

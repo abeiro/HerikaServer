@@ -52,6 +52,9 @@ $GLOBALS["TASKS"]["rolemaster"]["fn"]=function() {
     }  else if ($GLOBALS["argv"][2]=="spawn") {
         Logger::info("Loading spawn command");
         require_once("cmd" . DIRECTORY_SEPARATOR . "spawncharacter.php");
+    }  else if ($GLOBALS["argv"][2]=="smart_impersonation") {
+        Logger::info("Loading smart_impersonation command");
+        require_once("cmd" . DIRECTORY_SEPARATOR . "smart_impersonation.php");
     }
 
 

@@ -659,7 +659,20 @@ if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMP
     $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
 }
 
+// Cooldown for some actions
+if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+    $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
+    $lastGameTs=$GLOBALS["db"]->fetchOne("select * from actions_issued where actorname='$localActorName' and action='ComeCloser' ORDER BY gamets,ts LIMIT 1");
+    if (isset($lastGameTs["localts"])) {
+        if ((time()-$lastGameTs["localts"])<120) {
+            error_log("ComeCloser in cooldown for $localActorName");
+            unsetFunction("ComeCloser");
+        }
 
+    }
+
+
+}
 // Rolemaster stuff
 
 $namedKey="{$GLOBALS["HERIKA_NAME"]}_is_rolemastered";

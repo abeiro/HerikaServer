@@ -972,6 +972,12 @@ if ($checkVersion("locations")<20250516001) {
     error_log("Applied patch locations 20250516001");
 }
 
+if ($checkVersion("actions_issued")<20250525001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/actions_issued.sql"));
+    $updateVersion("actions_issued",20250525001);
+    error_log("Applied patch locations 20250525001");
+}
+
 $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"action\" TYPE text");
 $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"actor\" TYPE text");
 $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
