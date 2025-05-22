@@ -2,6 +2,7 @@
 
 // Functions to be provided to OpenAI
 
+
 $ENABLED_FUNCTIONS_LOCAL=[
     'Inspect',
     'LookAt',
@@ -33,7 +34,8 @@ $ENABLED_FUNCTIONS_LOCAL=[
     'ReturnBackHome',
     'GiveGoldTo',
     'GiveItemTo',
-    'GoToSleep'
+    'GoToSleep',
+    'UseSoulGaze'
 //    'WaitHere'
 ];
 
@@ -75,6 +77,7 @@ $F_TRANSLATIONS_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} travels to ho
 $F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives some gold/coins/septims to a single actor (target property is the actor). Amount will be infered from dialogue, so no need to specify";
 $F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives item to a single actor (target property is the actor). Amount and item will be infered from dialogue, so no need to specify";
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
+$F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through ${GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.  ";
 
 $GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
 
@@ -113,6 +116,7 @@ $F_RETURNMESSAGES_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} goes back h
 $F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold to #TARGET#";
 $F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives items to #TARGET#";
 $F_RETURNMESSAGES_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
+$F_RETURNMESSAGES_LOCAL["UseSoulGaze"]="{$GLOBALS["HERIKA_NAME"]} used soulgaze";
 
 $GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
 
@@ -155,6 +159,7 @@ $F_NAMES_LOCAL["ReturnBackHome"]="ExitLocation";
 $F_NAMES_LOCAL["GiveGoldTo"]="GiveCoinsTo";
 $F_NAMES_LOCAL["GiveItemTo"]="GiveItemToActor";
 $F_NAMES_LOCAL["GoToSleep"]="GoToSleep";
+$F_NAMES_LOCAL["UseSoulGaze"]="UseSoulGaze";
 
 
 $GLOBALS["F_NAMES"]=$F_NAMES_LOCAL;
@@ -637,6 +642,20 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => [""],
         ]
     ],
+    [
+        "name" => $F_NAMES_LOCAL["F_NAMES"]["UseSoulGaze"],
+        "description" => $F_TRANSLATIONS_LOCAL["F_TRANSLATIONS"]["UseSoulGaze"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ]
+            ],
+            "required" => []
+        ],
+    ]
 ];
 
 // Mantain a copy of all functions defined here
@@ -783,7 +802,8 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'Brawl',
         'GiveGoldTo',
         'GiveItemTo',
-        'GoToSleep'
+        'GoToSleep',
+        'UseSoulGaze'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',
