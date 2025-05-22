@@ -2422,27 +2422,6 @@ function call_llm() {
                             error_log("[ACTION POSTFILTER FollowPlayer] Just Cleaning here");
                             $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|FollowPlayer@";
                             
-                        }  else if ($actionParts2[0]=="TakeGoldFromPlayer") {
-                            
-                            $localtarget=$actionParts2[1];
-                            $mang1=explode(",",$localtarget);
-                            $mang2=explode(" and ",$mang1[0]);
-                            $mang3=explode("(",$mang2[0]);
-                            $mang4=explode("--",$mang3[0]);
-                            $destination=$mang4[0];
-
-                            error_log("[ACTION POSTFILTER TakeGoldFromPlayer] $localtarget=>$destination");
-
-                            if ($GLOBALS["SCRIPTLINE_LISTENER"]==$destination) {
-                                if ($destination!=$GLOBALS["PLAYER_NAME"]) {
-                                    // We can conclude AI is trying to take gold from other NPC 
-                                    // NO action in this case
-                                    $actions[$n]="";        
-                                }
-                            }
-                            
-                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@";
-                            
                         }  else if ($actionParts2[0]=="ReturnBackHome") {
                             
                             error_log("[ACTION POSTFILTER ReturnBackHome] Just Cleaning here");
@@ -2467,6 +2446,35 @@ function call_llm() {
                             error_log("[ACTION POSTFILTER Brawl] $localtarget => {$mang3[0]} => $finaltarget");
 
                             $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Brawl@$finaltarget";
+
+                        } else if ($actionParts2[0]=="TakeGoldFromPlayer") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+
+                            $mang4=($mang3[0]);
+
+                            error_log("[ACTION POSTFILTER TakeGoldFromPlayer] $localtarget => {$mang3[0]} => $mang4");
+
+                            if (!is_number($mang4)) {
+                                // Try to figure out quantity from speech
+                                $localNpc=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
+                                $qtyrecord=$GLOBALS["db"]->fetchOne("SELECT speech,(regexp_matches(speech, '\d+'))[1]::int AS quantity FROM public.speech 
+                                WHERE listener = '$localNpc' OR speaker = '$localNpc' order by rowid desc LIMIT 100");
+                                if (isset($qtyrecord["quantity"])) {
+                                    $qty=$qtyrecord["quantity"];
+                                    error_log("[ACTION POSTFILTER TakeGoldFromPlayer] quantity found $qty");
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@$qty";
+                                } else
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@";
+                            } else
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@";
+
+
+        
+
 
                         }
                     }

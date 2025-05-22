@@ -182,6 +182,29 @@ if (($gameRequest[0]=="delete_event")) {
     die();
 }
 
+// Player rewrite
+
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+    // Use preg_replace to remove the name and colon before the dialogue
+    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+    error_log($cleaned_player_dialogue);
+    if (strpos($cleaned_player_dialogue,"**")===0) {
+        // If player speech starts with **
+        error_log("Overwritting user prompt $cleaned_player_dialogue");
+        // This is a hack. Refactor.
+        $GLOBALS["argv"][3]=$cleaned_player_dialogue;
+        function logMsg($s,$t="") {
+            error_log("$s $t");
+        }
+        function make_replacements($s) {
+            return $s;
+        }
+
+        require_once(__DIR__."/service/processors/rolemaster/cmd/smart_impersonation.php");
+        $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["SMART_RESPONSE"]}";
+    }
+}
+
 // Profile selection
 if (isset($_GET["profile"])) {
     
@@ -216,6 +239,7 @@ if (isset($_GET["profile"])) {
     //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
     $GLOBALS["USING_DEFAULT_PROFILE"]=true;
 }
+
 
 // Player TTS. We overwrite some confs an then restore them.
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {

@@ -87,8 +87,8 @@ $F_RETURNMESSAGES_LOCAL["Inspect"]="{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# 
 $F_RETURNMESSAGES_LOCAL["LookAt"]="LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
 $F_RETURNMESSAGES_LOCAL["InspectSurroundings"]="{$GLOBALS["HERIKA_NAME"]} takes a look around and see this: #RESULT#";
 $F_RETURNMESSAGES_LOCAL["MoveTo"]= "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
-$F_RETURNMESSAGES_LOCAL["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}. Accept gift.";
-$F_RETURNMESSAGES_LOCAL["OpenInventory2"]="{$GLOBALS["PLAYER_NAME"]} give items to {$GLOBALS["HERIKA_NAME"]}";
+$F_RETURNMESSAGES_LOCAL["OpenInventory"]="Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
+$F_RETURNMESSAGES_LOCAL["OpenInventory2"]="{$GLOBALS["PLAYER_NAME"]} give items to {$GLOBALS["HERIKA_NAME"]}. Accept gift.";
 $F_RETURNMESSAGES_LOCAL["Attack"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["AttackHunt"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["Follow"]="{$GLOBALS["HERIKA_NAME"]} follows #TARGET# ";
@@ -130,7 +130,7 @@ $F_NAMES_LOCAL["LookAt"]="LookAt";
 $F_NAMES_LOCAL["InspectSurroundings"]="InspectSurroundings";
 $F_NAMES_LOCAL["MoveTo"]= "MoveTo";
 $F_NAMES_LOCAL["OpenInventory"]="ExchangeItems";
-$F_NAMES_LOCAL["OpenInventory2"]="TakeItemsFromPlayer";
+$F_NAMES_LOCAL["OpenInventory2"]="AcceptGift";
 $F_NAMES_LOCAL["Attack"]="Attack";
 $F_NAMES_LOCAL["AttackHunt"]="Hunt";
 $F_NAMES_LOCAL["Follow"]="Follow";
@@ -643,8 +643,8 @@ $GLOBALS["FUNCTIONS"] = [
         ]
     ],
     [
-        "name" => $F_NAMES_LOCAL["F_NAMES"]["UseSoulGaze"],
-        "description" => $F_TRANSLATIONS_LOCAL["F_TRANSLATIONS"]["UseSoulGaze"],
+        "name" => $F_NAMES_LOCAL["UseSoulGaze"],
+        "description" => $F_TRANSLATIONS_LOCAL["UseSoulGaze"],
         "parameters" => [
             "type" => "object",
             "properties" => [
@@ -750,6 +750,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'InspectSurroundings',
         //'MoveTo',
         'OpenInventory',
+        'OpenInventory2',
         'Attack',
         'AttackHunt',
         'TravelTo',
@@ -782,6 +783,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'InspectSurroundings',
         //'MoveTo',
         'OpenInventory',
+        'OpenInventory2',
         'Attack',
         'AttackHunt',
         'TravelTo',
