@@ -146,6 +146,18 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             $PARMS["HERIKA_DYNAMIC"]="\Mood: {$response["disposition"]}, goal is {$response["goal"]}";
             // Create profile
             createProfile($response["name"],$PARMS,true);
+            
+            // This should be on new npc profile table
+            $codename = npcNameToCodename($response["name"]);
+            $GLOBALS["db"]->insert(
+                'npc_templates_custom',
+                array(
+                    'npc_name' => $codename,
+                    'npc_dynamic' => "Goal: {$response["goal"]}. Traits: {$response["traits"]}",
+                    'npc_pers' => "{$response["name"]} {$response["race"]} {$response["gender"]} {$response["background"]}\n#SpeechStyle\n{$response["speechStyle"]}\n",
+                    "npc_misc" =>"rolemastered"
+                )
+            );
 
             $GLOBALS["db"]->insert(
                 'responselog',

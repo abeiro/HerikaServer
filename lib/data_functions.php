@@ -113,13 +113,17 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             if ($actorName==$GLOBALS["HERIKA_NAME"]) 
                 continue;
 
-            $interactions=DirectConversationsWith($actor);
-            if ($interactions==0) {
-                $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} never talked to $actorName before, should refer to it as stranger/traveller...)";
-            } else if ($interactions<5) {
-                $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} has talked to $actorName a couple of times before)";
+            if (strpos($actor,"(")===false) {    
+                $interactions=DirectConversationsWith($actor);
+                if ($interactions==0) {
+                    $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} never talked to $actorName before, should refer to it as stranger/traveller...)";
+                } else if ($interactions<5) {
+                    $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} has talked to $actorName a couple of times before)";
+                } else {
+                    $ittext="";
+                }
             } else {
-                $ittext="";
+                $ittext="$actor";
             }
             
             if ($actor==$GLOBALS["PLAYER_NAME"] && false) //PC as regular NPC
@@ -128,6 +132,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 
                 $actorName = preg_replace("/\s*\(.*?\)\s*/", "", $actor);
                 $codename = npcNameToCodename($actorName);
+                // Here we need the new npc profiles table, to put relevant info of each character in scene
                 $npcknowledge=$GLOBALS["db"]->fetchAll("SELECT COALESCE(NULLIF(trim(npc_dynamic), ''), npc_misc) as npc_dynamic
                  FROM combined_npc_templates where npc_name='$codename' and 1=2");// Disabled ATM
                 if (isset($npcknowledge[0]))
@@ -136,7 +141,12 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     $actorDetailedListWithProfile[]="$ittext";
             }
         }
-        $actorsInRange=implode("\n## ",$actorDetailedListWithProfile);
+        $actorDetailedListWithProfileSanitized=[];
+        foreach ($actorDetailedListWithProfile as $e)
+            if (!empty($e))
+                $actorDetailedListWithProfileSanitized[]=$e;
+
+        $actorsInRange=implode("\n## ",$actorDetailedListWithProfileSanitized);
 
     }
 
@@ -159,8 +169,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     
     if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"])
         $lastDialog[] = array('role' => 'user', 'content' => "# PARTY STATUS\n## ". (implode("\n## ",$followers)));
+    else 
+        $lastDialog[] = array('role' => 'user', 'content' => "# YOU'RE NOT PART OF THE GROUP FORMED BY\n## ". (implode("\n## ",$followers)));
 
-    $lastDialog[] = array('role' => 'user', 'content' => "# LOCATIONS OF INTEREST \n## ". (implode("\n## ",DataPosibleLocationsToGo())));
+    $lastDialog[] = array('role' => 'user', 'content' => "# POIs \n## ". (implode("\n## ",DataPosibleLocationsToGo())));
  
     // Rolemaster notes
     
@@ -226,11 +238,12 @@ function DataPosibleLocationsToGo()
         } else {
             $retData[$k] = preg_replace("/\([^)]+\)/", '', $v);
             //$retData[$k]=$v;
-
+            $retData[$k]=trim($retData[$k]);
         }
-
+        
     }
     //return ["Goldenglow Estate","Faldar's Tooth","Goldenglow Estate Sewer","Pit Wolf(dead)","Pit Wolf(dead)","Herika"];
+    //error_log("DataPosibleLocationsToGo: ".print_r($retData,true));
     return array_values($retData);
 }
 
@@ -2246,7 +2259,7 @@ function call_llm() {
                     
                     if (isset($actionParts2[1])) {
                         // Parameter part 
-                        if ($actionParts2[0]=="Attack") {
+                        if ($actionParts2[0]=="Attack"||$actionParts2[0]=="AttackHunt") {
                             // Lets polish the parameters
                             $localtarget=$actionParts2[1];
                             $mang1=explode(",",$localtarget);
@@ -2373,7 +2386,12 @@ function call_llm() {
 
                             $contextDestinations=DataPosibleLocationsToGo();
 
-                            if (in_array($destination,$contextDestinations)) {
+                            if (in_array(trim($localtarget),$contextDestinations)) {
+                                // Perfect match
+                                error_log("[ACTION POSTFILTER TravelTo] Seems valid as-is (context destination): <$localtarget> => $localtarget");
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$localtarget";
+
+                            } else if (in_array($destination,$contextDestinations)) {
                                 error_log("[ACTION POSTFILTER TravelTo] Seemd valid (context destination): $localtarget => $destination");
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
 
@@ -2946,11 +2964,11 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             // 4. Query #2: Try bracket-stripped match only if Query #1 was empty
             $npcTemlate2 = $db->fetchAll("SELECT npc_pers 
                                         FROM combined_npc_templates
-                                        WHERE npc_name='{$bracketMatch}'");
+                                        WHERE npc_name='".$db->escape($bracketMatch)."'");
 
             $npcknowledge2 = $db->fetchAll("SELECT npc_misc
                                         FROM combined_npc_templates
-                                        WHERE npc_name='{$bracketMatch}'");
+                                        WHERE npc_name='".$db->escape($bracketMatch)."'");
 
             if (!empty($npcTemlate2[0])) {
                 // Found a row by bracket match

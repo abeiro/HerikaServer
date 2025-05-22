@@ -660,19 +660,33 @@ if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMP
 }
 
 // Cooldown for some actions
+$COOLDOWNMAP=[];
+$COOLDOWNMAP=[
+    "ComeCloser"=>120/0.00864,
+    "WaitHere"=>300/0.00864,
+    "UseSoulGaze"=>300/0.00864,
+];
+
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
-    $lastGameTs=$GLOBALS["db"]->fetchOne("select * from actions_issued where actorname='$localActorName' and action='ComeCloser' ORDER BY gamets,ts LIMIT 1");
-    if (isset($lastGameTs["localts"])) {
-        if ((time()-$lastGameTs["localts"])<120) {
-            error_log("ComeCloser in cooldown for $localActorName");
-            unsetFunction("ComeCloser");
+    $lastActionsIssuedMap=$GLOBALS["db"]->fetchAll("SELECT * FROM (SELECT DISTINCT ON (action) * FROM actions_issued WHERE actorname = '$localActorName' ORDER BY action, gamets DESC, ts DESC) AS sub ORDER BY gamets DESC, ts DESC");
+    if (isset($lastActionsIssuedMap[0])) {
+        foreach ($lastActionsIssuedMap as $lastActionsIssued) {
+            $ingamenow=convert_gamets2seconds($gameRequest[2]);
+            $lasttriggered=convert_gamets2seconds($lastActionsIssued["gamets"]);
+            $elapsedSecs=gamets2seconds_between($gameRequest[2],$lastActionsIssued["gamets"]);
+            if (isset($COOLDOWNMAP[$lastActionsIssued["action"]])) {
+                if (($ingamenow-$lasttriggered)<$COOLDOWNMAP[$lastActionsIssued["action"]]) {   // COnsider here use gamets and ts and id001 time functions
+                    error_log("{$lastActionsIssued["action"]} in cooldown for $localActorName, {$COOLDOWNMAP[$lastActionsIssued["action"]]} $ingamenow-$lasttriggered $elapsedSecs");
+                    unsetFunction($lastActionsIssued["action"]);
+                } else {
+                    error_log("{$lastActionsIssued["action"]} NOT in cooldown for $localActorName  {$COOLDOWNMAP[$lastActionsIssued["action"]]} $ingamenow-$lasttriggered $elapsedSecs");
+                }
+            }
         }
-
     }
-
-
 }
+
 // Rolemaster stuff
 
 $namedKey="{$GLOBALS["HERIKA_NAME"]}_is_rolemastered";

@@ -323,7 +323,7 @@ function unmoodSentence($sentence) {
 
     $sentence = preg_replace('/"/', '', $cleaned); // Remove "
 
-    preg_match_all('/\((.*?)\)/', $sentence, $matches);
+    preg_match_all('/\((.*?)\)/', $sentence, $matches); // Unused?
 
     $responseTextUnmooded = trim(preg_replace('/\((.*?)\)/', '', $sentence));
 
@@ -564,8 +564,11 @@ function returnLines($lines,$writeOutput=true)
                 }
 
                 $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
+                // Don't touch original one
+                $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=$GLOBALS["SCRIPTLINE_LISTENER"];
+
                 if (is_array($listenerFix) && (sizeof($listenerFix)>1)) {
-                    $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix[0];
+                    $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listenerFix[0]);
                 }
                 
                 $listenerFix2=explode(",",$GLOBALS["SCRIPTLINE_LISTENER"]);
@@ -578,8 +581,42 @@ function returnLines($lines,$writeOutput=true)
                     if ($GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]>(sizeof($listenerFix2)-1))
                         $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=sizeof($listenerFix2)-1;
 
-                    Logger::info("Applying listenerFix2: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
-                    $GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[ $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]]);
+                    // Code to fix multiple listener issues
+                    // Arrays to store positions of found names
+                    $positions = [];           // For determining the first mentioned name
+                    $positionsWithIndex = [];  // For determining the last mentioned name and its index
+
+                    // Search for each name in the subtitle sentence
+                    foreach ($listenerFix2 as $index => $name) {
+                        $pos = stripos($responseForSubtitles, $name); // Case-insensitive search
+                        if ($pos !== false) {
+                            $positions[$name] = $pos;           // Save position for first-mention check
+                            $positionsWithIndex[$index] = $pos; // Save index and position for last-mention check
+                        }
+                    }
+
+                    if (!empty($positions)) {
+                        // Sort positions to find the first mentioned name
+                        asort($positions); // Ascending order by position
+                        $listener = array_key_first($positions); // Get the name of the first mentioned
+                        $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listener);
+                        // Sort positions to find the last mentioned index
+                        arsort($positionsWithIndex); // Descending order by position
+                        $nextListener = array_key_first($positionsWithIndex); // Get the index of the last mentioned name
+                        if ($nextListener>0)
+                            $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener-1;  // Next round will use this speaker if no refernce found.
+                        else
+                            $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener;
+                        // Output results
+                        Logger::info("Applying smarter listenerFix2: $listener $nextListener {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+
+                    } else {
+                        $listener=$listenerFix2[$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]];
+                        $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listener);
+                    }
+
+                    Logger::info("Applying listenerFix2: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}  {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+                    //$GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[ $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]]);
                     // $GLOBALS["SCRIPTLINE_LISTENER"] = trim($listenerFix2[array_rand($listenerFix2)]); // Random
                     
 
@@ -598,8 +635,8 @@ function returnLines($lines,$writeOutput=true)
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
-                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
                 file_put_contents(__DIR__."/../log/output_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
 
             }
