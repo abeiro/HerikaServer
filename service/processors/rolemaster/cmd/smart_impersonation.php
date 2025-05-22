@@ -12,7 +12,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         logMsg("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
         require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 
-        $contextDataHistoric = DataLastDataExpandedFor("", -25);    // Full context
+        $contextDataHistoric = DataLastDataExpandedFor("", -15);    // Full context
         
         $contextDataHistoric =array_merge([["role"=>"user","content"=>"# HISTORIC DIALOGUE AND EVENTS IN CHRONOLOGICAL ORDER"]], $contextDataHistoric);
 
@@ -93,7 +93,10 @@ $sysprompt
             $taskId = uniqid();
         
             // Format action string
-            $roleMasterAction = make_replacements("rolecommand|ImpersonatePlayer@{$instructionText}@inputtext");
+            if (php_sapi_name()=="cli")
+                $roleMasterAction = make_replacements("rolecommand|ImpersonatePlayer@{$instructionText}@inputtext");
+            else 
+                $GLOBALS["SMART_RESPONSE"]="$instructionText";
         
             // Insert into database
             $GLOBALS["db"]->insert(
