@@ -51,28 +51,9 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
 $commonprompt='
 # Examples
-user request: actor a should discuss with actor b
-[{
-  "character": "actor a",
-  "instruction": "actor a should confront actor b about a recent betrayal, accusing them of dishonesty.",
-  "action": "Fight",
-  "target": "actor b",
-  "scene_note": "actor a and actor b are in a heated discussion; other characters begin to take notice and prepare to intervene."
-}
-]
 
-user request: actor a reveals a secret to actor b
-[
-{
-  "character": "actor a",
-  "instruction": "actor a should reveal a hidden secret to actor b, hoping for support but fearing judgment.",
-  "action": "Talk",
-  "target": "actor b",
-  "scene_note": "actor b reacts strongly, emotions rising; an observer considers stepping in."
-}
-]
 user request: actor \"a\" leaves the place 
-[{
+{"instructions":[{
   "character": "actor a",
   "instruction": "actor a should say goodbye to everyone, hinting that they may not return for a long time",
   "action": "ExitLocation",
@@ -86,18 +67,20 @@ user request: actor \"a\" leaves the place
   "target": "Actor a",
   "scene_note": ""
 }
-  ]
+]
+}
 
 (no user request, randomly generated content)
-[
-{
+{"instructions":[
+ {
   "character": "actor a",
   "instruction": "actor a should ask actor b for a few coins, claiming they desperately need a drink.",
   "action": "Talk",
   "target": "actor b",
   "scene_note": "actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away."
-}
+ }
 ]
+}
 
 ';
         if (!$GLOBALS["argv"][3]) {
@@ -134,13 +117,13 @@ In addition, follow these general scene rules as a game director:
         $customParm["MAX_TOKENS"]=4000;
         
         $GLOBALS["HOOKS"]["JSON_TEMPLATE"][]=function() {
-            $GLOBALS["responseTemplate"] = [[
+            $GLOBALS["responseTemplate"] = ["instructions"=>[[
                 "character"=>"selected actor's full name",
                 "instruction"=>"the instruction for the actor, what should be said or done. Use 3rd person here.",
                 "action"=>implode("|",$GLOBALS["FUNCTION_SHORT_LIST"]),
                 "target"=>"action's target",
                 "scene_note"=>"Something other actors should know about the instruction, if the instruction also involves another actors"
-            ]];
+            ]]];
         };
 
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
@@ -223,8 +206,8 @@ In addition, follow these general scene rules as a game director:
         
         $response=__jpd_decode_lazy($rawbuffer);
         //print_r($response);
-        if (isset($response[0]) && is_array($response[0])) {
-            foreach ($response as $r) {
+        if (isset($response["instructions"]) && is_array($response["instructions"])) {
+            foreach ($response["instructions"] as $r) {
                 parseInstruction($r);
                 parseSceneNote($r);
             }

@@ -7,4 +7,8 @@ function npcNameToCodename($npcName) {
     return $codename;
 }
 
+function isNonEmptyArray($var) {
+    return is_array($var) && count($var) > 0;
+}
+
 ?>

@@ -338,7 +338,8 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 
             if ($timeElapsed < $cooldownPeriod) {
                 // Cooldown is still active, exit
-                die("NARRATOR_WELCOME is on cooldown. Try again in " . ($cooldownPeriod - $timeElapsed) . " seconds.");
+                Logger::info("NARRATOR_WELCOME is on cooldown. Try again in " . ($cooldownPeriod - $timeElapsed) . " seconds.");
+                die("X-CUSTOM-CLOSE");
             }
         }
 
