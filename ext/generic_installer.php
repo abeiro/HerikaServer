@@ -87,7 +87,9 @@ error_reporting(E_ALL);
 
 $PACKAGE_NAME = $_GET["PACKAGE_NAME"];
 $GITHUB_REPO = $_GET["GITHUB_REPO"];
-$DOWNLOAD_URL = "https://github.com/" . $GITHUB_REPO . "/releases/latest/download/" . $PACKAGE_NAME . ".tar.gz";
+// We'll try both formats, starting with .tar.gz
+$DOWNLOAD_URL_GZ = "https://github.com/" . $GITHUB_REPO . "/releases/latest/download/" . $PACKAGE_NAME . ".tar.gz";
+$DOWNLOAD_URL_TAR = "https://github.com/" . $GITHUB_REPO . "/releases/latest/download/" . $PACKAGE_NAME . ".tar";
 $TARGET_DIR = __DIR__ . "/" . $PACKAGE_NAME;
 $TEMP_DIR = "/tmp/";
 
@@ -302,26 +304,44 @@ function checkVersion($targetDir, $githubRepo) {
 /**
  * Installs a package from a remote archive
  * 
- * @param string $downloadUrl The URL to download the package from
+ * @param string $downloadUrlGz The URL to download the tar.gz package from
+ * @param string $downloadUrlTar The URL to download the tar package from (fallback)
  * @param string $targetDir The directory where files will be installed
  * @param string $tempDir The temporary directory for operations
  * @param string $packageName The name of the package (used for downloaded file)
  * @return bool True if installation was successful, false otherwise
  */
-function installPackage($downloadUrl, $targetDir, $tempDir, $packageName) {
+function installPackage($downloadUrlGz, $downloadUrlTar, $targetDir, $tempDir, $packageName) {
     try {
         ensureTargetDirectory($targetDir);
-        echo "<p class='log-action'>⚙️ Downloading package...</p>\n";
+        
+        // Try to download .tar.gz first
+        echo "<p class='log-action'>⚙️ Trying to download .tar.gz package...</p>\n";
+        $isGzipped = true;
         $downloadFile = $targetDir . "/" . $packageName . "-latest.tar.gz";
-        $downloadContent = @file_get_contents($downloadUrl);
+        $downloadContent = @file_get_contents($downloadUrlGz);
+        
+        // If .tar.gz fails, try .tar
         if ($downloadContent === false) {
-            throw new Exception("Failed to download from " . htmlspecialchars($downloadUrl));
+            echo "<p class='log-info'>ℹ️ .tar.gz not found, trying .tar format...</p>\n";
+            $isGzipped = false;
+            $downloadFile = $targetDir . "/" . $packageName . "-latest.tar";
+            $downloadContent = @file_get_contents($downloadUrlTar);
+            
+            if ($downloadContent === false) {
+                throw new Exception("Failed to download from both " . htmlspecialchars($downloadUrlGz) . " and " . htmlspecialchars($downloadUrlTar));
+            }
         }
+        
         if (@file_put_contents($downloadFile, $downloadContent) === false) {
             throw new Exception("Failed to write download file to " . htmlspecialchars($downloadFile));
         }
-        echo "<p class='log-action'>⚙️ Extracting package...</p>\n";
-        $extractCmd = "cd " . escapeshellarg($targetDir) . " && HOME=" . escapeshellarg($tempDir) . " tar xvfz " . escapeshellarg($downloadFile) . " --strip-components=1";
+        
+        echo "<p class='log-action'>⚙️ Extracting " . ($isGzipped ? "gzipped" : "non-gzipped") . " package...</p>\n";
+        
+        // Use the appropriate tar flags based on the format
+        $tarFlags = $isGzipped ? "xvfz" : "xvf";
+        $extractCmd = "cd " . escapeshellarg($targetDir) . " && HOME=" . escapeshellarg($tempDir) . " tar " . $tarFlags . " " . escapeshellarg($downloadFile) . " --strip-components=1";
         
         // Capture system command output
         ob_start();
@@ -332,6 +352,7 @@ function installPackage($downloadUrl, $targetDir, $tempDir, $packageName) {
         if ($extractStatus !== 0) {
             throw new Exception("Failed to extract archive. Command returned status: " . $extractStatus);
         }
+        
         echo "<p class='log-info'>ℹ️ Checking for database migrations...</p>\n";
         if (!runDatabaseMigrations($targetDir)) {
             throw new Exception("Failed to run database migrations");
@@ -518,8 +539,8 @@ function installPackage($downloadUrl, $targetDir, $tempDir, $packageName) {
         } elseif (!$versionInfo['installed'] || $versionInfo['update_available']) {
             echo '<h3>Installation Log</h3>';
             echo '<div class="installer-log">';
-            // installPackage function now echoes directly with HTML, no need to capture its output separately
-            $success = installPackage($DOWNLOAD_URL, $TARGET_DIR, $TEMP_DIR, $PACKAGE_NAME);
+            // Updated to pass both download URLs
+            $success = installPackage($DOWNLOAD_URL_GZ, $DOWNLOAD_URL_TAR, $TARGET_DIR, $TEMP_DIR, $PACKAGE_NAME);
             echo '</div>'; // Close installer-log
 
             if ($success) {
