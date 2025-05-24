@@ -851,9 +851,15 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
             $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
     }
 
+    $contextDataHistory=[];
+    foreach ($lastDialogFull as $n=>$lastDialogFullEntry) {
+        if (!empty(trim($lastDialogFullEntry["content"])))
+                $contextDataHistory[]=$lastDialogFullEntry;
 
-    file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_2_.txt",print_r($lastDialogFull,true));
-    return $lastDialogFull;
+    }
+
+    file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_2_.txt",print_r($contextDataHistory,true));
+    return $contextDataHistory;
 }
 
 function replaceRoles($lastDialogFull,$actor,$lastNelements) {

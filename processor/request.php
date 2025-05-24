@@ -77,7 +77,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 			array(
 				'ts' => $gameRequest[1],
 				'gamets' => $gameRequest[2],
-				'description' => SQLite3::escapeString($returnFunction[2]),
+				'description' => $db->escape($returnFunction[2]),
 				'sess' => 'pending',
 				'localts' => time()
 			)

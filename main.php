@@ -403,7 +403,7 @@ if (in_array($gameRequest[0],["suggestion"])) {
     $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
 }
 
-
+// Disable functions for The Narrator
 if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
     $FUNCTIONS_ARE_ENABLED=false;
 }
@@ -697,9 +697,11 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $lastActionsIssuedMap=$GLOBALS["db"]->fetchAll("SELECT * FROM (SELECT DISTINCT ON (action) * FROM actions_issued WHERE actorname = '$localActorName' ORDER BY action, gamets DESC, ts DESC) AS sub ORDER BY gamets DESC, ts DESC");
     if (isset($lastActionsIssuedMap[0])) {
         foreach ($lastActionsIssuedMap as $lastActionsIssued) {
+
             $ingamenow=convert_gamets2seconds($gameRequest[2]);
             $lasttriggered=convert_gamets2seconds($lastActionsIssued["gamets"]);
             $elapsedSecs=gamets2seconds_between($gameRequest[2],$lastActionsIssued["gamets"]);
+
             if (isset($COOLDOWNMAP[$lastActionsIssued["action"]])) {
                 if (($ingamenow-$lasttriggered)<$COOLDOWNMAP[$lastActionsIssued["action"]]) {   // COnsider here use gamets and ts and id001 time functions
                     error_log("{$lastActionsIssued["action"]} in cooldown for $localActorName, {$COOLDOWNMAP[$lastActionsIssued["action"]]} $ingamenow-$lasttriggered $elapsedSecs");

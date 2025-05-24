@@ -77,7 +77,7 @@ $F_TRANSLATIONS_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} travels to ho
 $F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives some gold/coins/septims to a single actor (target property is the actor). Amount will be infered from dialogue, so no need to specify";
 $F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives item to a single actor (target property is the actor). Amount and item will be infered from dialogue, so no need to specify";
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
-$F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through ${GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.  ";
+$F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
 
 $GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
 
