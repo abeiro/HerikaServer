@@ -2252,6 +2252,8 @@ function call_llm() {
         if (isset($GLOBALS["action_post_process_fnct"])) {
             $actions=$GLOBALS["action_post_process_fnct"]($actions);
         }
+
+        
         if (is_array($actions) && (sizeof($actions)>0)) {
             
             // ACTION POST-FILTER
