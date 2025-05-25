@@ -93,10 +93,9 @@ $sysprompt
             $taskId = uniqid();
         
             // Format action string
-            if (php_sapi_name()=="cli")
-                $roleMasterAction = make_replacements("rolecommand|ImpersonatePlayer@{$instructionText}@inputtext");
-            else 
-                $GLOBALS["SMART_RESPONSE"]="$instructionText";
+            
+            $roleMasterAction = make_replacements("rolecommand|ImpersonatePlayer@{$instructionText}@inputtext");
+            
         
             // Insert into database
             $GLOBALS["db"]->insert(
@@ -149,7 +148,10 @@ $sysprompt
         parseSceneNote($response);
         
     }
-
+    
 
     Logger::info("Successfully logged instruction command to responselog");
+
+    
+   
 ?>

@@ -190,17 +190,9 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     if (strpos($cleaned_player_dialogue,"**")===0) {
         // If player speech starts with **
         error_log("Overwritting user prompt $cleaned_player_dialogue");
-        // This is a hack. Refactor.
-        $GLOBALS["argv"][3]=$cleaned_player_dialogue;
-        function logMsg($s,$t="") {
-            error_log("$s $t");
-        }
-        function make_replacements($s) {
-            return $s;
-        }
 
-        require_once(__DIR__."/service/processors/rolemaster/cmd/smart_impersonation.php");
-        $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["SMART_RESPONSE"]}";
+        exec("php service/manager.php rolemaster smart_impersonation \"". $cleaned_player_dialogue."\"");
+        die("X-CUSTOM-CLOSE");
     }
 }
 

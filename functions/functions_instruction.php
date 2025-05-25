@@ -28,7 +28,7 @@ foreach ($GLOBALS["F_NAMES_NEW"] as $k=>$v)
 unsetFunction("ComeCloser");
 unsetFunction("IncreaseWalkSpeed");
 unsetFunction("DecreaseWalkSpeed");
-unsetFunction("Relax");
+//unsetFunction("Relax");
 
 
 
