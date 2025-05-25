@@ -18,9 +18,17 @@ class openaijson
     private $_buffer;
     private $_stopProc;
     private $_is_groq_com;
+    private $_is_nanogpt_com;
+    private $_is_x_ai;
+    private $_is_mistral_ai;
     private $_is_streaming;
     private $_is_reasoning;
     private $_model;
+    private $_url;
+    private $_remove_cot;
+    private $_cot_tag_base;
+    private $_output_buffer; 
+    private $_timeout;
     public $_extractedbuffer;
 
     public function __construct()
@@ -30,9 +38,17 @@ class openaijson
         $this->_stopProc=false;
         $this->_extractedbuffer="";
         $this->_is_groq_com=false;
+        $this->_is_nanogpt_com=false;
+        $this->_is_x_ai=false;
+        $this->_is_mistral_ai=false;
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
         $this->_model="";
+        $this->_url="";
+        $this->_remove_cot=true;
+        $this->_cot_tag_base="think";
+        $this->_output_buffer="";
+        $this->_timeout=30;
         require_once(__DIR__."/__jpd.php");
     }
 
@@ -47,28 +63,66 @@ class openaijson
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "aion-1");
             if ($i_pos === false) 
+                $i_pos = stripos($s_model, "grok-3-mini");
+            if ($i_pos === false) 
                 $i_pos = stripos($s_model, "-thinking");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, ":thinking");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "-reasoning");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "MAI-DS-R1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-235b-a22b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-30b-a3b");
             $b_res = (!($i_pos === false));
         }
         return $b_res;
     }
 
+    private function init_connector() {
+        $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
+        if (strlen($this->_url) < 6)
+            Logger::error("{$this->name} connector - missing url!");
+
+        $this->_remove_cot = (isset($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"])) ? $GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] : true;
+
+        $default_model = 'gpt-4o-mini';
+
+        $this->_is_groq_com = (stripos($this->_url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
+        if ($this->_is_groq_com) {
+            $default_model = 'meta-llama/llama-4-scout-17b-16e-instruct';
+            $this->_is_streaming = false; // groq can't do JSON with streaming
+            $this->_remove_cot = false; // no need to clean output, reasoning models on groq won't output CoT if parameter reasoning_format = hidden
+        } else {
+            $this->_is_nanogpt_com = (stripos($this->_url, "nano-gpt.com") > 0 ); //https://nano-gpt.com/api/v1/chat/completions
+            if ($this->_is_nanogpt_com) {    
+                $default_model = 'meta-llama/llama-4-scout';
+            } else {
+                $this->_is_x_ai = (stripos($this->_url, "x.ai") > 0 ); // https://api.x.ai/v1/chat/completions
+                if ($this->_is_x_ai) {    
+                    $default_model = 'grok-3-mini-beta';
+                } else {
+                    $this->_is_mistral_ai = (stripos($this->_url, "mistral.ai") > 0 ); //https://api.mistral.ai/v1/chat/completions
+                    if ($this->_is_mistral_ai)    
+                        $default_model = 'mistral-small-latest';
+                }
+            }
+        }
+
+        $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+        $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
+        if (!$this->_is_reasoning)
+            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+        $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
+    }
+    
     public function open($contextData, $customParms)
     {
-        $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
+        $this->init_connector();
 
-        $this->_is_groq_com = (stripos($url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
-        if ($this->_is_groq_com) 
-            $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'llama-3.3-70b-versatile';
-        else
-            $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini';
-        $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
-
-        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+        $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
 
 
@@ -92,6 +146,7 @@ class openaijson
         }
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+        
         
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
@@ -155,7 +210,7 @@ class openaijson
                 }
 
                 if ($element["role"]=="system") {
-                    
+                    // We should start chaging this to role=>"developer"
                     $pb["system"]=$element["content"]."\nThis is the script history for this story\n#CONTEXT_HISTORY\n";
                     $contextDataCopy[]=$element;
                     
@@ -170,9 +225,10 @@ class openaijson
                     
                 } else if ($element["role"]=="assistant") {
                     $assistantAppearedInhistory=true;
+                    $dialogueTarget=extractDialogueTarget($element["content"]) ?? "none"; // moved here to be available in tool_calls
                     if (isset($element["tool_calls"])) {
                         $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
-                        $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
+                        $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}, #RESULT#";
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
@@ -203,7 +259,7 @@ class openaijson
                         } else {
                             //error_log("#### ".$element["content"]);
                             $pb["system"].=$element["content"]."\n";
-                            $dialogueTarget=extractDialogueTarget($element["content"]);
+                            //$dialogueTarget=extractDialogueTarget($element["content"]); // moved up
                             // Trying to provide examples
                             if (true) {
                                 $assistantRoleBuffer.=$dialogueTarget["cleanedString"];                                
@@ -226,7 +282,7 @@ class openaijson
                             $pb["system"].=$element["content"]."\n";
                             
                            
-                            if (strpos($element["content"],"Error")===0) {
+                            if (stripos($element["content"],"error")===0) {
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
                                 $contextDataCopy[]=[
                                     "role"=>"user",
@@ -289,23 +345,21 @@ class openaijson
 
         // Forcing JSON output
 
+        $data = array(
+            'model' => $this->_model,
+            'messages' => $contextData,
+            'stream' => $this->_is_streaming, 
+            'max_completion_tokens' => $MAX_TOKENS,
+            'temperature' => $temperature, 
+            'top_p' => $top_p, 
+            'presence_penalty' => $presence_penalty, 
+            'frequency_penalty' => $frequency_penalty, 
+            'response_format'=>["type"=>"json_object"]
+        );
+
         if ($this->_is_groq_com) { // --- exception made for groq.com
 
             if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
-            $this->_is_streaming = false;
-
-            $data = array(
-                'model' => $this->_model,
-                'messages' => $contextData,
-                'stream' => $this->_is_streaming, // groq can't stream for JSON
-                'max_completion_tokens' => $MAX_TOKENS,
-                'temperature' => $temperature,
-                'top_p' => $top_p,
-                'presence_penalty' => $presence_penalty, 
-                'frequency_penalty' => $frequency_penalty, 
-                'response_format'=>["type"=>"json_object"]
-            );
-
 
             if ($this->_is_reasoning) { 
             /*  a reasoning model need "reasoning_format" parameter: 
@@ -318,41 +372,37 @@ class openaijson
         
         } else { // --- normal flow (not groq)
         
-            $this->_is_streaming = true;
-            $data = array(
-                'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-4o-mini',
-                'messages' => $contextData,
-                'stream' => $this->_is_streaming,
-                'max_completion_tokens'=>$MAX_TOKENS,
-                'temperature' => $temperature,
-                'top_p' => $top_p,
-                'response_format'=>["type"=>"json_object"]
+            if ($this->_is_x_ai) {
+                unset($data["presence_penalty"]); 
+                unset($data["frequency_penalty"]);
+                
+            } elseif ($this->_is_mistral_ai) {
+                unset($data["presence_penalty"]); 
+                unset($data["frequency_penalty"]);
+            } 
 
-            );
+            if (($this->_is_reasoning) && (!$this->_is_mistral_ai)) { // there is no rule accepted by all providers
+                $data["chat_format"]="tidy"; 
+                $data["reasoning_effort"] = "low";
+                $data['reasoning_format'] = "hidden";
+                if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
+                    $data["enable_thinking"] = false;
+            }
+
+        } // --- endif provider
             
             if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
                 $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
             }
 
-            // Mistral AI API does not support penalty params
-            if (strpos($url, "mistral") === false) {
-                $data["presence_penalty"]=$presence_penalty;
-                $data["frequency_penalty"]=$frequency_penalty;
-            }
-
-            if ($this->_is_reasoning) { // there is no rule accepted by all providers 
-                $data['reasoning_format'] = "hidden"; // parameter for deepseek-r1 
-                $data["chat_format"]="tidy"; //parameter for qwq reasoning
-            }
-      
-        } // --- endif groq
-
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
                 unset($data["max_completion_tokens"]);
+                
             } elseif (isset($customParms["MAX_TOKENS"])) {
                 $data["max_completion_tokens"]=$customParms["MAX_TOKENS"]+0;
             }
+            unset($customParms["MAX_TOKENS"]);
         }
 
         if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
@@ -366,6 +416,10 @@ class openaijson
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
+        foreach ($customParms as $k=>$v) {
+            $data[$k]=$v;
+        }
+
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
         $headers = array(
@@ -378,14 +432,14 @@ class openaijson
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30,
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout,
                 "ignore_errors" => true
             )
         );
 
         $context = stream_context_create($options);
         
-        $this->primary_handler = fopen($url, 'r', false, $context);
+        $this->primary_handler = fopen($this->_url, 'r', false, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
             Logger::error(trim(print_r($error,true)));
@@ -408,7 +462,7 @@ class openaijson
 
             if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
-                $error_message = "Request to openaijson connector failed: {$status_line}.\nResponse body: {$response}";
+                $error_message = "Request to openaijson connector failed: {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
@@ -439,11 +493,74 @@ class openaijson
 
         $this->_dataSent=json_encode($data);    // Will use this data in tokenizer.
 
-        
+        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." START\n\n", FILE_APPEND);        
         return true;
 
     }
 
+    private function removeChainOfThought($content) { 
+    // remove content between CoT tags
+        if (($this->_is_reasoning) && ($this->_remove_cot)) {
+            $this->_output_buffer .= $content; // collect content in a buffer
+
+            $crt_pos = 0;
+            $inside_cot = false;
+            $clean_buffer = "";
+            $this->_cot_tag_base="think";
+            $cot_tag = "<{$this->_cot_tag_base}>";
+            $cot_end_tag = "</{$this->_cot_tag_base}>";
+            
+            while (true) {
+                if (!$inside_cot) {
+                    // CoT opening tag could be <think> <thinking> or <reasoning>
+                    $cot_start = stripos($this->_output_buffer, $cot_tag, $crt_pos);
+                    if ($cot_start === false) {
+                        $cot_start = stripos($this->_output_buffer, "<thinking>", $crt_pos);
+                        if ($cot_start === false) {
+                            $cot_start = stripos($this->_output_buffer, "<reasoning>", $crt_pos);
+                            if ($cot_start === false) { // No CoT tags
+                                $clean_buffer .= substr($this->_output_buffer, $crt_pos);
+                                break;
+                            } else {
+                                $this->_cot_tag_base="reasoning";
+                                $cot_tag = "<reasoning>";
+                                $cot_end_tag = "</reasoning>";
+                            }
+                        } else {
+                            $this->_cot_tag_base="thinking";
+                            $cot_tag = "<thinking>";
+                            $cot_end_tag = "</thinking>";
+                        }
+                    }
+                    $cot_tag_len = strlen($cot_tag);
+
+                    // add content before the tag
+                    $clean_buffer .= substr($this->_output_buffer, $crt_pos, ($cot_start - $crt_pos));
+                    $crt_pos = $cot_start + $cot_tag_len; // move past CoT start tag
+                    $inside_cot = true;
+                } else {
+                    // check CoT closing tag
+                    $think_end = stripos($this->_output_buffer, $cot_end_tag, $crt_pos);
+                    if ($think_end === false) {
+                        // closing tag not found yet - need more chunks
+                        break;
+                    }
+                    // skip content between tags
+                    $crt_pos = $think_end + ($cot_tag_len + 1); // move past CoT end tag </...>
+                    $inside_cot = false;
+                }
+            }
+
+            if (!$inside_cot) { // if we've processed everything and nothing more is held in buffer
+                $this->_output_buffer = ""; // reset buffer if we've processed all complete tags
+                return $clean_buffer;
+            }
+            
+            return ""; // if still inside CoT tag or haven't completed processing, return empty and wait for more chunks
+        }
+
+        return $content; // not a reasoning model, return content w/o processing
+    }
 
     public function process()
     {
@@ -484,14 +601,28 @@ class openaijson
 
             if (isset($data["choices"][0]["delta"]["content"])) {
                 if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
-                    $buffer.=$data["choices"][0]["delta"]["content"];
-                    $this->_buffer.=$data["choices"][0]["delta"]["content"];
-                    $this->_numOutputTokens += 1;
-
+                    $clean_content = $this->removeChainOfThought($data["choices"][0]["delta"]["content"]); // remove CoT tags and thinking content
+                    if (strlen($clean_content) > 0) {
+                        $buffer .= $clean_content;
+                        $this->_buffer .= $clean_content;
+                        $this->_numOutputTokens += 1;
+                    }
                 }
                 $totalBuffer.=$data["choices"][0]["delta"]["content"];
             }
         } // --- endif is_streaming 
+
+        // process any remaining reasoning content on stream completion
+        if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
+            if (!empty($this->_output_buffer)) {
+                $clean_remain = $this->removeChainOfThought("");
+                if (!empty($clean_remain)) {
+                    $buffer .= $clean_remain;
+                    $this->_buffer .= $clean_remain;
+                }
+                $this->_output_buffer = ""; // clear the buffer
+            }
+        }
 
         $buffer="";
 
@@ -516,6 +647,10 @@ class openaijson
                         if (isset($finalData["listener"])) {
                             $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];
                         }
+                        if (isset($finalData["target"]) && !empty($finalData["target"]) && $finalData["action"]=="Talk") {
+                            // Cover the case where action is talk, and LLM hast pointed a target
+                            $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["target"];
+                        }
                         
                         if (isset($finalData["lang"])) {
                             $GLOBALS["LLM_LANG"]=$finalData["lang"];
@@ -538,14 +673,26 @@ class openaijson
     // Method to close the data processing operation
     public function close()
     {
+        
+        // process any remaining content in the reasoning buffer before closing
+        if ($this->_is_reasoning && !empty($this->_output_buffer)) {
+            // need another pass to clean up any remaining CoT tags
+            $pattern = '/<{$this->_cot_tag_base}>.*?<\/{$this->_cot_tag_base}>/is';
+            $cleaned_buffer = preg_replace($pattern, '', $this->_output_buffer);
+            $this->_buffer .= $cleaned_buffer;
+            $this->_output_buffer = "";
+        }
+        
         if ($this->primary_handler) {
             fclose($this->primary_handler);
         }
         
-        //file_put_contents(__DIR__."/../log/ouput_from_llm.log",$this->_buffer, FILE_APPEND | LOCK_EX);
-        file_put_contents(__DIR__."/../log/output_from_llm.log",date(DATE_ATOM)."\n=\n".$this->_buffer."\n=\n", FILE_APPEND);
-        return $this->_buffer;
+        // Write the buffer to the log file without timestamp separators
+        file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
 
+        return $this->_buffer;
+        
     }
 
     // Method to close the data processing operation
@@ -579,21 +726,21 @@ class openaijson
                     if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
                         
                         $functionDef=findFunctionByName($parsedResponse["action"]);
-                        if ($functionDef) {
+                        if (isset($functionDef)) {
                             $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
                             if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
                                 if (!empty($parsedResponse["target"])) {
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
-                                    Logger::warn("Missing required parameter: target");
+                                    Logger::warn("openaijson: Missing required parameter: target");
                                 }
                                     
                             } else {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
                         } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("Function not found for {$parsedResponse["action"]}");
+                            Logger::warn("openaijson: Function not found for {$parsedResponse["action"]}");
                         }
                         
                         //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);

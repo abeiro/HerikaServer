@@ -24,9 +24,18 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+function normalize_endpoint_url($url) {
+    // Remove trailing slashes
+    $url = rtrim($url, '/');
+    return $url;
+}
+
 // Define the endpoint for the XTTS API
 if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]))
     $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = 'http://127.0.0.1:8020';
+
+// Normalize the endpoint URL
+$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]);
 
 // Initialize message variables
 $message = '';
@@ -73,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message .= "<p>.wav file has been uploaded to $destinationPath</p>";
 
                     // Prepare the cURL request
-                    $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/upload_sample';
+                    $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
                     $cfile = new CURLFile($destinationPath, $fileType, $fileName);
 
                     $postFields = array('wavFile' => $cfile);
@@ -108,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (isset($_POST["get_speakers"])) {
         // Prepare the cURL request for getting the speakers list
-        $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/speakers_list';
+        $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/speakers_list';
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -181,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message .= "<p>Error: $fileName is not a valid .wav file.</p>";
             } else {
                 // Prepare the cURL request
-                $url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] . '/upload_sample';
+                $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
                 $cfile = new CURLFile($filePath, $fileType, $fileName);
 
                 $postFields = array('wavFile' => $cfile);
@@ -219,8 +228,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Add the JavaScript functions
 ?>
 <script>
-    const API_ENDPOINT = <?php echo json_encode($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>;
+    const API_ENDPOINT = <?php echo json_encode(normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])); ?>;
     const WEB_ROOT = <?php echo json_encode($webRoot); ?>;
+
+    function normalizeUrl(url) {
+        return url.replace(/\/+$/, '');
+    }
 
     function showLoadingMessage() {
         document.getElementById('loading-overlay').style.display = 'block';
@@ -285,7 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     function testVoice(voiceName) {
-        const url = `${API_ENDPOINT}/tts_to_audio/`;
+        const url = `${normalizeUrl(API_ENDPOINT)}/tts_to_audio`;
         const data = {
             text: 'CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis',
             speaker_wav: voiceName,
@@ -362,9 +375,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border-radius: 5px;
     }
 
-    .speakers-grid {
+    .voice-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 8px;
         margin-top: 10px;
     }
@@ -442,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <p>The <b>CHIM XTTS Voice Management</b> system allows you to manage custom voice samples for NPCs using the CHIM XTTS Server.</p>
         <p>This works differently from other TTS services - it requires voice samples to be uploaded and cached on the server.</p>
-        <p>For detailed information on how it works, please read our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.ojs1hcgp0qwl" style="color: yellow;" target="_blank" rel="noopener noreferrer">CHIM XTTS Voice Guide</a>.</p>
+        <p>For detailed information on how it works, please read our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts" style="color: yellow;" target="_blank" rel="noopener noreferrer">CHIM XTTS Voice Guide</a>.</p>
         <h3><strong>Ensure all voice sample filenames are lowercase and spaces are replaced with underscores (_).</strong></h3>
         <h4>Example: "Mjoll the Lioness" becomes "mjoll_the_lioness.wav"</h4>
 
@@ -472,6 +485,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <li>Bit Depth: 16-bit</li>
                 <li>Channels: Mono</li>
                 <li>Sample Rate: 20500Hz</li>
+                <li>Size: 5MB or less</li>
             </ul>
             <br>
             <h1>Current Voice List</h1>
@@ -488,12 +502,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p><strong>Only required for online CHIM XTTS instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
-                <p>For cloud setup instructions, see our <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.jl2x2nswa7az" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
                 <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
                 <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
             </form>
             <br>
-            <p>Advanced XTTS configuration: <a href="<?php echo $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]; ?>/docs#" style="color: yellow;" target="_blank"><?php echo $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]; ?>/docs#</a></p>
+            <p>Advanced XTTS configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
 
         </div>
 

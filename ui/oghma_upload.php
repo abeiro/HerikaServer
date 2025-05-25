@@ -97,11 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 SET native_vector = 
                       setweight(to_tsvector(coalesce(topic, '')), 'A')
                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                    || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                    || setweight(to_tsvector(coalesce(category, '')), 'D')
                 WHERE topic = $1
             ";
             $update_result = pg_query_params($conn, $update_query, [$topic]);
@@ -184,11 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 SET native_vector = 
                                       setweight(to_tsvector(coalesce(topic, '')), 'A')
                                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                                    || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
                                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                                    || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                                    || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                                    || setweight(to_tsvector(coalesce(category, '')), 'D')
                                 WHERE topic = $1
                             ";
                             pg_query_params($conn, $update_query, [$topic]);
@@ -420,11 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 SET native_vector = 
                       setweight(to_tsvector(coalesce(topic, '')), 'A')
                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                    || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                    || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                    || setweight(to_tsvector(coalesce(category, '')), 'D')
                 WHERE topic = $1
             ";
             pg_query_params($conn, $vector_sql, [$topic_new]);
@@ -940,13 +928,13 @@ if ($result) {
     echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
 }
 
-/* Dynamic Oghma Section - Commented out
 // Add Dynamic Oghma Entries Section
 echo '<br><br>';
 echo '<h1>Dynamic Oghma</h1>';
 echo '<p>Entires in the Dynamic Oghma table will update the Oghma table above whenever the quest ID & stage ID for a quest is reached.</p>';
 echo '<p>Any changes from a topic in this table will override whatever is in the Oghma table.</p>';
-echo '<p>You can leave cells empty so they do not overwrite specific info from the Oghma table.</p>';
+echo '<p>You can leave cells empty so they do not overwrite specific cells from the Oghma table.</p>';
+echo '<p>If a cell has the text "clearall" in it, it will clear that cell in the Oghma table.</p>';
 echo '<p>You also can introduce new topics to the Oghma table as well.</p>';
 echo '<p>It is currently empty by default. We need your help adding more entries!</p>';
 echo '<p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Would you like to know more?</a></p>';
@@ -1081,7 +1069,6 @@ if ($dynamicResult) {
 } else {
     echo '<p>Error fetching Dynamic Oghma entries: ' . pg_last_error($conn) . '</p>';
 }
-*/
 
 pg_close($conn);
 ?>

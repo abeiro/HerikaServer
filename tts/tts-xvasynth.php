@@ -20,13 +20,17 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash)
         $voice = $GLOBALS["PATCH_OVERRIDE_VOICE"]; // Player voice
     }
 
+    $lang = $GLOBALS["TTS"]["XVASYNTH"]["base_lang"];
+    if (isset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]))
+        $lang = $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];
+
     // Always initialize the model for each call
     $initData = array(
         "outputs" => "",
         "model" =>   "resources/app/models/{$GLOBALS["TTS"]["XVASYNTH"]["game"]}/{$voice}",
         "modelType" =>  $GLOBALS["TTS"]["XVASYNTH"]["modelType"],
         "version" => $GLOBALS["TTS"]["XVASYNTH"]["version"],
-        "base_lang" => $GLOBALS["TTS"]["XVASYNTH"]["base_lang"],
+        "base_lang" => $lang,
         "pluginsContext" => "{}"
     );
 
@@ -49,7 +53,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash)
         "sequence" => "$textString",
         "editorStyles" => (object)[],
         "pace" => $GLOBALS["TTS"]["XVASYNTH"]["pace"],
-        "base_lang" => $GLOBALS["TTS"]["XVASYNTH"]["base_lang"],
+        "base_lang" => $lang,
         "base_emb" => array(),
         "modelType" => $GLOBALS["TTS"]["XVASYNTH"]["modelType"],
         "useSR" => false,

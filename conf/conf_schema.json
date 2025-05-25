@@ -5,17 +5,19 @@
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!<br>If you are in the default profile <b>YOU MUST</b> leave it as <i>The Narrator</i>!<br><b>You can change profiles by clicking the blue button in the top left.</b>"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
-  "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"1st half of NPC Bio. NPC Static Personality. <br> Should be core traits and facts about a person that does not change.<br>","helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.u26f4kruck1"},
+  "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"1st half of NPC Bio. NPC Static Personality. <br> Should be core traits and facts about a person that does not change.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
   "HERIKA_DYNAMIC": {"userlvl":"basic","type": "longstring","description": "2nd half of NPC Bio. NPC Dynamic Personality. <br> Should be feelings and traits about a person that can change based on ingame events. Use the settings below to update this automatically!<br><b>Do not worry if it is initially empty, as it will change when using dynamic profiles. </b>"},
   "dynamic_profile_b1": {"userlvl":"basic","type":"util","description":"This will update HERIKA_DYNAMIC, based on recent events. Can adjust the prompt used by editing DYNAMIC_PROMPT. Requires CONNECTOR_DIARY to be configured.","action":"action_dynamic_profile_b1.php","name":"Update Dynamic Profile"},
   "DYNAMIC_PROFILE":{"userlvl":"basic","type":"boolean","description":"Will automatically update HERIKA_DYNAMIC during certain ingame events (such as sleeping). Can adjust the prompt used by editing DYNAMIC_PROMPT. Requires CONNECTOR_DIARY to be configured."},
-  "MINIME_T5":{"userlvl":"basic","type":"boolean","scope":"global","description":"Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be enabled in DwemerDistro under Tools/components. <br> <strong> Must be configued in default profile and only works in English!</strong>"},
+  "MINIME_T5":{"userlvl":"basic","type":"boolean","scope":"global","description":"Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. <br> <strong> Must be configued in default profile and only works in English!</strong>"},
   "OGHMA_INFINIUM": {"type":"boolean","userlvl":"basic","description":"Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics."},
-  "OGHMA_KNOWLEDGE": {"type":"string","userlvl":"basic","description":"Knowledge Classes assigned to the NPC. Effects what articles they can access in the Oghma database. If you want to add more make sure they are comma separated. Recommend to leave as default." ,"helpurl":"https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641"},
+  "OGHMA_KNOWLEDGE": {"type":"string","userlvl":"basic","description":"Knowledge Classes assigned to the NPC. Effects what articles they can access in the Oghma database. If you want to add more make sure they are comma separated. Recommend to leave as default." ,"helpurl":"https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=338893641#gid=338893641"},
   "OGHMA_AMOUNT": {"type":"select","values":["1","2","3"],"userlvl":"basic","description":"Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times."},
   "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Roleplay Management"},
   "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability. Chance that an AI NPC will continue an ongoing conversation.<br>0 = Never | 50 = 50% | 100 = Always"},
+  "RECHAT_ALLOW_ACTIONS": {"userlvl":"basic","type":"boolean","description":"Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos..."},
   "BORED_EVENT": {"userlvl":"basic","type":"integer","description":"Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.<br>0 = Never | 50 = 50% | 100 = Always"},
+  "BORED_EVENT_SERVERSIDE": {"userlvl":"basic","type":"boolean","description":"Smart Bored Events. Will use the director to generate dynamic bored event topics. It is slower but topics will improve the quality of bored event topics.","scope":"global"},
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.<br>Higher Context = more tokens used and slower response time.<br><b>We recommend you do not go over 100</b>"},
   "ALIVE_MESSAGE": {"userlvl":"basic","type":"boolean","description":"Whether the <i>I am alive..</i> response will trigger whenever you activate an AI NPC."},
   "TIME_AWARENESS": {"userlvl":"pro","type":"boolean","description":"Whether the NPC will be aware of how long it has been since you last talked to them, or if you are talking for the first time."},
@@ -27,13 +29,15 @@
   "QUEST_COMMENT_CHANCE":{"type":"select","userlvl":"basic","values":["10%","25%","50%","75%","100%"],"description":"Chance that an AI Quest Comment will happen every time a quest updates."},
   "CURRENT_TASK": {"userlvl":"basic","type":"boolean","description":"Include the current Dynamic AI Objective to the AI NPC's prompt. Disable this if the AI NPC becomes fixated on the task."},
   "RPG_COMMENTS": {"type":"selectmultiple","values":["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"],"description":"Pick which comments you want a chance to trigger when one of these ingame events happens."},
-  "HERIKA_ANIMATIONS": {"userlvl":"basic","type":"boolean","description":"Will issue animations for the NPC to play", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.q88yv4qigyw7","_title":"Advanced Configuration"},
+  "HERIKA_ANIMATIONS": {"userlvl":"basic","type":"boolean","description":"Will issue animations for the NPC to play", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features","_title":"Advanced Configuration"},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
   "LANG_LLM_XTTS": {"userlvl":"pro","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
-  "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.q88yv4qigyw7"},
+  "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"List of moods passed to LLM (comma separated). Some of them will trigger appropriate animations if animations are enabled", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
+  "REMOVE_ASTERISKS_FROM_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Remove text between **, like *couch*, *smiles*...", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
+  "ENFORCE_ACTIONS_PROMPT": {"userlvl":"basic","type":"boolean","description":"Adds a prompt to enforce use of actions", "helpurl":""},
   "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Default profile only! Custom instructions added when generating summaries for memories. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Default profile only! Instructions for updating HERIKA_DYNAMIC. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","web_connector","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Connectors Selection"},
@@ -45,6 +49,7 @@
       "url": {"type":"url","description":"OpenRouter API endpoint"},
       "model": {"type":"ormodellist","description":"<strong>Must be JSON/Instruct type of Model!</strong><br>FREE MODELS ARE NOT RECOMMENDED!<br>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Leave blank unless you want to manually select a provider from OpenRouter. It is case sensitive!","helpurl":"https://openrouter.ai/docs/provider-routing"},
+      "reasoning_model": {"type":"boolean","description":"This is a reasoning model, could output <strong>CoT</strong>.","helpurl":"https://openrouter.ai/docs/use-cases/reasoning-tokens"},      
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate."},
       "get_parms1": {"type":"util","userlvl":"wip","description":"Autofill parameter settings for the currently selected model for minimal randomness in AI response (P10)","action":"action_openrouterjson_get_parm_p1.php?P=10","name":"Autofill Parameters: Low Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
       "get_parms5": {"type":"util","userlvl":"wip","description":"Autofill parameter settings for the currently selected model for some randomness in AI response (P50)","action":"action_openrouterjson_get_parm_p1.php?P=50","name":"Autofill Parameters: Medium Randomness","helpurl":"https://openrouter.ai/docs/parameters"},
@@ -70,6 +75,7 @@
       "url": {"type":"url","description":"OpenRouter API endpoint"},
       "model": {"type":"ormodellist","description":"Model to use.<br>FREE MODELS ARE NOT RECOMMENDED!<br>If you change model use buttons below to set new parameters!","helpurl":"https://openrouter.ai/docs#models"},
       "PROVIDER": {"type":"string","description":"Leave blank unless you want to manually select a provider from OpenRouter. It is case sensitive!","helpurl":"https://openrouter.ai/docs/provider-routing"},
+      "reasoning_model": {"type":"boolean","description":"This is a reasoning model, could output <strong>CoT</strong>.","helpurl":"https://openrouter.ai/docs/use-cases/reasoning-tokens"},      
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate for regular responses, NOT SUMMARIES."},
       "temperature": {"type":"number","description":"Temperature [0-2]","helpurl":"https://openrouter.ai/docs#format"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"Presence Penalty [(-2)-2]","helpurl":"https://openrouter.ai/docs#format"},
@@ -91,6 +97,7 @@
       "_title":"OpenAI/ChatGPT API (JSON)",
       "url": {"type":"url","description":"OpenAI API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "reasoning_model": {"type":"boolean","description":"This is a reasoning model, could output <strong>CoT</strong>.","helpurl":"https://platform.openai.com/docs/guides/reasoning?api-mode=responses"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"Temperature [0-2]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"Presence Penalty [(-2)-2]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
@@ -104,6 +111,7 @@
       "_title":"OpenAI/ChatGPT API (SUMMARY)",
       "url": {"type":"url","description":"OpenAI API endpoint"},
       "model": {"type":"string","description":"Model to use","helpurl":"https://platform.openai.com/docs/models/"},
+      "reasoning_model": {"type":"boolean","description":"This is a reasoning model, could output <strong>CoT</strong>.","helpurl":"https://platform.openai.com/docs/guides/reasoning?api-mode=responses"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate for regular responses, NOT SUMMARIES."},
       "temperature": {"type":"number","description":"Temperature [0-2]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "presence_penalty": {"userlvl":"pro","type":"number","description":"Presence Penalty [(-2)-2]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
@@ -128,7 +136,7 @@
     },
     "koboldcppjson": {
       "_title":"KoboldCPP API (JSON)",
-      "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.4c92h73gekhw"},
+      "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://dwemerdynamics.hostwiki.io/en/Offline-LLMs"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"Temperature [0-2]"},
       "rep_pen": {"type":"number","description":"Repetition Penalty [0-2]"},
@@ -145,7 +153,7 @@
     },
     "koboldcpp": {
       "_title":"KoboldCPP API (SUMMARY)",
-      "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.4c92h73gekhw"},
+      "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://dwemerdynamics.hostwiki.io/en/Offline-LLMs"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate for regular responses, NOT SUMMARIES."},
       "temperature": {"type":"number","description":"Temperature [0-2]"},
       "rep_pen": {"userlvl":"pro","type":"number","description":"Repetition Penalty [0-2]"},
@@ -159,7 +167,7 @@
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","gcp","openai","convai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -168,11 +176,11 @@
       "endpoint":{"type":"url","description":"Endpoint URL. Should be 'http://127.0.0.1:8084' if using default installation","helpurl":"https://github.com/myshell-ai/MeloTTS"},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model. Should be EN if using default installation"},
       "speed":{"type":"number","description":"Speech Speed"},
-      "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.21ics3hex54a"}
+      "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids"}
     },
     "XTTSFASTAPI": {
       "_title":"CHIM XTTS (Installed in DwemerDistro)",
-      "endpoint":{"type":"url","description":"Endpoint URL. Leave as default if you use CHIM XTTS.<br>You can run it on the cloud or use Mantella XTTS. Click the help link to learn more.", "helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.ojs1hcgp0qwl"},
+      "endpoint":{"type":"url","description":"Endpoint URL. Leave as default if you use CHIM XTTS.<br>You can run it on the cloud or use Mantella XTTS. Click the help link to learn more.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS XTTSFASTAPI voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
@@ -186,7 +194,7 @@
     },
     "XVASYNTH": {
       "_title":"xVASynth",
-      "url":{"type":"url","description":"xVASynth should be running on the same machine as DwemerDistro!<br>Must use your computers IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008<br>Click the <b>help/doc</b> link for more info.","helpurl":"https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.3tf6myep6rmw"},
+      "url":{"type":"url","description":"xVASynth should be running on the same machine as DwemerDistro!<br>Must use your computers IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008<br>Click the <b>help/doc</b> link for more info.","helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options"},
       "base_lang":{"type":"string","description":"Base language"},
       "modelType":{"type":"string","description":"Model Type"},
       "version":{"type":"string","description":"xVASynth version (e.g. 3.0 is default. Older models are 1.0 or 2.0)"},
@@ -196,6 +204,18 @@
       "waveglowPath":{"type":"string","description":"Wave Glow Path (relative)"},
       "vocoder":{"type":"string","description":"Vocoder"},
       "distroname":{"type":"string","description":"Leave as default!"}
+    },
+    "ZONOS_GRADIO": {
+      "_title": "Zonos TTS",
+      "endpoint":{"userlvl":"wip", "type":"url","description":"Manual for Zonos <a href='https://dwemerdynamics.hostwiki.io/en/TTS-Options' target='_blank'>can be found here.</a> Endpoint URL. Can be ran on : <a href='https://cloud.vast.ai/?ref_id=177752&creator_id=177752&name=CHIM-Zonos%20(WORKING)' target='_blank'>Vast.ai</a>"},
+      "language":{"userlvl":"wip", "type":"select","values":["af", "am", "an", "ar", "as", "az", "ba", "bg", "bn", "bpy", "bs", "ca", "cmn", "cs", "cy", "da", "de", "el", "en-029", "en-gb", "en-gb-scotland", "en-gb-x-gbclan", "en-gb-x-gbcwmd", "en-gb-x-rp", "en-us", "eo", "es", "es-419", "et", "eu", "fa", "fa-latn", "fi", "fr-be", "fr-ch", "fr-fr", "ga", "gd", "gn", "grc", "gu", "hak", "hi", "hr", "ht", "hu", "hy", "hyw", "ia", "id", "is", "it", "ja", "jbo", "ka", "kk", "kl", "kn", "ko", "kok", "ku", "ky", "la", "lfn", "lt", "lv", "mi", "mk", "ml", "mr", "ms", "mt", "my", "nb", "nci", "ne", "nl", "om", "or", "pa", "pap", "pl", "pt", "pt-br", "py", "quc", "ro", "ru", "ru-lv", "sd", "shn", "si", "sk", "sl", "sq", "sr", "sv", "sw", "ta", "te", "tn", "tr", "tt", "ur", "uz", "vi", "vi-vn-x-central", "vi-vn-x-south", "yue"],"description":"Language","helpurl":"https://github.com/Zyphra/Zonos/blob/a09ff4fa50cfa66bf79986e19c191f85f5cb53e8/zonos/conditioning.py#L316"},
+      "model": {"userlvl":"wip", "type":"select","values":["Zyphra/Zonos-v0.1-transformer", "Zyphra/Zonos-v0.1-hybrid"],"description":"Default profile only. Model to use.", "scope":"global"},
+      "dynamic_tones": {"userlvl":"wip", "type":"boolean","description":"Default profile only. Enhance emotional quality by requesting values from the LLM. If false, emotions will be determined by the LLM-selected mood.", "scope":"global"},
+      "voiceid": {"userlvl":"wip", "type":"string","description":"Generated voice file name. Works the same as CHIM-XTTS voiceid and uses its voicelogic setting. Will only work with voices in your <a href='../data/voices' style='color: yellow;' target='_blank'>Voice Cache</a>."},
+      "pitch_std": {"userlvl":"wip", "type":"number","description":"Pitch standard deviation [0-300]"},
+      "speaking_rate": {"userlvl":"wip", "type":"number","description":"Speaking rate. Higher is faster. [5-30]"},
+      "cfg_scale": {"userlvl":"wip", "type":"number","description":"CFG scale. Controls how closely the audio matches the sample voice. Higher numbers will be a closer match. [1.1 - 5]"},
+      "cached_voice_path": {"userlvl":"wip", "type":"string","description":"Path to the sample audio stored in zonos. Leave as default; it is set automatically."}
     },
     "AZURE": {
       "_title":"Azure Text-To-Speech",
@@ -252,21 +272,32 @@
       "_title": "KoboldCPP TTS",
       "endpoint":{"type":"url","description":"Endpoint URL"},
       "voice": {"type":"string","description":"Voice to use"}
-    },
-    "ZONOS_GRADIO": {
-      "_title": "Zonos TTS (via Gradio) (EXPERIMENTAL)",
-      "endpoint":{"userlvl":"wip", "type":"url","description":"Endpoint URL."},
-      "language":{"userlvl":"wip", "type":"select","values":["af", "am", "an", "ar", "as", "az", "ba", "bg", "bn", "bpy", "bs", "ca", "cmn", "cs", "cy", "da", "de", "el", "en-029", "en-gb", "en-gb-scotland", "en-gb-x-gbclan", "en-gb-x-gbcwmd", "en-gb-x-rp", "en-us", "eo", "es", "es-419", "et", "eu", "fa", "fa-latn", "fi", "fr-be", "fr-ch", "fr-fr", "ga", "gd", "gn", "grc", "gu", "hak", "hi", "hr", "ht", "hu", "hy", "hyw", "ia", "id", "is", "it", "ja", "jbo", "ka", "kk", "kl", "kn", "ko", "kok", "ku", "ky", "la", "lfn", "lt", "lv", "mi", "mk", "ml", "mr", "ms", "mt", "my", "nb", "nci", "ne", "nl", "om", "or", "pa", "pap", "pl", "pt", "pt-br", "py", "quc", "ro", "ru", "ru-lv", "sd", "shn", "si", "sk", "sl", "sq", "sr", "sv", "sw", "ta", "te", "tn", "tr", "tt", "ur", "uz", "vi", "vi-vn-x-central", "vi-vn-x-south", "yue"],"description":"Language","helpurl":"https://github.com/Zyphra/Zonos/blob/a09ff4fa50cfa66bf79986e19c191f85f5cb53e8/zonos/conditioning.py#L316"},
-      "model": {"userlvl":"wip", "type":"select","values":["Zyphra/Zonos-v0.1-transformer", "Zyphra/Zonos-v0.1-hybrid"],"description":"Default profile only. Model to use.", "scope":"global"},
-      "dynamic_tones": {"userlvl":"wip", "type":"boolean","description":"Default profile only. Enhance emotional quality by requesting values from the LLM. If false, emotions will be determined by the LLM-selected mood.", "scope":"global"},
-      "voiceid": {"userlvl":"wip", "type":"string","description":"Generated voice file name. Works the same as XTTSFASTAPI's voiceid and uses its voicelogic setting."},
-      "pitch_std": {"userlvl":"wip", "type":"number","description":"Pitch standard deviation [0-300]"},
-      "speaking_rate": {"userlvl":"wip", "type":"number","description":"Speaking rate. Higher is faster. [5-30]"},
-      "cfg_scale": {"userlvl":"wip", "type":"number","description":"CFG scale. Controls how closely the audio matches the sample voice. Higher numbers will be a closer match. [1.1 - 5]"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","gcp","openai","convai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
+  "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character.<br/>If blank, the NPC's TTS language will be used."},
+  "TRANSLATION_FUNCTION": {"type":"select","userlvl":"basic","values":["none","DeepL"],"description":"Translate subtitles and/or audio into a different language.","_title":"Translation Service"},
+  "TRANSLATION": {
+    "_title":"Translation Service",
+    "settings": {
+        "_title":"Translation Settings",
+        "translate_audio": {"type":"boolean","description":"This NPC's audio will be translated to the target language."},
+        "translate_text": {"type":"boolean","description":"This NPC's subtitles will be translated to the target language."},
+        "save_translated_text": {"type":"boolean","description":"Replaces the NPC's speech in the context history with the translation. Only used if translate_audio or translate_text is true."},
+        "translate_player_audio": {"type":"boolean","description":"When speaking to this NPC, Player TTS audio will be translated to the player target language."},
+        "save_translated_player_text": {"type":"boolean","description":"Replaces the player's input in the context history with the translation. Only used if translate_player_audio is true.<br/>Note: player subtitles are always displayed in their original language."}
+    },
+    "DeepL": {
+      "_title":"DeepL",
+      "source_language": {"type":"string","description":"This NPC's source language to be translated from. This should be the language that the LLM responds with.<br/>May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "target_language": {"type":"string","description":"This NPC's target language to be translated into. <strong>Required.</strong>","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "url": {"type":"url","scope":"global","description":"DeepL endpoint url. Default profile only.<br/>Free: https://api-free.deepl.com/v2/translate<br/>Pro: https://api.deepl.com/v2/translate"},
+      "player_source_language": {"type":"string","description":"Player's source language to be translated from. This should be the language you speak with STT or input by text.<br/>May be left blank for auto-detection.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "player_target_language": {"type":"string","description":"Player's target language to be translated into.","helpurl":"https://developers.deepl.com/docs/getting-started/supported-languages#target-languages"},
+      "API_KEY":{"type":"apikey","scope":"global","description":"DeepL api key. Default profile only.<br/><strong>Required</strong> even when using the free version."}
+    }
+  },
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
@@ -334,7 +365,8 @@
     "MEMORY_EMBEDDING": {
       "_title":"Memory Settings",
       "ENABLED": {"type":"boolean","description":"<Strong>Make sure CONNECTORS_DIARY is setup!</strong> Enable long term memory. It will provide the most relevant memory with every AI response to be used as context."},
-      "TXTAI_URL": {"type":"url","description":"NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!"},
+      "TXTAI_URL": {"type":"url","description":"Text2Vec service"},
+      "USE_TEXT2VEC": {"type":"boolean","description":"Use text2vec service instead of keywords"},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to delay before using a memory in a prompt. Used to avoid pushing recent dialogues as memories."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"The amount of the most relevant memory records that will be injected into the prompt."},
       "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will combine individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},

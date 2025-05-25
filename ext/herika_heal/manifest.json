@@ -1,4 +1,5 @@
 {
   "name":"herika_heal",
-  "description":"Example Plugin to show how CHIM API works. Does not actually work."
+  "description":"Example Plugin to show how CHIM API works. Does not actually work.",
+  "version":"1.0.0"
 }

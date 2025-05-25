@@ -259,7 +259,7 @@ echo '<div class="btn-group-custom text-center">
             <div class="btn-group-custom text-center">
                 <h3 class="warning-text3">
                     PLEASE READ the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM 101</a> guide and the 
-                    <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit#heading=h.22ert9k7wlm" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Manual</a> 
+                    <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Manual</a> 
                     to learn how to make the most out of this mod!
                 </h3>
             </div>

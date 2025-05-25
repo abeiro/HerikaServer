@@ -2,6 +2,7 @@
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
 require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."online_translation.php");
 
 $TITLE = "🔊CHIM - TTS Test - CHIM Server";
 
@@ -37,7 +38,7 @@ error_reporting(E_ALL);
 
 $testString = "In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
 
-if ($_POST["customstring"]) {
+if (isset($_POST["customstring"]) && $_POST["customstring"]) {
     $testString = $_POST["customstring"];
 }
 
@@ -48,6 +49,9 @@ require_once($enginePath . "prompt.includes.php");
 $GLOBALS["AVOID_TTS_CACHE"] = true;
 $DEBUG_DATA = [];
 $cleanString = $testString;
+
+Translation::translate($cleanString);
+Translation::$sentences = [Translation::$response];
 
 $melotts_pronunciation_file = $enginePath . "tts" . DIRECTORY_SEPARATOR ."tts-melotts_pronunciation.php";
 $b_conf_melotts = file_exists($melotts_pronunciation_file);
@@ -79,6 +83,11 @@ unset($db);
 
 $file = basename($GLOBALS["TRACK"]["FILES_GENERATED"][0]);
 $ts = time();
+
+if (Translation::isTextEnabled()) {
+    $testString = Translation::$response;;
+}
+
 ?>
 
 <link rel="stylesheet" href="../css/main.css">
@@ -171,7 +180,7 @@ $ts = time();
                         <li>The audio file for the voice ID does not exist</li>
                         <li>CHIM XTTS = Sync Voices in XTTS Management page</li>
                         <li>MeloTTS= Use one of the 
-                            <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.21ics3hex54a" target="_blank">approved voice IDs</a>
+                            <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids" target="_blank">approved voice IDs</a>
                         </li>
                         <li>xVASynth = Make sure you have the voice ID installed</li>
                     </ul>
@@ -183,10 +192,10 @@ $ts = time();
                         <li>CHIM XTTS = If locally installed make sure it is http://127.0.0.1:8020. If its on the cloud verify the URL from the cloud provider </li>
                         <li>MeloTTS= Make sure it is http://127.0.0.1:8084</li>
                         <li>xVASynth = Make sure you have the URL pointed to your PC's IP address. 
-                            <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.3tf6myep6rmw" target="_blank">Read this guide.</a>
+                            <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options" target="_blank">Read this guide.</a>
                         </li>
                         <li>Using a 2nd PC = Make sure your local network and firewall is not blocking the connections. 
-                            <a href="https://docs.google.com/document/d/12KBar_VTn0xuf2pYw9MYQd7CKktx4JNr_2hiv4kOx3Q/edit?tab=t.0#heading=h.3amyap27i7u8" target="_blank">Read this guide.</a>
+                            <a href="https://dwemerdynamics.hostwiki.io/en/2nd-PC-Guide" target="_blank">Read this guide.</a>
                         </li>
                     </ul>
                 </li>

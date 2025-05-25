@@ -5,6 +5,7 @@ define("_MAXIMAL_DISTANCE_TO_BE_RELATED", 0.8);
 define("_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE", 3);
 
 require_once(__DIR__."/online_translation.php");
+require_once(__DIR__."/utils_game_timestamp.php");
 
 function randomReplaceShortWordsWithPoints($inputString, $distance)
 {
@@ -290,9 +291,52 @@ function getEndOfSentencePunctuation() {
     return $en.$cjk;
 }
 
+function unmoodSentence($sentence) {
+    global $forceMood;
+    if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
+        // Check to see if the LLM responded with the entire message in **'s.
+        if (str_starts_with($sentence, "*") && str_ends_with($sentence, "*")) {
+            $output = ltrim($sentence, "*");
+            $output = rtrim($sentence, "*");
+        }
+        else {
+            $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
+        }
+    }
+    else {
+        $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+    }
+    $sentence=$output;
+    $output = strtr($sentence,[
+                    "*Smirks*"=>"","*smirks*"=>"",
+                    "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*Giggles*"=>"","*laughs*"=>"",
+                    "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
+                    "*pant*"=>"",
+                    "*cough*"=>"",
+                    "*hiccup*"=>"",
+                    "*whimper*"=>""
+                    ]
+                    ); // Manual cases
+
+    //$cleaned = preg_replace('/\s*#ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
+    $cleaned = preg_replace('/\s*# ?ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
+
+    $sentence = preg_replace('/"/', '', $cleaned); // Remove "
+
+    preg_match_all('/\((.*?)\)/', $sentence, $matches); // Unused?
+
+    $responseTextUnmooded = trim(preg_replace('/\((.*?)\)/', '', $sentence));
+
+    if (stripos($responseTextUnmooded, "whispering:") !== false) { // Very very nasty, but solves lots of isses. We must keep log clean.
+        $responseTextUnmooded = str_ireplace("whispering:", "", $responseTextUnmooded);
+        $forceMood = "whispering";
+    }
+
+    return $responseTextUnmooded;
+}
+
 function returnLines($lines,$writeOutput=true)
 {
-
     global $db, $startTime, $forceMood, $staticMood, $talkedSoFar, $FORCED_STOP, $TRANSFORMER_FUNCTION,$receivedData;
     foreach ($lines as $n => $sentence) {
 
@@ -316,45 +360,8 @@ function returnLines($lines,$writeOutput=true)
         // This should be reworked
         //$sentence = preg_replace('/[[:^print:]]/', '', $output); // Remove non ASCII chracters
 
-
         $sentence=$output;
-
-        if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
-            // Check to see if the LLM responded with the entire message in **'s.
-            if (str_starts_with($output, "*") && str_ends_with($output, "*")) {
-                $output = ltrim($output, "*");
-                $output = rtrim($output, "*");
-            }
-            else {
-                $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
-            }
-        }
-        else {
-            $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
-        }
-        $sentence=$output;
-        $output = strtr($sentence,[
-                        "*Smirks*"=>"","*smirks*"=>"",
-                        "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*Giggles*"=>"","*laughs*"=>"",
-                        "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
-                        "*pant*"=>"",
-                        "*cough*"=>"",
-                        "*hiccup*"=>"",
-                        "*whimper*"=>""
-                        ]
-                        ); // Manual cases
-        
-        $sentence = preg_replace('/"/', '', $output); // Remove "
-
-        preg_match_all('/\((.*?)\)/', $sentence, $matches);
-
-        $responseTextUnmooded = trim(preg_replace('/\((.*?)\)/', '', $sentence));
-
-        if (stripos($responseTextUnmooded, "whispering:") !== false) { // Very very nasty, but solves lots of isses. We must keep log clean.
-            $responseTextUnmooded = str_ireplace("whispering:", "", $responseTextUnmooded);
-            $forceMood = "whispering";
-        }
-
+        $responseTextUnmooded=unmoodSentence($sentence);
 
         $scoring = checkOAIComplains($responseTextUnmooded);
 
@@ -366,10 +373,7 @@ function returnLines($lines,$writeOutput=true)
             if (isset($TRANSFORMER_FUNCTION)) {
                 $responseTextUnmooded = $TRANSFORMER_FUNCTION($responseTextUnmooded);
             }
-
         }
-
-
 
         if (isset($forceMood)) {
             $mood = $forceMood;
@@ -402,11 +406,26 @@ function returnLines($lines,$writeOutput=true)
         $responseTextUnmooded = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseTextUnmooded);	// Should not happen
 
         $responseText = $responseTextUnmooded;
+        $responseForTTS = $responseTextUnmooded;
+        $responseForSubtitles = $responseTextUnmooded;
         $ttsOutput = null;
 
-        // Make translation here on $responseText
+        if (Translation::$response) {
+            Translation::$sentences[$n] = unmoodSentence(Translation::$sentences[$n]);
+            Translation::$sentences[$n] = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', Translation::$sentences[$n]);
 
-        // $responseText=translate($responseTextUnmooded,'ES','EN');
+            if (Translation::isAudioEnabled() || Translation::isPlayerAudioEnabled()) {
+                $responseForTTS = Translation::$sentences[$n]; // script for TTS to generate audio from
+            }
+            if (Translation::isTextEnabled()) {
+                $responseForSubtitles = Translation::$sentences[$n]; // in-game subtitles
+            }
+            if (Translation::isSaveTranslationEnabled()) {
+                // replace the original speech with the translated text in the context history
+                $responseText = Translation::$sentences[$n];
+                $responseTextUnmooded = Translation::$sentences[$n];
+            }
+        }
 
         if (isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])&&($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) {
             $random_per_character=sprintf('%u', crc32($GLOBALS["HERIKA_NAME"])); // Unsigned integer
@@ -424,82 +443,82 @@ function returnLines($lines,$writeOutput=true)
                 ;
         }
 
-        if ($responseText) {
+        if ($responseTextUnmooded) {
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
 
                 require_once(__DIR__."/../tts/tts-azure.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
 
                 require_once(__DIR__."/../tts/tts-mimic3.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
 
                 require_once(__DIR__."/../tts/tts-11labs.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
 
                 require_once(__DIR__."/../tts/tts-gcp.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
 
                 require_once(__DIR__."/../tts/tts-coqui-ai.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
 
                 require_once(__DIR__."/../tts/tts-xvasynth.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
 
                 require_once(__DIR__."/../tts/tts-openai.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
 
                 require_once(__DIR__."/../tts/tts-convai.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
 
                 require_once(__DIR__."/../tts/tts-xtts.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
 
                 require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
 
                 require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "koboldcpp") {
 
                 require_once(__DIR__."/../tts/tts-koboldcpp.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
 
                 require_once(__DIR__."/../tts/tts-zonos_gradio.php");
-                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } 
             else {
                 if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
                     require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseTextUnmooded, $mood, $responseText);
+                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
                 }
             }
             if (!$ttsOutput) {
                 if (isset($GLOBALS["TTS_FALLBACK_FNCT"]))
-                    $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseTextUnmooded, $mood, $responseText);
+                    $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseForTTS, $mood, $responseForSubtitles);
             }
             $GLOBALS["TRACK"]["FILES_GENERATED"][] = $ttsOutput;
             if (trim($responseText)) {
@@ -529,7 +548,7 @@ function returnLines($lines,$writeOutput=true)
                  if (isset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) && $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]) 
                      $GLOBALS["SCRIPTLINE_ANIMATION"]="";
                 else {
-                    if ((rand(0,4)!==0)){ // Will disable animations, 20% chance to trigger
+                    if ((rand(0,5)==0)){ // Will disable animations, 20% chance to trigger
                         $GLOBALS["SCRIPTLINE_ANIMATION"]="IdleDialogueExpressiveStart";
                     }
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
@@ -545,25 +564,84 @@ function returnLines($lines,$writeOutput=true)
                 }
 
                 $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
+                // Don't touch original one
+                $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=$GLOBALS["SCRIPTLINE_LISTENER"];
+
                 if (is_array($listenerFix) && (sizeof($listenerFix)>1)) {
-                    $GLOBALS["SCRIPTLINE_LISTENER"]=$listenerFix[0];
+                    $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listenerFix[0]);
                 }
                 
                 $listenerFix2=explode(",",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix2) && (sizeof($listenerFix2)>1)) {
-                    Logger::info("Applying listenerFix2");
-                    $GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[0]);
+                    if (!isset($GLOBALS["SCRIPTLINE_LISTENER_CYCLE"])) {
+                        $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=0;
+                    } else
+                        $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]++;
+
+                    if ($GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]>(sizeof($listenerFix2)-1))
+                        $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=sizeof($listenerFix2)-1;
+
+                    // Code to fix multiple listener issues
+                    // Arrays to store positions of found names
+                    $positions = [];           // For determining the first mentioned name
+                    $positionsWithIndex = [];  // For determining the last mentioned name and its index
+
+                    // Search for each name in the subtitle sentence
+                    foreach ($listenerFix2 as $index => $name) {
+                        $pos = stripos($responseForSubtitles, $name); // Case-insensitive search
+                        if ($pos !== false) {
+                            $positions[$name] = $pos;           // Save position for first-mention check
+                            $positionsWithIndex[$index] = $pos; // Save index and position for last-mention check
+                        }
+                    }
+
+                    if (!empty($positions)) {
+                        // Sort positions to find the first mentioned name
+                        asort($positions); // Ascending order by position
+                        $listener = array_key_first($positions); // Get the name of the first mentioned
+                        $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listener);
+                        // Sort positions to find the last mentioned index
+                        arsort($positionsWithIndex); // Descending order by position
+                        $nextListener = array_key_first($positionsWithIndex); // Get the index of the last mentioned name
+                        if ($nextListener>0)
+                            $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener-1;  // Next round will use this speaker if no refernce found.
+                        else
+                            $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener;
+                        // Output results
+                        Logger::info("Applying smarter listenerFix2: $listener $nextListener {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+
+                    } else {
+                        $listener=$listenerFix2[$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]];
+                        $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listener);
+                    }
+
+                    Logger::info("Applying listenerFix2: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}  {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+                    //$GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[ $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]]);
+                    // $GLOBALS["SCRIPTLINE_LISTENER"] = trim($listenerFix2[array_rand($listenerFix2)]); // Random
+                    
+
                 }
 
-                // convert Japanese to Latin characters for use with lip sync
-                $responseTextPhonetic = containsJapanese($responseTextUnmooded) ? convertJapaneseTextToLatin($responseTextUnmooded) : "";
+                $responseTextPhonetic = "";
+                if (Translation::isAudioEnabled() || Translation::isTextEnabled()) {
+                    $responseTextPhonetic = $responseForTTS;
+                }
+                if (Translation::containsCyrillic($responseForTTS)) {
+                    $responseTextPhonetic = Translation::convertCyrillicTextToLatin($responseForTTS);
+                    Logger::debug("Transliterated Cyrillic text to: $responseTextPhonetic");
+                }
+                if (Translation::containsJapanese($responseForTTS)) {
+                    $responseTextPhonetic = Translation::convertJapaneseTextToLatin($responseForTTS);
+                    Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
+                }
                 
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
-                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseTextUnmooded/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
                 file_put_contents(__DIR__."/../log/output_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
+
             }
             else
-                echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseTextUnmooded\r\n";
+                echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseForSubtitles\r\n";
             
             if (ob_get_level()) @ob_flush();
             @flush();
@@ -713,6 +791,8 @@ function lastKeyWordsContext($n, $npcname='')
 
     $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) 
         order by gamets desc limit $m offset 0");
+    
+    
     $words=[];
     $uniqueArray=[];
     $uppercaseWords = [];
@@ -1213,7 +1293,14 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     if ($npc=="The Narrator") { // Narrator knows all
        $npc=""; 
     }
-    $memories=DataSearchMemory($gameRequest[3],$npc);
+
+    $contextKeywords  = implode(" ", lastKeyWordsContext(5,$npc));
+
+    if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+        $memories=DataSearchMemoryByVector($gameRequest[3],$npc);
+    } else {
+        $memories=DataSearchMemory($gameRequest[3],$npc);
+    }
    
     
     if (isset($memories[0])) {
@@ -1244,6 +1331,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             $s_prefix = "{$daysAgo} days ago, on {$sk_date} ... ";
         } else {
             $s_prefix = "{$hoursAgo} hours ago ... ";
+            return "";// Do not offer memory if its recent
         }
         $pattern = '/#Tags:.*/';
         $replacement = '';
@@ -1374,12 +1462,12 @@ function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
 
 }
 
-function logEvent($dataArray)
+function logEvent($dataArray,$forcePeople='')
 {
     global $db;
 
     if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
+        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange(); // DataBeingsInRange() won't work as depends on user input
     } 
     
     if (!isset($GLOBALS["CACHE_LOCATION"])) {
@@ -1390,22 +1478,31 @@ function logEvent($dataArray)
         $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
     }   
 
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $dataArray[1],
-            'gamets' => $dataArray[2],
-            'type' => $dataArray[0],
-            'data' => $dataArray[3],
-            'sess' => 'pending',
-            'localts' => time(),
-            'people'=> $GLOBALS["CACHE_PEOPLE"],
-            'location'=>$GLOBALS["CACHE_LOCATION"],
-            'party'=>$GLOBALS["CACHE_PARTY"]
-        )
-    );
-}
+    if (!isset($dataArray)) { // function called without parameter values
+        Logger::error("logEvent: undefined input parameter");
+    } else {
+        if( (!isset($dataArray[2])) || ($dataArray[2] < 5) ) { // wrong game timestamp. Sometime this function is called with gamets 0 or 1 then successive incremented values 
+            $new_gts = DataLastKnownGameTS();    
+            Logger::error("logEvent: wrong game timestamp " . ($dataArray[2] ?? 0) . " replaced with " . $new_gts);
+            $dataArray[2] = $new_gts;
+        }
 
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $dataArray[1],
+                'gamets' => $dataArray[2],
+                'type' => $dataArray[0],
+                'data' => $dataArray[3],
+                'sess' => 'pending',
+                'localts' => time(),
+                'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE"],
+                'location'=>$GLOBALS["CACHE_LOCATION"],
+                'party'=>$GLOBALS["CACHE_PARTY"]
+            )
+        );
+    }
+}
 
 function selectRandomInArray($arraySource)
 {
@@ -1443,27 +1540,4 @@ function prettyPrintJson($json )
 
 function startsWithUppercase($string) {
     return preg_match('/^[A-Z]/', $string);
-}
-
-function containsJapanese($string) {
-    $pattern = '/[\p{Hiragana}\p{Katakana}\p{Han}]/u';
-    return preg_match($pattern, $string);
-}
-
-function convertJapaneseTextToLatin($jpText) {
-    if (!file_exists("/home/dwemer/kakasi/")) {
-        Logger::warn("Error: could not convert Japanese to Romaji because Kakasi is not installed. Lip sync will not work.");
-        return "";
-    }
-    $venvPath = "/home/dwemer/kakasi/kakasi_env/bin/python3";
-    $scriptPath = "/home/dwemer/kakasi/convert_to_romaji.py";
-
-    // Escape the Japanese text to avoid issues with special characters
-    $escapedText = escapeshellarg($jpText);
-
-    // Run the Python script using the virtual environment
-    $command = "$venvPath $scriptPath $escapedText";
-    $output = shell_exec($command);
-    $romaji = trim($output);
-    return $romaji;
 }

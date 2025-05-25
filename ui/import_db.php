@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $message .= "<p>Import completed.</p>";
 
                             // Provide a clickable link and popup message
-                            $redirectUrl = '/HerikaServer/ui/index.php?table=eventlog';
+                            $redirectUrl = '/HerikaServer/ui/home.php';
                             $message .= "<script type='text/javascript'>
                                             alert('Database restored successfully.');
                                          </script>";

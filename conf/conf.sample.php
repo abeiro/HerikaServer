@@ -5,7 +5,7 @@ $PLAYER_NAME="Prisoner"; //Player's current character name.
 $DBDRIVER="postgresql"; //Database - Do not change.
 $HERIKA_NAME="The Narrator"; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $LOCK_PROFILE=false; //NPC name. MUST MATCH their Skyrim in-game NPC name!
-$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim."; //System Prompt. Defines the rules of the roleplay.
+$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. If the game director gives you an instruction, you must follow it."; //System Prompt. Defines the rules of the roleplay.
 $PLAYER_BIOS="I'm #PLAYER_NAME#"; //Player character description. 
 $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. "
     . "You refer to yourself as 'The Narrator'. "
@@ -25,7 +25,7 @@ $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random c
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
-$ALIVE_MESSAGE=true; //Leave as is - read only
+$ALIVE_MESSAGE=false; //Leave as is - read only
 $TIME_AWARENESS=false; //Overwrites the prompt to the AI to make it more aware of the passage of time
 $MAX_WORDS_LIMIT=0; //Enforce a word limit for AI's responses. 0 = unlimited.
 $BOOK_EVENT_FULL=true; //Sends full contents of books to the AI
@@ -34,7 +34,7 @@ $NARRATOR_TALKS=true; //Enables the Narrator.
 $NARRATOR_WELCOME=true;
 $QUEST_COMMENT = false;
 $QUEST_COMMENT_CHANCE= "10%";
-$CURRENT_TASK=true; //Sends current plan/quest to the AI
+$CURRENT_TASK=false; //Sends current plan/quest to the AI
  //The Narrator will recap previous events after a save is loaded.
 $LANG_LLM_XTTS=false; //XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language.
 $HERIKA_ANIMATIONS=true; //Issues animations to AI driven NPCs.
@@ -56,6 +56,9 @@ $EMOTEMOODS="sassy,"
     . "neutral,"
     . "teasing,"
     . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+
+$REMOVE_ASTERISKS_FROM_OUTPUT=true;
+$ENFORCE_ACTIONS_PROMPT=false;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
 $DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA COMMENTARY I.E. NPC NAME. NO META-DATA, or DISCLAIMERS OF TASK! I.E. \"UPDATING NPC PROFILE\". Use concise, fragmented prose for the following output.) "
     . "Last in-game date/time found: [date or \"No date\"] "
@@ -77,6 +80,7 @@ $CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp"]; //Cre
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.3-70b-instruct"; //LLM model.
 $CONNECTOR["openrouterjson"]["max_tokens"]='512'; //Maximum tokens to generate.
+$CONNECTOR["openrouterjson"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouterjson"]["temperature"]=0.6; //LLM parameter temperature.
 $CONNECTOR["openrouterjson"]["presence_penalty"]=0; //LLM parameter presence_penalty.
 $CONNECTOR["openrouterjson"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
@@ -96,6 +100,7 @@ $CONNECTOR["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON sche
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.
 $CONNECTOR["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
+$CONNECTOR["openrouter"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouter"]["temperature"]=0.9; //LLM parameter temperature.
 $CONNECTOR["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty.
 $CONNECTOR["openrouter"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
@@ -111,6 +116,7 @@ $CONNECTOR["openrouter"]["xtitle"]="CHIM"; //Stub needed header.
 //OpenAI JSON
 $CONNECTOR["openaijson"]["url"]="https://api.openai.com/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openaijson"]["model"]='gpt-4o-mini'; //LLM model.
+$CONNECTOR["openaijson"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openaijson"]["max_tokens"]='512'; //Maximum tokens to generate.
 $CONNECTOR["openaijson"]["temperature"]=1; //LLM parameter temperature.
 $CONNECTOR["openaijson"]["presence_penalty"]=1; //LLM parameter presence_penalty.
@@ -122,6 +128,7 @@ $CONNECTOR["openaijson"]["json_schema"]=false; //Enable OpenAI JSON schema.
 //OpenAI (Legacy)
 $CONNECTOR["openai"]["url"]="https://api.openai.com/v1/chat/completions";
 $CONNECTOR["openai"]["model"]='gpt-4o-mini'; //LLM model.
+$CONNECTOR["openai"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openai"]["max_tokens"]='1024'; //Maximum tokens to generate.
 $CONNECTOR["openai"]["temperature"]=1; //LLM parameter temperature.
 $CONNECTOR["openai"]["presence_penalty"]=1; //LLM parameter presence_penalty.
@@ -285,6 +292,23 @@ $TTS["ZONOS_GRADIO"]["cfg_scale"]=4.5;	//Context-free guidance scale
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
+$TTSFUNCTION_PLAYER_LANGUAGE="";
+
+//[Translation]
+$TRANSLATION_FUNCTION="none";
+//settings
+$TRANSLATION["settings"]["translate_audio"]=false; //translate audio
+$TRANSLATION["settings"]["translate_text"]=false; //translate text
+$TRANSLATION["settings"]["save_translated_text"]=false; //replace npc's speech in context history with the translation
+$TRANSLATION["settings"]["translate_player_text"]=false; //translate player text
+$TRANSLATION["settings"]["save_translated_player_text"]=false; //replace player input in context history with the translation
+//DeepL
+$TRANSLATION["DeepL"]["source_language"]=""; //source language
+$TRANSLATION["DeepL"]["target_language"]=""; //target language
+$TRANSLATION["DeepL"]["url"]="https://api-free.deepl.com/v2/translate"; //DeepL endpoint url
+$TRANSLATION["DeepL"]["player_source_language"]=""; //player source language
+$TRANSLATION["DeepL"]["player_target_language"]=""; //player target language
+$TRANSLATION["DeepL"]["API_KEY"]=""; //DeepL API key
 
 //[Speech-to-Text Service]
 $STTFUNCTION="whisper";
@@ -338,7 +362,9 @@ $ITT["llamacpp"]["AI_PROMPT"]=''; //Prompt sent to the LLM.
 //[Memory Configuration]
 //Memory Settings
 $FEATURES["MEMORY_EMBEDDING"]["ENABLED"]=true; //Long term memory embedding.
-$FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8083'; //NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!
+$FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8083'; //Text2Vec service
+$FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=false; //NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!
+
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=10; //Time in minutes to delay before using a memory in a prompt.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1; //Amount of memory records that will be injected into the prompt.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=false; //Combines individual memory logs into larger ones at the cost of tokens.
@@ -357,4 +383,6 @@ $OGHMA_INFINIUM=false;
 
 $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dynamic profiles
 
+$BORED_EVENT_SERVERSIDE=false;
+$RECHAT_ALLOW_ACTIONS=false;
 ?>

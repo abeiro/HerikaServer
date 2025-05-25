@@ -17,9 +17,10 @@ if (!isset($GLOBALS["DBDRIVER"])) {
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb_txtai.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
 
 
 if (!isset($argv[1])) {
@@ -52,28 +53,71 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
         $db=new sql();
    
-        $res=DataSearchMemory($argv[2],'',$argv[3]);
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Using pgvector search";
+            $res=DataSearchMemoryByVector($argv[2],'');
+        }
+        else {
+            echo "Using fts search";
+            $res=DataSearchMemory($argv[2],'');
+        }
+
+        print_r($res[0]);
+        
+        
+
+    }  elseif ($argv[1]=="query_oghma") {
+        echo "Query memory for '{$argv[2]}'".PHP_EOL;
+
+        $db=new sql();
+   
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Using pgvector search";
+            $res=DataSearchOghmaByVector($argv[2],'');
+        }
+        
 
         print_r($res[0]);
         
         
 
     } elseif ($argv[1]=="sync") {
-        
-        die("Sync is disabled atm. Will be enabled (maybe) in future releases. PostgreSQL pgvector will take care :)");
-        echo "Creating memories".PHP_EOL;
-        ;
-        $db = new sql();
-        $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null");
-        $counter=0;
-        foreach ($results as $row) {
-            
-            $TEST_TEXT=$row["content"];
-            storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE vecotr in memory_summary
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Creating vectors for memories".PHP_EOL;
+            ;
+            $db = new sql();
+            $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null and (embedding is null or native_vec is null)");
+            $counter=0;
+            foreach ($results as $row) {
+                
+                $TEST_TEXT=$row["content"];
+                storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE embedding in memory_summary
+                $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$row["rowid"]}");
 
-            $counter++;
-            
-            echo "Updated vector for  {$row["rowid"]} $counter\n";
+                $counter++;
+                
+                echo "Updated vector for  {$row["rowid"]} $counter\n";
+            }
+        }
+        
+
+
+    } elseif ($argv[1]=="sync_oghma") {
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Creating vectors for memories".PHP_EOL;
+            ;
+            $db = new sql();
+            $results = $db->fetchAll("select topic,topic_desc from oghma where vector384 is null");
+            $counter=0;
+            foreach ($results as $row) {
+                
+                $TEST_TEXT=$row["topic_desc"];
+                storeMemoryOghma($TEST_TEXT, $TEST_TEXT, $row["topic"]); // JUST UPDATE embedding in memory_summary
+
+                $counter++;
+                
+                echo "Updated vector for  {$row["topic"]} $counter\n";
+            }
         }
         
 
@@ -113,7 +157,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 				
 				$gameRequest=["summary"];	// Fake a diary call.
 				
-				$CLFORMAT="#Summary: {summary of events and dialogues}\r\n#Tags: {list of relevant twitter-like hashtags}";
+				$CLFORMAT="#Summary: {summary of events and dialogues}\r\n#Tags: {list of relevant twitter-like hashtags, include location names, enemies names, other NPC names}";
                 IF (isset($GLOBALS["CORE_LANG"])) {
                     if ($GLOBALS["CORE_LANG"]=="es") {
                         $CLFORMAT.=" GENERA EL CONTENIDO Y LOS TAGS EN ESPAÑOL";
@@ -143,7 +187,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 								  'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. using this format:\n$CLFORMAT");
 
 				
-                $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"];
+                $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
 
                 $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
                 $connectionHandler->open($prompt, []);
@@ -202,7 +246,10 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 			 $db->execQuery("update memory_summary set summary='".SQLite3::escapeString($uq["summary"])."',tags='".SQLite3::escapeString($tagsCol)."' where rowid={$uq["rowid"]}");
              $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$uq["rowid"]}");
 			 // UPDATE memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(tags, '')),'B')
-    
+             if ((isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"])) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+                $TEST_TEXT=$uq["summary"];
+                storeMemory($uq["summary"], $uq["summary"], $uq["rowid"]); // JUST UPDATE embedding in memory_summary
+             }
     
             }
             $toUpdate=[];

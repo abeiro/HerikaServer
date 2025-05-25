@@ -77,7 +77,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 			array(
 				'ts' => $gameRequest[1],
 				'gamets' => $gameRequest[2],
-				'description' => SQLite3::escapeString($returnFunction[2]),
+				'description' => $db->escape($returnFunction[2]),
 				'sess' => 'pending',
 				'localts' => time()
 			)
@@ -127,6 +127,11 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 
 } else {
 
+	if ($gameRequest[0] == "instruction" || $gameRequest[0] == "suggestion") {
+		// Override some descriptions when in instruction mode
+		require_once(__DIR__."/../functions/functions_instruction.php");
+	}
+
 	
 	if (isset($PROMPTS[$gameRequest[0]]["player_request"])) {
 		$request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]); // Add support for arrays here	
@@ -135,8 +140,11 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	}
 	else {
 		if (isset($PROMPTS[$gameRequest[0]]["cue"]))
-
 			$request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]); // Add support for arrays here	
+		else {
+			Logger::warn("Request cue is empty! - ".$gameRequest[0]." - ".print_r($PROMPTS[$gameRequest[0]],true)." - ".__FILE__.":".__LINE__);
+			$request = "{$GLOBALS["TEMPLATE_DIALOG"]}";
+		}
 	}
 }
 

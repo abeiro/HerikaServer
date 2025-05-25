@@ -12,26 +12,31 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         return;
     }
     $now=time();
-    $db->delete("eventlog", "gamets>{$gameRequest[2]}  ");
+    $db->delete("eventlog", "gamets>={$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
     //$db->delete("eventlog", "type='playerinfo'");
     //$db->delete("quests", "1=1");
-    $db->delete("speech", "gamets>{$gameRequest[2]}  ");
+    $db->delete("speech", "gamets>={$gameRequest[2]}  ");
     $db->delete("speech", "localts>$now ");
-    $db->delete("currentmission", "gamets>{$gameRequest[2]}  ");
+    $db->delete("currentmission", "gamets>={$gameRequest[2]}  ");
     $db->delete("currentmission", "localts>$now   ");
-    $db->delete("diarylog", "gamets>{$gameRequest[2]}  ");
-    $db->delete("diarylog", "localts>$now ");
-    $db->delete("books", "gamets>{$gameRequest[2]}  ");
+    $db->delete("diarylog", "gamets>={$gameRequest[2]}  ");
+    $db->delete("diarylog", "localts>=0$now ");
+    $db->delete("books", "gamets>=0{$gameRequest[2]}  ");
     $db->delete("books", "localts>$now ");
     $db->delete("responselog", " 1=1 ");
+    $db->delete("rolemaster", " 1=1 ");
+    $db->delete("actions_issued", "gamets>={$gameRequest[2]}  ");
 
+    /* This is obsolete */
+    /*
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
         $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");
         while ($memoryRow = $db->fetchArray($results)) {
             deleteElement($memoryRow["uid"]);
         }
     }
+    */
     $db->delete("memory_summary", "gamets_truncated>{$gameRequest[2]}  ");
     $db->delete("memory", "gamets>{$gameRequest[2]}  ");
 
@@ -51,6 +56,17 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         )
     );
     
+    if (isset($gameRequest[3]) && $gameRequest[3]) {
+        $db->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "plugin_dll_version",
+                'value' =>$gameRequest[3]
+            ),
+            "id"
+        );
+    }
+
     Logger::trace("INIT PROCESSING ".(time()-$now));
     // Delete TTS(STT cache
     $directory = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."soundcache";
@@ -194,11 +210,15 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             'localts' => time(),
             'briefing' => $questParsedData[2],
             'data' => $questParsedData[2],
-            'id_quest'=>$questParsedData[0]
+            'id_quest'=>$questParsedData[0],
+            'stage'=>($questParsedData[3] ?? null)
         );
         
         $db->insert('questlog',$data);
-
+        
+        // Include and call dynamicoghma.php after questlog entry
+        require_once(__DIR__.DIRECTORY_SEPARATOR."dynamicoghma.php");
+        syncQuestWithOghma($questParsedData[0], ($questParsedData[3] ?? null));
     }
     $MUST_END=true;
 
@@ -362,6 +382,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         }
     }
 } elseif ($gameRequest[0] == "location") {
+    $GLOBALS["CACHE_LOCATION"]=$gameRequest[3];
     logEvent($gameRequest);
     $MUST_END=true;
 
@@ -479,6 +500,23 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 
     createProfile($localName,[],false,$baseProfile);
     audit_log("comm.php addnpc $localName");
+    $MUST_END=true;
+    
+    
+} elseif (strpos($gameRequest[0], "util_location_name")===0) {    // addnpc 
+    
+    
+    $splitNameBase=explode("/",$gameRequest[3]);
+    if ($splitNameBase[0] && $splitNameBase[1]) {
+        $db->insert(
+            'locations',
+            array(
+                'name' => $splitNameBase[0],
+                'formid' => $splitNameBase[1]
+            )
+        );
+    }
+
     $MUST_END=true;
     
     

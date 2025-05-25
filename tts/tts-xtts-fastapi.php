@@ -37,9 +37,14 @@ function insertNoise($inputString, $noiseArray) {
     return implode(' ', $words);
 }
 
+function normalize_endpoint_url($url) {
+    // Remove trailing slashes
+    $url = rtrim($url, '/');
+    return $url;
+}
 
-function xtts_fastapi_settings($settings) {
-	$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"].'/set_tts_settings';
+function xtts_fastapi_settings($settings,$resetAfter=false) {
+	$url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]).'/set_tts_settings';
 	$data = json_decode('{
 		"stream_chunk_size": 20,
 		"temperature": 0.9,
@@ -53,6 +58,9 @@ function xtts_fastapi_settings($settings) {
 	
 	$finalData=array_merge($data,$settings);
 	
+	if ($resetAfter)
+		$GLOBALS["TTS"]["XTTSFASTAPI"]["RESET"]=true;
+
 	$options = array(
 		'http' => array(
 			'header' => "Content-type: application/json\r\n" .
@@ -63,7 +71,7 @@ function xtts_fastapi_settings($settings) {
 	);
 	$context = stream_context_create($options);
 	$result = file_get_contents($url, false, $context);
-
+	
 	if ($result === FALSE) {
 		// Handle error
 		Logger::error("Error occurred.".__FILE__);
@@ -125,7 +133,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		
 	    $starTime = microtime(true);
 
-		$url = $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]."/tts_to_audio/";
+		$url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])."/tts_to_audio";
 
 		// Request headers
 		$headers = array(
@@ -141,7 +149,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 		}
 		
-		
+		if (isset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]))
+        	$lang=$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];
 
 		if (empty($lang))
 			$lang=$GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
@@ -158,7 +167,14 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$newString=preg_replace_callback('/\d+/', $callback, $newString);
 		}
 	
+		// Hook. Last time transformations, custom settings for XTTS...
+		if (isset($GLOBALS["HOOKS"]) && isset($GLOBALS["HOOKS"]["XTTS_TEXTMODIFIER"]) && is_array($GLOBALS["HOOKS"]["XTTS_TEXTMODIFIER"])) {
+			foreach ($GLOBALS["HOOKS"]["XTTS_TEXTMODIFIER"] as $hook) {
+				Logger::info("Calling hook.".__FILE__);
+				$newString=call_user_func($hook,$newString);
 	
+			}
+		}
 		$voice=isset($GLOBALS["TTS"]["FORCED_VOICE_DEV"])?$GLOBALS["TTS"]["FORCED_VOICE_DEV"]:$GLOBALS["TTS"]["XTTSFASTAPI"]["voiceid"];
 		
 		if (empty($voice))
@@ -167,6 +183,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
 			$voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
 
+		if ($GLOBALS)	
 		$data = array(
 			'text' => $newString,
 			'speaker_wav' => $voice,
@@ -220,6 +237,10 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$FFMPEG_FILTER='-filter:a "adelay=150|150"';
 		}
 		
+		if (isset($GLOBALS["TTS"]["XTTSFASTAPI"]["RESET"]) && $GLOBALS["TTS"]["XTTSFASTAPI"]["RESET"]) {
+			xtts_fastapi_settings([]);
+		}
+
 		// Handle the response
 		if ($response !== false ) {
 			// Handle the successful response

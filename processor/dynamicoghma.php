@@ -1,97 +1,139 @@
 <?php
 
 function syncQuestWithOghma($questId, $stage) {
-    global $db;
+    Logger::debug("Processing Dynamic Oghma for Quest ID: $questId, Stage: $stage");
     
+    // Database connection details
+    $host = 'localhost';
+    $port = '5432';
+    $dbname = 'dwemer';
+    $schema = 'public';
+    $username = 'dwemer';
+    $password = 'dwemer';
+
+    // Connect to the database
+    $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
+    if (!$conn) {
+        Logger::error("Failed to connect to database: " . pg_last_error());
+        return;
+    }
+
     // Find matching rows in oghma_dynamic
-    $query = "SELECT * FROM oghma_dynamic WHERE id_quest = '{$questId}' AND stage = {$stage}";
-    $dynamicRows = $db->fetchAll($query);
+    $query = "SELECT * FROM $schema.oghma_dynamic WHERE id_quest = $1 AND stage = $2";
+    $result = pg_query_params($conn, $query, [$questId, $stage]);
     
-    if (!empty($dynamicRows)) {
-        foreach ($dynamicRows as $dynamicRow) {
-            // Only proceed if we have a topic
-            if (!empty($dynamicRow['topic'])) {
-                // Check if topic exists in oghma table
-                $existsQuery = "SELECT topic FROM oghma WHERE topic = " . $db->quote($dynamicRow['topic']);
-                $existsResult = $db->fetchAll($existsQuery);
+    if (!$result) {
+        Logger::error("Error querying oghma_dynamic: " . pg_last_error($conn));
+        return;
+    }
+
+    while ($dynamicRow = pg_fetch_assoc($result)) {
+        // Only proceed if we have a topic
+        if (!empty($dynamicRow['topic'])) {
+            Logger::debug("Processing dynamic entry for topic: " . $dynamicRow['topic']);
+            
+            // Check if topic exists in oghma table
+            $existsQuery = "SELECT topic FROM $schema.oghma WHERE topic = $1";
+            $existsResult = pg_query_params($conn, $existsQuery, [$dynamicRow['topic']]);
+            
+            if (!$existsResult) {
+                Logger::error("Error checking topic existence: " . pg_last_error($conn));
+                continue;
+            }
+
+            if (pg_num_rows($existsResult) == 0) {
+                Logger::debug("Creating new Oghma entry for topic: " . $dynamicRow['topic']);
+                // Topic doesn't exist - create new entry
+                $insertQuery = "
+                    INSERT INTO $schema.oghma (
+                        topic,
+                        topic_desc,
+                        knowledge_class,
+                        topic_desc_basic,
+                        knowledge_class_basic,
+                        tags,
+                        category
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ";
                 
-                if (empty($existsResult)) {
-                    // Topic doesn't exist - create new entry
-                    $insertData = array(
-                        'topic' => $dynamicRow['topic'],
-                        'topic_desc' => $dynamicRow['topic_desc'],
-                        'knowledge_class' => $dynamicRow['knowledge_class'],
-                        'topic_desc_basic' => $dynamicRow['topic_desc_basic'],
-                        'knowledge_class_basic' => $dynamicRow['knowledge_class_basic'],
-                        'tags' => $dynamicRow['tags'],
-                        'category' => $dynamicRow['category']
-                    );
-                    
-                    // Insert new topic
-                    $db->insert('oghma', $insertData);
-                    
-                    // Update native_vector for the new entry
-                    $vectorQuery = "
-                        UPDATE oghma 
-                        SET native_vector = 
-                            setweight(to_tsvector(coalesce(topic, '')), 'A')
-                            || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                            || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
-                            || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                            || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                            || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                            || setweight(to_tsvector(coalesce(category, '')), 'D')
-                        WHERE topic = " . $db->quote($dynamicRow['topic']);
-                    $db->execQuery($vectorQuery);
-                    
-                } else {
-                    // Topic exists - update with non-empty fields
-                    $updateData = array();
-                    
-                    // Only include non-empty fields in the update
-                    if (!empty($dynamicRow['topic_desc'])) {
-                        $updateData['topic_desc'] = $dynamicRow['topic_desc'];
-                    }
-                    if (!empty($dynamicRow['knowledge_class'])) {
-                        $updateData['knowledge_class'] = $dynamicRow['knowledge_class'];
-                    }
-                    if (!empty($dynamicRow['topic_desc_basic'])) {
-                        $updateData['topic_desc_basic'] = $dynamicRow['topic_desc_basic'];
-                    }
-                    if (!empty($dynamicRow['knowledge_class_basic'])) {
-                        $updateData['knowledge_class_basic'] = $dynamicRow['knowledge_class_basic'];
-                    }
-                    if (!empty($dynamicRow['tags'])) {
-                        $updateData['tags'] = $dynamicRow['tags'];
-                    }
-                    if (!empty($dynamicRow['category'])) {
-                        $updateData['category'] = $dynamicRow['category'];
-                    }
-                    
-                    // Only perform update if we have data to update
-                    if (!empty($updateData)) {
-                        $db->updateRow(
-                            'oghma',
-                            $updateData,
-                            "topic = " . $db->quote($dynamicRow['topic'])
-                        );
-                        
-                        // Update native_vector after the update
-                        $vectorQuery = "
-                            UPDATE oghma 
-                            SET native_vector = 
-                                setweight(to_tsvector(coalesce(topic, '')), 'A')
-                                || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-                                || setweight(to_tsvector(coalesce(knowledge_class, '')), 'B')
-                                || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-                                || setweight(to_tsvector(coalesce(knowledge_class_basic, '')), 'C')
-                                || setweight(to_tsvector(coalesce(tags, '')), 'D')
-                                || setweight(to_tsvector(coalesce(category, '')), 'D')
-                            WHERE topic = " . $db->quote($dynamicRow['topic']);
-                        $db->execQuery($vectorQuery);
+                $insertResult = pg_query_params($conn, $insertQuery, [
+                    $dynamicRow['topic'],
+                    $dynamicRow['topic_desc'],
+                    $dynamicRow['knowledge_class'],
+                    $dynamicRow['topic_desc_basic'],
+                    $dynamicRow['knowledge_class_basic'],
+                    $dynamicRow['tags'],
+                    $dynamicRow['category']
+                ]);
+
+                if (!$insertResult) {
+                    Logger::error("Error inserting new topic: " . pg_last_error($conn));
+                    continue;
+                }
+            } else {
+                Logger::debug("Updating existing Oghma entry for topic: " . $dynamicRow['topic']);
+                // Topic exists - update only non-empty fields or clear if 'clearall'
+                $updateFields = [];
+                $updateValues = [];
+                $paramCount = 1;
+
+                $fieldsToCheck = [
+                    'topic_desc', 'knowledge_class', 'topic_desc_basic', 
+                    'knowledge_class_basic', 'tags', 'category'
+                ];
+
+                foreach ($fieldsToCheck as $field) {
+                    if (isset($dynamicRow[$field])) { // Check if the key exists
+                        $value = $dynamicRow[$field];
+
+                        if ($value === 'clearall') {
+                            // Clear the field in oghma table
+                            $updateFields[] = "$field = $" . $paramCount++;
+                            $updateValues[] = null; // Use PHP null for SQL NULL
+                        } elseif (!empty($value)) {
+                            // Update with the non-empty value from oghma_dynamic
+                            $updateFields[] = "$field = $" . $paramCount++;
+                            $updateValues[] = $value;
+                        }
+                        // If $value is empty (but not 'clearall'), do nothing
                     }
                 }
+
+                if (!empty($updateFields)) {
+                    $updateValues[] = $dynamicRow['topic']; // Add topic for WHERE clause
+                    $updateQuery = "
+                        UPDATE $schema.oghma 
+                        SET " . implode(", ", $updateFields) . "
+                        WHERE topic = $" . $paramCount;
+
+                    $updateResult = pg_query_params($conn, $updateQuery, $updateValues);
+                    if (!$updateResult) {
+                        Logger::error("Error updating topic: " . pg_last_error($conn));
+                        // Removed 'continue' as we are not inside the main loop here for this specific block
+                    }
+                } else {
+                     Logger::debug("No fields to update or clear for existing topic: " . $dynamicRow['topic']);
+                }
+            }
+
+            Logger::debug("Updating native_vector for topic: " . $dynamicRow['topic']);
+            // Update native_vector
+            $vectorQuery = "
+                UPDATE $schema.oghma 
+                SET native_vector = 
+                    setweight(to_tsvector(coalesce(topic, '')), 'A')
+                    || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
+                    || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
+                WHERE topic = $1
+            ";
+            $vectorResult = pg_query_params($conn, $vectorQuery, [$dynamicRow['topic']]);
+            if (!$vectorResult) {
+                Logger::error("Error updating vector: " . pg_last_error($conn));
             }
         }
     }
+
+    Logger::debug("Completed Dynamic Oghma processing for Quest ID: $questId, Stage: $stage");
+    pg_close($conn);
 } 

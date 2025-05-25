@@ -960,4 +960,29 @@ if ($checkVersion("oghma_dynamic")<20250310001) {
     error_log("Applied patch oghma_dynamic 20250310001");
 }
 
+if ($checkVersion("rolemaster")<20250414001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/rolemaster.sql"));
+    $updateVersion("rolemaster",20250414001);
+    error_log("Applied patch rolemaster 20250414001");
+}
+
+if ($checkVersion("locations")<20250516001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/add_locations.sql"));
+    $updateVersion("locations",20250516001);
+    error_log("Applied patch locations 20250516001");
+}
+
+if ($checkVersion("actions_issued")<20250525001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/actions_issued.sql"));
+    $updateVersion("actions_issued",20250525001);
+    error_log("Applied patch locations 20250525001");
+}
+
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"action\" TYPE text");
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"actor\" TYPE text");
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
+
+
+Logger::info(__FILE__." update file processed");
+
 ?>
