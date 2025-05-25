@@ -362,7 +362,7 @@ $ITT["llamacpp"]["AI_PROMPT"]=''; //Prompt sent to the LLM.
 //[Memory Configuration]
 //Memory Settings
 $FEATURES["MEMORY_EMBEDDING"]["ENABLED"]=true; //Long term memory embedding.
-$FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8083'; //Text2Vec service
+$FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8082'; //Text2Vec service
 $FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=false; //NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!
 
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=10; //Time in minutes to delay before using a memory in a prompt.
