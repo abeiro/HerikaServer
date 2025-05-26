@@ -2111,7 +2111,19 @@ function call_llm() {
     
     $outputWasValid = true;
     $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
+
     $connectionHandler->open($contextData,$overrideParameters);
+
+    /* *****
+    Player TTS
+
+    Player TTS. We overwrite some confs an then restore them.
+    */
+    if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
+        require(__DIR__."/../processor/player_tts.php");
+    }
+
+
 
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
     if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
@@ -2798,61 +2810,62 @@ function GetExpression($mood) {
      "CombatShout"
      ];
      
+     $result="";
      if ($mood=="sarcastic") {
-         return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        $result= array_rand(array_flip(["DialoguePuzzled"]), 1);
          
          
      } else if ($mood=="sassy") {
-         return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        $result= array_rand(array_flip(["DialoguePuzzled"]), 1);
          
          
      } else if ($mood=="sardonic") {
-         return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        $result= array_rand(array_flip(["DialoguePuzzled"]), 1);
          
          
      } else if ($mood=="irritated") {
-         return array_rand(array_flip(["DialogueAnger"]), 1);
+        $result= array_rand(array_flip(["DialogueAnger"]), 1);
         
          
      } else if ($mood=="mocking") {
-         return array_rand(array_flip(["DialogueHappy"]), 1);
+        $result= array_rand(array_flip(["DialogueHappy"]), 1);
          
          
      } else if ($mood=="playful") {
-         return array_rand(array_flip(["DialogueHappy"]), 1);
+        $result= array_rand(array_flip(["DialogueHappy"]), 1);
              
      } else if ($mood=="teasing") {
-         return array_rand(array_flip(["DialogueSurprise"]), 1);
+        $result= array_rand(array_flip(["DialogueSurprise"]), 1);
          
          
      } else if ($mood=="smug") {
-         return array_rand(array_flip(["DialogueAnger"]), 1);
+        $result= array_rand(array_flip(["DialogueAnger"]), 1);
          
          
      } else if ($mood=="amused") {
-         return array_rand(array_flip(["DialogueSurprise"]), 1);
+        $result= array_rand(array_flip(["DialogueSurprise"]), 1);
          
      } else if ($mood=="smirking") {
-         return array_rand(array_flip(["DialogueHappy"]), 1);
+        $result= array_rand(array_flip(["DialogueHappy"]), 1);
      
          
      } else if ($mood=="serious") {
-         return array_rand(array_flip(["MoodNeutral"]), 1);
+        $result= array_rand(array_flip(["MoodNeutral"]), 1);
      
          
      } else if ($mood=="firm") {
-         return array_rand(array_flip(["MoodNeutral"]), 1);
+        $result= array_rand(array_flip(["MoodNeutral"]), 1);
      
          
      } if ($mood=="neutral") {
-         return array_rand(array_flip(["MoodNeutral"]), 1);
+        $result= array_rand(array_flip(["MoodNeutral"]), 1);
          
          
      }
                              
      
-     
-     return "";
+     $GLOBALS["PATH_ORIGINAL_MOD_ISSUED"]=$mood;
+     return $result;
      
  }
 
