@@ -198,7 +198,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                             onmouseout="this.style.backgroundColor='#ffc107';"
                             onclick="window.open('<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php', '_blank')" 
                             title="Generate AIAgent.ini file for the mod file.">
-                                <strong>Create AIAgent.ini<br>(Place in mod folder under SKSE\Plugins)</strong>
+                                <strong>Create Custom AIAgent.ini Mod<br>(Install with mod manager, override AIAgent mod folder)</strong>
                             </button>
                         </div>
                         </li>
@@ -436,7 +436,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
     }
     ?>
     <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal'; width: 120px;">
-        Server: v1.3.0
+        Server: v1.3.1
         <br>
         Plugin: <?php echo $pluginVersionDisplay; ?>
     </div>
