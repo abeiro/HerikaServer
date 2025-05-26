@@ -1,8 +1,11 @@
 <?php 
 require_once(__DIR__ . '/../../../../lib/logger.php');
 
+
+$GLOBALS["active_profile"]=md5("The Narrator");
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
+
 
 
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
@@ -157,6 +160,10 @@ In addition, follow these general scene rules as a game director:
             $instructionText = trim($response["instruction"] ?? 'No instruction text');
             $action = $response["action"]?"{$response["action"]} {$response["target"]}":"";
         
+            if (!$characterName || !$instructionText) {
+                return false;
+            }
+
             // Generate unique task ID
             $taskId = uniqid();
         
@@ -175,6 +182,8 @@ In addition, follow these general scene rules as a game director:
                     'tag' => ""
                 )
             );
+
+            return true;
         }
 
         function parseSceneNote($response) {
@@ -204,14 +213,55 @@ In addition, follow these general scene rules as a game director:
         
 
         
+        
+        $rawbuffer.=PHP_EOL;
+        unset($GLOBALS["_JSON_BUFFER"]);
         $response=__jpd_decode_lazy($rawbuffer);
-        //print_r($response);
+        
+        
+        if (isset($response[0]["instructions"]))
+            $response=$response[0];
+
         if (isset($response["instructions"]) && is_array($response["instructions"])) {
+            $allOk=true;
             foreach ($response["instructions"] as $r) {
-                parseInstruction($r);
+                $allOk=$allOk && parseInstruction($r);
                 parseSceneNote($r);
             }
+        } else 
+            $allOk=false;
+
+        
+        if (isset($GLOBALS["argv"][4]) && $GLOBALS["argv"][4]=="notify") {
+            $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) === '1.3.1') {
+                if ($allOk)
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Director mode instruction processed",
+                            'tag' => ""
+                        )
+                    );
+                else 
+                    $GLOBALS["db"]->insert(
+                    'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Director mode instruction failed",
+                            'tag' => ""
+                        )
+                    );
+            }
         }
+        
         //print_r($response);
         
         

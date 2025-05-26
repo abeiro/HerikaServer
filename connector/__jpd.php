@@ -410,14 +410,31 @@ function __jpd_decode($inputString)
 /*
 $FATA = <<<EOIN
 ```json
-{"character":"Mila Valentia","instruction":"Mila Valentia leans forward, her eyes sparkling with curiosity.  'You know,' she says, 'I've always wondered what it would be like to fight in a real brawl.  Do you think it's as exciting as it looks?'","action":"JustTalk","target":"Jon Battle-Born","scene_note":"Mila is trying to engage Jon in conversation about the upcoming brawl."}
+{
+  "instructions": [
+    {
+      "character": "Herika",
+      "instruction": "Herika should raise her flagon high with a mischievous grin and proclaim a toast in a loud, clear voice.",
+      "action": "JustTalk",
+      "target": "everyone",
+      "scene_note": "The mood shifts to festive as Herika leads the toast. Rolff Stone-Fist may either reluctantly join or remain defiant, while Aanya eagerly follows along."
+    },
+    {
+      "character": "Aanya",
+      "instruction": "Aanya should clink her flagon against Herika's with a loud cheer, egging on Rolff Stone-Fist to join or back down.",
+      "action": "JustTalk",
+      "target": "Herika, Rolff Stone-Fist",
+      "scene_note": "Aanya's energy is infectious—either the tension breaks into camaraderie or escalates into a brawl."
+    }
+  ]
+}
 ```
 EOIN;
 //$res= __jpd__extractContentBetweenBraces($FATA);
 //echo $res;
 
 print_r(__jpd_decode_lazy($FATA));
-
 */
+
 
 ?>

@@ -30,8 +30,10 @@ if (!isset($argv[1])) {
 commands: 
 	
 	query		Query for a memory. Example: query 'What do you know about Saadia?'
+    query_oghma	Query for a oghma entry.
 	count		Count Memories, memories summarized and memories vectorized.
 	sync 		Sync Summaries <> Vector embeddings. Needs TEXT2VEC active
+    sync_oghma	Sync oghma <> Vector embeddings. Needs TEXT2VEC active
 	get 		Get memory. Example: get 56
 	recreate	Recreate memory_summary table, 
 	compact	    Recreate memory_summary table, and uses AI (LLM) to summarize data. Use 'compact noembed' to avoid TEXT2VEC sync.
