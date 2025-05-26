@@ -990,7 +990,7 @@ $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"actor\" TYPE text"
 $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
 
 // TO-DO, make this properly
-$db->execQuery("ALTER TABLE public.oghma ADD COLUMN \"vector\" vector(384)");
+$db->execQuery("ALTER TABLE public.oghma ADD COLUMN \"vector384\" vector(384)");
 
 Logger::info(__FILE__." update file processed");
 
