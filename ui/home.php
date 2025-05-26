@@ -517,6 +517,62 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         .stat-card.double-width:hover::after {
             opacity: 0.7;
         }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .modal-content {
+            background-color: #2d2d2d;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #1a1a1a;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .modal-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .modal-table th, .modal-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #3a3a3a;
+            color: #d4d4d4;
+        }
+
+        .modal-table th {
+            background: #1a1a1a;
+            color: #f8f9fa;
+        }
     </style>
 </head>
 <body>
@@ -842,7 +898,60 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             return '0/0 (0%)';
                         }
 
-                        echo render_widget('CHIM Stats', "
+                        // Travel To Locations Data Fetching (moved before CHIM Stats rendering)
+                        $locationsCheck = fetch_widget_stats($conn, "
+                            SELECT EXISTS (
+                                SELECT 1 
+                                FROM information_schema.tables 
+                                WHERE table_schema = '{$schema}' 
+                                AND table_name = 'locations'
+                            ) as table_exists"
+                        );
+
+                        $locationsWidgetContent = ''; // This will be part of CHIM Stats
+                        $locationsModal = '';     // This will be echoed globally
+
+                        if (!isset($locationsCheck['error']) && !empty($locationsCheck) && isset($locationsCheck[0]['table_exists']) && $locationsCheck[0]['table_exists'] === 't') {
+                            $locationsData = fetch_widget_stats($conn, "SELECT name, formid FROM {$schema}.locations ORDER BY name");
+
+                            if (!isset($locationsData['error']) && !empty($locationsData)) {
+                                $locationCount = count($locationsData);
+                                // Content for inside CHIM Stats
+                                $locationsWidgetContent = "
+                                    <div class='stat-card double-width' style='cursor: pointer;' onclick=\"openModal('locationsModal')\">
+                                        <div class='stat-value'>{$locationCount}</div>
+                                        <div class='stat-label'>Travel To Locations</div>
+                                    </div>";
+                                
+                                // Modal HTML
+                                $locationsModal = "<div id='locationsModal' class='modal'>
+                                                        <div class='modal-content'>
+                                                            <span class='close-btn' onclick=\"closeModal('locationsModal')\">&times;</span>
+                                                            <h3>Available Locations</h3>
+                                                            <table class='modal-table'>
+                                                                <tr><th>Name</th><th>FormID</th></tr>";
+                                foreach ($locationsData as $location) {
+                                    $locationsModal .= "<tr><td>" . htmlspecialchars($location['name']) . "</td><td>" . htmlspecialchars($location['formid']) . "</td></tr>";
+                                }
+                                $locationsModal .= "</table>
+                                                        </div>
+                                                    </div>";
+                            } else {
+                                $locationsWidgetContent = "
+                                    <div class='stat-card double-width'>
+                                        <div class='stat-label' style='white-space: normal; text-align: center;'>Make sure to click Send all locations to server in CHIM MCM under Util</div>
+                                    </div>";
+                            }
+                        } else {
+                            $locationsWidgetContent = "
+                                <div class='stat-card double-width'>
+                                    <div class='stat-label' style='white-space: normal; text-align: center;'>Make sure to click Send all locations to server in CHIM MCM under Util</div>
+                                </div>";
+                        }
+                        // END Travel To Locations Data Fetching
+
+                        // Append $locationsWidgetContent to the CHIM Stats content string
+                        $chimStatsHtml = "
                             <div class='widget-stats'>
                                 " . (in_array('diarylog', $existingTables) ? "
                                 <div class='stat-card'>
@@ -901,490 +1010,468 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                         <span id='llm-label-lifetime' style='display: none;'>LLM Requests Success Rate (lifetime)</span>
                                     </div>
                                 </div>
+                                {$locationsWidgetContent}
+                            </div>";
+
+                        echo render_widget('CHIM Stats', $chimStatsHtml);
+                        echo $locationsModal; // Output modal HTML globally
+
+                        // Latest Diary Entry Widget
+                        $latestDiary = fetch_widget_stats($conn, "
+                        SELECT topic, content, people as author, localts, gamets
+                        FROM {$schema}.diarylog
+                        ORDER BY localts DESC
+                        LIMIT 1
+                        ");
+
+                        $diaryContent = "";
+                        if (!isset($latestDiary['error']) && !empty($latestDiary)) {
+                            $time = new DateTime("@{$latestDiary[0]['localts']}");
+                            $time->setTimezone(new DateTimeZone('UTC'));
+                            $tamrielicTime = '';
+                            if (isset($latestDiary[0]['gamets']) && $latestDiary[0]['gamets'] > 0) {
+                                $tamrielicTime = convert_gamets2skyrim_long_date2($latestDiary[0]['gamets']);
+                            }
+                            
+                            $diaryContent = "
+                                <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto;'>
+                                    <div style='background: url(\"/HerikaServer/ui/images/paper.jpg\") center/cover; padding: 40px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);'>
+                                        <div style='color: #000; line-height: 1.4; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>
+                                            <div style='font-size: 1.1em; margin-bottom: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['author']) . "</div>
+                                            <div style='font-size: 1.2em; padding-top: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . nl2br($latestDiary[0]['content']) . "</div>
+                                        </div>
+                                    </div>
+                                </div>";
+                        } else {
+                            $diaryContent = "
+                                <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto; text-align: center;'>
+                                    <div style='color: #6c757d; font-size: 1.2em; padding: 40px 20px;'>
+                                        No diary entries found yet. Make sure to use the Diary hotkey!
+                                    </div>
+                                </div>";
+                        }
+                        
+                        echo render_widget('Latest Diary Entry', $diaryContent, 'default', ['class' => 'widget-skyrim-stats']);
+
+                        // Word Map
+                        $generalStats = fetch_widget_stats($conn, "
+                            SELECT data
+                            FROM {$schema}.eventlog 
+                            WHERE type = 'chat'
+                            ORDER BY localts DESC
+                            LIMIT 10000
+                        ");
+
+                        if (!isset($generalStats['error']) && !empty($generalStats)) {
+                            // Process the chat messages to extract just the dialogue
+                            $processedText = [];
+                            foreach ($generalStats as $row) {
+                                $text = $row['data'];
+                                
+                                // Remove context information in parentheses
+                                $text = preg_replace('/\([^)]+\)/', '', $text);
+                                
+                                // Remove character name before colon
+                                $text = preg_replace('/^[^:]+:/', '', $text);
+                                
+                                // Clean up the text
+                                $text = trim($text);
+                                
+                                // Convert to lowercase
+                                $text = strtolower($text);
+                                
+                                // Remove all punctuation except apostrophes
+                                $text = preg_replace('/[^\w\s\']/', '', $text);
+                                
+                                // Clean up any standalone or multiple apostrophes
+                                $text = preg_replace('/\s\'|\'(\s|$)|(\'+)/', ' ', $text);
+                                
+                                // Split into words
+                                $words = preg_split('/\s+/', $text);
+                                
+                                // Filter out stop words and short words
+                                $words = array_filter($words, function($word) {
+                                    $stopWords = [
+                                        'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 
+                                        'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at', 'this', 'but', 'his', 
+                                        'by', 'from', 'they', 'we', 'say', 'her', 'she', 'or', 'an', 'will', 'my', 
+                                        'one', 'all', 'would', 'there', 'their', 'what', 'so', 'up', 'out', 'if', 
+                                        'about', 'who', 'get', 'which', 'go', 'me', 'when', 'make', 'can', 'like', 
+                                        'time', 'no', 'just', 'him', 'know', 'take', 'people', 'into', 'year', 'your', 
+                                        'good', 'some', 'could', 'them', 'see', 'other', 'than', 'then', 'now', 'look', 
+                                        'only', 'come', 'its', 'over', 'think', 'also', 'back', 'after', 'use', 'two', 
+                                        'how', 'our', 'work', 'first', 'well', 'way', 'even', 'new', 'want', 'because', 
+                                        'any', 'these', 'give', 'day', 'most', 'us', 'im', 'ive', 'are', 'was', 'been',
+                                        'had', 'has', 'yes', 'no', 'ok', 'okay', 'oh', 'ah', 'hmm', 'uh', 'er', 'um',
+                                        'whats', 'thats', 'youre', 'dont', 'cant', 'wont', 'shouldnt', 'couldnt',
+                                        'wouldnt', 'lets', 'theres', 'heres', 'wheres', 'whos', 'nobodys', 'everybodys',
+                                        'talking', 'talk', 'said', 'says', 'tell', 'told', 'went', 'gone', 'coming',
+                                        'going', 'doing', 'done', 'being', 'having', 'getting', 'putting', 'taking',
+                                        'making', 'finding', 'found', 'made', 'put', 'took', 'got', 'get', 'goes',
+                                        'went', 'come', 'came', 'goes', 'going'
+                                    ];
+                                    return strlen($word) > 2 && !in_array($word, $stopWords);
+                                });
+                                
+                                if (!empty($words)) {
+                                    $processedText = array_merge($processedText, $words);
+                                }
+                            }
+
+                            // Count word frequencies
+                            $wordFrequencies = array_count_values($processedText);
+                            arsort($wordFrequencies);
+                            
+                            // Take top 100 words
+                            $wordFrequencies = array_slice($wordFrequencies, 0, 100, true);
+                            
+                            // Convert to format needed for word cloud
+                            $words = array_map(function($word, $count) {
+                                return ['text' => $word, 'size' => log($count * 5) * 8 + 20, 'count' => $count];
+                            }, array_keys($wordFrequencies), array_values($wordFrequencies));
+
+                            echo render_widget('Recent Most Used Words', "
+                                <script src='https://d3js.org/d3.v7.min.js'></script>
+                                <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
+                                <div class='word-cloud-container'>
+                                    <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: rgb(212, 94, 0, 0.9); height: 30px; font-weight: bold;'></div>
+                                    <svg id='word-cloud' style='width: 100%; height: 500px;'></svg>
+                                </div>
+                                <style>
+                                    .word-cloud-container {
+                                        background: #1a1a1a;
+                                        border-radius: 8px;
+                                        padding: 20px;
+                                        position: relative;
+                                    }
+                                    .word-cloud-text {
+                                        font-family: 'Arial', sans-serif;
+                                        cursor: pointer;
+                                        transition: opacity 0.3s;
+                                    }
+                                    .word-cloud-text:hover {
+                                        opacity: 0.7;
+                                    }
+                                </style>
                                 <script>
-                                    document.getElementById('llm-stats-card').addEventListener('click', function() {
-                                        const periods = ['24h', '72h', '1w', 'lifetime'];
-                                        let currentIndex = 0;
-                                        
-                                        // Find which period is currently shown
-                                        for (let i = 0; i < periods.length; i++) {
-                                            if (document.getElementById('llm-stats-' + periods[i]).style.display !== 'none') {
-                                                currentIndex = i;
-                                                break;
-                                            }
+                                    const words = " . json_encode($words) . ";
+                                    const display = document.getElementById('word-count-display');
+                                    
+                                    // Color scale for words based on frequency
+                                    const color = d3.scaleOrdinal()
+                                        .range(['rgb(242, 124, 17)', 'rgb(242, 144, 47)', 'rgb(242, 164, 77)', 'rgb(242, 184, 107)', 'rgb(242, 204, 137)']);
+
+                                    // Create the word cloud layout
+                                    const layout = d3.layout.cloud()
+                                        .size([document.getElementById('word-cloud').clientWidth, 500])
+                                        .words(words)
+                                        .padding(5)
+                                        .rotate(() => 0)
+                                        .font('Arial')
+                                        .fontSize(d => d.size)
+                                        .on('end', draw);
+
+                                    // Function to draw the word cloud
+                                    function draw(words) {
+                                        d3.select('#word-cloud')
+                                            .append('g')
+                                            .attr('transform', 'translate(' + layout.size()[0] / 2 + ',' + layout.size()[1] / 2 + ')')
+                                            .selectAll('text')
+                                            .data(words)
+                                            .enter()
+                                            .append('text')
+                                            .style('font-size', d => d.size + 'px')
+                                            .style('font-family', 'Arial')
+                                            .style('fill', (d, i) => color(i % 5))
+                                            .attr('class', 'word-cloud-text')
+                                            .attr('text-anchor', 'middle')
+                                            .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
+                                            .text(d => d.text)
+                                            .on('mouseover', function(event, d) {
+                                                display.textContent = d.text + ' [' + d.count + ']';
+                                                d3.select(this).style('opacity', 0.7);
+                                            })
+                                            .on('mouseout', function() {
+                                                display.textContent = '';
+                                                d3.select(this).style('opacity', 1);
+                                            });
+                                    }
+
+                                    // Start the layout
+                                    layout.start();
+
+                                    // Resize handler
+                                    window.addEventListener('resize', () => {
+                                        const svg = document.getElementById('word-cloud');
+                                        if (svg) {
+                                            svg.innerHTML = '';
+                                            layout.size([svg.clientWidth, 500]).start();
                                         }
-                                        
-                                        // Hide current period
-                                        document.getElementById('llm-stats-' + periods[currentIndex]).style.display = 'none';
-                                        document.getElementById('llm-label-' + periods[currentIndex]).style.display = 'none';
-                                        
-                                        // Show next period
-                                        const nextIndex = (currentIndex + 1) % periods.length;
-                                        document.getElementById('llm-stats-' + periods[nextIndex]).style.display = 'inline';
-                                        document.getElementById('llm-label-' + periods[nextIndex]).style.display = 'inline';
                                     });
                                 </script>
-                            </div>
-                        ");
-                    } else {
-                        error_log("Stats count error: " . print_r($stats['error'], true));
-                    }
-                }
-
-                // Latest Diary Entry Widget
-                $latestDiary = fetch_widget_stats($conn, "
-                SELECT topic, content, people as author, localts, gamets
-                FROM {$schema}.diarylog
-                ORDER BY localts DESC
-                LIMIT 1
-                ");
-
-                $diaryContent = "";
-                if (!isset($latestDiary['error']) && !empty($latestDiary)) {
-                    $time = new DateTime("@{$latestDiary[0]['localts']}");
-                    $time->setTimezone(new DateTimeZone('UTC'));
-                    $tamrielicTime = '';
-                    if (isset($latestDiary[0]['gamets']) && $latestDiary[0]['gamets'] > 0) {
-                        $tamrielicTime = convert_gamets2skyrim_long_date2($latestDiary[0]['gamets']);
-                    }
-                    
-                    $diaryContent = "
-                        <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto;'>
-                            <div style='background: url(\"/HerikaServer/ui/images/paper.jpg\") center/cover; padding: 40px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);'>
-                                <div style='color: #000; line-height: 1.4; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>
-                                    <div style='font-size: 1.1em; margin-bottom: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['author']) . "</div>
-                                    <div style='font-size: 1.2em; padding-top: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . nl2br($latestDiary[0]['content']) . "</div>
-                                </div>
-                            </div>
-                        </div>";
-                } else {
-                    $diaryContent = "
-                        <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto; text-align: center;'>
-                            <div style='color: #6c757d; font-size: 1.2em; padding: 40px 20px;'>
-                                No diary entries found yet. Make sure to use the Diary hotkey!
-                            </div>
-                        </div>";
-                }
-                
-                echo render_widget('Latest Diary Entry', $diaryContent, 'default', ['class' => 'widget-skyrim-stats']);
-
-                // Word Map
-                $generalStats = fetch_widget_stats($conn, "
-                    SELECT data
-                    FROM {$schema}.eventlog 
-                    WHERE type = 'chat'
-                    ORDER BY localts DESC
-                    LIMIT 10000
-                ");
-
-                if (!isset($generalStats['error']) && !empty($generalStats)) {
-                    // Process the chat messages to extract just the dialogue
-                    $processedText = [];
-                    foreach ($generalStats as $row) {
-                        $text = $row['data'];
-                        
-                        // Remove context information in parentheses
-                        $text = preg_replace('/\([^)]+\)/', '', $text);
-                        
-                        // Remove character name before colon
-                        $text = preg_replace('/^[^:]+:/', '', $text);
-                        
-                        // Clean up the text
-                        $text = trim($text);
-                        
-                        // Convert to lowercase
-                        $text = strtolower($text);
-                        
-                        // Remove all punctuation except apostrophes
-                        $text = preg_replace('/[^\w\s\']/', '', $text);
-                        
-                        // Clean up any standalone or multiple apostrophes
-                        $text = preg_replace('/\s\'|\'(\s|$)|(\'+)/', ' ', $text);
-                        
-                        // Split into words
-                        $words = preg_split('/\s+/', $text);
-                        
-                        // Filter out stop words and short words
-                        $words = array_filter($words, function($word) {
-                            $stopWords = [
-                                'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 
-                                'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at', 'this', 'but', 'his', 
-                                'by', 'from', 'they', 'we', 'say', 'her', 'she', 'or', 'an', 'will', 'my', 
-                                'one', 'all', 'would', 'there', 'their', 'what', 'so', 'up', 'out', 'if', 
-                                'about', 'who', 'get', 'which', 'go', 'me', 'when', 'make', 'can', 'like', 
-                                'time', 'no', 'just', 'him', 'know', 'take', 'people', 'into', 'year', 'your', 
-                                'good', 'some', 'could', 'them', 'see', 'other', 'than', 'then', 'now', 'look', 
-                                'only', 'come', 'its', 'over', 'think', 'also', 'back', 'after', 'use', 'two', 
-                                'how', 'our', 'work', 'first', 'well', 'way', 'even', 'new', 'want', 'because', 
-                                'any', 'these', 'give', 'day', 'most', 'us', 'im', 'ive', 'are', 'was', 'been',
-                                'had', 'has', 'yes', 'no', 'ok', 'okay', 'oh', 'ah', 'hmm', 'uh', 'er', 'um',
-                                'whats', 'thats', 'youre', 'dont', 'cant', 'wont', 'shouldnt', 'couldnt',
-                                'wouldnt', 'lets', 'theres', 'heres', 'wheres', 'whos', 'nobodys', 'everybodys',
-                                'talking', 'talk', 'said', 'says', 'tell', 'told', 'went', 'gone', 'coming',
-                                'going', 'doing', 'done', 'being', 'having', 'getting', 'putting', 'taking',
-                                'making', 'finding', 'found', 'made', 'put', 'took', 'got', 'get', 'goes',
-                                'went', 'come', 'came', 'goes', 'going'
-                            ];
-                            return strlen($word) > 2 && !in_array($word, $stopWords);
-                        });
-                        
-                        if (!empty($words)) {
-                            $processedText = array_merge($processedText, $words);
+                            ", 'default', ['class' => 'widget-skyrim-stats']);
                         }
-                    }
 
-                    // Count word frequencies
-                    $wordFrequencies = array_count_values($processedText);
-                    arsort($wordFrequencies);
-                    
-                    // Take top 100 words
-                    $wordFrequencies = array_slice($wordFrequencies, 0, 100, true);
-                    
-                    // Convert to format needed for word cloud
-                    $words = array_map(function($word, $count) {
-                        return ['text' => $word, 'size' => log($count * 5) * 8 + 20, 'count' => $count];
-                    }, array_keys($wordFrequencies), array_values($wordFrequencies));
-
-                    echo render_widget('Recent Most Used Words', "
-                        <script src='https://d3js.org/d3.v7.min.js'></script>
-                        <script src='https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud/build/d3.layout.cloud.js'></script>
-                        <div class='word-cloud-container'>
-                            <div id='word-count-display' style='text-align: center; padding: 10px; margin-bottom: 20px; font-size: 24px; color: rgb(212, 94, 0, 0.9); height: 30px; font-weight: bold;'></div>
-                            <svg id='word-cloud' style='width: 100%; height: 500px;'></svg>
-                        </div>
-                        <style>
-                            .word-cloud-container {
-                                background: #1a1a1a;
-                                border-radius: 8px;
-                                padding: 20px;
-                                position: relative;
-                            }
-                            .word-cloud-text {
-                                font-family: 'Arial', sans-serif;
-                                cursor: pointer;
-                                transition: opacity 0.3s;
-                            }
-                            .word-cloud-text:hover {
-                                opacity: 0.7;
-                            }
-                        </style>
-                        <script>
-                            const words = " . json_encode($words) . ";
-                            const display = document.getElementById('word-count-display');
+                        // Add Skyrim Stats Widget
+                        if (in_array('conf_opts', $existingTables)) {
+                            // Debug: Log the raw query
+                            $query = "
+                                SELECT id, value 
+                                FROM {$schema}.conf_opts 
+                                WHERE id IN (
+                                    'Mauls', 'Werewolf Transformations', 'Days As Werewolf',
+                                    'Necks Bitten', 'Days As Vampire', 'Locations Discovered',
+                                    'Dungeons Cleared', 'Days Passed', 'Hours Slept',
+                                    'Hours Waited', 'Standing Stones Found', 'Gold Found',
+                                    'Most Gold Carried', 'Chests Looted', 'Skill Increases',
+                                    'Skill Books Read', 'Food Eaten', 'Training Sessions',
+                                    'Books Read', 'Horses Owned', 'Houses Owned',
+                                    'Stores Invested In', 'Barters', 'Persuasions',
+                                    'Bribes', 'Intimidations', 'Diseases Contracted',
+                                    'Dragonborn Quests Completed DB', 'Dawnguard Quests Completed DG',
+                                    'Quests Completed', 'Misc Objectives Completed',
+                                    'Main Quests Completed', 'Side Quests Completed',
+                                    'The Companions Quests Completed', 'College of Winterhold Quests Completed',
+                                    'Thieves'' Guild Quests Completed', 'The Dark Brotherhood Quests Completed',
+                                    'Civil War Quests Completed', 'Daedric Quests Completed',
+                                    'Questlines Completed', 'Bard''s College Quests Completed',
+                                    'Blades Quests Completed', 'Forsworn Quests Completed',
+                                    'Imperial Legion Quests Completed', 'Stormcloaks Quests Completed',
+                                    'Thieves'' Guild Special Jobs Completed', 'Dark Brotherhood Contracts Completed',
+                                    'Dawnguard Side Quests Completed', 'Dragonborn Side Quests Completed',
+                                    'Main Questline Quests Completed', 'Side Questlines Completed',
+                                    'Spells Learned', 'Favorite Spell', 'Favorite School',
+                                    'Dragon Souls Collected', 'Words of Power Learned',
+                                    'Words of Power Unlocked', 'Shouts Learned',
+                                    'Shouts Mastered', 'Times Shouted', 'Favorite Shout',
+                                    'Soul Gems Used', 'Souls Trapped', 'Magic Items Made',
+                                    'Weapons Improved', 'Weapons Made', 'Armor Improved',
+                                    'Armor Made', 'Potions Mixed', 'Potions Used',
+                                    'Poisons Mixed', 'Poisons Used', 'Ingredients Harvested',
+                                    'Ingredients Eaten', 'Nirnroots Found', 'Wings Plucked',
+                                    'Total Lifetime Bounty', 'Largest Bounty', 'Locks Picked',
+                                    'Pockets Picked', 'Items Pickpocketed', 'Times Jailed',
+                                    'Days Jailed', 'Fines Paid', 'Jail Escapes',
+                                    'Items Stolen', 'Assaults', 'Murders',
+                                    'Horses Stolen', 'Trespasses'
+                                )";
                             
-                            // Color scale for words based on frequency
-                            const color = d3.scaleOrdinal()
-                                .range(['rgb(242, 124, 17)', 'rgb(242, 144, 47)', 'rgb(242, 164, 77)', 'rgb(242, 184, 107)', 'rgb(242, 204, 137)']);
-
-                            // Create the word cloud layout
-                            const layout = d3.layout.cloud()
-                                .size([document.getElementById('word-cloud').clientWidth, 500])
-                                .words(words)
-                                .padding(5)
-                                .rotate(() => 0)
-                                .font('Arial')
-                                .fontSize(d => d.size)
-                                .on('end', draw);
-
-                            // Function to draw the word cloud
-                            function draw(words) {
-                                d3.select('#word-cloud')
-                                    .append('g')
-                                    .attr('transform', 'translate(' + layout.size()[0] / 2 + ',' + layout.size()[1] / 2 + ')')
-                                    .selectAll('text')
-                                    .data(words)
-                                    .enter()
-                                    .append('text')
-                                    .style('font-size', d => d.size + 'px')
-                                    .style('font-family', 'Arial')
-                                    .style('fill', (d, i) => color(i % 5))
-                                    .attr('class', 'word-cloud-text')
-                                    .attr('text-anchor', 'middle')
-                                    .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
-                                    .text(d => d.text)
-                                    .on('mouseover', function(event, d) {
-                                        display.textContent = d.text + ' [' + d.count + ']';
-                                        d3.select(this).style('opacity', 0.7);
-                                    })
-                                    .on('mouseout', function() {
-                                        display.textContent = '';
-                                        d3.select(this).style('opacity', 1);
-                                    });
+                            // Debug: Log connection status
+                            error_log("Database connection status: " . ($conn ? "Connected" : "Not connected"));
+                            if (!$conn) {
+                                error_log("Connection error: " . pg_last_error());
                             }
+                            
+                            error_log("Skyrim Stats Query: " . $query);
+                            
+                            $result = pg_query($conn, $query);
+                            if (!$result) {
+                                error_log("Query error: " . pg_last_error($conn));
+                            }
+                            
+                            $skyrimStats = fetch_widget_stats($conn, $query);
 
-                            // Start the layout
-                            layout.start();
+                            // Debug: Log the raw results
+                            error_log("Skyrim Stats Raw Results: " . print_r($skyrimStats, true));
+                            
+                            // Debug: Log if we got any results
+                            error_log("Number of results: " . count($skyrimStats));
 
-                            // Resize handler
-                            window.addEventListener('resize', () => {
-                                const svg = document.getElementById('word-cloud');
-                                if (svg) {
-                                    svg.innerHTML = '';
-                                    layout.size([svg.clientWidth, 500]).start();
+                            if (!isset($skyrimStats['error'])) {
+                                $statsContent = "<div class='skyrim-stats-grid'>";
+                                
+                                // Group stats into categories
+                                $categories = [
+                                    'Combat & Transformations' => ['Mauls', 'Werewolf Transformations', 'Days As Werewolf', 'Necks Bitten', 'Days As Vampire'],
+                                    'Exploration' => ['Locations Discovered', 'Dungeons Cleared', 'Standing Stones Found', 'Diseases Contracted'],
+                                    'Time & Activities' => ['Days Passed', 'Hours Slept', 'Hours Waited'],
+                                    'Wealth & Items' => ['Gold Found', 'Most Gold Carried', 'Chests Looted'],
+                                    'Skills & Knowledge' => ['Skill Increases', 'Skill Books Read', 'Training Sessions', 'Books Read'],
+                                    'Property & Social' => [
+                                        'Assets' => [
+                                            'Horses Owned',
+                                            'Houses Owned',
+                                            'Stores Invested In'
+                                        ],
+                                        'Interactions' => [
+                                            'Barters',
+                                            'Persuasions',
+                                            'Bribes',
+                                            'Intimidations'
+                                        ]
+                                    ],
+                                    'Magic & Shouts' => [
+                                        'Spells' => [
+                                            'Spells Learned',
+                                            'Favorite Spell',
+                                            'Favorite School'
+                                        ],
+                                        'Dragon Shouts' => [
+                                            'Dragon Souls Collected',
+                                            'Words of Power Learned',
+                                            'Words of Power Unlocked',
+                                            'Shouts Learned',
+                                            'Shouts Mastered',
+                                            'Times Shouted',
+                                            'Favorite Shout'
+                                        ]
+                                    ],
+                                    'Crafting' => [
+                                        'Enchanting' => [
+                                            'Soul Gems Used',
+                                            'Souls Trapped',
+                                            'Magic Items Made'
+                                        ],
+                                        'Smithing' => [
+                                            'Weapons Improved',
+                                            'Weapons Made',
+                                            'Armor Improved',
+                                            'Armor Made'
+                                        ],
+                                        'Alchemy' => [
+                                            'Potions Mixed',
+                                            'Potions Used',
+                                            'Poisons Mixed',
+                                            'Poisons Used',
+                                            'Ingredients Harvested',
+                                            'Ingredients Eaten',
+                                            'Nirnroots Found',
+                                            'Wings Plucked'
+                                        ]
+                                    ],
+                                    'Crime' => [
+                                        'Bounties' => [
+                                            'Total Lifetime Bounty',
+                                            'Largest Bounty'
+                                        ],
+                                        'Theft' => [
+                                            'Locks Picked',
+                                            'Pockets Picked',
+                                            'Items Pickpocketed',
+                                            'Items Stolen',
+                                            'Horses Stolen',
+                                            'Trespasses'
+                                        ],
+                                        'Violence' => [
+                                            'Assaults',
+                                            'Murders'
+                                        ],
+                                        'Punishment' => [
+                                            'Times Jailed',
+                                            'Days Jailed',
+                                            'Fines Paid',
+                                            'Jail Escapes'
+                                        ]
+                                    ],
+                                    'Quests Completed' => [
+                                        'Base Game Quests' => [
+                                            'Main Questline ',
+                                            'Main Quests',
+                                            'Side Quests',
+                                            'Side Questlines',
+                                            'Misc Objectives',
+                                            'Quests',
+                                            'Questlines',
+                                            'Daedric Quests'
+                                        ],
+                                        'Civil War' => [
+                                            'Civil War Quests',
+                                            'Imperial Legion Quests',
+                                            'Stormcloaks Quests'
+                                        ],
+                                        'Faction Quests' => [
+                                            'The Companions Quests',
+                                            'College of Winterhold Quests',
+                                            'Thieves\' Guild Quests',
+                                            'Thieves\' Guild Special Jobs',
+                                            'The Dark Brotherhood Quests',
+                                            'Dark Brotherhood Contracts',
+                                            'Bard\'s College Quests',
+                                            'Blades Quests',
+                                            'Forsworn Quests'
+                                        ],
+                                        'DLC Quests' => [
+                                            'Dragonborn Quests',
+                                            'Dragonborn Side Quests',
+                                            'Dawnguard Quests',
+                                            'Dawnguard Side Quests'
+                                        ]
+                                    ]
+                                ];
+
+                                // Create a map of id to value for easier lookup
+                                $statsMap = [];
+                                foreach ($skyrimStats as $stat) {
+                                    $statsMap[$stat['id']] = $stat['value'];
+                                    // Debug: Log each stat as we process it
+                                    error_log("Processing stat: {$stat['id']} = {$stat['value']}");
                                 }
-                            });
-                        </script>
-                    ", 'default', ['class' => 'widget-skyrim-stats']);
-                }
 
-                // Add Skyrim Stats Widget
-                if (in_array('conf_opts', $existingTables)) {
-                    // Debug: Log the raw query
-                    $query = "
-                        SELECT id, value 
-                        FROM {$schema}.conf_opts 
-                        WHERE id IN (
-                            'Mauls', 'Werewolf Transformations', 'Days As Werewolf',
-                            'Necks Bitten', 'Days As Vampire', 'Locations Discovered',
-                            'Dungeons Cleared', 'Days Passed', 'Hours Slept',
-                            'Hours Waited', 'Standing Stones Found', 'Gold Found',
-                            'Most Gold Carried', 'Chests Looted', 'Skill Increases',
-                            'Skill Books Read', 'Food Eaten', 'Training Sessions',
-                            'Books Read', 'Horses Owned', 'Houses Owned',
-                            'Stores Invested In', 'Barters', 'Persuasions',
-                            'Bribes', 'Intimidations', 'Diseases Contracted',
-                            'Dragonborn Quests Completed DB', 'Dawnguard Quests Completed DG',
-                            'Quests Completed', 'Misc Objectives Completed',
-                            'Main Quests Completed', 'Side Quests Completed',
-                            'The Companions Quests Completed', 'College of Winterhold Quests Completed',
-                            'Thieves'' Guild Quests Completed', 'The Dark Brotherhood Quests Completed',
-                            'Civil War Quests Completed', 'Daedric Quests Completed',
-                            'Questlines Completed', 'Bard''s College Quests Completed',
-                            'Blades Quests Completed', 'Forsworn Quests Completed',
-                            'Imperial Legion Quests Completed', 'Stormcloaks Quests Completed',
-                            'Thieves'' Guild Special Jobs Completed', 'Dark Brotherhood Contracts Completed',
-                            'Dawnguard Side Quests Completed', 'Dragonborn Side Quests Completed',
-                            'Main Questline Quests Completed', 'Side Questlines Completed',
-                            'Spells Learned', 'Favorite Spell', 'Favorite School',
-                            'Dragon Souls Collected', 'Words of Power Learned',
-                            'Words of Power Unlocked', 'Shouts Learned',
-                            'Shouts Mastered', 'Times Shouted', 'Favorite Shout',
-                            'Soul Gems Used', 'Souls Trapped', 'Magic Items Made',
-                            'Weapons Improved', 'Weapons Made', 'Armor Improved',
-                            'Armor Made', 'Potions Mixed', 'Potions Used',
-                            'Poisons Mixed', 'Poisons Used', 'Ingredients Harvested',
-                            'Ingredients Eaten', 'Nirnroots Found', 'Wings Plucked',
-                            'Total Lifetime Bounty', 'Largest Bounty', 'Locks Picked',
-                            'Pockets Picked', 'Items Pickpocketed', 'Times Jailed',
-                            'Days Jailed', 'Fines Paid', 'Jail Escapes',
-                            'Items Stolen', 'Assaults', 'Murders',
-                            'Horses Stolen', 'Trespasses'
-                        )";
-                    
-                    // Debug: Log connection status
-                    error_log("Database connection status: " . ($conn ? "Connected" : "Not connected"));
-                    if (!$conn) {
-                        error_log("Connection error: " . pg_last_error());
-                    }
-                    
-                    error_log("Skyrim Stats Query: " . $query);
-                    
-                    $result = pg_query($conn, $query);
-                    if (!$result) {
-                        error_log("Query error: " . pg_last_error($conn));
-                    }
-                    
-                    $skyrimStats = fetch_widget_stats($conn, $query);
+                                // Debug: Log the stats map
+                                error_log("Skyrim Stats Map: " . print_r($statsMap, true));
 
-                    // Debug: Log the raw results
-                    error_log("Skyrim Stats Raw Results: " . print_r($skyrimStats, true));
-                    
-                    // Debug: Log if we got any results
-                    error_log("Number of results: " . count($skyrimStats));
-
-                    if (!isset($skyrimStats['error'])) {
-                        $statsContent = "<div class='skyrim-stats-grid'>";
-                        
-                        // Group stats into categories
-                        $categories = [
-                            'Combat & Transformations' => ['Mauls', 'Werewolf Transformations', 'Days As Werewolf', 'Necks Bitten', 'Days As Vampire'],
-                            'Exploration' => ['Locations Discovered', 'Dungeons Cleared', 'Standing Stones Found', 'Diseases Contracted'],
-                            'Time & Activities' => ['Days Passed', 'Hours Slept', 'Hours Waited'],
-                            'Wealth & Items' => ['Gold Found', 'Most Gold Carried', 'Chests Looted'],
-                            'Skills & Knowledge' => ['Skill Increases', 'Skill Books Read', 'Training Sessions', 'Books Read'],
-                            'Property & Social' => [
-                                'Assets' => [
-                                    'Horses Owned',
-                                    'Houses Owned',
-                                    'Stores Invested In'
-                                ],
-                                'Interactions' => [
-                                    'Barters',
-                                    'Persuasions',
-                                    'Bribes',
-                                    'Intimidations'
-                                ]
-                            ],
-                            'Magic & Shouts' => [
-                                'Spells' => [
-                                    'Spells Learned',
-                                    'Favorite Spell',
-                                    'Favorite School'
-                                ],
-                                'Dragon Shouts' => [
-                                    'Dragon Souls Collected',
-                                    'Words of Power Learned',
-                                    'Words of Power Unlocked',
-                                    'Shouts Learned',
-                                    'Shouts Mastered',
-                                    'Times Shouted',
-                                    'Favorite Shout'
-                                ]
-                            ],
-                            'Crafting' => [
-                                'Enchanting' => [
-                                    'Soul Gems Used',
-                                    'Souls Trapped',
-                                    'Magic Items Made'
-                                ],
-                                'Smithing' => [
-                                    'Weapons Improved',
-                                    'Weapons Made',
-                                    'Armor Improved',
-                                    'Armor Made'
-                                ],
-                                'Alchemy' => [
-                                    'Potions Mixed',
-                                    'Potions Used',
-                                    'Poisons Mixed',
-                                    'Poisons Used',
-                                    'Ingredients Harvested',
-                                    'Ingredients Eaten',
-                                    'Nirnroots Found',
-                                    'Wings Plucked'
-                                ]
-                            ],
-                            'Crime' => [
-                                'Bounties' => [
-                                    'Total Lifetime Bounty',
-                                    'Largest Bounty'
-                                ],
-                                'Theft' => [
-                                    'Locks Picked',
-                                    'Pockets Picked',
-                                    'Items Pickpocketed',
-                                    'Items Stolen',
-                                    'Horses Stolen',
-                                    'Trespasses'
-                                ],
-                                'Violence' => [
-                                    'Assaults',
-                                    'Murders'
-                                ],
-                                'Punishment' => [
-                                    'Times Jailed',
-                                    'Days Jailed',
-                                    'Fines Paid',
-                                    'Jail Escapes'
-                                ]
-                            ],
-                            'Quests Completed' => [
-                                'Base Game Quests' => [
-                                    'Main Questline ',
-                                    'Main Quests',
-                                    'Side Quests',
-                                    'Side Questlines',
-                                    'Misc Objectives',
-                                    'Quests',
-                                    'Questlines',
-                                    'Daedric Quests'
-                                ],
-                                'Civil War' => [
-                                    'Civil War Quests',
-                                    'Imperial Legion Quests',
-                                    'Stormcloaks Quests'
-                                ],
-                                'Faction Quests' => [
-                                    'The Companions Quests',
-                                    'College of Winterhold Quests',
-                                    'Thieves\' Guild Quests',
-                                    'Thieves\' Guild Special Jobs',
-                                    'The Dark Brotherhood Quests',
-                                    'Dark Brotherhood Contracts',
-                                    'Bard\'s College Quests',
-                                    'Blades Quests',
-                                    'Forsworn Quests'
-                                ],
-                                'DLC Quests' => [
-                                    'Dragonborn Quests',
-                                    'Dragonborn Side Quests',
-                                    'Dawnguard Quests',
-                                    'Dawnguard Side Quests'
-                                ]
-                            ]
-                        ];
-
-                        // Create a map of id to value for easier lookup
-                        $statsMap = [];
-                        foreach ($skyrimStats as $stat) {
-                            $statsMap[$stat['id']] = $stat['value'];
-                            // Debug: Log each stat as we process it
-                            error_log("Processing stat: {$stat['id']} = {$stat['value']}");
-                        }
-
-                        // Debug: Log the stats map
-                        error_log("Skyrim Stats Map: " . print_r($statsMap, true));
-
-                        foreach ($categories as $category => $statIds) {
-                            $statsContent .= "<div class='stats-category'>
-                                <h4>{$category}</h4>
-                                <div class='stats-list'>";
-                            
-                            if (is_array($statIds)) {
-                                foreach ($statIds as $subCategory => $subStats) {
-                                    if (is_array($subStats)) {
-                                        // This is a nested category
-                                        $statsContent .= "<div class='sub-category'>
-                                            <h5>{$subCategory}</h5>";
-                                        foreach ($subStats as $statId) {
-                                            if (isset($statsMap[$statId])) {
-                                                $value = $statsMap[$statId];
+                                foreach ($categories as $category => $statIds) {
+                                    $statsContent .= "<div class='stats-category'>
+                                        <h4>{$category}</h4>
+                                        <div class='stats-list'>";
+                                    
+                                    if (is_array($statIds)) {
+                                        foreach ($statIds as $subCategory => $subStats) {
+                                            if (is_array($subStats)) {
+                                                // This is a nested category
+                                                $statsContent .= "<div class='sub-category'>
+                                                    <h5>{$subCategory}</h5>";
+                                                foreach ($subStats as $statId) {
+                                                    if (isset($statsMap[$statId])) {
+                                                        $value = $statsMap[$statId];
+                                                    } else {
+                                                        $value = '0';
+                                                    }
+                                                    $displayName = $statId;
+                                                    $statsContent .= "<div class='stat-item'>
+                                                        <span class='stat-label'>{$displayName}</span>
+                                                        <span class='stat-value'>{$value}</span>
+                                                    </div>";
+                                                }
+                                                $statsContent .= "</div>";
                                             } else {
-                                                $value = '0';
+                                                // This is a direct stat
+                                                if (isset($statsMap[$subStats])) {
+                                                    $value = $statsMap[$subStats];
+                                                } else {
+                                                    $value = '0';
+                                                }
+                                                $displayName = $subStats;
+                                                $statsContent .= "<div class='stat-item'>
+                                                    <span class='stat-label'>{$displayName}</span>
+                                                    <span class='stat-value'>{$value}</span>
+                                                </div>";
                                             }
-                                            $displayName = $statId;
-                                            $statsContent .= "<div class='stat-item'>
-                                                <span class='stat-label'>{$displayName}</span>
-                                                <span class='stat-value'>{$value}</span>
-                                            </div>";
                                         }
-                                        $statsContent .= "</div>";
                                     } else {
                                         // This is a direct stat
-                                        if (isset($statsMap[$subStats])) {
-                                            $value = $statsMap[$subStats];
+                                        if (isset($statsMap[$statIds])) {
+                                            $value = $statsMap[$statIds];
                                         } else {
                                             $value = '0';
                                         }
-                                        $displayName = $subStats;
+                                        $displayName = $statIds;
                                         $statsContent .= "<div class='stat-item'>
                                             <span class='stat-label'>{$displayName}</span>
                                             <span class='stat-value'>{$value}</span>
                                         </div>";
                                     }
+                                    
+                                    $statsContent .= "</div></div>";
                                 }
+                                
+                                $statsContent .= "</div>";
+                                
+                                echo render_widget('Skyrim Stats', $statsContent, 'default', ['class' => 'widget-skyrim-stats']);
                             } else {
-                                // This is a direct stat
-                                if (isset($statsMap[$statIds])) {
-                                    $value = $statsMap[$statIds];
-                                } else {
-                                    $value = '0';
-                                }
-                                $displayName = $statIds;
-                                $statsContent .= "<div class='stat-item'>
-                                    <span class='stat-label'>{$displayName}</span>
-                                    <span class='stat-value'>{$value}</span>
-                                </div>";
+                                error_log("Skyrim Stats error: " . print_r($skyrimStats['error'], true));
                             }
-                            
-                            $statsContent .= "</div></div>";
                         }
-                        
-                        $statsContent .= "</div>";
-                        
-                        echo render_widget('Skyrim Stats', $statsContent, 'default', ['class' => 'widget-skyrim-stats']);
-                    } else {
-                        error_log("Skyrim Stats error: " . print_r($skyrimStats['error'], true));
                     }
                 }
             } else {
@@ -1409,6 +1496,60 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         pg_close($conn);
         ?>
     </main>
+    <script>
+        // Script for LLM Stats Card
+        const llmStatsCard = document.getElementById('llm-stats-card');
+        if (llmStatsCard) {
+            llmStatsCard.addEventListener('click', function() {
+                const periods = ['24h', '72h', '1w', 'lifetime'];
+                let currentIndex = 0;
+                
+                for (let i = 0; i < periods.length; i++) {
+                    const statEl = document.getElementById('llm-stats-' + periods[i]);
+                    if (statEl && statEl.style.display !== 'none') {
+                        currentIndex = i;
+                        break;
+                    }
+                }
+                
+                const currentStatEl = document.getElementById('llm-stats-' + periods[currentIndex]);
+                const currentLabelEl = document.getElementById('llm-label-' + periods[currentIndex]);
+                if (currentStatEl) currentStatEl.style.display = 'none';
+                if (currentLabelEl) currentLabelEl.style.display = 'none';
+                
+                const nextIndex = (currentIndex + 1) % periods.length;
+                const nextStatEl = document.getElementById('llm-stats-' + periods[nextIndex]);
+                const nextLabelEl = document.getElementById('llm-label-' + periods[nextIndex]);
+                if (nextStatEl) nextStatEl.style.display = 'inline';
+                if (nextLabelEl) nextLabelEl.style.display = 'inline';
+            });
+        }
+
+        // Modal handling script
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'block';
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modals = document.getElementsByClassName('modal');
+            for (let i = 0; i < modals.length; i++) {
+                if (event.target == modals[i]) {
+                    modals[i].style.display = "none";
+                }
+            }
+        }
+    </script>
 </body>
 <?php
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
