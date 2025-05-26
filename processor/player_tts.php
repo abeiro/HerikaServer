@@ -3,9 +3,9 @@
     $cleaned_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
     
     
-    // audit_log(__FILE__." ".__LINE__);
-    $GLOBALS["PATCH_OVERRIDE_VOICE"]=$TTSFUNCTION_PLAYER_VOICE;
-    $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]=$TTSFUNCTION_PLAYER_LANGUAGE;
+    audit_log(__FILE__." ".__LINE__);
+    $GLOBALS["PATCH_OVERRIDE_VOICE"]=$GLOBALS["TTSFUNCTION_PLAYER_VOICE"];
+    $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]=$GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"];
     $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;
     $origTTS=$GLOBALS["TTSFUNCTION"];
     $origName=$GLOBALS["HERIKA_NAME"];
@@ -30,7 +30,7 @@
     unset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]);
     $GLOBALS["HERIKA_NAME"]=$origName;
     unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
-    // audit_log(__FILE__." ".__LINE__);
+    audit_log(__FILE__." ".__LINE__);
     $startTimeAfterPlayerTTTS = microtime(true);
 
 ?>
