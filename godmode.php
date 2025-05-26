@@ -18,6 +18,6 @@ $gameRequest = explode("|", $receivedData);
 $userWish=explode(":",$gameRequest[3]);
 $output='';
 $instruction=escapeshellarg("{$userWish[1]}");
-exec("php /var/www/html/HerikaServer/service/manager.php rolemaster instruction \"$instruction\"", $output, $returnCode);
+exec("php /var/www/html/HerikaServer/service/manager.php rolemaster instruction \"$instruction\" notify", $output, $returnCode);
 
 ?>
