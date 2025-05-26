@@ -842,7 +842,7 @@ $debugPaneLink = true;
         }
 
         // 3. Fetch data from database
-        $results = $db->fetchAll("SELECT gamets_truncated, n, summary, companions, tags, classifier, uid, ROWID as rowid, packed_message 
+        $results = $db->fetchAll("SELECT gamets_truncated, n, summary, companions, tags, classifier, uid, ROWID as rowid, packed_message, native_vec 
                                 FROM memory_summary 
                                 ORDER BY gamets_truncated DESC, rowid DESC 
                                 LIMIT 150");
@@ -856,12 +856,16 @@ $debugPaneLink = true;
                     <span class='summary-content'>" . nl2br(htmlspecialchars($row['summary'])) . "</span>
                 </div>
                 <div class='summary-section'>
-                    <span class='summary-label'>Tags:</span>
-                    <span class='summary-content'>" . htmlspecialchars($row['tags']) . "</span>
-                </div>
-                <div class='summary-section'>
                     <span class='summary-label'>People:</span>
                     <span class='summary-content'>" . htmlspecialchars($row['companions']) . "</span>
+                </div>
+                <div class='subcategory-section'>
+                    <span class='summary-label subcategory-label'>Tags:</span>
+                    <span class='summary-content subcategory-content'>" . htmlspecialchars($row['tags']) . "</span>
+                </div>
+                <div class='subcategory-section'>
+                    <span class='summary-label subcategory-label'>Embedding:</span>
+                    <span class='summary-content subcategory-content'>" . htmlspecialchars($row['native_vec'] ?? '') . "</span>
                 </div>
                 <div class='button-group' style='margin-top: 10px;'>
                     <button class='btn-base action-button edit' onclick='toggleEdit({$row['rowid']})'>Edit</button>
@@ -949,6 +953,20 @@ $debugPaneLink = true;
                 margin-bottom: 8px;
                 padding: 5px;
                 border-bottom: 1px solid #444;
+            }
+            .subcategory-section {
+                margin-bottom: 6px;
+                padding: 3px 5px 3px 15px;
+                border-bottom: 1px dotted #555;
+                font-size: 0.85em;
+            }
+            .subcategory-label {
+                color: #aaa;
+                font-size: 0.9em;
+            }
+            .subcategory-content {
+                color: #ddd;
+                font-size: 0.9em;
             }
             .summary-label {
                 font-weight: bold;
