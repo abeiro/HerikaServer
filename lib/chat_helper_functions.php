@@ -641,9 +641,12 @@ function returnLines($lines,$writeOutput=true)
                     'log',
                     array(
                         'localts' => time(),
-                        'prompt' => nl2br(SQLite3::escapeString(json_encode($GLOBALS["DEBUG_DATA"], JSON_PRETTY_PRINT))),
-                        'response' => (SQLite3::escapeString($responseTextUnmooded)),
-                        'url' => nl2br(SQLite3::escapeString("$receivedData [AI secs] $elapsedTimeAI  [TTS secs] $elapsedTimeTTS"))
+                        'ts' => $GLOBALS["gameRequest"][1],
+                        'gamets' => $GLOBALS["gameRequest"][2],
+                        'speaker' => $outBuffer["actor"],
+                        'listener' =>$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"],
+                        'sess' => 'pending',
+                        'mood' => time(),
     
     
                     )
