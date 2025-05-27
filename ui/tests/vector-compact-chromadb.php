@@ -11,6 +11,22 @@ include("../tmpl/head.html");
 $debugPaneLink = false;
 include("../tmpl/navbar.php");
 
+// Add styles for command output
+echo <<<HTML
+<style>
+pre.command-output {
+    background-color: #2c2c2c; /* Site background color */
+    border: 1px solid #444;    /* Darker border to complement the dark background */
+    padding: 15px;
+    border-radius: 5px;
+    white-space: pre-wrap;    /* CSS3 - wrap lines */
+    word-wrap: break-word;    /* Internet Explorer 5.5+ */
+    font-family: monospace;
+    font-size: 0.9em;
+    color: #ffffff;           /* White text color */
+}
+</style>
+HTML;
 
 $startTime = microtime(true);
 
@@ -46,30 +62,15 @@ echo "<title> CHIM - Compact Memories</title>";
 echo '<div style="padding-top: 160px; padding-left: 20px; padding-right: 20px;">';
 
 echo "<h1>Compact Memories</h1>";
-echo"<pre>$commandcompact</pre>";
+echo "<pre class='command-output'>$commandcompact</pre>";
 
-echo "<ul>";
-$lines = explode("\n", $commandcompact);
-foreach ($lines as $line) {
-    $line = trim($line);
-    if (!empty($line)) {
-        echo "<li>$line</li>";
-    }
-}
-echo "</ul>";
-
-// Run sync command // Disabled
-/*
+//Run the Sync Command
 $commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php sync';
-//$outputsync = shell_exec($commandsync);
+$outputsync = shell_exec($commandsync);
+    echo "<br>";
+    echo "<h1>Memory Sync for TXT2VEC</h1>";
+    echo "<pre class='command-output'>$outputsync</pre>";
 
-// Output sync command
-if ($embedding == 'local') {
-    echo "<h1>Memory Sync for Local Text2Vec</h1>";
-} else {
-    echo "<h1>Memory Sync for OpenAI's ADA2</h1>";
-}
-*/
 
 echo '</div>';
 ?>
