@@ -6,6 +6,13 @@
             "git_repo": "Dwemer-Dynamics/CHIM-Twitch-Bot",
             "github_url": "https://github.com/Dwemer-Dynamics/CHIM-Twitch-Bot",
             "mod_download_url": ""
+        },
+        "mindmap": {
+            "name": "CHIM-MindMap",
+            "description": "3D Visualization of memories via embeddings.",
+            "git_repo": "Dwemer-Dynamics/CHIM-MindMap",
+            "github_url": "https://github.com/Dwemer-Dynamics/CHIM-MindMap",
+            "mod_download_url": ""
         }
     }
 } 
