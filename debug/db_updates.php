@@ -983,7 +983,8 @@ $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"actor\" TYPE text"
 $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
 
 // TO-DO, make this properly
-$db->execQuery("ALTER TABLE public.oghma ADD COLUMN \"vector384\" vector(384)");
+$db->execQuery("ALTER TABLE public.oghma ADD COLUMN IF NOT EXISTS \"vector384\" vector(384)");
+$db->execQuery("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
 
 Logger::info(__FILE__." update file processed");
 
