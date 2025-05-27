@@ -143,7 +143,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
         echo "Packing existing data into summary...".PHP_EOL;
         $maxRow=PackIntoSummary();
-        echo "Packing complete. Max row ID from existing summaries: {$maxRow}".PHP_EOL;
+        echo "Packing complete. Max gamets_truncated row ID from existing summaries: {$maxRow}".PHP_EOL;
 
         echo "Checking for new entries to summarize and compact...".PHP_EOL;
         $count_query = "select COUNT(*) as count from memory_summary where (gamets_truncated>{$maxRow} or summary is null)";
