@@ -1,4 +1,5 @@
 <?php
+//No longer used, is in the database
 return [
     "$npcname has a habit of speaking in riddles or vague phrases, rarely giving a straightforward answer, leaving listeners puzzled or intrigued.",
     "$npcname constantly assesses the value of objects or situations, muttering things like 'worth a handful of septims' or 'barely worth a second glance.'",
