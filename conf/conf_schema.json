@@ -276,6 +276,7 @@
       "API_KEY":{"type":"apikey","scope":"global","description":"DeepL api key. Default profile only.<br/><strong>Required</strong> even when using the free version."}
     }
   },
+  "PLAYER_REESPECH":{"type":"boolean","description":"Use default diary connector AI to rewrite player speech Currently only triggers when strating speech with **","scope":"global"},
   "STTFUNCTION": {
     "type":"select","values":["whisper","localwhisper","azure", "deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service"
