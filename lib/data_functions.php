@@ -2636,7 +2636,7 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 						$s_res = "{$s_player} and {$s_npc} spoke last {$days_ago} days ago.";
 					} else {
 						$months_ago = intval($days_ago / 30);
-						if ($month_ago < 12) {
+						if ($months_ago < 12) {
 							$s_res = "{$s_player} and {$s_npc} spoke last {$months_ago} months ago on {$s_date}.";
 						} else {
 							$s_res = "{$s_player} and {$s_npc} spoke last long time ago on {$s_date}.";
