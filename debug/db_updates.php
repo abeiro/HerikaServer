@@ -985,6 +985,68 @@ $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text")
 // TO-DO, make this properly
 $db->execQuery("ALTER TABLE public.oghma ADD COLUMN \"vector384\" vector(384)");
 
+if ($checkVersion("dynamic_bio")<20250710001) {
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.dynamic_bio (
+            id SERIAL PRIMARY KEY,
+            prompt TEXT NOT NULL
+        )
+    ");
+
+    // Only populate if empty
+    $count = $db->fetchAll("SELECT COUNT(*) as count FROM dynamic_bio")[0]['count'];
+    if ($count == 0) {
+        $prompts = [
+            "Has a habit of speaking in riddles or vague phrases, rarely giving a straightforward answer, leaving listeners puzzled or intrigued.",
+            "Constantly assesses the value of objects or situations, muttering things like 'worth a handful of septims' or 'barely worth a second glance.'",
+            "Often boasts of past deeds, embellishing stories to seem larger-than-life, whether its about defeating bandits or outrunning a pack of wolves.",
+            "Uses overly formal or flowery language, regardless of the situation, giving the impression theyre more important than they might actually be.",
+            "Startles easily, overreacting to minor surprises and making dramatic exclamations even when the situation is harmless.",
+            "Frequently mentions their love of drink, often wishing they could be drinking rather then whatever they are doing right now.",
+            "Keeps their sentences brief and to the point, constantly scanning their surroundings as though expecting trouble to appear at any moment.",
+            "Peppers conversations with religious sayings or blessings, pausing at random to mutter prayers or invoke divine guidance.",
+            "Laughs loudly and at odd moments, their mirth sometimes inappropriate and unsettling to those around them.",
+            "Enjoys recounting old tales or bits of local history, often veering off into tangents about events or people from the past.",
+            "Refuses to back down in any argument, no matter how small or insignificant, stubbornly clinging to their point of view.",
+            "Insists on challenging anyone who questions their honor, even if the slight is minor or unintended, seeing every disagreement as a personal affront.",
+            "Occasionally mutters strange combinations of words or phrases, as though rehearsing something, leaving an air of mystery about their knowledge.",
+            "Cracks jokes and tries to lighten the mood, though their attempts at humor sometimes feel misplaced or poorly timed.",
+            "Constantly uses idioms and proverbs, even in situations where they make little sense, leaving others scratching their heads.",
+            "Has a habit of over-apologizing for even the smallest inconveniences, often stumbling over their words to avoid conflict.",
+            "Repeats the words of others, they do this without realizing it.",
+            "Avoids directly answering questions, instead responding with questions of their own or deflecting with vague statements.",
+            "Greets everyone they meet with an overly cheerful tone, regardless of the situation, sometimes to the annoyance of others.",
+            "Has a habit of over-explaining simple concepts, as though assuming others cant understand without detailed clarification.",
+            "Hesitates before speaking, often starting sentences over or leaving thoughts unfinished, as if unsure of what to say.",
+            "Insists on using nicknames for everyone they meet, even if the person prefers to be addressed more formally.",
+            "Takes every compliment as a personal challenge, feeling the need to outdo themselves or prove they deserve the praise.",
+            "Frequently comments on how things 'used to be better' in the past, regardless of whether theyve actually experienced those times.",
+            "Carries a peculiar fixation on fairness, pointing out perceived injustices or unfair treatment in even trivial matters.",
+            "Refers to themselves in the third person, making their speech stand out as eccentric or self-important.",
+            "Seems overly curious, asking far too many questions about others lives, sometimes venturing into topics considered personal or taboo.",
+            "Speaks sparingly, relying on gestures or brief comments to communicate, making their few words carry extra weight.",
+            "Constantly mentions the weather, relating it to omens or signs from the divines about what might happen next.",
+            "Frequently clears their throat before speaking, as if always preparing to make an important announcement.",
+            "Has a habit of touching their weapons or armor while speaking, a nervous tic that suggests they're always ready for trouble.",
+            "Speaks with an unusual cadence, emphasizing random words in their sentences for no apparent reason.",
+            "Compares everything to hunting or fishing, using metaphors like 'quick as a slaughterfish' or 'stubborn as a horker'.",
+            "Interrupts themselves mid-sentence to comment on seemingly unrelated observations about their surroundings.",
+            "Occasionally whispers parts of sentences, as if sharing secrets even when discussing mundane topics.",
+            "Sighs dramatically before responding to questions, as though the weight of the world rests on their shoulders.",
+            "Frequently mentions their aches and pains, blaming old wounds or the changing seasons for their discomfort.",
+            "Has a peculiar habit of sniffing the air while conversing, sometimes commenting on scents others can't detect.",
+            "Speaks with excessive politeness to those of higher status, but becomes notably curt with those they deem beneath them.",
+            "Prides themselves on their knowledge of herbs and potions, offering unsolicited advice about remedies for ailments no one mentioned."
+        ];
+        
+        foreach ($prompts as $prompt) {
+            $db->execQuery("INSERT INTO dynamic_bio (prompt) VALUES ('".$db->escape($prompt)."')");
+        }
+    }
+    
+    $updateVersion("dynamic_bio", 20250710001);
+}
+
 Logger::info(__FILE__." update file processed");
 
 ?>

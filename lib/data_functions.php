@@ -2989,14 +2989,14 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             if (!empty($npcTemlate2[0])) {
                 // Found a row by bracket match
                 file_put_contents($newFile,'$HERIKA_PERS=\''.addslashes(trim($npcTemlate2[0]["npc_pers"])).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-                $dynamicPrompts = include 'prompts/dynamic_prompts.php'; // Ensure this returns an array
-                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($dynamicPrompts[array_rand($dynamicPrompts)])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
+                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
                 file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes(trim($npcknowledge2[0]["npc_misc"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);  
             } else {
                 // Fallback if neither query found anything
                 file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-                $dynamicPrompts = include 'prompts/dynamic_prompts.php'; // Ensure this returns an array
-                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($dynamicPrompts[array_rand($dynamicPrompts)])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
+                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             }
 
         } else {
