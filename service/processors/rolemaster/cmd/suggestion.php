@@ -95,7 +95,8 @@ user request: actor a leaves the place
             $sysprompt="user request: \"{$GLOBALS["argv"][3]}\". (As game director, you now must issue an instruction to any actor to make this wish happen. If user is addressing an actor, use instruction on it)"; 
             $userprompt="* Fufill the user's request no matter what, even if it means breaking roleplay.";
         }
-        
+
+        // Database Prompt (Instruction)
         $prompt[] = array('role' => 'system', 'content' => "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.$commonprompt");
         $prompt[] = array('role' => 'user', 'content' => "# Contextual data\n$historyData");
         $prompt[] = array('role' => 'user', 'content' =>"

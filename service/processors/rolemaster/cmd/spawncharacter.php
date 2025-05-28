@@ -56,6 +56,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         $randomLetter = chr(rand(65, 90)); // ASCII A-Z
         $nameRandom="Start by letter \"$randomLetter\"";
 
+        // Database Prompt (Spawn Character)
         $prompt[] = array('role' => 'system', 'content' => "$sysprompt");
         $prompt[] = array('role' => 'user', 'content' =>"
 

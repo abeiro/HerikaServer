@@ -59,7 +59,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
       }
 
-    
+    // Database Prompt (Movie Director)
     //$GLOBALS["HERIKA_NAME"]="random present actor";
     $GLOBALS["HERIKA_PERS"]="";
 

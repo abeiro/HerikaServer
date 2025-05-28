@@ -96,6 +96,7 @@ user request: actor \"a\" leaves the place
         
         $prompt[] = array('role' => 'system', 'content' => "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.$commonprompt");
         $prompt[] = array('role' => 'user', 'content' => "# Contextual data\n$historyData");
+        // Database Prompt (Director)
         $prompt[] = array('role' => 'user', 'content' =>"
 $sysprompt
 Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at  2 or 3 max actors)

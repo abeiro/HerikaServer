@@ -188,6 +188,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                             $CLFORMAT.=" GENERA EL CONTENIDO Y LOS TAGS EN ESPAÑOL";
                         }
                     }
+                    // Database Prompt (Memory Compaction)
                     $prompt=[];
                     $prompt[] = array('role' => 'system', 
                                       'content' => "This is a playthrough in Skyrim. 
