@@ -13,6 +13,9 @@ date_default_timezone_set('Europe/Madrid');
 $GLOBALS["AVOID_TTS_CACHE"]=true;
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
+// Cooldown for some actions
+$COOLDOWNMAP=[];
+
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
@@ -43,10 +46,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     
         
     $receivedData = "inputtext|{$res[0]["ts"]}|{$res[0]["gamets"]}|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
-    //$receivedData = "funcret|{$res[0]["ts"]}|{$res[0]["gamets"]}|command@Inspect@Serana@Serana is wearing: Serana Hood,Elven Dagger,Elder Scroll,Vampire Boots,Vampire Royal Armor,";
-    //$receivedData = "{$argv[1]}";
     $_GET["profile"]=$argv[2];
-    //error_reporting(E_ERROR);
     $GLOBALS["FUNCTIONS_ARE_ENABLED"]=true;
 
     unset($GLOBALS["db"]);
@@ -118,6 +118,7 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 /*    &&($gameRequest[0]!="addnpc")&&($gameRequest[0]!="_speech")) {
 */
 $db = new sql();
+
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","init"])) {
     $GLOBALS["ADD_PLAYER_BIOS"]=true;
@@ -141,7 +142,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
-    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout",
+    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
     "util_location_name"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
@@ -178,22 +179,28 @@ if (($gameRequest[0]=="delete_event")) {
     // Do this ASAP
     $datacn=$db->escape($gameRequest[3]);
     $db->delete("eventlog","type in ('chat','prechat') and data like '%$datacn%' and localts>".(time()- 120));
-    audit_log(__FILE__);
+    // audit_log(__FILE__);
     die();
 }
 
 // Player rewrite
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && false) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["PLAYER_REESPECH"]) && $GLOBALS["PLAYER_REESPECH"]) {
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
     error_log($cleaned_player_dialogue);
     if (strpos($cleaned_player_dialogue,"**")===0) {
         // If player speech starts with **
         error_log("Overwritting user prompt $cleaned_player_dialogue");
+        function getBaseUrlForSpeech(): string {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+            $host = $_SERVER['HTTP_HOST'];
+            return $protocol . $host;
+        }
 
-        exec("php service/manager.php rolemaster smart_impersonation \"". $cleaned_player_dialogue."\"");
-        die("X-CUSTOM-CLOSE");
+        $newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
+        $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$newSpeech";
+
     }
 }
 
@@ -380,6 +387,8 @@ if (is_array($currentParty)) {
     $GLOBALS["IS_NPC"]=false;
 
 // RECHAT PRE MANAGMENT
+
+
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
 
@@ -574,6 +583,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
      $memoryInjectionCtx=[];
 
 
+
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
 
@@ -645,13 +655,11 @@ if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMP
     $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
 }
 
-// Cooldown for some actions
-$COOLDOWNMAP=[];
-$COOLDOWNMAP=[
-    "ComeCloser"=>120/0.00864,
-    "WaitHere"=>300/0.00864,
-    "UseSoulGaze"=>300/0.00864,
-];
+
+$COOLDOWNMAP["ComeCloser"]=120/0.00864;
+$COOLDOWNMAP["WaitHere"]=300/0.00864;
+$COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
+
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
@@ -696,7 +704,6 @@ if (isset($npcRoleMastered["is_rolemastered"])) {
 
 // MINIME_T5 STUFF, command assiastant
 
-
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
     if ($GLOBALS["MINIME_T5"]) {
@@ -739,6 +746,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 }
 
 
+// audit_log(__FILE__." [MINIME]  ".__LINE__);
 
 // OGHMA STUFF
 
@@ -753,6 +761,8 @@ if (sizeof($memoryInjectionCtx)>0) {
 }
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
+
+// audit_log(__FILE__." [OGHMA]  ".__LINE__);
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
     // When chatnf_book (make the AI to read a book), context will only be the book data.
@@ -775,6 +785,8 @@ $head[] = array('role' => 'system', 'content' =>
 
 // Check for context overrides on ext dir (plugins)
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
+
+// audit_log(__FILE__." [PLUGINS CONTEXT]  ".__LINE__);
 
 /**********************
 CALL BUILDING
@@ -861,6 +873,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEP
 
     require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 }
+
+// audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 
 $outputWasValid = call_llm();
 if (!$outputWasValid) {

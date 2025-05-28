@@ -526,6 +526,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='death' then 'RPG_DEATH' 
       when type='welcome' then 'RPG_SPAWN' 
       when type='bleedout' then 'RPG_DEFEAT' 
+      when type='waitstart' then 'CONTEXTI' 
+      when type='waitstop' then 'CONTEXTI' 
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
@@ -533,6 +535,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive'
+    
     ".(($actorEscaped)?" 
     and (people like '|%$actorEscaped%|' or people like '$actorEscaped') ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
@@ -2265,6 +2268,12 @@ function call_llm() {
             $actions=$GLOBALS["action_post_process_fnct"]($actions);
         }
 
+        // Extnded version which is an array, so we can hook more than one function
+        if (isset($GLOBALS["action_post_process_fnct_ex"]) && is_array($GLOBALS["action_post_process_fnct_ex"])) {
+            foreach ($GLOBALS["action_post_process_fnct_ex"] as $postFilterFunc)
+                $actions=$postFilterFunc($actions);
+        }
+
         
         if (is_array($actions) && (sizeof($actions)>0)) {
             
@@ -2502,6 +2511,7 @@ function call_llm() {
                 }
             }
 
+            // Log actions
             foreach ($actions as $n=>$singleaction) {
                 $actionPart=explode("|",$singleaction); 
                 $actionArg=explode("@",$actionPart[2]); 
@@ -2864,7 +2874,7 @@ function GetExpression($mood) {
      }
                              
      
-     $GLOBALS["PATH_ORIGINAL_MOD_ISSUED"]=$mood;
+     $GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"]=$mood;
      return $result;
      
  }

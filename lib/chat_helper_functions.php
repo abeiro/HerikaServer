@@ -637,20 +637,23 @@ function returnLines($lines,$writeOutput=true)
                 
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
                 $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
-                $GLOBALS["moods_issued"]->insert(
-                    'log',
-                    array(
-                        'localts' => time(),
-                        'ts' => $GLOBALS["gameRequest"][1],
-                        'gamets' => $GLOBALS["gameRequest"][2],
-                        'speaker' => $outBuffer["actor"],
-                        'listener' =>$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"],
-                        'sess' => 'pending',
-                        'mood' => time(),
-    
-    
-                    )
-                );
+                if ($outBuffer["actor"]!="Player" && isset($GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"])) {
+                    $GLOBALS["db"]->insert(
+                        'moods_issued',
+                        array(
+                            'localts' => time(),
+                            'ts' => $GLOBALS["gameRequest"][1],
+                            'gamets' => $GLOBALS["gameRequest"][2],
+                            'speaker' => $outBuffer["actor"],
+                            'listener' =>$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"],
+                            'sess' => 'pending',
+                            'mood' => $GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"]
+        
+        
+                        )
+                    );
+                }
+
                 file_put_contents(__DIR__."/../log/output_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
 
             }

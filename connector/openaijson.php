@@ -734,6 +734,9 @@ class openaijson
                                 }
                                 else {
                                     Logger::warn("openaijson: Missing required parameter: target");
+                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
+                                    // Change. we allow this. Post filter maybe can fix.
+
                                 }
                                     
                             } else {

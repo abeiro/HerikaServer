@@ -849,7 +849,9 @@ class openrouterjson
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
+                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
                                     Logger::warn("openrouterjson: Missing required parameter: target");
+                                    // Change. we allow this. Post filter maybe can fix.
                                 }
                                     
                             } else {

@@ -56,7 +56,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $db=new sql();
    
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
-            echo "Using pgvector search";
+            echo "Using pgvector search (text2vec)";
             $res=DataSearchMemoryByVector($argv[2],'');
         }
         else {
@@ -64,7 +64,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
             $res=DataSearchMemory($argv[2],'');
         }
 
-        print_r($res[0]);
+        print_r($res);
         
         
 
