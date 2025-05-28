@@ -10,6 +10,7 @@
 // Common patterns to use in most functions
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
+// Database Prompt (Dialogue)
 $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
@@ -33,6 +34,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $TEMPLATE_ACTION="";
 }
 
+// Database Prompt (Dialogue should all be one)
 if (DMgetCurrentModel()=="openaijson") {
     $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
     $TEMPLATE_ACTION="";
