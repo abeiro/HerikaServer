@@ -275,7 +275,7 @@ class openai
                 unset($data["presence_penalty"]); 
                 unset($data["frequency_penalty"]);
                 unset($data["max_completion_tokens"]);
-                $data['max_tokens'] => $MAX_TOKENS;
+                $data['max_tokens'] = $MAX_TOKENS;
             } 
 
             if (($this->_is_reasoning) && (!$this->_is_mistral_ai)) { // there is no rule accepted by all providers
