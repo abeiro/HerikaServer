@@ -578,7 +578,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 		Logger::debug($partyConf);
 		// Use the global DYNAMIC_PROMPT
         $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
-
+		// Database Prompt (Dynamic Profile Head)    
 		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
 		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "Character static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $GLOBALS["HERIKA_DYNAMIC"]];

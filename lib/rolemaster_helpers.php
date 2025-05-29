@@ -1,5 +1,5 @@
 <?php 
-
+// Database Prompt (Quest Maker)
 $AIQUEST_TEMPLATE=<<<EOI
 You are a Skyrim quest creator. You can create quest using this tools
 
