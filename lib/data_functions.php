@@ -528,6 +528,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='bleedout' then 'RPG_DEFEAT' 
       when type='waitstart' then 'CONTEXTI' 
       when type='waitstop' then 'CONTEXTI' 
+      when type='spellcast' then 'CONTEXTI' 
+      when type='npcspellcast' then 'CONTEXTI' 
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
@@ -1965,7 +1967,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                     'audit_memory',
                     array(
                         'input' => $TEST_TEXT,
-                        'keywords' =>'text2vec search /'.$contextKeywords,
+                        'keywords' =>'text2vec search / (input plus "'.$contextKeywords.'"',
                         'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                         'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                         'memory'=>$memory[0]["summary"],

@@ -318,9 +318,11 @@ function unmoodSentence($sentence) {
                     ]
                     ); // Manual cases
 
-    //$cleaned = preg_replace('/\s*#ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
-    $cleaned = preg_replace('/\s*# ?ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
+    
+    $cleaned = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove #ACTIONS .... (Gemini seems prone to doing this)
+    $output = preg_replace('/#[A-Za-z]+/', '', $cleaned);       // Remove #<text> .... (Gemini seems prone to doing this)
 
+    $cleaned=$output;
     $sentence = preg_replace('/"/', '', $cleaned); // Remove "
 
     preg_match_all('/\((.*?)\)/', $sentence, $matches); // Unused?
@@ -561,7 +563,10 @@ function returnLines($lines,$writeOutput=true)
 
                 if (is_array($GLOBALS["SCRIPTLINE_LISTENER"]) && sizeof($GLOBALS["SCRIPTLINE_LISTENER"]) > 0 && is_string($GLOBALS["SCRIPTLINE_LISTENER"][0])) {
                     $GLOBALS["SCRIPTLINE_LISTENER"]=$GLOBALS["SCRIPTLINE_LISTENER"][0];
+                    Logger::info("GLOBALS['SCRIPTLINE_LISTENER'] seems to be an array!");
+
                 }
+
 
                 $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 // Don't touch original one
@@ -588,7 +593,7 @@ function returnLines($lines,$writeOutput=true)
 
                     // Search for each name in the subtitle sentence
                     foreach ($listenerFix2 as $index => $name) {
-                        $pos = stripos($responseForSubtitles, $name); // Case-insensitive search
+                        $pos = stripos($responseForSubtitles, trim($name)); // Case-insensitive search
                         if ($pos !== false) {
                             $positions[$name] = $pos;           // Save position for first-mention check
                             $positionsWithIndex[$index] = $pos; // Save index and position for last-mention check
@@ -607,6 +612,8 @@ function returnLines($lines,$writeOutput=true)
                             $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener-1;  // Next round will use this speaker if no refernce found.
                         else
                             $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener;
+                        // Test
+                        $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener;
                         // Output results
                         Logger::info("Applying smarter listenerFix2: $listener $nextListener {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
 
