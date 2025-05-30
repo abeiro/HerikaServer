@@ -911,9 +911,6 @@ if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
     Logger::debug("Applied patch: sql_gamets_convert_functions 2 20250226001");
 }
 
-//----------------------------------------------------
-
-
 
 //----------------------------------------------------
 // npc_template and oghma table. 1.1.0 update
@@ -975,8 +972,9 @@ if ($checkVersion("locations")<20250516001) {
 if ($checkVersion("actions_issued")<20250525001) {
     $db->execQuery(file_get_contents(__DIR__."/../data/actions_issued.sql"));
     $updateVersion("actions_issued",20250525001);
-    error_log("Applied patch locations 20250525001");
+    error_log("Applied patch actions_issued 20250525001");
 }
+
 
 if ($checkVersion("moods_issued")<20250526001) {
     $db->execQuery(file_get_contents(__DIR__."/../data/table_moods_issued.sql"));
@@ -993,6 +991,7 @@ $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text")
 $db->execQuery("ALTER TABLE public.oghma ADD COLUMN IF NOT EXISTS \"vector384\" vector(384)");
 $db->execQuery("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
 
+
 if ($checkVersion("dynamic_bio")<20250710001) {
     $db->execQuery("
         CREATE TABLE IF NOT EXISTS public.dynamic_bio (
@@ -1008,7 +1007,7 @@ if ($checkVersion("dynamic_bio")<20250710001) {
             "Has a habit of speaking in riddles or vague phrases, rarely giving a straightforward answer, leaving listeners puzzled or intrigued.",
             "Constantly assesses the value of objects or situations, muttering things like 'worth a handful of septims' or 'barely worth a second glance.'",
             "Often boasts of past deeds, embellishing stories to seem larger-than-life, whether its about defeating bandits or outrunning a pack of wolves.",
-            "Uses overly formal or flowery language, regardless of the situation, giving the impression theyre more important than they might actually be.",
+           "Uses overly formal or flowery language, regardless of the situation, giving the impression theyre more important than they might actually be.",
             "Startles easily, overreacting to minor surprises and making dramatic exclamations even when the situation is harmless.",
             "Frequently mentions their love of drink, often wishing they could be drinking rather then whatever they are doing right now.",
             "Keeps their sentences brief and to the point, constantly scanning their surroundings as though expecting trouble to appear at any moment.",
@@ -1054,6 +1053,66 @@ if ($checkVersion("dynamic_bio")<20250710001) {
     
     $updateVersion("dynamic_bio", 20250710001);
 }
+
+//----------------------------------------------------
+
+if ($checkVersion("oghma")<20250903001) { // version 202509... 
+    Logger::debug(" try patch: oghma 20250903001");
+    $db->execQuery("ALTER TABLE public.oghma ADD COLUMN IF NOT EXISTS \"vector384\" vector(384)");
+    $updateVersion("oghma",20250903001);
+    Logger::info("Applied patch oghma 20250903001");
+}
+
+if ($checkVersion("locations")<20250526001) {
+    Logger::debug(" try patch: locations 20250526001");
+    $db->execQuery("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
+    $updateVersion("locations",20250526001);
+    Logger::info("Applied patch locations 20250526001");
+}
+
+if ($checkVersion("rolemaster")<20250528001) {
+    Logger::debug(" try patch: rolemaster 20250528001");
+    $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"action\" TYPE text");
+    $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"actor\" TYPE text");
+    $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
+    $updateVersion("rolemaster",20250528001);
+    Logger::info("Applied patch rolemaster 20250528001");
+}
+
+//----------------------------------------------------
+// database maintenance tools
+// - autovacuum / table
+//----------------------------------------------------
+
+if ($checkVersion("db_maintenance")<20250528002) {
+    Logger::debug(" try patch: db_maintenance 20250528002");
+
+    $db->execQuery("DROP FUNCTION IF EXISTS public.sql_exec2(text) CASCADE");
+
+    $db->execQuery("
+    CREATE FUNCTION public.sql_exec2(text) returns text 
+    language plpgsql volatile 
+    AS 
+    $$
+        BEGIN
+          EXECUTE $1;
+          RETURN $1;
+        END;
+    $$; 
+    ");
+
+    $db->execQuery("SELECT sql_exec2('ALTER TABLE \"'||pgc.relname||'\" SET (autovacuum_enabled = on, toast.autovacuum_enabled = on) '||';')
+        FROM pg_catalog.pg_class pgc
+        LEFT JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+        WHERE (pgc.relkind ='r')
+        AND (pgn.nspname='public'); ");
+
+    $updateVersion("db_maintenance",20250528002);
+    Logger::info("Applied patch db_maintenance 20250528002");
+}
+
+//----------------------------------------------------
+
 
 Logger::info(__FILE__." update file processed");
 
