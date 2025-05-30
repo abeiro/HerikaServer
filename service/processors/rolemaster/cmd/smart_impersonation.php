@@ -29,7 +29,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
         
        
-
+    // Database Prompt (Smart Impersonation)
 $commonprompt='';
         if (!$GLOBALS["argv"][3]) {
             $sysprompt="Write dialogue for {$GLOBALS["PLAYER_NAME"]}";

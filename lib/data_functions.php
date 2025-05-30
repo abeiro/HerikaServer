@@ -2660,7 +2660,7 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 						$s_res = "{$s_player} and {$s_npc} spoke last {$days_ago} days ago.";
 					} else {
 						$months_ago = intval($days_ago / 30);
-						if ($month_ago < 12) {
+						if ($months_ago < 12) {
 							$s_res = "{$s_player} and {$s_npc} spoke last {$months_ago} months ago on {$s_date}.";
 						} else {
 							$s_res = "{$s_player} and {$s_npc} spoke last long time ago on {$s_date}.";
@@ -3014,14 +3014,14 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             if (!empty($npcTemlate2[0])) {
                 // Found a row by bracket match
                 file_put_contents($newFile,'$HERIKA_PERS=\''.addslashes(trim($npcTemlate2[0]["npc_pers"])).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-                $dynamicPrompts = include 'prompts/dynamic_prompts.php'; // Ensure this returns an array
-                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($dynamicPrompts[array_rand($dynamicPrompts)])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
+                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
                 file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes(trim($npcknowledge2[0]["npc_misc"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);  
             } else {
                 // Fallback if neither query found anything
                 file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-                $dynamicPrompts = include 'prompts/dynamic_prompts.php'; // Ensure this returns an array
-                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($dynamicPrompts[array_rand($dynamicPrompts)])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
+                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             }
 
         } else {
