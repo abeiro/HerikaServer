@@ -326,7 +326,7 @@ $debugPaneLink = true;
         $results = $db->fetchAll(
             "SELECT type, data, gamets, localts, ts, ROWID
              FROM eventlog a
-             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close')
+             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init')
              ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
              LIMIT $limit OFFSET $offset"
         );
