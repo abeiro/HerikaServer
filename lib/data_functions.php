@@ -526,6 +526,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='death' then 'RPG_DEATH' 
       when type='welcome' then 'RPG_SPAWN' 
       when type='bleedout' then 'RPG_DEFEAT' 
+      when type='waitstart' then 'CONTEXTI' 
+      when type='waitstop' then 'CONTEXTI' 
+      when type='spellcast' then 'CONTEXTI' 
+      when type='npcspellcast' then 'CONTEXTI' 
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
@@ -533,6 +537,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive'
+    
     ".(($actorEscaped)?" 
     and (people like '|%$actorEscaped%|' or people like '$actorEscaped') ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
@@ -1962,7 +1967,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                     'audit_memory',
                     array(
                         'input' => $TEST_TEXT,
-                        'keywords' =>'text2vec search /'.$contextKeywords,
+                        'keywords' =>'text2vec search / (input plus "'.$contextKeywords.'"',
                         'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                         'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                         'memory'=>$memory[0]["summary"],
@@ -2111,7 +2116,19 @@ function call_llm() {
     
     $outputWasValid = true;
     $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
+
     $connectionHandler->open($contextData,$overrideParameters);
+
+    /* *****
+    Player TTS
+
+    Player TTS. We overwrite some confs an then restore them.
+    */
+    if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
+        require(__DIR__."/../processor/player_tts.php");
+    }
+
+
 
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
     if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
@@ -2251,6 +2268,12 @@ function call_llm() {
         $actions=$connectionHandler->processActions();
         if (isset($GLOBALS["action_post_process_fnct"])) {
             $actions=$GLOBALS["action_post_process_fnct"]($actions);
+        }
+
+        // Extnded version which is an array, so we can hook more than one function
+        if (isset($GLOBALS["action_post_process_fnct_ex"]) && is_array($GLOBALS["action_post_process_fnct_ex"])) {
+            foreach ($GLOBALS["action_post_process_fnct_ex"] as $postFilterFunc)
+                $actions=$postFilterFunc($actions);
         }
 
         
@@ -2490,6 +2513,7 @@ function call_llm() {
                 }
             }
 
+            // Log actions
             foreach ($actions as $n=>$singleaction) {
                 $actionPart=explode("|",$singleaction); 
                 $actionArg=explode("@",$actionPart[2]); 
@@ -2798,61 +2822,62 @@ function GetExpression($mood) {
      "CombatShout"
      ];
      
+     $result="";
      if ($mood=="sarcastic") {
-         return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        $result= array_rand(array_flip(["DialoguePuzzled"]), 1);
          
          
      } else if ($mood=="sassy") {
-         return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        $result= array_rand(array_flip(["DialoguePuzzled"]), 1);
          
          
      } else if ($mood=="sardonic") {
-         return array_rand(array_flip(["DialoguePuzzled"]), 1);
+        $result= array_rand(array_flip(["DialoguePuzzled"]), 1);
          
          
      } else if ($mood=="irritated") {
-         return array_rand(array_flip(["DialogueAnger"]), 1);
+        $result= array_rand(array_flip(["DialogueAnger"]), 1);
         
          
      } else if ($mood=="mocking") {
-         return array_rand(array_flip(["DialogueHappy"]), 1);
+        $result= array_rand(array_flip(["DialogueHappy"]), 1);
          
          
      } else if ($mood=="playful") {
-         return array_rand(array_flip(["DialogueHappy"]), 1);
+        $result= array_rand(array_flip(["DialogueHappy"]), 1);
              
      } else if ($mood=="teasing") {
-         return array_rand(array_flip(["DialogueSurprise"]), 1);
+        $result= array_rand(array_flip(["DialogueSurprise"]), 1);
          
          
      } else if ($mood=="smug") {
-         return array_rand(array_flip(["DialogueAnger"]), 1);
+        $result= array_rand(array_flip(["DialogueAnger"]), 1);
          
          
      } else if ($mood=="amused") {
-         return array_rand(array_flip(["DialogueSurprise"]), 1);
+        $result= array_rand(array_flip(["DialogueSurprise"]), 1);
          
      } else if ($mood=="smirking") {
-         return array_rand(array_flip(["DialogueHappy"]), 1);
+        $result= array_rand(array_flip(["DialogueHappy"]), 1);
      
          
      } else if ($mood=="serious") {
-         return array_rand(array_flip(["MoodNeutral"]), 1);
+        $result= array_rand(array_flip(["MoodNeutral"]), 1);
      
          
      } else if ($mood=="firm") {
-         return array_rand(array_flip(["MoodNeutral"]), 1);
+        $result= array_rand(array_flip(["MoodNeutral"]), 1);
      
          
      } if ($mood=="neutral") {
-         return array_rand(array_flip(["MoodNeutral"]), 1);
+        $result= array_rand(array_flip(["MoodNeutral"]), 1);
          
          
      }
                              
      
-     
-     return "";
+     $GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"]=$mood;
+     return $result;
      
  }
 

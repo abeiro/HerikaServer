@@ -975,7 +975,22 @@ if ($checkVersion("actions_issued")<20250525001) {
     error_log("Applied patch actions_issued 20250525001");
 }
 
-//----------------------------------------------------
+
+if ($checkVersion("moods_issued")<20250526001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/table_moods_issued.sql"));
+    $updateVersion("moods_issued",20250526001);
+    error_log("Applied patch moods_issued 20250526001");
+}
+
+
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"action\" TYPE text");
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"actor\" TYPE text");
+$db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
+
+// TO-DO, make this properly
+$db->execQuery("ALTER TABLE public.oghma ADD COLUMN IF NOT EXISTS \"vector384\" vector(384)");
+$db->execQuery("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
+
 
 if ($checkVersion("dynamic_bio")<20250710001) {
     $db->execQuery("

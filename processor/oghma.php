@@ -188,7 +188,7 @@ if ($GLOBALS["MINIME_T5"]) {
 
                                 if ($advancedAllowed) {
                                     // The user can access advanced lore
-                                    $GLOBALS["OGHMA_HINT"] .= " \n# Lore Information (You have advanced knowledge on this subject, you can use it in your dialogue): \"{$topTopic["topic_desc"]}\"";
+                                    $GLOBALS["OGHMA_HINT"] .= " \n# Lore Information (You have advanced knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}  \"{$topTopic["topic_desc"]}\"";
                                 } else {
                                     // -----------------------------
                                     // 2) Check basic article
@@ -211,7 +211,7 @@ if ($GLOBALS["MINIME_T5"]) {
                                     }
 
                                     if ($basicAllowed) {
-                                        $GLOBALS["OGHMA_HINT"] .= " \n# Lore Information (You only have basic knowledge on this subject, you can use it in your dialogue): \"{$topTopic["topic_desc_basic"]}\"";
+                                        $GLOBALS["OGHMA_HINT"] .= " \n# Lore Information (You only have basic knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}  \"{$topTopic["topic_desc_basic"]}\"";
                                     } else {
                                         $GLOBALS["OGHMA_HINT"] .= " \nYou do not know ANYTHING about {$topTopic["topic"]}";
                                     }

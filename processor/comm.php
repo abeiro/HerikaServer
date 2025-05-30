@@ -672,5 +672,42 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         $MUST_END=true;
     
     }
+} elseif (strpos($gameRequest[0], "waitstart")===0) {    // addnpc 
+    
+    
+    if (isset($gameRequest[3]) && $gameRequest[3]) {
+        $db->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "last_waitstart",
+                'value' =>$gameRequest[2]
+            ),
+            "id"
+        );
+    }
+    
+    $MUST_END=true;
+    
+    
+} elseif (strpos($gameRequest[0], "waitstop")===0) {    // addnpc 
+    
+    $lastgameTs=$db->fetchOne("select value from conf_opts where id='last_waitstart'");
+    
+    $elapsed=($gameRequest[2]-$lastgameTs["value"])* 0.0000024;
+    $db->insert(
+        'eventlog',
+        array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'type' => "info_timeforward",
+            'data' => "$elapsed hours have passed. Current date/time: ".convert_gamets2skyrim_long_date($gameRequest[2]),
+            'sess' => 'pending',
+            'localts' => time()
+        )
+    );
+
+    $MUST_END=true;
+    
+    
 }
 ?>

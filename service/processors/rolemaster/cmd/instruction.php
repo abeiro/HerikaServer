@@ -235,7 +235,7 @@ In addition, follow these general scene rules as a game director:
         
         if (isset($GLOBALS["argv"][4]) && $GLOBALS["argv"][4]=="notify") {
             $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) === '1.3.1') {
+            if ($pluginVersionRow && isset($pluginVersionRow['value']) && in_array(trim($pluginVersionRow['value']),['1.3.1','1.3.2'])) {
                 if ($allOk)
                     $GLOBALS["db"]->insert(
                         'responselog',

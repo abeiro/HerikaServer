@@ -385,4 +385,5 @@ $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dy
 
 $BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
+
 ?>
