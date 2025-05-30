@@ -592,6 +592,8 @@ function returnLines($lines,$writeOutput=true)
                     $positionsWithIndex = [];  // For determining the last mentioned name and its index
 
                     // Search for each name in the subtitle sentence
+                    $listenerFix2[]="Dragonborn";
+
                     foreach ($listenerFix2 as $index => $name) {
                         $pos = stripos($responseForSubtitles, trim($name)); // Case-insensitive search
                         if ($pos !== false) {
@@ -621,6 +623,8 @@ function returnLines($lines,$writeOutput=true)
                         $listener=$listenerFix2[$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]];
                         $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listener);
                     }
+
+                    $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=strtr($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"],["Dragonborn"=>$GLOBALS["PLAYER_NAME"]]);
 
                     Logger::info("Applying listenerFix2: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}  {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
                     //$GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[ $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]]);
