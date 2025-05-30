@@ -99,8 +99,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $Q = array();
                     $Q[] = "DROP SCHEMA IF EXISTS $schema CASCADE";
                     $Q[] = "DROP EXTENSION IF EXISTS vector CASCADE";
+                    $Q[] = "DROP EXTENSION IF EXISTS pg_trgm CASCADE";
                     $Q[] = "CREATE SCHEMA $schema";
                     $Q[] = "CREATE EXTENSION vector";
+                    $Q[] = "CREATE EXTENSION IF NOT EXISTS pg_trgm";
 
                     $errorOccurred = false;
 

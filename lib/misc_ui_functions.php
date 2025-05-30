@@ -79,13 +79,13 @@ function print_array_as_table($data)
                     ".nl2br($cell)."</p>
 
                 </td>";
-            } elseif (strpos($cell, 'background chat') !== false) {
+            } elseif (stripos($cell, 'background chat') !== false) {
                 echo "<td class='$colorClass'><em>" . $cell . "</em></td>";
-            } elseif (strpos($cell, $GLOBALS["PLAYER_NAME"] . ':') !== false) {
+            } elseif (stripos($cell, ($GLOBALS["PLAYER_NAME"] ?? "_none") . ':') !== false) {
                 echo "<td class='$colorClass'>" . $cell . "</td>";
-            } elseif (strpos($cell, 'obtains a quest') !== false) {
+            } elseif (stripos($cell, 'obtains a quest') !== false) {
                 echo "<td class='$colorClass'><strong>" . $cell . "</strong></td>";
-            } elseif (strpos($cell, "{$GLOBALS["HERIKA_NAME"]}:") !== false) {
+            } elseif (stripos($cell, ($GLOBALS["HERIKA_NAME"] ?? "_none") . ":") !== false) {
                 echo "<td  class='$colorClass'>" . $cell . "</td>";
 
             } elseif ($n == "cost_USD" || $n == "total_cost_so_far_USD") {
