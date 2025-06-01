@@ -31,7 +31,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         }
 
         
-        // Function stuff        
+        // Function stuff      
         require($enginePath . "functions/functions_instruction.php");
 
         $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
