@@ -1732,18 +1732,20 @@ function DirectConversationsWith($actor)
 {
 
     global $db;
-
+    $i_res = 0;
+    
     $speakerprmt=$db->escape($GLOBALS["HERIKA_NAME"]);
     $listenerprmt=$db->escape($actor);
 
+    $lastLoc=$db->fetchAll("SELECT count(*) as N FROM speech WHERE (speaker='$speakerprmt' and listener='$listenerprmt') OR (listener='$speakerprmt' and speaker='$listenerprmt') ");  
     
-    $lastLoc=$db->fetchAll("select  count(*) as N from speech where speaker='$speakerprmt' and listener='$listenerprmt' ");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        return "";
+        Logger::warn("DirectConversationsWith: zero interactions {$speakerprmt} - {$listenerprmt} ");
+    } else {
+        $i_res = intval($lastLoc[0]["n"]);
     }
-    
-    return $lastLoc[0]["n"];
-    
+    //error_log(" --- dbg DirectConversationsWith: {$speakerprmt} - {$listenerprmt} = {$i_res} ");
+    return $i_res;
     
 }
 
