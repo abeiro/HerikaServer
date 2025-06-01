@@ -707,7 +707,8 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
     $lastrole="";
     $bufferHerika=[];
     $lastDialogFullCopy=[];
- 
+    $compactedBuffer = "";
+    
     foreach ($lastDialogFull as $n => $line) {
         if (($line["role"] == "assistant")) {
             $isJson=json_decode($line["content"],true);
