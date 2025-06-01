@@ -16,6 +16,9 @@
 	
 	$forceAttackingText = false;
 	
+	// Patch. 
+	$returnFunction[2]=trim($returnFunction[2]);
+
 	if (isset($returnFunction[2])) {
 		if ($functionCodeName == "GetTopicInfo") {
 			$argName = "topic";

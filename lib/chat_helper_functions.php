@@ -1305,6 +1305,40 @@ function ExtractKeywords($sourceText) {
     return $uniqueArray;  
 }
 
+// Returns how many in-game hours are needed to contain the last $limit events for $actor.
+// This is used to dynamically adjust the memory window based on recent activity.
+
+function getGametsLimitFor($actor) {
+    global $db;
+
+    $actorEscaped = $db->escape($actor);
+    $limit = (int) $GLOBALS["CONTEXT_HISTORY"];
+
+    $query = "
+        SELECT 
+            (MAX(gamets) - MIN(gamets)) * 0.0000024 AS hour_threshold
+        FROM (
+            SELECT gamets 
+            FROM eventlog 
+            WHERE people LIKE '%$actorEscaped%'
+            and type='chat'
+            ORDER BY gamets DESC
+            LIMIT $limit
+        ) AS recent_events
+    ";
+
+    $limitRow = $db->fetchOne($query);
+
+    Logger::debug("MEMORY_EMBEDDING getGametsLimitFor($actor),CONTEXT_HISTORY: {$GLOBALS["CONTEXT_HISTORY"]} => {$limitRow["hour_threshold"]}");
+
+    // If no data or result is too small, fall back to a sensible default (e.g. 72 in-game hours)
+    return (isset($limitRow["hour_threshold"]) && $limitRow["hour_threshold"] > 0)
+        ? $limitRow["hour_threshold"]
+        : 72;
+}
+
+
+
 function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
@@ -1342,31 +1376,39 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)>0.05) {
+        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)>0.05 && false) {//This is too low
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else
-            return "";
-    } else
+        } else {
+           Logger::trace("Memory discarded by scoring");
+           return "";
+        }
+    } else {
+        Logger::trace("Memory not found");
         return "";
+    }
     
     if (!empty($memory)) {
+        Logger::trace("adding date to memory <".substr($memory,0,25)."...>");
         $hoursAgo=round(($gameRequest[2]-$memories[0]["gamets_truncated"]) * 0.0000024, 0);
-        if($hoursAgo > 72) {
+        if($hoursAgo > getGametsLimitFor($GLOBALS["HERIKA_NAME"])) {
             $daysAgo = floor(($gameRequest[2]-$memories[0]["gamets_truncated"]) * 0.0000001);
             $sk_date = gamets2str_format_date($memories[0]["gamets_truncated"], 'Y-m-d');    
             $s_prefix = "{$daysAgo} days ago, on {$sk_date} ... ";
         } else {
             $s_prefix = "{$hoursAgo} hours ago ... ";
+            Logger::trace("Discaring memory because recent ($hoursAgo} hours ago ... )");
             return "";// Do not offer memory if its recent
         }
         $pattern = '/#Tags:.*/';
         $replacement = '';
         $output = preg_replace($pattern, $replacement, $memory);
         $memory = $s_prefix . $output;
+        Logger::trace("Final memory <".substr($memory,0,25)."...>");
+
     }
-    // print_r($memories);
+    
     return ($memory);
 }
 

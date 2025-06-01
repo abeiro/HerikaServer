@@ -975,10 +975,7 @@ if ($checkVersion("actions_issued")<20250525001) {
     error_log("Applied patch actions_issued 20250525001");
 }
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 0f10654dec64b9b4e62012f6a13788cda9e79552
 if ($checkVersion("moods_issued")<20250526001) {
     $db->execQuery(file_get_contents(__DIR__."/../data/table_moods_issued.sql"));
     $updateVersion("moods_issued",20250526001);

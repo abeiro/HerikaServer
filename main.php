@@ -438,7 +438,9 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death') ";  // Use prechat
+    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death') or (type='chat' and data like '(Context%') ";  // Use prechat
+    // chat entries starting by "(Context%" are standard skyrim dialogue
+
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
    
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
@@ -568,6 +570,8 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"]) ) {
 
     $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+    //Logger::info("Memory injection:".json_encode($memoryInjection));
+
     if (!empty($memoryInjection)) {
         
         //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
@@ -733,7 +737,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                         )
                     );
                     Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
-                    $memoryInjectionCtx=[]; // Disable memorie when command.
+                    //$memoryInjectionCtx=[]; // Disable memorie when command.
                     $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
                     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
                 } 

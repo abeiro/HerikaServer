@@ -146,8 +146,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             if (!empty($e))
                 $actorDetailedListWithProfileSanitized[]=$e;
 
-        $actorsInRange=implode("\n## ",$actorDetailedListWithProfileSanitized);
-
+        if (!empty($actorDetailedListWithProfileSanitized))
+            $actorsInRange=implode("\n## ",$actorDetailedListWithProfileSanitized);
+        else 
+            $actorsInRange="\n## No more actors in scene";// Catch
     }
 
     
@@ -1688,7 +1690,7 @@ function FindClosestNPCName($actorName)
 {
     global $db;
 
-    $lastLoc = $db->fetchAll("SELECT a.people AS data FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
+    $lastLoc = $db->fetchAll("SELECT a.people FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc) == 0) {
         return "";
     }
@@ -1953,7 +1955,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                     ORDER BY embedding <-> $vectorString
                     LIMIT 5 OFFSET 0
                 ");
-                    
+            
+        
             if (!isset($memory[0])) {
                 $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
                 $memory[0]["distance"]=1.4;

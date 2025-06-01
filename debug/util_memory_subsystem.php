@@ -284,6 +284,37 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
             //echo "Embedding step was skipped as per 'noembed' argument. Run sync later if embeddings are required.".PHP_EOL;
         }
         
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Starting memory vector synchronization...".PHP_EOL;
+            
+
+            // Count items to sync first
+            $count_query_sync = "select COUNT(*) as count from memory_summary where summary is not null and (embedding is null or native_vec is null)";
+            $count_result_res_sync = $db->query($count_query_sync);
+            $count_result_sync_arr = $db->fetchArray($count_result_res_sync);
+            $memories_to_sync_count = $count_result_sync_arr ? (int)$count_result_sync_arr['count'] : 0;
+
+            if ($memories_to_sync_count == 0) {
+                echo "No memories found requiring vector synchronization.".PHP_EOL;
+            } else {
+                echo "Found {$memories_to_sync_count} memories to sync. Starting process...".PHP_EOL;
+                // Fetch all results for processing, as original script did.
+                $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null and (embedding is null or native_vec is null)");
+                $processed_counter = 0;
+                foreach ($results as $row) {
+                    $TEST_TEXT=$row["content"];
+                    storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE embedding in memory_summary
+                    $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$row["rowid"]}");
+                    $processed_counter++;
+                    echo "Updated vector for memory ID {$row["rowid"]}. (Processed {$processed_counter} of {$memories_to_sync_count})".PHP_EOL;
+                }
+                if ($processed_counter > 0) {
+                    echo "Successfully synchronized {$processed_counter} memories.".PHP_EOL;
+                }
+            }
+        } else {
+            echo "TEXT2VEC feature is not enabled. Skipping memory synchronization.".PHP_EOL;
+        }
         echo "Memory compaction process finished.".PHP_EOL;
 
     } elseif ($argv[1]=="recreate") {
