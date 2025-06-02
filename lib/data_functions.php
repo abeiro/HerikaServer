@@ -103,27 +103,27 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     if ($actorsInRange && $addNPCDescriptions) {
         $actorDetailedListWithProfile=[];
         foreach ($actorDetailedList as $actor) {
-            $actorName=str_replace("(far away)","",$actor);
             if (empty($actor))
                 continue;
             if ($excludeBusy)
                 if ((strpos($actor,"(busy)")>0)||(strpos($actor,"(dead)")>0))
                     continue;
-
+                
+            $actorName=trim(str_replace("(far away)","",$actor));
             if ($actorName==$GLOBALS["HERIKA_NAME"]) 
                 continue;
 
-            if (strpos($actor,"(")===false) {    
+            if ((strpos($actor,"(")===false) && ($GLOBALS["HERIKA_NAME"]!="The Narrator") && (strpos($GLOBALS["HERIKA_NAME"],"(")===false)) { // last condition is for debugging / temporary    
                 $interactions=DirectConversationsWith($actor);
                 if ($interactions==0) {
-                    $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} never talked to $actorName before, should refer to it as stranger/traveller...)";
+                    $ittext="{$actor} ({$GLOBALS["HERIKA_NAME"]} never talked to {$actorName} before, {$GLOBALS["HERIKA_NAME"]} should speak to this person as to a stranger or traveler...)";
                 } else if ($interactions<5) {
-                    $ittext="$actor ({$GLOBALS["HERIKA_NAME"]} has talked to $actorName a couple of times before)";
+                    $ittext="{$actor} ({$GLOBALS["HERIKA_NAME"]} has talked to {$actorName} a couple of times before)";
                 } else {
                     $ittext="";
                 }
             } else {
-                $ittext="$actor";
+                $ittext="{$actor}";
             }
             
             if ($actor==$GLOBALS["PLAYER_NAME"] && false) //PC as regular NPC
@@ -1632,6 +1632,39 @@ function DataBeingsInRange()
     
     return "|".$beingsFormatted."|";
 }
+
+function DataBeingsInRangeExcluding($excludeNPC="", $excludePlayer=true)
+{
+
+    global $db;
+
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    if (trim($excludeNPC) > "")
+        $exNPC = trim($excludeNPC);
+    else
+        $exNPC = "x_y_z";
+            
+    $beings=strtr($lastLoc[0]["data"],["(beings in range:"=>""]);
+    $beingsArray=explode(",",$beings);
+    $beingsArrayNew=[];
+    if (!$excludePlayer)
+        $beingsArrayNew[]="{$GLOBALS["PLAYER_NAME"]}";  // Add player to beings in range
+    foreach ($beingsArray as $k=>$v) {
+        if (strpos($v,")")===false) {
+            if (strpos($v,"Horse")!==0) 
+                if (strpos($v,"Chicken")!==0) 
+                    if (strpos($v,$exNPC)!==0) 
+                        $beingsArrayNew[]=$v;
+        }
+    }
+    $beingsFormatted=implode("|",$beingsArrayNew);
+    
+    return "|".$beingsFormatted."|";
+}
+
 
 function DataBeingsInCloseRange()
 {
