@@ -569,6 +569,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     $beingsPresent=null;
     $lastlocation="";
+    $lastGameTs=0;
     foreach ($orderedData as $row) {
         $rowData = $row["data"];
         
@@ -594,6 +595,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $location = trim($locationMatch[1]);
             $locationFinal="$location, hold: $hold";
         }
+        
         
         if ($lastlocation!=$locationFinal) {
             $lastlocation=$locationFinal;
@@ -674,24 +676,42 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             
         }
 
-        $lastSpeaker = $speaker;
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker));
+    
 
         if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(true)) {
-            $hoursAgo=round(($currentGameTs-$row["gamets"])* 0.0000024, 0);
-            //if ($hoursAgo>12) {
-            if ($printLocation) {
+            
+            
+            if ($lastGameTs==0)
+                $lastGameTs=$row["gamets"];
+            else {
+                $timeGapInHours=round(($row["gamets"]-$lastGameTs)* 0.0000024, 0);
+                
+                if ($timeGapInHours>72) {
+                    $timeGapInDays=round($timeGapInHours/24,1);
+                    $lastDialogFull[] = array('role' => "narratorci", 'content' => "NOTE: THERE IS BIG TIME JUMP HERE OF ABOUT $timeGapInDays days. Current location is $currentLocation)  ");
+                }
+                $lastGameTs=$row["gamets"];
+            }
+
+            if ($printLocation ) {
+                $hoursAgo=round(($currentGameTs-$row["gamets"])* 0.0000024, 0);
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
                         if (DataLastKnownLocationHuman(false,true)==$currentLocation)   // Enforce current location.
-                            $lastDialogFull[] = array('role' => "narratorloc", 'content' => "LOCATION CHANGE, THIS IS THE CURRENT LOCATION: $currentLocation");
+                            $lastDialogFull[] = array('role' => "narratorci", 'content' => "LOCATION CHANGE, THIS IS THE CURRENT LOCATION: $currentLocation");
                         
                         else
-                            $lastDialogFull[] = array('role' => "narratorloc", 'content' => "LOCATION CHANGE to $currentLocation, timeline mark: $hoursAgo hours ago  ");
+                            $lastDialogFull[] = array('role' => "narratorci", 'content' => "LOCATION CHANGE to $currentLocation, timeline mark: $hoursAgo hours ago  ");
                     }
                 }
+            } else {
+               
+
             }
         }
+
+        $lastSpeaker = $speaker;
+        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker));
 
     }
 
@@ -1691,13 +1711,13 @@ function FindClosestNPCName($actorName)
 {
     global $db;
 
-    $lastLoc = $db->fetchAll("SELECT a.people FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
+    $lastLoc = $db->fetchAll("SELECT a.data as people FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc) == 0) {
         return "";
     }
 
     $beings = strtr($lastLoc[0]["people"], ["beings in range:" => ""]);
-    $beingsArray = explode("|", $beings);
+    $beingsArray = explode("/", $beings);
     $beingsArrayCleaned = [];
 
     foreach ($beingsArray as $v) {
@@ -1707,7 +1727,8 @@ function FindClosestNPCName($actorName)
     }
 
     if (empty($beingsArrayCleaned)) {
-        return "";
+        error_log("Note: empty(beingsArrayCleaned)");
+        return $actorName;
     }
 
     // Find the closest match using Levenshtein distance
@@ -1716,6 +1737,7 @@ function FindClosestNPCName($actorName)
 
     foreach ($beingsArrayCleaned as $name) {
         $lev = levenshtein($actorName, $name);
+        error_log("Comparing: $actorName, $name");
 
         if ($lev == 0) {
             return $name; // Exact match
@@ -1727,7 +1749,7 @@ function FindClosestNPCName($actorName)
         }
     }
 
-    return $closest;
+    return (!empty(trim($closest)))?$closest:$actorName;
 }
 
 function DirectConversationsWith($actor)
