@@ -16,6 +16,11 @@ $TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a ca
 " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
 " {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
+// To keep the original one
+// $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
+
+
+
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
     if ($GLOBALS["TTSFUNCTION"]=="azure")
         $TEMPLATE_DIALOG.="(optional way of speaking from this list [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
