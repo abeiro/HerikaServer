@@ -2000,13 +2000,33 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
 
         }
 
+        $keywords=hashtagifySentences($TEST_TEXT);
+        $kw=[];
+        
+        //print_r($keywords);
+
+        foreach (explode(" ",$keywords) as $tag) {
+            if (strlen($tag)<4)
+                continue;
+            $lkw=hashtagify(strtr($tag,["remember"=>"","Remember"=>""]));    
+            if ($lkw) {
+                $kw=array_merge($kw,explode(" ",$lkw));
+            }
+        }
+        $result = array_unique($kw);
+
+        $kwStringAny=implode(" | ",$result);
+        $kwStringAll=implode(" & ",$result);
+
         $vector=json_decode($response,true);
         if (is_array($vector) && isset($vector["embedding"])) {
             $vectorString="'[".implode(",",$vector["embedding"])."]'";
    
             $memory=$GLOBALS["db"]->fetchAll("
                 SELECT summary, gamets_truncated,
-                        embedding <-> $vectorString as distance
+                        embedding <-> $vectorString as distance,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
                     and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'

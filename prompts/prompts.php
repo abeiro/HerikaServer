@@ -176,6 +176,7 @@ $PROMPTS=array(
             "({$GLOBALS['HERIKA_NAME']} subtly shifts the focus of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} speculates about potential outcomes of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} warns about possible risks tied to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",*/
+            //"Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action involving a third actor, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
             "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider only one answer and/or action involving a third actor, without repeating your answer for each actor. Keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
             "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
             "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Focus speech and/or action only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
@@ -218,7 +219,7 @@ $PROMPTS=array(
     ],
     // Database Prompt (RPG Level Up)
     "rpg_lvlup"=> [
-        "cue"   => ["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "cue"   => ["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]} in an immersive way. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("levelup", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     // Database Prompt (RPG Shout)

@@ -1019,7 +1019,7 @@ if (sizeof($talkedSoFar) == 0) {
 
 
 
-echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+echo PHP_EOL.'X-CUSTOM-CLOSE'.PHP_EOL;
 
 if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     echo PHP_EOL;
