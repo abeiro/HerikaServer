@@ -1019,7 +1019,12 @@ if (sizeof($talkedSoFar) == 0) {
 
 
 
-echo PHP_EOL.'X-CUSTOM-CLOSE'.PHP_EOL;
+echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+if (!getenv("PHPUNIT_TEST")) {
+    @ob_end_flush();
+    @flush();
+}
+
 
 if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     echo PHP_EOL;
@@ -1034,7 +1039,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
-while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_clean());
+while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_flush());
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"postrequest.php");
 
