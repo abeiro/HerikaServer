@@ -286,8 +286,22 @@ if ($gameRequest[0]=="diary") {
 
 
 // Exit if only a event info log.
+if ($gameRequest[0] == "npcspellcast") {
+    // Handle npcspellcast events based on DETECT_MAGIC_EVENT setting
+    if (isset($GLOBALS["DETECT_MAGIC_EVENT"]) && $GLOBALS["DETECT_MAGIC_EVENT"]) {
+        $gameRequest[3] = isset($gameRequest[3]) ? $gameRequest[3] : "";
+        $lastInfoNpcData = $db->escape($gameRequest[3]);
+        $lastlogEqual = $db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
+        if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+            die();
+        }
+        logEvent($gameRequest);
+    }
+    die(); // Always exit, whether logged or not
+}
+
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","goodnight","itemfound",
-    "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast","npcspellcast"])) {
+    "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));

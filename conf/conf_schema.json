@@ -29,6 +29,7 @@
   "QUEST_COMMENT_CHANCE":{"type":"select","userlvl":"basic","values":["10%","25%","50%","75%","100%"],"description":"Chance that an AI Quest Comment will happen every time a quest updates."},
   "CURRENT_TASK": {"userlvl":"basic","type":"boolean","description":"Include the current Dynamic AI Objective to the AI NPC's prompt. Disable this if the AI NPC becomes fixated on the task."},
   "RPG_COMMENTS": {"type":"selectmultiple","values":["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"],"description":"Pick which comments you want a chance to trigger when one of these ingame events happens."},
+  "DETECT_MAGIC_EVENT": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable detection and logging of spellcasting events. When disabled, spellcast events will not be logged to the context log."},
   "HERIKA_ANIMATIONS": {"userlvl":"basic","type":"boolean","description":"Will issue animations for the NPC to play", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features","_title":"Advanced Configuration"},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
   "LANG_LLM_XTTS": {"userlvl":"pro","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
