@@ -123,7 +123,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     $actorDetailedList=explode("|",$actorsInRangeList);
     // Not always the same order
     shuffle($actorDetailedList);
-
+    // error_log("[DataLastInfoFor] $actorsInRangeList");
     // Actors
     if ($actorsInRange && $addNPCDescriptions) {
         $actorDetailedListWithProfile=[];
@@ -149,7 +149,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 } else if ($interactions<5) {
                     $ittext="{$actor} ({$GLOBALS["HERIKA_NAME"]} has talked to {$actorName} a couple of times before)";
                 } else {
-                    $ittext="";
+                    $ittext="{$actor}";
                 }
             } else {
                 $ittext="{$actor}";
@@ -178,7 +178,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         if (!empty($actorDetailedListWithProfileSanitized))
             $actorsInRange=implode("\n## ",$actorDetailedListWithProfileSanitized);
         else 
-            $actorsInRange="\n## No more actors in scene";// Catch
+            $actorsInRange="No more actors in scene";// Catch
     }
 
     
@@ -2813,7 +2813,7 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 function GetAnimationHex($mood)
 {
 
-    //error_log("MOOD:".$mood);
+    
     $ANIMATIONS=[
         "ArmsCrossed"=>"IdleExamine",        // Arms crossed
         "PointClose"=>"IdlePointClose",
@@ -2860,6 +2860,7 @@ function GetAnimationHex($mood)
     foreach ($animationsDb as $an) {
         $candidates=explode(",", $an["animations"]);
         if (is_array($candidates)) {
+            error_log("[ANIMATION] {$an["animations"]}");
             return $candidates[array_rand($candidates)];
         }
 
@@ -2869,6 +2870,7 @@ function GetAnimationHex($mood)
     foreach ($animationsDb as $an) {
         $candidates=explode(",", $an["animations"]);
         if (is_array($candidates)) {
+            // error_log("[ANIMATION] {$an["animations"]}");
             return $candidates[array_rand($candidates)];
         }
 
