@@ -120,8 +120,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 </style>
 <?php
 
-$debugPaneLink = false;
-
 $hide_navbar = ((isset($_GET["navbar"])) && ($_GET["navbar"] == "hidden"));
 if (!$hide_navbar) { 
     include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
@@ -254,20 +252,12 @@ if ($_POST["animation"]) {
 
 <!-- navbar -->
 <?php
-$debugPaneLink = true;
 ?>
 <!--<a href='index.php?openai=true'  >OpenAI API Usage</a> -->
 
 <div class="clearfix"></div>
 
 <div class="container-fluid">
-
-    <!-- debug pane -->
-    <div class="debugpane d-none">
-        <?php
-        include("tmpl/debug-pane.php");
-        ?>
-    </div>
 
     <!-- auto info -->
     <?php
@@ -326,7 +316,7 @@ $debugPaneLink = true;
         $results = $db->fetchAll(
             "SELECT type, data, gamets, localts, ts, ROWID
              FROM eventlog a
-             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close')
+             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init')
              ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
              LIMIT $limit OFFSET $offset"
         );

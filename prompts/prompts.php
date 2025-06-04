@@ -7,13 +7,13 @@ $PROMPTS=array(
             "cue"=>["(Chat as {$GLOBALS["HERIKA_NAME"]})"], // give way to
             "player_request"=>["{$gameRequest[3]} What do you know about this place?"]  //requirement
         ],
-    
+    // Database Prompt (Book)
     "book"=>[
         "cue"=>["(Note that despite their poor memory, {$GLOBALS["HERIKA_NAME"]} is capable of remembering entire books)"],
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["HERIKA_NAME"]}, summarize this book shortly: "]  //requirement
         
     ],
-    
+    // Database Prompt (Combat End)
     "combatend"=>[
         "cue"=>[
             "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -30,6 +30,7 @@ $PROMPTS=array(
                 : true
         ],
     ],
+    // Database Prompt (Combat End Mighty)
     "combatendmighty"=>[
         "cue"=>[
             "({$GLOBALS["HERIKA_NAME"]} comments about  {$GLOBALS["PLAYER_NAME"]} weapons) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -42,6 +43,7 @@ $PROMPTS=array(
         ],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("combat_end", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
+    // Database Prompt (Quest)
     "quest"=>[
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
         //"player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest '{$questName}'?"
@@ -52,7 +54,7 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} complain about almost being defeated in battle, {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("bleedout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
-    //Some bored event ideas belong to L'ENFP from our discord!
+    // Database Prompt (Bored)
     "bored"=>[
         "cue"=>[
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the current location) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -89,7 +91,7 @@ $PROMPTS=array(
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
         ,"extra" => ["dontuse" => (rand(0, 99) >= intval($GLOBALS["BORED_EVENT"]))]
     ],
-
+    // Database Prompt (Good Morning)
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} comment about {$GLOBALS["PLAYER_NAME"]}s time asleep. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]} wakes up from sleeping. ahhhh"],
@@ -108,6 +110,7 @@ $PROMPTS=array(
         "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"], // Prompt is implicit
         "extra"=>["mood"=>"whispering"]
     ],
+    // Database Prompt (Memory)
     "memory"=>[
         "cue"=>[
             "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} remembers this memory. \"#MEMORY_INJECTION_RESULT#\" {$GLOBALS["TEMPLATE_DIALOG"]} "
@@ -130,6 +133,7 @@ $PROMPTS=array(
             
             ]
     ],
+    // Database Prompt (Lockpicked)
     "lockpicked"=>[
         "cue"=>[
             "({$GLOBALS["HERIKA_NAME"]} comments about what they lockpicked {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -139,6 +143,7 @@ $PROMPTS=array(
         "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked) {$gameRequest[3]})"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("lockpick", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
+    // Database Prompt (After Attack)
     "afterattack"=>[
         "cue"=>["(roleplay as {$GLOBALS["HERIKA_NAME"]}, shout a catchphrase for combat UPPERCASE) {$GLOBALS["TEMPLATE_DIALOG"]}"]
     ],
@@ -147,6 +152,7 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"] // Prompt is implicit
         
     ],
+    // Database Prompt (Rechat)
     "rechat"=>[ 
         "cue"=>[
             /*"({$GLOBALS['HERIKA_NAME']} reflects on the topic with the last speaker.) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -170,16 +176,18 @@ $PROMPTS=array(
             "({$GLOBALS['HERIKA_NAME']} subtly shifts the focus of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} speculates about potential outcomes of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} warns about possible risks tied to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",*/
-            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action involving a third actor, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider only one answer and/or action involving a third actor, without repeating your answer for each actor. Keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
             "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
             "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Focus speech and/or action only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
         
     ],
+    // Database Prompt (Diary)
     "diary"=>[ 
         "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
         "extra"=>["force_tokens_max"=>0]
     ],
+    // Database Prompt (Soulgaze)
     "vision"=>[ 
         "cue"=>["{$GLOBALS["ITT"][$GLOBALS["ITTFUNCTION"]]["AI_PROMPT"]}. "],
         //"player_request"=>["{$GLOBALS["PLAYER_NAME"]} : Look at this, {$GLOBALS["HERIKA_NAME"]}.{$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
@@ -194,37 +202,46 @@ $PROMPTS=array(
         "player_request"=> ["The Narrator: {$GLOBALS["HERIKA_NAME"]} feels a sudden shock...and feels more real"],
         "extra"=> (!empty($GLOBALS["ALIVE_MESSAGE"]) && $GLOBALS["ALIVE_MESSAGE"]) ? [] : ["dontuse" => true]
     ],
+    // Database Prompt (Start Game)
     "playerinfo"=>[ 
         "cue"=>["(Out of roleplay, game has been loaded) Tell {$GLOBALS["PLAYER_NAME"]} a short summary about last events, and then remind {$GLOBALS["PLAYER_NAME"]} the current task/quest/plan) {$GLOBALS["TEMPLATE_DIALOG"]}"]
     ],
+    // Database Prompt (New Game)
     "newgame"=>[ 
         "cue"=>["(Out of roleplay, new game ) Give welcome to {$GLOBALS["PLAYER_NAME"]}, a new game has started. Remind them of their quests) {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra"=>["dontuse"=>true] 
     ],
+    // Database Prompt (Travel Done)
     "traveldone"=>[ 
         "cue"=>["Comment about the destination reached. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["The Narrator: The party reaches destination)"]
     ],
+    // Database Prompt (RPG Level Up)
     "rpg_lvlup"=> [
-        "cue"   => ["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "cue"   => ["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]} in an immersive way. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("levelup", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
+    // Database Prompt (RPG Shout)
     "rpg_shout"=>[ 
         "cue"=>["Comment/ask about the the new shout learned by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_shout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
+    // Database Prompt (RPG Soul)
     "rpg_soul"=>[ 
         "cue"=>["Comment/ask about the soul absorbed by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("absorb_soul", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
+    // Database Prompt (RPG Word)
     "rpg_word"=>[ 
         "cue"=>["Comment/ask about the new word learned by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
+    // Database Prompt (Instruction)
     "instruction"=>[ 
         "cue"=>["{$gameRequest[3]} write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
+    // Database Prompt (Welcome)
     "welcome"=>[ 
         "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],

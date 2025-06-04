@@ -318,9 +318,11 @@ function unmoodSentence($sentence) {
                     ]
                     ); // Manual cases
 
-    //$cleaned = preg_replace('/\s*#ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
-    $cleaned = preg_replace('/\s*# ?ACTIONS.*/', '', $output); // Remove #ACTIONS .... (Gemini seems prone to doing this)
+    
+    $cleaned = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove #ACTIONS .... (Gemini seems prone to doing this)
+    $output = preg_replace('/#[A-Za-z]+/', '', $cleaned);       // Remove #<text> .... (Gemini seems prone to doing this)
 
+    $cleaned=$output;
     $sentence = preg_replace('/"/', '', $cleaned); // Remove "
 
     preg_match_all('/\((.*?)\)/', $sentence, $matches); // Unused?
@@ -561,7 +563,10 @@ function returnLines($lines,$writeOutput=true)
 
                 if (is_array($GLOBALS["SCRIPTLINE_LISTENER"]) && sizeof($GLOBALS["SCRIPTLINE_LISTENER"]) > 0 && is_string($GLOBALS["SCRIPTLINE_LISTENER"][0])) {
                     $GLOBALS["SCRIPTLINE_LISTENER"]=$GLOBALS["SCRIPTLINE_LISTENER"][0];
+                    Logger::info("GLOBALS['SCRIPTLINE_LISTENER'] seems to be an array!");
+
                 }
+
 
                 $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 // Don't touch original one
@@ -587,8 +592,10 @@ function returnLines($lines,$writeOutput=true)
                     $positionsWithIndex = [];  // For determining the last mentioned name and its index
 
                     // Search for each name in the subtitle sentence
+                    $listenerFix2[]="Dragonborn";
+
                     foreach ($listenerFix2 as $index => $name) {
-                        $pos = stripos($responseForSubtitles, $name); // Case-insensitive search
+                        $pos = stripos($responseForSubtitles, trim($name)); // Case-insensitive search
                         if ($pos !== false) {
                             $positions[$name] = $pos;           // Save position for first-mention check
                             $positionsWithIndex[$index] = $pos; // Save index and position for last-mention check
@@ -607,6 +614,8 @@ function returnLines($lines,$writeOutput=true)
                             $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener-1;  // Next round will use this speaker if no refernce found.
                         else
                             $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener;
+                        // Test
+                        $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=$nextListener;
                         // Output results
                         Logger::info("Applying smarter listenerFix2: $listener $nextListener {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
 
@@ -614,6 +623,8 @@ function returnLines($lines,$writeOutput=true)
                         $listener=$listenerFix2[$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]];
                         $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listener);
                     }
+
+                    $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=strtr($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"],["Dragonborn"=>$GLOBALS["PLAYER_NAME"]]);
 
                     Logger::info("Applying listenerFix2: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}  {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
                     //$GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[ $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]]);
@@ -637,6 +648,23 @@ function returnLines($lines,$writeOutput=true)
                 
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
                 $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                if ($outBuffer["actor"]!="Player" && isset($GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"])) {
+                    $GLOBALS["db"]->insert(
+                        'moods_issued',
+                        array(
+                            'localts' => time(),
+                            'ts' => $GLOBALS["gameRequest"][1],
+                            'gamets' => $GLOBALS["gameRequest"][2],
+                            'speaker' => $outBuffer["actor"],
+                            'listener' =>$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"],
+                            'sess' => 'pending',
+                            'mood' => $GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"]
+        
+        
+                        )
+                    );
+                }
+
                 file_put_contents(__DIR__."/../log/output_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
 
             }
@@ -1277,6 +1305,40 @@ function ExtractKeywords($sourceText) {
     return $uniqueArray;  
 }
 
+// Returns how many in-game hours are needed to contain the last $limit events for $actor.
+// This is used to dynamically adjust the memory window based on recent activity.
+
+function getGametsLimitFor($actor) {
+    global $db;
+
+    $actorEscaped = $db->escape($actor);
+    $limit = (int) $GLOBALS["CONTEXT_HISTORY"];
+
+    $query = "
+        SELECT 
+            (MAX(gamets) - MIN(gamets)) * 0.0000024 AS hour_threshold
+        FROM (
+            SELECT gamets 
+            FROM eventlog 
+            WHERE people LIKE '%$actorEscaped%'
+            and type='chat'
+            ORDER BY gamets DESC
+            LIMIT $limit
+        ) AS recent_events
+    ";
+
+    $limitRow = $db->fetchOne($query);
+
+    Logger::debug("MEMORY_EMBEDDING getGametsLimitFor($actor),CONTEXT_HISTORY: {$GLOBALS["CONTEXT_HISTORY"]} => {$limitRow["hour_threshold"]}");
+
+    // If no data or result is too small, fall back to a sensible default (e.g. 72 in-game hours)
+    return (isset($limitRow["hour_threshold"]) && $limitRow["hour_threshold"] > 0)
+        ? $limitRow["hour_threshold"]
+        : 72;
+}
+
+
+
 function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
@@ -1314,31 +1376,39 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)>0.05) {
+        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)>0.05 && false) {//This is too low
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else
-            return "";
-    } else
+        } else {
+           Logger::trace("Memory discarded by scoring");
+           return "";
+        }
+    } else {
+        Logger::trace("Memory not found");
         return "";
+    }
     
     if (!empty($memory)) {
+        Logger::trace("adding date to memory <".substr($memory,0,25)."...>");
         $hoursAgo=round(($gameRequest[2]-$memories[0]["gamets_truncated"]) * 0.0000024, 0);
-        if($hoursAgo > 72) {
+        if($hoursAgo > getGametsLimitFor($GLOBALS["HERIKA_NAME"])) {
             $daysAgo = floor(($gameRequest[2]-$memories[0]["gamets_truncated"]) * 0.0000001);
             $sk_date = gamets2str_format_date($memories[0]["gamets_truncated"], 'Y-m-d');    
             $s_prefix = "{$daysAgo} days ago, on {$sk_date} ... ";
         } else {
             $s_prefix = "{$hoursAgo} hours ago ... ";
+            Logger::trace("Discaring memory because recent ($hoursAgo} hours ago ... )");
             return "";// Do not offer memory if its recent
         }
         $pattern = '/#Tags:.*/';
         $replacement = '';
         $output = preg_replace($pattern, $replacement, $memory);
         $memory = $s_prefix . $output;
+        Logger::trace("Final memory <".substr($memory,0,25)."...>");
+
     }
-    // print_r($memories);
+    
     return ($memory);
 }
 
@@ -1511,16 +1581,18 @@ function selectRandomInArray($arraySource)
         return "";
     
     $n=sizeof($arraySource);
-    if ($n==1) {
-        return strtr($arraySource[0],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
-        //return $arraySource[0];
-    }
     
-    return strtr($arraySource[rand(0, $n-1)],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
-    //return $arraySource[rand(0, $n-1)];
-
-
-
+    if ($n>0) {
+        if ($n==1) {
+            return strtr($arraySource[0],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
+            //return $arraySource[0];
+        }
+        return strtr($arraySource[rand(0, $n-1)],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
+        //return $arraySource[rand(0, $n-1)];
+    } else {
+        Logger::warn("chat_helper_functions selectRandomInArray: Empty array! ");
+        return "";
+    }
 }
 
 function prettyPrintJson($json )

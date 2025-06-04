@@ -13,6 +13,9 @@ date_default_timezone_set('Europe/Madrid');
 $GLOBALS["AVOID_TTS_CACHE"]=true;
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
+// Cooldown for some actions
+$COOLDOWNMAP=[];
+
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
@@ -43,10 +46,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     
         
     $receivedData = "inputtext|{$res[0]["ts"]}|{$res[0]["gamets"]}|{$GLOBALS["PLAYER_NAME"]}: {$argv[1]}";
-    //$receivedData = "funcret|{$res[0]["ts"]}|{$res[0]["gamets"]}|command@Inspect@Serana@Serana is wearing: Serana Hood,Elven Dagger,Elder Scroll,Vampire Boots,Vampire Royal Armor,";
-    //$receivedData = "{$argv[1]}";
     $_GET["profile"]=$argv[2];
-    //error_reporting(E_ERROR);
     $GLOBALS["FUNCTIONS_ARE_ENABLED"]=true;
 
     unset($GLOBALS["db"]);
@@ -118,6 +118,7 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 /*    &&($gameRequest[0]!="addnpc")&&($gameRequest[0]!="_speech")) {
 */
 $db = new sql();
+
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","init"])) {
     $GLOBALS["ADD_PLAYER_BIOS"]=true;
@@ -141,8 +142,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
-    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout",
-    "util_location_name"];
+    "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
+    "util_location_name","spellcast","npcspellcast"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -178,22 +179,28 @@ if (($gameRequest[0]=="delete_event")) {
     // Do this ASAP
     $datacn=$db->escape($gameRequest[3]);
     $db->delete("eventlog","type in ('chat','prechat') and data like '%$datacn%' and localts>".(time()- 120));
-    audit_log(__FILE__);
+    // audit_log(__FILE__);
     die();
 }
 
 // Player rewrite
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && false) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["PLAYER_REESPECH"]) && $GLOBALS["PLAYER_REESPECH"]) {
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
     error_log($cleaned_player_dialogue);
     if (strpos($cleaned_player_dialogue,"**")===0) {
         // If player speech starts with **
         error_log("Overwritting user prompt $cleaned_player_dialogue");
+        function getBaseUrlForSpeech(): string {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+            $host = $_SERVER['HTTP_HOST'];
+            return $protocol . $host;
+        }
 
-        exec("php service/manager.php rolemaster smart_impersonation \"". $cleaned_player_dialogue."\"");
-        die("X-CUSTOM-CLOSE");
+        $newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
+        $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$newSpeech";
+
     }
 }
 
@@ -232,47 +239,16 @@ if (isset($_GET["profile"])) {
     $GLOBALS["USING_DEFAULT_PROFILE"]=true;
 }
 
+/* *****
+Player TTS
 
-// Player TTS. We overwrite some confs an then restore them.
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
-    // Use preg_replace to remove the name and colon before the dialogue
-    $cleaned_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
-    
-    
-    // audit_log(__FILE__." ".__LINE__);
-    $GLOBALS["PATCH_OVERRIDE_VOICE"]=$TTSFUNCTION_PLAYER_VOICE;
-    $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]=$TTSFUNCTION_PLAYER_LANGUAGE;
-    $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;
-    $origTTS=$GLOBALS["TTSFUNCTION"];
-    $origName=$GLOBALS["HERIKA_NAME"];
-
-    $GLOBALS["TTSFUNCTION"]=$GLOBALS["TTSFUNCTION_PLAYER"];
-    $GLOBALS["HERIKA_NAME"]="Player";
-
-    // error_log("$cleaned_dialogue {$GLOBALS["TTSFUNCTION_PLAYER"]} {$GLOBALS["TTSFUNCTION"]} {$GLOBALS["PATCH_OVERRIDE_VOICE"]} override:{$OVERRIDES["TTSFUNCTION_PLAYER"]}");
-
-    Translation::translate($cleaned_dialogue);
-    Translation::$sentences = [Translation::$response];
-
-    $ownspeech=returnlines([$cleaned_dialogue]);
-    
-    if (Translation::isSavePlayerTranslationEnabled()) {
-        $gameRequest[3]=$GLOBALS["PLAYER_NAME"].":".Translation::$response;
-    }
-    Translation::reset();
-    unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
-    unset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]);
-    $GLOBALS["TTSFUNCTION"]=$origTTS;
-    unset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]);
-    $GLOBALS["HERIKA_NAME"]=$origName;
-    unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
-    // audit_log(__FILE__." ".__LINE__);
-    $startTimeAfterPlayerTTTS = microtime(true);
-    
+Player TTS. We overwrite some confs an then restore them.
+*/
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && Translation::isSavePlayerTranslationEnabled()) {
+   
+    require(__DIR__."/processor/player_tts.php");
     
 }
-
-
 
 
 $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
@@ -311,7 +287,7 @@ if ($gameRequest[0]=="diary") {
 
 // Exit if only a event info log.
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","goodnight","itemfound",
-    "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout"])) {
+    "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast","npcspellcast"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
@@ -412,6 +388,8 @@ if (is_array($currentParty)) {
 
 // RECHAT PRE MANAGMENT
 
+
+
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
 
 if (in_array($gameRequest[0],["rechat"]) ) {
@@ -460,7 +438,9 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death') ";  // Use prechat
+    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death') or (type='chat' and data like '(Context%') ";  // Use prechat
+    // chat entries starting by "(Context%" are standard skyrim dialogue
+
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
    
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
@@ -590,6 +570,8 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"]) ) {
 
     $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+    //Logger::info("Memory injection:".json_encode($memoryInjection));
+
     if (!empty($memoryInjection)) {
         
         //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
@@ -603,6 +585,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     }
 } else
      $memoryInjectionCtx=[];
+
 
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
@@ -676,13 +659,12 @@ if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMP
     $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
 }
 
-// Cooldown for some actions
-$COOLDOWNMAP=[];
-$COOLDOWNMAP=[
-    "ComeCloser"=>120/0.00864,
-    "WaitHere"=>300/0.00864,
-    "UseSoulGaze"=>300/0.00864,
-];
+
+$COOLDOWNMAP["ComeCloser"]=120/0.00864;
+$COOLDOWNMAP["WaitHere"]=300/0.00864;
+$COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
+$COOLDOWNMAP["InspectSurroundings"]=300/0.00864;
+
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
@@ -727,7 +709,6 @@ if (isset($npcRoleMastered["is_rolemastered"])) {
 
 // MINIME_T5 STUFF, command assiastant
 
-
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
     if ($GLOBALS["MINIME_T5"]) {
@@ -756,7 +737,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                         )
                     );
                     Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
-                    $memoryInjectionCtx=[]; // Disable memorie when command.
+                    //$memoryInjectionCtx=[]; // Disable memorie when command.
                     $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
                     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
                 } 
@@ -770,6 +751,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 }
 
 
+// audit_log(__FILE__." [MINIME]  ".__LINE__);
 
 // OGHMA STUFF
 
@@ -785,6 +767,8 @@ if (sizeof($memoryInjectionCtx)>0) {
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
+// audit_log(__FILE__." [OGHMA]  ".__LINE__);
+
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
     // When chatnf_book (make the AI to read a book), context will only be the book data.
     $contextDataFull = DataGetLastReadedBook();
@@ -796,16 +780,25 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
 }
 
 if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
-    $GLOBALS["PROMPT_HEAD"].=$GLOBALS["OGHMA_HINT"];
 
+    $head[] = array('role' => 'system', 'content' =>  
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . $GLOBALS["OGHMA_HINT"]."\n". $GLOBALS["COMMAND_PROMPT"],
+        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
+    );
+} else {
+    $head[] = array('role' => 'system', 'content' =>  
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n". $GLOBALS["COMMAND_PROMPT"],
+        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
+    );
 }
 
-$head[] = array('role' => 'system', 'content' =>  
-    strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n". $GLOBALS["COMMAND_PROMPT"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
-);
+
+
 
 // Check for context overrides on ext dir (plugins)
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
+
+// audit_log(__FILE__." [PLUGINS CONTEXT]  ".__LINE__);
 
 /**********************
 CALL BUILDING
@@ -892,6 +885,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEP
 
     require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 }
+
+// audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 
 $outputWasValid = call_llm();
 if (!$outputWasValid) {
@@ -1025,6 +1020,11 @@ if (sizeof($talkedSoFar) == 0) {
 
 
 echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+if (!getenv("PHPUNIT_TEST")) {
+    @ob_end_flush();
+    @flush();
+}
+
 
 if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     echo PHP_EOL;
@@ -1039,7 +1039,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
-while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_clean());
+while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_flush());
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"postrequest.php");
 

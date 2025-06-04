@@ -31,7 +31,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         }
 
         
-        // Function stuff        
+        // Function stuff      
         require($enginePath . "functions/functions_instruction.php");
 
         $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
@@ -96,6 +96,7 @@ user request: actor \"a\" leaves the place
         
         $prompt[] = array('role' => 'system', 'content' => "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.$commonprompt");
         $prompt[] = array('role' => 'user', 'content' => "# Contextual data\n$historyData");
+        // Database Prompt (Director)
         $prompt[] = array('role' => 'user', 'content' =>"
 $sysprompt
 Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at  2 or 3 max actors)
@@ -234,7 +235,7 @@ In addition, follow these general scene rules as a game director:
         
         if (isset($GLOBALS["argv"][4]) && $GLOBALS["argv"][4]=="notify") {
             $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) === '1.3.1') {
+            if ($pluginVersionRow && isset($pluginVersionRow['value']) && in_array(trim($pluginVersionRow['value']),['1.3.1','1.3.2'])) {
                 if ($allOk)
                     $GLOBALS["db"]->insert(
                         'responselog',

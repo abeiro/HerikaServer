@@ -1,4 +1,5 @@
 <?php
+require_once("logger.php");
 
 class sql
 {
@@ -24,6 +25,11 @@ class sql
             pg_close(self::$link);
             self::$link = null;
         }
+    }
+
+    public function GetLastError()
+    {
+        return pg_last_error(self::$link);
     }
 
     public function insert($table, $data)
@@ -56,6 +62,19 @@ class sql
         pg_query(self::$link, $query);
     }
 
+    public function truncate($table, $restart = false, $cascade = false)
+    {
+        if ($table > "") {
+            $query = "TRUNCATE {$table}";
+            if ($restart) 
+                $query .= " RESTART IDENTITY";
+            if ($cascade)
+                $query .= " CASCADE";
+            pg_query(self::$link, $query);
+        } else
+            Logger::warn("SQL::truncate empty parameter [table] ");
+    }
+
     public function update($table, $set, $where = "FALSE")
     {
         $query = "UPDATE $table SET $set WHERE $where";
@@ -68,6 +87,17 @@ class sql
         if (!$result) {
             Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
+    }
+
+    public function execQueryVerbose($sqlquery)
+    {
+        $result = pg_query(self::$link, $sqlquery);
+        if (!$result) {
+            $res = pg_last_error(self::$link);
+            Logger::error($res . print_r(debug_backtrace(), true));
+            return $res; 
+        }
+        return "";
     }
 
     public function fetchAll($q)

@@ -411,22 +411,22 @@ function __jpd_decode($inputString)
 $FATA = <<<EOIN
 ```json
 {
-  "instructions": [
-    {
-      "character": "Herika",
-      "instruction": "Herika should raise her flagon high with a mischievous grin and proclaim a toast in a loud, clear voice.",
-      "action": "JustTalk",
-      "target": "everyone",
-      "scene_note": "The mood shifts to festive as Herika leads the toast. Rolff Stone-Fist may either reluctantly join or remain defiant, while Aanya eagerly follows along."
-    },
-    {
-      "character": "Aanya",
-      "instruction": "Aanya should clink her flagon against Herika's with a loud cheer, egging on Rolff Stone-Fist to join or back down.",
-      "action": "JustTalk",
-      "target": "Herika, Rolff Stone-Fist",
-      "scene_note": "Aanya's energy is infectious—either the tension breaks into camaraderie or escalates into a brawl."
-    }
-  ]
+"instructions": [
+{
+"character": "Lyne",
+"instruction": "Lyne approaches Kinjo with a playful smirk, swaying slightly as she leans against the bar. 'Well hello there, handsome. I don't believe we've been properly introduced. The name's Lyne - and you are?'",
+"action": "JustTalk",
+"target": "Kinjo",
+"scene_note": "Lyne's flirtatious greeting cuts through the tense atmosphere, shifting the mood. Other patrons might glance over, some amused, others annoyed by the interruption."
+},
+{
+"character": "Hulda",
+"instruction": "Hulda rolls her eyes and mutters under her breath, 'Gods give me strength. Lyne, if you're done making eyes at customers, the ale won't serve itself.'",
+"action": "JustTalk",
+"target": "Lyne",
+"scene_note": "Hulda's exasperation adds a layer of workplace tension, hinting at Lyne's reputation for distraction."
+}
+]
 }
 ```
 EOIN;
@@ -434,7 +434,7 @@ EOIN;
 //echo $res;
 
 print_r(__jpd_decode_lazy($FATA));
-*/
 
+*/
 
 ?>

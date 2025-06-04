@@ -27,6 +27,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("responselog", " 1=1 ");
     $db->delete("rolemaster", " 1=1 ");
     $db->delete("actions_issued", "gamets>={$gameRequest[2]}  ");
+    $db->delete("moods_issued", "gamets>={$gameRequest[2]}  ");
 
     /* This is obsolete */
     /*
@@ -578,7 +579,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 		Logger::debug($partyConf);
 		// Use the global DYNAMIC_PROMPT
         $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
-
+		// Database Prompt (Dynamic Profile Head)    
 		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
 		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "Character static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $GLOBALS["HERIKA_DYNAMIC"]];
@@ -672,5 +673,42 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         $MUST_END=true;
     
     }
+} elseif (strpos($gameRequest[0], "waitstart")===0) {    // addnpc 
+    
+    
+    if (isset($gameRequest[3]) && $gameRequest[3]) {
+        $db->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "last_waitstart",
+                'value' =>$gameRequest[2]
+            ),
+            "id"
+        );
+    }
+    
+    $MUST_END=true;
+    
+    
+} elseif (strpos($gameRequest[0], "waitstop")===0) {    // addnpc 
+    
+    $lastgameTs=$db->fetchOne("select value from conf_opts where id='last_waitstart'");
+    
+    $elapsed=($gameRequest[2]-$lastgameTs["value"])* 0.0000024;
+    $db->insert(
+        'eventlog',
+        array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'type' => "info_timeforward",
+            'data' => "$elapsed hours have passed. Current date/time: ".convert_gamets2skyrim_long_date($gameRequest[2]),
+            'sess' => 'pending',
+            'localts' => time()
+        )
+    );
+
+    $MUST_END=true;
+    
+    
 }
 ?>

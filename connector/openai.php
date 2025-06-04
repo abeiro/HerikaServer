@@ -21,6 +21,7 @@ class openai
     private $_is_nanogpt_com;
     private $_is_x_ai;
     private $_is_mistral_ai;
+    private $_is_cohere_ai;
     private $_is_streaming;
     private $_is_reasoning;
     private $_use_tools;
@@ -42,6 +43,7 @@ class openai
         $this->_is_nanogpt_com=false;
         $this->_is_x_ai=false;
         $this->_is_mistral_ai=false;
+        $this->_is_cohere_ai=false; 
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
         $this->_use_tools=true;
@@ -107,8 +109,13 @@ class openai
                     $default_model = 'grok-3-mini-beta';
                 } else {
                     $this->_is_mistral_ai = (stripos($this->_url, "mistral.ai") > 0 ); //https://api.mistral.ai/v1/chat/completions
-                    if ($this->_is_mistral_ai)    
+                    if ($this->_is_mistral_ai) {
                         $default_model = 'mistral-small-latest';
+                    } else { 
+                        $this->_is_cohere_ai = (stripos($this->_url, "cohere.ai") > 0 ); //https://api.cohere.ai/compatibility/v1/chat/completions
+                        if ($this->_is_cohere_ai)    
+                            $default_model = 'command-r-08-2024';
+                    }
                 }
             }
         }
@@ -270,13 +277,17 @@ class openai
             if ($this->_is_x_ai) {
                 unset($data["presence_penalty"]); 
                 unset($data["frequency_penalty"]);
-                
             } elseif ($this->_is_mistral_ai) {
-                unset($data["presence_penalty"]); 
-                unset($data["frequency_penalty"]);
+                //unset($data["presence_penalty"]); 
+                //unset($data["frequency_penalty"]);
+                unset($data["max_completion_tokens"]);
+                $data['max_tokens'] = $MAX_TOKENS;
+            } elseif ($this->_is_cohere_ai) {
+                unset($data["max_completion_tokens"]);
+                $data['max_tokens'] = $MAX_TOKENS;
             } 
 
-            if (($this->_is_reasoning) && (!$this->_is_mistral_ai)) { // there is no rule accepted by all providers
+            if (($this->_is_reasoning) && (!$this->_is_mistral_ai) && (!$this->_is_cohere_ai)) { // there is no rule accepted by all providers
                 $data["chat_format"]="tidy"; 
                 $data["reasoning_effort"] = "low";
                 $data['reasoning_format'] = "hidden"; 

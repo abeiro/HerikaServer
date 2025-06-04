@@ -163,6 +163,15 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                             Restore Current Database 
                         </a>
                         </li>
+                        <li>
+                        <button class="dropdown-item" style="letter-spacing:0.5px" 
+                        title="Maintenance operations - clean and optimize the database, reclaim unused space. Skyrim game must be stopped."
+                        onclick="if (confirm('Vacuum operation will compact and optimize the database. \n- Make sure Skyrim game is stopped. \n- To reclaim unused space, free temporary space is required, do not start this if your disk is almost full. \n- During this operation tables will be locked, do not access the database and do not interrupt. \nThis could take some time, please wait until you see the confirmation.')) {
+                            window.open('<?php echo $webRoot; ?>/ui/vacuum_db.php', 'Database_maintenance', 
+                                'resizable=yes,scrollbars=yes,titlebar=no' ); 
+                                return false;
+                        }">Database Maintenance - vacuum</button>
+                        </li>
                         <!--
                         <li>
                         <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the CHIM Database." 
@@ -436,7 +445,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
     }
     ?>
     <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal'; width: 120px;">
-        Server: v1.3.1
+        Server: 1.3.3
         <br>
         Plugin: <?php echo $pluginVersionDisplay; ?>
     </div>

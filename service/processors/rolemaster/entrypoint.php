@@ -24,8 +24,9 @@ $GLOBALS["TASKS"]["rolemaster"]["fn"]=function() {
 
     $GLOBALS["db"]=new sql();
     
-    $GLOBALS["HERIKA_NAME"]="(actor)";
-
+    SaveOriginalHerikaName(); 
+    $GLOBALS["HERIKA_NAME"]="<actor>";
+    
     require($enginePath . "functions/functions.php");
 
     // Make functions.php data global
