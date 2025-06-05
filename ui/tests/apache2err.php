@@ -345,7 +345,7 @@ function outputLLMContextBlock($block) {
 }
 
 // Function to read and filter the error log from a given path
-function readErrorLog($errorLogPath, $logType) {
+function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
         $errorLog = tail($errorLogPath, 2000); // Get last 2000 lines
 
@@ -357,37 +357,81 @@ function readErrorLog($errorLogPath, $logType) {
         echo '</div>';
         echo '<div class="search-container">';
         echo '<input type="text" class="search-input" placeholder="Search in Apache Error Log..." data-target="errorLogContainer">';
+        echo '<label class="toggle-switch-inline">';
+        echo '<input type="checkbox" id="apacheLogToggle" ' . ($showAllEntries ? 'checked' : '') . '>';
+        echo '<span class="toggle-slider-inline"></span>';
+        echo '<span class="toggle-label-inline">Show All</span>';
+        echo '</label>';
         echo '</div>';
         echo '<div class="log-container" id="errorLogContainer">';
         
         $entries = [];
+        $lineNumber = 0; // Used for fallback sorting when timestamps can't be parsed
+        
         foreach ($errorLog as $line) {
+            $lineNumber++;
             // Match any Apache log entry with timestamp and module
             if (preg_match('/^\[(.*?)\]\s+\[(.*?)\]/', $line, $matches)) {
                 $timestamp = $matches[1];
                 $module = $matches[2];
+                $message = preg_replace('/^\[.*?\]\s+\[.*?\]\s+\[.*?\]\s+/', '', $line);
 
-                // Only show actual errors
+                // Parse Apache timestamp - handle multiple formats
+                $rawTime = parseApacheTimestamp($timestamp);
+                // If parsing fails, use current time minus line number for ordering
+                if ($rawTime === false) {
+                    $rawTime = time() - (count($errorLog) - $lineNumber);
+                }
+
+                // Determine log level
+                $level = 'info'; // default
+                $levelClass = '';
+                
                 if (stripos($line, ':error]') !== false || stripos($line, ' error:') !== false) {
+                    $level = 'error';
+                    $levelClass = 'error-level';
+                } elseif (stripos($line, ':warn]') !== false || stripos($line, ' warn:') !== false || stripos($line, 'warning') !== false) {
+                    $level = 'warn';
+                    $levelClass = 'warn-level';
+                } elseif (stripos($line, ':notice]') !== false || stripos($line, ' notice:') !== false) {
+                    $level = 'notice';
+                    $levelClass = 'notice-level';
+                } elseif (stripos($line, ':info]') !== false || stripos($line, ' info:') !== false) {
+                    $level = 'info';
+                    $levelClass = 'info-level';
+                } elseif (stripos($line, ':debug]') !== false || stripos($line, ' debug:') !== false) {
+                    $level = 'debug';
+                    $levelClass = 'debug-level';
+                }
+
+                // Show entry based on toggle state
+                if ($showAllEntries || $level === 'error') {
                     $entries[] = [
                         'timestamp' => $timestamp,
                         'module' => $module,
-                        'message' => preg_replace('/^\[.*?\]\s+\[.*?\]\s+\[.*?\]\s+/', '', $line),
-                        'raw_time' => strtotime($timestamp)
+                        'message' => $message,
+                        'level' => $level,
+                        'level_class' => $levelClass,
+                        'raw_time' => $rawTime,
+                        'line_order' => $lineNumber // Preserve file order as secondary sort
                     ];
                 }
             }
         }
 
         // Sort entries by timestamp in descending order (newest first)
+        // Use line order as secondary sort for entries with same timestamp
         usort($entries, function($a, $b) {
+            if ($a['raw_time'] == $b['raw_time']) {
+                return $b['line_order'] - $a['line_order']; // Later in file = more recent
+            }
             return $b['raw_time'] - $a['raw_time'];
         });
 
         foreach ($entries as $entry) {
-            echo '<div class="log-entry error-level">';
+            echo '<div class="log-entry ' . $entry['level_class'] . '">';
             echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
-            echo '<div class="log-level">ERROR</div>';
+            echo '<div class="log-level">' . strtoupper(htmlspecialchars($entry['level'])) . '</div>';
             echo '<div class="log-module">' . htmlspecialchars($entry['module']) . '</div>';
             echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
             echo '</div>';
@@ -397,6 +441,35 @@ function readErrorLog($errorLogPath, $logType) {
     } else {
         echo '<p class="error-message">Error log file not found or not readable at: ' . htmlspecialchars($errorLogPath) . '</p>';
     }
+}
+
+// Helper function to parse Apache timestamp formats
+function parseApacheTimestamp($timestamp) {
+    // Common Apache timestamp formats
+    $formats = [
+        'D M d H:i:s.u Y',           // Wed Dec 25 12:34:56.789123 2024
+        'D M d H:i:s Y',             // Wed Dec 25 12:34:56 2024
+        'Y-m-d H:i:s.u',             // 2024-12-25 12:34:56.789123
+        'Y-m-d H:i:s',               // 2024-12-25 12:34:56
+        'd/M/Y:H:i:s O',             // 25/Dec/2024:12:34:56 +0000
+        'd/M/Y H:i:s',               // 25/Dec/2024 12:34:56
+        'M d H:i:s',                 // Dec 25 12:34:56 (current year assumed)
+    ];
+    
+    foreach ($formats as $format) {
+        $date = DateTime::createFromFormat($format, $timestamp);
+        if ($date !== false) {
+            return $date->getTimestamp();
+        }
+    }
+    
+    // Try strtotime as fallback
+    $time = strtotime($timestamp);
+    if ($time !== false) {
+        return $time;
+    }
+    
+    return false;
 }
 
 // Helper function to create valid IDs from log names
@@ -780,6 +853,53 @@ if (isset($_GET['download_logs'])) {
             border-color: #454545;
         }
 
+        /* Inline toggle switch styles (smaller version) */
+        .toggle-switch-inline {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .toggle-switch-inline input[type="checkbox"] {
+            position: relative;
+            width: 28px;
+            height: 14px;
+            appearance: none;
+            background-color: #444;
+            border-radius: 7px;
+            outline: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-switch-inline input[type="checkbox"]:checked {
+            background-color: #17a2b8;
+        }
+
+        .toggle-switch-inline input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: white;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch-inline input[type="checkbox"]:checked::before {
+            transform: translateX(14px);
+        }
+
+        .toggle-label-inline {
+            color: #d4d4d4;
+            font-size: 12px;
+        }
+
         .regex-toggle {
             display: flex;
             align-items: center;
@@ -1067,6 +1187,70 @@ if (isset($_GET['download_logs'])) {
         .copy-llm-btn:hover {
             opacity: 0.7;
         }
+
+        /* Apache log controls */
+        .apache-log-controls {
+            margin: 10px 0;
+            padding: 8px;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+
+        /* Toggle switch styles */
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            appearance: none;
+            background-color: #444;
+            border-radius: 10px;
+            outline: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked {
+            background-color: #17a2b8;
+        }
+
+        .toggle-switch input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: white;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked::before {
+            transform: translateX(20px);
+        }
+
+        .toggle-label {
+            color: #d4d4d4;
+            font-size: 14px;
+        }
+
+        /* Notice level styling */
+        .notice-level {
+            border-left: 4px solid #20c997;
+        }
+        .notice-level .log-level {
+            background-color: #20c997;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -1100,8 +1284,11 @@ if (isset($_GET['download_logs'])) {
     <div class="grid-container" id="logGrid">
         <div class="log-section">
             <?php
+            // Check if we should show all entries based on GET parameter
+            $showAllApacheEntries = isset($_GET['show_all_apache']) && $_GET['show_all_apache'] === '1';
             // Display Apache error log
-            readErrorLog($distroLogPath, "Apache Log [Errors Only] (apache_error.log)");
+            $apacheLogTitle = $showAllApacheEntries ? "Apache Log [All Entries] (apache_error.log)" : "Apache Log [Errors Only] (apache_error.log)";
+            readErrorLog($distroLogPath, $apacheLogTitle, $showAllApacheEntries);
             ?>
         </div>
 
@@ -1660,6 +1847,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+});
+
+// Apache log toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const apacheToggle = document.getElementById('apacheLogToggle');
+    if (apacheToggle) {
+        apacheToggle.addEventListener('change', function() {
+            const url = new URL(window.location);
+            if (this.checked) {
+                url.searchParams.set('show_all_apache', '1');
+            } else {
+                url.searchParams.delete('show_all_apache');
+            }
+            // Remove download parameter if it exists
+            url.searchParams.delete('download_logs');
+            window.location.href = url.toString();
+        });
+    }
 });
 </script>
 
