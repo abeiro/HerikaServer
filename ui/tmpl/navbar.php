@@ -445,7 +445,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
     }
     ?>
     <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal'; width: 120px;">
-        Server: v1.3.2
+        Server: 1.3.3
         <br>
         Plugin: <?php echo $pluginVersionDisplay; ?>
     </div>
