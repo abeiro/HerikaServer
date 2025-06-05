@@ -316,7 +316,12 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
             if ($timeElapsed < $cooldownPeriod) {
                 // Cooldown is still active, exit
                 Logger::info("NARRATOR_WELCOME is on cooldown. Try again in " . ($cooldownPeriod - $timeElapsed) . " seconds.");
-                die("X-CUSTOM-CLOSE");
+                echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+                if (!getenv("PHPUNIT_TEST")) {
+                    @ob_end_flush();
+                    @flush();
+                    die();
+                }
             }
         }
 
@@ -455,7 +460,11 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 if ($MUST_END) {  // Shorthand for non LLM processing
     echo 'X-CUSTOM-CLOSE'.PHP_EOL;
-    return;
+    if (!getenv("PHPUNIT_TEST")) {
+        @ob_end_flush();
+        @flush();
+    }    
+    die();
 }
 
 

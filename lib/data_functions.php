@@ -2598,7 +2598,7 @@ function call_llm() {
 
                             error_log("[ACTION POSTFILTER TakeGoldFromPlayer] $localtarget => {$mang3[0]} => $mang4");
 
-                            if (!is_number($mang4)) {
+                            if (!is_numeric($mang4)) {
                                 // Try to figure out quantity from speech
                                 $localNpc=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
                                 $qtyrecord=$GLOBALS["db"]->fetchOne("SELECT speech,(regexp_matches(speech, '\d+'))[1]::int AS quantity FROM public.speech 
