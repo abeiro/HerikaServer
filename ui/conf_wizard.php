@@ -32,7 +32,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SE
 $configFilepath=realpath($configFilepath).DIRECTORY_SEPARATOR;
 
 // Profile selection
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf ) {
+foreach (glob($configFilepath . 'conf_????????????????????????????????????????????????.php') as $mconf ) {
     if (file_exists($mconf)) {
         $filename=basename($mconf);
         $pattern = '/conf_([a-f0-9]+)\.php/';
@@ -210,8 +210,12 @@ foreach ($currentConf as $pname=>$parms) {
         if (isset($currentConfTitles["{$pnameA[0]}"])) {
             $legend=$currentConfTitles["{$pnameA[0]}"];
         } else {
-            $legend=$primaryGroups[$pnameA[0]];
+            $legend = isset($primaryGroups[$pnameA[0]]) ? $primaryGroups[$pnameA[0]] : "";
         }
+        
+        // Ensure $legend is a string to avoid null parameter warnings
+        $legend = $legend ?? "";
+        
         if (trim($legend)) {
             $summary[md5($legend)]["main"]=$legend;
             $lastLegend=$legend;
@@ -222,33 +226,38 @@ foreach ($currentConf as $pname=>$parms) {
         $lvl2=0;
     }
 
-    if ((!isset($sSeparator["{$pnameA[0]}{$pnameA[1]}"]))&&(sizeof($pnameA)>2)) {
+    if ((!isset($sSeparator["{$pnameA[0]}" . (isset($pnameA[1]) ? $pnameA[1] : "")]))&&(sizeof($pnameA)>2)) {
         echo str_repeat("</fieldset>", $lvl2);
         
-        if (isset($currentConfTitles["{$pnameA[0]} {$pnameA[1]}"])) {
+        if (isset($pnameA[1]) && isset($currentConfTitles["{$pnameA[0]} {$pnameA[1]}"])) {
             $legend=$currentConfTitles["{$pnameA[0]} {$pnameA[1]}"];
             
         } else {
-            $legend=$primarySubGroups[$pnameA[1]];
+            $legend = isset($pnameA[1]) && isset($primarySubGroups[$pnameA[1]]) ? $primarySubGroups[$pnameA[1]] : "";
         }
+        
+        // Ensure $legend is a string to avoid null parameter warnings
+        $legend = $legend ?? "";
         
         echo "<legend id='".md5($legend)."'>$legend</legend><fieldset title='$legend'  id='f_".md5($legend)."' class='unvisible-fieldset' $MAKE_NO_VISIBLE_MARK>";
         
         if (trim($legend))
-            $summary[md5($lastLegend)]["childs"][]=$legend;
+            $summary[md5($lastLegend ?? "")]["childs"][]=$legend;
         
         if (!isset($pSeparator["{$pnameA[0]}"])) {
             $lvl2=1;
         }
     }
 
-    $sSeparator["{$pnameA[0]}{$pnameA[1]}"]=true;
-    $pSeparator["{$pnameA[0]}"]=true;
+    $sSeparator["{$pnameA[0]}" . (isset($pnameA[1]) ? $pnameA[1] : "")] = true;
+    $pSeparator["{$pnameA[0]}"] = true;
 
     $fieldName=strtr($pname,array(" "=>"@"));
 
-    if (!is_array($parms["currentValue"]))
-        $fieldValue=stripslashes($parms["currentValue"]);
+    if (!is_array($parms["currentValue"] ?? null))
+        $fieldValue=stripslashes($parms["currentValue"] ?? "");
+    else 
+        $fieldValue = "";
     
     
     if ($DEFAULT_PROFILE && $fieldName=="HERIKA_NAME") {
@@ -258,11 +267,11 @@ foreach ($currentConf as $pname=>$parms) {
         $FORCE_DISABLED="";
     }
     
-    if (!$DEFAULT_PROFILE && $parms["scope"]=="global") {
+    if (!$DEFAULT_PROFILE && isset($parms["scope"]) && $parms["scope"]=="global") {
         $FORCE_DISABLED=" readonly='true' disabled='true' title='This is a global parameter. Set it on default profile' ";
     }
     
-    if ($parms["scope"]=="constant") {
+    if (isset($parms["scope"]) && $parms["scope"]=="constant") {
         $FORCE_DISABLED=" readonly='true' disabled='true' title='This is a readonly parameter'";
     }
     
@@ -560,9 +569,15 @@ foreach ($currentConf as $pname=>$parms) {
         </p>".PHP_EOL;
 
     } 
+    
+    // Initialize jsid if not set for the copy to profiles button
+    if (!isset($jsid)) {
+        $jsid = strtr($fieldName,["@"=>"_"]);
+    }
+    
     if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid", "OGHMA_KNOWLEDGE"]))
         if (!in_array($parms["type"],["util"]))
-            if (!in_array($parms["scope"],["global","constant"]))
+            if (!isset($parms["scope"]) || !in_array($parms["scope"],["global","constant"]))
                 echo "<button class='ctapb' title='Copy $fieldName to all profiles' style='
                     color: #FFFFFF; 
                     cursor: pointer; 
@@ -691,8 +706,10 @@ echo '<input
 foreach ($summary as $k=>$item) {
     echo "<li>&nbsp;<a href='#$k'>{$item["main"]}</a></li>";
     
-    foreach ($item["childs"] as $localhash=>$subtitle) {
-        echo "<li class='subchild' id='mini_f_".md5($subtitle)."'>&nbsp;<a href='#" . md5($subtitle) . "'>$subtitle</a></li>";
+    if (isset($item["childs"]) && is_array($item["childs"])) {
+        foreach ($item["childs"] as $localhash=>$subtitle) {
+            echo "<li class='subchild' id='mini_f_".md5($subtitle)."'>&nbsp;<a href='#" . md5($subtitle) . "'>$subtitle</a></li>";
+        }
     }
 }
 
@@ -725,11 +742,7 @@ function validateForm() {
             invalid.push(inputs[i].name + " ends with a backslash. Unable to save due to invalid configuration!");
         }
 
-        if (val.indexOf("\\'") !== -1) {
-            invalid.push(inputs[i].name + " contains a backslash followed by a single quote. Unable to save due to invalid configuration!");
-        }
-
-        if (val.indexOf("<?php") !== -1 || val.indexOf("<?") !== -1 || val.indexOf("?>") !== -1) {
+        if (val.indexOf('<?') !== -1 || val.indexOf('?>') !== -1) {
             invalid.push(inputs[i].name + " contains PHP code patterns. Unable to save due to invalid configuration!");
         }
     }
