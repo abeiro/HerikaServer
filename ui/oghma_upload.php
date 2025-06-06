@@ -256,32 +256,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_dynamic_csv'])
                     $category             = $data[8] ?? '';
 
                     if (!empty($id_quest) && !empty($topic)) {
-                        $query = "
-                            INSERT INTO $schema.oghma_dynamic (
-                                id_quest,
-                                stage,
-                                topic,
-                                topic_desc,
-                                knowledge_class,
-                                topic_desc_basic,
-                                knowledge_class_basic,
-                                tags,
-                                category
-                            )
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        // Check if record with same id_quest, stage, and topic already exists
+                        $checkQuery = "
+                            SELECT id FROM $schema.oghma_dynamic 
+                            WHERE id_quest = $1 AND stage = $2 AND topic = $3
                         ";
+                        $checkResult = pg_query_params($conn, $checkQuery, [$id_quest, $stage, $topic]);
                         
-                        $result = pg_query_params($conn, $query, [
-                            $id_quest,
-                            $stage,
-                            $topic,
-                            $topic_desc,
-                            $knowledge_class,
-                            $topic_desc_basic,
-                            $knowledge_class_basic,
-                            $tags,
-                            $category
-                        ]);
+                        if ($checkResult && pg_num_rows($checkResult) > 0) {
+                            // Update existing record
+                            $existingRow = pg_fetch_assoc($checkResult);
+                            $updateQuery = "
+                                UPDATE $schema.oghma_dynamic 
+                                SET topic_desc = $1,
+                                    knowledge_class = $2,
+                                    topic_desc_basic = $3,
+                                    knowledge_class_basic = $4,
+                                    tags = $5,
+                                    category = $6
+                                WHERE id = $7
+                            ";
+                            
+                            $result = pg_query_params($conn, $updateQuery, [
+                                $topic_desc,
+                                $knowledge_class,
+                                $topic_desc_basic,
+                                $knowledge_class_basic,
+                                $tags,
+                                $category,
+                                $existingRow['id']
+                            ]);
+                        } else {
+                            // Insert new record
+                            $query = "
+                                INSERT INTO $schema.oghma_dynamic (
+                                    id_quest,
+                                    stage,
+                                    topic,
+                                    topic_desc,
+                                    knowledge_class,
+                                    topic_desc_basic,
+                                    knowledge_class_basic,
+                                    tags,
+                                    category
+                                )
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                            ";
+                            
+                            $result = pg_query_params($conn, $query, [
+                                $id_quest,
+                                $stage,
+                                $topic,
+                                $topic_desc,
+                                $knowledge_class,
+                                $topic_desc_basic,
+                                $knowledge_class_basic,
+                                $tags,
+                                $category
+                            ]);
+                        }
 
                         if ($result) {
                             $rowCount++;
@@ -449,37 +482,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_dynamic'])) {
     $category             = htmlspecialchars($_POST['dynamic_category']             ?? '');
 
     if (!empty($id_quest) && !empty($topic)) {
-        $query = "
-            INSERT INTO $schema.oghma_dynamic (
-                id_quest,
-                stage,
-                topic,
-                topic_desc,
-                knowledge_class,
-                topic_desc_basic,
-                knowledge_class_basic,
-                tags,
-                category
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        // Check if record with same id_quest, stage, and topic already exists
+        $checkQuery = "
+            SELECT id FROM $schema.oghma_dynamic 
+            WHERE id_quest = $1 AND stage = $2 AND topic = $3
         ";
+        $checkResult = pg_query_params($conn, $checkQuery, [$id_quest, $stage, $topic]);
         
-        $result = pg_query_params($conn, $query, [
-            $id_quest,
-            $stage,
-            $topic,
-            $topic_desc,
-            $knowledge_class,
-            $topic_desc_basic,
-            $knowledge_class_basic,
-            $tags,
-            $category
-        ]);
-
-        if ($result) {
-            $message .= "<p>Dynamic entry added successfully!</p>";
+        if ($checkResult && pg_num_rows($checkResult) > 0) {
+            $message .= "<p style='color: orange;'>A dynamic entry with Quest ID '$id_quest', Stage '$stage', and Topic '$topic' already exists. Please edit the existing entry or use different values.</p>";
         } else {
-            $message .= "<p>Error adding dynamic entry: " . pg_last_error($conn) . "</p>";
+            // Insert new record
+            $query = "
+                INSERT INTO $schema.oghma_dynamic (
+                    id_quest,
+                    stage,
+                    topic,
+                    topic_desc,
+                    knowledge_class,
+                    topic_desc_basic,
+                    knowledge_class_basic,
+                    tags,
+                    category
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ";
+            
+            $result = pg_query_params($conn, $query, [
+                $id_quest,
+                $stage,
+                $topic,
+                $topic_desc,
+                $knowledge_class,
+                $topic_desc_basic,
+                $knowledge_class_basic,
+                $tags,
+                $category
+            ]);
+
+            if ($result) {
+                $message .= "<p>Dynamic entry added successfully!</p>";
+            } else {
+                $message .= "<p>Error adding dynamic entry: " . pg_last_error($conn) . "</p>";
+            }
         }
     } else {
         $message .= '<p>Please fill in at least the "Quest ID" and "Topic" fields.</p>';
