@@ -97,6 +97,12 @@ function storeMemory($embeddings, $text, $id, $category='past dialogues' ,$force
 
 	$response = file_get_contents($url);
 	
+	// Check if the response is successful
+	if ($response === false) {
+		error_log("Error: Unable to fetch embedding response from: " . $url);
+		return false;
+	}
+	
 	$pattern = '/People:\s*(.*)$/m';
 	$filteredArray=[];
 	if (preg_match($pattern, strtr($text,["and"=>",","AND"=>","]), $matches)) {
@@ -123,6 +129,12 @@ function storeMemory($embeddings, $text, $id, $category='past dialogues' ,$force
 	
 	$vector=json_decode($response,true);
 	
+	// Check if JSON decode was successful
+	if ($vector === null) {
+		error_log("Error: Invalid JSON response from embedding service: " . $response);
+		return false;
+	}
+	
 	if (sizeof($vector)=="384") {
 		$db->update("memory_summary","embedding='$response',companions='$peopleS'","rowid=$id");
 		error_log("Using 384 dim vectors".PHP_EOL);
@@ -131,8 +143,12 @@ function storeMemory($embeddings, $text, $id, $category='past dialogues' ,$force
 		$db->update("memory_summary","embedding768='$response',companions='$peopleS'","rowid=$id");
 		error_log("Using 768 dim vectors".PHP_EOL);
 	}
+	else {
+		error_log("Error: Unexpected vector size: " . sizeof($vector) . " for response: " . $response);
+		return false;
+	}
 	
-	
+	return true;
 }
 
 function queryMemory($embeddings,$category='past dialogues',$limitNpc="")
@@ -158,6 +174,12 @@ function queryMemory($embeddings,$category='past dialogues',$limitNpc="")
 	error_log("Similarity Search");
 	// Decode the JSON response
 	$responseData = json_decode($response, true);
+	
+	// Check if JSON decode was successful
+	if ($responseData === null) {
+		error_log("Error: Invalid JSON response from embedding service: " . $response);
+		return null;
+	}
 	
 	if (sizeof($responseData)==384) {
 		error_log("Using 384 dim vectors".PHP_EOL);
