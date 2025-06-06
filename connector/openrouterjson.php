@@ -150,6 +150,19 @@ class openrouterjson
                         $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
                         $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
+
+                        // Seems we were missing this case
+                        if (isset($assistantRoleBuffer) && !empty($assistantRoleBuffer)) {
+                            $contextDataCopy[]=[
+                                "role"=>"assistant",
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"$lastTargetBuffer\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($assistantRoleBuffer)."\"}"
+                                
+                            ];
+                            $lastTargetBuffer="";
+                            $assistantRoleBuffer="";
+                            $lastrole=$element["role"];
+
+                        }
                         
                         unset($contextData[$n]);
                     } else {
@@ -169,6 +182,14 @@ class openrouterjson
                                 $assistantRoleBuffer.=$dialogueTarget["cleanedString"];                                
                                 $lastTargetBuffer=$dialogueTarget["target"];
                                 unset($contextData[$n]);
+                                /*
+                                $contextData[$n]=[
+                                    "role"=>"assistant",
+                                    "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
+                                    
+                                ];
+                                */
+
                             } else {
                                 
                                 $contextData[$n]=[
