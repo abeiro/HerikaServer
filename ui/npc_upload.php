@@ -289,7 +289,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
     if (file_exists($filePath)) {
         header('Content-Description: File Transfer');
         header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="example.csv"');
+        header('Content-Disposition: attachment; filename="example_bios.csv"');
         header('Expires: 0');
         header('Cache-Control: must-revalidate');
         header('Pragma: public');
