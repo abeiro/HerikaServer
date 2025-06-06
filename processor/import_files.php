@@ -1,17 +1,45 @@
 <?php
 
-// Biography CSV upload
-if ($gameRequest[0]=="biography_import") {
-    Logger::info("Biography Import: STARTED - Processing CSV data upload");
+// Handle POST-based CSV uploads
+if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['type'])) {
+    $import_type = $_POST['type'];
+    $timestamp = $_POST['ts'] ?? time();
+    $game_timestamp = $_POST['gamets'] ?? 0;
     
-    // Parse the message format: biography|timestamp|gametime|filename|csv_data
-    // $gameRequest[4] should contain the CSV data
-    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
-        Logger::error("Biography Import: No CSV data provided");
+    // Check if file was uploaded
+    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        Logger::error("CSV Import ($import_type): No file uploaded or upload error occurred");
         die("X-CUSTOM-CLOSE");
     }
     
-    $csvData = $gameRequest[4];
+    $csvData = file_get_contents($_FILES['file']['tmp_name']);
+    if (empty($csvData)) {
+        Logger::error("CSV Import ($import_type): Empty CSV file uploaded");
+        die("X-CUSTOM-CLOSE");
+    }
+    
+    // Route to appropriate handler
+    switch ($import_type) {
+        case 'biography_import':
+            handleBiographyImport($csvData, $timestamp, $game_timestamp);
+            break;
+        case 'oghma_import':
+            handleOghmaImport($csvData, $timestamp, $game_timestamp);
+            break;
+        case 'dynamic_oghma_import':
+            handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp);
+            break;
+        default:
+            Logger::error("CSV Import: Unknown import type: $import_type");
+            die("X-CUSTOM-CLOSE");
+    }
+}
+
+function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
+    global $db;
+    
+    Logger::info("Biography Import: STARTED - Processing CSV data upload");
+    
     $processedCount = 0;
     $errorCount = 0;
     
@@ -127,8 +155,8 @@ if ($gameRequest[0]=="biography_import") {
         $db->insert(
             'eventlog',
             array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
                 'type' => 'biography_import',
                 'data' => "CSV upload: $processedCount records processed, $errorCount errors",
                 'sess' => 'web',
@@ -149,8 +177,8 @@ if ($gameRequest[0]=="biography_import") {
         $db->insert(
             'eventlog',
             array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
                 'type' => 'biography_import',
                 'data' => "CSV upload failed: " . $e->getMessage(),
                 'sess' => 'web',
@@ -165,18 +193,11 @@ if ($gameRequest[0]=="biography_import") {
     die("X-CUSTOM-CLOSE");
 }
 
-// Oghma CSV upload
-if ($gameRequest[0]=="oghma_import") {
+function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
+    global $db;
+    
     Logger::info("Oghma Import: STARTED - Processing CSV data upload");
     
-    // Parse the message format: oghma_import|timestamp|gametime|filename|csv_data
-    // $gameRequest[4] should contain the CSV data
-    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
-        Logger::error("Oghma Import: No CSV data provided");
-        die("X-CUSTOM-CLOSE");
-    }
-    
-    $csvData = $gameRequest[4];
     $processedCount = 0;
     $errorCount = 0;
     
@@ -288,8 +309,8 @@ if ($gameRequest[0]=="oghma_import") {
         $db->insert(
             'eventlog',
             array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
                 'type' => 'oghma_import',
                 'data' => "CSV upload: $processedCount records processed, $errorCount errors",
                 'sess' => 'web',
@@ -310,8 +331,8 @@ if ($gameRequest[0]=="oghma_import") {
         $db->insert(
             'eventlog',
             array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
                 'type' => 'oghma_import',
                 'data' => "CSV upload failed: " . $e->getMessage(),
                 'sess' => 'web',
@@ -326,18 +347,11 @@ if ($gameRequest[0]=="oghma_import") {
     die("X-CUSTOM-CLOSE");
 }
 
-// Dynamic Oghma CSV upload
-if ($gameRequest[0]=="dynamic_oghma_import") {
+function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
+    global $db;
+    
     Logger::info("Dynamic Oghma Import: STARTED - Processing CSV data upload");
     
-    // Parse the message format: dynamic_oghma_import|timestamp|gametime|filename|csv_data
-    // $gameRequest[4] should contain the CSV data
-    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
-        Logger::error("Dynamic Oghma Import: No CSV data provided");
-        die("X-CUSTOM-CLOSE");
-    }
-    
-    $csvData = $gameRequest[4];
     $processedCount = 0;
     $errorCount = 0;
     
@@ -447,7 +461,6 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
                     
                     if ($db->query($updateSql)) {
                         $processedCount++;
-                        Logger::info("Dynamic Oghma Import: Updated existing record for quest '$id_quest' stage $stage topic '$topic'");
                     } else {
                         Logger::error("Dynamic Oghma Import: Error updating existing record for quest '$id_quest' topic '$topic'");
                         $errorCount++;
@@ -469,7 +482,6 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
                         )
                     );
                     $processedCount++;
-                    Logger::info("Dynamic Oghma Import: Inserted new record for quest '$id_quest' stage $stage topic '$topic'");
                 }
             } catch (Exception $e) {
                 Logger::error("Dynamic Oghma Import: Error processing quest '$id_quest' topic '$topic': " . $e->getMessage());
@@ -486,8 +498,8 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
         $db->insert(
             'eventlog',
             array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
                 'type' => 'dynamic_oghma_import',
                 'data' => "CSV upload: $processedCount records processed, $errorCount errors",
                 'sess' => 'web',
@@ -508,8 +520,8 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
         $db->insert(
             'eventlog',
             array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
                 'type' => 'dynamic_oghma_import',
                 'data' => "CSV upload failed: " . $e->getMessage(),
                 'sess' => 'web',

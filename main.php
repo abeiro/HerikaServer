@@ -184,8 +184,60 @@ if (($gameRequest[0]=="delete_event")) {
 }
 
 // CSV Import Processing - Load processor only when needed for performance
-if (in_array($gameRequest[0], ["biography_import", "oghma_import", "dynamic_oghma_import"])) {
+if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && 
+    isset($_POST['type']) && 
+    in_array($_POST['type'], ["biography_import", "oghma_import", "dynamic_oghma_import"])) {
     require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."import_files.php");
+}
+
+// Handle pipe-delimited CSV imports from C++ side
+if (in_array($gameRequest[0], ["biography_import", "oghma_import", "dynamic_oghma_import"])) {
+    Logger::info("Processing pipe-delimited CSV import: {$gameRequest[0]}");
+    
+    // Validate message format: type|timestamp|gametime|filename|csvdata
+    if (count($gameRequest) < 5) {
+        Logger::error("CSV Import ({$gameRequest[0]}): Invalid message format - expected 5 parts, got " . count($gameRequest));
+        die("X-CUSTOM-CLOSE");
+    }
+    
+    $import_type = $gameRequest[0];
+    $timestamp = $gameRequest[1];
+    $game_timestamp = $gameRequest[2];
+    $filename = $gameRequest[3];
+    $csvData = $gameRequest[4];
+    
+    // Validate CSV data is not empty
+    if (empty($csvData)) {
+        Logger::error("CSV Import ($import_type): Empty CSV data received");
+        die("X-CUSTOM-CLOSE");
+    }
+    
+    Logger::info("CSV Import ($import_type): Processing file '$filename' with " . strlen($csvData) . " bytes of data");
+    
+    // Set up environment to mimic POST processing
+    $_POST['csv_import'] = '1';
+    $_POST['type'] = $import_type;
+    $_POST['ts'] = $timestamp;
+    $_POST['gamets'] = $game_timestamp;
+    $_POST['filename'] = $filename;
+    
+    // Create a temporary uploaded file structure
+    $tempFile = tempnam(sys_get_temp_dir(), 'csv_import_pipe_');
+    file_put_contents($tempFile, $csvData);
+    
+    $_FILES['file'] = array(
+        'name' => $filename,
+        'type' => 'text/csv',
+        'size' => strlen($csvData),
+        'tmp_name' => $tempFile,
+        'error' => UPLOAD_ERR_OK
+    );
+    
+    // Load and execute the import processor
+    require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."import_files.php");
+    
+    // Cleanup temp file is handled by the processor
+    // Script will die() in the processor, so this point should not be reached
 }
 
 // Player rewrite
