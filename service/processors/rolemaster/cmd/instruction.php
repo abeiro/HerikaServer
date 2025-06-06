@@ -118,6 +118,8 @@ In addition, follow these general scene rules as a game director:
         
         
         $customParm["response_format"]=["type"=>"json_object"];
+        
+
         $customParm["MAX_TOKENS"]=4000;
         
         $GLOBALS["HOOKS"]["JSON_TEMPLATE"][]=function() {
@@ -128,10 +130,17 @@ In addition, follow these general scene rules as a game director:
                 "target"=>"action's target",
                 "scene_note"=>"Something other actors should know about the instruction, if the instruction also involves another actors"
             ]]];
+
+            setResponseTemplate();
+            setStructuredOutputTemplate();
         };
 
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
+        // Force unset json schema
+        $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
+
         $connectionHandler->open($prompt,$customParm);
+        
 
         $buffer="";
         $totalBuffer="";
