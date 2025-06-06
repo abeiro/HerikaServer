@@ -1,6 +1,11 @@
 <?php
 
-// Handle POST-based CSV uploads
+/* CSV Import Processor - Called by csv_import.php endpoint
+ * Handles three types of CSV imports:
+ * - biography_import: NPC character data
+ * - oghma_import: Knowledge base entries
+ * - dynamic_oghma_import: Quest-specific knowledge entries
+ */
 if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['type'])) {
     $import_type = $_POST['type'];
     $timestamp = $_POST['ts'] ?? time();
@@ -9,7 +14,7 @@ if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['
     // Check if file was uploaded
     if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
         Logger::error("CSV Import ($import_type): No file uploaded or upload error occurred");
-        die("X-CUSTOM-CLOSE");
+        return false;
     }
     
     $csvData = file_get_contents($_FILES['file']['tmp_name']);
@@ -31,7 +36,7 @@ if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['
             break;
         default:
             Logger::error("CSV Import: Unknown import type: $import_type");
-            die("X-CUSTOM-CLOSE");
+            return false;
     }
 }
 
@@ -51,7 +56,7 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
         $handle = fopen($tempFile, 'r');
         if ($handle === false) {
             Logger::error("Biography Import: Could not open temporary CSV file");
-            die("X-CUSTOM-CLOSE");
+            return false;
         }
         
         // Read and process header
@@ -60,7 +65,7 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
             Logger::error("Biography Import: Invalid CSV header");
             fclose($handle);
             unlink($tempFile);
-            die("X-CUSTOM-CLOSE");
+            return false;
         }
         
         // Normalize header labels and create header map
@@ -190,7 +195,7 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
         );
     }
     
-    die("X-CUSTOM-CLOSE");
+    return true;
 }
 
 function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
@@ -209,7 +214,7 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
         $handle = fopen($tempFile, 'r');
         if ($handle === false) {
             Logger::error("Oghma Import: Could not open temporary CSV file");
-            die("X-CUSTOM-CLOSE");
+            return false;
         }
         
         // Read and process header
@@ -218,7 +223,7 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
             Logger::error("Oghma Import: Invalid CSV header");
             fclose($handle);
             unlink($tempFile);
-            die("X-CUSTOM-CLOSE");
+            return false;
         }
         
         // Normalize header labels and create header map
@@ -293,6 +298,18 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
                     ),
                     'topic'
                 );
+                
+                // Update native_vector for search functionality
+                $vectorUpdateSql = "
+                    UPDATE oghma
+                    SET native_vector = 
+                          setweight(to_tsvector(coalesce(topic, '')), 'A')
+                        || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
+                        || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
+                    WHERE topic = '" . $db->escape($topic) . "'
+                ";
+                $db->query($vectorUpdateSql);
+                
                 $processedCount++;
             } catch (Exception $e) {
                 Logger::error("Oghma Import: Error processing topic '$topic': " . $e->getMessage());
@@ -344,7 +361,7 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
         );
     }
     
-    die("X-CUSTOM-CLOSE");
+    return true;
 }
 
 function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
@@ -363,7 +380,7 @@ function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
         $handle = fopen($tempFile, 'r');
         if ($handle === false) {
             Logger::error("Dynamic Oghma Import: Could not open temporary CSV file");
-            die("X-CUSTOM-CLOSE");
+            return false;
         }
         
         // Read and process header
@@ -372,7 +389,7 @@ function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
             Logger::error("Dynamic Oghma Import: Invalid CSV header");
             fclose($handle);
             unlink($tempFile);
-            die("X-CUSTOM-CLOSE");
+            return false;
         }
         
         // Normalize header labels and create header map
@@ -533,7 +550,7 @@ function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
         );
     }
     
-    die("X-CUSTOM-CLOSE");
+    return true;
 }
 
 ?>
