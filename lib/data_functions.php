@@ -975,6 +975,22 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
+    $lastElement = end($ctx3);
+    if ($lastElement["role"]=="assistant") {
+        if ($GLOBALS["gameRequest"][3]=="rechat") {
+            // NPC is rechatting himself
+            
+            Logger::warn("[RECHAT] actor is replying itself, aborting");
+
+            echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+            if (!getenv("PHPUNIT_TEST")) {
+                @ob_end_flush();
+                @flush();
+            }
+        }
+
+    }
+
     return $ctx3;
 
 }

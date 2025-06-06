@@ -191,6 +191,7 @@ if ($gameRequest[0]=="biography_import") {
 }
 
 // Oghma CSV upload
+// Move this to a processor file
 if ($gameRequest[0]=="oghma_import") {
     Logger::info("Processing Oghma CSV data upload");
     
@@ -352,7 +353,9 @@ if ($gameRequest[0]=="oghma_import") {
     die("X-CUSTOM-CLOSE");
 }
 
+
 // Dynamic Oghma CSV upload
+// Move this to a processor file
 if ($gameRequest[0]=="dynamic_oghma_import") {
     Logger::info("Processing Dynamic Oghma CSV data upload");
     
@@ -1271,6 +1274,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEP
 // audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 
 $outputWasValid = call_llm();
+
 if (!$outputWasValid) {
     Logger::warn("LLM returned invalid output.");
     if (isset($GLOBALS["LLM_RETRY_FNCT"])) {

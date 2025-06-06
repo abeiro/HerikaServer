@@ -4,6 +4,7 @@ require_once("logger.php");
 class sql
 {
     private static $link = null;
+    private $queryTimeThreshold = 0.5; // Time threshold in seconds
 
     public function __construct()
     {
@@ -34,6 +35,7 @@ class sql
 
     public function insert($table, $data)
     {
+        $startTime = microtime(true);
         $i=0;
         $columns = implode(', ', array_keys($data));
         foreach (array_keys($data) as $d) {
@@ -42,10 +44,15 @@ class sql
         $values = implode(', ', $values);
 
         $query = "INSERT INTO $table ($columns) VALUES ($values)";
-        //error_log($query);
         $params = array_values($data);
-        //error_log(print_r($params,true));
         $result = pg_query_params(self::$link, $query, $params);
+        $endTime = microtime(true);
+
+        $elapsedTime = $endTime - $startTime;
+        if ($elapsedTime > $this->queryTimeThreshold) {
+            Logger::error("Insert query execution time exceeded threshold: {$elapsedTime} seconds.");
+        }
+
         if (!$result) {
             Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
@@ -77,13 +84,32 @@ class sql
 
     public function update($table, $set, $where = "FALSE")
     {
+        $startTime = microtime(true);
         $query = "UPDATE $table SET $set WHERE $where";
-        pg_query(self::$link, $query);
+        $result = pg_query(self::$link, $query);
+        $endTime = microtime(true);
+
+        $elapsedTime = $endTime - $startTime;
+        if ($elapsedTime > $this->queryTimeThreshold) {
+            Logger::error("Update query execution time exceeded threshold: {$elapsedTime} seconds.");
+        }
+
+        if (!$result) {
+            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+        }
     }
 
     public function execQuery($sqlquery)
     {
+        $startTime = microtime(true);
         $result = pg_query(self::$link, $sqlquery);
+        $endTime = microtime(true);
+
+        $elapsedTime = $endTime - $startTime;
+        if ($elapsedTime > $this->queryTimeThreshold) {
+            Logger::error("Query execution time exceeded threshold: {$elapsedTime} seconds.");
+        }
+
         if (!$result) {
             Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
@@ -91,7 +117,15 @@ class sql
 
     public function execQueryVerbose($sqlquery)
     {
+        $startTime = microtime(true);
         $result = pg_query(self::$link, $sqlquery);
+        $endTime = microtime(true);
+
+        $elapsedTime = $endTime - $startTime;
+        if ($elapsedTime > $this->queryTimeThreshold) {
+            Logger::error("Query execution time exceeded threshold: {$elapsedTime} seconds.");
+        }
+
         if (!$result) {
             $res = pg_last_error(self::$link);
             Logger::error($res . print_r(debug_backtrace(), true));
@@ -102,7 +136,15 @@ class sql
 
     public function fetchAll($q)
     {
+        $startTime = microtime(true);
         $result = pg_query(self::$link, $q);
+        $endTime = microtime(true);
+
+        $elapsedTime = $endTime - $startTime;
+        if ($elapsedTime > $this->queryTimeThreshold) {
+            Logger::error("FetchAll query execution time exceeded threshold: {$elapsedTime} seconds.");
+        }
+
         if (!$result) {
             Logger::error(pg_last_error(self::$link));
             return [];
@@ -112,14 +154,21 @@ class sql
         while ($row = pg_fetch_assoc($result)) {
             $finalData[] = $row;
         }
-        
 
         return $finalData;
     }
-    
+
     public function fetchOne($q)
     {
+        $startTime = microtime(true);
         $result = pg_query(self::$link, $q);
+        $endTime = microtime(true);
+
+        $elapsedTime = $endTime - $startTime;
+        if ($elapsedTime > $this->queryTimeThreshold) {
+            Logger::error("FetchOne query execution time exceeded threshold: {$elapsedTime} seconds.");
+        }
+
         if (!$result) {
             Logger::error(pg_last_error(self::$link));
             return [];
@@ -130,7 +179,6 @@ class sql
             $finalData = $row;
             break;
         }
-        
 
         return $finalData;
     }
