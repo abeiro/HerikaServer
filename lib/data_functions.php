@@ -975,20 +975,42 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
-    $lastElement = end($ctx3);
-    if ($lastElement["role"]=="assistant") {
-        if ($GLOBALS["gameRequest"][3]=="rechat") {
-            // NPC is rechatting himself
-            
-            Logger::warn("[RECHAT] actor is replying itself, aborting");
 
-            echo 'X-CUSTOM-CLOSE'.PHP_EOL;
-            if (!getenv("PHPUNIT_TEST")) {
-                @ob_end_flush();
-                @flush();
+    // Cases of self rechat
+    if ((sizeof($ctx3)>3)&&($GLOBALS["gameRequest"][3]=="rechat")) {
+        $lastElement = $ctx3[sizeof($ctx3)-1];
+        // Last element is assistant
+        if ($lastElement["role"]=="assistant") {
+            if ($GLOBALS["gameRequest"][3]=="rechat") {
+                // NPC is rechatting himself
+                
+                Logger::warn("[RECHAT] actor is replying itself, case 1, aborting");
+
+                echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+                if (!getenv("PHPUNIT_TEST")) {
+                    @ob_end_flush();
+                    @flush();
+                }
             }
+
         }
 
+        $preLastElement = $ctx3[sizeof($ctx3)-2];
+        // Pre last element is assistant, and last is a memory.
+        if (($preLastElement["role"]=="assistant")&&(strpos($lastElement["content"],"MEMORY")!==false)) {
+            if ($GLOBALS["gameRequest"][3]=="rechat") {
+                // NPC is rechatting himself
+                
+                Logger::warn("[RECHAT] actor is replying itself,case 2, aborting");
+
+                echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+                if (!getenv("PHPUNIT_TEST")) {
+                    @ob_end_flush();
+                    @flush();
+                }
+            }
+
+        }
     }
 
     return $ctx3;
@@ -2648,7 +2670,7 @@ function call_llm() {
                     array(
                         'action' => $actionArg[0],
                         'fullcall' =>$singleaction,
-                        'actorname'=> $actionPart[0],
+                        'actorname'=> isset($GLOBALS["PATCH_ACTION_ALL_ACTORS"])?$GLOBALS["PATCH_ACTION_ALL_ACTORS"]:$actionPart[0],
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
