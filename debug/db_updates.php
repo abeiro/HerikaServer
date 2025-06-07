@@ -1050,7 +1050,33 @@ if ($checkVersion("dynamic_bio")<20250710001) {
 
 if ($checkVersion("oghma")<20250903001) { // version 202509... 
     Logger::debug(" try patch: oghma 20250903001");
-    $db->execQuery("ALTER TABLE public.oghma ADD COLUMN IF NOT EXISTS \"vector384\" vector(384)");
+    
+    // Check if vector384 column exists first
+    try {
+        $columnCheck = $db->fetchAll("
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'oghma' 
+            AND column_name = 'vector384' 
+            AND table_schema = 'public'
+        ");
+        
+        if (empty($columnCheck)) {
+            $db->execQuery("ALTER TABLE public.oghma ADD COLUMN \"vector384\" vector(384)");
+            Logger::info("Added vector384 column to oghma table");
+        } else {
+            Logger::info("vector384 column already exists, skipping...");
+        }
+    } catch (Exception $e) {
+        Logger::error("Error with vector384 column: " . $e->getMessage());
+        // If it's the "already exists" error, we can safely continue
+        if (strpos($e->getMessage(), "already exists") !== false) {
+            Logger::info("Column already exists, continuing...");
+        } else {
+            throw $e; // Re-throw if it's a different error
+        }
+    }
+    
     $updateVersion("oghma",20250903001);
     Logger::info("Applied patch oghma 20250903001");
 }

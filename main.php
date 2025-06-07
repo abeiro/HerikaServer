@@ -143,7 +143,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast"];
+    "util_location_name","spellcast","npcspellcast","biography_import","oghma_import","dynamic_oghma_import"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -181,6 +181,351 @@ if (($gameRequest[0]=="delete_event")) {
     $db->delete("eventlog","type in ('chat','prechat') and data like '%$datacn%' and localts>".(time()- 120));
     // audit_log(__FILE__);
     die();
+}
+
+// Biography CSV upload
+if ($gameRequest[0]=="biography_import") {
+    require(__DIR__."/processor/biography_import.php");
+    
+    die("X-CUSTOM-CLOSE");
+}
+
+// Oghma CSV upload
+// Move this to a processor file
+if ($gameRequest[0]=="oghma_import") {
+    Logger::info("Processing Oghma CSV data upload");
+    
+    // Parse the message format: oghma_import|timestamp|gametime|filename|csv_data
+    // $gameRequest[4] should contain the CSV data
+    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
+        Logger::error("Oghma Import: No CSV data provided");
+        die("X-CUSTOM-CLOSE");
+    }
+    
+    $csvData = $gameRequest[4];
+    $processedCount = 0;
+    $errorCount = 0;
+    
+    try {
+        // Create a temporary file to properly parse complex CSV data
+        $tempFile = tempnam(sys_get_temp_dir(), 'oghma_import_');
+        file_put_contents($tempFile, $csvData);
+        
+        $handle = fopen($tempFile, 'r');
+        if ($handle === false) {
+            Logger::error("Oghma Import: Could not open temporary CSV file");
+            die("X-CUSTOM-CLOSE");
+        }
+        
+        // Read and process header
+        $header = fgetcsv($handle, 0, ',', '"', '"');
+        if ($header === false || empty($header)) {
+            Logger::error("Oghma Import: Invalid CSV header");
+            fclose($handle);
+            unlink($tempFile);
+            die("X-CUSTOM-CLOSE");
+        }
+        
+        // Normalize header labels and create header map
+        $headerMap = [];
+        foreach ($header as $i => $colName) {
+            $normalized = strtolower(trim($colName));
+            $headerMap[$normalized] = $i;
+        }
+        
+        // Process each data row
+        while (($data = fgetcsv($handle, 0, ',', '"', '"')) !== false) {
+            if (empty($data) || count($data) < 2) {
+                continue; // Skip empty or invalid rows
+            }
+            
+            // Extract required fields
+            $topic = '';
+            if (isset($headerMap['topic']) && isset($data[$headerMap['topic']])) {
+                $topic = strtolower(trim($data[$headerMap['topic']]));
+            }
+            
+            $topic_desc = '';
+            if (isset($headerMap['topic_desc']) && isset($data[$headerMap['topic_desc']])) {
+                $topic_desc = trim($data[$headerMap['topic_desc']]);
+            }
+            
+            // Extract optional fields
+            $knowledge_class = '';
+            if (isset($headerMap['knowledge_class']) && isset($data[$headerMap['knowledge_class']])) {
+                $knowledge_class = trim($data[$headerMap['knowledge_class']]);
+            }
+            
+            $topic_desc_basic = '';
+            if (isset($headerMap['topic_desc_basic']) && isset($data[$headerMap['topic_desc_basic']])) {
+                $topic_desc_basic = trim($data[$headerMap['topic_desc_basic']]);
+            }
+            
+            $knowledge_class_basic = '';
+            if (isset($headerMap['knowledge_class_basic']) && isset($data[$headerMap['knowledge_class_basic']])) {
+                $knowledge_class_basic = trim($data[$headerMap['knowledge_class_basic']]);
+            }
+            
+            $tags = '';
+            if (isset($headerMap['tags']) && isset($data[$headerMap['tags']])) {
+                $tags = trim($data[$headerMap['tags']]);
+            }
+            
+            $category = '';
+            if (isset($headerMap['category']) && isset($data[$headerMap['category']])) {
+                $category = trim($data[$headerMap['category']]);
+            }
+            
+            // Skip if required fields are missing
+            if (empty($topic) || empty($topic_desc)) {
+                Logger::warn("Oghma Import: Skipping row with missing topic or topic_desc");
+                $errorCount++;
+                continue;
+            }
+            
+            // Insert or update record using upsertRowOnConflict
+            try {
+                $db->upsertRowOnConflict(
+                    'oghma',
+                    array(
+                        'topic' => $topic,
+                        'topic_desc' => $topic_desc,
+                        'knowledge_class' => $knowledge_class,
+                        'topic_desc_basic' => $topic_desc_basic,
+                        'knowledge_class_basic' => $knowledge_class_basic,
+                        'tags' => $tags,
+                        'category' => $category
+                    ),
+                    'topic'
+                );
+                $processedCount++;
+                Logger::info("Oghma Import: Successfully processed topic: $topic");
+            } catch (Exception $e) {
+                Logger::error("Oghma Import: Error processing topic '$topic': " . $e->getMessage());
+                $errorCount++;
+            }
+        }
+        
+        fclose($handle);
+        unlink($tempFile);
+        
+        Logger::info("Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
+        
+        // Log the event for audit purposes
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => 'oghma_import',
+                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
+                'sess' => 'web',
+                'localts' => time(),
+                'people' => '',
+                'location' => '',
+                'party' => ''
+            )
+        );
+        
+    } catch (Exception $e) {
+        Logger::error("Oghma Import: Fatal error processing CSV: " . $e->getMessage());
+        // Clean up temp file if it exists
+        if (isset($tempFile) && file_exists($tempFile)) {
+            unlink($tempFile);
+        }
+        // Log the error event
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => 'oghma_import',
+                'data' => "CSV upload failed: " . $e->getMessage(),
+                'sess' => 'web',
+                'localts' => time(),
+                'people' => '',
+                'location' => '',
+                'party' => ''
+            )
+        );
+    }
+    
+    die("X-CUSTOM-CLOSE");
+}
+
+
+// Dynamic Oghma CSV upload
+// Move this to a processor file
+if ($gameRequest[0]=="dynamic_oghma_import") {
+    Logger::info("Processing Dynamic Oghma CSV data upload");
+    
+    // Parse the message format: dynamic_oghma_import|timestamp|gametime|filename|csv_data
+    // $gameRequest[4] should contain the CSV data
+    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
+        Logger::error("Dynamic Oghma Import: No CSV data provided");
+        die("X-CUSTOM-CLOSE");
+    }
+    
+    $csvData = $gameRequest[4];
+    $processedCount = 0;
+    $errorCount = 0;
+    
+    try {
+        // Create a temporary file to properly parse complex CSV data
+        $tempFile = tempnam(sys_get_temp_dir(), 'dynamic_oghma_import_');
+        file_put_contents($tempFile, $csvData);
+        
+        $handle = fopen($tempFile, 'r');
+        if ($handle === false) {
+            Logger::error("Dynamic Oghma Import: Could not open temporary CSV file");
+            die("X-CUSTOM-CLOSE");
+        }
+        
+        // Read and process header
+        $header = fgetcsv($handle, 0, ',', '"', '"');
+        if ($header === false || empty($header)) {
+            Logger::error("Dynamic Oghma Import: Invalid CSV header");
+            fclose($handle);
+            unlink($tempFile);
+            die("X-CUSTOM-CLOSE");
+        }
+        
+        // Normalize header labels and create header map
+        $headerMap = [];
+        foreach ($header as $i => $colName) {
+            $normalized = strtolower(trim($colName));
+            $headerMap[$normalized] = $i;
+        }
+        
+        // Process each data row
+        while (($data = fgetcsv($handle, 0, ',', '"', '"')) !== false) {
+            if (empty($data) || count($data) < 3) {
+                continue; // Skip empty or invalid rows
+            }
+            
+            // Extract required fields
+            $id_quest = '';
+            if (isset($headerMap['id_quest']) && isset($data[$headerMap['id_quest']])) {
+                $id_quest = trim($data[$headerMap['id_quest']]);
+            }
+            
+            $stage = 0;
+            if (isset($headerMap['stage']) && isset($data[$headerMap['stage']])) {
+                $stage = intval(trim($data[$headerMap['stage']]));
+            }
+            
+            $topic = '';
+            if (isset($headerMap['topic']) && isset($data[$headerMap['topic']])) {
+                $topic = strtolower(trim($data[$headerMap['topic']]));
+            }
+            
+            // Extract optional fields
+            $topic_desc = '';
+            if (isset($headerMap['topic_desc']) && isset($data[$headerMap['topic_desc']])) {
+                $topic_desc = trim($data[$headerMap['topic_desc']]);
+            }
+            
+            $knowledge_class = '';
+            if (isset($headerMap['knowledge_class']) && isset($data[$headerMap['knowledge_class']])) {
+                $knowledge_class = trim($data[$headerMap['knowledge_class']]);
+            }
+            
+            $topic_desc_basic = '';
+            if (isset($headerMap['topic_desc_basic']) && isset($data[$headerMap['topic_desc_basic']])) {
+                $topic_desc_basic = trim($data[$headerMap['topic_desc_basic']]);
+            }
+            
+            $knowledge_class_basic = '';
+            if (isset($headerMap['knowledge_class_basic']) && isset($data[$headerMap['knowledge_class_basic']])) {
+                $knowledge_class_basic = trim($data[$headerMap['knowledge_class_basic']]);
+            }
+            
+            $tags = '';
+            if (isset($headerMap['tags']) && isset($data[$headerMap['tags']])) {
+                $tags = trim($data[$headerMap['tags']]);
+            }
+            
+            $category = '';
+            if (isset($headerMap['category']) && isset($data[$headerMap['category']])) {
+                $category = trim($data[$headerMap['category']]);
+            }
+            
+            // Skip if required fields are missing
+            if (empty($id_quest) || empty($topic)) {
+                Logger::warn("Dynamic Oghma Import: Skipping row with missing id_quest or topic");
+                $errorCount++;
+                continue;
+            }
+            
+            // Insert record (dynamic oghma doesn't use upsert, it allows multiple entries)
+            try {
+                $db->insert(
+                    'oghma_dynamic',
+                    array(
+                        'id_quest' => $id_quest,
+                        'stage' => $stage,
+                        'topic' => $topic,
+                        'topic_desc' => $topic_desc,
+                        'knowledge_class' => $knowledge_class,
+                        'topic_desc_basic' => $topic_desc_basic,
+                        'knowledge_class_basic' => $knowledge_class_basic,
+                        'tags' => $tags,
+                        'category' => $category
+                    )
+                );
+                $processedCount++;
+                Logger::info("Dynamic Oghma Import: Successfully processed quest '$id_quest' stage $stage topic '$topic'");
+            } catch (Exception $e) {
+                Logger::error("Dynamic Oghma Import: Error processing quest '$id_quest' topic '$topic': " . $e->getMessage());
+                $errorCount++;
+            }
+        }
+        
+        fclose($handle);
+        unlink($tempFile);
+        
+        Logger::info("Dynamic Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
+        
+        // Log the event for audit purposes
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => 'dynamic_oghma_import',
+                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
+                'sess' => 'web',
+                'localts' => time(),
+                'people' => '',
+                'location' => '',
+                'party' => ''
+            )
+        );
+        
+    } catch (Exception $e) {
+        Logger::error("Dynamic Oghma Import: Fatal error processing CSV: " . $e->getMessage());
+        // Clean up temp file if it exists
+        if (isset($tempFile) && file_exists($tempFile)) {
+            unlink($tempFile);
+        }
+        // Log the error event
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => 'dynamic_oghma_import',
+                'data' => "CSV upload failed: " . $e->getMessage(),
+                'sess' => 'web',
+                'localts' => time(),
+                'people' => '',
+                'location' => '',
+                'party' => ''
+            )
+        );
+    }
+    
+    die("X-CUSTOM-CLOSE");
 }
 
 // Player rewrite
@@ -286,8 +631,39 @@ if ($gameRequest[0]=="diary") {
 
 
 // Exit if only a event info log.
+if ($gameRequest[0] == "npcspellcast") {
+    // Handle npcspellcast events based on DETECT_MAGIC_EVENT setting
+    if (isset($GLOBALS["DETECT_MAGIC_EVENT"]) && $GLOBALS["DETECT_MAGIC_EVENT"]) {
+        $gameRequest[3] = isset($gameRequest[3]) ? $gameRequest[3] : "";
+        
+        // Check blacklist if configured
+        $shouldLog = true;
+        if (isset($GLOBALS["MAGIC_EVENT_BLACKLIST"]) && !empty($GLOBALS["MAGIC_EVENT_BLACKLIST"])) {
+            $blacklistedEvents = array_map('trim', explode(',', strtolower($GLOBALS["MAGIC_EVENT_BLACKLIST"])));
+            $eventData = strtolower($gameRequest[3]);
+            
+            foreach ($blacklistedEvents as $blacklistedEvent) {
+                if (!empty($blacklistedEvent) && strpos($eventData, $blacklistedEvent) !== false) {
+                    $shouldLog = false;
+                    break;
+                }
+            }
+        }
+        
+        if ($shouldLog) {
+            $lastInfoNpcData = $db->escape($gameRequest[3]);
+            $lastlogEqual = $db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
+            if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+                die();
+            }
+            logEvent($gameRequest);
+        }
+    }
+    die(); // Always exit, whether logged or not
+}
+
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","goodnight","itemfound",
-    "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast","npcspellcast"])) {
+    "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
@@ -316,7 +692,12 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
             if ($timeElapsed < $cooldownPeriod) {
                 // Cooldown is still active, exit
                 Logger::info("NARRATOR_WELCOME is on cooldown. Try again in " . ($cooldownPeriod - $timeElapsed) . " seconds.");
-                die("X-CUSTOM-CLOSE");
+                echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+                if (!getenv("PHPUNIT_TEST")) {
+                    @ob_end_flush();
+                    @flush();
+                    die();
+                }
             }
         }
 
@@ -455,7 +836,11 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 if ($MUST_END) {  // Shorthand for non LLM processing
     echo 'X-CUSTOM-CLOSE'.PHP_EOL;
-    return;
+    if (!getenv("PHPUNIT_TEST")) {
+        @ob_end_flush();
+        @flush();
+    }    
+    die();
 }
 
 
@@ -660,6 +1045,7 @@ if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMP
 }
 
 
+// Cooldown definitions
 $COOLDOWNMAP["ComeCloser"]=120/0.00864;
 $COOLDOWNMAP["WaitHere"]=300/0.00864;
 $COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
@@ -668,7 +1054,7 @@ $COOLDOWNMAP["InspectSurroundings"]=300/0.00864;
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
-    $lastActionsIssuedMap=$GLOBALS["db"]->fetchAll("SELECT * FROM (SELECT DISTINCT ON (action) * FROM actions_issued WHERE actorname = '$localActorName' ORDER BY action, gamets DESC, ts DESC) AS sub ORDER BY gamets DESC, ts DESC");
+    $lastActionsIssuedMap=$GLOBALS["db"]->fetchAll("SELECT * FROM (SELECT DISTINCT ON (action) * FROM actions_issued WHERE (actorname = '$localActorName' or actorname like '%$localActorName,%' or actorname='*') ORDER BY action, gamets DESC, ts DESC) AS sub ORDER BY gamets DESC, ts DESC");
     if (isset($lastActionsIssuedMap[0])) {
         foreach ($lastActionsIssuedMap as $lastActionsIssued) {
 
@@ -889,6 +1275,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEP
 // audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 
 $outputWasValid = call_llm();
+
 if (!$outputWasValid) {
     Logger::warn("LLM returned invalid output.");
     if (isset($GLOBALS["LLM_RETRY_FNCT"])) {

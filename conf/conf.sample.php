@@ -70,6 +70,8 @@ $DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA
     . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
+$DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.
+$MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
 
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).

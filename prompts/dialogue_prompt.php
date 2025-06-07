@@ -16,6 +16,19 @@ $TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a ca
 " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
 " {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
+// Database Prompt (Dialogue)
+// "should be a casual direct reaction to what was just said" is not always true, maybe last line was the same NPC,
+// and is repeating (not copying) this same line, because is the 'direct reaction to what was just said'
+// Example:
+// Morgan|ScriptQueue|Though I suppose we could always settle it with a little *wrestling*.//Volkur//
+// (a funcrec event comes, which just write  something into context. )
+// Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
+//
+$TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
+" Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
+" Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
+" {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
+
 // To keep the original one
 // $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
