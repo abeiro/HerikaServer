@@ -131,8 +131,7 @@ In addition, follow these general scene rules as a game director:
                 "scene_note"=>"Something other actors should know about the instruction, if the instruction also involves another actors"
             ]]];
 
-            setResponseTemplate();
-            setStructuredOutputTemplate();
+            
         };
 
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
