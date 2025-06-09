@@ -623,6 +623,40 @@ foreach ($gameRequest as $i => $ele) {
 
 if ($gameRequest[0]=="diary") {
     $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
+    
+    // Add configurable cooldown for diary events to prevent spam
+    $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
+    
+    // Fetch the last diary trigger timestamp from the database
+    $diaryRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='DIARY_LAST_TIMESTAMP'");
+    
+    // Check if the timestamp exists in the database
+    if (!empty($diaryRecord)) {
+        $lastTrigger = (int) $diaryRecord[0]['value'];
+        $timeElapsed = time() - $lastTrigger;
+
+        if ($timeElapsed < $diaryCooldownPeriod) {
+            // Cooldown is still active, exit
+            Logger::info("DIARY is on cooldown. Try again in " . ($diaryCooldownPeriod - $timeElapsed) . " seconds.");
+            echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+            if (!getenv("PHPUNIT_TEST")) {
+                @ob_end_flush();
+                @flush();
+                die();
+            }
+        }
+    }
+
+    // Update the timestamp in the database to the current time
+    $currentTimestamp = time();
+    $GLOBALS["db"]->upsertRowOnConflict(
+        "conf_opts",
+        array(
+            "id"    => "DIARY_LAST_TIMESTAMP",
+            "value" => $currentTimestamp
+        ),
+        'id'
+    );
 }
 
 
