@@ -360,11 +360,48 @@ if ($_POST["animation"]) {
         $prevPage = max(1, $page - 1);
         $nextPage = $page + 1;
         
+        // Get total count for pagination
+        $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init')";
+        $countResult = $db->fetchAll($countQuery);
+        $totalRecords = $countResult[0]['total'];
+        $totalPages = ceil($totalRecords / $limit);
+        
         echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
+        
+        // Previous button
         if ($page > 1) {
             echo "<button onclick=\"window.location.href='?table=eventlog&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
         }
-        echo "<button onclick=\"window.location.href='?table=eventlog&page=$nextPage&limit=$limit'\" class='btn-base btn-primary'>Next</button>";
+        
+        // First 5 pages (1-5)
+        for ($i = 1; $i <= 5 && $i <= $totalPages; $i++) {
+            if ($i == $page) {
+                echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
+            } else {
+                echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
+            }
+        }
+        
+        // Show ellipsis and last 5 pages if we have more than 10 pages total
+        if ($totalPages > 10) {
+            echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
+            
+            // Last 5 pages
+            $startLastPages = max(6, $totalPages - 4);
+            for ($i = $startLastPages; $i <= $totalPages; $i++) {
+                if ($i == $page) {
+                    echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
+                } else {
+                    echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
+                }
+            }
+        }
+        
+        // Next button - only show if not on last page
+        if ($page < $totalPages) {
+            echo "<button onclick=\"window.location.href='?table=eventlog&page=$nextPage&limit=$limit'\" class='btn-base btn-primary'>Next</button>";
+        }
+        
         echo "</div>";
         
         // 4) Display the "Delete Last X" buttons
