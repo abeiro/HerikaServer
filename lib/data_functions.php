@@ -3198,6 +3198,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         } else {
             // 5. Fallback if no bracket or no match found
             file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
+            file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes($codename).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
             
