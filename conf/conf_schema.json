@@ -42,7 +42,7 @@
   "ENFORCE_ACTIONS_PROMPT": {"userlvl":"basic","type":"boolean","description":"Adds a prompt to enforce use of actions", "helpurl":""},
   "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Default profile only! Custom instructions added when generating summaries for memories. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Default profile only! Instructions for updating HERIKA_DYNAMIC. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
-  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","web_connector","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Connectors Selection"},
+  "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","web_connector","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter","player2json"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Connectors Selection"},
   "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Is one of the SUMMARY connectors. Used for creating diary entries, dynamic profiles and summarized memories!<br><br><strong>You will need to place your API key in the (SUMMARY) connector for this to work!</strong>"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
@@ -121,6 +121,10 @@
       "top_p": {"userlvl":"pro","type":"number","description":"Top_P [0-1]","helpurl":"https://platform.openai.com/docs/api-reference/completions/create"},
       "API_KEY":  {"type":"apikey","description":"OpenAI API key","code":"OPENAI_API_KEY","helpurl":"https://platform.openai.com/account/api-keys"},
       "MAX_TOKENS_MEMORY": {"type":"integer","description":"Maximum tokens to generate when summarizing, diary entries, and dynamic profile updates."}
+    },
+    "player2json": {
+      "_title":"Player2 API (JSON)",
+      "url": {"type":"url","description":"Player2 API endpoint"}
     },
     "google_openaijson": {
       "_title":"Google OpenAI API (JSON/SUMMARY)",
