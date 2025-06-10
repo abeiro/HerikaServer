@@ -687,6 +687,34 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         );
     }
     
+    // AUTO_DIARY functionality - trigger diary entries for all current followers
+    if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
+        processAutoDiary($gameRequest, "waitstart");
+    }
+    
+    $MUST_END=true;
+    
+    
+} elseif (strpos($gameRequest[0], "goodnight")===0) {    // goodnight event
+    
+    // Log the goodnight event
+    $db->insert(
+        'eventlog',
+        array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'type' => $gameRequest[0],
+            'data' => isset($gameRequest[3]) ? $gameRequest[3] : '',
+            'sess' => 'pending',
+            'localts' => time()
+        )
+    );
+    
+    // AUTO_DIARY functionality - trigger diary entries for all current followers
+    if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
+        processAutoDiary($gameRequest, "goodnight");
+    }
+    
     $MUST_END=true;
     
     
@@ -710,5 +738,232 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
     
     
+}
+
+// Function to process AUTO_DIARY for all current followers
+function processAutoDiary($gameRequest, $eventType) {
+    global $db;
+    
+    // Get current party data
+    $partyConf = DataGetCurrentPartyConf();
+    if (empty($partyConf)) {
+        Logger::info("AUTO_DIARY: No current party data found");
+        return;
+    }
+    
+    // Parse party data
+    $currentParty = json_decode($partyConf, true);
+    if (!is_array($currentParty) || empty($currentParty)) {
+        Logger::info("AUTO_DIARY: Failed to parse party data or party is empty");
+        return;
+    }
+    
+    $processedCount = 0;
+    $generatedCount = 0;
+    $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
+    
+    Logger::info("AUTO_DIARY: Processing $eventType event for " . count($currentParty) . " followers");
+    
+    foreach ($currentParty as $followerName => $followerData) {
+        if (empty($followerName) || !isset($followerData["name"])) {
+            continue;
+        }
+        
+        $processedCount++;
+        
+        // Check diary cooldown for this specific follower
+        $npcName = preg_replace('/[^a-zA-Z0-9_]/', '_', $followerName);
+        $cooldownKey = "DIARY_LAST_TIMESTAMP_" . $npcName;
+        
+        $diaryRecord = $db->fetchAll("SELECT value FROM conf_opts WHERE id='" . $db->escape($cooldownKey) . "'");
+        
+        if (!empty($diaryRecord)) {
+            $lastTrigger = (int) $diaryRecord[0]['value'];
+            $timeElapsed = time() - $lastTrigger;
+
+            if ($timeElapsed < $diaryCooldownPeriod) {
+                Logger::info("AUTO_DIARY: Skipping $followerName (cooldown active: " . ($diaryCooldownPeriod - $timeElapsed) . " seconds remaining)");
+                continue;
+            }
+        }
+        
+        // Update cooldown timestamp for this follower
+        $db->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => $cooldownKey,
+                'value' => time()
+            ),
+            "id"
+        );
+        
+        // Generate diary entry for this follower
+        if (generateFollowerDiary($followerName, $gameRequest, $eventType)) {
+            $generatedCount++;
+            Logger::info("AUTO_DIARY: Generated diary entry for $followerName");
+        } else {
+            Logger::info("AUTO_DIARY: Failed to generate diary entry for $followerName");
+        }
+    }
+    
+    // Send confirmation message to plugin
+    $confirmationMessage = "AUTO_DIARY processed $eventType event: $generatedCount/$processedCount followers wrote diary entries";
+    Logger::info($confirmationMessage);
+    
+    // Echo confirmation for the plugin (this will be captured by the C++ plugin)
+    echo "AUTO_DIARY|confirm|$confirmationMessage" . PHP_EOL;
+}
+
+// Function to generate diary entry for a specific follower
+function generateFollowerDiary($followerName, $gameRequest, $eventType) {
+    global $db;
+    
+    // Check if we have the diary connector configured
+    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+        Logger::info("AUTO_DIARY: No diary connector configured for $followerName");
+        return false;
+    }
+    
+    // Temporarily switch context to this follower
+    $originalHerikaName = $GLOBALS["HERIKA_NAME"];
+    $GLOBALS["HERIKA_NAME"] = $followerName;
+    
+    try {
+        // Load follower's profile if it exists
+        $profileLoaded = false;
+        $originalHerikaData = [];
+        
+        // Try to load profile data for this follower
+        if (function_exists('getConfFileFor')) {
+            $confFile = getConfFileFor($followerName);
+            if (!empty($confFile) && file_exists($confFile)) {
+                // Save original values
+                $originalHerikaData = [
+                    'HERIKA_PERS' => isset($GLOBALS["HERIKA_PERS"]) ? $GLOBALS["HERIKA_PERS"] : '',
+                    'HERIKA_DYNAMIC' => isset($GLOBALS["HERIKA_DYNAMIC"]) ? $GLOBALS["HERIKA_DYNAMIC"] : ''
+                ];
+                
+                // Load follower's profile
+                include($confFile);
+                $profileLoaded = true;
+                Logger::info("AUTO_DIARY: Loaded profile for $followerName");
+            }
+        }
+        
+        if (!$profileLoaded) {
+            // Use default follower personality if no specific profile exists
+            $GLOBALS["HERIKA_PERS"] = "A loyal companion and follower of " . $GLOBALS["PLAYER_NAME"] . ".";
+            $GLOBALS["HERIKA_DYNAMIC"] = "Currently traveling and adventuring alongside " . $GLOBALS["PLAYER_NAME"] . ".";
+        }
+        
+        // Prepare diary context based on event type
+        $contextPrompt = "";
+        if ($eventType == "goodnight") {
+            $contextPrompt = "You are writing a diary entry after " . $GLOBALS["PLAYER_NAME"] . " has said goodnight and is going to rest. Reflect on the recent events, your thoughts, and experiences from today.";
+        } elseif ($eventType == "waitstart") {
+            $contextPrompt = "You are writing a diary entry while waiting/resting. Reflect on recent adventures, your relationship with " . $GLOBALS["PLAYER_NAME"] . ", and your current thoughts.";
+        }
+        
+        // Build context for diary generation
+        $lastNDataForContext = isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) && $GLOBALS["CONTEXT_HISTORY_DIARY"] > 0 
+            ? $GLOBALS["CONTEXT_HISTORY_DIARY"] 
+            : (isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25);
+            
+        $contextDataHistoric = DataLastDataExpandedFor($followerName, $lastNDataForContext * -1, " and type<>'prechat' ");
+        
+        // Prepare prompt for diary generation
+        $head = [
+            ["role" => "system", "content" => $contextPrompt],
+            ["role" => "system", "content" => "Character: " . $followerName],
+            ["role" => "system", "content" => "Personality: " . $GLOBALS["HERIKA_PERS"]],
+            ["role" => "system", "content" => "Current state: " . $GLOBALS["HERIKA_DYNAMIC"]]
+        ];
+        
+        $prompt = [
+            ["role" => "user", "content" => "Write a brief diary entry (2-3 sentences) about recent events and your thoughts. Sign it as yourself."]
+        ];
+        
+        if (!empty($contextDataHistoric)) {
+            $prompt[] = ["role" => "user", "content" => "Recent context: " . $contextDataHistoric];
+        }
+        
+        $contextData = array_merge($head, $prompt);
+        
+        // Generate diary entry using LLM
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php");
+        
+        $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
+        $maxTokens = isset($GLOBALS["CONNECTOR"][$GLOBALS["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"]) 
+            ? $GLOBALS["CONNECTOR"][$GLOBALS["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"] 
+            : 1500;
+            
+        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
+        
+        $buffer = "";
+        $totalBuffer = "";
+        $breakFlag = false;
+        
+        while (true) {
+            if ($breakFlag) {
+                break;
+            }
+            
+            if ($connectionHandler->isDone()) {
+                $breakFlag = true;
+            }
+            
+            $buffer .= $connectionHandler->process();
+            $totalBuffer .= $buffer;
+        }
+        
+        $connectionHandler->close();
+        
+        if (!empty(trim($buffer))) {
+            // Save diary entry to database
+            $topic = DataLastKnowDate();
+            $location = DataLastKnownLocation();
+            
+            $db->insert(
+                'diarylog',
+                array(
+                    'ts' => $gameRequest[1],
+                    'gamets' => $gameRequest[2],
+                    'topic' => $topic . " (Auto-diary: $eventType)",
+                    'content' => trim($buffer),
+                    'tags' => "Auto-diary,$eventType",
+                    'people' => $followerName,
+                    'location' => $location,
+                    'sess' => 'pending',
+                    'localts' => time()
+                )
+            );
+            
+            // Log memory
+            if (function_exists('logMemory')) {
+                logMemory($followerName, $followerName, trim($buffer), time(), $gameRequest[2], 'auto_diary', $gameRequest[1]);
+            }
+            
+            // Send notification to plugin for this follower (same format as manual diary)
+            echo $followerName."|rolecommand|DebugNotification@Diary Entry Written for ".$followerName.PHP_EOL;
+            @ob_flush();
+            @flush();
+            
+            return true;
+        }
+        
+    } catch (Exception $e) {
+        Logger::error("AUTO_DIARY: Error generating diary for $followerName: " . $e->getMessage());
+    } finally {
+        // Restore original context
+        $GLOBALS["HERIKA_NAME"] = $originalHerikaName;
+        
+        // Restore original profile data if we loaded a follower profile
+        if (!empty($originalHerikaData)) {
+            $GLOBALS["HERIKA_PERS"] = $originalHerikaData['HERIKA_PERS'];
+            $GLOBALS["HERIKA_DYNAMIC"] = $originalHerikaData['HERIKA_DYNAMIC'];
+        }
+    }
+    
+    return false;
 }
 ?>
