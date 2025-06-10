@@ -624,11 +624,15 @@ foreach ($gameRequest as $i => $ele) {
 if ($gameRequest[0]=="diary") {
     $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
     
-    // Add configurable cooldown for diary events to prevent spam
+    // Add configurable cooldown for diary events to prevent spam (per NPC)
     $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
     
-    // Fetch the last diary trigger timestamp from the database
-    $diaryRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='DIARY_LAST_TIMESTAMP'");
+    // Create a per-NPC cooldown key using the current NPC's name
+    $npcName = preg_replace('/[^a-zA-Z0-9_]/', '_', $GLOBALS["HERIKA_NAME"]);
+    $cooldownKey = "DIARY_LAST_TIMESTAMP_" . $npcName;
+    
+    // Fetch the last diary trigger timestamp for this specific NPC
+    $diaryRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='" . $GLOBALS["db"]->escape($cooldownKey) . "'");
     
     // Check if the timestamp exists in the database
     if (!empty($diaryRecord)) {
@@ -636,8 +640,8 @@ if ($gameRequest[0]=="diary") {
         $timeElapsed = time() - $lastTrigger;
 
         if ($timeElapsed < $diaryCooldownPeriod) {
-            // Cooldown is still active, exit
-            Logger::info("DIARY is on cooldown. Try again in " . ($diaryCooldownPeriod - $timeElapsed) . " seconds.");
+            // Cooldown is still active for this NPC, exit
+            Logger::info("DIARY is on cooldown for {$GLOBALS["HERIKA_NAME"]}. Try again in " . ($diaryCooldownPeriod - $timeElapsed) . " seconds.");
             echo 'X-CUSTOM-CLOSE'.PHP_EOL;
             if (!getenv("PHPUNIT_TEST")) {
                 @ob_end_flush();
@@ -647,12 +651,12 @@ if ($gameRequest[0]=="diary") {
         }
     }
 
-    // Update the timestamp in the database to the current time
+    // Update the timestamp in the database for this specific NPC
     $currentTimestamp = time();
     $GLOBALS["db"]->upsertRowOnConflict(
         "conf_opts",
         array(
-            "id"    => "DIARY_LAST_TIMESTAMP",
+            "id"    => $cooldownKey,
             "value" => $currentTimestamp
         ),
         'id'
@@ -1417,9 +1421,8 @@ if (sizeof($talkedSoFar) == 0) {
             if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
                 logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
 
-            Translation::translate($RESPONSE_OK_NOTED);
-            Translation::$sentences = [Translation::$response];
-            returnLines([$RESPONSE_OK_NOTED]);
+            // Diary entries are silent by default - send notification instead of speech
+            echo $GLOBALS["HERIKA_NAME"]."|AASPGQuestDialogue2Topic1B1Topic|DIARY_SILENT_NOTIFICATION|[CHIM] Diary entry written for ".$GLOBALS["HERIKA_NAME"].PHP_EOL;
 
         } else {
             
