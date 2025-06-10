@@ -1422,7 +1422,9 @@ if (sizeof($talkedSoFar) == 0) {
                 logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
 
             // Diary entries are silent by default - send notification instead of speech
-            echo $GLOBALS["HERIKA_NAME"]."|AASPGQuestDialogue2Topic1B1Topic|DIARY_SILENT_NOTIFICATION|[CHIM] Diary entry written for ".$GLOBALS["HERIKA_NAME"].PHP_EOL;
+            echo $GLOBALS["HERIKA_NAME"]."|rolecommand|DebugNotification@Diary Entry Written for ".$GLOBALS["HERIKA_NAME"].PHP_EOL;
+            @ob_flush(); 
+            @flush();
 
         } else {
             
