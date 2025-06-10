@@ -1585,8 +1585,8 @@ function DataRechatHistory()
 {
 
     global $db;
-
-    $lastRechat=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('rechat','inputtext','inputtext_s') 
+    // Actually we don't need the data here, just an array which size must match the history size.
+    $lastRechat=$db->fetchAll("select gamets FROM  eventlog a  WHERE type in ('rechat','inputtext','inputtext_s') 
     and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 10 OFFSET 0");
     
     return $lastRechat;

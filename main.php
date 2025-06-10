@@ -651,11 +651,6 @@ if ($gameRequest[0] == "npcspellcast") {
         }
         
         if ($shouldLog) {
-            $lastInfoNpcData = $db->escape($gameRequest[3]);
-            $lastlogEqual = $db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
-            if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
-                die();
-            }
             logEvent($gameRequest);
         }
     }
@@ -666,10 +661,13 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
     "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
-    $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
-    if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
-        //error_log("Skipping {$gameRequest[0]}");
-        die();
+    if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close'])) {
+        // Special cases
+        $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
+        if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+            //error_log("Skipping {$gameRequest[0]}");
+            die();
+        }
     }
     logEvent($gameRequest);
     die();
@@ -1049,7 +1047,7 @@ if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMP
 $COOLDOWNMAP["ComeCloser"]=120/0.00864;
 $COOLDOWNMAP["WaitHere"]=300/0.00864;
 $COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
-$COOLDOWNMAP["InspectSurroundings"]=300/0.00864;
+$COOLDOWNMAP["InspectSurroundings"]=100/0.00864;
 
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
