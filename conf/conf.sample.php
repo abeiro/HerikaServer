@@ -24,6 +24,7 @@ $RECHAT_H=2; //Rechat Rounds. Higher values will increase the amount of rounds N
 $RECHAT_P=50; //Rechat Probability.
 $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random conversation after a set period of time.
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
+$CONTEXT_HISTORY_DIARY="100"; //Amount of context history specifically for diary entries. Set to 0 to use regular CONTEXT_HISTORY value.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=false; //Leave as is - read only
