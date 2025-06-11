@@ -518,6 +518,21 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             opacity: 0.7;
         }
 
+        .stat-card.clickable-card {
+            transition: all 0.3s ease;
+        }
+
+        .stat-card.clickable-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(242, 124, 17, 0.2);
+            background: #333333;
+        }
+
+        .stat-card.clickable-card:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(255, 0, 198, 0.1);
+        }
+
         /* Modal styles */
         .modal {
             display: none;
@@ -898,6 +913,30 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             return '0/0 (0%)';
                         }
 
+                        // Event Types Data Fetching
+                        $eventTypesData = fetch_widget_stats($conn, "
+                            SELECT count(*) as event_count, type 
+                            FROM {$schema}.eventlog 
+                            GROUP BY type 
+                            ORDER BY count(*) DESC
+                        ");
+
+                        $eventTypesModal = '';
+                        if (!isset($eventTypesData['error']) && !empty($eventTypesData)) {
+                            $eventTypesModal = "<div id='eventTypesModal' class='modal'>
+                                                    <div class='modal-content'>
+                                                        <span class='close-btn' onclick=\"closeModal('eventTypesModal')\">&times;</span>
+                                                        <h3>Event Types</h3>
+                                                        <table class='modal-table'>
+                                                            <tr><th>Event Type</th><th>Count</th></tr>";
+                            foreach ($eventTypesData as $eventType) {
+                                $eventTypesModal .= "<tr><td>" . htmlspecialchars($eventType['type']) . "</td><td>" . number_format($eventType['event_count']) . "</td></tr>";
+                            }
+                            $eventTypesModal .= "</table>
+                                                    </div>
+                                                </div>";
+                        }
+
                         // Travel To Locations Data Fetching (moved before CHIM Stats rendering)
                         $locationsCheck = fetch_widget_stats($conn, "
                             SELECT EXISTS (
@@ -954,7 +993,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         $chimStatsHtml = "
                             <div class='widget-stats'>
                                 " . (in_array('diarylog', $existingTables) ? "
-                                <div class='stat-card'>
+                                <div class='stat-card clickable-card' style='cursor: pointer;' onclick=\"openModal('eventTypesModal')\">
                                     <div class='stat-value'>{$stats[0]['total_events']}</div>
                                     <div class='stat-label'>Total Events</div>
                                 </div>
@@ -1015,6 +1054,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
                         echo render_widget('CHIM Stats', $chimStatsHtml);
                         echo $locationsModal; // Output modal HTML globally
+                        echo $eventTypesModal; // Output event types modal HTML globally
 
                         // Latest Diary Entry Widget
                         $latestDiary = fetch_widget_stats($conn, "
