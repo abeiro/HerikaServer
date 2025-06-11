@@ -14,7 +14,7 @@ $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to 
     . "Talk about quests and last events."; //NPC personality.
 $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically. 
 $DIARY_COOLDOWN=30; //Cooldown period in seconds between diary entries to prevent spam. If a diary hotkey is pressed within this time period, the request will be ignored.
-$DYNAMIC_PROFILE=false; //Dynamic profile updates during certain ingame events.
+$DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
