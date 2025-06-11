@@ -651,7 +651,15 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         $lastListener="";
         $lastDateTime = "";
 
-        foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"],50),true) as $element) {
+        // Determine how much context history to use for dynamic profiles
+        $dynamicProfileContextHistory = 50; // Default value
+        if (isset($GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"]) && $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"] > 0) {
+            $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"];
+        } elseif (isset($GLOBALS["CONTEXT_HISTORY"]) && $GLOBALS["CONTEXT_HISTORY"] > 0) {
+            $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY"];
+        }
+        
+        foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"], $dynamicProfileContextHistory),true) as $element) {
           if ($element["listener"]=="The Narrator") {
                 continue;
           }
@@ -970,7 +978,15 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         $lastListener="";
         $lastDateTime = "";
 
-        foreach (json_decode(DataSpeechJournal($npcName, 50), true) as $element) {
+        // Determine how much context history to use for dynamic profiles
+        $dynamicProfileContextHistory = 50; // Default value
+        if (isset($GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"]) && $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"] > 0) {
+            $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"];
+        } elseif (isset($GLOBALS["CONTEXT_HISTORY"]) && $GLOBALS["CONTEXT_HISTORY"] > 0) {
+            $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY"];
+        }
+        
+        foreach (json_decode(DataSpeechJournal($npcName, $dynamicProfileContextHistory), true) as $element) {
             if ($element["listener"]=="The Narrator") {
                 continue;
             }
