@@ -975,6 +975,44 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
+
+    // Cases of self rechat
+    if ((sizeof($ctx3)>3)&&($GLOBALS["gameRequest"][3]=="rechat")) {
+        $lastElement = $ctx3[sizeof($ctx3)-1];
+        // Last element is assistant
+        if ($lastElement["role"]=="assistant") {
+            if ($GLOBALS["gameRequest"][3]=="rechat") {
+                // NPC is rechatting himself
+                
+                Logger::warn("[RECHAT] actor is replying itself, case 1, aborting");
+
+                echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+                if (!getenv("PHPUNIT_TEST")) {
+                    @ob_end_flush();
+                    @flush();
+                }
+            }
+
+        }
+
+        $preLastElement = $ctx3[sizeof($ctx3)-2];
+        // Pre last element is assistant, and last is a memory.
+        if (($preLastElement["role"]=="assistant")&&(strpos($lastElement["content"],"MEMORY")!==false)) {
+            if ($GLOBALS["gameRequest"][3]=="rechat") {
+                // NPC is rechatting himself
+                
+                Logger::warn("[RECHAT] actor is replying itself,case 2, aborting");
+
+                echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+                if (!getenv("PHPUNIT_TEST")) {
+                    @ob_end_flush();
+                    @flush();
+                }
+            }
+
+        }
+    }
+
     return $ctx3;
 
 }
@@ -1547,8 +1585,8 @@ function DataRechatHistory()
 {
 
     global $db;
-
-    $lastRechat=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('rechat','inputtext','inputtext_s') 
+    // Actually we don't need the data here, just an array which size must match the history size.
+    $lastRechat=$db->fetchAll("select gamets FROM  eventlog a  WHERE type in ('rechat','inputtext','inputtext_s') 
     and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 10 OFFSET 0");
     
     return $lastRechat;
@@ -2598,7 +2636,7 @@ function call_llm() {
 
                             error_log("[ACTION POSTFILTER TakeGoldFromPlayer] $localtarget => {$mang3[0]} => $mang4");
 
-                            if (!is_number($mang4)) {
+                            if (!is_numeric($mang4)) {
                                 // Try to figure out quantity from speech
                                 $localNpc=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
                                 $qtyrecord=$GLOBALS["db"]->fetchOne("SELECT speech,(regexp_matches(speech, '\d+'))[1]::int AS quantity FROM public.speech 
@@ -2632,7 +2670,7 @@ function call_llm() {
                     array(
                         'action' => $actionArg[0],
                         'fullcall' =>$singleaction,
-                        'actorname'=> $actionPart[0],
+                        'actorname'=> isset($GLOBALS["PATCH_ACTION_ALL_ACTORS"])?$GLOBALS["PATCH_ACTION_ALL_ACTORS"]:$actionPart[0],
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
