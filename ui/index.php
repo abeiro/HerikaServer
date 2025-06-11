@@ -316,7 +316,7 @@ if ($_POST["animation"]) {
         $results = $db->fetchAll(
             "SELECT type, data, gamets, localts, ts, ROWID
              FROM eventlog a
-             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init')
+             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import')
              ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
              LIMIT $limit OFFSET $offset"
         );

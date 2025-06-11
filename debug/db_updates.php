@@ -992,9 +992,8 @@ if ($checkVersion("dynamic_bio")<20250710001) {
         )
     ");
 
-    // Only populate if empty
-    $count = $db->fetchAll("SELECT COUNT(*) as count FROM dynamic_bio")[0]['count'];
-    if ($count == 0) {
+    // Always populate prompts - use INSERT ... WHERE NOT EXISTS to avoid duplicates
+    Logger::info("Ensuring dynamic_bio prompts are populated...");
         $prompts = [
             "Has a habit of speaking in riddles or vague phrases, rarely giving a straightforward answer, leaving listeners puzzled or intrigued.",
             "Constantly assesses the value of objects or situations, muttering things like 'worth a handful of septims' or 'barely worth a second glance.'",
@@ -1039,9 +1038,13 @@ if ($checkVersion("dynamic_bio")<20250710001) {
         ];
         
         foreach ($prompts as $prompt) {
-            $db->execQuery("INSERT INTO dynamic_bio (prompt) VALUES ('".$db->escape($prompt)."')");
+            $escapedPrompt = $db->escape($prompt);
+            $db->execQuery("INSERT INTO dynamic_bio (prompt) 
+                SELECT '".$escapedPrompt."' 
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM dynamic_bio WHERE prompt = '".$escapedPrompt."'
+                )");
         }
-    }
     
     $updateVersion("dynamic_bio", 20250710001);
 }

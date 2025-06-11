@@ -143,7 +143,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast","biography_import","oghma_import","dynamic_oghma_import"];
+    "util_location_name","spellcast","npcspellcast"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -527,6 +527,7 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
     
     die("X-CUSTOM-CLOSE");
 }
+
 
 // Player rewrite
 

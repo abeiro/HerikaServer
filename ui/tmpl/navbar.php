@@ -385,6 +385,12 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
         @include_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
     }
 
+    // Function to validate plugin version format - just check it's not too long
+    function isValidPluginVersion($version) {
+        // Simple validation: version should be 10 characters or less
+        return strlen($version) <= 10;
+    }
+
     $pluginVersionDisplay = 'N/A'; // Default value
 
     // Attempt to use a global $db object if available and valid
@@ -393,13 +399,21 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
             if (method_exists($GLOBALS['db'], 'fetchOne')) {
                 $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
                 if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
-                    $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
+                    $version = trim($pluginVersionRow['value']);
+                    // Validate that the version follows the expected format
+                    if (isValidPluginVersion($version)) {
+                        $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                    }
                 }
             } elseif (method_exists($GLOBALS['db'], 'fetchAll')) {
                 // Fallback to fetchAll on global $db if fetchOne not found
                 $rows = $GLOBALS['db']->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
                 if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
-                    $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
+                    $version = trim($rows[0]['value']);
+                    // Validate that the version follows the expected format
+                    if (isValidPluginVersion($version)) {
+                        $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                    }
                 }
             }
         } catch (Exception $e) {
@@ -427,12 +441,20 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         if (method_exists($localDb, 'fetchOne')) {
                             $pluginVersionRow = @$localDb->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
                             if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
-                                $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
+                                $version = trim($pluginVersionRow['value']);
+                                // Validate that the version follows the expected format
+                                if (isValidPluginVersion($version)) {
+                                    $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                                }
                             }
                         } elseif (method_exists($localDb, 'fetchAll')) {
                             $rows = @$localDb->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
                             if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
-                                $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
+                                $version = trim($rows[0]['value']);
+                                // Validate that the version follows the expected format
+                                if (isValidPluginVersion($version)) {
+                                    $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                                }
                             }
                         }
                     }
