@@ -923,12 +923,10 @@ function processAutoDiary($gameRequest, $eventType) {
         }
     }
     
-    // Send confirmation message to plugin
-    $confirmationMessage = "AUTO_DIARY processed $eventType event: $generatedCount/$processedCount followers wrote diary entries";
-    Logger::info($confirmationMessage);
-    
-    // Echo confirmation for the plugin (this will be captured by the C++ plugin)
-    echo "AUTO_DIARY|confirm|$confirmationMessage" . PHP_EOL;
+    // Echo confirmation using the same format as other notifications
+    if ($generatedCount > 0) {
+        echo "The Narrator|rolecommand|DebugNotification@$confirmationMessage" . PHP_EOL;
+    }
 }
 
 // Function to process a single NPC's dynamic profile
@@ -1155,31 +1153,18 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
             $GLOBALS["HERIKA_DYNAMIC"] = "Currently traveling and adventuring alongside " . $GLOBALS["PLAYER_NAME"] . ".";
         }
         
-        // Prepare diary context based on event type
-        $contextPrompt = "";
-        if ($eventType == "goodnight") {
-            $contextPrompt = "You are writing a diary entry after " . $GLOBALS["PLAYER_NAME"] . " has said goodnight and is going to rest. Reflect on the recent events, your thoughts, and experiences from today.";
-        } elseif ($eventType == "waitstart") {
-            $contextPrompt = "You are writing a diary entry while waiting/resting. Reflect on recent adventures, your relationship with " . $GLOBALS["PLAYER_NAME"] . ", and your current thoughts.";
-        }
-        
-        // Build context for diary generation
-        $lastNDataForContext = isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) && $GLOBALS["CONTEXT_HISTORY_DIARY"] > 0 
-            ? $GLOBALS["CONTEXT_HISTORY_DIARY"] 
-            : (isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25);
-            
-        $contextDataHistoric = DataLastDataExpandedFor($followerName, $lastNDataForContext * -1, " and type<>'prechat' ");
-        
-        // Prepare prompt for diary generation
+        // Use the same prompt system as regular diary entries
+        // Build standard system prompt like main.php does
         $head = [
-            ["role" => "system", "content" => $contextPrompt],
-            ["role" => "system", "content" => "Character: " . $followerName],
-            ["role" => "system", "content" => "Personality: " . $GLOBALS["HERIKA_PERS"]],
-            ["role" => "system", "content" => "Current state: " . $GLOBALS["HERIKA_DYNAMIC"]]
+            ["role" => "system", "content" => strtr(
+                $GLOBALS["PROMPT_HEAD"] . "\n" . $GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n" . $GLOBALS["COMMAND_PROMPT"],
+                ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]
+            )]
         ];
         
+        // Build user prompt for diary generation (like regular diary)
         $prompt = [
-            ["role" => "user", "content" => "Write a brief diary entry (2-3 sentences) about recent events and your thoughts. Sign it as yourself."]
+            ["role" => "user", "content" => "diary"]
         ];
         
         if (!empty($contextDataHistoric)) {

@@ -700,7 +700,7 @@ if ($gameRequest[0] == "npcspellcast") {
     die(); // Always exit, whether logged or not
 }
 
-if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","goodnight","itemfound",
+if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
     "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
