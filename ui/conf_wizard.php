@@ -445,6 +445,60 @@ foreach ($currentConf as $pname=>$parms) {
                 <span>{$parms["description"]}</span>
                 </p>" . PHP_EOL;
     
+    } else if ($pname === "DIARY_COOLDOWN") {
+        // DIARY_COOLDOWN: 10-1200
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='10' max='1200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='10' max='1200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:80px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
+    } else if ($pname === "CONTEXT_HISTORY_DIARY") {
+        // CONTEXT_HISTORY_DIARY: 0-400
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:70px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
+    } else if ($pname === "CONTEXT_HISTORY_DYNAMIC_PROFILE") {
+        // CONTEXT_HISTORY_DYNAMIC_PROFILE: 0-400
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:70px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
     } else {
         // Default integer handling
         echo "<p class='conf-item'>

@@ -13,7 +13,9 @@ $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to 
     . "Your goal is to comment on #PLAYER_NAME#'s playthrough, and occasionally give hints. NO SPOILERS. " 
     . "Talk about quests and last events."; //NPC personality.
 $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically. 
-$DYNAMIC_PROFILE=false; //Dynamic profile updates during certain ingame events.
+$DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to prevent spam. If a diary hotkey is pressed within this time period, the request will be ignored.
+$DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
+$AUTO_DIARY=false; //Automatically create diary entries for all current followers when saying goodnight or waiting. Each follower respects their individual diary cooldown timer.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
@@ -23,6 +25,8 @@ $RECHAT_H=2; //Rechat Rounds. Higher values will increase the amount of rounds N
 $RECHAT_P=50; //Rechat Probability.
 $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random conversation after a set period of time.
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
+$CONTEXT_HISTORY_DIARY="100"; //Amount of context history specifically for diary entries. Set to 0 to use regular CONTEXT_HISTORY value.
+$CONTEXT_HISTORY_DYNAMIC_PROFILE="50"; //Amount of context history specifically for dynamic profile updates. Set to 0 to use regular CONTEXT_HISTORY value.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=false; //Leave as is - read only

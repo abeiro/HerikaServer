@@ -624,6 +624,44 @@ foreach ($gameRequest as $i => $ele) {
 
 if ($gameRequest[0]=="diary") {
     $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
+    
+    // Add configurable cooldown for diary events to prevent spam (per NPC)
+    $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
+    
+    // Create a per-NPC cooldown key using the current NPC's name
+    $npcName = preg_replace('/[^a-zA-Z0-9_]/', '_', $GLOBALS["HERIKA_NAME"]);
+    $cooldownKey = "DIARY_LAST_TIMESTAMP_" . $npcName;
+    
+    // Fetch the last diary trigger timestamp for this specific NPC
+    $diaryRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='" . $GLOBALS["db"]->escape($cooldownKey) . "'");
+    
+    // Check if the timestamp exists in the database
+    if (!empty($diaryRecord)) {
+        $lastTrigger = (int) $diaryRecord[0]['value'];
+        $timeElapsed = time() - $lastTrigger;
+
+        if ($timeElapsed < $diaryCooldownPeriod) {
+            // Cooldown is still active for this NPC, exit
+            Logger::info("DIARY is on cooldown for {$GLOBALS["HERIKA_NAME"]}. Try again in " . ($diaryCooldownPeriod - $timeElapsed) . " seconds.");
+            echo 'X-CUSTOM-CLOSE'.PHP_EOL;
+            if (!getenv("PHPUNIT_TEST")) {
+                @ob_end_flush();
+                @flush();
+                die();
+            }
+        }
+    }
+
+    // Update the timestamp in the database for this specific NPC
+    $currentTimestamp = time();
+    $GLOBALS["db"]->upsertRowOnConflict(
+        "conf_opts",
+        array(
+            "id"    => $cooldownKey,
+            "value" => $currentTimestamp
+        ),
+        'id'
+    );
 }
 
 
@@ -658,7 +696,7 @@ if ($gameRequest[0] == "npcspellcast") {
     die(); // Always exit, whether logged or not
 }
 
-if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","goodnight","itemfound",
+if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
     "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
@@ -918,7 +956,12 @@ if (isset($GLOBALS["NARRATOR_TALKS"])&&($GLOBALS["NARRATOR_TALKS"]==false)) {
         die("\r\n");
 }
 
-$lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
+// Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
+if (($gameRequest[0] == "diary" || $gameRequest[0] == "diary_followers") && isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) && $GLOBALS["CONTEXT_HISTORY_DIARY"] > 0) {
+    $lastNDataForContext = $GLOBALS["CONTEXT_HISTORY_DIARY"];
+} else {
+    $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
+}
 
 // Historic context (last dialogues, events,...)
 //if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator"))
@@ -1382,9 +1425,10 @@ if (sizeof($talkedSoFar) == 0) {
             if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
                 logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
 
-            Translation::translate($RESPONSE_OK_NOTED);
-            Translation::$sentences = [Translation::$response];
-            returnLines([$RESPONSE_OK_NOTED]);
+            // Diary entries are silent by default - send notification instead of speech
+            echo $GLOBALS["HERIKA_NAME"]."|rolecommand|DebugNotification@Diary Entry Written for ".$GLOBALS["HERIKA_NAME"].PHP_EOL;
+            @ob_flush(); 
+            @flush();
 
         } else {
             
