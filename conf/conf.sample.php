@@ -72,6 +72,7 @@ $DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA
     . "   - Describe the NPC's evolving feelings or stance toward the dragonborn, key individuals or groups. Always re-list unchanged but relevant relationships. "
     . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2–3 bullet points) "
     . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
+$DIARY_PROMPT = "Please write a short summary of {\$GLOBALS[\"PLAYER_NAME\"]} and {\$GLOBALS[\"HERIKA_NAME\"]}s last dialogues and events written above into {\$GLOBALS[\"HERIKA_NAME\"]}s diary . WRITE AS IF YOU WERE {\$GLOBALS[\"HERIKA_NAME\"]}. Start the diary entry with the current date and time.";
 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
 $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.

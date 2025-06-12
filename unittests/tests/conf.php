@@ -49,6 +49,7 @@ $GLOBALS["EMOTEMOODS"]="sassy,"
     . "teasing,"
     . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 $GLOBALS["SUMMARY_PROMPT"]=''; //Instructions added when generating summaries for memories and other features.
+$GLOBALS["DIARY_PROMPT"]=''; //Instructions added when generating diary entries.
 
 //[AI/LLM Service Selection]
 $GLOBALS["CONNECTORS"]=["openrouterjson"]; //AI Service(s).
