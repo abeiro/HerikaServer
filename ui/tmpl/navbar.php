@@ -66,9 +66,9 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
 
                     <!-- Memories Category -->
                     <li><h6 class="dropdown-header">Memories</h6></li>
-                    <li>
+                    <!--<li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=memory">Memories (WIP)</a>
-                    </li>
+                    </li>-->
                     <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=memory_summary">Memory Summaries</a>
                     </li>
