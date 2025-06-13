@@ -153,7 +153,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                             Database Manager
                         </a>
                         </li>
-                        <li>
+                        <!--<li>
                         <button class="dropdown-item" style="letter-spacing:0.5px" 
                         title="Maintenance operations - clean and optimize the database, reclaim unused space. Skyrim game must be stopped."
                         onclick="if (confirm('Vacuum operation will compact and optimize the database. \n- Make sure Skyrim game is stopped. \n- To reclaim unused space, free temporary space is required, do not start this if your disk is almost full. \n- During this operation tables will be locked, do not access the database and do not interrupt. \nThis could take some time, please wait until you see the confirmation.')) {
@@ -161,7 +161,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                                 'resizable=yes,scrollbars=yes,titlebar=no' ); 
                                 return false;
                         }">Database Maintenance - vacuum</button>
-                        </li>
+                        </li>-->
                         <!--
                         <li>
                         <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the CHIM Database." 

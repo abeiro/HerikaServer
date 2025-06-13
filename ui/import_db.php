@@ -354,37 +354,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>Database Manager</title>
     <style>
-        /* Updated CSS for Dark Grey Background Theme */
+        /* Database Manager - Using main.css theme colors */
         body {
-            font-family: Arial, sans-serif;
-            background-color: #2c2c2c; /* Dark grey background */
-            color: #f8f9fa; /* Light grey text for readability */
+            font-family: 'Futura CondensedLight', Arial, sans-serif;
+            background-color: #2c2c2c;
+            color: #f8f9fa;
+            font-size: 18px;
+            min-height: 100vh;
         }
 
-        h1, h2 {
-            color: #ffffff; /* White color for headings */
+        h1, h2, h3, h4, h5, h6 {
+            color: #ffffff;
+            font-family: 'Futura CondensedLight', Arial, sans-serif;
+            margin-bottom: 15px;
         }
 
+        h1 {
+            font-size: 32px;
+            font-family: 'MagicCards', sans-serif;
+            font-weight: normal;
+            letter-spacing: 0.5px;
+            word-spacing: 8px;
+        }
 
         label {
             font-weight: bold;
-            color: #f8f9fa; /* Ensure labels are readable */
+            color: #f8f9fa;
         }
 
-    
-
         .message {
-            background-color: #444444; /* Darker background for messages */
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #555555;
+            background-color: rgba(30, 35, 45, 0.8);
+            border: 1px solid rgba(138, 155, 182, 0.3);
+            border-radius: 8px;
+            padding: 20px;
             margin-bottom: 20px;
-            color: #f8f9fa; /* Light text in messages */
+            color: #f8f9fa;
             height: fit-content;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                        inset 0 1px rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .message:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                        inset 0 1px rgba(255, 255, 255, 0.15);
         }
 
         .message p {
             margin: 0 0 10px 0;
+            line-height: 150%;
+            font-size: 16px;
         }
 
         .response-container {
@@ -392,36 +413,118 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .indent {
-            padding-left: 10ch; /* 10 character spaces */
+            padding-left: 10ch;
         }
 
         .indent5 {
-            padding-left: 5ch; /* 5 character spaces */
-            padding-right: 20px; /* Right side margin */
+            padding-left: 5ch;
+            padding-right: 20px;
         }
 
         .button {
-            padding: 8px 16px;
-            margin-top: 10px;
+            padding: 10px 20px;
+            color: #ffffff;
+            background-color: rgba(30, 35, 45, 0.8);
+            border: 1px solid rgba(138, 155, 182, 0.3);
+            border-radius: 8px;
             cursor: pointer;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 3px;
+            font-size: 15px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease-in-out;
+            margin: 5px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                        inset 0 1px rgba(255, 255, 255, 0.1);
         }
 
         .button:hover {
-            background-color: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                        inset 0 1px rgba(255, 255, 255, 0.15);
+            text-decoration: none;
+            color: #ffffff;
+        }
+
+        .button:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                        inset 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Form elements using main.css styling */
+        input[type="text"],
+        input[type="file"],
+        select {
+            background-color: rgba(30, 35, 45, 0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(138, 155, 182, 0.3);
+            cursor: pointer;
+            width: auto;
+            backdrop-filter: blur(5px);
+        }
+
+        input[type="file"]::-webkit-file-upload-button {
+            background-color: rgba(75, 85, 99, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border: 1px solid rgba(138, 155, 182, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: all 0.2s ease-in-out;
+            font-size: 14px;
+        }
+
+        input[type="file"]::-webkit-file-upload-button:hover {
+            background-color: rgba(85, 95, 109, 0.9);
+            transform: translateY(-1px);
         }
 
         pre {
             background-color: #2c2c2c;
             padding: 10px;
-            border: 1px solid #555555;
-            border-radius: 5px;
+            border: 1px solid rgba(138, 155, 182, 0.3);
+            border-radius: 8px;
             color: #f8f9fa;
             overflow: auto;
-            max-width: 600px;
+            backdrop-filter: blur(5px);
+        }
+
+        code {
+            background-color: #000000;
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: #f8f9fa;
+        }
+
+        /* Progress bar styling */
+        #progressBar {
+            background: linear-gradient(90deg, rgba(30, 35, 45, 0.8) 0%, rgba(40, 45, 55, 0.9) 100%);
+            border: 1px solid rgba(138, 155, 182, 0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        /* Backup list container */
+        .backup-list {
+            background-color: rgba(26, 26, 26, 0.8);
+            border: 1px solid rgba(138, 155, 182, 0.2);
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+
+        .backup-item {
+            border-bottom: 1px solid rgba(138, 155, 182, 0.2);
+        }
+
+        .backup-item:hover {
+            background-color: rgba(40, 45, 55, 0.3);
         }
     </style>
 </head>
@@ -436,7 +539,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="message" style="background-color: #1a1a5c; border: 1px solid #2d2d8f;">
             <h3>🗄️ Database Access</h3>
             <p>Access the pgAdmin database manager for advanced database management.</p>
-            <p><strong>Login:</strong> Both username = dwemer and password = dwemer</p>
+            <p><strong>Login:</strong> username = dwemer & password = dwemer</p>
             <a href="/pgAdmin/" target="_blank" class="button" style="background-color: #6f42c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                 Open Database Manager
             </a>
@@ -475,13 +578,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="message" style="background-color: #2d1a5c; border: 1px solid #4a2d8f;">
             <h3>🤖 Automatic Backups</h3>
             <p>System-generated backups created automatically when the server starts only once a day. Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached.</p>
-            <p><strong>Status:</strong> <?php echo $autoBackup->isEnabled() ? '<span style="color: #28a745;">Enabled</span>' : '<span style="color: #dc3545;">Disabled</span>'; ?></p>
+            <p><strong>Status:</strong> <?php echo $autoBackup->isEnabled() ? '<span style="color: #28a745;">Enabled</span>' : '<span style="color: #dc3545;">Disabled</span>'; ?> (Controlled in Configuration Wizard)</p>
             
             <?php if (!empty($automaticBackups)): ?>
                 <h4>Available Automatic Backups:</h4>
-                <div style="max-height: 200px; overflow-y: auto; background-color: #1a1a1a; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                <div class="backup-list" style="max-height: 200px; overflow-y: auto; padding: 10px; margin: 10px 0;">
                     <?php foreach ($automaticBackups as $backup): ?>
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #444; margin-bottom: 5px;">
+                        <div class="backup-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 5px; transition: all 0.2s ease-in-out;">
                             <div style="flex-grow: 1;">
                                 <strong><?php echo htmlspecialchars($backup['filename']); ?></strong><br>
                                 <small style="color: #ccc;">
