@@ -147,20 +147,10 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </li>
 
                         <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Database Operations</h6></li>
+                        <li><h6 class="dropdown-header">Database Controls</h6></li>
                         <li>
-                        <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User & Password is 'dwemer'">
-                            <strong>Database Manager (Both User & Password = dwemer)</strong>
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_db.php" target="_blank" title="Exports current database into a file.">
-                            Backup Current Database
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Reimport an exported database file.">
-                            Restore Current Database 
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Complete database management - backup, restore, maintenance, and pgAdmin access.">
+                            Database Manager
                         </a>
                         </li>
                         <li>

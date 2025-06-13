@@ -59,6 +59,50 @@ $password = 'dwemer';
 // Initialize message variable
 $message = '';
 
+// PHP function to format file sizes
+function formatFileSize($bytes) {
+    if ($bytes == 0) return '0 Bytes';
+    $k = 1024;
+    $sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    $i = floor(log($bytes) / log($k));
+    return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+}
+
+
+
+// Handle backup database request
+if (isset($_GET['action']) && $_GET['action'] === 'backup') {
+    shell_exec('echo "localhost:5432:dwemer:dwemer:dwemer" > /tmp/.pgpass;');
+    shell_exec('chmod 600 /tmp/.pgpass;');
+    $filename = date("dMy") . ".sql";
+    $response = shell_exec('HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost > ' . $rootPath . 'data/export_' . $filename);
+    
+    $backupFile = $rootPath . 'data/export_' . $filename;
+    if (file_exists($backupFile) && filesize($backupFile) > 0) {
+        // Force download of the backup file
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="dwemer_backup_' . $filename . '"');
+        header('Content-Length: ' . filesize($backupFile));
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        
+        // Clear any output buffer
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // Output the file
+        readfile($backupFile);
+        
+        // Clean up - delete the temporary file
+        unlink($backupFile);
+        
+        exit();
+    } else {
+        $message = "<p><strong>Error:</strong> Backup creation failed or file is empty.</p>";
+    }
+}
+
 // Check if the form has been submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if a file was uploaded without errors
@@ -165,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <title>Upload SQL File</title>
+    <title>Database Manager</title>
     <style>
         /* Updated CSS for Dark Grey Background Theme */
         body {
@@ -239,8 +283,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="indent5">
-    <h1>Restore Database</h1>
-    <p>Upload the SQL backup file.<br>You can download this from <b>Server Actions - Backup Current Database</b></p>
+    <h1>Database Manager</h1>
+    
+    <!-- Database Manager Section -->
+    <div class="message" style="background-color: #1a1a5c; border: 1px solid #2d2d8f;">
+        <h3>🗄️ Database Access</h3>
+        <p>Access the pgAdmin database manager for advanced database operations and queries.</p>
+        <p><strong>Login:</strong> Both username and password are <code>dwemer</code></p>
+        <a href="/pgAdmin/" target="_blank" class="button" style="background-color: #6f42c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Open Database Manager
+        </a>
+    </div>
+    
+    <!-- Backup Section -->
+    <div class="message" style="background-color: #1a5c1a; border: 1px solid #2d8f2d;">
+        <h3>📦 Backup Database</h3>
+        <p>Create a backup of your current database. This will generate an SQL file you can download.</p>
+        <a href="?action=backup" class="button" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Create Backup
+        </a>
+    </div>
+    
+    <!-- Maintenance Section -->
+    <div class="message" style="background-color: #5c3c1a; border: 1px solid #8f5f2d;">
+        <h3>🔧 Database Maintenance</h3>
+        <p>Optimize and clean your database. This will compact the database and reclaim unused space.</p>
+        <p><strong>⚠️ Important:</strong> Make sure Skyrim is stopped before running maintenance.</p>
+        <button onclick="if (confirm('Database maintenance will optimize and compact the database.\n\n- Make sure Skyrim game is stopped\n- To reclaim unused space, free temporary space is required\n- During this operation tables will be locked, do not interrupt\n- This could take some time, please wait until you see the confirmation\n\nContinue?')) { window.open('<?php echo $webRoot; ?>/ui/vacuum_db.php', 'Database_maintenance', 'resizable=yes,scrollbars=yes,titlebar=no,width=800,height=600'); return false; }" 
+                class="button" style="background-color: #fd7e14; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
+            Run Database Maintenance
+        </button>
+    </div>
+    
+    <!-- Restore Section -->
+    <div class="message" style="background-color: #1a3c5c; border: 1px solid #2d5f8f;">
+        <h3>📥 Restore Database</h3>
+        <p>Upload an SQL backup file to restore your database.</p>
+    </div>
     <?php
     if (!empty($message)) {
         echo '<div class="message">';
