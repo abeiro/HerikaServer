@@ -811,13 +811,18 @@ function lastSpeech($npcname)
 function lastKeyWordsContext($n, $npcname='')
 {
 
-    global $db;
+    global $db,$gameRequest;
     
     $m=$n+1;
     $speaker=$db->escape($npcname);
     $pj=$GLOBALS["PLAYER_NAME"];
 
-    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) 
+    if (isset($gameRequest[2]))
+        $whileago=round($gameRequest[2] - (2/ 0.0000024));
+    else
+        $whileago=0;
+    
+    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech,gamets from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) and gamets>$whileago
         order by gamets desc limit $m offset 0");
     
     
@@ -870,6 +875,7 @@ function lastKeyWordsContext($n, $npcname='')
     unset($words["Maybe"]);
     unset($words["Looks"]);
     unset($words["Just"]);
+    unset($words["Narrator"]);
     
     
     foreach ($words as $n=>$e) {

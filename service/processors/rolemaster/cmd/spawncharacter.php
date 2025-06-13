@@ -88,6 +88,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             ];
         };
 
+        $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
+
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
         $connectionHandler->open($prompt,$customParm);
 
