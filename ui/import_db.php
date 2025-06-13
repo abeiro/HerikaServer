@@ -33,7 +33,7 @@ if (isset($_SESSION["PROFILE"])) {
 
 $pattern = '/conf_([a-f0-9]+)\.php/';
 preg_match($pattern, basename($_SESSION["PROFILE"]), $matches);
-$hash = $matches[1];    
+$hash = isset($matches[1]) ? $matches[1] : 'default';    
 
 $db=new sql();
 $res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");
@@ -69,6 +69,91 @@ function formatFileSize($bytes) {
 }
 
 
+
+// Include automatic backup management
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "automatic_backup.php");
+
+// Handle restore from automatic backup
+if (isset($_GET['action']) && $_GET['action'] === 'restore_auto' && isset($_GET['filename'])) {
+    $autoBackup = new AutomaticBackup();
+    $filename = $_GET['filename'];
+    
+    // Security check
+    if (strpos($filename, 'auto_backup_') === 0 && substr($filename, -4) === '.sql') {
+        $backups = $autoBackup->getBackups();
+        $validFile = false;
+        
+        foreach ($backups as $backup) {
+            if ($backup['filename'] === $filename) {
+                $validFile = true;
+                $backupPath = $backup['filepath'];
+                break;
+            }
+        }
+        
+        if ($validFile && file_exists($backupPath)) {
+            // Proceed with database restore using the automatic backup
+            $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
+            
+            if (!$conn) {
+                $message .= "<p><strong>Error:</strong> Failed to connect to database: " . pg_last_error() . "</p>";
+            } else {
+                // Drop and recreate database schema and extensions
+                $Q = array();
+                $Q[] = "DROP SCHEMA IF EXISTS $schema CASCADE";
+                $Q[] = "DROP EXTENSION IF EXISTS vector CASCADE";
+                $Q[] = "DROP EXTENSION IF EXISTS pg_trgm CASCADE";
+                $Q[] = "CREATE SCHEMA $schema";
+                $Q[] = "CREATE EXTENSION vector";
+                $Q[] = "CREATE EXTENSION IF NOT EXISTS pg_trgm";
+
+                $errorOccurred = false;
+
+                foreach ($Q as $QS) {
+                    $r = pg_query($conn, $QS);
+                    if (!$r) {
+                        $message .= "<p>Error executing query: " . pg_last_error($conn) . "</p>";
+                        $errorOccurred = true;
+                        break;
+                    } else {
+                        $message .= "<p>$QS executed successfully.</p>";
+                    }
+                }
+
+                if (!$errorOccurred) {
+                    // Command to import SQL file using psql
+                    $psqlCommand = "PGPASSWORD=" . escapeshellarg($password) . " psql -h " . escapeshellarg($host) . " -p " . escapeshellarg($port) . " -U " . escapeshellarg($username) . " -d " . escapeshellarg($dbname) . " -f " . escapeshellarg($backupPath);
+
+                    // Execute psql command
+                    $output = [];
+                    $returnVar = 0;
+                    exec($psqlCommand, $output, $returnVar);
+
+                    if ($returnVar !== 0) {
+                        $message .= "<p>Failed to restore from automatic backup.</p>";
+                        $message .= '<pre>' . htmlspecialchars(implode("\n", $output)) . '</pre>';
+                    } else {
+                        $message .= "<p><strong>✅ Database restored successfully from automatic backup!</strong></p>";
+                        $message .= "<p>Restored from: <strong>$filename</strong></p>";
+                        $message .= '<pre>' . htmlspecialchars(implode("\n", $output)) . '</pre>';
+
+                        // Provide a clickable link and popup message
+                        $redirectUrl = '/HerikaServer/ui/home.php';
+                        $message .= "<script type='text/javascript'>
+                                        alert('Database restored successfully from automatic backup.');
+                                     </script>";
+                        $message .= "<p><a href='$redirectUrl'><b>Click here to go back!</b></a></p>";
+                    }
+                }
+                pg_close($conn);
+            }
+        } else {
+            $message = "<p><strong>Error:</strong> Invalid backup file specified.</p>";
+        }
+    } else {
+        $message = "<p><strong>Error:</strong> Invalid filename format.</p>";
+    }
+}
 
 // Handle backup database request
 if (isset($_GET['action']) && $_GET['action'] === 'backup') {
@@ -295,9 +380,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </a>
     </div>
     
+    <!-- Automatic Backups Section -->
+    <?php
+    $autoBackup = new AutomaticBackup();
+    $automaticBackups = $autoBackup->getBackups();
+    ?>
+    <div class="message" style="background-color: #2d1a5c; border: 1px solid #4a2d8f;">
+        <h3>🤖 Automatic Backups</h3>
+        <p>System-generated backups created automatically when the server starts.</p>
+        <p><strong>Status:</strong> <?php echo $autoBackup->isEnabled() ? '<span style="color: #28a745;">Enabled</span>' : '<span style="color: #dc3545;">Disabled</span>'; ?></p>
+        
+        <?php if (!empty($automaticBackups)): ?>
+            <h4>Available Automatic Backups:</h4>
+            <div style="max-height: 200px; overflow-y: auto; background-color: #1a1a1a; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                <?php foreach ($automaticBackups as $backup): ?>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #444; margin-bottom: 5px;">
+                        <div>
+                            <strong><?php echo htmlspecialchars($backup['filename']); ?></strong><br>
+                            <small style="color: #ccc;">
+                                📅 <?php echo $backup['formatted_date']; ?> | 
+                                📁 <?php echo AutomaticBackup::formatFileSize($backup['size']); ?>
+                            </small>
+                        </div>
+                        <button onclick="if (confirm('Restore database from automatic backup:\\n\\n<?php echo htmlspecialchars($backup['filename']); ?>\\n\\nThis will replace your current database. Continue?')) { window.location.href='?action=restore_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
+                                class="button" style="background-color: #007bff; color: white; padding: 5px 10px; border: none; border-radius: 3px; font-size: 12px; cursor: pointer;">
+                            Restore
+                        </button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <p style="color: #888; font-style: italic;">No automatic backups available yet.</p>
+        <?php endif; ?>
+        
+        <?php if (!$autoBackup->isEnabled()): ?>
+            <p><em>Enable automatic backups in the Configuration Wizard under "AUTOMATIC_DATABASE_BACKUPS"</em></p>
+        <?php endif; ?>
+    </div>
+    
     <!-- Backup Section -->
     <div class="message" style="background-color: #1a5c1a; border: 1px solid #2d8f2d;">
-        <h3>📦 Backup Database</h3>
+        <h3>📦 Manual Backup</h3>
         <p>Create a backup of your current database. This will generate an SQL file you can download.</p>
         <a href="?action=backup" class="button" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
             Create Backup
@@ -319,6 +442,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="message" style="background-color: #1a3c5c; border: 1px solid #2d5f8f;">
         <h3>📥 Restore Database</h3>
         <p>Upload an SQL backup file to restore your database.</p>
+        
+        <form id="uploadForm" action="" method="post" enctype="multipart/form-data" style="margin-top: 15px;">
+            <label for="sql_file" style="color: #f8f9fa; font-weight: bold;">Select SQL file to upload:</label><br>
+            <input type="file" name="sql_file" id="sql_file" accept=".sql" required style="margin: 10px 0; padding: 8px; background-color: #444; color: #f8f9fa; border: 1px solid #666; border-radius: 4px;">
+            <br>
+            <input type="submit" class="button" value="Upload and Restore" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px;">
+        </form>
+        
+        <div id="uploadProgress" style="display: none; margin-top: 15px;">
+            <h4>Upload Progress</h4>
+            <div style="background-color: #333; border-radius: 10px; padding: 4px; margin: 10px 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);">
+                <div id="progressBar" style="
+                    background: linear-gradient(90deg, #007bff 0%, #0056b3 100%); 
+                    height: 25px; 
+                    border-radius: 8px; 
+                    width: 0%; 
+                    transition: width 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 12px;
+                    box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+                ">
+                    <span id="progressPercent">0%</span>
+                </div>
+            </div>
+            <p id="progressText" style="text-align: center; margin: 10px 0; font-weight: bold;">Preparing upload...</p>
+            <div id="progressDetails" style="text-align: center; font-size: 12px; color: #ccc; margin: 5px 0;"></div>
+        </div>
     </div>
     <?php
     if (!empty($message)) {
@@ -327,12 +481,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo '</div>';
     }
     ?>
-    <form action="" method="post" enctype="multipart/form-data">
-        <label for="sql_file">Select SQL file to upload:</label>
-        <input type="file" name="sql_file" id="sql_file" accept=".sql" required>
-        <br>
-        <input type="submit" class="btn-save" value="Upload and Restore">
-    </form>
 </div>
 </body>
 </html>
