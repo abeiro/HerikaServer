@@ -136,6 +136,11 @@ $db = new sql();
 if (sizeof($_GET)==0) {
     require_once(__DIR__."/../debug/db_updates.php");
     require_once(__DIR__."/../debug/npc_removal.php");
+    
+    // Initialize automatic backup system now that database is ready
+    if (function_exists('deferredAutomaticBackupInit')) {
+        deferredAutomaticBackupInit();
+    }
 }
 /* END of check database for updates */
 

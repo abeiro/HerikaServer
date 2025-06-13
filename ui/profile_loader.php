@@ -55,5 +55,8 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
     require_once($_SESSION["PROFILE"]);
 }
 
+// Initialize automatic backup system (after profiles are loaded)
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "automatic_backup.php");
+
 
     
