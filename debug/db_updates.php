@@ -1263,6 +1263,96 @@ if ($checkVersion("combined_npc_templates")<20250302002) {
 }
 
 //----------------------------------------------------
+// Add npc_goals field to npc_templates tables
+// Version 20250302003
+//----------------------------------------------------
+
+if ($checkVersion("npc_templates")<20250302003) {
+    Logger::debug("try patch: npc_templates add npc_goals field 20250302003");
+    
+    $query = "
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_goals TEXT;
+    ";
+    $db->execQuery($query);
+    $updateVersion("npc_templates",20250302003);
+    Logger::info("Applied patch npc_templates add npc_goals field 20250302003");
+}
+
+if ($checkVersion("npc_templates_custom")<20250302003) {
+    Logger::debug("try patch: npc_templates_custom add npc_goals field 20250302003");
+    
+    $query = "
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_goals TEXT;
+    ";
+    $db->execQuery($query);
+    $updateVersion("npc_templates_custom",20250302003);
+    Logger::info("Applied patch npc_templates_custom add npc_goals field 20250302003");
+}
+
+if ($checkVersion("npc_templates_trl")<20250302003) {
+    Logger::debug("try patch: npc_templates_trl add npc_goals field 20250302003");
+    
+    $query = "
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_goals TEXT;
+    ";
+    $db->execQuery($query);
+    $updateVersion("npc_templates_trl",20250302003);
+    Logger::info("Applied patch npc_templates_trl add npc_goals field 20250302003");
+}
+
+if ($checkVersion("combined_npc_templates")<20250302003) {
+    Logger::debug("try patch: combined_npc_templates view update for npc_goals 20250302003");
+    
+    $query="
+    DROP VIEW IF EXISTS public.combined_npc_templates;
+    CREATE VIEW public.combined_npc_templates AS
+     SELECT c.npc_name,
+        c.npc_pers,
+        c.npc_dynamic,
+        c.npc_misc,
+        c.melotts_voiceid,
+        c.xtts_voiceid,
+        c.xvasynth_voiceid,
+        c.npc_background,
+        c.npc_personality,
+        c.npc_appearance,
+        c.npc_relationships,
+        c.npc_occupation,
+        c.npc_skills,
+        c.npc_speechstyle,
+        c.npc_quest,
+        c.npc_goals
+       FROM public.npc_templates_custom c
+    UNION ALL
+     SELECT t.npc_name,
+        t.npc_pers,
+        t.npc_dynamic,
+        t.npc_misc,
+        t.melotts_voiceid,
+        t.xtts_voiceid,
+        t.xvasynth_voiceid,
+        t.npc_background,
+        t.npc_personality,
+        t.npc_appearance,
+        t.npc_relationships,
+        t.npc_occupation,
+        t.npc_skills,
+        t.npc_speechstyle,
+        t.npc_quest,
+        t.npc_goals
+       FROM (public.npc_templates t
+         LEFT JOIN public.npc_templates_custom c ON (((t.npc_name)::text = (c.npc_name)::text)))
+      WHERE (c.npc_name IS NULL);";
+    
+    $db->execQuery($query);
+    $updateVersion("combined_npc_templates",20250302003);
+    Logger::info("Applied patch combined_npc_templates view update for npc_goals 20250302003");
+}
+
+//----------------------------------------------------
 
 
 Logger::info(__FILE__." update file processed");

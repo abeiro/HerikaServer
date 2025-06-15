@@ -66,13 +66,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
     $npc_skills        = (!empty($_POST['npc_skills']))        ? trim($_POST['npc_skills'])        : null;
     $npc_speechstyle   = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
     $npc_quest         = (!empty($_POST['npc_quest']))         ? trim($_POST['npc_quest'])         : null;
+    $npc_goals         = (!empty($_POST['npc_goals']))         ? trim($_POST['npc_goals'])         : null;
 
     if (!empty($npc_name) && !empty($npc_pers)) {
         $query = "
             INSERT INTO {$schema}.npc_templates_custom
                 (npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
-                 npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_quest)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                 npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_quest, npc_goals)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             ON CONFLICT (npc_name)
             DO UPDATE SET
                 npc_dynamic = EXCLUDED.npc_dynamic,
@@ -88,7 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 npc_occupation = EXCLUDED.npc_occupation,
                 npc_skills = EXCLUDED.npc_skills,
                 npc_speechstyle = EXCLUDED.npc_speechstyle,
-                npc_quest = EXCLUDED.npc_quest
+                npc_quest = EXCLUDED.npc_quest,
+                npc_goals = EXCLUDED.npc_goals
         ";
 
         $params = [
@@ -106,7 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
             $npc_occupation,
             $npc_skills,
             $npc_speechstyle,
-            $npc_quest
+            $npc_quest,
+            $npc_goals
         ];
 
         $result = pg_query_params($conn, $query, $params);
@@ -266,6 +269,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $npc_quest = ($temp !== '') ? $temp : null;
                         }
 
+                        $npc_goals = null;
+                        if (isset($headerMap['npc_goals']) && isset($data[$headerMap['npc_goals']])) {
+                            $temp = trim($data[$headerMap['npc_goals']]);
+                            $npc_goals = ($temp !== '') ? $temp : null;
+                        }
+
                         // Convert to UTF-8 if not already
                         if ($encoding !== 'UTF-8') {
                             $npc_name           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
@@ -307,6 +316,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $npc_quest          = ($npc_quest !== null)
                                                     ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_quest)
                                                     : null;
+                            $npc_goals          = ($npc_goals !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_goals)
+                                                    : null;
                         }
 
                         // Skip if either required field is empty
@@ -320,8 +332,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             INSERT INTO $schema.npc_templates_custom 
                                 (npc_name, npc_dynamic, npc_pers, npc_misc, 
                                  melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
-                                 npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_quest)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                                 npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_quest, npc_goals)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                             ON CONFLICT (npc_name)
                             DO UPDATE SET
                                 npc_dynamic       = EXCLUDED.npc_dynamic,
@@ -337,7 +349,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 npc_occupation    = EXCLUDED.npc_occupation,
                                 npc_skills        = EXCLUDED.npc_skills,
                                 npc_speechstyle   = EXCLUDED.npc_speechstyle,
-                                npc_quest         = EXCLUDED.npc_quest
+                                npc_quest         = EXCLUDED.npc_quest,
+                                npc_goals         = EXCLUDED.npc_goals
                         ";
 
                         $params = [
@@ -355,7 +368,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $npc_occupation,
                             $npc_skills,
                             $npc_speechstyle,
-                            $npc_quest
+                            $npc_quest,
+                            $npc_goals
                         ];
 
                         $result = pg_query_params($conn, $query, $params);
@@ -447,6 +461,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $npc_skills        = (!empty($_POST['npc_skills']))        ? trim($_POST['npc_skills'])        : null;
     $npc_speechstyle   = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
     $npc_quest         = (!empty($_POST['npc_quest']))         ? trim($_POST['npc_quest'])         : null;
+    $npc_goals         = (!empty($_POST['npc_goals']))         ? trim($_POST['npc_goals'])         : null;
 
     if (!empty($npc_name) && !empty($npc_pers)) {
         $query = "
@@ -466,8 +481,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 npc_occupation = $12,
                 npc_skills = $13,
                 npc_speechstyle = $14,
-                npc_quest = $15
-            WHERE npc_name = $16
+                npc_quest = $15,
+                npc_goals = $16
+            WHERE npc_name = $17
         ";
 
         $params = [
@@ -486,6 +502,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $npc_skills,
             $npc_speechstyle,
             $npc_quest,
+            $npc_goals,
             $npc_name_original
         ];
 
@@ -732,13 +749,14 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 'Occupation' => $row['npc_occupation'] ?? '',
                 'Skills' => $row['npc_skills'] ?? '',
                 'Speech Style' => $row['npc_speechstyle'] ?? '',
+                'Goals' => $row['npc_goals'] ?? '',
                 'Quests' => $row['npc_quest'] ?? ''
             ];
             $extendedCount = count(array_filter($extendedFields));
             echo '  <td style="cursor: pointer; color: #4a9eff;" onclick="showExtendedProfile(\'' . 
                 htmlspecialchars($row['npc_name'], ENT_QUOTES) . '\', ' . 
                 htmlspecialchars(json_encode($extendedFields), ENT_QUOTES) . ')">';
-            echo '<span style="color: #888; font-size: 0.9em;">' . $extendedCount . ' of 8 fields completed</span>';
+            echo '<span style="color: #888; font-size: 0.9em;">' . $extendedCount . ' of 9 fields completed</span>';
             echo '<br><small style="color: #4a9eff; font-size: 0.8em;">Click to view details</small>';
             echo '</td>';
             
@@ -773,7 +791,8 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 'npc_occupation' => $row['npc_occupation'] ?? '',
                 'npc_skills' => $row['npc_skills'] ?? '',
                 'npc_speechstyle' => $row['npc_speechstyle'] ?? '',
-                'npc_quest' => $row['npc_quest'] ?? ''
+                'npc_quest' => $row['npc_quest'] ?? '',
+                'npc_goals' => $row['npc_goals'] ?? ''
             ];
             echo '<button onclick="openEditModal(' . 
                 htmlspecialchars(str_replace(
@@ -859,6 +878,10 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>How this character speaks, including vocabulary, accent, mannerisms, and communication patterns.</small>
                 <textarea name="npc_speechstyle" id="edit_npc_speechstyle" rows="3"></textarea>
 
+                <label for="edit_npc_goals">Goals & Aspirations:</label>
+                <small>Long-term objectives, personal ambitions, and life goals that drive this character.</small>
+                <textarea name="npc_goals" id="edit_npc_goals" rows="3"></textarea>
+
                 <label for="edit_npc_quest">Quest Information:</label>
                 <small>Current quests, objectives, and story-related information for this character.</small>
                 <textarea name="npc_quest" id="edit_npc_quest" rows="3"></textarea>
@@ -943,6 +966,10 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>How this character speaks, including vocabulary, accent, mannerisms, and communication patterns.</small>
                 <textarea name="npc_speechstyle" id="new_npc_speechstyle" rows="3"></textarea>
 
+                <label for="new_npc_goals">Goals & Aspirations:</label>
+                <small>Long-term objectives, personal ambitions, and life goals that drive this character.</small>
+                <textarea name="npc_goals" id="new_npc_goals" rows="3"></textarea>
+
                 <label for="new_npc_quest">Quest Information:</label>
                 <small>Current quests, objectives, and story-related information for this character.</small>
                 <textarea name="npc_quest" id="new_npc_quest" rows="3"></textarea>
@@ -1016,6 +1043,11 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 </div>
 
                 <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Goals & Aspirations</h4>
+                    <div id="profile-goals" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div class="profile-field">
                     <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Quest Information</h4>
                     <div id="profile-quest" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
                 </div>
@@ -1064,6 +1096,7 @@ function openEditModal(data) {
         document.getElementById("edit_npc_skills").value = decodeHTML(data.npc_skills || '');
         document.getElementById("edit_npc_speechstyle").value = decodeHTML(data.npc_speechstyle || '');
         document.getElementById("edit_npc_quest").value = decodeHTML(data.npc_quest || '');
+        document.getElementById("edit_npc_goals").value = decodeHTML(data.npc_goals || '');
         
         // Voice overrides
         document.getElementById("edit_melotts_voiceid").value = decodeHTML(data.melotts_voiceid);
@@ -1107,6 +1140,7 @@ function showExtendedProfile(npcName, profileData) {
             'Occupation': 'profile-occupation',
             'Skills': 'profile-skills',
             'Speech Style': 'profile-speechstyle',
+            'Goals': 'profile-goals',
             'Quests': 'profile-quest'
         };
         
