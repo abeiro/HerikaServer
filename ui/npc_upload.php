@@ -56,12 +56,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
     $melotts_voiceid   = (!empty($_POST['melotts_voiceid']))   ? trim($_POST['melotts_voiceid'])   : null;
     $xtts_voiceid      = (!empty($_POST['xtts_voiceid']))      ? trim($_POST['xtts_voiceid'])      : null;
     $xvasynth_voiceid  = (!empty($_POST['xvasynth_voiceid']))  ? trim($_POST['xvasynth_voiceid'])  : null;
+    
+    // New extended profile fields
+    $npc_background    = (!empty($_POST['npc_background']))    ? trim($_POST['npc_background'])    : null;
+    $npc_personality   = (!empty($_POST['npc_personality']))   ? trim($_POST['npc_personality'])   : null;
+    $npc_appearance    = (!empty($_POST['npc_appearance']))    ? trim($_POST['npc_appearance'])    : null;
+    $npc_relationships = (!empty($_POST['npc_relationships'])) ? trim($_POST['npc_relationships']) : null;
+    $npc_occupation    = (!empty($_POST['npc_occupation']))    ? trim($_POST['npc_occupation'])    : null;
+    $npc_skills        = (!empty($_POST['npc_skills']))        ? trim($_POST['npc_skills'])        : null;
+    $npc_speechstyle   = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
+    $npc_quest         = (!empty($_POST['npc_quest']))         ? trim($_POST['npc_quest'])         : null;
 
     if (!empty($npc_name) && !empty($npc_pers)) {
         $query = "
             INSERT INTO {$schema}.npc_templates_custom
-                (npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+                (npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
+                 npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_quest)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (npc_name)
             DO UPDATE SET
                 npc_dynamic = EXCLUDED.npc_dynamic,
@@ -69,7 +80,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 npc_misc = EXCLUDED.npc_misc,
                 melotts_voiceid = EXCLUDED.melotts_voiceid,
                 xtts_voiceid = EXCLUDED.xtts_voiceid,
-                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid
+                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid,
+                npc_background = EXCLUDED.npc_background,
+                npc_personality = EXCLUDED.npc_personality,
+                npc_appearance = EXCLUDED.npc_appearance,
+                npc_relationships = EXCLUDED.npc_relationships,
+                npc_occupation = EXCLUDED.npc_occupation,
+                npc_skills = EXCLUDED.npc_skills,
+                npc_speechstyle = EXCLUDED.npc_speechstyle,
+                npc_quest = EXCLUDED.npc_quest
         ";
 
         $params = [
@@ -79,7 +98,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
             $npc_misc,
             $melotts_voiceid,
             $xtts_voiceid,
-            $xvasynth_voiceid
+            $xvasynth_voiceid,
+            $npc_background,
+            $npc_personality,
+            $npc_appearance,
+            $npc_relationships,
+            $npc_occupation,
+            $npc_skills,
+            $npc_speechstyle,
+            $npc_quest
         ];
 
         $result = pg_query_params($conn, $query, $params);
@@ -140,6 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                     // * npc_pers (required)
                     // * npc_misc (optional if you want to skip it, set it to "")
                     // * melotts_voiceid, xtts_voiceid, xvasynth_voiceid (optional)
+                    // * Extended profile fields (all optional):
+                    //   - npc_background, npc_personality, npc_appearance, npc_relationships
+                    //   - npc_occupation, npc_skills, npc_speechstyle, npc_quest
                     //
 
                     $rowCount = 0;
@@ -187,6 +217,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $xvasynth_voiceid = ($temp !== '') ? $temp : null;
                         }
 
+                        // New extended profile fields
+                        $npc_background = null;
+                        if (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
+                            $temp = trim($data[$headerMap['npc_background']]);
+                            $npc_background = ($temp !== '') ? $temp : null;
+                        }
+
+                        $npc_personality = null;
+                        if (isset($headerMap['npc_personality']) && isset($data[$headerMap['npc_personality']])) {
+                            $temp = trim($data[$headerMap['npc_personality']]);
+                            $npc_personality = ($temp !== '') ? $temp : null;
+                        }
+
+                        $npc_appearance = null;
+                        if (isset($headerMap['npc_appearance']) && isset($data[$headerMap['npc_appearance']])) {
+                            $temp = trim($data[$headerMap['npc_appearance']]);
+                            $npc_appearance = ($temp !== '') ? $temp : null;
+                        }
+
+                        $npc_relationships = null;
+                        if (isset($headerMap['npc_relationships']) && isset($data[$headerMap['npc_relationships']])) {
+                            $temp = trim($data[$headerMap['npc_relationships']]);
+                            $npc_relationships = ($temp !== '') ? $temp : null;
+                        }
+
+                        $npc_occupation = null;
+                        if (isset($headerMap['npc_occupation']) && isset($data[$headerMap['npc_occupation']])) {
+                            $temp = trim($data[$headerMap['npc_occupation']]);
+                            $npc_occupation = ($temp !== '') ? $temp : null;
+                        }
+
+                        $npc_skills = null;
+                        if (isset($headerMap['npc_skills']) && isset($data[$headerMap['npc_skills']])) {
+                            $temp = trim($data[$headerMap['npc_skills']]);
+                            $npc_skills = ($temp !== '') ? $temp : null;
+                        }
+
+                        $npc_speechstyle = null;
+                        if (isset($headerMap['npc_speechstyle']) && isset($data[$headerMap['npc_speechstyle']])) {
+                            $temp = trim($data[$headerMap['npc_speechstyle']]);
+                            $npc_speechstyle = ($temp !== '') ? $temp : null;
+                        }
+
+                        $npc_quest = null;
+                        if (isset($headerMap['npc_quest']) && isset($data[$headerMap['npc_quest']])) {
+                            $temp = trim($data[$headerMap['npc_quest']]);
+                            $npc_quest = ($temp !== '') ? $temp : null;
+                        }
+
                         // Convert to UTF-8 if not already
                         if ($encoding !== 'UTF-8') {
                             $npc_name           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
@@ -204,6 +283,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $xvasynth_voiceid   = ($xvasynth_voiceid !== null)
                                                     ? iconv('Windows-1252', 'UTF-8//IGNORE', $xvasynth_voiceid)
                                                     : null;
+                            $npc_background     = ($npc_background !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_background)
+                                                    : null;
+                            $npc_personality    = ($npc_personality !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_personality)
+                                                    : null;
+                            $npc_appearance     = ($npc_appearance !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_appearance)
+                                                    : null;
+                            $npc_relationships  = ($npc_relationships !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_relationships)
+                                                    : null;
+                            $npc_occupation     = ($npc_occupation !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_occupation)
+                                                    : null;
+                            $npc_skills         = ($npc_skills !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_skills)
+                                                    : null;
+                            $npc_speechstyle    = ($npc_speechstyle !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_speechstyle)
+                                                    : null;
+                            $npc_quest          = ($npc_quest !== null)
+                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_quest)
+                                                    : null;
                         }
 
                         // Skip if either required field is empty
@@ -216,8 +319,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         $query = "
                             INSERT INTO $schema.npc_templates_custom 
                                 (npc_name, npc_dynamic, npc_pers, npc_misc, 
-                                 melotts_voiceid, xtts_voiceid, xvasynth_voiceid)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7)
+                                 melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
+                                 npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_quest)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                             ON CONFLICT (npc_name)
                             DO UPDATE SET
                                 npc_dynamic       = EXCLUDED.npc_dynamic,
@@ -225,7 +329,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 npc_misc          = EXCLUDED.npc_misc,
                                 melotts_voiceid   = EXCLUDED.melotts_voiceid,
                                 xtts_voiceid      = EXCLUDED.xtts_voiceid,
-                                xvasynth_voiceid  = EXCLUDED.xvasynth_voiceid
+                                xvasynth_voiceid  = EXCLUDED.xvasynth_voiceid,
+                                npc_background    = EXCLUDED.npc_background,
+                                npc_personality   = EXCLUDED.npc_personality,
+                                npc_appearance    = EXCLUDED.npc_appearance,
+                                npc_relationships = EXCLUDED.npc_relationships,
+                                npc_occupation    = EXCLUDED.npc_occupation,
+                                npc_skills        = EXCLUDED.npc_skills,
+                                npc_speechstyle   = EXCLUDED.npc_speechstyle,
+                                npc_quest         = EXCLUDED.npc_quest
                         ";
 
                         $params = [
@@ -235,7 +347,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $npc_misc,
                             $melotts_voiceid,
                             $xtts_voiceid,
-                            $xvasynth_voiceid
+                            $xvasynth_voiceid,
+                            $npc_background,
+                            $npc_personality,
+                            $npc_appearance,
+                            $npc_relationships,
+                            $npc_occupation,
+                            $npc_skills,
+                            $npc_speechstyle,
+                            $npc_quest
                         ];
 
                         $result = pg_query_params($conn, $query, $params);
@@ -317,6 +437,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $melotts_voiceid = (!empty($_POST['melotts_voiceid'])) ? trim($_POST['melotts_voiceid']) : null;
     $xtts_voiceid = (!empty($_POST['xtts_voiceid'])) ? trim($_POST['xtts_voiceid']) : null;
     $xvasynth_voiceid = (!empty($_POST['xvasynth_voiceid'])) ? trim($_POST['xvasynth_voiceid']) : null;
+    
+    // New extended profile fields
+    $npc_background    = (!empty($_POST['npc_background']))    ? trim($_POST['npc_background'])    : null;
+    $npc_personality   = (!empty($_POST['npc_personality']))   ? trim($_POST['npc_personality'])   : null;
+    $npc_appearance    = (!empty($_POST['npc_appearance']))    ? trim($_POST['npc_appearance'])    : null;
+    $npc_relationships = (!empty($_POST['npc_relationships'])) ? trim($_POST['npc_relationships']) : null;
+    $npc_occupation    = (!empty($_POST['npc_occupation']))    ? trim($_POST['npc_occupation'])    : null;
+    $npc_skills        = (!empty($_POST['npc_skills']))        ? trim($_POST['npc_skills'])        : null;
+    $npc_speechstyle   = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
+    $npc_quest         = (!empty($_POST['npc_quest']))         ? trim($_POST['npc_quest'])         : null;
 
     if (!empty($npc_name) && !empty($npc_pers)) {
         $query = "
@@ -328,8 +458,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 npc_misc = $4,
                 melotts_voiceid = $5,
                 xtts_voiceid = $6,
-                xvasynth_voiceid = $7
-            WHERE npc_name = $8
+                xvasynth_voiceid = $7,
+                npc_background = $8,
+                npc_personality = $9,
+                npc_appearance = $10,
+                npc_relationships = $11,
+                npc_occupation = $12,
+                npc_skills = $13,
+                npc_speechstyle = $14,
+                npc_quest = $15
+            WHERE npc_name = $16
         ";
 
         $params = [
@@ -340,6 +478,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $melotts_voiceid,
             $xtts_voiceid,
             $xvasynth_voiceid,
+            $npc_background,
+            $npc_personality,
+            $npc_appearance,
+            $npc_relationships,
+            $npc_occupation,
+            $npc_skills,
+            $npc_speechstyle,
+            $npc_quest,
             $npc_name_original
         ];
 
@@ -565,10 +711,8 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         echo '  <th>Name</th>';
         echo '  <th>Static Bio</th>';
         echo '  <th>Dynamic Bio</th>';
-        echo '  <th>Misc</th>';
-        echo '  <th>MeloTTS Override</th>';
-        echo '  <th>XTTS Override</th>';
-        echo '  <th>xVASynth Override</th>';
+        echo '  <th>Extended Profile</th>';
+        echo '  <th>Voice Overrides</th>';
         echo '  <th>Actions</th>';
         echo '</tr>';
 
@@ -576,12 +720,40 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         while ($row = pg_fetch_assoc($result_combined)) {
             echo '<tr>';
             echo '  <td>' . htmlspecialchars($row['npc_name'] ?? '') . '</td>';
-            echo '  <td>' . nl2br(htmlspecialchars($row['npc_pers'] ?? '')) . '</td>';
-            echo '  <td>' . ($row['npc_dynamic'] !== null ? nl2br(htmlspecialchars($row['npc_dynamic'])) : '') . '</td>';
-            echo '  <td>' . ($row['npc_misc'] !== null ? nl2br(htmlspecialchars($row['npc_misc'])) : '') . '</td>';
-            echo '  <td>' . htmlspecialchars($row['melotts_voiceid'] ?? '') . '</td>';
-            echo '  <td>' . htmlspecialchars($row['xtts_voiceid'] ?? '') . '</td>';
-            echo '  <td>' . htmlspecialchars($row['xvasynth_voiceid'] ?? '') . '</td>';
+            echo '  <td style="max-width: 250px; word-wrap: break-word;">' . nl2br(htmlspecialchars(substr($row['npc_pers'] ?? '', 0, 200))) . (strlen($row['npc_pers'] ?? '') > 200 ? '...' : '') . '</td>';
+            echo '  <td style="max-width: 200px; word-wrap: break-word;">' . ($row['npc_dynamic'] !== null ? nl2br(htmlspecialchars(substr($row['npc_dynamic'], 0, 150))) . (strlen($row['npc_dynamic']) > 150 ? '...' : '') : '') . '</td>';
+            
+            // Extended Profile summary
+            $extendedFields = [
+                'Background' => $row['npc_background'] ?? '',
+                'Personality' => $row['npc_personality'] ?? '',
+                'Appearance' => $row['npc_appearance'] ?? '',
+                'Relationships' => $row['npc_relationships'] ?? '',
+                'Occupation' => $row['npc_occupation'] ?? '',
+                'Skills' => $row['npc_skills'] ?? '',
+                'Speech Style' => $row['npc_speechstyle'] ?? '',
+                'Quests' => $row['npc_quest'] ?? ''
+            ];
+            $extendedCount = count(array_filter($extendedFields));
+            echo '  <td style="cursor: pointer; color: #4a9eff;" onclick="showExtendedProfile(\'' . 
+                htmlspecialchars($row['npc_name'], ENT_QUOTES) . '\', ' . 
+                htmlspecialchars(json_encode($extendedFields), ENT_QUOTES) . ')">';
+            echo '<span style="color: #888; font-size: 0.9em;">' . $extendedCount . ' of 8 fields completed</span>';
+            echo '<br><small style="color: #4a9eff; font-size: 0.8em;">Click to view details</small>';
+            echo '</td>';
+            
+            // Voice Overrides summary
+            $voiceFields = [
+                'MeloTTS' => $row['melotts_voiceid'] ?? '',
+                'XTTS' => $row['xtts_voiceid'] ?? '',
+                'xVASynth' => $row['xvasynth_voiceid'] ?? ''
+            ];
+            echo '  <td style="font-size: 0.85em; line-height: 1.4;">';
+            foreach ($voiceFields as $type => $voice) {
+                $displayValue = !empty(trim($voice)) ? htmlspecialchars($voice) : '<span style="color: #888; font-style: italic;">None</span>';
+                echo '<div style="margin-bottom: 2px;"><strong>' . $type . ':</strong> ' . $displayValue . '</div>';
+            }
+            echo '</td>';
             
             // Add Edit button
             echo '<td>';
@@ -593,7 +765,15 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 'npc_misc' => $row['npc_misc'] ?? '',
                 'melotts_voiceid' => $row['melotts_voiceid'] ?? '',
                 'xtts_voiceid' => $row['xtts_voiceid'] ?? '',
-                'xvasynth_voiceid' => $row['xvasynth_voiceid'] ?? ''
+                'xvasynth_voiceid' => $row['xvasynth_voiceid'] ?? '',
+                'npc_background' => $row['npc_background'] ?? '',
+                'npc_personality' => $row['npc_personality'] ?? '',
+                'npc_appearance' => $row['npc_appearance'] ?? '',
+                'npc_relationships' => $row['npc_relationships'] ?? '',
+                'npc_occupation' => $row['npc_occupation'] ?? '',
+                'npc_skills' => $row['npc_skills'] ?? '',
+                'npc_speechstyle' => $row['npc_speechstyle'] ?? '',
+                'npc_quest' => $row['npc_quest'] ?? ''
             ];
             echo '<button onclick="openEditModal(' . 
                 htmlspecialchars(str_replace(
@@ -648,6 +828,44 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="edit_npc_misc">
 
+                <!-- Extended Profile Fields -->
+                <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Extended Profile</h3>
+                
+                <label for="edit_npc_background">Background:</label>
+                <small>Detailed history, origins, and past experiences that shaped this character.</small>
+                <textarea name="npc_background" id="edit_npc_background" rows="4"></textarea>
+
+                <label for="edit_npc_personality">Personality:</label>
+                <small>Detailed character traits, behavioral patterns, and psychological characteristics.</small>
+                <textarea name="npc_personality" id="edit_npc_personality" rows="4"></textarea>
+
+                <label for="edit_npc_appearance">Appearance:</label>
+                <small>Detailed description of physical features, clothing, and distinguishing characteristics.</small>
+                <textarea name="npc_appearance" id="edit_npc_appearance" rows="4"></textarea>
+
+                <label for="edit_npc_relationships">Relationships:</label>
+                <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
+                <textarea name="npc_relationships" id="edit_npc_relationships" rows="4"></textarea>
+
+                <label for="edit_npc_occupation">Occupation & Role:</label>
+                <small>Current job, profession, duties, and position in society or organizations.</small>
+                <textarea name="npc_occupation" id="edit_npc_occupation" rows="3"></textarea>
+
+                <label for="edit_npc_skills">Skills & Abilities:</label>
+                <small>Special talents, combat abilities, magical knowledge, and areas of expertise.</small>
+                <textarea name="npc_skills" id="edit_npc_skills" rows="3"></textarea>
+
+                <label for="edit_npc_speechstyle">Speech Style:</label>
+                <small>How this character speaks, including vocabulary, accent, mannerisms, and communication patterns.</small>
+                <textarea name="npc_speechstyle" id="edit_npc_speechstyle" rows="3"></textarea>
+
+                <label for="edit_npc_quest">Quest Information:</label>
+                <small>Current quests, objectives, and story-related information for this character.</small>
+                <textarea name="npc_quest" id="edit_npc_quest" rows="3"></textarea>
+
+                <!-- Voice Overrides Section -->
+                <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Voice Overrides</h3>
+
                 <label for="edit_melotts_voiceid">Melotts Voice ID:</label>
                 <small>Optional: Custom voice override for Melotts.</small>
                 <input type="text" name="melotts_voiceid" id="edit_melotts_voiceid">
@@ -694,6 +912,44 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="new_npc_misc">
 
+                <!-- Extended Profile Fields -->
+                <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Extended Profile</h3>
+                
+                <label for="new_npc_background">Background:</label>
+                <small>Detailed history, origins, and past experiences that shaped this character.</small>
+                <textarea name="npc_background" id="new_npc_background" rows="4"></textarea>
+
+                <label for="new_npc_personality">Personality:</label>
+                <small>Detailed character traits, behavioral patterns, and psychological characteristics.</small>
+                <textarea name="npc_personality" id="new_npc_personality" rows="4"></textarea>
+
+                <label for="new_npc_appearance">Appearance:</label>
+                <small>Detailed description of physical features, clothing, and distinguishing characteristics.</small>
+                <textarea name="npc_appearance" id="new_npc_appearance" rows="4"></textarea>
+
+                <label for="new_npc_relationships">Relationships:</label>
+                <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
+                <textarea name="npc_relationships" id="new_npc_relationships" rows="4"></textarea>
+
+                <label for="new_npc_occupation">Occupation & Role:</label>
+                <small>Current job, profession, duties, and position in society or organizations.</small>
+                <textarea name="npc_occupation" id="new_npc_occupation" rows="3"></textarea>
+
+                <label for="new_npc_skills">Skills & Abilities:</label>
+                <small>Special talents, combat abilities, magical knowledge, and areas of expertise.</small>
+                <textarea name="npc_skills" id="new_npc_skills" rows="3"></textarea>
+
+                <label for="new_npc_speechstyle">Speech Style:</label>
+                <small>How this character speaks, including vocabulary, accent, mannerisms, and communication patterns.</small>
+                <textarea name="npc_speechstyle" id="new_npc_speechstyle" rows="3"></textarea>
+
+                <label for="new_npc_quest">Quest Information:</label>
+                <small>Current quests, objectives, and story-related information for this character.</small>
+                <textarea name="npc_quest" id="new_npc_quest" rows="3"></textarea>
+
+                <!-- Voice Overrides Section -->
+                <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Voice Overrides</h3>
+
                 <label for="new_melotts_voiceid">Melotts Voice ID:</label>
                 <small>Optional: Custom voice override for Melotts.</small>
                 <input type="text" name="melotts_voiceid" id="new_melotts_voiceid">
@@ -711,6 +967,64 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                     <button type="button" onclick="closeNewEntryModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Extended Profile View Modal -->
+<div id="extendedProfileModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2 class="modal-title">Extended Profile: <span id="extended-profile-npc-name"></span></h2>
+        </div>
+        <div class="modal-body">
+            <div class="extended-profile-grid" style="display: grid; gap: 20px;">
+                
+                <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Background</h4>
+                    <div id="profile-background" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Personality</h4>
+                    <div id="profile-personality" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Appearance</h4>
+                    <div id="profile-appearance" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Relationships</h4>
+                    <div id="profile-relationships" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Occupation & Role</h4>
+                    <div id="profile-occupation" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Skills & Abilities</h4>
+                    <div id="profile-skills" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Speech Style</h4>
+                    <div id="profile-speechstyle" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div class="profile-field">
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Quest Information</h4>
+                    <div id="profile-quest" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
+                </div>
+
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" onclick="closeExtendedProfileModal()" class="btn-base btn-cancel">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -740,6 +1054,18 @@ function openEditModal(data) {
         document.getElementById("edit_npc_pers").value = decodeHTML(data.npc_pers);
         document.getElementById("edit_npc_dynamic").value = decodeHTML(data.npc_dynamic);
         document.getElementById("edit_npc_misc").value = decodeHTML(data.npc_misc);
+        
+        // Extended profile fields
+        document.getElementById("edit_npc_background").value = decodeHTML(data.npc_background || '');
+        document.getElementById("edit_npc_personality").value = decodeHTML(data.npc_personality || '');
+        document.getElementById("edit_npc_appearance").value = decodeHTML(data.npc_appearance || '');
+        document.getElementById("edit_npc_relationships").value = decodeHTML(data.npc_relationships || '');
+        document.getElementById("edit_npc_occupation").value = decodeHTML(data.npc_occupation || '');
+        document.getElementById("edit_npc_skills").value = decodeHTML(data.npc_skills || '');
+        document.getElementById("edit_npc_speechstyle").value = decodeHTML(data.npc_speechstyle || '');
+        document.getElementById("edit_npc_quest").value = decodeHTML(data.npc_quest || '');
+        
+        // Voice overrides
         document.getElementById("edit_melotts_voiceid").value = decodeHTML(data.melotts_voiceid);
         document.getElementById("edit_xtts_voiceid").value = decodeHTML(data.xtts_voiceid);
         document.getElementById("edit_xvasynth_voiceid").value = decodeHTML(data.xvasynth_voiceid);
@@ -764,6 +1090,53 @@ function openNewEntryModal() {
 
 function closeNewEntryModal() {
     document.getElementById("newEntryModal").style.display = "none";
+    document.body.style.overflow = "auto";
+}
+
+function showExtendedProfile(npcName, profileData) {
+    try {
+        // Set the NPC name in the modal title
+        document.getElementById("extended-profile-npc-name").textContent = npcName;
+        
+        // Populate each field, showing "Not specified" for empty fields
+        const fields = {
+            'Background': 'profile-background',
+            'Personality': 'profile-personality', 
+            'Appearance': 'profile-appearance',
+            'Relationships': 'profile-relationships',
+            'Occupation': 'profile-occupation',
+            'Skills': 'profile-skills',
+            'Speech Style': 'profile-speechstyle',
+            'Quests': 'profile-quest'
+        };
+        
+        Object.keys(fields).forEach(fieldName => {
+            const elementId = fields[fieldName];
+            const content = profileData[fieldName] || '';
+            const element = document.getElementById(elementId);
+            
+            if (content.trim()) {
+                element.textContent = content;
+                element.style.color = '#d4d4d4';
+                element.style.fontStyle = 'normal';
+            } else {
+                element.textContent = 'Not specified';
+                element.style.color = '#888';
+                element.style.fontStyle = 'italic';
+            }
+        });
+        
+        // Show the modal
+        document.getElementById("extendedProfileModal").style.display = "block";
+        document.body.style.overflow = "hidden";
+    } catch (error) {
+        console.error("Error in showExtendedProfile:", error);
+        alert("There was an error displaying the extended profile. Please try again.");
+    }
+}
+
+function closeExtendedProfileModal() {
+    document.getElementById("extendedProfileModal").style.display = "none";
     document.body.style.overflow = "auto";
 }
 
@@ -827,6 +1200,21 @@ window.addEventListener("load", function() {
         document.getElementById("searchBox").value = decodeURIComponent(searchTerm);
     }
 });
+
+// Close modals when clicking outside of them
+window.onclick = function(event) {
+    const editModal = document.getElementById('editModal');
+    const newEntryModal = document.getElementById('newEntryModal');
+    const extendedProfileModal = document.getElementById('extendedProfileModal');
+    
+    if (event.target == editModal) {
+        closeEditModal();
+    } else if (event.target == newEntryModal) {
+        closeNewEntryModal();
+    } else if (event.target == extendedProfileModal) {
+        closeExtendedProfileModal();
+    }
+}
 </script>
 
 <?php

@@ -1133,6 +1133,136 @@ if ($checkVersion("db_maintenance")<20250528002) {
 }
 
 //----------------------------------------------------
+// Add new character profile fields to npc_templates tables
+// Version 20250203001
+//----------------------------------------------------
+
+if ($checkVersion("npc_templates")<20250302002) {
+    Logger::debug("try patch: npc_templates extended profile fields 20250302002");
+    
+    $query = "
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_background TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_personality TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_appearance TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_relationships TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_occupation TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_skills TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_quest TEXT;
+    ";
+    $db->execQuery($query);
+    $updateVersion("npc_templates",20250302002);
+    Logger::info("Applied patch npc_templates extended profile fields 20250302002");
+}
+
+if ($checkVersion("npc_templates_custom")<20250302002) {
+    Logger::debug("try patch: npc_templates_custom extended profile fields 20250302002");
+    
+    $query = "
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_background TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_personality TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_appearance TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_relationships TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_occupation TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_skills TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_quest TEXT;
+    ";
+    $db->execQuery($query);
+    $updateVersion("npc_templates_custom",20250302002);
+    Logger::info("Applied patch npc_templates_custom extended profile fields 20250302002");
+}
+
+if ($checkVersion("npc_templates_trl")<20250302002) {
+    Logger::debug("try patch: npc_templates_trl extended profile fields 20250302002");
+    
+    $query = "
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_background TEXT;
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_personality TEXT;
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_appearance TEXT;
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_relationships TEXT;
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_occupation TEXT;
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_skills TEXT;
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
+    ALTER TABLE npc_templates_trl 
+    ADD COLUMN IF NOT EXISTS npc_quest TEXT;
+    ";
+    $db->execQuery($query);
+    $updateVersion("npc_templates_trl",20250302002);
+    Logger::info("Applied patch npc_templates_trl extended profile fields 20250302002");
+}
+
+if ($checkVersion("combined_npc_templates")<20250302002) {
+    Logger::debug("try patch: combined_npc_templates view update 20250302002");
+    
+    $query="
+    DROP VIEW IF EXISTS public.combined_npc_templates;
+    CREATE VIEW public.combined_npc_templates AS
+     SELECT c.npc_name,
+        c.npc_pers,
+        c.npc_dynamic,
+        c.npc_misc,
+        c.melotts_voiceid,
+        c.xtts_voiceid,
+        c.xvasynth_voiceid,
+        c.npc_background,
+        c.npc_personality,
+        c.npc_appearance,
+        c.npc_relationships,
+        c.npc_occupation,
+        c.npc_skills,
+        c.npc_speechstyle,
+        c.npc_quest
+       FROM public.npc_templates_custom c
+    UNION ALL
+     SELECT t.npc_name,
+        t.npc_pers,
+        t.npc_dynamic,
+        t.npc_misc,
+        t.melotts_voiceid,
+        t.xtts_voiceid,
+        t.xvasynth_voiceid,
+        t.npc_background,
+        t.npc_personality,
+        t.npc_appearance,
+        t.npc_relationships,
+        t.npc_occupation,
+        t.npc_skills,
+        t.npc_speechstyle,
+        t.npc_quest
+       FROM (public.npc_templates t
+         LEFT JOIN public.npc_templates_custom c ON (((t.npc_name)::text = (c.npc_name)::text)))
+      WHERE (c.npc_name IS NULL);";
+    
+    $db->execQuery($query);
+    $updateVersion("combined_npc_templates",20250302002);
+    Logger::info("Applied patch combined_npc_templates view update 20250302002");
+}
+
+//----------------------------------------------------
 
 
 Logger::info(__FILE__." update file processed");
