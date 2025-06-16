@@ -3286,6 +3286,76 @@ function getConfFileFor($npcname) {
     
 }
 
+function buildDynamicBiography() {
+    /**
+     * Build dynamic biography from new HERIKA fields, with fallback to legacy HERIKA_DYNAMIC
+     * @return string The dynamic biography content
+     */
+    $dynamicBio = '';
+    
+    // List of new HERIKA fields to include
+    $herikaFields = [
+        'HERIKA_BACKGROUND' => 'Background',
+        'HERIKA_PERSONALITY' => 'Personality', 
+        'HERIKA_APPEARANCE' => 'Appearance',
+        'HERIKA_RELATIONSHIPS' => 'Relationships',
+        'HERIKA_OCCUPATION' => 'Occupation',
+        'HERIKA_SKILLS' => 'Skills',
+        'HERIKA_SPEECHSTYLE' => 'Speech Style',
+        'HERIKA_GOALS' => 'Goals',
+        'HERIKA_QUEST' => 'Quest Information'
+    ];
+    
+    foreach ($herikaFields as $fieldName => $label) {
+        if (isset($GLOBALS[$fieldName]) && !empty(trim($GLOBALS[$fieldName]))) {
+            $dynamicBio .= "\n" . trim($GLOBALS[$fieldName]);
+        }
+    }
+    
+    // Fall back to HERIKA_DYNAMIC if no new fields are set
+    if (empty(trim($dynamicBio)) && isset($GLOBALS["HERIKA_DYNAMIC"]) && !empty(trim($GLOBALS["HERIKA_DYNAMIC"]))) {
+        $dynamicBio = $GLOBALS["HERIKA_DYNAMIC"];
+    }
+    
+    return $dynamicBio;
+}
+
+function buildDynamicProfileDisplay() {
+    /**
+     * Build formatted dynamic profile display for profile updates
+     * @return string The formatted dynamic profile content
+     */
+    $currentDynamicProfile = '';
+    $herikaFields = [
+        'HERIKA_BACKGROUND' => 'Background',
+        'HERIKA_PERSONALITY' => 'Personality', 
+        'HERIKA_APPEARANCE' => 'Appearance',
+        'HERIKA_RELATIONSHIPS' => 'Relationships',
+        'HERIKA_OCCUPATION' => 'Occupation',
+        'HERIKA_SKILLS' => 'Skills',
+        'HERIKA_SPEECHSTYLE' => 'Speech Style',
+        'HERIKA_GOALS' => 'Goals',
+        'HERIKA_QUEST' => 'Quest Information'
+    ];
+    
+    foreach ($herikaFields as $fieldName => $label) {
+        if (isset($GLOBALS[$fieldName]) && !empty(trim($GLOBALS[$fieldName]))) {
+            $currentDynamicProfile .= "\n$label:\n" . trim($GLOBALS[$fieldName]) . "\n";
+        }
+    }
+    
+    // Fall back to HERIKA_DYNAMIC if no new fields are set
+    if (empty(trim($currentDynamicProfile)) && isset($GLOBALS["HERIKA_DYNAMIC"]) && !empty(trim($GLOBALS["HERIKA_DYNAMIC"]))) {
+        $currentDynamicProfile = "Legacy Dynamic Profile:\n" . $GLOBALS["HERIKA_DYNAMIC"];
+    }
+    
+    if (empty(trim($currentDynamicProfile))) {
+        $currentDynamicProfile = "No dynamic profile information available.";
+    }
+    
+    return $currentDynamicProfile;
+}
+
 function requireFilesRecursively($dir,$name) {
     $files = scandir($dir);
     foreach ($files as $file) {

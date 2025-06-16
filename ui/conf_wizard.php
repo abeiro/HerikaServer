@@ -427,7 +427,7 @@ foreach ($currentConf as $pname=>$parms) {
         // Add individual dynamic profile update buttons for relevant bio fields
         $dynamicFields = [
             "HERIKA_PERSONALITY" => ["field" => "personality", "label" => "Update Personality"],
-            "HERIKA_REALTIONSHIPS" => ["field" => "relationships", "label" => "Update Relationships"], 
+            "HERIKA_RELATIONSHIPS" => ["field" => "relationships", "label" => "Update Relationships"], 
             "HERIKA_OCCUPATION" => ["field" => "occupation", "label" => "Update Occupation"],
             "HERIKA_SKILLS" => ["field" => "skills", "label" => "Update Skills"],
             "HERIKA_SPEECHSTYLE" => ["field" => "speechstyle", "label" => "Update Speech Style"],

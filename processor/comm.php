@@ -699,7 +699,10 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 		// Database Prompt (Dynamic Profile Head)    
 		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "Character static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $GLOBALS["HERIKA_DYNAMIC"]];
+		// Use centralized function from data_functions.php
+		$currentDynamicProfile = buildDynamicProfileDisplay();
+        
+		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "\nCharacter static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $currentDynamicProfile];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
@@ -1059,9 +1062,13 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         
         // Use the same prompt system as regular diary entries
         // Build standard system prompt like main.php does
+        
+        // Use centralized function from data_functions.php
+        $dynamicBio = buildDynamicBiography();
+        
         $head = [
             ["role" => "system", "content" => strtr(
-                $GLOBALS["PROMPT_HEAD"] . "\n" . $GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n" . $GLOBALS["COMMAND_PROMPT"],
+                $GLOBALS["PROMPT_HEAD"] . "\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBio . "\n" . $GLOBALS["COMMAND_PROMPT"],
                 ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]
             )]
         ];
@@ -1206,7 +1213,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     // Map field names to their corresponding HERIKA variables and prompts
     $fieldMapping = [
         'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
-        'relationships' => ['var' => 'HERIKA_REALTIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
+                    'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
         'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
         'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
         'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
@@ -1335,7 +1342,7 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
         // Map field names to their corresponding HERIKA variables
         $fieldMapping = [
             'personality' => 'HERIKA_PERSONALITY',
-            'relationships' => 'HERIKA_REALTIONSHIPS',
+            'relationships' => 'HERIKA_RELATIONSHIPS',
             'occupation' => 'HERIKA_OCCUPATION',
             'skills' => 'HERIKA_SKILLS',
             'speechstyle' => 'HERIKA_SPEECHSTYLE',

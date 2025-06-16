@@ -111,7 +111,7 @@ if ($method === "POST") {
         }
 
         // Get current relationships value and prompt
-        $currentRelationships = isset($jsonDataInput["HERIKA_REALTIONSHIPS"]) ? $jsonDataInput["HERIKA_REALTIONSHIPS"] : '';
+        $currentRelationships = isset($jsonDataInput["HERIKA_RELATIONSHIPS"]) ? $jsonDataInput["HERIKA_RELATIONSHIPS"] : '';
         $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"]) ? $GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"] : '';
 
         if (empty($updatePrompt)) {
@@ -157,19 +157,19 @@ if ($method === "POST") {
             $content = file_get_contents($profile);
             $escapedValue = var_export($buffer, true);
             
-            // Update or add HERIKA_REALTIONSHIPS variable
-            $pattern = '/\$HERIKA_REALTIONSHIPS\s*=\s*[^;]+;/';
+            // Update or add HERIKA_RELATIONSHIPS variable
+            $pattern = '/\$HERIKA_RELATIONSHIPS\s*=\s*[^;]+;/';
             if (preg_match($pattern, $content)) {
-                $content = preg_replace($pattern, '$HERIKA_REALTIONSHIPS=' . $escapedValue . ';', $content);
+                $content = preg_replace($pattern, '$HERIKA_RELATIONSHIPS=' . $escapedValue . ';', $content);
             } else {
-                $content = str_replace('?>', '$HERIKA_REALTIONSHIPS=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
+                $content = str_replace('?>', '$HERIKA_RELATIONSHIPS=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
             }
             
             if (file_put_contents($profile, $content, LOCK_EX)) {
                 echo json_encode([
                     "status" => "success", 
                     "message" => "Relationships updated successfully!",
-                    "updated_field" => "HERIKA_REALTIONSHIPS",
+                    "updated_field" => "HERIKA_RELATIONSHIPS",
                     "new_value" => $buffer
                 ]);
             } else {

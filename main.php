@@ -1207,15 +1207,18 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
     $GLOBALS["PROMPT_HEAD"].=PHP_EOL.$GLOBALS["PLAYER_BIOS"];
 }
 
+// Use centralized function from data_functions.php
+$dynamicBiography = buildDynamicBiography();
+
 if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . $GLOBALS["OGHMA_HINT"]."\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n" . $GLOBALS["OGHMA_HINT"]."\n". $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
     );
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n". $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
     );
 }

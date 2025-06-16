@@ -123,7 +123,7 @@ if ($method === "POST") {
         // New field-based system - update all selected fields
         $fieldMapping = [
             'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
-            'relationships' => ['var' => 'HERIKA_REALTIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
+            'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
             'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
             'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
             'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
