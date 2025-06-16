@@ -1100,6 +1100,18 @@ if ($checkVersion("rolemaster")<20250528001) {
     Logger::info("Applied patch rolemaster 20250528001");
 }
 
+if ($checkVersion("audit_request")<20250616001) {
+    Logger::debug(" try patch: audit_request 20250616001");
+    $a=$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"url\"  text");
+    $a=$a && $db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"connector\"  text");
+    if ($a) {
+        $updateVersion("audit_request",20250616001);
+        Logger::info("Applied patch audit_request 20250616001");
+    } else {
+        Logger::error("Patch audit_request 20250616001 failed!");
+    }
+}
+
 //----------------------------------------------------
 // database maintenance tools
 // - autovacuum / table

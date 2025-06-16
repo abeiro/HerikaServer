@@ -622,7 +622,9 @@ class openrouterjson
                 'audit_request',
                     array(
                         'request' => json_encode($data),
-                        'result' => $error["message"]
+                        'result' => $error["message"],
+                        'connector'=>$this->name,
+                        'url'=>$this->_url
                     ));
             }
             return null;
@@ -639,7 +641,9 @@ class openrouterjson
                     'audit_request',
                         array(
                             'request' => json_encode($data),
-                            'result' => $error_message
+                            'result' => $error_message,
+                            'connector'=>$this->name,
+                            'url'=>$this->_url
                         ));
                 }
 
@@ -652,7 +656,9 @@ class openrouterjson
                     'audit_request',
                     array(
                         'request' => json_encode($data),
-                        'result' => "Ok"
+                        'result' => "Ok",
+                        'connector'=>$this->name,
+                        'url'=>$this->_url
                     ));
                 }
             }
