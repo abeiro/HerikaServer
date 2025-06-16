@@ -64,7 +64,7 @@ $EMOTEMOODS="sassy,"
 $REMOVE_ASTERISKS_FROM_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=false;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
-$DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA COMMENTARY I.E. NPC NAME. NO META-DATA, or DISCLAIMERS OF TASK! I.E. \"UPDATING NPC PROFILE\". Use concise, fragmented prose for the following output.) "
+$DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
     . "Last in-game date/time found: [date or \"No date\"] "
     . "1. RECENT HIGHLIGHTS (3–5 bullet points) "
     . "   - Write one sentence per bullet with objective facts (locations, quest progress, important decisions). Re-list older relevant events DO NOT REMOVE ENTRIES that are still important. "
@@ -72,6 +72,50 @@ $DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA
     . "   - Describe the NPC's evolving feelings or stance toward the dragonborn, key individuals or groups. Always re-list unchanged but relevant relationships. "
     . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2–3 bullet points) "
     . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
+
+$DYNAMIC_PROFILE_FIELDS = ["personality", "relationships"];
+
+$DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, update the character's personality traits. Focus on: "
+    . "- Behavioral changes due to recent experiences "
+    . "- Emotional growth or regression "
+    . "- New character traits that have emerged "
+    . "- Changes in confidence, mood, or outlook "
+    . "Keep existing traits that remain relevant. Use 2-3 sentences maximum.";
+
+$DYNAMIC_PROMPT_RELATIONSHIPS = "Based on recent interactions, update the character's relationships. Format as bulleted list with name/faction first: "
+    . "- Focus on changed relationships only "
+    . "- Include new relationships formed "
+    . "- Update existing relationships that have evolved "
+    . "- Remove relationships that are no longer relevant "
+    . "Format: * Name/Faction - Description of current relationship status";
+
+$DYNAMIC_PROMPT_OCCUPATION = "Based on story progression and events, update the character's occupation and role. Focus on: "
+    . "- Job changes or promotions "
+    . "- New responsibilities or duties "
+    . "- Changes in social status or position "
+    . "- Professional relationships and affiliations "
+    . "Keep current if no significant changes occurred. Use 2-3 sentences maximum.";
+
+$DYNAMIC_PROMPT_SKILLS = "Based on experiences and training, update the character's skills and abilities. Format as bulleted list: "
+    . "- New skills learned or abilities gained "
+    . "- Existing skills that have improved "
+    . "- Skills that may have deteriorated "
+    . "- Combat experience or magical knowledge gained "
+    . "Only include changes, keep existing skills that remain relevant.";
+
+$DYNAMIC_PROMPT_SPEECHSTYLE = "Based on recent interactions, update how the character speaks and communicates. Focus on: "
+    . "- Changes in vocabulary or language patterns "
+    . "- New mannerisms or speech habits "
+    . "- Accent or dialect changes "
+    . "- Confidence level in speech "
+    . "Keep existing style elements that remain consistent. Maximum 2 sentences.";
+
+$DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update the character's goals and aspirations. Format as bulleted list: "
+    . "- Completed goals that should be removed "
+    . "- New aspirations that have emerged "
+    . "- Modified existing goals due to circumstances "
+    . "- Long-term objectives that have evolved "
+    . "Format: * Goal description as actionable aspiration";
 $DIARY_PROMPT = "Please write a short summary of {\$GLOBALS[\"PLAYER_NAME\"]} and {\$GLOBALS[\"HERIKA_NAME\"]}s last dialogues and events written above into {\$GLOBALS[\"HERIKA_NAME\"]}s diary . WRITE AS IF YOU WERE {\$GLOBALS[\"HERIKA_NAME\"]}. Start the diary entry with the current date and time.";
 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).

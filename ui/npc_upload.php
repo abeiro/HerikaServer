@@ -726,9 +726,8 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         echo '<table>';
         echo '<tr>';
         echo '  <th>Name</th>';
-        echo '  <th>Static Bio</th>';
-        echo '  <th>Dynamic Bio</th>';
-        echo '  <th>Extended Profile</th>';
+        echo '  <th>Summary Bio</th>';
+        echo '  <th>Extended Profiles</th>';
         echo '  <th>Voice Overrides</th>';
         echo '  <th>Actions</th>';
         echo '</tr>';
@@ -738,7 +737,6 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             echo '<tr>';
             echo '  <td>' . htmlspecialchars($row['npc_name'] ?? '') . '</td>';
             echo '  <td style="max-width: 250px; word-wrap: break-word;">' . nl2br(htmlspecialchars(substr($row['npc_pers'] ?? '', 0, 200))) . (strlen($row['npc_pers'] ?? '') > 200 ? '...' : '') . '</td>';
-            echo '  <td style="max-width: 200px; word-wrap: break-word;">' . ($row['npc_dynamic'] !== null ? nl2br(htmlspecialchars(substr($row['npc_dynamic'], 0, 150))) . (strlen($row['npc_dynamic']) > 150 ? '...' : '') : '') . '</td>';
             
             // Extended Profile summary
             $extendedFields = [
@@ -1002,7 +1000,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 <div id="extendedProfileModal" class="modal-backdrop" style="display: none;">
     <div class="modal-container">
         <div class="modal-header">
-            <h2 class="modal-title">Extended Profile: <span id="extended-profile-npc-name"></span></h2>
+            <h2 class="modal-title">Extended Profiles: <span id="extended-profile-npc-name"></span></h2>
         </div>
         <div class="modal-body">
             <div class="extended-profile-grid" style="display: grid; gap: 20px;">

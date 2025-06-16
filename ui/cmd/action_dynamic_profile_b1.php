@@ -91,65 +91,142 @@ if ($method === "POST") {
         $partyConfA = json_decode($partyConf, true);
         Logger::debug($partyConf);
 
-		// Use the global DYNAMIC_PROMPT
-        $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
-        // Database Prompt (Dynamic Profile)
-		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
-		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $jsonDataInput["HERIKA_NAME"] . "Character static biography:\n" . $jsonDataInput["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $jsonDataInput["HERIKA_DYNAMIC"]];
-		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
-		$contextData       = array_merge($head, $prompt);
-		$connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-
-		// Get max tokens based on which connector is being used for diary
-		$maxTokens = 1000; // Default fallback
-		switch($GLOBALS["CONNECTORS_DIARY"]) {
-			case "openrouter":
-				$maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
-					$GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"] : $maxTokens;
-				break;
-			case "openai":
-				$maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
-					$GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"] : $maxTokens;
-				break;
-			case "google_openaijson":
-				$maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
-					$GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"] : $maxTokens;
-				break;
-			case "koboldcpp":
-				$maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
-					$GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"] : $maxTokens;
-				break;
-		}
-
-		$connectionHandler->open($contextData, ["max_tokens"=>$maxTokens]);
-
-		$buffer      = "";
-		$totalBuffer = "";
-		$breakFlag   = false;
-        while (true) {
-            if ($breakFlag) {
+		// Check if we're using the new field-based system or legacy HERIKA_DYNAMIC
+        // First check if it's in the JSON input, otherwise get it from the loaded profile
+        $fieldsToUpdate = [];
+        
+        // Debug: Log all available variables
+        Logger::debug("Manual dynamic profile update - Debug info:");
+        Logger::debug("jsonDataInput keys: " . json_encode(array_keys($jsonDataInput)));
+        Logger::debug("DYNAMIC_PROFILE_FIELDS isset: " . (isset($DYNAMIC_PROFILE_FIELDS) ? "yes" : "no"));
+        Logger::debug("GLOBALS DYNAMIC_PROFILE_FIELDS isset: " . (isset($GLOBALS["DYNAMIC_PROFILE_FIELDS"]) ? "yes" : "no"));
+        
+        if (isset($jsonDataInput["DYNAMIC_PROFILE_FIELDS"]) && is_array($jsonDataInput["DYNAMIC_PROFILE_FIELDS"])) {
+            $fieldsToUpdate = $jsonDataInput["DYNAMIC_PROFILE_FIELDS"];
+            Logger::debug("Using fieldsToUpdate from jsonDataInput: " . json_encode($fieldsToUpdate));
+        } elseif (isset($DYNAMIC_PROFILE_FIELDS) && is_array($DYNAMIC_PROFILE_FIELDS)) {
+            $fieldsToUpdate = $DYNAMIC_PROFILE_FIELDS;
+            Logger::debug("Using fieldsToUpdate from local DYNAMIC_PROFILE_FIELDS: " . json_encode($fieldsToUpdate));
+        } elseif (isset($GLOBALS["DYNAMIC_PROFILE_FIELDS"]) && is_array($GLOBALS["DYNAMIC_PROFILE_FIELDS"])) {
+            $fieldsToUpdate = $GLOBALS["DYNAMIC_PROFILE_FIELDS"];
+            Logger::debug("Using fieldsToUpdate from GLOBALS: " . json_encode($fieldsToUpdate));
+        } else {
+            // Force use of default fields since user has configured the new system
+            $fieldsToUpdate = ["personality", "relationships"];
+            Logger::debug("No DYNAMIC_PROFILE_FIELDS found, using default: " . json_encode($fieldsToUpdate));
+        }
+        
+        // Always use new field-based system (no legacy fallback)
+        $useLegacyMode = false;
+        Logger::debug("Using new field-based system with fields: " . json_encode($fieldsToUpdate));
+        
+        // New field-based system - update all selected fields
+        $fieldMapping = [
+            'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
+            'relationships' => ['var' => 'HERIKA_REALTIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
+            'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
+            'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
+            'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
+            'goals' => ['var' => 'HERIKA_GOALS', 'prompt' => 'DYNAMIC_PROMPT_GOALS']
+        ];
+        
+        $updatedFields = [];
+        $responseParsed = [];
+        $successCount = 0;
+        
+        // Get max tokens for field updates (smaller than legacy)
+        $maxTokens = 800;
+        switch($GLOBALS["CONNECTORS_DIARY"]) {
+            case "openrouter":
+                $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
+                    min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
-            }
-
-            if ($connectionHandler->isDone()) {
-                $breakFlag = true;
-            }
-
-            $buffer .= $connectionHandler->process();
-            $totalBuffer .= $buffer;
+            case "openai":
+                $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
+                    min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                break;
+            case "google_openaijson":
+                $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
+                    min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                break;
+            case "koboldcpp":
+                $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
+                    min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                break;
         }
-        $connectionHandler->close();
+        
+        // Process each selected field
+        foreach ($fieldsToUpdate as $field) {
+            if (!isset($fieldMapping[$field])) {
+                continue;
+            }
+            
+            $varName = $fieldMapping[$field]['var'];
+            $promptName = $fieldMapping[$field]['prompt'];
+            $currentValue = isset($jsonDataInput[$varName]) ? $jsonDataInput[$varName] : '';
+            $updatePrompt = isset($GLOBALS[$promptName]) ? $GLOBALS[$promptName] : '';
+            
+            if (empty($updatePrompt)) {
+                continue; // Skip if no prompt configured
+            }
+            
+            // Build prompt for this specific field
+            $head = [
+                ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and update the specific character profile field based on the information provided."]
+            ];
+            
+            $prompt = [
+                ["role" => "user", "content" => "* Dialogue history:\n" . $historyData],
+                ["role" => "user", "content" => "Character name: " . $jsonDataInput["HERIKA_NAME"] . "\nCurrent " . ucfirst($field) . ":\n" . $currentValue],
+                ["role" => "user", "content" => $updatePrompt]
+            ];
+            
+            $contextData = array_merge($head, $prompt);
+            
+            // Process this field
+            $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
+            $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
+            
+            $buffer = "";
+            $breakFlag = false;
+            while (true) {
+                if ($breakFlag) {
+                    break;
+                }
 
-        $actions = $connectionHandler->processActions();
+                if ($connectionHandler->isDone()) {
+                    $breakFlag = true;
+                }
 
-        $responseParsed["HERIKA_DYNAMIC"] = $buffer;
-
-        // Custom function to process LLM output
-        if (array_key_exists("CustomUpdateProfileFunction", $GLOBALS) && is_callable($GLOBALS["CustomUpdateProfileFunction"])) {
-            $responseParsed["HERIKA_DYNAMIC"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
+                $buffer .= $connectionHandler->process();
+            }
+            $connectionHandler->close();
+            
+            $buffer = trim($buffer);
+            if (!empty($buffer)) {
+                $updatedFields[$field] = $buffer;
+                $responseParsed[$varName] = $buffer;
+                $successCount++;
+            }
         }
-
+        
+        // Save all updated fields to the profile file
+        if (!empty($updatedFields)) {
+            require_once($enginePath . "processor" . DIRECTORY_SEPARATOR . "comm.php");
+            
+            if (saveDynamicProfileUpdates($jsonDataInput["HERIKA_NAME"], $updatedFields, $db)) {
+                $responseParsed["success"] = true;
+                $responseParsed["updated_fields"] = array_keys($updatedFields);
+                $responseParsed["message"] = "Successfully updated " . $successCount . " field(s): " . implode(', ', array_keys($updatedFields));
+            } else {
+                $responseParsed["success"] = false;
+                $responseParsed["message"] = "Failed to save profile updates";
+            }
+        } else {
+            $responseParsed["success"] = false;
+            $responseParsed["message"] = "No fields were updated";
+        }
+        
         echo json_encode($responseParsed);
     }
 }
