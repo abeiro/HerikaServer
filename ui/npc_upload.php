@@ -833,13 +833,16 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>NPC names cannot be changed after creation. If you need to change a name, create a new entry.</small>
                 <input type="text" name="npc_name" id="edit_npc_name" readonly style="background-color: #2a2a2a; cursor: not-allowed;" required>
 
-                <label for="edit_npc_pers">NPC Static Bio:</label>
+                <label for="edit_npc_pers">NPC Summary Bio:</label>
                 <small>Static traits and background of the NPC.</small>
                 <textarea name="npc_pers" id="edit_npc_pers" rows="8" required></textarea>
 
-                <label for="edit_npc_dynamic">NPC Dynamic Bio:</label>
-                <small>Optional: Dynamic personality traits.</small>
-                <textarea name="npc_dynamic" id="edit_npc_dynamic" rows="8"></textarea>
+                <!-- Hidden: NPC Dynamic Bio field -->
+                <div style="display: none;">
+                    <label for="edit_npc_dynamic">NPC Dynamic Bio:</label>
+                    <small>Optional: Dynamic personality traits.</small>
+                    <textarea name="npc_dynamic" id="edit_npc_dynamic" rows="8"></textarea>
+                </div>
 
                 <label for="edit_npc_misc">NPC Misc:</label>
                 <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener">Read more here!</a></small>
@@ -921,13 +924,16 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>Make sure name is lowercase with underscores instead of spaces.</small>
                 <input type="text" name="npc_name" id="new_npc_name" required>
 
-                <label for="new_npc_pers">NPC Static Bio:</label>
+                <label for="new_npc_pers">NPC Summary Bio:</label>
                 <small>Static tratits and background of the NPC.</small> 
                 <textarea name="npc_pers" id="new_npc_pers" rows="8" required></textarea>
 
-                <label for="new_npc_dynamic">NPC Dynamic Bio:</label>
-                <small>Optional: Dynamic personality traits.</small>
-                <textarea name="npc_dynamic" id="new_npc_dynamic" rows="8"></textarea>
+                <!-- Hidden: NPC Dynamic Bio field -->
+                <div style="display: none;">
+                    <label for="new_npc_dynamic">NPC Dynamic Bio:</label>
+                    <small>Optional: Dynamic personality traits.</small>
+                    <textarea name="npc_dynamic" id="new_npc_dynamic" rows="8"></textarea>
+                </div>
 
                 <label for="new_npc_misc">NPC Misc:</label>
                 <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here!</a></small>
