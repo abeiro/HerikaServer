@@ -1155,8 +1155,6 @@ if ($checkVersion("npc_templates")<20250302002) {
     ADD COLUMN IF NOT EXISTS npc_skills TEXT;
     ALTER TABLE npc_templates 
     ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_quest TEXT;
     ";
     $db->execQuery($query);
     $updateVersion("npc_templates",20250302002);
@@ -1181,8 +1179,6 @@ if ($checkVersion("npc_templates_custom")<20250302002) {
     ADD COLUMN IF NOT EXISTS npc_skills TEXT;
     ALTER TABLE npc_templates_custom 
     ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
-    ALTER TABLE npc_templates_custom 
-    ADD COLUMN IF NOT EXISTS npc_quest TEXT;
     ";
     $db->execQuery($query);
     $updateVersion("npc_templates_custom",20250302002);
@@ -1207,8 +1203,6 @@ if ($checkVersion("npc_templates_trl")<20250302002) {
     ADD COLUMN IF NOT EXISTS npc_skills TEXT;
     ALTER TABLE npc_templates_trl 
     ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
-    ALTER TABLE npc_templates_trl 
-    ADD COLUMN IF NOT EXISTS npc_quest TEXT;
     ";
     $db->execQuery($query);
     $updateVersion("npc_templates_trl",20250302002);
@@ -1234,8 +1228,7 @@ if ($checkVersion("combined_npc_templates")<20250302002) {
         c.npc_relationships,
         c.npc_occupation,
         c.npc_skills,
-        c.npc_speechstyle,
-        c.npc_quest
+        c.npc_speechstyle
        FROM public.npc_templates_custom c
     UNION ALL
      SELECT t.npc_name,
@@ -1251,8 +1244,7 @@ if ($checkVersion("combined_npc_templates")<20250302002) {
         t.npc_relationships,
         t.npc_occupation,
         t.npc_skills,
-        t.npc_speechstyle,
-        t.npc_quest
+        t.npc_speechstyle
        FROM (public.npc_templates t
          LEFT JOIN public.npc_templates_custom c ON (((t.npc_name)::text = (c.npc_name)::text)))
       WHERE (c.npc_name IS NULL);";
@@ -1323,7 +1315,6 @@ if ($checkVersion("combined_npc_templates")<20250302003) {
         c.npc_occupation,
         c.npc_skills,
         c.npc_speechstyle,
-        c.npc_quest,
         c.npc_goals
        FROM public.npc_templates_custom c
     UNION ALL
@@ -1341,7 +1332,6 @@ if ($checkVersion("combined_npc_templates")<20250302003) {
         t.npc_occupation,
         t.npc_skills,
         t.npc_speechstyle,
-        t.npc_quest,
         t.npc_goals
        FROM (public.npc_templates t
          LEFT JOIN public.npc_templates_custom c ON (((t.npc_name)::text = (c.npc_name)::text)))

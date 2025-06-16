@@ -3128,7 +3128,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
             // Query for new HERIKA fields
-            $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_quest FROM combined_npc_templates where npc_name='$codename'");
+            $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
         } else {
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
@@ -3138,10 +3138,10 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                 $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
                 $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
                 // Query for new HERIKA fields
-                $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_quest FROM combined_npc_templates where npc_name='$codename'");
+                $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
             } else {
                 // For translated templates, set empty new fields for now
-                $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '', 'npc_quest' => '']];
+                $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
             }
         }
                 
@@ -3186,11 +3186,10 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                     'HERIKA_PERSONALITY' => $npcNewFields[0]["npc_personality"] ?? '',
                     'HERIKA_APPEARANCE' => $npcNewFields[0]["npc_appearance"] ?? '',
                     'HERIKA_RELATIONSHIPS' => $npcNewFields[0]["npc_relationships"] ?? '',
-                    'HERIKA_OCCUPATION' => $npcNewFields[0]["npc_occupation"] ?? '',
-                    'HERIKA_SKILLS' => $npcNewFields[0]["npc_skills"] ?? '',
-                    'HERIKA_SPEECHSTYLE' => $npcNewFields[0]["npc_speechstyle"] ?? '',
-                    'HERIKA_GOALS' => $npcNewFields[0]["npc_goals"] ?? '',
-                    'HERIKA_QUEST' => $npcNewFields[0]["npc_quest"] ?? ''
+                                'HERIKA_OCCUPATION' => $npcNewFields[0]["npc_occupation"] ?? '',
+            'HERIKA_SKILLS' => $npcNewFields[0]["npc_skills"] ?? '',
+            'HERIKA_SPEECHSTYLE' => $npcNewFields[0]["npc_speechstyle"] ?? '',
+            'HERIKA_GOALS' => $npcNewFields[0]["npc_goals"] ?? ''
                 ];
                 
                 foreach ($newFields as $fieldName => $fieldValue) {
@@ -3211,7 +3210,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                                         WHERE npc_name='".$db->escape($bracketMatch)."'");
 
             // Query for new HERIKA fields for bracket match
-            $npcNewFields2 = $db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_quest FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
+            $npcNewFields2 = $db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
 
             if (!empty($npcTemlate2[0])) {
                 // Found a row by bracket match
@@ -3230,8 +3229,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                         'HERIKA_OCCUPATION' => $npcNewFields2[0]["npc_occupation"] ?? '',
                         'HERIKA_SKILLS' => $npcNewFields2[0]["npc_skills"] ?? '',
                         'HERIKA_SPEECHSTYLE' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
-                        'HERIKA_GOALS' => $npcNewFields2[0]["npc_goals"] ?? '',
-                        'HERIKA_QUEST' => $npcNewFields2[0]["npc_quest"] ?? ''
+                        'HERIKA_GOALS' => $npcNewFields2[0]["npc_goals"] ?? ''
                     ];
                     
                     foreach ($newFields as $fieldName => $fieldValue) {
@@ -3354,8 +3352,7 @@ function buildDynamicBiography() {
         'HERIKA_OCCUPATION' => 'Occupation',
         'HERIKA_SKILLS' => 'Skills',
         'HERIKA_SPEECHSTYLE' => 'Speech Style',
-        'HERIKA_GOALS' => 'Goals',
-        'HERIKA_QUEST' => 'Quest Information'
+        'HERIKA_GOALS' => 'Goals'
     ];
     
     foreach ($herikaFields as $fieldName => $label) {
@@ -3386,8 +3383,7 @@ function buildDynamicProfileDisplay() {
         'HERIKA_OCCUPATION' => 'Occupation',
         'HERIKA_SKILLS' => 'Skills',
         'HERIKA_SPEECHSTYLE' => 'Speech Style',
-        'HERIKA_GOALS' => 'Goals',
-        'HERIKA_QUEST' => 'Quest Information'
+        'HERIKA_GOALS' => 'Goals'
     ];
     
     foreach ($herikaFields as $fieldName => $label) {
