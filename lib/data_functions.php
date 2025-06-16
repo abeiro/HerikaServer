@@ -3127,6 +3127,8 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
+            // Query for new HERIKA fields
+            $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_quest FROM combined_npc_templates where npc_name='$codename'");
         } else {
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
@@ -3135,6 +3137,11 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                 $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
                 $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
                 $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
+                // Query for new HERIKA fields
+                $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_quest FROM combined_npc_templates where npc_name='$codename'");
+            } else {
+                // For translated templates, set empty new fields for now
+                $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '', 'npc_quest' => '']];
             }
         }
                 
@@ -3171,6 +3178,27 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($npcdynamic[0]["npc_dynamic"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\'' . addslashes(implode(', ', array_unique(array_merge(array_filter(array_map('trim', explode(',', $npcknowledge[0]["npc_misc"] ?? ''))), [$codename])))) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
+            
+            // Add new HERIKA fields if available
+            if (isset($npcNewFields[0]) && is_array($npcNewFields[0])) {
+                $newFields = [
+                    'HERIKA_BACKGROUND' => $npcNewFields[0]["npc_background"] ?? '',
+                    'HERIKA_PERSONALITY' => $npcNewFields[0]["npc_personality"] ?? '',
+                    'HERIKA_APPEARANCE' => $npcNewFields[0]["npc_appearance"] ?? '',
+                    'HERIKA_RELATIONSHIPS' => $npcNewFields[0]["npc_relationships"] ?? '',
+                    'HERIKA_OCCUPATION' => $npcNewFields[0]["npc_occupation"] ?? '',
+                    'HERIKA_SKILLS' => $npcNewFields[0]["npc_skills"] ?? '',
+                    'HERIKA_SPEECHSTYLE' => $npcNewFields[0]["npc_speechstyle"] ?? '',
+                    'HERIKA_GOALS' => $npcNewFields[0]["npc_goals"] ?? '',
+                    'HERIKA_QUEST' => $npcNewFields[0]["npc_quest"] ?? ''
+                ];
+                
+                foreach ($newFields as $fieldName => $fieldValue) {
+                    if (!empty(trim($fieldValue))) {
+                        file_put_contents($newFile, '$'.$fieldName.'=\''.addslashes(trim($fieldValue)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                    }
+                }
+            }
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
             // 4. Query #2: Try bracket-stripped match only if Query #1 was empty
@@ -3182,12 +3210,36 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                                         FROM combined_npc_templates
                                         WHERE npc_name='".$db->escape($bracketMatch)."'");
 
+            // Query for new HERIKA fields for bracket match
+            $npcNewFields2 = $db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_quest FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
+
             if (!empty($npcTemlate2[0])) {
                 // Found a row by bracket match
                 file_put_contents($newFile,'$HERIKA_PERS=\''.addslashes(trim($npcTemlate2[0]["npc_pers"])).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
                 $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
                 file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
                 file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes(trim($npcknowledge2[0]["npc_misc"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);  
+                
+                // Add new HERIKA fields if available for bracket match
+                if (isset($npcNewFields2[0]) && is_array($npcNewFields2[0])) {
+                    $newFields = [
+                        'HERIKA_BACKGROUND' => $npcNewFields2[0]["npc_background"] ?? '',
+                        'HERIKA_PERSONALITY' => $npcNewFields2[0]["npc_personality"] ?? '',
+                        'HERIKA_APPEARANCE' => $npcNewFields2[0]["npc_appearance"] ?? '',
+                        'HERIKA_RELATIONSHIPS' => $npcNewFields2[0]["npc_relationships"] ?? '',
+                        'HERIKA_OCCUPATION' => $npcNewFields2[0]["npc_occupation"] ?? '',
+                        'HERIKA_SKILLS' => $npcNewFields2[0]["npc_skills"] ?? '',
+                        'HERIKA_SPEECHSTYLE' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
+                        'HERIKA_GOALS' => $npcNewFields2[0]["npc_goals"] ?? '',
+                        'HERIKA_QUEST' => $npcNewFields2[0]["npc_quest"] ?? ''
+                    ];
+                    
+                    foreach ($newFields as $fieldName => $fieldValue) {
+                        if (!empty(trim($fieldValue))) {
+                            file_put_contents($newFile, '$'.$fieldName.'=\''.addslashes(trim($fieldValue)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                        }
+                    }
+                }
             } else {
                 // Fallback if neither query found anything
                 file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
