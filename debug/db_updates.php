@@ -440,6 +440,22 @@ if ($checkVersion("npc_templates")<20250129001) {
     ADD COLUMN IF NOT EXISTS xtts_voiceid TEXT;
     ALTER TABLE npc_templates 
     ADD COLUMN IF NOT EXISTS xvasynth_voiceid TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_background TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_personality TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_appearance TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_relationships TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_occupation TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_skills TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_goals TEXT;
     ";
     $db->execQuery($query);
     $updateVersion("npc_templates",20250129001);
@@ -461,6 +477,22 @@ if ($checkVersion("npc_templates_custom")<20250129001) {
     ADD COLUMN IF NOT EXISTS xtts_voiceid TEXT;
     ALTER TABLE npc_templates_custom 
     ADD COLUMN IF NOT EXISTS xvasynth_voiceid TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_background TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_personality TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_appearance TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_relationships TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_occupation TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_skills TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
+    ALTER TABLE npc_templates_custom 
+    ADD COLUMN IF NOT EXISTS npc_goals TEXT;
     ";
     $db->execQuery($query);
     $updateVersion("npc_templates_custom",20250129001);
@@ -1254,51 +1286,7 @@ if ($checkVersion("combined_npc_templates")<20250302002) {
     Logger::info("Applied patch combined_npc_templates view update 20250302002");
 }
 
-//----------------------------------------------------
-// Add extended biography fields to npc_templates table
-// Version 20250302002
-//----------------------------------------------------
-
-if ($checkVersion("npc_templates")<20250302002) {
-    Logger::debug("try patch: npc_templates extended profile fields 20250302002");
-    
-    $query = "
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_background TEXT;
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_personality TEXT;
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_appearance TEXT;
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_relationships TEXT;
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_occupation TEXT;
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_skills TEXT;
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_speechstyle TEXT;
-    ";
-    $db->execQuery($query);
-    $updateVersion("npc_templates",20250302002);
-    Logger::info("Applied patch npc_templates extended profile fields 20250302002");
-}
-
-//----------------------------------------------------
-// Add npc_goals field to npc_templates tables
-// Version 20250302003
-//----------------------------------------------------
-
-if ($checkVersion("npc_templates")<20250302003) {
-    Logger::debug("try patch: npc_templates add npc_goals field 20250302003");
-    
-    $query = "
-    ALTER TABLE npc_templates 
-    ADD COLUMN IF NOT EXISTS npc_goals TEXT;
-    ";
-    $db->execQuery($query);
-    $updateVersion("npc_templates",20250302003);
-    Logger::info("Applied patch npc_templates add npc_goals field 20250302003");
-}
+// Extended biography fields are now handled in the base table creation (20250129001)
 
 if ($checkVersion("npc_templates_custom")<20250302003) {
     Logger::debug("try patch: npc_templates_custom add npc_goals field 20250302003");
@@ -1310,6 +1298,18 @@ if ($checkVersion("npc_templates_custom")<20250302003) {
     $db->execQuery($query);
     $updateVersion("npc_templates_custom",20250302003);
     Logger::info("Applied patch npc_templates_custom add npc_goals field 20250302003");
+}
+
+if ($checkVersion("npc_templates")<20250302003) {
+    Logger::debug("try patch: npc_templates add npc_goals field 20250302003");
+    
+    $query = "
+    ALTER TABLE npc_templates 
+    ADD COLUMN IF NOT EXISTS npc_goals TEXT;
+    ";
+    $db->execQuery($query);
+    $updateVersion("npc_templates",20250302003);
+    Logger::info("Applied patch npc_templates add npc_goals field 20250302003");
 }
 
 if ($checkVersion("npc_templates_trl")<20250302003) {
