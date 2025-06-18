@@ -708,11 +708,11 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         echo '<div id="npc-table-container" class="table-container">';
         echo '<table>';
         echo '<tr>';
-        echo '  <th>Name</th>';
-        echo '  <th>Summary Bio</th>';
-        echo '  <th>Extended Profiles</th>';
-        echo '  <th>Voice Overrides</th>';
-        echo '  <th>Actions</th>';
+        echo '  <th style="width: 15%;">Name</th>';
+        echo '  <th style="width: 35%;">Summary Bio</th>';
+        echo '  <th style="width: 20%;">Extended Profiles</th>';
+        echo '  <th style="width: 20%;">Voice Overrides</th>';
+        echo '  <th style="width: 10%;">Actions</th>';
         echo '</tr>';
 
         $rowCountCombined = 0;
@@ -732,11 +732,15 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 'Speech Style' => $row['npc_speechstyle'] ?? '',
                 'Goals' => $row['npc_goals'] ?? ''
             ];
-            $extendedCount = count(array_filter($extendedFields));
+            // Count fields that have actual content (not just empty strings or whitespace)
+            $extendedCount = count(array_filter($extendedFields, function($value) {
+                return !empty(trim($value));
+            }));
+            $totalExtendedFields = count($extendedFields);
             echo '  <td style="cursor: pointer; color: #4a9eff;" onclick="showExtendedProfile(\'' . 
                 htmlspecialchars($row['npc_name'], ENT_QUOTES) . '\', ' . 
                 htmlspecialchars(json_encode($extendedFields), ENT_QUOTES) . ')">';
-            echo '<span style="color: #888; font-size: 0.9em;">' . $extendedCount . ' of 4 fields completed</span>';
+            echo '<span style="color: #888; font-size: 0.9em;">' . $extendedCount . ' of ' . $totalExtendedFields . ' fields completed</span>';
             echo '<br><small style="color: #4a9eff; font-size: 0.8em;">Click to view details</small>';
             echo '</td>';
             
@@ -815,7 +819,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <input type="text" name="npc_name" id="edit_npc_name" readonly style="background-color: #2a2a2a; cursor: not-allowed;" required>
 
                 <label for="edit_npc_pers">NPC Summary Bio:</label>
-                <small>Static traits and background of the NPC.</small>
+                <small>Basic core NPC Summary Bio.</small>
                 <textarea name="npc_pers" id="edit_npc_pers" rows="8" required></textarea>
 
                 <!-- Hidden: NPC Dynamic Bio field -->
@@ -841,7 +845,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <textarea name="npc_personality" id="edit_npc_personality" rows="4"></textarea>
 
                 <label for="edit_npc_appearance">Appearance:</label>
-                <small>Detailed description of physical features, clothing, and distinguishing characteristics.</small>
+                <small>Detailed description of physical features and distinguishing characteristics.</small>
                 <textarea name="npc_appearance" id="edit_npc_appearance" rows="4"></textarea>
 
                 <label for="edit_npc_relationships">Relationships:</label>
@@ -902,7 +906,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <input type="text" name="npc_name" id="new_npc_name" required>
 
                 <label for="new_npc_pers">NPC Summary Bio:</label>
-                <small>Static tratits and background of the NPC.</small> 
+                <small>Basic core NPC Summary Bio.</small> 
                 <textarea name="npc_pers" id="new_npc_pers" rows="8" required></textarea>
 
                 <!-- Hidden: NPC Dynamic Bio field -->
@@ -928,13 +932,13 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <textarea name="npc_personality" id="new_npc_personality" rows="4"></textarea>
 
                 <label for="new_npc_appearance">Appearance:</label>
-                <small>Detailed description of physical features, clothing, and distinguishing characteristics.</small>
+                <small>Detailed description of physical features and distinguishing characteristics.</small>
                 <textarea name="npc_appearance" id="new_npc_appearance" rows="4"></textarea>
 
                 <label for="new_npc_relationships">Relationships:</label>
                 <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
                 <textarea name="npc_relationships" id="new_npc_relationships" rows="4"></textarea>
-
+    
                 <label for="new_npc_occupation">Occupation & Role:</label>
                 <small>Current job, profession, duties, and position in society or organizations.</small>
                 <textarea name="npc_occupation" id="new_npc_occupation" rows="3"></textarea>
