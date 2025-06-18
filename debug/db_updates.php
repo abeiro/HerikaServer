@@ -1343,7 +1343,26 @@ if ($checkVersion("combined_npc_templates")<20250302003) {
 }
 
 //----------------------------------------------------
+// Update npc_templates table with new data
+// Version 20250618001- New Profile Fields
+//----------------------------------------------------
 
+if ($checkVersion("npc_templates")<20250618001) {
+    Logger::debug("try patch: npc_templates data update 20250618001");
+    
+    // Clear existing data
+    $query="TRUNCATE TABLE public.npc_templates";
+    $db->execQuery($query);
+    
+    // Load new data from SQL file
+    $db->execQuery(file_get_contents(__DIR__."/../data/npc_template_2025180625.sql"));
+    
+    $updateVersion("npc_templates",20250618001);
+    Logger::info("Applied patch npc_templates data update 20250618001");
+    echo '<script>alert("The New Profile fields patch has been applied. Please check configuration wizard for new changes.")</script>';
+}
+
+//----------------------------------------------------
 
 Logger::info(__FILE__." update file processed");
 
