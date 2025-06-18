@@ -178,6 +178,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         $npc_name = '';
                         if (isset($headerMap['npc_name']) && isset($data[$headerMap['npc_name']])) {
                             $npc_name = strtolower(trim($data[$headerMap['npc_name']]));
+                            // Truncate npc_name to 128 characters to fit database constraint
+                            if (strlen($npc_name) > 128) {
+                                $npc_name = substr($npc_name, 0, 128);
+                            }
                         }
 
                         $npc_pers = '';
@@ -265,6 +269,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $temp = trim($data[$headerMap['npc_goals']]);
                             $npc_goals = ($temp !== '') ? $temp : null;
                         }
+
+                        // Handle npc_quest field if present (we ignore it but need to account for column alignment)
+                        // This field was removed from the system but may still exist in CSV files
 
                         // Convert to UTF-8 if not already
                         if ($encoding !== 'UTF-8') {
@@ -363,7 +370,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         if ($result) {
                             $rowCount++;
                         } else {
-                            $message .= "<p>Error processing row (npc_name: '$npc_name'): " . pg_last_error($conn) . "</p>";
+                            $error_msg = pg_last_error($conn);
+                            $message .= "<p>Error processing row (npc_name: '$npc_name'): $error_msg</p>";
+                            
+                            // Add debugging info for character length issues
+                            if (strpos($error_msg, 'value too long') !== false) {
+                                $message .= "<p style='color: #ff6464;'>Debug info for '$npc_name':</p>";
+                                $message .= "<p>- npc_name length: " . strlen($npc_name) . "</p>";
+                                $message .= "<p>- npc_pers length: " . strlen($npc_pers) . "</p>";
+                                if ($npc_dynamic) $message .= "<p>- npc_dynamic length: " . strlen($npc_dynamic) . "</p>";
+                                $message .= "<p>- npc_misc length: " . strlen($npc_misc) . "</p>";
+                                if ($melotts_voiceid) $message .= "<p>- melotts_voiceid length: " . strlen($melotts_voiceid) . "</p>";
+                                if ($xtts_voiceid) $message .= "<p>- xtts_voiceid length: " . strlen($xtts_voiceid) . "</p>";
+                                if ($xvasynth_voiceid) $message .= "<p>- xvasynth_voiceid length: " . strlen($xvasynth_voiceid) . "</p>";
+                            }
                         }
                     } // end while
 
