@@ -113,11 +113,11 @@ $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 
 
-// Lock to avoid TTS hangs
-/*if (($gameRequest[0]!="updateprofile")&&($gameRequest[0]!="diary")&&($gameRequest[0]!="_quest")&&($gameRequest[0]!="setConf")&&($gameRequest[0]!="request")
-/*    &&($gameRequest[0]!="addnpc")&&($gameRequest[0]!="_speech")) {
-*/
+// Database Connection
 $db = new sql();
+
+// Check modes should be here
+
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","init"])) {

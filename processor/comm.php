@@ -165,6 +165,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     foreach ($responseDataMl as $responseData) {
         echo "{$responseData["actor"]}|{$responseData["action"]}|{$responseData["text"]}\r\n";
     }
+    
     if (time()%5==0)
         logEvent($gameRequest);
     

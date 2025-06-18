@@ -293,7 +293,12 @@ function getEndOfSentencePunctuation() {
 
 function unmoodSentence($sentence) {
     global $forceMood;
+    
     if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
+        $GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"]=true;
+    }
+
+    if (isset($GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"]) && $GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"] == true) {
         // Check to see if the LLM responded with the entire message in **'s.
         if (str_starts_with($sentence, "*") && str_ends_with($sentence, "*")) {
             $output = ltrim($sentence, "*");
