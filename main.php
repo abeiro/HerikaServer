@@ -311,43 +311,12 @@ if ($gameRequest[0]=="oghma_import") {
         
         Logger::info("Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
         
-        // Log the event for audit purposes
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => 'oghma_import',
-                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
-        );
-        
     } catch (Exception $e) {
         Logger::error("Oghma Import: Fatal error processing CSV: " . $e->getMessage());
         // Clean up temp file if it exists
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        // Log the error event
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => 'oghma_import',
-                'data' => "CSV upload failed: " . $e->getMessage(),
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
-        );
     }
     
     die("X-CUSTOM-CLOSE");
@@ -486,43 +455,12 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
         
         Logger::info("Dynamic Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
         
-        // Log the event for audit purposes
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => 'dynamic_oghma_import',
-                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
-        );
-        
     } catch (Exception $e) {
         Logger::error("Dynamic Oghma Import: Fatal error processing CSV: " . $e->getMessage());
         // Clean up temp file if it exists
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        // Log the error event
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => 'dynamic_oghma_import',
-                'data' => "CSV upload failed: " . $e->getMessage(),
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
-        );
     }
     
     die("X-CUSTOM-CLOSE");

@@ -122,43 +122,12 @@ try {
     
     Logger::info("Biography Import: Processing complete. $processedCount records processed, $errorCount errors");
     
-    // Log the event for audit purposes
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => 'biography_import',
-            'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-            'sess' => 'web',
-            'localts' => time(),
-            'people' => '',
-            'location' => '',
-            'party' => ''
-        )
-    );
-    
 } catch (Exception $e) {
     Logger::error("Biography Import: Fatal error processing CSV: " . $e->getMessage());
     // Clean up temp file if it exists
     if (isset($tempFile) && file_exists($tempFile)) {
         unlink($tempFile);
     }
-    // Log the error event
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => 'biography_import',
-            'data' => "CSV upload failed: " . $e->getMessage(),
-            'sess' => 'web',
-            'localts' => time(),
-            'people' => '',
-            'location' => '',
-            'party' => ''
-        )
-    );
 }
 
 ?>
