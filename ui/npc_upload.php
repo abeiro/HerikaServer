@@ -270,8 +270,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $npc_goals = ($temp !== '') ? $temp : null;
                         }
 
-                        // Handle npc_quest field if present (we ignore it but need to account for column alignment)
-                        // This field was removed from the system but may still exist in CSV files
 
                         // Convert to UTF-8 if not already
                         if ($encoding !== 'UTF-8') {
