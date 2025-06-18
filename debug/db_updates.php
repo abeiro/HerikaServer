@@ -1355,7 +1355,7 @@ if ($checkVersion("npc_templates")<20250618001) {
     $db->execQuery($query);
     
     // Load new data from SQL file
-    $db->execQuery(file_get_contents(__DIR__."/../data/npc_template_2025180625.sql"));
+    $db->execQuery(file_get_contents(__DIR__."/../data/npc_templates_20250618001.sql"));
     
     $updateVersion("npc_templates",20250618001);
     Logger::info("Applied patch npc_templates data update 20250618001");
