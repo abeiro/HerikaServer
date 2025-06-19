@@ -73,49 +73,35 @@ $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
     . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2–3 bullet points) "
     . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
 
-$DYNAMIC_PROFILE_FIELDS = ["personality", "relationships"];
+$DYNAMIC_PROFILE_FIELDS = ["relationships", "goals"];
 
-$DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, update the character's personality traits. Focus on: "
-    . "- Behavioral changes due to recent experiences "
-    . "- Emotional growth or regression "
-    . "- New character traits that have emerged "
-    . "- Changes in confidence, mood, or outlook "
-    . "Keep existing traits that remain relevant. Use 2-3 sentences maximum.";
+$DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, update the character's personality traits. "
+    . "Focus on behavioral changes, emotional growth/regression, new traits that emerged, and changes in confidence or outlook. "
+    . "Keep existing traits that remain relevant and add new ones based on recent experiences. "
+    . "Format your response as: [Updated personality description in 3-5 sentences]";
 
-$DYNAMIC_PROMPT_RELATIONSHIPS = "Based on recent interactions, update the character's relationships. Format as bulleted list with name/faction first: "
-    . "- Focus on changed relationships only "
-    . "- Include new relationships formed "
-    . "- Update existing relationships that have evolved "
-    . "- Remove relationships that are no longer relevant "
-    . "Format: * Name/Faction - Description of current relationship status";
+$DYNAMIC_PROMPT_RELATIONSHIPS = "Based on recent interactions, update the character's relationships with other people and factions. "
+    . "Focus on changed relationships, new relationships formed, evolved existing ones, and remove any no longer relevant. "
+    . "Format your response as: [Bulleted list with * Name/Faction - Description format]";
 
-$DYNAMIC_PROMPT_OCCUPATION = "Based on story progression and events, update the character's occupation and role. Focus on: "
-    . "- Job changes or promotions "
-    . "- New responsibilities or duties "
-    . "- Changes in social status or position "
-    . "- Professional relationships and affiliations "
-    . "Keep current if no significant changes occurred. Use 2-3 sentences maximum.";
+$DYNAMIC_PROMPT_OCCUPATION = "Based on story progression and events, update the character's occupation and role. "
+    . "Focus on job changes, new responsibilities, changes in social status, and professional affiliations. "
+    . "Keep current occupation if no significant changes occurred. "
+    . "Format your response as: [Updated occupation description in 2-3 sentences]";
 
-$DYNAMIC_PROMPT_SKILLS = "Based on experiences and training, update the character's skills and abilities. Format as bulleted list: "
-    . "- New skills learned or abilities gained "
-    . "- Existing skills that have improved "
-    . "- Skills that may have deteriorated "
-    . "- Combat experience or magical knowledge gained "
-    . "Only include changes, keep existing skills that remain relevant.";
+$DYNAMIC_PROMPT_SKILLS = "Based on experiences and training, update the character's skills and abilities. "
+    . "Focus on new skills learned, existing skills improved, any skills that deteriorated, and combat/magical knowledge gained. "
+    . "Only include changes while keeping existing skills that remain relevant. "
+    . "Format your response as: [Bulleted list with * Skill - Description format]";
 
-$DYNAMIC_PROMPT_SPEECHSTYLE = "Based on recent interactions, update how the character speaks and communicates. Focus on: "
-    . "- Changes in vocabulary or language patterns "
-    . "- New mannerisms or speech habits "
-    . "- Accent or dialect changes "
-    . "- Confidence level in speech "
-    . "Keep existing style elements that remain consistent. Maximum 2 sentences.";
+$DYNAMIC_PROMPT_SPEECHSTYLE = "Based on recent interactions, update how the character speaks and communicates. "
+    . "Focus on changes in vocabulary, new mannerisms, accent changes, and confidence level in speech. "
+    . "Keep existing style elements that remain consistent while adding new patterns. "
+    . "Format your response as: [Updated speech style description in 2-3 sentences]";
 
-$DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update the character's goals and aspirations. Format as bulleted list: "
-    . "- Completed goals that should be removed "
-    . "- New aspirations that have emerged "
-    . "- Modified existing goals due to circumstances "
-    . "- Long-term objectives that have evolved "
-    . "Format: * Goal description as actionable aspiration";
+$DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update the character's goals and aspirations. "
+    . "Remove completed goals, add new aspirations that emerged, modify existing goals due to circumstances, and update long-term objectives. "
+    . "Format your response as: [Bulleted list with * Goal description as actionable aspiration format]";
 $DIARY_PROMPT = "Please write a short summary of {\$GLOBALS[\"PLAYER_NAME\"]} and {\$GLOBALS[\"HERIKA_NAME\"]}s last dialogues and events written above into {\$GLOBALS[\"HERIKA_NAME\"]}s diary . WRITE AS IF YOU WERE {\$GLOBALS[\"HERIKA_NAME\"]}. Start the diary entry with the current date and time.";
 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
