@@ -104,6 +104,9 @@ $DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update th
     . "Format your response as: [Bulleted list with * Goal description as actionable aspiration format]";
 $DIARY_PROMPT = "Please write a short summary of {\$GLOBALS[\"PLAYER_NAME\"]} and {\$GLOBALS[\"HERIKA_NAME\"]}s last dialogues and events written above into {\$GLOBALS[\"HERIKA_NAME\"]}s diary . WRITE AS IF YOU WERE {\$GLOBALS[\"HERIKA_NAME\"]}. Start the diary entry with the current date and time.";
 
+// Dynamic profile utility button
+$dynamic_profile_b1 = false; // Utility button for updating all dynamic profile fields
+
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
 $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.
 $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
@@ -133,6 +136,10 @@ $CONNECTOR["openrouterjson"]["API_KEY"]=""; //API key.
 $CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $CONNECTOR["openrouterjson"]["xtitle"]="CHIM"; //Stub needed header.
 $CONNECTOR["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
+// Utility buttons for autofilling parameters
+$CONNECTOR["openrouterjson"]["get_parms1"] = false; // Utility button for low randomness parameters
+$CONNECTOR["openrouterjson"]["get_parms5"] = false; // Utility button for medium randomness parameters  
+$CONNECTOR["openrouterjson"]["get_parms9"] = false; // Utility button for high randomness parameters
 //OpenRouter (Legacy)
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.
@@ -150,6 +157,10 @@ $CONNECTOR["openrouter"]["MAX_TOKENS_MEMORY"]="1024"; //Maximum tokens to genera
 $CONNECTOR["openrouter"]["API_KEY"]=""; //API key.
 $CONNECTOR["openrouter"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $CONNECTOR["openrouter"]["xtitle"]="CHIM"; //Stub needed header.
+// Utility buttons for autofilling parameters
+$CONNECTOR["openrouter"]["get_parms1"] = false; // Utility button for low randomness parameters
+$CONNECTOR["openrouter"]["get_parms5"] = false; // Utility button for medium randomness parameters  
+$CONNECTOR["openrouter"]["get_parms9"] = false; // Utility button for high randomness parameters
 //OpenAI JSON
 $CONNECTOR["openaijson"]["url"]="https://api.openai.com/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openaijson"]["model"]='gpt-4o-mini'; //LLM model.
