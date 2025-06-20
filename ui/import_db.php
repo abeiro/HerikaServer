@@ -47,7 +47,6 @@ ini_set('display_errors', '1');
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $enginePath = $rootPath . ".." . DIRECTORY_SEPARATOR;
 $configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
-$TITLE = "📝CHIM - NPC Biography Management";
 
 // Database connection details
 $host = 'localhost';
@@ -692,29 +691,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="submit" class="button" value="🚀 Upload and Restore Database" 
                        style="background-color: rgb(1 53 166 / 90%); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; font-size: 16px;">
             </form>
-            
-            <h4 style="margin: 20px 0 10px 0;">📊 Upload Information</h4>
-            
-            <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <h5 style="color: #eaee05; margin: 0 0 8px 0;">Supported Formats</h5>
-                <ul style="color: #f8f9fa; margin: 0; padding-left: 20px; font-size: 14px;">
-                    <li><strong>.sql</strong> - Standard SQL dump files</li>
-                    <li>Files created by pg_dump</li>
-                    <li>Manual backups from this interface</li>
-                    <li>Automatic backup files</li>
-                </ul>
-            </div>
-            
-            <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 15px; border-radius: 8px;">
-                <h5 style="color: #eaee05; margin: 0 0 8px 0;">Restoration Process</h5>
-                <ol style="color: #f8f9fa; margin: 0; padding-left: 20px; font-size: 14px;">
-                    <li>File upload and validation</li>
-                    <li>Drop existing database schema</li>
-                    <li>Recreate extensions (vector, pg_trgm)</li>
-                    <li>Import SQL data</li>
-                    <li>Verify restoration success</li>
-                </ol>
-            </div>
             
             <div id="uploadProgress" style="display: none; margin-top: 15px; background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 15px; border-radius: 8px;">
                 <h4 style="color: #eaee05; margin: 0 0 10px 0;">🔄 Upload Progress</h4>
