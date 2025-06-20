@@ -354,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>Database Manager</title>
     <style>
-        /* Database Manager - Using main.css theme colors */
+        /* Database Manager - Using main.css consistent color scheme */
         body {
             font-family: 'Futura CondensedLight', Arial, sans-serif;
             background-color: #2c2c2c;
@@ -460,41 +460,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input[type="text"],
         input[type="file"],
         select {
-            background-color: rgba(30, 35, 45, 0.8);
-            color: white;
+            background-color: #4a4a4a;
+            color: #f8f9fa;
             padding: 8px;
-            border-radius: 8px;
-            border: 1px solid rgba(138, 155, 182, 0.3);
+            border-radius: 4px;
+            border: 1px solid #555555;
             cursor: pointer;
             width: auto;
-            backdrop-filter: blur(5px);
         }
 
         input[type="file"]::-webkit-file-upload-button {
-            background-color: rgba(75, 85, 99, 0.8);
+            background-color: #6c757d;
             color: white;
             padding: 8px 12px;
-            border: 1px solid rgba(138, 155, 182, 0.3);
-            border-radius: 6px;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
             margin-right: 10px;
-            transition: all 0.2s ease-in-out;
+            transition: background-color 0.3s ease;
             font-size: 14px;
         }
 
         input[type="file"]::-webkit-file-upload-button:hover {
-            background-color: rgba(85, 95, 109, 0.9);
-            transform: translateY(-1px);
+            background-color: #5a6268;
         }
 
         pre {
             background-color: #2c2c2c;
             padding: 10px;
-            border: 1px solid rgba(138, 155, 182, 0.3);
+            border: 1px solid #4a4a4a;
             border-radius: 8px;
             color: #f8f9fa;
             overflow: auto;
-            backdrop-filter: blur(5px);
         }
 
         code {
@@ -506,25 +503,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Progress bar styling */
         #progressBar {
-            background: linear-gradient(90deg, rgba(30, 35, 45, 0.8) 0%, rgba(40, 45, 55, 0.9) 100%);
-            border: 1px solid rgba(138, 155, 182, 0.3);
-            backdrop-filter: blur(5px);
+            background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+            border: 1px solid #4a4a4a;
         }
 
         /* Backup list container */
         .backup-list {
-            background-color: rgba(26, 26, 26, 0.8);
-            border: 1px solid rgba(138, 155, 182, 0.2);
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
             border-radius: 8px;
-            backdrop-filter: blur(5px);
         }
 
         .backup-item {
-            border-bottom: 1px solid rgba(138, 155, 182, 0.2);
+            border-bottom: 1px solid #333333;
         }
 
         .backup-item:hover {
-            background-color: rgba(40, 45, 55, 0.3);
+            background-color: #1f1f1f;
         }
     </style>
 </head>
@@ -533,108 +528,196 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h1>Database Manager</h1>
     
     <!-- Main Grid Container -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; min-height: 220px;">
         
         <!-- Database Manager Section -->
-        <div class="message" style="background-color: #1a1a5c; border: 1px solid #2d2d8f;">
-            <h3>🗄️ Database Access</h3>
-            <p>Access the pgAdmin database manager for advanced database management.</p>
-            <p><strong>Login:</strong> username = dwemer & password = dwemer</p>
-            <a href="/pgAdmin/" target="_blank" class="button" style="background-color: #6f42c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                Open Database Manager
-            </a>
+        <div class="message" style="background-color: #2c3440; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <h3>🗄️ Database Access</h3>
+                <p>Access the pgAdmin database manager for advanced database management.</p>
+                <p><strong>Login:</strong> username = dwemer & password = dwemer</p>
+            </div>
+            <div style="margin-top: auto;">
+                <a href="/pgAdmin/" target="_blank" class="button" style="background-color: rgb(1 53 166 / 90%); color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; text-align: center;">
+                    Open Database Manager
+                </a>
+            </div>
         </div>
         
         <!-- Backup Section -->
-        <div class="message" style="background-color: #1a5c1a; border: 1px solid #2d8f2d;">
-            <h3>📦 Manual Backup</h3>
-            <p>Create a backup of your current database. This will generate an SQL file you can download.</p>
-            <a href="?action=backup" class="button" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                Create Backup
-            </a>
+        <div class="message" style="background-color: #374151; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <h3>📦 Manual Backup</h3>
+                <p>Create a backup of your current database. This will generate an SQL file you can download.</p>
+                <p style="color: #ccc; font-size: 14px; margin-top: auto;">Creates a one-time downloadable backup file.</p>
+            </div>
+            <div style="margin-top: auto;">
+                <a href="?action=backup" class="button" style="background-color: #176529; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; text-align: center;">
+                    Create Backup
+                </a>
+            </div>
         </div>
         
         <!-- Maintenance Section -->
-        <div class="message" style="background-color: #5c3c1a; border: 1px solid #8f5f2d;">
-            <h3>🔧 Database Maintenance</h3>
-            <p>Optimize and clean your database. This will compact the database and reclaim unused space.</p>
-            <p><strong>⚠️ Important:</strong> Make sure Skyrim is stopped before running maintenance.</p>
-            <button onclick="if (confirm('Database maintenance will optimize and compact the database.\n\n- Make sure Skyrim game is stopped\n- To reclaim unused space, free temporary space is required\n- During this operation tables will be locked, do not interrupt\n- This could take some time, please wait until you see the confirmation\n\nContinue?')) { window.open('<?php echo $webRoot; ?>/ui/vacuum_db.php', 'Database_maintenance', 'resizable=yes,scrollbars=yes,titlebar=no,width=800,height=600'); return false; }" 
-                    class="button" style="background-color: #fd7e14; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
-                Run Database Maintenance
-            </button>
+        <div class="message" style="background-color: #2d3748; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <h3>🔧 Database Maintenance</h3>
+                <p>Optimize and clean your database. This will compact the database and reclaim unused space.</p>
+                <p><strong>⚠️ Important:</strong> Make sure Skyrim is stopped before running maintenance.</p>
+            </div>
+            <div style="margin-top: auto;">
+                <button onclick="if (confirm('Database maintenance will optimize and compact the database.\n\n- Make sure Skyrim game is stopped\n- To reclaim unused space, free temporary space is required\n- During this operation tables will be locked, do not interrupt\n- This could take some time, please wait until you see the confirmation\n\nContinue?')) { window.open('<?php echo $webRoot; ?>/ui/vacuum_db.php', 'Database_maintenance', 'resizable=yes,scrollbars=yes,titlebar=no,width=800,height=600'); return false; }" 
+                        class="button" style="background-color: #fd7e14; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
+                    Run Database Maintenance
+                </button>
+            </div>
         </div>
         
     </div>
     
-    <!-- Second Row -->
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
+    <!-- Second Row - Automatic Backups and Manual Restore Side by Side -->
+    <?php
+    $autoBackup = new AutomaticBackup();
+    $automaticBackups = $autoBackup->getBackups();
+    $totalBackupsSize = 0;
+    foreach ($automaticBackups as $backup) {
+        $totalBackupsSize += $backup['size'];
+    }
+    ?>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
         
-        <!-- Automatic Backups Section -->
-        <?php
-        $autoBackup = new AutomaticBackup();
-        $automaticBackups = $autoBackup->getBackups();
-        ?>
-        <div class="message" style="background-color: #2d1a5c; border: 1px solid #4a2d8f;">
-            <h3>🤖 Automatic Backups</h3>
-            <p>System-generated backups created automatically when the server starts only once a day. Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached.</p>
-            <p><strong>Status:</strong> <?php echo $autoBackup->isEnabled() ? '<span style="color: #28a745;">Enabled</span>' : '<span style="color: #dc3545;">Disabled</span>'; ?> (Controlled in Configuration Wizard)</p>
+        <!-- Left Column: Automatic Backups -->
+        <div class="message" style="background-color: #3a2d48; border: 1px solid #4a4a4a;">
+            <h3>🤖 Automatic Backup System</h3>
+            <p>System-generated backups created automatically every time the server starts up. Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached.</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0;">
+                <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
+                    <h5 style="margin: 0 0 5px 0; color: #f8f9fa; font-size: 14px;">Status</h5>
+                    <p style="margin: 0; font-size: 16px; font-weight: bold;">
+                        <?php echo $autoBackup->isEnabled() ? '<span style="color: #176529;">✅ On</span>' : '<span style="color: #dc3545;">❌ Off</span>'; ?>
+                    </p>
+                </div>
+                
+                <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
+                    <h5 style="margin: 0 0 5px 0; color: #f8f9fa; font-size: 14px;">Available</h5>
+                    <p style="margin: 0; font-size: 16px; font-weight: bold; color: #f8f9fa;">
+                        <?php echo count($automaticBackups); ?> / 5
+                    </p>
+                </div>
+                
+                <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
+                    <h5 style="margin: 0 0 5px 0; color: #f8f9fa; font-size: 14px;">Total Size</h5>
+                    <p style="margin: 0; font-size: 16px; font-weight: bold; color: #eaee05;">
+                        <?php echo AutomaticBackup::formatFileSize($totalBackupsSize); ?>
+                    </p>
+                </div>
+            </div>
+            
+            <?php if (!$autoBackup->isEnabled()): ?>
+                <div style="background-color: rgba(166, 53, 63, 0.1); border: 1px solid rgba(166, 53, 63, 0.9); border-radius: 8px; padding: 15px; margin: 15px 0;">
+                    <h4 style="color: #dc3545; margin: 0 0 10px 0;">⚠️ Automatic Backups Disabled</h4>
+                    <p style="margin: 0; color: #f8f9fa;">To enable automatic backups, go to the <strong>Configuration Wizard</strong> and set <code>AUTOMATIC_DATABASE_BACKUPS</code> to <strong>true</strong>.</p>
+                </div>
+            <?php endif; ?>
+            
+            <h4 style="margin: 15px 0 10px 0;">📂 Backup Management</h4>
             
             <?php if (!empty($automaticBackups)): ?>
-                <h4>Available Automatic Backups:</h4>
-                <div class="backup-list" style="max-height: 200px; overflow-y: auto; padding: 10px; margin: 10px 0;">
-                    <?php foreach ($automaticBackups as $backup): ?>
-                        <div class="backup-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 5px; transition: all 0.2s ease-in-out;">
-                            <div style="flex-grow: 1;">
-                                <strong><?php echo htmlspecialchars($backup['filename']); ?></strong><br>
-                                <small style="color: #ccc;">
-                                    📁 <?php echo AutomaticBackup::formatFileSize($backup['size']); ?>
-                                </small>
+                <div class="backup-list" style="max-height: 300px; overflow-y: auto; padding: 0; margin: 0; border: 1px solid #333333; border-radius: 8px; background-color: #1a1a1a;">
+                    <?php foreach ($automaticBackups as $index => $backup): ?>
+                        <div class="backup-item" style="padding: 12px; border-bottom: 1px solid #333333; transition: all 0.2s ease-in-out; <?php echo $index === count($automaticBackups) - 1 ? 'border-bottom: none;' : ''; ?>">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <div style="flex-grow: 1; min-width: 0;">
+                                    <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; word-break: break-all;">
+                                        <?php echo htmlspecialchars($backup['filename']); ?>
+                                    </div>
+                                    <div style="font-size: 11px; color: #ccc; display: flex; justify-content: space-between;">
+                                        <span>📁 <?php echo AutomaticBackup::formatFileSize($backup['size']); ?></span>                                    </div>
+                                </div>
                             </div>
-                            <div style="display: flex; gap: 5px;">
+                            
+                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                                 <button onclick="window.location.href='?action=download_auto&filename=<?php echo urlencode($backup['filename']); ?>'" 
-                                        class="button" style="background-color: #28a745; color: white; padding: 5px 10px; border: none; border-radius: 3px; font-size: 12px; cursor: pointer;" 
+                                        class="button" style="background-color: #176529; color: white; padding: 4px 8px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; flex: 1; min-width: 70px;" 
                                         title="Download backup file">
-                                    📥 Download
+                                    📥
                                 </button>
                                 <button onclick="if (confirm('⚠️ RESTORE DATABASE\\n\\nRestore from: <?php echo htmlspecialchars($backup['filename']); ?>\\n\\nThis will COMPLETELY REPLACE your current database with this backup.\\n\\n❌ All current data will be lost!\\n✅ Database will be restored to backup state\\n\\nAre you absolutely sure you want to continue?')) { window.location.href='?action=restore_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
-                                        class="button" style="background-color: #007bff; color: white; padding: 5px 10px; border: none; border-radius: 3px; font-size: 12px; cursor: pointer;" 
+                                        class="button" style="background-color: rgb(1 53 166 / 90%); color: white; padding: 4px 8px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; flex: 1; min-width: 70px;" 
                                         title="Restore database from this backup">
-                                    🔄 Restore
+                                    🔄
                                 </button>
                                 <button onclick="if (confirm('⚠️ DELETE BACKUP\\n\\nDelete: <?php echo htmlspecialchars($backup['filename']); ?>\\n\\nThis action cannot be undone!\\n\\nAre you sure you want to permanently delete this backup?')) { window.location.href='?action=delete_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
-                                        class="button" style="background-color: #dc3545; color: white; padding: 5px 10px; border: none; border-radius: 3px; font-size: 12px; cursor: pointer;" 
+                                        class="button" style="background-color: rgba(166, 53, 63, 0.9); color: white; padding: 4px 8px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; flex: 1; min-width: 70px;" 
                                         title="Delete this backup file">
-                                    🗑️ Delete
+                                    🗑️
                                 </button>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <p style="color: #888; font-style: italic;">No automatic backups available yet.</p>
-            <?php endif; ?>
-            
-            <?php if (!$autoBackup->isEnabled()): ?>
-                <p><em>Enable automatic backups in the Configuration Wizard under "AUTOMATIC_DATABASE_BACKUPS"</em></p>
+                <div style="text-align: center; padding: 30px 20px; color: #888; font-style: italic; background-color: #2c2c2c; border-radius: 8px; border: 1px dashed #4a4a4a;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">📂</div>
+                    <p style="margin: 0;">No automatic backups available yet.</p>
+                    <?php if ($autoBackup->isEnabled()): ?>
+                        <small style="color: #ffffff; display: block; margin-top: 8px;">Backups will be created on server restart.</small>
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
         </div>
-        
-        <!-- Restore Section -->
-        <div class="message" style="background-color: #1a3c5c; border: 1px solid #2d5f8f;">
-            <h3>📥 Restore Database</h3>
-            <p>Upload an SQL backup file to restore your database.</p>
+
+        <!-- Right Column: Manual Database Restore -->
+        <div class="message" style="background-color: #283344; border: 1px solid #4a4a4a;">
+            <h3>📥 Manual Database Restore</h3>
+            <p>Upload an SQL backup file to restore your database. This will completely replace your current database with the uploaded backup.</p>
             
-            <form id="uploadForm" action="" method="post" enctype="multipart/form-data" style="margin-top: 15px;">
-                <label for="sql_file" style="color: #f8f9fa; font-weight: bold;">Select SQL file to upload:</label><br>
-                <input type="file" name="sql_file" id="sql_file" accept=".sql" required style="margin: 10px 0; padding: 8px; background-color: #444; color: #f8f9fa; border: 1px solid #666; border-radius: 4px;">
-                <br>
-                <input type="submit" class="button" value="Upload and Restore" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px;">
+            <div style="background-color: rgba(166, 53, 63, 0.1); border: 1px solid rgba(166, 53, 63, 0.9); border-radius: 8px; padding: 15px; margin: 15px 0;">
+                <h4 style="color: #dc3545; margin: 0 0 10px 0;">⚠️ Important Warning</h4>
+                <ul style="color: #f8f9fa; margin: 0; padding-left: 20px;">
+                    <li>This will <strong>completely replace</strong> your current database</li>
+                    <li>All current data will be <strong>permanently lost</strong></li>
+                    <li>Make sure to create a backup before proceeding</li>
+                    <li>Only upload trusted SQL files</li>
+                </ul>
+            </div>
+            
+            <form id="uploadForm" action="" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
+                <label for="sql_file" style="color: #f8f9fa; font-weight: bold; display: block; margin-bottom: 8px;">Select SQL file to upload:</label>
+                <input type="file" name="sql_file" id="sql_file" accept=".sql" required 
+                       style="margin: 10px 0; padding: 12px; background-color: #4a4a4a; color: #f8f9fa; border: 1px solid #555555; border-radius: 4px; width: 100%;">
+                
+                <input type="submit" class="button" value="🚀 Upload and Restore Database" 
+                       style="background-color: rgb(1 53 166 / 90%); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; font-size: 16px;">
             </form>
             
-            <div id="uploadProgress" style="display: none; margin-top: 15px;">
-                <h4>Upload Progress</h4>
-                <div style="background-color: #333; border-radius: 10px; padding: 4px; margin: 10px 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);">
+            <h4 style="margin: 20px 0 10px 0;">📊 Upload Information</h4>
+            
+            <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <h5 style="color: #eaee05; margin: 0 0 8px 0;">Supported Formats</h5>
+                <ul style="color: #f8f9fa; margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li><strong>.sql</strong> - Standard SQL dump files</li>
+                    <li>Files created by pg_dump</li>
+                    <li>Manual backups from this interface</li>
+                    <li>Automatic backup files</li>
+                </ul>
+            </div>
+            
+            <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 15px; border-radius: 8px;">
+                <h5 style="color: #eaee05; margin: 0 0 8px 0;">Restoration Process</h5>
+                <ol style="color: #f8f9fa; margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>File upload and validation</li>
+                    <li>Drop existing database schema</li>
+                    <li>Recreate extensions (vector, pg_trgm)</li>
+                    <li>Import SQL data</li>
+                    <li>Verify restoration success</li>
+                </ol>
+            </div>
+            
+            <div id="uploadProgress" style="display: none; margin-top: 15px; background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 15px; border-radius: 8px;">
+                <h4 style="color: #eaee05; margin: 0 0 10px 0;">🔄 Upload Progress</h4>
+                <div style="background-color: #1a1a1a; border-radius: 10px; padding: 4px; margin: 10px 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);">
                     <div id="progressBar" style="
                         background: linear-gradient(90deg, #007bff 0%, #0056b3 100%); 
                         height: 25px; 
@@ -652,7 +735,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span id="progressPercent">0%</span>
                     </div>
                 </div>
-                <p id="progressText" style="text-align: center; margin: 10px 0; font-weight: bold;">Preparing upload...</p>
+                <p id="progressText" style="text-align: center; margin: 10px 0; font-weight: bold; color: #f8f9fa;">Preparing upload...</p>
                 <div id="progressDetails" style="text-align: center; font-size: 12px; color: #ccc; margin: 5px 0;"></div>
             </div>
         </div>
