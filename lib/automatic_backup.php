@@ -178,8 +178,8 @@ class AutomaticBackup {
     }
     
     /**
-     * Check if we should create a backup today
-     * Uses conf_opts table to track last backup date
+     * Check if we should create a backup on server restart
+     * Always creates a backup when the server starts up
      */
     public function shouldCreateBackup() {
         try {
@@ -190,65 +190,46 @@ class AutomaticBackup {
                 return true;
             }
             
-            // Get the last backup check date from conf_opts
-            $result = $db->fetchAll("SELECT value FROM conf_opts WHERE id='AUTOMATIC_BACKUP_CHECK_DATE'");
-            
-            $today = date('Y-m-d');
-            
-            if (empty($result)) {
-                // No record exists, we should create a backup
-                Logger::info("No backup check date found - backup needed");
-                return true;
-            }
-            
-            $lastBackupDate = $result[0]['value'];
-            
-            if ($lastBackupDate !== $today) {
-                // Last backup was on a different date, we should create a backup
-                Logger::info("Last backup date: {$lastBackupDate}, today: {$today} - backup needed");
-                return true;
-            }
-            
-            // Backup already created today
-            Logger::info("Backup already created today: {$today}");
-            return false;
+            // Always create a backup on server restart
+            Logger::info("Server restart detected - backup needed");
+            return true;
             
         } catch (Exception $e) {
-            Logger::warn("Error checking backup date: " . $e->getMessage());
+            Logger::warn("Error checking backup requirement: " . $e->getMessage());
             // If we can't check, err on the side of creating a backup
             return true;
         }
     }
     
     /**
-     * Update the backup check date in conf_opts table
-     * Called after successful backup creation
+     * Update the backup completion timestamp
+     * Called after successful backup creation for logging purposes
      */
     public function updateBackupCheckDate() {
         try {
             // Try to get a working database connection
             $db = $this->getDatabaseConnection();
             if (!$db) {
-                Logger::warn("No database connection available for updating backup check date");
+                Logger::warn("No database connection available for updating backup timestamp");
                 return;
             }
             
-            $today = date('Y-m-d');
+            $timestamp = date('Y-m-d H:i:s');
             
-            // Update the backup check date using upsertRowOnConflict (same pattern as NARRATOR_WELCOME)
+            // Update the backup timestamp for reference (not used for backup decisions)
             $db->upsertRowOnConflict(
                 "conf_opts",
                 array(
-                    "id"    => "AUTOMATIC_BACKUP_CHECK_DATE",
-                    "value" => $today
+                    "id"    => "AUTOMATIC_BACKUP_LAST_TIMESTAMP",
+                    "value" => $timestamp
                 ),
                 'id'
             );
             
-            Logger::info("Updated backup check date to: {$today}");
+            Logger::info("Updated last backup timestamp to: {$timestamp}");
             
         } catch (Exception $e) {
-            Logger::warn("Error updating backup check date: " . $e->getMessage());
+            Logger::warn("Error updating backup timestamp: " . $e->getMessage());
         }
     }
     
@@ -293,9 +274,9 @@ class AutomaticBackup {
 }
 
 /**
- * Initialize automatic backup using database-based date tracking
- * This follows the same pattern as NARRATOR_WELCOME_TIMESTAMP and db_updates.php
- * Runs on every page load but only creates backup once per day
+ * Initialize automatic backup on server restart
+ * Creates a backup every time the server starts up
+ * Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached
  */
 function initializeAutomaticBackup() {
     try {
@@ -307,18 +288,16 @@ function initializeAutomaticBackup() {
             return;
         }
         
-        // Check if we need to create a backup today
+        // Create a backup on server restart
         if ($backup->shouldCreateBackup()) {
-            Logger::info("Daily backup check: backup needed - creating backup");
+            Logger::info("Server restart backup: creating backup");
             $result = $backup->createBackup();
             if ($result) {
-                Logger::info("Automatic backup created successfully");
+                Logger::info("Server restart backup created successfully");
                 $backup->updateBackupCheckDate();
             } else {
-                Logger::warn("Automatic backup creation failed");
+                Logger::warn("Server restart backup creation failed");
             }
-        } else {
-            Logger::info("Daily backup check: backup already created today");
         }
         
     } catch (Exception $e) {
@@ -331,7 +310,7 @@ function initializeAutomaticBackup() {
  * This prevents running too early in the initialization process
  */
 function deferredAutomaticBackupInit() {
-    // Only run if we haven't already checked today
+    // Only run once per server restart
     static $hasRun = false;
     if ($hasRun) {
         return;
