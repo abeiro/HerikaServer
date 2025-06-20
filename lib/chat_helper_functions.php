@@ -1547,8 +1547,8 @@ function logEvent($dataArray,$forcePeople='')
 {
     global $db;
 
-    if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange(); // DataBeingsInRange() won't work as depends on user input
+    if (!isset($GLOBALS["CACHE_PEOPLE_LIMITED"])) {
+        $GLOBALS["CACHE_PEOPLE_LIMITED"]=DataBeingsInCloseRange(true); // DataBeingsInRange() won't work as depends on user input
     } 
     
     if (!isset($GLOBALS["CACHE_LOCATION"])) {
@@ -1577,7 +1577,7 @@ function logEvent($dataArray,$forcePeople='')
                 'data' => $dataArray[3],
                 'sess' => 'pending',
                 'localts' => time(),
-                'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE"],
+                'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE_LIMITED"],
                 'location'=>$GLOBALS["CACHE_LOCATION"],
                 'party'=>$GLOBALS["CACHE_PARTY"]
             )

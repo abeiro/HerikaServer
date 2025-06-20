@@ -116,11 +116,13 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 // Database Connection
 $db = new sql();
 
-// Check modes should be here
+require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","init"])) {
+    // This is just form mark that user has made an input request. We will check later when waiting for LLm response 
+    // if use has made input after that request, so we can abort it.
     $GLOBALS["ADD_PLAYER_BIOS"]=true;
     // $db = new sql();
     $db->insert(
@@ -180,14 +182,14 @@ if (($gameRequest[0]=="delete_event")) {
     $datacn=$db->escape($gameRequest[3]);
     $db->delete("eventlog","type in ('chat','prechat') and data like '%$datacn%' and localts>".(time()- 120));
     // audit_log(__FILE__);
-    die();
+    terminate();
 }
 
 // Biography CSV upload
 if ($gameRequest[0]=="biography_import") {
     require(__DIR__."/processor/biography_import.php");
     
-    die("X-CUSTOM-CLOSE");
+    terminate();
 }
 
 // Oghma CSV upload
@@ -199,7 +201,7 @@ if ($gameRequest[0]=="oghma_import") {
     // $gameRequest[4] should contain the CSV data
     if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
         Logger::error("Oghma Import: No CSV data provided");
-        die("X-CUSTOM-CLOSE");
+        terminate();
     }
     
     $csvData = $gameRequest[4];
@@ -214,7 +216,7 @@ if ($gameRequest[0]=="oghma_import") {
         $handle = fopen($tempFile, 'r');
         if ($handle === false) {
             Logger::error("Oghma Import: Could not open temporary CSV file");
-            die("X-CUSTOM-CLOSE");
+            terminate();
         }
         
         // Read and process header
@@ -223,7 +225,7 @@ if ($gameRequest[0]=="oghma_import") {
             Logger::error("Oghma Import: Invalid CSV header");
             fclose($handle);
             unlink($tempFile);
-            die("X-CUSTOM-CLOSE");
+            terminate();
         }
         
         // Normalize header labels and create header map
@@ -350,7 +352,7 @@ if ($gameRequest[0]=="oghma_import") {
         );
     }
     
-    die("X-CUSTOM-CLOSE");
+    terminate();
 }
 
 
@@ -363,7 +365,7 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
     // $gameRequest[4] should contain the CSV data
     if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
         Logger::error("Dynamic Oghma Import: No CSV data provided");
-        die("X-CUSTOM-CLOSE");
+        terminate();
     }
     
     $csvData = $gameRequest[4];
@@ -378,7 +380,7 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
         $handle = fopen($tempFile, 'r');
         if ($handle === false) {
             Logger::error("Dynamic Oghma Import: Could not open temporary CSV file");
-            die("X-CUSTOM-CLOSE");
+            terminate();
         }
         
         // Read and process header
@@ -387,7 +389,7 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
             Logger::error("Dynamic Oghma Import: Invalid CSV header");
             fclose($handle);
             unlink($tempFile);
-            die("X-CUSTOM-CLOSE");
+            terminate();
         }
         
         // Normalize header labels and create header map
@@ -525,7 +527,7 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
         );
     }
     
-    die("X-CUSTOM-CLOSE");
+    terminate();
 }
 
 
@@ -535,7 +537,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
     error_log($cleaned_player_dialogue);
-    if (strpos($cleaned_player_dialogue,"**")===0) {
+    if (strpos($gameRequest[3],"**")===0) {
         // If player speech starts with **
         error_log("Overwritting user prompt $cleaned_player_dialogue");
         function getBaseUrlForSpeech(): string {
@@ -643,12 +645,7 @@ if ($gameRequest[0]=="diary") {
         if ($timeElapsed < $diaryCooldownPeriod) {
             // Cooldown is still active for this NPC, exit
             Logger::info("DIARY is on cooldown for {$GLOBALS["HERIKA_NAME"]}. Try again in " . ($diaryCooldownPeriod - $timeElapsed) . " seconds.");
-            echo 'X-CUSTOM-CLOSE'.PHP_EOL;
-            if (!getenv("PHPUNIT_TEST")) {
-                @ob_end_flush();
-                @flush();
-                die();
-            }
+            terminate();
         }
     }
 
@@ -693,7 +690,7 @@ if ($gameRequest[0] == "npcspellcast") {
             logEvent($gameRequest);
         }
     }
-    die(); // Always exit, whether logged or not
+    terminate(); // Always exit, whether logged or not
 }
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
@@ -705,18 +702,18 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
         $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
         if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
             //error_log("Skipping {$gameRequest[0]}");
-            die();
+            terminate();
         }
     }
     logEvent($gameRequest);
-    die();
+    terminate();
 }
 
 // Check if the gameRequest matches specific types
 if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
     if (!$GLOBALS["NARRATOR_WELCOME"]) {
         logEvent($gameRequest);
-        die();
+        terminate();
     } else {
         // Fetch the last trigger timestamp from the database
         $narratorRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='NARRATOR_WELCOME_TIMESTAMP'");
@@ -729,12 +726,7 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
             if ($timeElapsed < $cooldownPeriod) {
                 // Cooldown is still active, exit
                 Logger::info("NARRATOR_WELCOME is on cooldown. Try again in " . ($cooldownPeriod - $timeElapsed) . " seconds.");
-                echo 'X-CUSTOM-CLOSE'.PHP_EOL;
-                if (!getenv("PHPUNIT_TEST")) {
-                    @ob_end_flush();
-                    @flush();
-                    die();
-                }
+                terminate();
             }
         }
 
@@ -766,7 +758,7 @@ if (in_array($gameRequest[0],["bored"])) {
     if ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
         Logger::info("Redirecting bored event to rolemaster");
         `php service/manager.php rolemaster instruction ""`;
-        die();
+        terminate();
 
     }
 }
@@ -822,7 +814,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         sem_release($semaphore);
         while(ob_get_length() && ob_end_clean());
         require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
-        die();
+        terminate();
     }
     
     $rndNumber = rand(1, 100);
@@ -833,7 +825,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
         }
     }
     else{
-        die();
+        terminate();
     }
     
     
@@ -849,7 +841,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
                 if (isset($user_input_after[0]["N"]))
                     if ($user_input_after[0]["N"]>0) {
                         Logger::info("Generation stopped because user_input. ".__LINE__);
-                        die();// Abort rechat
+                        terminate();
                     }
 
             usleep(100);
@@ -877,9 +869,13 @@ if ($MUST_END) {  // Shorthand for non LLM processing
         @ob_end_flush();
         @flush();
     }    
-    die();
+    terminate();
 }
-
+if ($EXECUTION_MODE=="INJECTION_LOG") {
+    
+    terminate();
+    
+}
 
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
@@ -945,7 +941,7 @@ if ($gameRequest[0] != "diary") {
 // Check if this event  has been disabled 
 if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
     if ($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])
-        die("\r\n");
+        terminate();
 }
 
 
@@ -953,7 +949,7 @@ if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
 
 if (isset($GLOBALS["NARRATOR_TALKS"])&&($GLOBALS["NARRATOR_TALKS"]==false)) {
     if ($GLOBALS["HERIKA_NAME"]=="The Narrator")
-        die("\r\n");
+        terminate();
 }
 
 // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set

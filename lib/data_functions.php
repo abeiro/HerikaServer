@@ -1731,7 +1731,7 @@ function DataBeingsInRangeExcluding($excludeNPC="", $excludePlayer=true)
 }
 
 
-function DataBeingsInCloseRange()
+function DataBeingsInCloseRange($excludeFarAway=false)
 {
 
     global $db;
@@ -1745,13 +1745,15 @@ function DataBeingsInCloseRange()
     $beingsArray=explode("/",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
+        if ($excludeFarAway && strpos($v,"(far away)")>0)
+            continue;
         //if (strpos($v,")")===false) 
             if (strpos($v,"Horse")!==0) 
                 if (strpos($v,"Chicken")!==0) 
                     $beingsArrayNew[]=$v;
             
-        
     }
+
     $beingsFormatted=implode("|",$beingsArrayNew);
     
     return "|".$beingsFormatted."|";
