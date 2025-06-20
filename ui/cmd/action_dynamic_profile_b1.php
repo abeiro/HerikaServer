@@ -31,162 +31,168 @@ if ($method === "POST") {
         Logger::info(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
         $GLOBALS["USING_DEFAULT_PROFILE"] = true;
     }
-    $db = new sql();
 
+    $db = new sql();
     if (!$db) {
-        die("DB error");
+        echo json_encode(["status" => "error", "message" => "Database connection failed"]);
+        exit;
     }
 
     $FUNCTIONS_ARE_ENABLED = false;
 
     if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists($enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
-        die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector." . PHP_EOL);
+        echo json_encode(["status" => "error", "message" => "CONNECTORS_DIARY not configured properly"]);
+        exit;
     } else {
         require $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
 
-        $historyData = "";
-        $lastPlace = "";
-        $lastListener = "";
-        $lastDateTime = "";
- 
-        foreach (json_decode(DataSpeechJournal($jsonDataInput["HERIKA_NAME"], 100), true) as $element) {
-            if ($lastListener != $element["listener"]) {
-                $listener = " (talking to {$element["listener"]})";
-                $lastListener = $element["listener"];
-            } else {
-                $listener = "";
-            }
-
-            if ($lastPlace != $element["location"]) {
-                $place = " (at {$element["location"]})";
-                $lastPlace = $element["location"];
-            } else {
-                $place = "";
-            }
-
-            if ($lastDateTime != substr($element["sk_date"], 0, 15)) {
-                $date = substr($element["sk_date"], 0, 10);
-                $time = substr($element["sk_date"], 11);
-                $dateTime = "(on date {$date} at {$time})";
-                $lastDateTime = substr($element["sk_date"], 0, 15); //0201-11-23 16:29:43
-            } else {
-                $dateTime = "";
-            }
-
-            $historyData .= trim("{$element["speaker"]}:" . trim($element["speech"]) . " $listener $place $dateTime") . PHP_EOL;
-        }
-        if ($_GET["short"] == "yes") {
-            $SHORT = "25 keywords";
-            $SHORTER = "5 keywords";
-            $REMINDER = "SHORT";
-            $SUMMARIZE = ",AND SUMMARIZE INTO 250 TOKENS,";
-        } else {
-            $SHORT = "75 words";
-            $SHORTER = "15 keywords";
-            $REMINDER = "";
-            $SUMMARIZE = " and summarize";
-        }
-
-        $partyConf = DataGetCurrentPartyConf();
-        $partyConfA = json_decode($partyConf, true);
-        Logger::debug($partyConf);
-
-		// Check if we're using the new field-based system or legacy HERIKA_DYNAMIC
-        // First check if it's in the JSON input, otherwise get it from the loaded profile
+        // Determine which fields to update
         $fieldsToUpdate = [];
-        
-        // Debug: Log all available variables
-        Logger::debug("Manual dynamic profile update - Debug info:");
-        Logger::debug("jsonDataInput keys: " . json_encode(array_keys($jsonDataInput)));
-        Logger::debug("DYNAMIC_PROFILE_FIELDS isset: " . (isset($DYNAMIC_PROFILE_FIELDS) ? "yes" : "no"));
-        Logger::debug("GLOBALS DYNAMIC_PROFILE_FIELDS isset: " . (isset($GLOBALS["DYNAMIC_PROFILE_FIELDS"]) ? "yes" : "no"));
         
         if (isset($jsonDataInput["DYNAMIC_PROFILE_FIELDS"]) && is_array($jsonDataInput["DYNAMIC_PROFILE_FIELDS"])) {
             $fieldsToUpdate = $jsonDataInput["DYNAMIC_PROFILE_FIELDS"];
-            Logger::debug("Using fieldsToUpdate from jsonDataInput: " . json_encode($fieldsToUpdate));
         } elseif (isset($DYNAMIC_PROFILE_FIELDS) && is_array($DYNAMIC_PROFILE_FIELDS)) {
             $fieldsToUpdate = $DYNAMIC_PROFILE_FIELDS;
-            Logger::debug("Using fieldsToUpdate from local DYNAMIC_PROFILE_FIELDS: " . json_encode($fieldsToUpdate));
         } elseif (isset($GLOBALS["DYNAMIC_PROFILE_FIELDS"]) && is_array($GLOBALS["DYNAMIC_PROFILE_FIELDS"])) {
             $fieldsToUpdate = $GLOBALS["DYNAMIC_PROFILE_FIELDS"];
-            Logger::debug("Using fieldsToUpdate from GLOBALS: " . json_encode($fieldsToUpdate));
         } else {
-            // Force use of default fields since user has configured the new system
+            // Default fields if none configured
             $fieldsToUpdate = ["personality", "relationships"];
-            Logger::debug("No DYNAMIC_PROFILE_FIELDS found, using default: " . json_encode($fieldsToUpdate));
         }
-        
-        // Always use new field-based system (no legacy fallback)
-        $useLegacyMode = false;
-        Logger::debug("Using new field-based system with fields: " . json_encode($fieldsToUpdate));
-        
-        // New field-based system - update all selected fields
-        $fieldMapping = [
-            'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
-            'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
-            'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
-            'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
-            'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
-            'goals' => ['var' => 'HERIKA_GOALS', 'prompt' => 'DYNAMIC_PROMPT_GOALS']
-        ];
-        
-        $updatedFields = [];
-        $responseParsed = [];
-        $successCount = 0;
-        
-        // Get max tokens for field updates (smaller than legacy)
-        $maxTokens = 800;
-        switch($GLOBALS["CONNECTORS_DIARY"]) {
-            case "openrouter":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "openai":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "google_openaijson":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "koboldcpp":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-        }
-        
-        // Process each selected field
-        foreach ($fieldsToUpdate as $field) {
-            if (!isset($fieldMapping[$field])) {
-                continue;
+
+        // Function to update a single field using the same logic as individual files
+        function updateSingleField($field, $jsonDataInput, $enginePath) {
+            // Determine how much context history to use for dynamic profiles
+            $dynamicProfileContextHistory = 50; // Default value
+            if (isset($GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"]) && $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"] > 0) {
+                $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"];
+            } elseif (isset($GLOBALS["CONTEXT_HISTORY"]) && $GLOBALS["CONTEXT_HISTORY"] > 0) {
+                $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY"];
             }
-            
+
+            $historyData = "";
+            $lastPlace = "";
+            $lastListener = "";
+            $lastDateTime = "";
+     
+            foreach (json_decode(DataSpeechJournal($jsonDataInput["HERIKA_NAME"], $dynamicProfileContextHistory), true) as $element) {
+                if ($element["listener"] == "The Narrator") {
+                    continue;
+                }
+                if ($lastListener != $element["listener"]) {
+                    $listener = " (talking to {$element["listener"]})";
+                    $lastListener = $element["listener"];
+                } else {
+                    $listener = "";
+                }
+
+                if ($lastPlace != $element["location"]) {
+                    $place = " (at {$element["location"]})";
+                    $lastPlace = $element["location"];
+                } else {
+                    $place = "";
+                }
+
+                if ($lastDateTime != substr($element["sk_date"], 0, 15)) {
+                    $date = substr($element["sk_date"], 0, 10);
+                    $time = substr($element["sk_date"], 11);
+                    $dateTime = "(on date {$date} at {$time})";
+                    $lastDateTime = substr($element["sk_date"], 0, 15);
+                } else {
+                    $dateTime = "";
+                }
+
+                $historyData .= trim("{$element["speaker"]}:" . trim($element["speech"]) . " $listener $place $dateTime") . PHP_EOL;
+            }
+
+            // Field mapping
+            $fieldMapping = [
+                'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY', 'label' => 'personality traits'],
+                'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS', 'label' => 'relationships'],
+                'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION', 'label' => 'occupation and role'],
+                'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS', 'label' => 'skills and abilities'],
+                'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'label' => 'speech style'],
+                'goals' => ['var' => 'HERIKA_GOALS', 'prompt' => 'DYNAMIC_PROMPT_GOALS', 'label' => 'goals and aspirations']
+            ];
+
+            if (!isset($fieldMapping[$field])) {
+                return ["status" => "error", "message" => "Unknown field: {$field}"];
+            }
+
             $varName = $fieldMapping[$field]['var'];
             $promptName = $fieldMapping[$field]['prompt'];
+            $fieldLabel = $fieldMapping[$field]['label'];
+            
             $currentValue = isset($jsonDataInput[$varName]) ? $jsonDataInput[$varName] : '';
             $updatePrompt = isset($GLOBALS[$promptName]) ? $GLOBALS[$promptName] : '';
-            
+
             if (empty($updatePrompt)) {
-                continue; // Skip if no prompt configured
+                return ["status" => "error", "message" => "{$promptName} not configured"];
             }
-            
-            // Build prompt for this specific field
-            $head = [
-                ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and update the specific character profile field based on the information provided."]
+
+            // Collect other profile fields for context (excluding the current field)
+            $profileContext = [];
+            $profileFields = [
+                'HERIKA_PERS' => 'Basic Summary',
+                'HERIKA_BACKGROUND' => 'Background',
+                'HERIKA_PERSONALITY' => 'Personality Traits',
+                'HERIKA_APPEARANCE' => 'Physical Appearance',
+                'HERIKA_RELATIONSHIPS' => 'Relationships',
+                'HERIKA_OCCUPATION' => 'Occupation & Role',
+                'HERIKA_SKILLS' => 'Skills & Abilities',
+                'HERIKA_SPEECHSTYLE' => 'Speech Style',
+                'HERIKA_GOALS' => 'Goals & Aspirations'
             ];
-            
+
+            // Remove the current field from context
+            unset($profileFields[$varName]);
+
+            foreach ($profileFields as $fieldName => $fieldLabel) {
+                if (isset($jsonDataInput[$fieldName]) && !empty(trim($jsonDataInput[$fieldName]))) {
+                    $profileContext[] = "**{$fieldLabel}**: " . trim($jsonDataInput[$fieldName]);
+                }
+            }
+
+            $profileContextString = !empty($profileContext) ? "\n\n* Current Character Profile:\n" . implode("\n\n", $profileContext) : '';
+
+            // Get max tokens
+            $maxTokens = 800;
+            switch($GLOBALS["CONNECTORS_DIARY"]) {
+                case "openrouter":
+                    $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
+                        min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                    break;
+                case "openai":
+                    $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
+                        min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                    break;
+                case "google_openaijson":
+                    $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
+                        min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                    break;
+                case "koboldcpp":
+                    $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
+                        min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                    break;
+            }
+
+            // Build prompt
+            $head = [
+                ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update the character's {$fieldLabel} based on the information provided."]
+            ];
+
             $prompt = [
-                ["role" => "user", "content" => "* Dialogue history:\n" . $historyData],
+                ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . $profileContextString],
                 ["role" => "user", "content" => "Character name: " . $jsonDataInput["HERIKA_NAME"] . "\nCurrent " . ucfirst($field) . ":\n" . $currentValue],
                 ["role" => "user", "content" => $updatePrompt]
             ];
-            
+
             $contextData = array_merge($head, $prompt);
-            
-            // Process this field
+
+            // Process with streaming connector
             $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-            $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
-            
+            $connectionHandler->open($contextData, ["MAX_TOKENS" => $maxTokens]);
+
             $buffer = "";
             $breakFlag = false;
             while (true) {
@@ -201,33 +207,78 @@ if ($method === "POST") {
                 $buffer .= $connectionHandler->process();
             }
             $connectionHandler->close();
-            
+
             $buffer = trim($buffer);
             if (!empty($buffer)) {
-                $updatedFields[$field] = $buffer;
-                $responseParsed[$varName] = $buffer;
-                $successCount++;
+                // Save directly to profile file
+                $profile = $jsonDataInput["profile"];
+                $content = file_get_contents($profile);
+                $escapedValue = var_export($buffer, true);
+                
+                // Update or add variable
+                $pattern = '/\$' . $varName . '\s*=\s*[^;]+;/';
+                if (preg_match($pattern, $content)) {
+                    $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
+                } else {
+                    $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
+                }
+                
+                if (file_put_contents($profile, $content, LOCK_EX)) {
+                    return [
+                        "status" => "success", 
+                        "message" => ucfirst($field) . " updated successfully!",
+                        "updated_field" => $varName,
+                        "new_value" => $buffer
+                    ];
+                } else {
+                    return ["status" => "error", "message" => "Failed to save {$field} update to profile"];
+                }
+            } else {
+                return ["status" => "error", "message" => "No {$field} update generated"];
             }
         }
-        
-        // Save all updated fields to the profile file
-        if (!empty($updatedFields)) {
-            require_once($enginePath . "processor" . DIRECTORY_SEPARATOR . "comm.php");
+
+        // Process each selected field
+        $updatedFields = [];
+        $failedFields = [];
+        $successCount = 0;
+        $results = [];
+
+        foreach ($fieldsToUpdate as $field) {
+            $result = updateSingleField($field, $jsonDataInput, $enginePath);
             
-            if (saveDynamicProfileUpdates($jsonDataInput["HERIKA_NAME"], $updatedFields, $db)) {
-                $responseParsed["success"] = true;
-                $responseParsed["updated_fields"] = array_keys($updatedFields);
-                $responseParsed["message"] = "Successfully updated " . $successCount . " field(s): " . implode(', ', array_keys($updatedFields));
+            if ($result["status"] === "success") {
+                $updatedFields[] = $field;
+                $results[$field] = $result;
+                $successCount++;
             } else {
-                $responseParsed["success"] = false;
-                $responseParsed["message"] = "Failed to save profile updates";
+                $failedFields[] = $field . " (" . $result["message"] . ")";
+            }
+        }
+
+        // Prepare final response
+        $response = [
+            "status" => $successCount > 0 ? "success" : "error",
+            "updated_fields" => $updatedFields,
+            "failed_fields" => $failedFields,
+            "success_count" => $successCount,
+            "total_requested" => count($fieldsToUpdate)
+        ];
+
+        if ($successCount > 0) {
+            $response["message"] = "Successfully updated {$successCount} of " . count($fieldsToUpdate) . " field(s): " . implode(', ', $updatedFields);
+            if (!empty($failedFields)) {
+                $response["message"] .= ". Failed: " . implode(', ', $failedFields);
             }
         } else {
-            $responseParsed["success"] = false;
-            $responseParsed["message"] = "No fields were updated";
+            $response["message"] = "No fields were updated. Failed: " . implode(', ', $failedFields);
         }
+
+        $response["results"] = $results;
         
-        echo json_encode($responseParsed);
+        echo json_encode($response);
     }
+} else {
+    echo json_encode(["status" => "error", "message" => "Only POST method allowed"]);
 }
-?>
+?> 

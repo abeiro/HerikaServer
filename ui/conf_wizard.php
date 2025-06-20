@@ -246,7 +246,7 @@ function showToast(message, type = 'info', duration = 5000) {
 
 // Enhanced callHelper function for dynamic profile updates
 function callDynamicProfileHelper(actionFile, fieldLabel) {
-    showToast('Updating ' + fieldLabel + '...', 'info', 10000);
+    showToast(fieldLabel + '...', 'info', 10000);
     
     // Collect all form data like the regular callHelper function does
     var formData = new FormData(document.getElementById('top'));

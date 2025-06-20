@@ -119,13 +119,34 @@ if ($method === "POST") {
             exit;
         }
 
+        // Collect other profile fields for context
+        $profileContext = [];
+        $profileFields = [
+            'HERIKA_PERS' => 'Basic Summary',
+            'HERIKA_BACKGROUND' => 'Background',
+            'HERIKA_PERSONALITY' => 'Personality Traits',
+            'HERIKA_APPEARANCE' => 'Physical Appearance',
+            'HERIKA_RELATIONSHIPS' => 'Relationships',
+            'HERIKA_OCCUPATION' => 'Occupation & Role',
+            'HERIKA_SPEECHSTYLE' => 'Speech Style',
+            'HERIKA_GOALS' => 'Goals & Aspirations'
+        ];
+
+        foreach ($profileFields as $fieldName => $fieldLabel) {
+            if (isset($jsonDataInput[$fieldName]) && !empty(trim($jsonDataInput[$fieldName]))) {
+                $profileContext[] = "**{$fieldLabel}**: " . trim($jsonDataInput[$fieldName]);
+            }
+        }
+
+        $profileContextString = !empty($profileContext) ? "\n\n* Current Character Profile:\n" . implode("\n\n", $profileContext) : '';
+
         // Build prompt for skills update
         $head = [
-            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and update the character's skills and abilities based on the information provided."]
+            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update the character's skills and abilities based on the information provided."]
         ];
 
         $prompt = [
-            ["role" => "user", "content" => "* Dialogue history:\n" . $historyData],
+            ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . $profileContextString],
             ["role" => "user", "content" => "Character name: " . $jsonDataInput["HERIKA_NAME"] . "\nCurrent Skills:\n" . $currentSkills],
             ["role" => "user", "content" => $updatePrompt]
         ];
