@@ -145,7 +145,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast"];
+    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -313,43 +313,12 @@ if ($gameRequest[0]=="oghma_import") {
         
         Logger::info("Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
         
-        // Log the event for audit purposes
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => 'oghma_import',
-                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
-        );
-        
     } catch (Exception $e) {
         Logger::error("Oghma Import: Fatal error processing CSV: " . $e->getMessage());
         // Clean up temp file if it exists
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        // Log the error event
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => 'oghma_import',
-                'data' => "CSV upload failed: " . $e->getMessage(),
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
-        );
     }
     
     terminate();
@@ -488,43 +457,12 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
         
         Logger::info("Dynamic Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
         
-        // Log the event for audit purposes
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => 'dynamic_oghma_import',
-                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
-        );
-        
     } catch (Exception $e) {
         Logger::error("Dynamic Oghma Import: Fatal error processing CSV: " . $e->getMessage());
         // Clean up temp file if it exists
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        // Log the error event
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => 'dynamic_oghma_import',
-                'data' => "CSV upload failed: " . $e->getMessage(),
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
-        );
     }
     
     terminate();
@@ -1203,15 +1141,18 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
     $GLOBALS["PROMPT_HEAD"].=PHP_EOL.$GLOBALS["PLAYER_BIOS"];
 }
 
+// Use centralized function from data_functions.php
+$dynamicBiography = buildDynamicBiography();
+
 if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . $GLOBALS["OGHMA_HINT"]."\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n" . $GLOBALS["OGHMA_HINT"]."\n". $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
     );
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n". $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
     );
 }

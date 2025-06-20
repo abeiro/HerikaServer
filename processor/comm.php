@@ -522,20 +522,20 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
     
     
-} elseif (strpos($gameRequest[0], "updateprofiles_batch")===0) {
+} elseif (strpos($gameRequest[0], "updateprofiles_batch_async")===0) {
     
-    // New batch processing for timer-based dynamic profile updates
-    // Format: updateprofiles_batch|timestamp|gamestamp|NPC1,NPC2,NPC3,NPC4
+    // Async batch processing for timer-based dynamic profile updates
+    // Format: updateprofiles_batch_async|timestamp|gamestamp|NPC1,NPC2,NPC3,NPC4
     
     if (!isset($gameRequest[3]) || empty($gameRequest[3])) {
-        Logger::debug("updateprofiles_batch: No NPCs provided");
+        Logger::debug("updateprofiles_batch_async: No NPCs provided");
         die();
     }
     
     $npcList = explode(',', $gameRequest[3]);
     $enabledNPCs = [];
     
-    Logger::info("updateprofiles_batch: Checking " . count($npcList) . " NPCs for enabled dynamic profiles");
+    Logger::info("updateprofiles_batch_async: Checking " . count($npcList) . " NPCs for enabled dynamic profiles");
     
     // First pass: quickly check which NPCs have DYNAMIC_PROFILE enabled
     foreach ($npcList as $npcName) {
@@ -577,34 +577,88 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
     $enabledCount = count($enabledNPCs);
     
-    // Send immediate ACK message back to plugin with count
+    // Send immediate ACK message back to plugin with count - ONLY notification we send
     if ($enabledCount > 0) {
         echo "The Narrator|rolecommand|DebugNotification@Updating $enabledCount dynamic profile" . ($enabledCount == 1 ? "" : "s") . "..." . PHP_EOL;
-        Logger::info("updateprofiles_batch: Will update $enabledCount profiles: " . implode(', ', $enabledNPCs));
+        Logger::info("updateprofiles_batch_async: Will update $enabledCount profiles in background: " . implode(', ', $enabledNPCs));
     } else {
-        Logger::info("updateprofiles_batch: No profiles to update - none had DYNAMIC_PROFILE enabled");
+        Logger::info("updateprofiles_batch_async: No profiles to update - none had DYNAMIC_PROFILE enabled");
     }
     
     @ob_flush();
     @flush();
     
-    // Second pass: actually process the enabled NPCs (this can take time)
+    // Process in background if we have enabled NPCs
     if ($enabledCount > 0) {
-        $successCount = 0;
-        foreach ($enabledNPCs as $npcName) {
-            if (processSingleDynamicProfile($npcName, $gameRequest)) {
-                $successCount++;
+        // Try to fork process for background processing
+        if (function_exists('pcntl_fork')) {
+            $pid = pcntl_fork();
+            if ($pid == 0) {
+                // Child process - do the background work
+                Logger::info("updateprofiles_batch_async: Child process started for background processing");
+                
+                $successCount = 0;
+                foreach ($enabledNPCs as $npcName) {
+                    try {
+                        if (processSingleDynamicProfile($npcName, $gameRequest)) {
+                            $successCount++;
+                        }
+                    } catch (Exception $e) {
+                        Logger::error("updateprofiles_batch_async: Error processing profile for $npcName: " . $e->getMessage());
+                    }
+                }
+                
+                Logger::info("updateprofiles_batch_async: Background processing completed. Updated $successCount of $enabledCount profiles");
+                exit(0);
+            } elseif ($pid > 0) {
+                // Parent process - continue normally
+                Logger::info("updateprofiles_batch_async: Forked background process with PID $pid");
+            } else {
+                // Fork failed - fall back to database queue method
+                Logger::warn("updateprofiles_batch_async: Fork failed, using database queue fallback");
+                $queueData = [
+                    'timestamp' => time(),
+                    'npcs' => $enabledNPCs,
+                    'gameRequest' => $gameRequest
+                ];
+                $queueId = 'dynamic_profiles_queue_' . time() . '_' . uniqid();
+                
+                try {
+                    $db->upsertRowOnConflict('conf_opts', array(
+                        'id' => $queueId,
+                        'value' => json_encode($queueData)
+                    ), 'id');
+                    Logger::info("updateprofiles_batch_async: Queued $enabledCount profiles for background processing in database");
+                } catch (Exception $e) {
+                    Logger::error("updateprofiles_batch_async: Failed to write to database queue: " . $e->getMessage());
+                }
+            }
+        } else {
+            // No fork available - use database queue method
+            Logger::info("updateprofiles_batch_async: pcntl_fork not available, using database queue method");
+            $queueData = [
+                'timestamp' => time(),
+                'npcs' => $enabledNPCs,
+                'gameRequest' => $gameRequest
+            ];
+            $queueId = 'dynamic_profiles_queue_' . time() . '_' . uniqid();
+            
+            try {
+                $db->upsertRowOnConflict('conf_opts', array(
+                    'id' => $queueId,
+                    'value' => json_encode($queueData)
+                ), 'id');
+                Logger::info("updateprofiles_batch_async: Queued $enabledCount profiles for background processing in database");
+            } catch (Exception $e) {
+                Logger::error("updateprofiles_batch_async: Failed to write to database queue: " . $e->getMessage());
             }
         }
-        Logger::info("updateprofiles_batch: Completed processing $enabledCount dynamic profiles");
         
-        // Send single summary message
-        if ($successCount > 0) {
-            echo "The Narrator|rolecommand|DebugNotification@Dynamic Profile updated for $successCount character" . ($successCount == 1 ? "" : "s") . PHP_EOL;
-        }
+        // Trigger immediate background processing
+        triggerImmediateProfileProcessing();
     }
     
-    $MUST_END = true;
+        die("X-CUSTOM-CLOSE");
     
 } elseif (strpos($gameRequest[0], "updateprofile")===0) {    
     
@@ -700,7 +754,10 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 		// Database Prompt (Dynamic Profile Head)    
 		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "Character static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $GLOBALS["HERIKA_DYNAMIC"]];
+		// Use centralized function from data_functions.php
+		$currentDynamicProfile = buildDynamicProfileDisplay();
+        
+		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "\nCharacter static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $currentDynamicProfile];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
@@ -926,6 +983,7 @@ function processAutoDiary($gameRequest, $eventType) {
     
     // Echo confirmation using the same format as other notifications
     if ($generatedCount > 0) {
+        $confirmationMessage = "Generated $generatedCount auto-diary " . ($generatedCount == 1 ? "entry" : "entries");
         echo "The Narrator|rolecommand|DebugNotification@$confirmationMessage" . PHP_EOL;
     }
 }
@@ -933,6 +991,14 @@ function processAutoDiary($gameRequest, $eventType) {
 // Function to process a single NPC's dynamic profile
 function processSingleDynamicProfile($npcName, $gameRequest) {
     global $db;
+    
+    // Ensure required dependencies are loaded
+    if (!function_exists('DataSpeechJournal')) {
+        require_once(__DIR__ . "/../lib/data_functions.php");
+    }
+    if (!function_exists('buildDynamicProfileDisplay')) {
+        require_once(__DIR__ . "/../lib/model_dynmodel.php");
+    }
     
     // Skip The Narrator
     if ($npcName === "The Narrator") {
@@ -966,137 +1032,41 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
             return false;
         }
         
+        // Get dynamic profile fields to update
+        $fieldsToUpdate = isset($DYNAMIC_PROFILE_FIELDS) && is_array($DYNAMIC_PROFILE_FIELDS) 
+            ? $DYNAMIC_PROFILE_FIELDS 
+            : ["personality", "relationships"]; // Default fields
+        
+        if (empty($fieldsToUpdate)) {
+            Logger::debug("processSingleDynamicProfile: No fields selected for dynamic updates for $npcName");
+            return false;
+        }
+        
         // Set context for this NPC
         $GLOBALS["HERIKA_NAME"] = $npcName;
         
-        // Process the dynamic profile update (reuse existing logic)
+        // Process each selected field
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php");
         
-        $historyData="";
-        $lastPlace="";
-        $lastListener="";
-        $lastDateTime = "";
-
-        // Determine how much context history to use for dynamic profiles
-        $dynamicProfileContextHistory = 50; // Default value
-        if (isset($GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"]) && $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"] > 0) {
-            $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"];
-        } elseif (isset($GLOBALS["CONTEXT_HISTORY"]) && $GLOBALS["CONTEXT_HISTORY"] > 0) {
-            $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY"];
+        $historyData = getDynamicProfileHistoryData($npcName);
+        $updatedFields = [];
+        $successCount = 0;
+        
+        foreach ($fieldsToUpdate as $field) {
+            $result = updateDynamicProfileField($npcName, $field, $historyData);
+            if ($result !== false) {
+                $updatedFields[$field] = $result;
+                $successCount++;
+            }
         }
         
-        foreach (json_decode(DataSpeechJournal($npcName, $dynamicProfileContextHistory), true) as $element) {
-            if ($element["listener"]=="The Narrator") {
-                continue;
+        if ($successCount > 0) {
+            // Save the updated profile
+            $success = saveDynamicProfileUpdates($npcName, $updatedFields, $db);
+            if ($success) {
+                Logger::info("processSingleDynamicProfile: Successfully updated $successCount fields for $npcName: " . implode(', ', array_keys($updatedFields)));
+                return true;
             }
-            if ($lastListener!=$element["listener"]) {
-                $listener=" (talking to {$element["listener"]})";
-                $lastListener=$element["listener"];
-            } else {
-                $listener="";
-            }
-            
-            if ($lastPlace!=$element["location"]){
-                $place=" (at {$element["location"]})";
-                $lastPlace=$element["location"];
-            } else {
-                $place="";
-            }
-
-            if ($lastDateTime != substr($element["sk_date"], 0, 15)) {
-                $date = substr($element["sk_date"], 0, 10);
-                $time = substr($element["sk_date"], 11);
-                $dateTime = "(on date {$date} at {$time})";
-                $lastDateTime = substr($element["sk_date"], 0, 15); 
-            } else {
-                $dateTime = "";
-            }
-            
-            $historyData.=trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place $dateTime").PHP_EOL;
-        }
-        
-        // Use the global DYNAMIC_PROMPT
-        $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
-        
-        // Build prompt for dynamic profile update
-        $head[]   = ["role" => "system", "content" => "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided."];
-        $prompt[] = ["role" => "user", "content" => "* Dialogue history:\n" .$historyData];
-        $prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $npcName . "Character static biography:\n" . $HERIKA_PERS . "\n" ."Character dynamic biography (this is what you are updating):\n" . $HERIKA_DYNAMIC];
-        $prompt[] = ["role" => "user", "content" => $updateProfilePrompt];
-        $contextData = array_merge($head, $prompt);
-        
-        $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-        $GLOBALS["FORCE_MAX_TOKENS"] = 1500;
-        $connectionHandler->open($contextData, ["max_tokens" => 1500]);
-        
-        $buffer = "";
-        $totalBuffer = "";
-        $breakFlag = false;
-        
-        while (true) {
-            if ($breakFlag) {
-                break;
-            }
-            
-            if ($connectionHandler->isDone()) {
-                $breakFlag = true;
-            }
-            
-            $buffer .= $connectionHandler->process();
-            $totalBuffer .= $buffer;
-        }
-        
-        $connectionHandler->close();
-        $actions = $connectionHandler->processActions();
-        
-        $responseParsed["HERIKA_DYNAMIC"] = $buffer;
-        
-        // Handle custom update function if it exists
-        if (array_key_exists("CustomUpdateProfileFunction", $GLOBALS) && is_callable($GLOBALS["CustomUpdateProfileFunction"])) {
-            $responseParsed["HERIKA_DYNAMIC"] = $GLOBALS["CustomUpdateProfileFunction"]($buffer);
-        }
-        
-        // Save the updated profile
-        $newConfFile = md5($npcName);
-        $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-        
-        if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php")) {
-            // Create backup
-            copy($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php", $path . "conf".DIRECTORY_SEPARATOR.".conf_{$newConfFile}_".time().".php");
-            
-            $backup = file_get_contents($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
-            $backupFmtd = $db->escape($backup);
-            
-            $db->insert(
-                'npc_profile_backup',
-                array(
-                    'name' => $db->escape($npcName),
-                    'data' => $backupFmtd
-                )
-            );
-            
-            // Update the file
-            $newFile = $path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
-            $file_lines = file($newFile);
-            
-            for ($i = count($file_lines) - 1; $i >= 0; $i--) {
-                if (trim($file_lines[$i]) !== '') {
-                    unset($file_lines[$i]);
-                    break;
-                }
-                unset($file_lines[$i]);
-            }
-            
-            file_put_contents($newFile, implode('', $file_lines));
-            $escapedDynamic = var_export($responseParsed["HERIKA_DYNAMIC"], true);
-            if (!is_string($responseParsed["HERIKA_DYNAMIC"]) || !$escapedDynamic) {
-                $escapedDynamic = "''";
-            }
-            file_put_contents($newFile, PHP_EOL.'$HERIKA_DYNAMIC='.$escapedDynamic.';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-            file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
-            
-            Logger::info("processSingleDynamicProfile: Successfully updated profile for $npcName");
-            return true;
         }
         
     } catch (Exception $e) {
@@ -1156,9 +1126,13 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         
         // Use the same prompt system as regular diary entries
         // Build standard system prompt like main.php does
+        
+        // Use centralized function from data_functions.php
+        $dynamicBio = buildDynamicBiography();
+        
         $head = [
             ["role" => "system", "content" => strtr(
-                $GLOBALS["PROMPT_HEAD"] . "\n" . $GLOBALS["HERIKA_PERS"] . $GLOBALS["HERIKA_DYNAMIC"] . "\n" . $GLOBALS["COMMAND_PROMPT"],
+                $GLOBALS["PROMPT_HEAD"] . "\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBio . "\n" . $GLOBALS["COMMAND_PROMPT"],
                 ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]
             )]
         ];
@@ -1251,4 +1225,339 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
     
     return false;
 }
-?>
+
+function getDynamicProfileHistoryData($npcName) {
+    $historyData = "";
+    $lastPlace = "";
+    $lastListener = "";
+    $lastDateTime = "";
+    
+    // Determine how much context history to use for dynamic profiles
+    $dynamicProfileContextHistory = 50; // Default value
+    if (isset($GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"]) && $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"] > 0) {
+        $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"];
+    } elseif (isset($GLOBALS["CONTEXT_HISTORY"]) && $GLOBALS["CONTEXT_HISTORY"] > 0) {
+        $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY"];
+    }
+    
+    foreach (json_decode(DataSpeechJournal($npcName, $dynamicProfileContextHistory), true) as $element) {
+        if ($element["listener"] == "The Narrator") {
+            continue;
+        }
+        if ($lastListener != $element["listener"]) {
+            $listener = " (talking to {$element["listener"]})";
+            $lastListener = $element["listener"];
+        } else {
+            $listener = "";
+        }
+        
+        if ($lastPlace != $element["location"]) {
+            $place = " (at {$element["location"]})";
+            $lastPlace = $element["location"];
+        } else {
+            $place = "";
+        }
+
+        if ($lastDateTime != substr($element["sk_date"], 0, 15)) {
+            $date = substr($element["sk_date"], 0, 10);
+            $time = substr($element["sk_date"], 11);
+            $dateTime = "(on date {$date} at {$time})";
+            $lastDateTime = substr($element["sk_date"], 0, 15); 
+        } else {
+            $dateTime = "";
+        }
+        
+        $historyData .= trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place $dateTime").PHP_EOL;
+    }
+    
+    return $historyData;
+}
+
+function updateDynamicProfileField($npcName, $field, $historyData) {
+    // Map field names to their corresponding HERIKA variables and prompts
+    $fieldMapping = [
+        'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
+                    'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
+        'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
+        'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
+        'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
+        'goals' => ['var' => 'HERIKA_GOALS', 'prompt' => 'DYNAMIC_PROMPT_GOALS']
+    ];
+    
+    if (!isset($fieldMapping[$field])) {
+        Logger::warning("updateDynamicProfileField: Unknown field '$field' for $npcName");
+        return false;
+    }
+    
+    $varName = $fieldMapping[$field]['var'];
+    $promptName = $fieldMapping[$field]['prompt'];
+    
+    // Get current field value
+    $currentValue = isset($GLOBALS[$varName]) ? $GLOBALS[$varName] : '';
+    
+    // Get field-specific prompt
+    $updatePrompt = isset($GLOBALS[$promptName]) ? $GLOBALS[$promptName] : '';
+    if (empty($updatePrompt)) {
+        Logger::warning("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
+        return false;
+    }
+    
+    try {
+        // Collect other profile fields for context (excluding the current field)
+        $profileContext = [];
+        $profileFields = [
+            'HERIKA_PERS' => 'Basic Summary',
+            'HERIKA_BACKGROUND' => 'Background',
+            'HERIKA_PERSONALITY' => 'Personality Traits',
+            'HERIKA_APPEARANCE' => 'Physical Appearance',
+            'HERIKA_RELATIONSHIPS' => 'Relationships',
+            'HERIKA_OCCUPATION' => 'Occupation & Role',
+            'HERIKA_SKILLS' => 'Skills & Abilities',
+            'HERIKA_SPEECHSTYLE' => 'Speech Style',
+            'HERIKA_GOALS' => 'Goals & Aspirations'
+        ];
+
+        // Remove the current field from context
+        unset($profileFields[$varName]);
+
+        foreach ($profileFields as $fieldName => $fieldLabel) {
+            if (isset($GLOBALS[$fieldName]) && !empty(trim($GLOBALS[$fieldName]))) {
+                $profileContext[] = "**{$fieldLabel}**: " . trim($GLOBALS[$fieldName]);
+            }
+        }
+
+        $profileContextString = !empty($profileContext) ? "\n\n* Current Character Profile:\n" . implode("\n\n", $profileContext) : '';
+        
+        // Build prompt for this specific field
+        $head = [
+            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update the character's " . ucfirst($field) . " based on the information provided."]
+        ];
+        
+        $prompt = [
+            ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . $profileContextString],
+            ["role" => "user", "content" => "Character name: " . $npcName . "\nCurrent " . ucfirst($field) . ":\n" . $currentValue],
+            ["role" => "user", "content" => $updatePrompt]
+        ];
+        
+        $contextData = array_merge($head, $prompt);
+        
+        $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
+        
+        // Get max tokens for this connector
+        $maxTokens = 800; // Default for field updates
+        switch($GLOBALS["CONNECTORS_DIARY"]) {
+            case "openrouter":
+                $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
+                    min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                break;
+            case "openai":
+                $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
+                    min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                break;
+            case "google_openaijson":
+                $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
+                    min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                break;
+            case "koboldcpp":
+                $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
+                    min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
+                break;
+        }
+        
+        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
+        
+        $buffer = "";
+        $breakFlag = false;
+        
+        while (true) {
+            if ($breakFlag) {
+                break;
+            }
+            
+            if ($connectionHandler->isDone()) {
+                $breakFlag = true;
+            }
+            
+            $buffer .= $connectionHandler->process();
+        }
+        
+        $connectionHandler->close();
+        
+        // Clean up the response
+        $buffer = trim($buffer);
+        
+        if (!empty($buffer)) {
+            Logger::debug("updateDynamicProfileField: Updated $field for $npcName");
+            return $buffer;
+        } else {
+            Logger::warning("updateDynamicProfileField: Empty response for field '$field' for $npcName");
+            return false;
+        }
+        
+    } catch (Exception $e) {
+        Logger::error("updateDynamicProfileField: Error updating field '$field' for $npcName: " . $e->getMessage());
+        return false;
+    }
+}
+
+function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
+    $newConfFile = md5($npcName);
+    $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+    $configFile = $path . "conf" . DIRECTORY_SEPARATOR . "conf_$newConfFile.php";
+    
+    if (!file_exists($configFile)) {
+        Logger::error("saveDynamicProfileUpdates: Config file not found for $npcName");
+        return false;
+    }
+    
+    try {
+        // Create backup
+        copy($configFile, $path . "conf" . DIRECTORY_SEPARATOR . ".conf_{$newConfFile}_" . time() . ".php");
+        
+        $backup = file_get_contents($configFile);
+        $backupFmtd = $db->escape($backup);
+        
+        $db->insert(
+            'npc_profile_backup',
+            array(
+                'name' => $db->escape($npcName),
+                'data' => $backupFmtd
+            )
+        );
+        
+        // Read current file content
+        $content = file_get_contents($configFile);
+        
+        // Map field names to their corresponding HERIKA variables
+        $fieldMapping = [
+            'personality' => 'HERIKA_PERSONALITY',
+            'relationships' => 'HERIKA_RELATIONSHIPS',
+            'occupation' => 'HERIKA_OCCUPATION',
+            'skills' => 'HERIKA_SKILLS',
+            'speechstyle' => 'HERIKA_SPEECHSTYLE',
+            'goals' => 'HERIKA_GOALS'
+        ];
+        
+        // Update each field in the file
+        foreach ($updatedFields as $field => $newValue) {
+            if (!isset($fieldMapping[$field])) {
+                continue;
+            }
+            
+            $varName = $fieldMapping[$field];
+            $escapedValue = var_export($newValue, true);
+            
+            // Check if variable already exists in file
+            $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
+            
+            if (preg_match($pattern, $content)) {
+                // Update existing variable
+                $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
+            } else {
+                // Add new variable before the closing 
+                $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
+            }
+        }
+        
+        // Write updated content back to file
+        file_put_contents($configFile, $content, LOCK_EX);
+        
+        Logger::info("saveDynamicProfileUpdates: Successfully saved updates for $npcName");
+        return true;
+        
+    } catch (Exception $e) {
+        Logger::error("saveDynamicProfileUpdates: Error saving updates for $npcName: " . $e->getMessage());
+        return false;
+    }
+}
+
+function triggerImmediateProfileProcessing() {
+    global $db;
+    
+    // Ensure required dependencies are loaded
+    if (!function_exists('DataSpeechJournal')) {
+        require_once(__DIR__ . "/../lib/data_functions.php");
+    }
+    if (!function_exists('buildDynamicProfileDisplay')) {
+        require_once(__DIR__ . "/../lib/model_dynmodel.php");
+    }
+    
+    // Check if there are any queue entries to process
+    $queueResults = $db->fetchAll("SELECT id, value FROM conf_opts WHERE id LIKE 'dynamic_profiles_queue_%' ORDER BY id LIMIT 5");
+    
+    if (empty($queueResults)) {
+        Logger::debug("triggerImmediateProfileProcessing: No queue entries found");
+        return;
+    }
+    
+    Logger::info("triggerImmediateProfileProcessing: Processing " . count($queueResults) . " queue entries immediately");
+    
+    // Check if already processing (lock exists)
+    $lockId = 'dynamic_profiles_lock';
+    $lockResult = $db->fetchAll("SELECT value FROM conf_opts WHERE id = '$lockId'");
+    
+    if (!empty($lockResult)) {
+        $lockTime = intval($lockResult[0]['value']);
+        // If lock is recent (less than 30 seconds), skip immediate processing
+        if (time() - $lockTime < 30) {
+            Logger::debug("triggerImmediateProfileProcessing: Processing already in progress, skipping");
+            return;
+        } else {
+            // Remove stale lock
+            $db->delete("conf_opts", "id = '$lockId'");
+        }
+    }
+    
+    // Create processing lock
+    $db->upsertRowOnConflict('conf_opts', array('id' => $lockId, 'value' => time()), 'id');
+    
+    try {
+        $processedJobs = 0;
+        $totalNPCs = 0;
+        
+        foreach ($queueResults as $queueRow) {
+            $queueId = $queueRow['id'];
+            $queueJson = $queueRow['value'];
+            
+            // Delete this queue entry immediately
+            $db->delete("conf_opts", "id = '" . $db->escape($queueId) . "'");
+            
+            $queueData = json_decode($queueJson, true);
+            if (!$queueData || !isset($queueData['npcs']) || !isset($queueData['gameRequest'])) {
+                Logger::error("triggerImmediateProfileProcessing: Invalid queue data for $queueId");
+                continue;
+            }
+
+            $npcs = $queueData['npcs'];
+            $gameRequest = $queueData['gameRequest'];
+            
+            Logger::info("triggerImmediateProfileProcessing: Processing " . count($npcs) . " NPCs");
+
+            $successCount = 0;
+            foreach ($npcs as $npcName) {
+                try {
+                    if (processSingleDynamicProfile($npcName, $gameRequest)) {
+                        $successCount++;
+                        Logger::debug("triggerImmediateProfileProcessing: Updated profile for $npcName");
+                    }
+                } catch (Exception $e) {
+                    Logger::error("triggerImmediateProfileProcessing: Error processing $npcName: " . $e->getMessage());
+                }
+            }
+
+            Logger::info("triggerImmediateProfileProcessing: Completed job - updated $successCount of " . count($npcs) . " profiles");
+            $processedJobs++;
+            $totalNPCs += count($npcs);
+        }
+
+        if ($processedJobs > 0) {
+            Logger::info("triggerImmediateProfileProcessing: Total processed: $processedJobs jobs, $totalNPCs NPCs");
+        }
+
+    } catch (Exception $e) {
+        Logger::error("triggerImmediateProfileProcessing: Fatal error: " . $e->getMessage());
+    } finally {
+        // Always remove lock
+        $db->delete("conf_opts", "id = '$lockId'");
+    }
+}

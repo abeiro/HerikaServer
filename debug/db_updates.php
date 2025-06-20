@@ -1145,7 +1145,162 @@ if ($checkVersion("db_maintenance")<20250528002) {
 }
 
 //----------------------------------------------------
+// NPC Templates Extended Profile Update 
+// Version 20250619001 - Works for both new and existing installs
+//----------------------------------------------------
 
+if ($checkVersion("npc_templates")<20250619001) {
+    Logger::debug("Applying consolidated NPC templates extended profile update 20250619001");
+    
+    // Ensure all NPC template tables exist with complete structure
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.npc_templates (
+            npc_name character varying(128) NOT NULL PRIMARY KEY,
+            npc_pers text NOT NULL,
+            npc_misc text,
+            npc_dynamic text,
+            melotts_voiceid text,
+            xtts_voiceid text,
+            xvasynth_voiceid text,
+            npc_background text,
+            npc_personality text,
+            npc_appearance text,
+            npc_relationships text,
+            npc_occupation text,
+            npc_skills text,
+            npc_speechstyle text,
+            npc_goals text
+        );
+    ");
+    
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.npc_templates_custom (
+            npc_name character varying(128) NOT NULL PRIMARY KEY,
+            npc_pers text NOT NULL,
+            npc_misc text,
+            npc_dynamic text,
+            melotts_voiceid text,
+            xtts_voiceid text,
+            xvasynth_voiceid text,
+            npc_background text,
+            npc_personality text,
+            npc_appearance text,
+            npc_relationships text,
+            npc_occupation text,
+            npc_skills text,
+            npc_speechstyle text,
+            npc_goals text
+        );
+    ");
+    
+    // Add columns to existing tables (safe if they already exist)
+    $columns_to_add = [
+        'npc_dynamic', 'melotts_voiceid', 'xtts_voiceid', 'xvasynth_voiceid',
+        'npc_background', 'npc_personality', 'npc_appearance', 'npc_relationships',
+        'npc_occupation', 'npc_skills', 'npc_speechstyle', 'npc_goals'
+    ];
+    
+    foreach ($columns_to_add as $column) {
+        try {
+            $db->execQuery("ALTER TABLE public.npc_templates ADD COLUMN IF NOT EXISTS $column text");
+            $db->execQuery("ALTER TABLE public.npc_templates_custom ADD COLUMN IF NOT EXISTS $column text");
+        } catch (Exception $e) {
+            // Column might already exist, continue
+            Logger::debug("Column $column might already exist: " . $e->getMessage());
+        }
+    }
+    
+    // Create/update the combined view with all columns
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_npc_templates CASCADE;");
+    $db->execQuery("
+        CREATE VIEW public.combined_npc_templates AS
+        SELECT c.npc_name,
+            c.npc_pers,
+            c.npc_dynamic,
+            c.npc_misc,
+            c.melotts_voiceid,
+            c.xtts_voiceid,
+            c.xvasynth_voiceid,
+            c.npc_background,
+            c.npc_personality,
+            c.npc_appearance,
+            c.npc_relationships,
+            c.npc_occupation,
+            c.npc_skills,
+            c.npc_speechstyle,
+            c.npc_goals
+        FROM public.npc_templates_custom c
+        UNION ALL
+        SELECT t.npc_name,
+            t.npc_pers,
+            t.npc_dynamic,
+            t.npc_misc,
+            t.melotts_voiceid,
+            t.xtts_voiceid,
+            t.xvasynth_voiceid,
+            t.npc_background,
+            t.npc_personality,
+            t.npc_appearance,
+            t.npc_relationships,
+            t.npc_occupation,
+            t.npc_skills,
+            t.npc_speechstyle,
+            t.npc_goals
+        FROM (public.npc_templates t
+            LEFT JOIN public.npc_templates_custom c ON (((t.npc_name)::text = (c.npc_name)::text)))
+        WHERE (c.npc_name IS NULL);
+    ");
+    
+    // Load/update NPC template data preserving existing custom data
+    try {
+        $sqlFile = __DIR__."/../data/npc_templates_20250618001.sql";
+        if (file_exists($sqlFile)) {
+            // Create temporary table for new data
+            $db->execQuery("CREATE TEMP TABLE npc_templates_new AS SELECT * FROM npc_templates WHERE 1=0");
+            
+            // Load new data, handling the SQL file properly
+            $newDataSql = file_get_contents($sqlFile);
+            // Replace table references to use temp table
+            $newDataSql = str_replace('INSERT INTO public.npc_templates', 'INSERT INTO npc_templates_new', $newDataSql);
+            $newDataSql = str_replace('INSERT INTO npc_templates', 'INSERT INTO npc_templates_new', $newDataSql);
+            
+            $db->execQuery($newDataSql);
+            
+            // Upsert from temp table to main table
+            $db->execQuery("
+                INSERT INTO npc_templates 
+                SELECT * FROM npc_templates_new 
+                ON CONFLICT (npc_name) DO UPDATE SET
+                    npc_pers = EXCLUDED.npc_pers,
+                    npc_dynamic = EXCLUDED.npc_dynamic,
+                    npc_misc = EXCLUDED.npc_misc,
+                    melotts_voiceid = EXCLUDED.melotts_voiceid,
+                    xtts_voiceid = EXCLUDED.xtts_voiceid,
+                    xvasynth_voiceid = EXCLUDED.xvasynth_voiceid,
+                    npc_background = EXCLUDED.npc_background,
+                    npc_personality = EXCLUDED.npc_personality,
+                    npc_appearance = EXCLUDED.npc_appearance,
+                    npc_relationships = EXCLUDED.npc_relationships,
+                    npc_occupation = EXCLUDED.npc_occupation,
+                    npc_skills = EXCLUDED.npc_skills,
+                    npc_speechstyle = EXCLUDED.npc_speechstyle,
+                    npc_goals = EXCLUDED.npc_goals
+            ");
+            
+            $db->execQuery("DROP TABLE npc_templates_new");
+            Logger::info("NPC template data loaded/updated successfully");
+        }
+    } catch (Exception $e) {
+        Logger::error("Error loading NPC template data: " . $e->getMessage());
+        // Continue with structure updates even if data loading fails
+    }
+    
+    $updateVersion("npc_templates", 20250619001);
+    Logger::info("Applied consolidated NPC templates extended profile update 20250619001");
+    echo '<script>alert("NPC Templates have been updated with extended profile fields!");</script>';
+}
+
+//----------------------------------------------------
 
 Logger::info(__FILE__." update file processed");
 
