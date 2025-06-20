@@ -9,13 +9,13 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
+
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."logger.php");
 
-$TITLE = "💬 CHIM Chat Testing";
 
 ob_start();
 
@@ -47,6 +47,7 @@ ini_set('display_errors', '1');
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $enginePath = $rootPath . ".." . DIRECTORY_SEPARATOR;
 $configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
+$TITLE = "📝CHIM - NPC Biography Management";
 
 // Database connection details
 $host = 'localhost';
