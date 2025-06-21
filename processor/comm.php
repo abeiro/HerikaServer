@@ -1157,14 +1157,19 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
 
 
         // Build user prompt for diary generation (like regular diary)
-        $prompt = [
-            ["role" => "user", "content" => "diary"]
-        ];
-        
+       
         if (!empty($contextDataHistoric)) {
             $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
         }
+
+        $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],["#PLAYER_NAME#"=>$FOLLOWER_CONF["PLAYER_NAME"],"#HERIKA_NAME#"=>$followerName]);
+
+        $prompt[] = 
+            ["role" => "user", "content" => $diaryPrompt
+            ]
+        ;
         
+
         $contextData = array_merge($head, $prompt);
         
         // Generate diary entry using LLM
