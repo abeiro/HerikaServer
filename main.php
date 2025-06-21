@@ -1142,7 +1142,7 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
 }
 
 // Use centralized function from data_functions.php
-$dynamicBiography = buildDynamicBiography();
+$dynamicBiography = buildDynamicBiography($GLOBALS);
 
 if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
 

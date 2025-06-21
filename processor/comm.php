@@ -1112,7 +1112,9 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
                 ];
                 
                 // Load follower's profile
-                include($confFile);
+                //include($confFile);
+                $FOLLOWER_CONF=extract_assignments($confFile);
+                //print_r($FOLLOWER_CONF);
                 $profileLoaded = true;
                 Logger::info("AUTO_DIARY: Loaded profile for $followerName");
             }
@@ -1128,32 +1130,49 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         // Build standard system prompt like main.php does
         
         // Use centralized function from data_functions.php
-        $dynamicBio = buildDynamicBiography();
+        $dynamicBio = buildDynamicBiography($FOLLOWER_CONF);
         
         $head = [
             ["role" => "system", "content" => strtr(
-                $GLOBALS["PROMPT_HEAD"] . "\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBio . "\n" . $GLOBALS["COMMAND_PROMPT"],
-                ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]
+                $FOLLOWER_CONF["PROMPT_HEAD"] . "\n" . $FOLLOWER_CONF["HERIKA_PERS"] . $dynamicBio . "\n" . $FOLLOWER_CONF["COMMAND_PROMPT"],
+                ["#PLAYER_NAME#" => $FOLLOWER_CONF["PLAYER_NAME"]]
             )]
         ];
         
+        // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
+        if (isset($FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"]) && $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"] > 0) {
+            $lastNDataForContext = $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"]+0;
+        } else {
+            $lastNDataForContext = (isset($FOLLOWER_CONF["CONTEXT_HISTORY"])) ? ($FOLLOWER_CONF["CONTEXT_HISTORY"]+0) : 25;
+        }
+
+        $sqlfilter=" and type<>'prechat'";
+        $contextDataHistoric = DataLastDataExpandedFor("{$FOLLOWER_CONF["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
+        $historyData="";
+        foreach ($contextDataHistoric as $element) {
+        
+            $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
+            
+        }
+
+
         // Build user prompt for diary generation (like regular diary)
         $prompt = [
             ["role" => "user", "content" => "diary"]
         ];
         
         if (!empty($contextDataHistoric)) {
-            $prompt[] = ["role" => "user", "content" => "Recent context: " . $contextDataHistoric];
+            $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
         }
         
         $contextData = array_merge($head, $prompt);
         
         // Generate diary entry using LLM
-        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php");
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$FOLLOWER_CONF["CONNECTORS_DIARY"]}.php");
         
-        $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-        $maxTokens = isset($GLOBALS["CONNECTOR"][$GLOBALS["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"]) 
-            ? $GLOBALS["CONNECTOR"][$GLOBALS["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"] 
+        $connectionHandler = new $FOLLOWER_CONF["CONNECTORS_DIARY"];
+        $maxTokens = isset($FOLLOWER_CONF["CONNECTOR"][$FOLLOWER_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"]) 
+            ? $FOLLOWER_CONF["CONNECTOR"][$FOLLOWER_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"] 
             : 1500;
             
         $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
@@ -1390,7 +1409,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
             Logger::debug("updateDynamicProfileField: Updated $field for $npcName");
             return $buffer;
         } else {
-            Logger::warning("updateDynamicProfileField: Empty response for field '$field' for $npcName");
+            Logger::info("updateDynamicProfileField: Empty response for field '$field' for $npcName");
             return false;
         }
         
@@ -1428,6 +1447,7 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
         // Read current file content
         $content = file_get_contents($configFile);
         $currentConfContent=extract_assignments($configFile);
+        
         // Map field names to their corresponding HERIKA variables
         $fieldMapping = [
             'personality' => 'HERIKA_PERSONALITY',
