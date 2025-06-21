@@ -1427,7 +1427,7 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
         
         // Read current file content
         $content = file_get_contents($configFile);
-        
+        $currentConfContent=extract_assignments($configFile);
         // Map field names to their corresponding HERIKA variables
         $fieldMapping = [
             'personality' => 'HERIKA_PERSONALITY',
@@ -1444,8 +1444,11 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
                 continue;
             }
             
+            $currentConfContent[$fieldMapping[$field]]=$newValue;
+            
+            /*
             $varName = $fieldMapping[$field];
-            $escapedValue = addslashes(var_export($newValue, true));
+            $escapedValue = var_export($newValue, true);
             
             // Check if variable already exists in file
             $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
@@ -1457,10 +1460,13 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
                 // Add new variable before the closing 
                 $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
             }
+            */
         }
         
         // Write updated content back to file
-        file_put_contents($configFile, $content, LOCK_EX);
+        //file_put_contents($configFile, $content, LOCK_EX);
+        write_php_assignments($currentConfContent,$configFile);
+        
         
         Logger::info("saveDynamicProfileUpdates: Successfully saved updates for $npcName");
         return true;

@@ -184,11 +184,12 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
 
 		if ($GLOBALS)	
-		$data = array(
-			'text' => $newString,
-			'speaker_wav' => $voice,
-			'language' => $lang
-		);
+			$data = array(
+				'text' => $newString,
+				'speaker_wav' => $voice,
+				'language' => $lang
+			);
+			
 		$options = array(
 			'http' => array(
 				'header' => "Content-type: application/json\r\n" .

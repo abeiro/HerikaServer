@@ -3406,6 +3406,7 @@ function buildDynamicProfileDisplay() {
     return $currentDynamicProfile;
 }
 
+
 function requireFilesRecursively($dir,$name) {
     $files = scandir($dir);
     foreach ($files as $file) {
@@ -3423,5 +3424,142 @@ function requireFilesRecursively($dir,$name) {
     }
 }
 
+
+/**
+ * Extracts top-level variable assignments from a PHP file using token-based parsing.
+ *
+ * This function parses a PHP file and returns an associative array where keys are variable
+ * names (including nested array keys like HERIKA_PERS['MIND']['RAGE']) and values are their
+ * assigned expressions as strings.
+ *
+ * Handles:
+ * - Simple scalar assignments: $foo = "bar";
+ * - Nested array assignments: $a["x"]["y"] = 123;
+ * - Full array declarations: $list = ["a", "b", "c"];
+ *
+ * Does not:
+ * - Evaluate values (expressions are returned as strings)
+ * - Detect variables inside functions, conditionals, or classes (purely syntactic)
+ * - Parse dynamic or computed keys (e.g., $arr[$key . "x"] = ...)
+ *
+ * @param string $filePath Path to the PHP file to parse.
+ * @return array An associative array of variable names to assigned value strings.
+ */
+
+function extract_assignments($filePath) {
+    $code = file_get_contents($filePath);
+    $tokens = token_get_all($code);
+
+    $variables = [];
+    $varName = '';
+    $indexStack = [];
+    $isAssign = false;
+    $collectValue = false;
+    $valueBuffer = '';
+    $bracketDepth = 0;
+
+    foreach ($tokens as $i => $token) {
+        if (is_array($token)) {
+            [$id, $text] = $token;
+
+            if ($id === T_VARIABLE) {
+                $varName = substr($text, 1);
+                $indexStack = [];
+                $isAssign = false;
+                $collectValue = false;
+                $valueBuffer = '';
+                $bracketDepth = 0;
+            }
+
+            elseif (in_array($id, [T_CONSTANT_ENCAPSED_STRING, T_STRING, T_LNUMBER, T_DNUMBER]) && !$collectValue) {
+                $prev = $tokens[$i - 1] ?? null;
+                if ($prev === '[') {
+                    $indexStack[] = trim($text, "'\"");
+                }
+            }
+
+            elseif ($collectValue) {
+                $valueBuffer .= $text;
+            }
+
+        } else {
+            // Symbolic tokens
+            if ($token === '=' && !$collectValue) {
+                $isAssign = true;
+                $collectValue = true;
+                $valueBuffer = '';
+                $bracketDepth = 0;
+            }
+
+            elseif ($collectValue) {
+                $valueBuffer .= $token;
+
+                // Track nested brackets (for arrays)
+                if ($token === '[') $bracketDepth++;
+                elseif ($token === ']') $bracketDepth--;
+
+                if (($token === ';' && $bracketDepth === 0)) {
+                    // Flatten variable with optional keys
+                    $fullKey = $varName;
+                    foreach ($indexStack as $key) {
+                        $fullKey .= "['$key']";
+                    }
+
+                    $variables[$fullKey] = trim($valueBuffer, " \t\n\r\0\x0B;");
+                    $isAssign = false;
+                    $collectValue = false;
+                    $valueBuffer = '';
+                    $indexStack = [];
+                }
+            }
+        }
+    }
+
+    return $variables;
+}
+
+/**
+ * Writes variable assignments back into a PHP file.
+ *
+ * Takes an array of variable assignments (as returned by extract_assignments()) and writes
+ * them into a PHP file with proper formatting.
+ *
+ * @param array $assignments Associative array of variable keys and value strings.
+ * @param string $filePath Destination file path to write the PHP code to.
+ */
+function write_php_assignments(array $assignments, string $filePath): void {
+    $output = "<?php\n\n";
+
+    foreach ($assignments as $key => $value) {
+        // Determine if it's a scalar value needing quotes
+        $trimmed = trim($value);
+
+        $isAlreadyQuoted =
+            (strlen($trimmed) >= 2) &&
+            (
+                ($trimmed[0] === '"' && $trimmed[-1] === '"') ||
+                ($trimmed[0] === "'" && $trimmed[-1] === "'")
+            );
+
+        $isLikelyArray = str_starts_with($trimmed, '[');
+        $isBoolOrNull = in_array(strtolower($trimmed), ['true', 'false', 'null'], true);
+        $isNumeric = is_numeric($trimmed);
+
+        if (!$isAlreadyQuoted && !$isLikelyArray && !$isBoolOrNull && !$isNumeric) {
+            // Escape inner quotes if needed
+            $trimmed = addslashes($trimmed);
+            $value = '"' . $trimmed . '"';
+        }
+
+        // Reconstruct variable name
+        $line = (strpos($key, '[') !== false)
+            ? "\${$key} = {$value};"
+            : "\$$key = {$value};";
+
+        $output .= $line . "\n";
+    }
+
+    file_put_contents($filePath, $output,LOCK_EX);
+}
 
 ?>
