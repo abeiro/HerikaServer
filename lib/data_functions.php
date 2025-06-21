@@ -3353,13 +3353,13 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         'HERIKA_RELATIONSHIPS' => 'Relationships',
         'HERIKA_OCCUPATION' => 'Occupation',
         'HERIKA_SKILLS' => 'Skills',
-        'HERIKA_SPEECHSTYLE' => 'Speech Style',
+        'HERIKA_SPEECHSTYLE' => 'SpeechStyle',
         'HERIKA_GOALS' => 'Goals'
     ];
     
     foreach ($herikaFields as $fieldName => $label) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
-            $dynamicBio .= "\n" . trim($FOLLOWER_CONF[$fieldName]);
+            $dynamicBio .= "\n\n#$label\n" . trim($FOLLOWER_CONF[$fieldName]);
         }
     }
     
@@ -3544,7 +3544,7 @@ function extract_assignments($filePath) {
  * @param array $assignments The variable assignments, as [name => raw_value]
  * @param string $filePath Path to save the output PHP code
  */
-function write_php_assignments(array $assignments, string $filePath): void {
+function write_php_assignments(array $assignments, string $filePath): bool {
     $output = "<?php\n\n";
 
     foreach ($assignments as $key => $value) {
@@ -3587,7 +3587,7 @@ function write_php_assignments(array $assignments, string $filePath): void {
         $output .= $line . "\n";
     }
 
-    file_put_contents($filePath, $output, LOCK_EX);
+    return file_put_contents($filePath, $output, LOCK_EX);
 }
 
 
