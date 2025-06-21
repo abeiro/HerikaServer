@@ -1445,7 +1445,7 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
             }
             
             $varName = $fieldMapping[$field];
-            $escapedValue = var_export($newValue, true);
+            $escapedValue = addslashes(var_export($newValue, true));
             
             // Check if variable already exists in file
             $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
