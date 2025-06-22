@@ -864,7 +864,10 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
     // AUTO_DIARY functionality - trigger diary entries for all current followers
     if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
-        processAutoDiary($gameRequest, "waitstart");
+        // Check if AUTO_DIARY_WAIT is enabled for wait events
+        if (!isset($GLOBALS["AUTO_DIARY_WAIT"]) || $GLOBALS["AUTO_DIARY_WAIT"]) {
+            processAutoDiary($gameRequest, "waitstart");
+        }
     }
     
     $MUST_END=true;
