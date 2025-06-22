@@ -598,8 +598,6 @@ if ($allDatesResult) {
                         'date' => $dateRow['date'],
                         'day' => $eventDay,
                         'localts' => $dateRow['localts'],
-                        'type' => $dateRow['type'],
-                        'data' => $dateRow['data'],
                         'people' => $dateRow['people'],
                         'location' => $dateRow['location']
                     ];
@@ -628,8 +626,6 @@ if ($allDatesResult) {
                         'gamets' => $gamets,
                         'localts' => $dateRow['localts'],
                         'day' => $eventDay,
-                        'type' => $dateRow['type'],
-                        'data' => $dateRow['data'],
                         'people' => $dateRow['people'],
                         'location' => $dateRow['location']
                     ];
