@@ -865,7 +865,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     // AUTO_DIARY functionality - trigger diary entries for all current followers
     if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
         // Check if AUTO_DIARY_WAIT is enabled for wait events
-        if (!isset($GLOBALS["AUTO_DIARY_WAIT"]) || $GLOBALS["AUTO_DIARY_WAIT"]) {
+        if (isset($GLOBALS["AUTO_DIARY_WAIT"]) && $GLOBALS["AUTO_DIARY_WAIT"]) {
             processAutoDiary($gameRequest, "waitstart");
         }
     }
@@ -929,10 +929,12 @@ function processAutoDiary($gameRequest, $eventType) {
         return;
     }
     
+    Logger::debug("AUTO_DIARY: Raw party data: " . $partyConf);
+    
     // Parse party data
     $currentParty = json_decode($partyConf, true);
     if (!is_array($currentParty) || empty($currentParty)) {
-        Logger::info("AUTO_DIARY: Failed to parse party data or party is empty");
+        Logger::info("AUTO_DIARY: Failed to parse party data or party is empty. Data was: " . $partyConf);
         return;
     }
     
@@ -984,11 +986,6 @@ function processAutoDiary($gameRequest, $eventType) {
         }
     }
     
-    // Echo confirmation using the same format as other notifications
-    if ($generatedCount > 0) {
-        $confirmationMessage = "Generated $generatedCount auto-diary " . ($generatedCount == 1 ? "entry" : "entries");
-        echo "The Narrator|rolecommand|DebugNotification@$confirmationMessage" . PHP_EOL;
-    }
 }
 
 // Function to process a single NPC's dynamic profile
