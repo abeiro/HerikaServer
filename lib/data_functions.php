@@ -3408,6 +3408,9 @@ function buildDynamicProfileDisplay() {
 
 
 function requireFilesRecursively($dir,$name) {
+    
+    global $gameRequest;
+
     $files = scandir($dir);
     foreach ($files as $file) {
         if ($file === '.' || $file === '..') {

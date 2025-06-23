@@ -29,6 +29,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php"); 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
 
+$GLOBALS["ENGINE_PATH"]=$path;
 
 // PARSE GET RESPONSE into $gameRequest
 $cooldownPeriod = 600;
@@ -1407,6 +1408,7 @@ if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
 while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_flush());
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prepostrequest.php");
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"postrequest.php");
 
