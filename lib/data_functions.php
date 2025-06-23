@@ -1658,7 +1658,25 @@ function DataGetCurrentPartyConf() {
 
     $results = $db->fetchAll("select value from conf_opts where id='CurrentParty'");
     if (is_array($results) && sizeof($results)>0) {
-        $guys=json_decode("[{$results[0]["value"]}\"\"]",true);
+        // The C++ code stores party data like: {"name":"Lydia"},{"name":"Serana"},
+        // We need to wrap it in brackets and remove trailing comma to make valid JSON
+        $partyData = trim($results[0]["value"]);
+        if (empty($partyData)) {
+            return "";
+        }
+        
+        // Remove trailing comma if present
+        $partyData = rtrim($partyData, ',');
+        
+        // Wrap in brackets to make it a valid JSON array
+        $jsonString = "[" . $partyData . "]";
+        
+        $guys = json_decode($jsonString, true);
+        if (!is_array($guys)) {
+            Logger::warn("DataGetCurrentPartyConf: Failed to parse party JSON: " . $jsonString);
+            return "";
+        }
+        
         $finalparty=[];
         foreach ($guys as $guy) {
             if (isset($guy["name"]))

@@ -864,7 +864,10 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     
     // AUTO_DIARY functionality - trigger diary entries for all current followers
     if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
-        processAutoDiary($gameRequest, "waitstart");
+        // Check if AUTO_DIARY_WAIT is enabled for wait events
+        if (isset($GLOBALS["AUTO_DIARY_WAIT"]) && $GLOBALS["AUTO_DIARY_WAIT"]) {
+            processAutoDiary($gameRequest, "waitstart");
+        }
     }
     
     $MUST_END=true;
@@ -913,6 +916,189 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "diary_nearby")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+    
+    // Process diary entries for all nearby NPCs (not just followers)
+    processNearbyDiary($gameRequest, "manual_nearby");
+    
+    $MUST_END=true;
+    
+    
+}
+
+// Function to process diary entries for all nearby NPCs (triggered by C++ with 400 unit range)
+function processNearbyDiary($gameRequest, $eventType) {
+    global $db;
+    
+    // Note: The C++ code handles the 400 unit range filtering and sends individual diary requests
+    // This function processes the diary_nearby event type but won't actually be called for bulk processing
+    // Individual diary requests will come through the normal diary handler
+    
+    Logger::info("DIARY_NEARBY: diary_nearby event received - C++ will handle individual NPCs within 400 units");
+    
+    // Just log that the nearby diary was triggered
+    echo "The Narrator|rolecommand|DebugNotification@Checking for nearby NPCs within 400 units..." . PHP_EOL;
+}
+
+// Function to generate diary entry for a nearby NPC (similar to followers but for any NPC)
+function generateNearbyDiary($npcName, $gameRequest, $eventType) {
+    global $db;
+    
+    // Check if we have the diary connector configured
+    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+        Logger::info("DIARY_NEARBY: No diary connector configured for $npcName");
+        return false;
+    }
+    
+    // Temporarily switch context to this NPC
+    $originalHerikaName = $GLOBALS["HERIKA_NAME"];
+    $GLOBALS["HERIKA_NAME"] = $npcName;
+    
+    try {
+        // Load NPC's profile if it exists
+        $profileLoaded = false;
+        $originalHerikaData = [];
+        $NPC_CONF = [];
+        
+        // Try to load profile data for this NPC
+        if (function_exists('getConfFileFor')) {
+            $confFile = getConfFileFor($npcName);
+            if (!empty($confFile) && file_exists($confFile)) {
+                // Save original values
+                $originalHerikaData = [
+                    'HERIKA_PERS' => isset($GLOBALS["HERIKA_PERS"]) ? $GLOBALS["HERIKA_PERS"] : '',
+                    'HERIKA_DYNAMIC' => isset($GLOBALS["HERIKA_DYNAMIC"]) ? $GLOBALS["HERIKA_DYNAMIC"] : ''
+                ];
+                
+                // Load NPC's profile
+                $NPC_CONF = extract_assignments($confFile);
+                $profileLoaded = true;
+                Logger::info("DIARY_NEARBY: Loaded profile for $npcName");
+            }
+        }
+        
+        if (!$profileLoaded) {
+            // Use default NPC personality if no specific profile exists
+            $NPC_CONF = [
+                "HERIKA_NAME" => $npcName,
+                "PLAYER_NAME" => $GLOBALS["PLAYER_NAME"],
+                "HERIKA_PERS" => "An NPC in the world of Skyrim.",
+                "HERIKA_DYNAMIC" => "Currently encountered by " . $GLOBALS["PLAYER_NAME"] . ".",
+                "PROMPT_HEAD" => isset($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "You are an NPC in the world of Skyrim.",
+                "COMMAND_PROMPT" => isset($GLOBALS["COMMAND_PROMPT"]) ? $GLOBALS["COMMAND_PROMPT"] : "",
+                "CONTEXT_HISTORY" => isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25,
+                "CONTEXT_HISTORY_DIARY" => isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0,
+                "CONNECTORS_DIARY" => $GLOBALS["CONNECTORS_DIARY"]
+            ];
+            Logger::info("DIARY_NEARBY: Using default profile for $npcName");
+        }
+        
+        // Use centralized function from data_functions.php
+        $dynamicBio = buildDynamicBiography($NPC_CONF);
+        
+        $head = [
+            ["role" => "system", "content" => strtr(
+                $NPC_CONF["PROMPT_HEAD"] . "\n" . $NPC_CONF["HERIKA_PERS"] . $dynamicBio . "\n" . $NPC_CONF["COMMAND_PROMPT"],
+                ["#PLAYER_NAME#" => $NPC_CONF["PLAYER_NAME"]]
+            )]
+        ];
+        
+        // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
+        if (isset($NPC_CONF["CONTEXT_HISTORY_DIARY"]) && $NPC_CONF["CONTEXT_HISTORY_DIARY"] > 0) {
+            $lastNDataForContext = $NPC_CONF["CONTEXT_HISTORY_DIARY"] + 0;
+        } else {
+            $lastNDataForContext = (isset($NPC_CONF["CONTEXT_HISTORY"])) ? ($NPC_CONF["CONTEXT_HISTORY"] + 0) : 25;
+        }
+
+        $sqlfilter = " and type<>'prechat'";
+        $contextDataHistoric = DataLastDataExpandedFor("{$NPC_CONF["HERIKA_NAME"]}", $lastNDataForContext * -1, $sqlfilter);
+        $historyData = "";
+        foreach ($contextDataHistoric as $element) {
+            $historyData .= trim("{$element["content"]}") . PHP_EOL . PHP_EOL;
+        }
+
+        // Build user prompt for diary generation (like regular diary)
+        $prompt = [];
+        if (!empty($contextDataHistoric)) {
+            $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
+        }
+
+        $diaryPrompt = strtr($GLOBALS["DIARY_PROMPT"], ["#PLAYER_NAME#" => $NPC_CONF["PLAYER_NAME"], "#HERIKA_NAME#" => $npcName]);
+        $prompt[] = ["role" => "user", "content" => $diaryPrompt];
+
+        $contextData = array_merge($head, $prompt);
+        
+        // Generate diary entry using LLM
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$NPC_CONF["CONNECTORS_DIARY"]}.php");
+        
+        $connectionHandler = new $NPC_CONF["CONNECTORS_DIARY"];
+        $maxTokens = isset($GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"]) 
+            ? $GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"] 
+            : 1500;
+            
+        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
+        
+        $buffer = "";
+        $totalBuffer = "";
+        $breakFlag = false;
+        
+        while (true) {
+            if ($breakFlag) {
+                break;
+            }
+            
+            if ($connectionHandler->isDone()) {
+                $breakFlag = true;
+            }
+            
+            $buffer .= $connectionHandler->process();
+            $totalBuffer .= $buffer;
+        }
+        
+        $connectionHandler->close();
+        
+        if (!empty(trim($buffer))) {
+            // Save diary entry to database
+            $topic = DataLastKnowDate();
+            $location = DataLastKnownLocation();
+            
+            $db->insert(
+                'diarylog',
+                array(
+                    'ts' => $gameRequest[1],
+                    'gamets' => $gameRequest[2],
+                    'topic' => $topic . " (Nearby diary: $eventType)",
+                    'content' => trim($buffer),
+                    'tags' => "Nearby-diary,$eventType",
+                    'people' => $npcName,
+                    'location' => $location,
+                    'sess' => 'pending',
+                    'localts' => time()
+                )
+            );
+            
+            // Log memory
+            if (function_exists('logMemory')) {
+                logMemory($npcName, $npcName, trim($buffer), time(), $gameRequest[2], 'nearby_diary', $gameRequest[1]);
+            }
+            
+            return true;
+        }
+        
+    } catch (Exception $e) {
+        Logger::error("DIARY_NEARBY: Error generating diary for $npcName: " . $e->getMessage());
+    } finally {
+        // Restore original context
+        $GLOBALS["HERIKA_NAME"] = $originalHerikaName;
+        
+        // Restore original profile data if we loaded an NPC profile
+        if (!empty($originalHerikaData)) {
+            $GLOBALS["HERIKA_PERS"] = $originalHerikaData['HERIKA_PERS'];
+            $GLOBALS["HERIKA_DYNAMIC"] = $originalHerikaData['HERIKA_DYNAMIC'];
+        }
+    }
+    
+    return false;
 }
 
 // Function to process AUTO_DIARY for all current followers
@@ -926,10 +1112,12 @@ function processAutoDiary($gameRequest, $eventType) {
         return;
     }
     
+    Logger::debug("AUTO_DIARY: Raw party data: " . $partyConf);
+    
     // Parse party data
     $currentParty = json_decode($partyConf, true);
     if (!is_array($currentParty) || empty($currentParty)) {
-        Logger::info("AUTO_DIARY: Failed to parse party data or party is empty");
+        Logger::info("AUTO_DIARY: Failed to parse party data or party is empty. Data was: " . $partyConf);
         return;
     }
     
@@ -981,11 +1169,6 @@ function processAutoDiary($gameRequest, $eventType) {
         }
     }
     
-    // Echo confirmation using the same format as other notifications
-    if ($generatedCount > 0) {
-        $confirmationMessage = "Generated $generatedCount auto-diary " . ($generatedCount == 1 ? "entry" : "entries");
-        echo "The Narrator|rolecommand|DebugNotification@$confirmationMessage" . PHP_EOL;
-    }
 }
 
 // Function to process a single NPC's dynamic profile
