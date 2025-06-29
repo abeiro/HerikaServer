@@ -34,6 +34,7 @@ class openrouterjson
     private $_cot_tag_base;
     private $_output_buffer; 
     private $_timeout;
+    private $_is_grok;
 
     public function __construct()
     {
@@ -118,7 +119,7 @@ class openrouterjson
         return $b_res;
     }
    
-    private function init_connector() {
+    private function init_connector($customParms) {
         $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
@@ -136,7 +137,16 @@ class openrouterjson
                 $default_model = 'mistral-small-latest';
         }
 
+
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+
+        // We shoud be able to overwrite model.
+        
+        $this->_model = isset($customParms["model"]) ?$customParms["model"] :  $this->_model;
+
+        $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
+
+
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
             $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
@@ -146,7 +156,7 @@ class openrouterjson
     public function open($contextData, $customParms)
     {
 
-        $this->init_connector();
+        $this->init_connector($customParms);
 
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
@@ -493,6 +503,11 @@ class openrouterjson
         if ($this->_is_mistral_ai) {
             unset($data["presence_penalty"]); 
             unset($data["frequency_penalty"]);
+        } 
+
+        if ($this->_is_grok) { //Argument not supported on this model: stop
+            unset($data["stop"]); 
+
         } 
 
         if (isset($customParms["MAX_TOKENS"])) {

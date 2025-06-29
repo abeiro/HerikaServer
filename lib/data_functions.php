@@ -208,7 +208,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Rolemaster notes
     
     $timeCut=time();
-    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where localts+ttl>$timeCut order by localts asc");
+    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scene_note' and localts+ttl>$timeCut order by localts asc");
     if (is_array($rolemasterNotes)) {
         $notes=[];
         foreach ($rolemasterNotes as $note)
@@ -713,7 +713,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             else {
                 $timeGapInHours=round(($row["gamets"]-$lastGameTs)* 0.0000024, 0);
                 
-                if ($timeGapInHours>72) {
+                if ($timeGapInHours>36) {
                     $timeGapInDays=round($timeGapInHours/24,1);
                     $lastDialogFull[] = array('role' => "narratorci", 'content' => "NOTE: THERE IS BIG TIME JUMP HERE OF ABOUT $timeGapInDays days. Current location is $currentLocation)  ");
                 }
@@ -2739,7 +2739,7 @@ function call_llm() {
                                 error_log("[ACTION POSTFILTER SetCurrentTask, using speech as parameter $speech] ");
                             
                             } else {
-                                error_log("[ACTION POSTFILTER SetCurrentTask, using target as parameter ${$actionParts2[1]}] ");
+                                error_log("[ACTION POSTFILTER SetCurrentTask, using target as parameter {$actionParts2[1]}] ");
                             }
 
                             

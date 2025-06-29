@@ -83,7 +83,7 @@ class openrouter
         return $b_res;
     }
 
-    private function init_connector() {
+    private function init_connector($customParms) {
         $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
@@ -103,6 +103,10 @@ class openrouter
         }
 
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+
+        // We shoud be able to overwrite model.
+        $this->_model = isset($customParms["model"]) ?$customParms["model"] :  $this->_model;
+
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
             $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
@@ -112,7 +116,7 @@ class openrouter
     public function open($contextData, $customParms)
     {
 
-        $this->init_connector();
+        $this->init_connector($customParms);
 
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
