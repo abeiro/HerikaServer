@@ -29,6 +29,12 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
             
         }
+        
+        $recap=$GLOBALS["db"]->fetchOne("SELECT * FROM rolemaster where type='story_summary' ORDER BY rowid DESC LIMIT 1");
+        if (isset($recap["data"])) {
+            $historyData=$recap["data"]."\n".$historyData;
+
+        }
 
         
         // Function stuff      

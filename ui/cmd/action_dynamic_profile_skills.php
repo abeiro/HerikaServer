@@ -173,7 +173,11 @@ if ($method === "POST") {
         $connectionHandler->close();
 
         $buffer = trim($buffer);
+
+        
         if (!empty($buffer)) {
+            $skillsData=getInGameSkillDataFor($jsonDataInput["HERIKA_NAME"] );
+            $buffer.="\n$skillsData";
             // Save directly to profile file
             $FOLLOWER_CONF=extract_assignments($profile);
             $FOLLOWER_CONF["HERIKA_SKILLS"]=$buffer;

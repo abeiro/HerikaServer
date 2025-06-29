@@ -27,6 +27,9 @@ $updateVersion = function($tablename,$version) {
 
 /////////////////////////
 
+// Must
+$db->execQuery('CREATE EXTENSION IF NOT EXISTS vector');
+
 $query = "
     SELECT column_name 
     FROM information_schema.columns 
@@ -1051,7 +1054,7 @@ if ($checkVersion("dynamic_bio")<20250710001) {
 
 //----------------------------------------------------
 
-if ($checkVersion("oghma")<20250903001) { // version 202509... 
+//if ($checkVersion("oghma")<20250903001) { // version 202509... 
     Logger::debug(" try patch: oghma 20250903001");
     
     // Check if vector384 column exists first
@@ -1082,7 +1085,7 @@ if ($checkVersion("oghma")<20250903001) { // version 202509...
     
     $updateVersion("oghma",20250903001);
     Logger::info("Applied patch oghma 20250903001");
-}
+//}
 
 if ($checkVersion("locations")<20250526001) {
     Logger::debug(" try patch: locations 20250526001");

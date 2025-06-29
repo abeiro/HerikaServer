@@ -1348,7 +1348,35 @@ function DataDiaryLogIndex($topic)
 function DataGetCurrentTask()
 {
     global $db;
-    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission order by gamets desc");
+
+    $hourThreshold= DataLastKnownGameTS()-(2/ 0.0000024);
+
+    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission where sess='ephemeral' and gamets>$hourThreshold order by gamets desc");
+    error_log("SElECT  distinct description as description,gamets FROM currentmission where sess='ephemeral' and gamets>$hourThreshold order by gamets desc");
+
+    if (!$results) {
+        $results=[];
+    } else {
+        return $results[0]["description"];
+
+    }
+
+    $data = "";
+
+    $n = 0;
+    foreach ($results as $row) {
+
+        if ($n == 0) {
+            $data = "Current plan: {$row["description"]}.";
+        } elseif ($n == 1) {
+            $data .= "Previous plan: {$row["description"]}.";
+        } else {
+            break;
+        }
+        $n++;
+    }
+
+    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission where sess<>'ephemeral' order by gamets desc");
     if (!$results) {
         $results=[];
     }
@@ -2058,9 +2086,13 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
         $pattern = '/\(talking to [^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
-        $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
+        if (empty($npcfilter)) {
+            $npcfilter=$GLOBALS["HERIKA_NAME"];
+        }
 
+        $contextKeywords  = implode(" ", lastKeyWordsContext(5, $npcfilter));
 
+        
         $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
         $data = [
             'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
@@ -2153,10 +2185,10 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
     
 }
 
-
-function DataSearchOghmaByVector($rawstring) {
+function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$contextKeywords) {
+//function DataSearchOghmaByVector($rawstring) {
     
-  
+    
     Logger::info("Using DataSearchOghmaByVector");
     $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
     $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
@@ -2168,40 +2200,59 @@ function DataSearchOghmaByVector($rawstring) {
     $pattern = '/\(talking to [^()]+\)/i';
     $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
-    $contextKeywords  = implode(" ", lastKeyWordsContext(5, "%"));
+   
+    Logger::info("DataSearchOghmaByVector Expanded keywords: <$currentOghmaTopic> <$locationCtx> <$contextKeywords>");
+    /***/
 
+    $embeddingFunction=function($text) {
+        if (empty($text))
+            return ["embedding"=>array_fill(0, 384, 0)];
 
-    $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
-    $data = [
-        'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
-    ];
+        $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+        $data = [
+            'text' => $text   // We add previous keywords
+        ];
 
-    // Convert to JSON
-    $options = [
-        'http' => [
-            'method'  => 'POST',
-            'header'  => "Content-Type: application/json\r\n" .
-                        "Accept: application/json\r\n",
-            'content' => json_encode($data),
-            'ignore_errors' => true // to capture error messages if any
-        ]
-    ];
+        // Convert to JSON
+        $options = [
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Content-Type: application/json\r\n" .
+                            "Accept: application/json\r\n",
+                'content' => json_encode($data),
+                'ignore_errors' => true // to capture error messages if any
+            ]
+        ];
 
-    // Create context and send the request
-    $context  = stream_context_create($options);
-    $response = file_get_contents($url, false, $context);
+        // Create context and send the request
+        $context  = stream_context_create($options);
+        $response = file_get_contents($url, false, $context);
 
-    // Output the response
-    if ($response === false) {
-        Logger::error("Request failed.\n");
-    } else {
-        Logger::info("Request done: Searched: {$data["text"]}\n");
+        // Output the response
+        if ($response === false) {
+            Logger::error("Request failed.\n");
+        } else {
+            Logger::info("Request done: Searched: {$data["text"]}\n");
 
-    }
+        }
 
-    $vector=json_decode($response,true);
-    if (is_array($vector) && isset($vector["embedding"])) {
-        $vectorString="'[".implode(",",$vector["embedding"])."]'";
+        $vector=json_decode($response,true);
+        return sizeof($vector)>0?$vector:["embedding"=>array_fill(0, 384, 0)];
+
+    };
+
+    $vector1=$embeddingFunction($TEST_TEXT);
+    $vector2=$embeddingFunction($locationCtx);
+    $vector3=$embeddingFunction($contextKeywords);
+    $vector4=$embeddingFunction($currentOghmaTopic);
+    
+    
+
+    if (is_array($vector1) && isset($vector1["embedding"])) {
+        $vectorString1="'[".implode(",",$vector1["embedding"])."]'";
+        $vectorString2="'[".implode(",",$vector2["embedding"])."]'";
+        $vectorString3="'[".implode(",",$vector3["embedding"])."]'";
+        $vectorString4="'[".implode(",",$vector4["embedding"])."]'";
 
         $memory=$GLOBALS["db"]->fetchAll("
             SELECT  topic_desc,
@@ -2209,18 +2260,24 @@ function DataSearchOghmaByVector($rawstring) {
                                 knowledge_class,
                                 knowledge_class_basic,
                                 topic_desc_basic, 
-                    vector384 <-> $vectorString as distance
+                    vector384 <-> $vectorString1 as distance1,
+                    vector384 <-> $vectorString2 as distance2,
+                    vector384 <-> $vectorString3 as distance3,
+                    vector384 <-> $vectorString4 as distance4,
+                    ((vector384 <-> $vectorString1) + (vector384 <-> $vectorString2)/4 + (vector384 <-> $vectorString3)/2 + (vector384 <-> $vectorString4)/2 )/2 as distance
                 FROM public.oghma 
                 WHERE vector384 IS NOT NULL
-                ORDER BY vector384 <-> $vectorString
+                ORDER BY ((vector384 <-> $vectorString1) + (vector384 <-> $vectorString2)/4 + (vector384 <-> $vectorString3)/2 + (vector384 <-> $vectorString4)/2 )/4 ASC
                 LIMIT 5 OFFSET 0
             ");
-                
+        
+        
+
         if (!isset($memory[0]))
             $memory[0]=["combined_rank"=>null];
         else {
-             $memory[0]['combined_rank']=(7.40-$memory[0]["distance"]);
-             $memory[0]['combined_rank']=(7.40-$memory[0]["distance"]);
+             $memory[0]['combined_rank']=(7.95-$memory[0]["distance"]);
+             $memory[0]['combined_rank']=(7.95-$memory[0]["distance"]);
         }
         
         $GLOBALS["db"]->insert(
@@ -2673,6 +2730,19 @@ function call_llm() {
 
         
 
+
+                        } else if ($actionParts2[0]=="SetCurrentTask") {
+                            // Lets polish the parammeters
+                            if (empty(trim($actionParts2[1]))) {
+                                $speech=implode(" ".$talkedSoFar);
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|SetCurrentTask@$speech";
+                                error_log("[ACTION POSTFILTER SetCurrentTask, using speech as parameter $speech] ");
+                            
+                            } else {
+                                error_log("[ACTION POSTFILTER SetCurrentTask, using target as parameter ${$actionParts2[1]}] ");
+                            }
+
+                            
 
                         }
                     }
@@ -3611,5 +3681,67 @@ function write_php_assignments(array $assignments, string $filePath): bool {
     return file_put_contents($filePath, $output, LOCK_EX);
 }
 
+function getInGameSkillDataFor($npcnName) {
 
+    $npcEscapedName=$GLOBALS["db"]->escape($npcnName);
+    $query="
+WITH npc_spells AS (
+  SELECT
+    TRIM(SUBSTRING(data FROM '$npcEscapedName casts\s+(.+)$')) AS spell
+  FROM public.eventlog
+  WHERE type = 'npcspellcast' AND data LIKE '$npcEscapedName casts%'
+),
+
+npc_weapons AS (
+  SELECT
+    TRIM(SUBSTRING(data FROM 'using weapon\s+(.+)$')) AS weapon
+  FROM public.eventlog
+  WHERE type = 'death' AND data LIKE '%$npcEscapedName has defeated%'
+)
+
+SELECT
+  'spell' AS type,
+  spell AS item,
+  COUNT(*) AS usage_count
+FROM npc_spells
+where spell is not null
+GROUP BY spell
+HAVING COUNT(*)>1
+
+UNION ALL
+
+SELECT
+  'weapon' AS type,
+  weapon AS item,
+  COUNT(*) AS usage_count
+FROM npc_weapons
+where weapon is not null
+GROUP BY weapon
+HAVING COUNT(*)>1
+
+ORDER BY type, usage_count DESC;
+";
+    $skillsData=$GLOBALS["db"]->fetchAll($query);
+
+    if (sizeof ($skillsData)==0)
+        return "";
+
+    $spells = [];
+    $weapons = [];
+
+    foreach ($skillsData as $entry) {
+        if ($entry['type'] === 'spell') {
+            $spells[] = $entry['item'];
+        } elseif ($entry['type'] === 'weapon') {
+            $weapons[] = $entry['item'];
+        }
+    }
+
+    // Store in strings
+    $spellsList = sizeof($spells)>0?implode(', ', $spells):"none";
+    $weaponsList = sizeof($weapons)>0?implode(', ', $weapons):"none";
+    
+
+    return "* Fav.Spells: $spellsList\n* Fav. Weapons: $weaponsList\n";
+}
 ?>
