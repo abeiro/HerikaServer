@@ -97,7 +97,7 @@ if ($EXECUTION_MODE=="STANDARD") {
                 'sent' => 0,
                 'actor' => "rolemaster",
                 'text' => '',
-                'action' => "rolecommand|DebugNotification@Spwan instruction processed, back to standard mode",
+                'action' => "rolecommand|DebugNotification@Spawn instruction processed, back to standard mode",
                 'tag' => ""
             )
         );
@@ -107,18 +107,25 @@ if ($EXECUTION_MODE=="STANDARD") {
 } else if ($EXECUTION_MODE=="IMPERSONATION") {
     
     $gameRequest[3]="**".$gameRequest[3];
+    $GLOBALS["PLAYER_REESPECH"]=true;
     
 } else if ($EXECUTION_MODE=="CREATION") {
     
     $gameRequest[3]="**(".$gameRequest[3].")";
+    $GLOBALS["PLAYER_REESPECH"]=true;
     
 } else if ($EXECUTION_MODE=="INJECTION_LOG") {
-    
-    $gameRequest[3]="(".$gameRequest[3].")";
+    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+    $gameRequest[3]="($cleaned_player_dialogue)";
+    logEvent($gameRequest);
+
+
     
 } else if ($EXECUTION_MODE=="INJECTION_CHAT") {
-    
-    $gameRequest[3]="(".$gameRequest[3].")";
+    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+
+    $gameRequest[3]="($cleaned_player_dialogue)";
+
     
 }
  
