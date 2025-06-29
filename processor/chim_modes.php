@@ -40,6 +40,8 @@
 $EXECUTION_MODE_=$db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
 $EXECUTION_MODE=isset($EXECUTION_MODE_["value"])?$EXECUTION_MODE_["value"]:"STANDARD";
 
+$EXECUTION_MODE=strtoupper($EXECUTION_MODE);
+
 if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
     $EXECUTION_MODE="STANDARD";
 }

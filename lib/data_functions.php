@@ -1713,7 +1713,7 @@ function DataGetCurrentPartyConf() {
     
         return json_encode($finalparty);
     } else
-        return "";
+        return json_encode([]);
     
 }
 
