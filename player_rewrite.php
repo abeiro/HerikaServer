@@ -72,6 +72,12 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
         // Build context for player character
         $playerContext = "";
+        
+        // Ensure PLAYER_SPEECH_STYLE is available (it's a global config variable)
+        if (!isset($GLOBALS["PLAYER_SPEECH_STYLE"])) {
+            $GLOBALS["PLAYER_SPEECH_STYLE"] = "";
+        }
+        
         if (!empty($GLOBALS["PLAYER_BIOS"])) {
             $playerContext .= "Player Character Background: " . $GLOBALS["PLAYER_BIOS"] . "\n";
         }
@@ -113,6 +119,9 @@ $sysprompt
             ];
         };
         $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
+
+        // Log the player rewrite request to context_sent_to_llm.log (minimal logging)
+        file_put_contents(__DIR__."/log/context_sent_to_llm.log", date(DATE_ATOM)."\n=PLAYER_REWRITE for {$GLOBALS["PLAYER_NAME"]}=\n".var_export($prompt,true)."\n=\n", FILE_APPEND);
 
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
         $connectionHandler->open($prompt,$customParm);
