@@ -482,8 +482,14 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         function getBaseUrlForSpeech(): string {
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
             $host = $_SERVER['HTTP_HOST'];
-            return $protocol . $host;
+            $port = $_SERVER['SERVER_PORT'];
+        
+            // Check if the port is non-standard for the protocol
+            $isDefaultPort = ($protocol === "http://" && $port == 80) || ($protocol === "https://" && $port == 443);
+        
+            return $protocol . $host . ($isDefaultPort ? '' : ':' . $port);
         }
+        
 
         $newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$newSpeech";
