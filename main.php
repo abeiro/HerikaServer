@@ -483,7 +483,9 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
             $host = $_SERVER['HTTP_HOST'];
             $port = $_SERVER['SERVER_PORT'];
-        
+            
+            $port = 8081; // Seems this is not being autodetected
+
             // Check if the port is non-standard for the protocol
             $isDefaultPort = ($protocol === "http://" && $port == 80) || ($protocol === "https://" && $port == 443);
         
