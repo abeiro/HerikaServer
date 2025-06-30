@@ -70,12 +70,27 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
        
 
+        // Build context for player character
+        $playerContext = "";
+        if (!empty($GLOBALS["PLAYER_BIOS"])) {
+            $playerContext .= "Player Character Background: " . $GLOBALS["PLAYER_BIOS"] . "\n";
+        }
+        if (!empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {
+            $playerContext .= "Player Speech Style: " . $GLOBALS["PLAYER_SPEECH_STYLE"] . "\n";
+        }
+        
         $commonprompt='';
         if (!$_GET["speech"]) {
             $sysprompt="Write dialogue for {$GLOBALS["PLAYER_NAME"]}";
+            if (!empty($playerContext)) {
+                $sysprompt .= "\n\n# Character Context\n" . $playerContext;
+            }
             $userprompt="";
         } else {
             $sysprompt="Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Pay attention to comments between brackets, that can guide you in length and verbosity.";
+            if (!empty($playerContext)) {
+                $sysprompt .= "\n\n# Character Context\n" . $playerContext;
+            }
             $userprompt="";
         }
         
