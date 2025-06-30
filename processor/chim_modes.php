@@ -107,12 +107,12 @@ if ($EXECUTION_MODE=="STANDARD") {
 } else if ($EXECUTION_MODE=="IMPERSONATION") {
     
     $gameRequest[3]="**".$gameRequest[3];
-    $GLOBALS["PLAYER_REESPECH"]=true;
+    $GLOBALS["PLAYER_RESPEECH"]=true;
     
 } else if ($EXECUTION_MODE=="CREATION") {
     
     $gameRequest[3]="**(".$gameRequest[3].")";
-    $GLOBALS["PLAYER_REESPECH"]=true;
+    $GLOBALS["PLAYER_RESPEECH"]=true;
     
 } else if ($EXECUTION_MODE=="INJECTION_LOG") {
     $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
