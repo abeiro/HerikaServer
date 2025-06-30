@@ -472,7 +472,7 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
 
 // Player rewrite
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["PLAYER_REESPECH"]) && $GLOBALS["PLAYER_REESPECH"]) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["PLAYER_RESPEECH"]) && $GLOBALS["PLAYER_RESPEECH"]) {
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
     error_log($cleaned_player_dialogue);
