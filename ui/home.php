@@ -690,14 +690,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         <h1>📊 Dwemer Dashboard</h1>
 
         <div class="dashboard-buttons">
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?table=eventlog'" class="dashboard-btn">
-                <span class="btn-icon">📜</span> Events
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?table=log'" class="dashboard-btn">
-                <span class="btn-icon">📋</span> Response Log
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?table=memory_summary'" class="dashboard-btn">
-                <span class="btn-icon">🧠</span> Memory Summaries
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/events-memories.php'" class="dashboard-btn">
+                <span class="btn-icon">📜</span> Events & Memories
             </button>
             <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php'" class="dashboard-btn">
                 <span class="btn-icon">🧙</span> Configuration Wizard

@@ -36,45 +36,13 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
 
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Events & Memories</a>
-                    <ul class="dropdown-menu">
-
-                    <!-- Events Category -->
-                    <li><h6 class="dropdown-header">Events and Objectives</h6></li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=eventlog">Event Log</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=quests">Active Quests</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=currentmission">Dynamic AI Objective</a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <!-- Logs Category -->
-                    <li><h6 class="dropdown-header">Logs</h6></li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=log">Response Log</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=books">Book Log</a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-
-                    <!-- Memories Category -->
-                    <li><h6 class="dropdown-header">Memories</h6></li>
-                    <!--<li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=memory">Memories (WIP)</a>
-                    </li>-->
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=memory_summary">Memory Summaries</a>
-                    </li>
-
-                    </ul>
+                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a>
                 </li>
                 <li class="nav-item dropdown mx-2">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server  Actions</a>
                     <ul class="dropdown-menu">
+
+
 
                         <li><h6 class="dropdown-header">Character Profiles</h6></li>
                         <li>
