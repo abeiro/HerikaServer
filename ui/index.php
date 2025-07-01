@@ -631,6 +631,12 @@ if ($_POST["animation"]) {
     
         echo "<h1 class='my-2'>Response Log</h1>";
     
+        // Add Clean and Export buttons
+        echo "<div class='response-log-actions' style='margin: 15px 0;'>";
+        echo "<button onclick=\"if(confirm('This will clear all the entries in the Response Log. ARE YOU SURE?')) window.location.href='?cleanlog=true'\" class='btn-base btn-danger' style='margin-right: 10px;'>Clean Response Log</button>";
+        echo "<button onclick=\"window.open('?export=log', '_blank')\" class='btn-base btn-primary'>Export Response Log</button>";
+        echo "</div>";
+    
         $prevPage = max(1, $page - 1);
         $nextPage = $page + 1;
     

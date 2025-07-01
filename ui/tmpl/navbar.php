@@ -98,19 +98,6 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </li>
                         <li><hr class="dropdown-divider"></li>
 
-                        <!-- Second Category Header -->
-                        <li><h6 class="dropdown-header">Response Log Management</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?cleanlog=true" title="Clean AI Log table." onclick="return confirm('This will clear all the entries in the Response Log. ARE YOU SURE?')">
-                            Clean Response Log
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?export=log" title="Export Response Log (debugging purposes)." target="_blank">
-                            Export Response Log
-                        </a>
-                        </li>
-
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Memory Management</h6></li>
                         <li>
