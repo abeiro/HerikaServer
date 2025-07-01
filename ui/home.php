@@ -526,21 +526,51 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         .stat-card.double-width {
             grid-column: span 2;
             transition: all 0.3s ease;
+            position: relative;
         }
         
         .stat-card.double-width .stat-value {
             font-size: 1.8em;
         }
 
+        /* Clickable indicators for double-width cards */
+        .stat-card.double-width[style*="cursor: pointer"]::before {
+            content: "🔍";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.8em;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card.double-width[style*="cursor: pointer"] {
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(242, 124, 17, 0.2);
+        }
+
         .stat-card.double-width:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(242, 124, 17, 0.2);
-            background: #333333;
+            box-shadow: 
+                0 4px 15px rgba(242, 124, 17, 0.3),
+                0 0 20px rgba(242, 124, 17, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, #333333 0%, #2a2a2a 100%);
+            border-color: rgba(242, 124, 17, 0.4);
+        }
+
+        .stat-card.double-width[style*="cursor: pointer"]:hover::before {
+            opacity: 1;
         }
 
         .stat-card.double-width:active {
             transform: translateY(0);
-            box-shadow: 0 2px 10px rgba(255, 0, 198, 0.1);
+            box-shadow: 
+                0 2px 10px rgba(242, 124, 17, 0.2),
+                0 0 10px rgba(242, 124, 17, 0.05);
         }
 
         .stat-card.double-width::after {
@@ -558,17 +588,44 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
         .stat-card.clickable-card {
             transition: all 0.3s ease;
+            position: relative;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(242, 124, 17, 0.2);
+        }
+
+        /* Clickable indicator for regular cards */
+        .stat-card.clickable-card::before {
+            content: "👆";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.7em;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
         }
 
         .stat-card.clickable-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(242, 124, 17, 0.2);
-            background: #333333;
+            box-shadow: 
+                0 4px 15px rgba(242, 124, 17, 0.3),
+                0 0 20px rgba(242, 124, 17, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, #333333 0%, #2a2a2a 100%);
+            border-color: rgba(242, 124, 17, 0.4);
+        }
+
+        .stat-card.clickable-card:hover::before {
+            opacity: 1;
         }
 
         .stat-card.clickable-card:active {
             transform: translateY(0);
-            box-shadow: 0 2px 10px rgba(255, 0, 198, 0.1);
+            box-shadow: 
+                0 2px 10px rgba(242, 124, 17, 0.2),
+                0 0 10px rgba(242, 124, 17, 0.05);
         }
 
         /* Modal styles */
@@ -764,42 +821,44 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         </table></div>";
                 }
                 
-                // Get current AI objective information
-                $currentMission = fetch_widget_stats($conn, "
-                    SELECT description, localts, gamets
-                    FROM {$schema}.currentmission
-                    WHERE description IS NOT NULL
-                    ORDER BY localts DESC
-                ");
+                // Get current AI objective information - HIDDEN
+                // $currentMission = fetch_widget_stats($conn, "
+                //     SELECT description, localts, gamets
+                //     FROM {$schema}.currentmission
+                //     WHERE description IS NOT NULL
+                //     ORDER BY localts DESC
+                // ");
                 
                 // Debug logging
-                error_log("Current Mission Query Results: " . print_r($currentMission, true));
+                // error_log("Current Mission Query Results: " . print_r($currentMission, true));
                 
-                $currentMissionContent = "<div class='quest-list'>
-                    <h4>Active AI Objectives</h4>
-                    <table class='widget-table'>
-                        <tr><th>Description</th><th>Time (UTC)</th><th><a href='https://en.uesp.net/wiki/Lore:Calendar' target='_blank'>Tamrielic Time</a></th></tr>";
+                $currentMissionContent = ""; // Hidden AI objectives section
                 
-                if (!isset($currentMission['error']) && !empty($currentMission)) {
-                    foreach ($currentMission as $mission) {
-                        $time = new DateTime("@{$mission['localts']}");
-                        $time->setTimezone(new DateTimeZone('UTC'));
-                        $tamrielicTime = '';
-                        if (isset($mission['gamets']) && $mission['gamets'] > 0) {
-                            $tamrielicTime = convert_gamets2skyrim_long_date2($mission['gamets']);
-                        }
-                        $currentMissionContent .= "<tr>
-                            <td>" . htmlspecialchars($mission['description']) . "</td>
-                            <td>{$time->format('jS F, Y, H:i')}</td>
-                            <td>{$tamrielicTime}</td>
-                        </tr>";
-                    }
-                } else {
-                    error_log("Current Mission Error or Empty: " . print_r($currentMission, true));
-                    $currentMissionContent .= "<tr><td colspan='3' style='text-align: center;'>No active objectives</td></tr>";
-                }
+                // $currentMissionContent = "<div class='quest-list'>
+                //     <h4>Active AI Objectives</h4>
+                //     <table class='widget-table'>
+                //         <tr><th>Description</th><th>Time (UTC)</th><th><a href='https://en.uesp.net/wiki/Lore:Calendar' target='_blank'>Tamrielic Time</a></th></tr>";
                 
-                $currentMissionContent .= "</table></div>";
+                // if (!isset($currentMission['error']) && !empty($currentMission)) {
+                //     foreach ($currentMission as $mission) {
+                //         $time = new DateTime("@{$mission['localts']}");
+                //         $time->setTimezone(new DateTimeZone('UTC'));
+                //         $tamrielicTime = '';
+                //         if (isset($mission['gamets']) && $mission['gamets'] > 0) {
+                //             $tamrielicTime = convert_gamets2skyrim_long_date2($mission['gamets']);
+                //         }
+                //         $currentMissionContent .= "<tr>
+                //             <td>" . htmlspecialchars($mission['description']) . "</td>
+                //             <td>{$time->format('jS F, Y, H:i')}</td>
+                //             <td>{$tamrielicTime}</td>
+                //         </tr>";
+                //     }
+                // } else {
+                //     error_log("Current Mission Error or Empty: " . print_r($currentMission, true));
+                //     $currentMissionContent .= "<tr><td colspan='3' style='text-align: center;'>No active objectives</td></tr>";
+                // }
+                
+                // $currentMissionContent .= "</table></div>";
                 
                 echo render_widget('Current Playthrough', "
                     <div class='quest-list'>
