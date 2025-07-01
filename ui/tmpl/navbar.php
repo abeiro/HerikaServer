@@ -79,18 +79,6 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server  Actions</a>
                     <ul class="dropdown-menu">
 
-                        <li><h6 class="dropdown-header">Memory Management</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
-                            Sync & Create Memory Summaries
-                        </a>
-                        </li><li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/vector-delete-memory_summary.php" title="Compact and Sync Memories." onclick="return confirm('Will delete all summarized memories. ARE YOU SURE?')">
-                            Delete All Memory Summaries
-                        </a>
-                        </li>
-
-                        <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Character Profiles</h6></li>
                         <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_conf.php" target="_blank" title="Exports all current character profiles into a ZIP file.">
