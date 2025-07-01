@@ -409,23 +409,40 @@ if ($_POST["animation"]) {
         
         echo "</div>";
         
-        // 4) Display the "Delete Last X" buttons
+        // 4) Display the "Delete Last X" buttons and "Delete All Events" button
         echo "<div style='margin: 10px 0;'>";
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='?table=eventlog&delete_last=20'\" 
                 class='btn-base btn-danger'>
-                Delete Lastest 20
+                Delete Latest 20
             </button> ";
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='?table=eventlog&delete_last=50'\" 
                 class='btn-base btn-danger'>
-                Delete Lastest 50
+                Delete Latest 50
             </button> ";
         echo "<button 
                 onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='?table=eventlog&delete_last=100'\" 
                 class='btn-base btn-danger'>
-                Delete Lastest 100
+                Delete Latest 100
+            </button> ";
+        echo "<button 
+                onclick=\"deleteAllEventsConfirm()\" 
+                class='btn-base btn-danger' style='margin-left: 20px; background-color: #dc2626; font-weight: bold;'>
+                ⚠️ Delete ALL Events
             </button>";
+        
+        // Add JavaScript function for secure confirmation
+        echo "<script>
+        function deleteAllEventsConfirm() {
+            var userInput = prompt('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG!\\n\\nEvents are used for AI context. This action cannot be undone.\\n\\nTo confirm this dangerous operation, please type exactly: Delete');
+            if (userInput === 'Delete') {
+                window.location.href = '?reset=true&table=event';
+            } else if (userInput !== null) {
+                alert('Operation cancelled. You must type exactly \"Delete\" to confirm.');
+            }
+        }
+        </script>";
         echo "</div>";
         
         // 5) Print the table using the modified headers

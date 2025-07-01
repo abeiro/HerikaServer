@@ -79,26 +79,6 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server  Actions</a>
                     <ul class="dropdown-menu">
 
-                        <!-- First Category Header -->
-                        <li><h6 class="dropdown-header">Event Management</h6></li>
-                        <!-- <li>
-                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent events." onclick="return confirm('Sure?')">
-                            Clean Sent Events
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="This will clear the short term context buffer of events that will be sent with the AI prompt (CONTEXT_HISTORY). Will not delete events from the event log." onclick="return confirm('This will clear the short term context buffer of events that will be sent with the AI prompt (CONTEXT_HISTORY). Will not delete events from the event log. ARE YOU SURE?')">
-                            Clear Current Context Events Buffer
-                        </a>
-                        </li>-->
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG! EVENTS ARE USED FOR CONTEXT. ARE YOU SURE?')">
-                            Delete All Events
-                        </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-
-                        <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Memory Management</h6></li>
                         <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
