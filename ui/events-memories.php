@@ -87,7 +87,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-size: 1em;
         white-space: nowrap;
         font-family: 'MagicCards', sans-serif;
-        letter-spacing: 0.5px;
+        letter-spacing: 1.5px;
     }
 
     .tab-button:hover {
@@ -336,19 +336,19 @@ function getTimeColor($time) {
     <div class="tab-container">
         <div class="tab-buttons">
             <button class="tab-button <?php echo $activeTab === 'eventlog' ? 'active' : ''; ?>" onclick="switchTab('eventlog')">
-                📝 Event Log
+                📝 Events
             </button>
             <button class="tab-button <?php echo $activeTab === 'responselog' ? 'active' : ''; ?>" onclick="switchTab('responselog')">
-                💬 Response Log
+                💬 AI Responses
             </button>
             <button class="tab-button <?php echo $activeTab === 'memory' ? 'active' : ''; ?>" onclick="switchTab('memory')">
-                🧠 Memory Summaries
+                🧠 Memories
             </button>
             <button class="tab-button <?php echo $activeTab === 'quests' ? 'active' : ''; ?>" onclick="switchTab('quests')">
                 🎯 Active Quests
             </button>
             <button class="tab-button <?php echo $activeTab === 'books' ? 'active' : ''; ?>" onclick="switchTab('books')">
-                📚 Book Log
+                📚 Books
             </button>
             <button class="tab-button <?php echo $activeTab === 'objectives' ? 'active' : ''; ?>" onclick="switchTab('objectives')">
                 🥅 Dynamic AI Objective
