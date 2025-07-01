@@ -711,9 +711,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'" class="dashboard-btn">
                 <span class="btn-icon">🔌</span> Server Plugins
             </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/dwemer-diagnostics.php'" class="dashboard-btn">
-                <span class="btn-icon">🤖</span> Dwemer AI Diagnostics (WIP)
-            </button>
             <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/tests/apache2err.php'" class="dashboard-btn">
                 <span class="btn-icon">🌲</span> Server Logs
             </button>
