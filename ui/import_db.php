@@ -562,7 +562,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     
     <!-- Main Grid Container -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; min-height: 220px;">
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; min-height: 220px;">
         
         <!-- Database Manager Section -->
         <div class="message" style="background-color: #2c3440; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between;">
@@ -603,6 +603,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button onclick="if (confirm('Database maintenance will optimize and compact the database.\n\n- Make sure Skyrim game is stopped\n- To reclaim unused space, free temporary space is required\n- During this operation tables will be locked, do not interrupt\n- This could take some time, please wait until you see the confirmation\n\nContinue?')) { window.open('<?php echo $webRoot; ?>/ui/vacuum_db.php', 'Database_maintenance', 'resizable=yes,scrollbars=yes,titlebar=no,width=800,height=600'); return false; }" 
                         class="button" style="background-color: #fd7e14; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
                     Run Database Maintenance
+                </button>
+            </div>
+        </div>
+        
+        <!-- Factory Reset Section -->
+        <div class="message" style="background-color: #481f1f; border: 1px solid #dc3545; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <h3>💥 Factory Reset Database</h3>
+                <p>Completely wipe and reinstall the entire database to the default configuration.</p>
+                <p><strong>⚠️ DANGER:</strong> This will permanently delete ALL data including profiles, events, diaries, and memories.</p>
+            </div>
+            <div style="margin-top: auto;">
+                <button onclick="if (confirm('⚠️ FACTORY RESET DATABASE\n\nThis will wipe and reinstall the entire database to the default configuration.\n\n❌ ALL DATA WILL BE PERMANENTLY LOST:\n- All character profiles\n- All event logs\n- All diaries and memories\n- All configuration settings\n\n✅ Database will be reset to fresh installation state\n\nThis action CANNOT be undone!\n\nAre you absolutely sure you want to continue?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }" 
+                        class="button" style="background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
+                    Factory Reset Database
                 </button>
             </div>
         </div>

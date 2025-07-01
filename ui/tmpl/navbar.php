@@ -38,91 +38,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                 <li class="nav-item dropdown mx-2">
                     <a class="nav-link" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a>
                 </li>
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server  Actions</a>
-                    <ul class="dropdown-menu">
 
-
-
-                        <li><h6 class="dropdown-header">Character Profiles</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_conf.php" target="_blank" title="Exports all current character profiles into a ZIP file.">
-                            Backup Character Profiles
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_conf.php" title="Imports character profiles from a ZIP file.">
-                            Restore Character Profiles
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/delete_conf.php" target="_blank" title="Deletes all character profiles apart from  locked ones or the default." onclick="return confirm('This will delete ALL profiles. We recommend you backup your profiles first. Locked profiles will not be deleted. You can not reverse this operation, ARE YOU SURE?')">
-                            Delete All Character Profiles
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="#" onclick="regenerateCharacterMap(); return false;" title="Regenerates character map if profiles become out of sync.">
-                            Regenerate Character Map
-                        </a>
-                        </li>
-
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Database Controls</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Complete database management - backup, restore, maintenance, and pgAdmin access.">
-                            Database Manager
-                        </a>
-                        </li>
-                        <!--<li>
-                        <button class="dropdown-item" style="letter-spacing:0.5px" 
-                        title="Maintenance operations - clean and optimize the database, reclaim unused space. Skyrim game must be stopped."
-                        onclick="if (confirm('Vacuum operation will compact and optimize the database. \n- Make sure Skyrim game is stopped. \n- To reclaim unused space, free temporary space is required, do not start this if your disk is almost full. \n- During this operation tables will be locked, do not access the database and do not interrupt. \nThis could take some time, please wait until you see the confirmation.')) {
-                            window.open('<?php echo $webRoot; ?>/ui/vacuum_db.php', 'Database_maintenance', 
-                                'resizable=yes,scrollbars=yes,titlebar=no' ); 
-                                return false;
-                        }">Database Maintenance - vacuum</button>
-                        </li>-->
-                        <!--
-                        <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the CHIM Database." 
-                        onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
-                            Factory Reset Server Database
-                        </a>
-                        </li>
-                        -->
-
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Utilities</h6></li>
-                        <li>
-                        <div style="
-                            display: flex; 
-                            justify-content: center; 
-                            align-items: center; 
-                            margin-top: 20px;">
-                            <button style="
-                                font-weight: bold;
-                                font-family: 'Futura CondensedLight', Arial, sans-serif;
-                                border: 1px solid;
-                                transition: background-color 0.3s, color 0.3s;
-                                border-radius: 4px;
-                                text-align: center;
-                                text-decoration: none;
-                                background-color: #ffc107;
-                                color: black;
-                                padding: 6px 12px;
-                                font-size: 14px;
-                                cursor: pointer;
-                            " 
-                            onmouseover="this.style.backgroundColor='#e6ac00';"
-                            onmouseout="this.style.backgroundColor='#ffc107';"
-                            onclick="window.open('<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php', '_blank')" 
-                            title="Generate AIAgent.ini file for the mod file.">
-                                <strong>Create Custom AIAgent.ini Mod<br>(Install with mod manager, override AIAgent mod folder)</strong>
-                            </button>
-                        </div>
-                        </li>
-                    </ul>
-                </li>
 
                 <li class="nav-item dropdown mx-2">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
@@ -162,11 +78,7 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                             CHIM XTTS Management
                         </a>
                         </li>
-                        <li>
-                        <a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices." target="_blank">
-                            Mimic3 Management
-                        </a>
-                        </li>
+
                         <!-- li>
                         <a class="dropdown-item" href="<?= htmlspecialchars($GLOBALS["TTS"]["ZONOS_GRADIO"]["endpoint"]) ?>" title="Test Zonos Settings" target="_blank">
                             Zonos Gradio Management
@@ -177,8 +89,31 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <li>
                         <a class="dropdown-item" href="#" onclick="window.open('/HerikaServer/ui/addons/pmstt', 'ChromeSTT', 'width=800,height=600,resizable=yes,scrollbars=yes'); return false;">Chrome Free Speech-to-Text</a>
                         </li>
-                        <li>
+                        <!--<li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/websocket" target="_blank">Websocket Configuration (WIP)</a>
+                        </li>-->
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Character Profiles</h6></li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_conf.php" target="_blank" title="Exports all current character profiles into a ZIP file.">
+                            Backup Character Profiles
+                        </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_conf.php" title="Imports character profiles from a ZIP file.">
+                            Restore Character Profiles
+                        </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/delete_conf.php" target="_blank" title="Deletes all character profiles apart from  locked ones or the default." onclick="return confirm('This will delete ALL profiles. We recommend you backup your profiles first. Locked profiles will not be deleted. You can not reverse this operation, ARE YOU SURE?')">
+                            Delete All Character Profiles
+                        </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="#" onclick="regenerateCharacterMap(); return false;" title="Regenerates character map if profiles become out of sync.">
+                            Regenerate Character Map
+                        </a>
                         </li>
                     </ul>
                 </li>
@@ -213,9 +148,51 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <li>
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
                     </li>
-                    <!--<li>
-                    <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
-                    </li>-->
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Database Controls</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Complete database management - backup, restore, maintenance, and pgAdmin access.">
+                        Database Manager
+                    </a>
+                    </li>
+                                         <li><hr class="dropdown-divider"></li>
+                     <li><h6 class="dropdown-header">Debugging</h6></li>
+                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>
+                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=audit_request' title="">Request Logs</a></li>
+
+                     <li><hr class="dropdown-divider"></li>
+                     <li><h6 class="dropdown-header">Utilities</h6></li>
+                     <li>
+                     <div style="
+                         display: flex; 
+                         justify-content: center; 
+                         align-items: center; 
+                         margin-top: 20px;">
+                         <button style="
+                             font-weight: bold;
+                             font-family: 'Futura CondensedLight', Arial, sans-serif;
+                             border: 1px solid;
+                             transition: background-color 0.3s, color 0.3s;
+                             border-radius: 4px;
+                             text-align: center;
+                             text-decoration: none;
+                             background-color: #ffc107;
+                             color: black;
+                             padding: 6px 12px;
+                             font-size: 14px;
+                             cursor: pointer;
+                         " 
+                         onmouseover="this.style.backgroundColor='#e6ac00';"
+                         onmouseout="this.style.backgroundColor='#ffc107';"
+                         onclick="window.open('<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php', '_blank')" 
+                         title="Generate AIAgent.ini file for the mod file.">
+                             <strong>Create Custom AIAgent.ini Mod<br>(Install with mod manager, override AIAgent mod folder)</strong>
+                         </button>
+                     </div>
+                     </li>
+                     <!--<li>
+                     <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
+                     </li>-->
                 </ul>
                 </li>
 
@@ -232,44 +209,8 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                 </li>
 
                 <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Plugins</a>
-                    <ul class="dropdown-menu">
-                        <li><h6 class="dropdown-header">CHIM Extensions</h6></li>
-                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'>Plugin Manager</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Debugging</h6></li>
-                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>
-                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=audit_request' title="">Request Logs</a></li>
-                        <div style="
-                        display: flex; 
-                        justify-content: center; 
-                        align-items: center; 
-                        margin-top: 20px;">
-                        <button style="
-                            font-weight: bold;
-                            border: 1px solid;
-                            font-family: 'Futura CondensedLight', Arial, sans-serif;
-                            transition: background-color 0.3s, color 0.3s;
-                            border-radius: 4px;
-                            text-align: center;
-                            text-decoration: none;
-                            background-color: #dc3545; /* Red background */
-                            color: black;
-                            padding: 6px 12px;
-                            font-size: 14px;
-                            cursor: pointer;
-                        " 
-                        onmouseover="this.style.backgroundColor='#c82333';"
-                        onmouseout="this.style.backgroundColor='#dc3545';"
-                        onclick="if (confirm('This will wipe and reinstall the entire database to the default configuration. ARE YOU SURE?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }"
-                        title="Fully reinstalls the CHIM Database.">
-                            <strong>Factory Reset Server Database</strong>
-                        </button>
-                    </div>
-
-                    </li>
-                </ul>
-            </li>
+                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/index.php?plugins_show=true">Server Plugins</a>
+                </li>
             <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Guides</a>
                 <ul class="dropdown-menu">
