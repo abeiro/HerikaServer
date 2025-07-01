@@ -216,34 +216,66 @@ if (isset($_GET['action']) && $_GET['action'] === 'restore_auto' && isset($_GET[
 
 // Handle backup database request
 if (isset($_GET['action']) && $_GET['action'] === 'backup') {
-    shell_exec('echo "localhost:5432:dwemer:dwemer:dwemer" > /tmp/.pgpass;');
-    shell_exec('chmod 600 /tmp/.pgpass;');
-    $filename = date("dMy") . ".sql";
-    $response = shell_exec('HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost > ' . $rootPath . 'data/export_' . $filename);
-    
-    $backupFile = $rootPath . 'data/export_' . $filename;
-    if (file_exists($backupFile) && filesize($backupFile) > 0) {
-        // Force download of the backup file
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="dwemer_backup_' . $filename . '"');
-        header('Content-Length: ' . filesize($backupFile));
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
+    try {
+        // Create authentication setup (same as AutomaticBackup class)
+        $pgpassResult = shell_exec('echo "localhost:5432:dwemer:dwemer:dwemer" > /tmp/.pgpass; echo $?');
+        $chmodResult = shell_exec('chmod 600 /tmp/.pgpass; echo $?');
         
-        // Clear any output buffer
-        if (ob_get_level()) {
-            ob_end_clean();
+        $filename = "manual_backup_" . date("Y-m-d_H-i-s") . ".sql";
+        $backupFile = $rootPath . 'data/export_' . $filename;
+        
+        // Execute pg_dump with error capture (same approach as AutomaticBackup class)
+        $command = "HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost 2>&1";
+        $output = shell_exec($command);
+        
+        // Write output to file if we got data
+        if ($output && strlen($output) > 0) {
+            file_put_contents($backupFile, $output);
         }
         
-        // Output the file
-        readfile($backupFile);
+        // Check if backup was created successfully
+        if (file_exists($backupFile) && filesize($backupFile) > 0) {
+            $fileSize = filesize($backupFile);
+            
+            // Check if the file contains error messages instead of actual backup data
+            $firstLine = substr($output, 0, 100);
+            if (strpos($firstLine, 'pg_dump: error:') !== false || strpos($firstLine, 'FATAL:') !== false) {
+                $message = "<p><strong>Error:</strong> Database backup failed.</p>";
+                $message .= "<pre>" . htmlspecialchars(substr($output, 0, 500)) . "</pre>";
+                if (file_exists($backupFile)) {
+                    unlink($backupFile);
+                }
+            } else {
+                // Successful backup - force download
+                header('Content-Type: application/octet-stream');
+                header('Content-Disposition: attachment; filename="dwemer_backup_' . $filename . '"');
+                header('Content-Length: ' . $fileSize);
+                header('Cache-Control: must-revalidate');
+                header('Pragma: public');
+                
+                // Clear any output buffer
+                if (ob_get_level()) {
+                    ob_end_clean();
+                }
+                
+                // Output the file
+                readfile($backupFile);
+                
+                // Clean up - delete the temporary file
+                unlink($backupFile);
+                
+                exit();
+            }
+        } else {
+            $message = "<p><strong>Error:</strong> Backup creation failed or file is empty.</p>";
+            if ($output) {
+                $message .= "<p><strong>pg_dump output:</strong></p>";
+                $message .= "<pre>" . htmlspecialchars(substr($output, 0, 1000)) . "</pre>";
+            }
+        }
         
-        // Clean up - delete the temporary file
-        unlink($backupFile);
-        
-        exit();
-    } else {
-        $message = "<p><strong>Error:</strong> Backup creation failed or file is empty.</p>";
+    } catch (Exception $e) {
+        $message = "<p><strong>Error:</strong> Exception during backup creation: " . htmlspecialchars($e->getMessage()) . "</p>";
     }
 }
 
@@ -526,6 +558,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="indent5">
     <h1>Database Manager</h1>
+    
+
     
     <!-- Main Grid Container -->
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; min-height: 220px;">
