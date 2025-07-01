@@ -45,9 +45,6 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=eventlog">Event Log</a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=eventlog&autorefresh=true">Monitor Events</a>
-                    </li>
-                    <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=quests">Active Quests</a>
                     </li>
                     <li>

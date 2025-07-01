@@ -359,7 +359,18 @@ if ($_POST["animation"]) {
             return $mappedRow;
         }, $results);
         
-        echo "<h1 class='my-2'>Event Log</h1>";
+        // Event Log title with integrated monitor toggle
+        $isAutoRefresh = isset($_GET["autorefresh"]) && $_GET["autorefresh"];
+        echo "<div style='display: flex; align-items: center; margin: 20px 0;'>";
+        echo "<h1 class='my-2' style='margin-right: 15px;'>Event Log</h1>";
+        
+        if ($isAutoRefresh) {
+            echo "<button onclick=\"window.location.href='?table=eventlog'\" class='btn-base btn-secondary' style='padding: 8px 12px; font-size: 0.9em;' title='Stop monitoring events'>⏸️ Stop Live</button>";
+            echo "<span style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
+        } else {
+            echo "<button onclick=\"window.location.href='?table=eventlog&autorefresh=true'\" class='btn-base btn-primary' style='padding: 8px 12px; font-size: 0.9em;' title='Start monitoring events with auto-refresh'>📡 Monitor Live</button>";
+        }
+        echo "</div>";
         
         // 3) Generate pagination buttons
         $prevPage = max(1, $page - 1);
