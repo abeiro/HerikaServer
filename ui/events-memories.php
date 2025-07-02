@@ -73,6 +73,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin-bottom: 20px;
         border-bottom: 2px solid #3a3a3a;
         gap: 5px;
+        word-spacing: 5px;
     }
 
     .tab-button {
@@ -87,6 +88,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-size: 1em;
         white-space: nowrap;
         font-family: 'MagicCards', sans-serif;
+        word-spacing: 5px;
         letter-spacing: 1.5px;
     }
 
