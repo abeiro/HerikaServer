@@ -1455,9 +1455,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     echo '<tr>';
                     echo '<td>' . $topic . '</td>';
                     echo '<td>' . nl2br($topic_desc) . '</td>';
-                    echo '<td>' . nl2br($knowledge_class) . '</td>';
+                    
+                    // Knowledge Class column with badge styling
+                    echo '<td style="font-size: 1.5em; line-height: 1.4;">';
+                    if (!empty(trim($knowledge_class))) {
+                        $knowledgeClasses = array_map('trim', explode(',', $knowledge_class));
+                        foreach ($knowledgeClasses as $class) {
+                            if (!empty($class)) {
+                                echo '<span style="display: inline-block; background: rgba(242, 124, 17, 0.2); color: rgb(242, 124, 17); padding: 3px 8px; margin: 2px; border-radius: 4px; font-size: 0.85em; font-weight: 500;">' . htmlspecialchars($class) . '</span>';
+                            }
+                        }
+                    } else {
+                        echo '<span style="color: #888; font-style: italic;">Everyone</span>';
+                    }
+                    echo '</td>';
+                    
                     echo '<td>' . nl2br($topic_desc_basic) . '</td>';
-                    echo '<td>' . nl2br($knowledge_class_basic) . '</td>';
+                    
+                    // Knowledge Class Basic column with badge styling
+                    echo '<td style="font-size: 1.5em; line-height: 1.4;">';
+                    if (!empty(trim($knowledge_class_basic))) {
+                        $knowledgeClassesBasic = array_map('trim', explode(',', $knowledge_class_basic));
+                        foreach ($knowledgeClassesBasic as $class) {
+                            if (!empty($class)) {
+                                echo '<span style="display: inline-block; background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 3px 8px; margin: 2px; border-radius: 4px; font-size: 0.85em; font-weight: 400;">' . htmlspecialchars($class) . '</span>';
+                            }
+                        }
+                    } else {
+                        echo '<span style="color: #888; font-style: italic;">Everyone</span>';
+                    }
+                    echo '</td>';
+                    
                     echo '<td>' . nl2br($tags) . '</td>';
                     echo '<td>' . nl2br($category) . '</td>';
 
