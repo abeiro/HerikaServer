@@ -16,10 +16,10 @@
 	
 	$forceAttackingText = false;
 	
-	// Patch. 
-	$returnFunction[2]=trim($returnFunction[2]);
-
 	if (isset($returnFunction[2])) {
+		// Patch. 
+		$returnFunction[2]=trim($returnFunction[2]);
+
 		if ($functionCodeName == "GetTopicInfo") {
 			$argName = "topic";
 			// Lets overwrite this
@@ -138,8 +138,9 @@
 																								  "function"=>["name"=>$functionLocaleName,"arguments" => "{\"$argName\":\"{$returnFunction[2]}\"}"])]);
 
 	} else
-		$functionCalled[] = array('role' => 'assistant', 'content' => null, 'tool_calls' => [array("id" => $lastCallId, "function"=>["name"=>$functionLocaleName,"arguments" => "{\"$argName\":\"{$returnFunction[2]}\"}"])]);
-
+		//$functionCalled[] = array('role' => 'assistant', 'content' => null, 'tool_calls' => [array("id" => $lastCallId, "function"=>["name"=>$functionLocaleName,"arguments" => "{\"$argName\":\"{$returnFunction[2]}\"}"])]);
+		$functionCalled[] = array('role' => 'assistant', 'content' => null, 'tool_calls' => [array("id" => $lastCallId, "function"=>["name"=>$functionLocaleName,"arguments" => "{\"$argName\":\"\"}"])]); // $returnFunction[2] is not set here
+		
 	$returnFunctionArray[] = array('role' => 'tool', 'content' => "{$returnFunction[3]}",'tool_call_id'=>"$lastCallId");
 
 	if ($forceAttackingText)

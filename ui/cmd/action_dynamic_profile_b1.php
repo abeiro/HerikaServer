@@ -182,9 +182,9 @@ if ($method === "POST") {
             ];
 
             $prompt = [
-                ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . $profileContextString],
-                ["role" => "user", "content" => "Character name: " . $jsonDataInput["HERIKA_NAME"] . "\nCurrent " . ucfirst($field) . ":\n" . $currentValue],
-                ["role" => "user", "content" => $updatePrompt]
+                ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . ReplacePlayerNamePlaceholder($profileContextString)],
+                ["role" => "user", "content" => "Character name: " . $jsonDataInput["HERIKA_NAME"] . "\nCurrent " . ucfirst($field) . ":\n" . ReplacePlayerNamePlaceholder($currentValue)],
+                ["role" => "user", "content" => ReplacePlayerNamePlaceholder($updatePrompt)]
             ];
 
             $contextData = array_merge($head, $prompt);
