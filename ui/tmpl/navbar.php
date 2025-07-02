@@ -15,26 +15,225 @@ if (!isset($webRoot)) {
     $webRoot = rtrim($webRoot, '/');
 }
 
+// Ensure conf.php is loaded for $GLOBALS["DBDRIVER"] and other settings
+if (defined('BASE_PATH') && !isset($GLOBALS["DBDRIVER"])) {
+    @include_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+}
+
+// Function to validate plugin version format - just check it's not too long
+function isValidPluginVersion($version) {
+    // Simple validation: version should be 10 characters or less
+    return strlen($version) <= 10;
+}
+
+$pluginVersionDisplay = 'N/A'; // Default value
+
+// Attempt to use a global $db object if available and valid
+if (isset($GLOBALS['db']) && is_object($GLOBALS['db'])) {
+    try {
+        if (method_exists($GLOBALS['db'], 'fetchOne')) {
+            $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
+                $version = trim($pluginVersionRow['value']);
+                // Validate that the version follows the expected format
+                if (isValidPluginVersion($version)) {
+                    $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                }
+            }
+        } elseif (method_exists($GLOBALS['db'], 'fetchAll')) {
+            // Fallback to fetchAll on global $db if fetchOne not found
+            $rows = $GLOBALS['db']->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
+            if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
+                $version = trim($rows[0]['value']);
+                // Validate that the version follows the expected format
+                if (isValidPluginVersion($version)) {
+                    $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Just keep the default value and log the error
+        error_log("Error fetching plugin version using global \$db: " . $e->getMessage());
+    }
+} else {
+    // Only attempt to create a new DB connection if we don't already have a global one
+    // and only if we have all the required components
+    try {
+        if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
+            $dbDriverFile = BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
+            
+            // Only try to load the SQL class if it doesn't already exist
+            if (!class_exists('sql') && file_exists($dbDriverFile)) {
+                @require_once($dbDriverFile);
+            }
+            
+            // Only create a new connection if the class was loaded successfully
+            if (class_exists('sql')) {
+                // Suppress warnings/errors in this section as it's purely for UI decoration
+                @$localDb = new sql();
+                
+                if ($localDb && is_object($localDb)) {
+                    if (method_exists($localDb, 'fetchOne')) {
+                        $pluginVersionRow = @$localDb->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+                        if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
+                            $version = trim($pluginVersionRow['value']);
+                            // Validate that the version follows the expected format
+                            if (isValidPluginVersion($version)) {
+                                $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                            }
+                        }
+                    } elseif (method_exists($localDb, 'fetchAll')) {
+                        $rows = @$localDb->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
+                        if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
+                            $version = trim($rows[0]['value']);
+                            // Validate that the version follows the expected format
+                            if (isValidPluginVersion($version)) {
+                                $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Just continue with the default value
+        error_log("Error in navbar fallback DB connection: " . $e->getMessage());
+    }
+}
+
 // Add link to navbar CSS
 echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
+
+// Add custom CSS for centered navbar layout
+echo '<style>
+.chim-navbar .container-fluid {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.server-version-info {
+    display: flex;
+    align-items: center;
+    color: #6c757d;
+    font-size: 0.75em;
+    font-family: Arial, sans-serif;
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.navbar-content-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.social-links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 120px;
+    flex-shrink: 0;
+    justify-content: flex-end;
+}
+
+.social-link img {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease;
+}
+
+.social-link:hover img {
+    transform: scale(1.1);
+}
+
+.navbar-left {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    margin: 0 15px 0 0 !important;
+}
+
+.navbar-center {
+    display: flex;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin: 0 20px;
+}
+
+.navbar-right {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    margin: 0 0 0 15px !important;
+}
+
+.navbar-center .navbar-brand {
+    margin: 0;
+    padding: 0;
+}
+
+/* Dropdown positioning */
+.nav-item.dropdown .dropdown-menu {
+    min-width: 280px;
+}
+
+@media (max-width: 992px) {
+    .container-fluid {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .server-version-info,
+    .social-links {
+        order: 2;
+        width: auto;
+    }
+    
+    .navbar-content-wrapper {
+        flex-direction: column;
+        gap: 10px;
+        order: 1;
+    }
+    
+    .navbar-left,
+    .navbar-right {
+        justify-content: center;
+        flex: none;
+        margin: 0 !important;
+    }
+    
+    .navbar-center {
+        order: -1;
+        margin: 0;
+    }
+    
+    /* Center dropdowns on mobile */
+    .dropdown-menu {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+</style>';
 
 ?>
 <div class="chim-navbar-wrapper">
     <nav class="navbar navbar-expand-lg chim-navbar">
         <div class="container-fluid mx-1">
-            <!-- PLEASE LEAVE THIS LINK TO index.php, as database update checks are being made there -->
-            <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="CHIM Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> CHIM</a> -->
-            <a class="navbar-brand mr-2 Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
-                <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
-                <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
-            </a> 
+            <!-- Server Version Info - Far Left -->
+            <div class="server-version-info">
+                Server: 1.3.5<br>
+                Plugin: <?php echo $pluginVersionDisplay; ?>
+            </div>
             
-            <a class="navbar-brand mr-2 button" href="<?php echo $webRoot; ?>/ui/index.php?togglemodel=true" title="Click to change active connector" style="display:none">
-            <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel_.json'), true)); ?>-->
-            </a>
-            
-
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <div class="navbar-content-wrapper">
+                <!-- Left Navigation -->
+                <ul class="navbar-nav navbar-left">
                 <li class="nav-item dropdown mx-2">
                     <a class="nav-link" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a>
                 </li>
@@ -117,8 +316,18 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                         </li>
                     </ul>
                 </li>
+                </ul>
 
+                <!-- Center Logo -->
+                <div class="navbar-center">
+                    <a class="navbar-brand Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
+                        <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+                        <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+                    </a>
+                </div>
 
+                <!-- Right Navigation -->
+                <ul class="navbar-nav navbar-right">
                 <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
@@ -218,115 +427,25 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
             if (file_exists($plug_file)) 
                 include($plug_file); 
             ?>                       
-        </ul>
-    </div>
+                </ul>
+            </div>
+            
+            <!-- Social Media Links - Far Right -->
+            <div class="social-links">
+                <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
+                    <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
+                </a>
+                <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
+                    <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord">
+                </a>
+                <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
+                    <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon">
+                </a>
+            </div>
+        </div>
 
-    <?php
-    // Ensure conf.php is loaded for $GLOBALS["DBDRIVER"] and other settings
-    if (defined('BASE_PATH') && !isset($GLOBALS["DBDRIVER"])) {
-        @include_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-    }
 
-    // Function to validate plugin version format - just check it's not too long
-    function isValidPluginVersion($version) {
-        // Simple validation: version should be 10 characters or less
-        return strlen($version) <= 10;
-    }
-
-    $pluginVersionDisplay = 'N/A'; // Default value
-
-    // Attempt to use a global $db object if available and valid
-    if (isset($GLOBALS['db']) && is_object($GLOBALS['db'])) {
-        try {
-            if (method_exists($GLOBALS['db'], 'fetchOne')) {
-                $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-                if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
-                    $version = trim($pluginVersionRow['value']);
-                    // Validate that the version follows the expected format
-                    if (isValidPluginVersion($version)) {
-                        $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
-                    }
-                }
-            } elseif (method_exists($GLOBALS['db'], 'fetchAll')) {
-                // Fallback to fetchAll on global $db if fetchOne not found
-                $rows = $GLOBALS['db']->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
-                if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
-                    $version = trim($rows[0]['value']);
-                    // Validate that the version follows the expected format
-                    if (isValidPluginVersion($version)) {
-                        $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
-                    }
-                }
-            }
-        } catch (Exception $e) {
-            // Just keep the default value and log the error
-            error_log("Error fetching plugin version using global \$db: " . $e->getMessage());
-        }
-    } else {
-        // Only attempt to create a new DB connection if we don't already have a global one
-        // and only if we have all the required components
-        try {
-            if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
-                $dbDriverFile = BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
-                
-                // Only try to load the SQL class if it doesn't already exist
-                if (!class_exists('sql') && file_exists($dbDriverFile)) {
-                    @require_once($dbDriverFile);
-                }
-                
-                // Only create a new connection if the class was loaded successfully
-                if (class_exists('sql')) {
-                    // Suppress warnings/errors in this section as it's purely for UI decoration
-                    @$localDb = new sql();
-                    
-                    if ($localDb && is_object($localDb)) {
-                        if (method_exists($localDb, 'fetchOne')) {
-                            $pluginVersionRow = @$localDb->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-                            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
-                                $version = trim($pluginVersionRow['value']);
-                                // Validate that the version follows the expected format
-                                if (isValidPluginVersion($version)) {
-                                    $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
-                                }
-                            }
-                        } elseif (method_exists($localDb, 'fetchAll')) {
-                            $rows = @$localDb->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
-                            if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
-                                $version = trim($rows[0]['value']);
-                                // Validate that the version follows the expected format
-                                if (isValidPluginVersion($version)) {
-                                    $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception $e) {
-            // Just continue with the default value
-            error_log("Error in navbar fallback DB connection: " . $e->getMessage());
-        }
-    }
-    ?>
-    <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal'; width: 120px;">
-        Server: 1.3.5
-        <br>
-        Plugin: <?php echo $pluginVersionDisplay; ?>
-    </div>
-
-    <div class="social-links">
-        <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
-            <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
-        </a>
-        <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
-            <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord">
-        </a>
-        <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
-            <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon">
-        </a>
-    </div>
-
-    </nav>
+        </nav>
 
 <?php
 // Start the session if not already started
