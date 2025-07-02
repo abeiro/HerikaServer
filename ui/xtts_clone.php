@@ -636,7 +636,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="page-header">
-        <h1>CHIM XTTS Voice Management</h1>
+        <h1>CHIM XTTS Voice Management 
+            <a href="https://dwemerdynamics.hostwiki.io/en/Auto-TTS-Voices" target="_blank" rel="noopener" 
+               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
+               title="View detailed documentation about TTS Voice Configuration"
+               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
+               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
+        </h1>
         <p>The <b>CHIM XTTS Voice Management</b> system allows you to manage custom voice samples for NPCs using the CHIM XTTS Server.</p>
         <p>This works differently from other TTS services - it requires voice samples to be uploaded and cached on the server.</p>
         <p>For detailed information on how it works, please read our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts" style="color: yellow;" target="_blank" rel="noopener noreferrer">CHIM XTTS Voice Guide</a>.</p>

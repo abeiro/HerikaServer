@@ -870,7 +870,13 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     </div>
 
     <div class="page-header">
-        <h1>NPC Biography Management</h1>
+        <h1>NPC Biography Management 
+            <a href="https://dwemerdynamics.hostwiki.io/en/Profiles" target="_blank" rel="noopener" 
+               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
+               title="View detailed documentation about Profile Management"
+               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
+               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
+        </h1>
         <p>The <b>NPC Biography System</b> allows you to create custom character profiles that AI NPCs will use during roleplay.</p>
         <p>Upload biographies individually or in bulk via CSV files. All custom entries override default templates.</p>
     </div>

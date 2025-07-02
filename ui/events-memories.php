@@ -333,7 +333,13 @@ function getTimeColor($time) {
 </div>
 
 <div class="container-fluid">
-    <h1 class='my-2'>Events & Memories</h1>
+    <h1 class='my-2'>Events & Memories 
+        <a href="https://dwemerdynamics.hostwiki.io/en/Rechat" target="_blank" rel="noopener" 
+           style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
+           title="View detailed documentation about Events, Response Logs, and Rechat System"
+           onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
+           onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
+    </h1>
 
     <div class="tab-container">
         <div class="tab-buttons">
@@ -344,7 +350,13 @@ function getTimeColor($time) {
                 💬 AI Responses
             </button>
             <button class="tab-button <?php echo $activeTab === 'memory' ? 'active' : ''; ?>" onclick="switchTab('memory')">
-                🧠 Memories
+                🧠 Memories 
+                <a href="https://dwemerdynamics.hostwiki.io/en/diaries-memories" target="_blank" rel="noopener" 
+                   style="display: inline-block; margin-left: 8px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 16px; height: 16px; text-align: center; line-height: 12px; transition: all 0.3s ease;" 
+                   title="View detailed documentation about Diaries and Memory System"
+                   onclick="event.stopPropagation();"
+                   onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
+                   onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
             </button>
             <button class="tab-button <?php echo $activeTab === 'quests' ? 'active' : ''; ?>" onclick="switchTab('quests')">
                 🎯 Active Quests

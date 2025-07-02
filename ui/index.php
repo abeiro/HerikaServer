@@ -1304,7 +1304,13 @@ if ($_POST["animation"]) {
         // Add a title for installed plugins with Refresh button
         echo '<body>';
         echo '<br>';
-        echo '<h1>Installed CHIM Plugins</h1>';
+        echo '<h1>Installed Server Plugins 
+            <a href="https://dwemerdynamics.hostwiki.io/en/CHIM-Plugins" target="_blank" rel="noopener" 
+               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
+               title="View detailed documentation about CHIM Plugins"
+               onmouseover="this.style.background=\'rgb(242, 124, 17)\'; this.style.color=\'white\';" 
+               onmouseout="this.style.background=\'transparent\'; this.style.color=\'rgb(242, 124, 17)\';">ℹ</a>
+        </h1>';
         echo '<form method="post" style="margin: 0;">
         <input type="hidden" name="refresh_plugins" value="1">
         <button type="submit" class="btn-primary">Refresh Plugins</button>
