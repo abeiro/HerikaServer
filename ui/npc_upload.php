@@ -1640,19 +1640,40 @@ function populateKnowledgeTable(knowledge) {
             const levelColor = item.level === 'Advanced' ? 'rgb(242, 124, 17)' : '#4a9eff';
             const levelBg = item.level === 'Advanced' ? 'rgba(242, 124, 17, 0.2)' : 'rgba(74, 158, 255, 0.2)';
             
-            // Add category and tags info if available
+            // Add category, knowledge classes, and tags info if available
             let extraInfo = '';
-            if (item.category || item.tags) {
+            if (item.category || item.knowledge_class || item.knowledge_class_basic || item.tags) {
                 extraInfo = '<div style="margin-top: 8px; font-size: 0.8em; color: #888;">';
+                
+                // Category
                 if (item.category) {
-                    extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 5px;">📁 ${item.category}</span>`;
+                    extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 1.5em;">📁 ${item.category}</span>`;
                 }
+                
+                // Knowledge Class (Advanced) - Orange tags
+                if (item.knowledge_class) {
+                    const knowledgeClasses = item.knowledge_class.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    knowledgeClasses.forEach(knowledgeClass => {
+                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.2); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em; font-weight: 500;">🔸 ${knowledgeClass}</span>`;
+                    });
+                }
+                
+                // Knowledge Class Basic - Orange tags with different opacity
+                if (item.knowledge_class_basic) {
+                    const basicClasses = item.knowledge_class_basic.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    basicClasses.forEach(basicClass => {
+                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em;">🔹 ${basicClass}</span>`;
+                    });
+                }
+                
+                // Tags - Blue tags
                 if (item.tags) {
                     const tags = item.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
                     tags.forEach(tag => {
                         extraInfo += `<span style="background: rgba(74, 158, 255, 0.15); color: #4a9eff; padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 0.75em;">🏷️ ${tag}</span>`;
                     });
                 }
+                
                 extraInfo += '</div>';
             }
             

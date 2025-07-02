@@ -176,7 +176,9 @@ try {
                 'level' => $accessLevel,
                 'description' => htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
                 'tags' => htmlspecialchars($tags, ENT_QUOTES, 'UTF-8'),
-                'category' => htmlspecialchars($category, ENT_QUOTES, 'UTF-8')
+                'category' => htmlspecialchars($category, ENT_QUOTES, 'UTF-8'),
+                'knowledge_class' => $hasAdvancedAccess ? htmlspecialchars($knowledgeClass, ENT_QUOTES, 'UTF-8') : '',
+                'knowledge_class_basic' => (!$hasAdvancedAccess && $hasBasicAccess) ? htmlspecialchars($knowledgeClassBasic, ENT_QUOTES, 'UTF-8') : ''
             ];
         }
     }
