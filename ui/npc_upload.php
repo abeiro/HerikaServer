@@ -7,7 +7,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "📝CHIM - NPC Biography Management";
+$TITLE = "📝CHIM - NPC Biography";
 
 ob_start();
 
@@ -526,11 +526,22 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
+    /* Font Face Declaration */
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+
     /* Override main container styles */
     main {
         padding-top: 160px; /* Space for navbar */
         padding-bottom: 40px; /* Reduced space for footer */
-        padding-left: 10px;
+        padding-left: 10%;
+        padding-right: 10%;
+        width: 100%;
+        margin: 0;
     }
     
     /* Override footer styles */
@@ -543,8 +554,64 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         z-index: 100;
     }
 
-        /* Modal specific overrides */
-        .modal-backdrop {
+    /* Page Header Styling */
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .page-header h1 {
+        margin-bottom: 15px;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .page-header h3 {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+
+    .page-header h4 {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    /* Content Section Headers */
+    .content-section h1, .indent5 h1 {
+        font-family: 'MagicCards', serif;
+        font-size: 1.8em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        word-spacing: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    /* Form Container Styling */
+    .form-container {
+        background: #2a2a2a;
+        padding: 25px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        margin-bottom: 20px;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    /* Modal specific overrides */
+    .modal-backdrop {
         overflow-y: auto !important;
         padding: 20px 0;
     }
@@ -594,25 +661,205 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         border-top: 1px solid #4a4a4a;
     }
 
-    /* Table container height adjustment */
+    /* Table container and styling improvements */
     .table-container {
-        max-height: calc(100vh - 400px) !important;
+        max-height: calc(100vh - 450px) !important;
+        margin-top: 20px;
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    /* Table styling improvements */
+    .table-container table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+    }
+
+    /* Column width optimization */
+    .table-container th:nth-child(1), /* Name */
+    .table-container td:nth-child(1) {
+        width: 15%;
+        min-width: 120px;
+    }
+
+    .table-container th:nth-child(2), /* Summary Bio */
+    .table-container td:nth-child(2) {
+        width: 35%;
+        min-width: 250px;
+    }
+
+    .table-container th:nth-child(3), /* Extended Profiles */
+    .table-container td:nth-child(3) {
+        width: 20%;
+        min-width: 150px;
+    }
+
+    .table-container th:nth-child(4), /* Voice Overrides */
+    .table-container td:nth-child(4) {
+        width: 20%;
+        min-width: 150px;
+    }
+
+    .table-container th:nth-child(5), /* Actions */
+    .table-container td:nth-child(5) {
+        width: 10%;
+        min-width: 80px;
+    }
+
+    /* Text wrapping and overflow handling */
+    .table-container td {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        vertical-align: top;
+        padding: 8px;
+        line-height: 1.4;
+    }
+
+    .table-container th {
+        padding: 10px 8px;
+        font-weight: bold;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    /* Action container styling */
+    .action-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .search-container {
+        display: flex;
+        gap: 10px;
+        min-width: 300px;
+    }
+
+    /* Filter section styling */
+    .filter-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin: 15px 0;
+        justify-content: center;
+    }
+
+    /* Content sections */
+    .content-section {
+        background: #2a2a2a;
+        padding: 25px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        margin-bottom: 20px;
+    }
+
+    /* Responsive table for smaller screens */
+    @media (max-width: 1200px) {
+        .table-container {
+            font-size: 0.9em;
+        }
+        
+        .table-container th:nth-child(2), /* Summary Bio */
+        .table-container td:nth-child(2) {
+            width: 40%;
+        }
+        
+        .table-container th:nth-child(3), /* Extended Profiles */
+        .table-container td:nth-child(3) {
+            width: 25%;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .table-container {
+            font-size: 0.8em;
+        }
+        
+        .table-container th,
+        .table-container td {
+            padding: 6px 4px;
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        main {
+            padding-left: 5%;
+            padding-right: 5%;
+        }
+        
+        .search-container {
+            min-width: 200px;
+        }
+        
+        .action-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .form-container {
+            padding: 15px;
+        }
+        
+        .content-section {
+            padding: 15px;
+        }
+
+        .page-header {
+            padding: 15px;
+        }
+
+        .page-header h1 {
+            font-size: 1.8em;
+        }
+
+        .content-section h1, .indent5 h1 {
+            font-size: 1.6em;
+        }
+    }
+
+    @media (max-width: 480px) {
+        main {
+            padding-left: 2%;
+            padding-right: 2%;
+        }
+        
+        .page-header h1 {
+            font-size: 1.5em;
+        }
+
+        .content-section h1, .indent5 h1 {
+            font-size: 1.3em;
+        }
+        
+        .button-group {
+            flex-direction: column;
+        }
     }
 </style>
 
 <main>
-    <div class="indent5">
-        <h1>📝NPC Biography Management</h1>
-        <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
-        <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
+    <div id="toast" class="toast-notification">
+        <span class="message"></span>
+    </div>
 
-        <div id="toast" class="toast-notification">
-            <span class="message"></span>
-        </div>
-        <br>
-        <h1>Batch Upload</h1>
-        <div class="form-container">
+    <div class="page-header">
+        <h1>NPC Biography Management</h1>
+        <p>The <b>NPC Biography System</b> allows you to create custom character profiles that AI NPCs will use during roleplay.</p>
+        <p>Upload biographies individually or in bulk via CSV files. All custom entries override default templates.</p>
+    </div>
+
+    <div class="indent5">
+        <div class="content-section">
+            <h1>Batch Upload</h1>
             <form action="" method="post" enctype="multipart/form-data">
+            <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
+            <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
                 <div>
                     <label for="csv_file">Select .csv file to upload:</label>
                     <br>

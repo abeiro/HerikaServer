@@ -655,7 +655,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         flex: 1;
         padding: 15px 20px;
         background: #3a3a3a;
-        color: #f8f9fa;
+        color: rgb(242, 124, 17);
         border: none;
         cursor: pointer;
         font-family: 'MagicCards', serif;
@@ -673,11 +673,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     .tab-button.active {
         background: rgb(242, 124, 17);
-        color: #fff;
+        color: #000;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(255,255,255,0.3);
     }
 
     .tab-button:hover:not(.active) {
         background: #4a4a4a;
+        color: rgb(255, 140, 30);
     }
 
     /* Tab Content */
@@ -710,8 +713,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         border: 1px solid #4a4a4a;
     }
 
+    .content-section h2 {
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        margin-bottom: 15px;
+        font-size: 1.4em;
+    }
+
     .full-width-section {
         grid-column: 1 / -1;
+    }
+
+    .full-width-section h2 {
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        margin-bottom: 15px;
+        font-size: 1.6em;
+        text-align: center;
     }
 
     /* Form Improvements */
@@ -792,6 +814,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         font-size: 1.3em;
         font-weight: bold;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        font-family: 'MagicCards', serif;
+        word-spacing: 6px;
     }
 
     .logic-steps {
@@ -1059,6 +1083,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         .tab-button {
             padding: 12px 15px;
             font-size: 16px;
+            color: rgb(242, 124, 17);
         }
         
         .search-container {
@@ -1108,6 +1133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         .tab-button {
             padding: 10px 12px;
             font-size: 15px;
+            color: rgb(242, 124, 17);
         }
         
         .logic-section {
