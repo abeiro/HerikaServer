@@ -1,25 +1,31 @@
 <?php
 
-require_once("utils.php");
-
+require_once(__DIR__."/utils.php");
 // used for openai_token_count table
 
-require_once("utils_game_timestamp.php");
+require_once(__DIR__."/utils_game_timestamp.php");
+require_once(__DIR__."/model_dynmodel.php");
 
+
+function ChangeHerikaName($new_name="") {
+    if ($new_name > "") {
+        SaveOriginalHerikaName();
+        $GLOBALS["HERIKA_NAME"] = $new_name;
+    }
+}
 
 function SaveOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
     if (!$b_already_saved) {
         $herika = ($GLOBALS["HERIKA_NAME"] ?? "");
-        if (($herika > "") && ($herika != "The Narrator") && (stripos($herika, "actor") === false)) {
+        if (($herika > "") && ($herika != "The Narrator") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
         } else {
-            Logger::warn("SaveOriginalHerikaName: invalid value for HERIKA_NAME {$herika}");
+            Logger::debug("SaveOriginalHerikaName: ignored new value for HERIKA_NAME {$herika}");
         }
     }
 }
-
 
 function GetOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
@@ -30,6 +36,18 @@ function GetOriginalHerikaName() {
     }
     return $herika;
 } 
+
+function ReplacePlayerNamePlaceholder($s_input) {
+    //replace #PLAYER_NAME# with player name
+    $s_res = $s_input;
+    if ((strlen(trim($s_input))) > 12) {
+        $s_res = strtr($s_input, [
+            "#HERIKA_NAME#" =>$GLOBALS["HERIKA_NAME"],
+            "#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"] 
+        ]);
+    }
+    return $s_res;
+}
 
 
 function DataDequeue()
@@ -178,7 +196,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         if (!empty($actorDetailedListWithProfileSanitized))
             $actorsInRange=implode("\n## ",$actorDetailedListWithProfileSanitized);
         else 
-            $actorsInRange="No more actors in scene";// Catch
+            $actorsInRange="\nNo more actors in scene";// Catch
     }
 
     
@@ -977,7 +995,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
       
 
     // Cases of self rechat
-    if ((sizeof($ctx3)>3)&&($GLOBALS["gameRequest"][3]=="rechat")) {
+    if ((sizeof($ctx3)>3)&&(($GLOBALS["gameRequest"][3] ?? "")=="rechat")) {
         $lastElement = $ctx3[sizeof($ctx3)-1];
         // Last element is assistant
         if ($lastElement["role"]=="assistant") {
@@ -2818,7 +2836,10 @@ function DataRetrieveFirstTimeMet($s_player_name, $s_npc_name) {
 
 	$s_res = "";
 
-	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0)) {
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
+        if (($s_npc_name == "Herika") || ($s_player_name == "Herika")) { // Herika easter egg
+            return "{$s_player_name} met {$s_npc_name} for the first time on 0199-04-26, 15:36:00, years ago.";
+        }
 		$s_player = $db->escape($s_player_name);
 		$s_npc = $db->escape($s_npc_name);
 
@@ -2912,25 +2933,26 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 			$hours_ago = convert_gamets2hours($gts_ago);
 			if ($hours_ago > 3) {
 				if ($hours_ago < 48) {
-					$s_res = "{$s_player_name} and {$s_npc_name} spoke last {$hours_ago} hours ago.";
+					$s_res = "{$s_player_name} and {$s_npc_name} last spoke {$hours_ago} hours ago.";
 				} else {
 					$days_ago = convert_gamets2days($gts_ago);
 					if ($days_ago < 31) {
-						$s_res = "{$s_player_name} and {$s_npc_name} spoke last {$days_ago} days ago.";
+						$s_res = "{$s_player_name} and {$s_npc_name} last spoke {$days_ago} days ago.";
 					} else {
-						$months_ago = intval($days_ago / 30);
+						$months_ago = intval($days_ago * 0.03333333);
 						if ($months_ago < 12) {
-							$s_res = "{$s_player_name} and {$s_npc_name} spoke last {$months_ago} months ago on {$s_date}.";
+							$s_res = "{$s_player_name} and {$s_npc_name} last spoke {$months_ago} months ago on {$s_date}.";
 						} else {
-							$s_res = "{$s_player_name} and {$s_npc_name} spoke last long time ago on {$s_date}.";
+							$s_res = "{$s_player_name} and {$s_npc_name} last spoke long time ago on {$s_date}.";
 						}
 					}
 				}	
 			} else {
-				$s_res = "{$s_player_name} and {$s_npc_name} spoke recently.";
+                Logger::debug("DataRetrieveLastTimeTalk: {$s_player_name} and {$s_npc_name} spoke recently");
+				//$s_res = "{$s_player_name} and {$s_npc_name} spoke recently.";
 			}
 		} else { 
-			Logger::info("DataRetrieveLastTimeTalk: NO match found");
+			Logger::debug("DataRetrieveLastTimeTalk: NO match found for {$s_player_name} - {$s_npc_name}");
 			//$s_res = "There is no record of when {$s_player_name} and {$s_npc_name} last spoke.";
 		}
 	}
