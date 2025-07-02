@@ -679,32 +679,38 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     /* Column width optimization */
     .table-container th:nth-child(1), /* Name */
     .table-container td:nth-child(1) {
-        width: 15%;
-        min-width: 120px;
+        width: 12%;
+        min-width: 100px;
     }
 
     .table-container th:nth-child(2), /* Summary Bio */
     .table-container td:nth-child(2) {
-        width: 35%;
-        min-width: 250px;
+        width: 30%;
+        min-width: 200px;
     }
 
     .table-container th:nth-child(3), /* Extended Profiles */
     .table-container td:nth-child(3) {
-        width: 20%;
-        min-width: 150px;
+        width: 18%;
+        min-width: 130px;
     }
 
     .table-container th:nth-child(4), /* Voice Overrides */
     .table-container td:nth-child(4) {
-        width: 20%;
-        min-width: 150px;
+        width: 15%;
+        min-width: 120px;
     }
 
-    .table-container th:nth-child(5), /* Actions */
+    .table-container th:nth-child(5), /* Oghma Tags */
     .table-container td:nth-child(5) {
-        width: 10%;
-        min-width: 80px;
+        width: 15%;
+        min-width: 120px;
+    }
+
+    .table-container th:nth-child(6), /* Actions */
+    .table-container td:nth-child(6) {
+        width: 12%;
+        min-width: 120px;
     }
 
     /* Text wrapping and overflow handling */
@@ -766,12 +772,27 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         
         .table-container th:nth-child(2), /* Summary Bio */
         .table-container td:nth-child(2) {
-            width: 40%;
+            width: 35%;
         }
         
         .table-container th:nth-child(3), /* Extended Profiles */
         .table-container td:nth-child(3) {
-            width: 25%;
+            width: 20%;
+        }
+
+        .table-container th:nth-child(4), /* Voice Overrides */
+        .table-container td:nth-child(4) {
+            width: 12%;
+        }
+
+        .table-container th:nth-child(5), /* Oghma Tags */
+        .table-container td:nth-child(5) {
+            width: 13%;
+        }
+
+        .table-container th:nth-child(6), /* Actions */
+        .table-container td:nth-child(6) {
+            width: 10%;
         }
     }
 
@@ -973,11 +994,12 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         echo '<div id="npc-table-container" class="table-container">';
         echo '<table>';
         echo '<tr>';
-        echo '  <th style="width: 15%;">Name</th>';
-        echo '  <th style="width: 35%;">Summary Bio</th>';
-        echo '  <th style="width: 20%;">Extended Profiles</th>';
-        echo '  <th style="width: 20%;">Voice Overrides</th>';
-        echo '  <th style="width: 10%;">Actions</th>';
+        echo '  <th>Name</th>';
+        echo '  <th>Summary Bio</th>';
+        echo '  <th>Extended Profiles</th>';
+        echo '  <th>Voice Overrides</th>';
+        echo '  <th>Oghma Tags</th>';
+        echo '  <th>Actions</th>';
         echo '</tr>';
 
         $rowCountCombined = 0;
@@ -1022,9 +1044,25 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             }
             echo '</td>';
             
-            // Add Edit button
+            // Oghma Tags (npc_misc) column
+            $oghmaTagsValue = $row['npc_misc'] ?? '';
+            echo '  <td style="font-size: 1.5em; line-height: 1.4;">';
+            if (!empty(trim($oghmaTagsValue))) {
+                // Split by commas and display as badges/tags
+                $tags = array_map('trim', explode(',', $oghmaTagsValue));
+                foreach ($tags as $tag) {
+                    if (!empty($tag)) {
+                        echo '<span style="display: inline-block; background: rgba(242, 124, 17, 0.2); color: rgb(242, 124, 17); padding: 3px 8px; margin: 2px; border-radius: 4px; font-size: 0.85em; font-weight: 500;">' . htmlspecialchars($tag) . '</span>';
+                    }
+                }
+            } else {
+                echo '<span style="color: #888; font-style: italic;">None</span>';
+            }
+            echo '</td>';
+            
+            // Add Edit and Oghma buttons
             echo '<td>';
-            echo '<div class="button-group">';
+            echo '<div class="button-group" style="display: flex; flex-direction: column; gap: 5px;">';
             $jsData = [
                 'npc_name' => $row['npc_name'],
                 'npc_pers' => $row['npc_pers'],
@@ -1048,7 +1086,11 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                     [' ', ' ', "\\'"],
                     json_encode($jsData)
                 ), ENT_QUOTES, 'UTF-8') . 
-                ')" class="action-button edit">Edit</button>';
+                ')" class="action-button edit" style="font-size: 0.8em; padding: 4px 8px;">Edit</button>';
+            echo '<button onclick="openOghmaModal(\'' . 
+                htmlspecialchars($row['npc_name'], ENT_QUOTES) . '\', \'' . 
+                htmlspecialchars($row['npc_misc'] ?? '', ENT_QUOTES) . 
+                '\')" class="action-button" style="background: rgba(242, 124, 17, 0.8); font-size: 0.8em; padding: 4px 8px;">Oghma</button>';
             echo '</div>';
             echo '</td>';
             echo '</tr>';
@@ -1094,7 +1136,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                     <textarea name="npc_dynamic" id="edit_npc_dynamic" rows="8"></textarea>
                 </div>
 
-                <label for="edit_npc_misc">NPC Misc:</label>
+                <label for="edit_npc_misc">NPC Misc (Oghma Tags):</label>
                 <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="edit_npc_misc">
 
@@ -1181,7 +1223,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                     <textarea name="npc_dynamic" id="new_npc_dynamic" rows="8"></textarea>
                 </div>
 
-                <label for="new_npc_misc">NPC Misc:</label>
+                <label for="new_npc_misc">NPC Misc (Oghma Tags):</label>
                 <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="new_npc_misc">
 
@@ -1302,6 +1344,83 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     </div>
 </div>
 
+<!-- Oghma Knowledge Modal -->
+<div id="oghmaModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-container" style="max-width: 1000px;">
+        <div class="modal-header">
+            <h2 class="modal-title">Oghma Knowledge: <span id="oghma-npc-name"></span></h2>
+        </div>
+        <div class="modal-body">
+            <div id="oghma-loading" style="text-align: center; padding: 40px; display: none;">
+                <p>Loading Oghma knowledge...</p>
+            </div>
+            <div id="oghma-content">
+                <!-- Search and Filter Section -->
+                <div class="oghma-filters" style="background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #4a4a4a;">
+                    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label for="oghma-search" style="display: block; margin-bottom: 5px; color: rgb(242, 124, 17); font-size: 0.9em; font-weight: bold;">Search Topics & Descriptions:</label>
+                            <input 
+                                type="text" 
+                                id="oghma-search" 
+                                placeholder="Search knowledge articles..." 
+                                style="width: 100%; padding: 8px 12px; border: 1px solid #555; background: #1a1a1a; color: #f8f9fa; border-radius: 4px; font-size: 0.9em;"
+                            >
+                        </div>
+                        <div style="min-width: 150px;">
+                            <label for="oghma-category" style="display: block; margin-bottom: 5px; color: rgb(242, 124, 17); font-size: 0.9em; font-weight: bold;">Category:</label>
+                            <select 
+                                id="oghma-category" 
+                                style="width: 100%; padding: 8px 12px; border: 1px solid #555; background: #1a1a1a; color: #f8f9fa; border-radius: 4px; font-size: 0.9em;"
+                            >
+                                <option value="">All Categories</option>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: end;">
+                            <button 
+                                id="oghma-apply-filters" 
+                                style="padding: 8px 16px; background: rgb(242, 124, 17); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500;"
+                            >
+                                Apply Filters
+                            </button>
+                            <button 
+                                id="oghma-clear-filters" 
+                                style="padding: 8px 16px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em;"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="oghma-table-container" style="max-height: 50vh; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead style="position: sticky; top: 0; background: #3a3a3a; z-index: 10;">
+                            <tr style="border-bottom: 2px solid rgb(242, 124, 17);">
+                                <th style="padding: 12px 8px; text-align: left; color: rgb(242, 124, 17); width: 25%;">Topic</th>
+                                <th style="padding: 12px 8px; text-align: left; color: rgb(242, 124, 17); width: 15%;">Knowledge Level</th>
+                                <th style="padding: 12px 8px; text-align: left; color: rgb(242, 124, 17); width: 60%;">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="oghma-knowledge-list">
+                            <!-- Content will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="oghma-no-access" style="text-align: center; padding: 40px; color: #888; display: none;">
+                    <p>This NPC has no Oghma knowledge tags or no access to any knowledge articles.</p>
+                    <p><small>Knowledge access is determined by the tags in the "Oghma Tags" field.</small></p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" onclick="closeOghmaModal()" class="btn-base btn-cancel">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function showToast(message, duration = 5000) {
     const toast = document.getElementById('toast');
@@ -1413,6 +1532,207 @@ function closeExtendedProfileModal() {
     document.body.style.overflow = "auto";
 }
 
+// Global variables to store the current Oghma data
+let currentOghmaData = null;
+let currentNpcName = '';
+let currentOghmaTags = '';
+
+function openOghmaModal(npcName, oghmaTagsString) {
+    try {
+        // Store current NPC info for filtering
+        currentNpcName = npcName;
+        currentOghmaTags = oghmaTagsString;
+        
+        // Set the NPC name in the modal title
+        document.getElementById("oghma-npc-name").textContent = npcName;
+        
+        // Clear filters
+        document.getElementById("oghma-search").value = '';
+        document.getElementById("oghma-category").value = '';
+        
+        // Show loading state
+        document.getElementById("oghma-loading").style.display = "block";
+        document.getElementById("oghma-content").style.display = "none";
+        
+        // Show the modal
+        document.getElementById("oghmaModal").style.display = "block";
+        document.body.style.overflow = "hidden";
+        
+        // Load initial data
+        loadOghmaData();
+        
+    } catch (error) {
+        console.error("Error in openOghmaModal:", error);
+        alert("There was an error opening the Oghma knowledge viewer. Please try again.");
+    }
+}
+
+function loadOghmaData(searchTerm = '', categoryFilter = '') {
+    // Fetch Oghma knowledge data
+    const formData = new URLSearchParams();
+    formData.append('npc_name', currentNpcName);
+    formData.append('oghma_tags', currentOghmaTags);
+    if (searchTerm) formData.append('search', searchTerm);
+    if (categoryFilter) formData.append('category', categoryFilter);
+    
+    fetch('oghma_knowledge.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString()
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Store the data globally
+        currentOghmaData = data;
+        
+        // Hide loading state
+        document.getElementById("oghma-loading").style.display = "none";
+        document.getElementById("oghma-content").style.display = "block";
+        
+        // Populate category dropdown if it's the first load
+        if (!searchTerm && !categoryFilter) {
+            populateCategoryDropdown(data.categories || []);
+        }
+        
+        // Populate the knowledge table
+        populateKnowledgeTable(data.knowledge || []);
+        
+    })
+    .catch(error => {
+        console.error('Error fetching Oghma knowledge:', error);
+        document.getElementById("oghma-loading").style.display = "none";
+        document.getElementById("oghma-content").style.display = "block";
+        document.getElementById("oghma-no-access").style.display = "block";
+        document.getElementById("oghma-no-access").innerHTML = '<p style="color: #ff6464;">Error loading Oghma knowledge. Please try again.</p>';
+    });
+}
+
+function populateCategoryDropdown(categories) {
+    const categorySelect = document.getElementById("oghma-category");
+    
+    // Clear existing options except "All Categories"
+    while (categorySelect.children.length > 1) {
+        categorySelect.removeChild(categorySelect.lastChild);
+    }
+    
+    // Add category options
+    categories.forEach(category => {
+        if (category && category.trim()) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        }
+    });
+}
+
+function populateKnowledgeTable(knowledge) {
+    const knowledgeList = document.getElementById("oghma-knowledge-list");
+    knowledgeList.innerHTML = '';
+    
+    if (knowledge && knowledge.length > 0) {
+        knowledge.forEach(item => {
+            const row = document.createElement('tr');
+            row.style.borderBottom = '1px solid #4a4a4a';
+            
+            const levelColor = item.level === 'Advanced' ? 'rgb(242, 124, 17)' : '#4a9eff';
+            const levelBg = item.level === 'Advanced' ? 'rgba(242, 124, 17, 0.2)' : 'rgba(74, 158, 255, 0.2)';
+            
+            // Add category and tags info if available
+            let extraInfo = '';
+            if (item.category || item.tags) {
+                extraInfo = '<div style="margin-top: 8px; font-size: 0.8em; color: #888;">';
+                if (item.category) {
+                    extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 5px;">📁 ${item.category}</span>`;
+                }
+                if (item.tags) {
+                    const tags = item.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    tags.forEach(tag => {
+                        extraInfo += `<span style="background: rgba(74, 158, 255, 0.15); color: #4a9eff; padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 0.75em;">🏷️ ${tag}</span>`;
+                    });
+                }
+                extraInfo += '</div>';
+            }
+            
+            row.innerHTML = `
+                <td style="padding: 12px 8px; vertical-align: top; word-wrap: break-word;">
+                    <strong>${item.topic}</strong>
+                    ${extraInfo}
+                </td>
+                <td style="padding: 12px 8px; vertical-align: top;">
+                    <span style="display: inline-block; background: ${levelBg}; color: ${levelColor}; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 500;">${item.level}</span>
+                </td>
+                <td style="padding: 12px 8px; vertical-align: top; word-wrap: break-word; line-height: 1.4;">
+                    ${item.description}
+                </td>
+            `;
+            
+            knowledgeList.appendChild(row);
+        });
+        
+        document.getElementById("oghma-no-access").style.display = "none";
+    } else {
+        document.getElementById("oghma-no-access").style.display = "block";
+        document.getElementById("oghma-no-access").innerHTML = `
+            <p>No knowledge articles found matching the current filters.</p>
+            <p><small>Try adjusting your search terms or category filter.</small></p>
+        `;
+    }
+}
+
+function closeOghmaModal() {
+    document.getElementById("oghmaModal").style.display = "none";
+    document.body.style.overflow = "auto";
+}
+
+// Add event listeners for Oghma filters when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Apply Filters button
+    const applyFiltersBtn = document.getElementById('oghma-apply-filters');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', function() {
+            const searchTerm = document.getElementById('oghma-search').value.trim();
+            const categoryFilter = document.getElementById('oghma-category').value;
+            
+            // Show loading state
+            document.getElementById("oghma-loading").style.display = "block";
+            document.getElementById("oghma-content").style.display = "none";
+            
+            // Load filtered data
+            loadOghmaData(searchTerm, categoryFilter);
+        });
+    }
+    
+    // Clear Filters button
+    const clearFiltersBtn = document.getElementById('oghma-clear-filters');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            document.getElementById('oghma-search').value = '';
+            document.getElementById('oghma-category').value = '';
+            
+            // Show loading state
+            document.getElementById("oghma-loading").style.display = "block";
+            document.getElementById("oghma-content").style.display = "none";
+            
+            // Load all data
+            loadOghmaData();
+        });
+    }
+    
+    // Enter key support for search box
+    const searchBox = document.getElementById('oghma-search');
+    if (searchBox) {
+        searchBox.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('oghma-apply-filters').click();
+            }
+        });
+    }
+});
+
 // Update PHP message handling
 <?php if (!empty($message)): ?>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1479,6 +1799,7 @@ window.onclick = function(event) {
     const editModal = document.getElementById('editModal');
     const newEntryModal = document.getElementById('newEntryModal');
     const extendedProfileModal = document.getElementById('extendedProfileModal');
+    const oghmaModal = document.getElementById('oghmaModal');
     
     if (event.target == editModal) {
         closeEditModal();
@@ -1486,6 +1807,8 @@ window.onclick = function(event) {
         closeNewEntryModal();
     } else if (event.target == extendedProfileModal) {
         closeExtendedProfileModal();
+    } else if (event.target == oghmaModal) {
+        closeOghmaModal();
     }
 }
 </script>
