@@ -349,11 +349,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
+    /* Font Face Declaration */
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+
     /* Override main container styles */
     main {
         padding-top: 160px;
         padding-bottom: 40px;
-        padding-left: 10px;
+        padding-left: 10%;
+        padding-right: 10%;
+        width: 100%;
+        margin: 0;
     }
     
     /* Override footer styles */
@@ -364,6 +375,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         height: 20px;
         background: #031633;
         z-index: 100;
+    }
+
+    /* Page Header Styling */
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .page-header h1 {
+        margin-bottom: 15px;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .page-header h3 {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+
+    .page-header h4 {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    /* Content Section Headers */
+    .content-section h1, .indent5 h1 {
+        font-family: 'MagicCards', serif;
+        font-size: 1.8em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        word-spacing: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    /* Form Container Styling */
+    .form-container {
+        background: #2a2a2a;
+        padding: 25px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        margin-bottom: 20px;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    /* Content Layout Improvements */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .content-section {
+        background: #2a2a2a;
+        padding: 25px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        margin-bottom: 20px;
+    }
+
+    .full-width-section {
+        grid-column: 1 / -1;
     }
 
     /* Voice list styling */
@@ -439,6 +526,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         opacity: 1 !important;
         transform: scale(1.1);
     }
+
+    /* Voice list container styling */
+    .voice-list-container {
+        background: #1a1a1a;
+        border-radius: 8px;
+        border: 2px solid rgb(242, 124, 17);
+        padding: 20px;
+        margin-top: 15px;
+    }
+
+    .voice-list-header h3 {
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        text-align: center;
+    }
+
+    .voice-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background-color: #3a3a3a;
+        border: 1px solid #555555;
+        border-radius: 6px;
+        color: #f8f9fa;
+        transition: all 0.2s ease;
+    }
+
+    .voice-item:hover {
+        background-color: #4a4a4a;
+        border-color: rgb(242, 124, 17);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        main {
+            padding-left: 5%;
+            padding-right: 5%;
+        }
+        
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-container {
+            padding: 15px;
+        }
+        
+        .content-section {
+            padding: 15px;
+        }
+
+        .page-header {
+            padding: 15px;
+        }
+
+        .page-header h1 {
+            font-size: 1.8em;
+        }
+
+        .content-section h1, .indent5 h1 {
+            font-size: 1.6em;
+        }
+
+        .voice-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 480px) {
+        main {
+            padding-left: 2%;
+            padding-right: 2%;
+        }
+        
+        .page-header h1 {
+            font-size: 1.5em;
+        }
+
+        .content-section h1, .indent5 h1 {
+            font-size: 1.3em;
+        }
+        
+        .button-group {
+            flex-direction: column;
+        }
+
+        .voice-grid {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+
+        .voice-item {
+            padding: 8px 12px;
+        }
+    }
 </style>
 
 <main>
@@ -450,27 +635,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <span class="message"></span>
     </div>
 
-    <div class="indent5">
-        <h1>🔊 CHIM XTTS Voice Management</h1>
-        
+    <div class="page-header">
+        <h1>CHIM XTTS Voice Management</h1>
         <p>The <b>CHIM XTTS Voice Management</b> system allows you to manage custom voice samples for NPCs using the CHIM XTTS Server.</p>
         <p>This works differently from other TTS services - it requires voice samples to be uploaded and cached on the server.</p>
         <p>For detailed information on how it works, please read our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts" style="color: yellow;" target="_blank" rel="noopener noreferrer">CHIM XTTS Voice Guide</a>.</p>
         <h3><strong>Ensure all voice sample filenames are lowercase and spaces are replaced with underscores (_).</strong></h3>
         <h4>Example: "Mjoll the Lioness" becomes "mjoll_the_lioness.wav"</h4>
+    </div>
 
-        <?php if (!empty($message)): ?>
-            <div class="message"><?php echo $message; ?></div>
-        <?php endif; ?>
+    <?php if (!empty($message)): ?>
+        <div class="message"><?php echo $message; ?></div>
+    <?php endif; ?>
 
-        
-        <div class="form-container">
+    <div class="content-grid">
+        <div class="content-section">
+            <h1>Voice Sample Upload</h1>
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" enctype="multipart/form-data">
                 <div>
-                <h1>Voice Sample Upload</h1>
                     <label for="file">Select .wav file(s) to upload:</label>
                     <br>
-                    
                     <input type="file" name="file[]" id="file" accept=".wav" multiple="multiple" required>
                 </div>
                 <div class="button-group">
@@ -487,7 +671,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <li>Sample Rate: 20500Hz</li>
                 <li>Size: 5MB or less</li>
             </ul>
-            <br>
+        </div>
+
+        <div class="content-section">
             <h1>Current Voice List</h1>
             <div class="button-group">
                 <button onclick="toggleVoiceList()" id="toggleVoices" class="action-button download-csv">Show Available Voices</button>
@@ -495,22 +681,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div id="voiceList" style="display: none; margin-top: 15px;">
                 <?php echo $speakersMessage; ?>
             </div>
-            <br>
-            <br>
-            <h1>Cloud XTTS Sync</h1>
-            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
-                <p><strong>Only required for online CHIM XTTS instances.</strong></p>
-                <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
-                <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
-                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
-                <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
-                <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
-            </form>
-            <br>
-            <p>Advanced XTTS configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
-
         </div>
+    </div>
 
+    <div class="content-section full-width-section">
+        <h1>Cloud XTTS Sync</h1>
+        <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
+            <p><strong>Only required for online CHIM XTTS instances.</strong></p>
+            <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
+            <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
+            <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+            <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
+            <div class="button-group">
+                <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
+            </div>
+        </form>
+        <p>Advanced XTTS configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
     </div>
 </main>
 
