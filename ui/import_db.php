@@ -615,7 +615,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p><strong>⚠️ DANGER:</strong> This will permanently delete ALL data including profiles, events, diaries, and memories.</p>
             </div>
             <div style="margin-top: auto;">
-                <button onclick="if (confirm('⚠️ FACTORY RESET DATABASE\n\nThis will wipe and reinstall the entire database to the default configuration.\n\n❌ ALL DATA WILL BE PERMANENTLY LOST:\n- All character profiles\n- All event logs\n- All diaries and memories\n- All configuration settings\n\n✅ Database will be reset to fresh installation state\n\nThis action CANNOT be undone!\n\nAre you absolutely sure you want to continue?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }" 
+                <button onclick="if (confirm('⚠️ FACTORY RESET DATABASE\n\nThis will wipe and reinstall the entire database to the default configuration.\n\n❌ ALL DATA WILL BE PERMANENTLY LOST:\n- All event logs\n- All diaries and memories\n- All custom Oghama and NPC Biography management profiles\n\n✅ Database will be reset to fresh installation state\n\nThis action CANNOT be undone!\n\nAre you absolutely sure you want to continue?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }" 
                         class="button" style="background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
                     Factory Reset Database
                 </button>
