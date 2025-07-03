@@ -78,6 +78,8 @@ class openrouter
                 $i_pos = stripos($s_model, "qwen3-235b-a22b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwen3-30b-a3b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-32b");
             $b_res = (!($i_pos === false));
         }
         return $b_res;
@@ -179,6 +181,14 @@ class openrouter
         $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
         if ($top_k < 0) $top_k = 0; 
 
+        if (isset($customParms["MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($customParms["MAX_TOKENS"]); 
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
+
         $data = array(
             'model' => $this->_model,
             'messages' => $contextData,
@@ -215,25 +225,13 @@ class openrouter
                 $data["enable_thinking"] = false;
         }
 
-        if (isset($customParms["MAX_TOKENS"])) {
-            if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
-            } elseif ($customParms["MAX_TOKENS"]) {
-                $data["max_tokens"]=$customParms["MAX_TOKENS"];
-            }
-        }
-
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
-            } else {
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
-
-            }
+        if ($MAX_TOKENS<1) {
+            unset($data["max_completion_tokens"]); 
+            unset($data["max_tokens"]); 
         }
         
         $GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;
-
+        /* if FUNCTIONS_ARE_ENABLED is false, this is not used
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             foreach ($GLOBALS["FUNCTIONS"] as $function)
                 $data["tools"][]=["type"=>"function","function"=>$function];
@@ -242,7 +240,8 @@ class openrouter
             }
 
         }
-
+        */
+        
         if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;

@@ -78,12 +78,14 @@ class openaijson
                 $i_pos = stripos($s_model, "qwen3-235b-a22b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwen3-30b-a3b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-32b");
             $b_res = (!($i_pos === false));
         }
         return $b_res;
     }
 
-    private function init_connector() {
+    private function init_connector($customParms) {
         $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
@@ -119,6 +121,9 @@ class openaijson
         }
 
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+        // We shoud be able to overwrite model.
+        $this->_model = isset($customParms["model"]) ? $customParms["model"] : $this->_model;
+        
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
             $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
@@ -127,7 +132,7 @@ class openaijson
     
     public function open($contextData, $customParms)
     {
-        $this->init_connector();
+        $this->init_connector($customParms);
 
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
@@ -162,7 +167,7 @@ class openaijson
             //$prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         }
         
-        if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
+        if (stripos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Check reference #SpeechStyle.";
         } else
             $speechReinforcement="";
@@ -170,12 +175,12 @@ class openaijson
         if ($this->_is_groq_com) { // --- exception made for groq.com - JSON need pretty print
             $contextData[]=[
                 'role' => 'user',
-                'content' => "{$prefix}. $speechReinforcement Use only this JSON object to give your answer and do not send any other characters outside of this JSON structure: ".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) 
+                'content' => "{$prefix}. $speechReinforcement \nUse only this JSON object to give your answer and do not send any other characters outside of this JSON structure: \n".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) 
             ];
         } else {
             $contextData[]=[
                 'role' => 'user',
-                'content' => "{$prefix}. $speechReinforcement Use only this JSON object to give your answer and do not send any other characters outside of this JSON structure: ".json_encode($GLOBALS["responseTemplate"])
+                'content' => "{$prefix}. $speechReinforcement \nUse only this JSON object to give your answer and do not send any other characters outside of this JSON structure: \n".json_encode($GLOBALS["responseTemplate"])
             ];
         }
     
@@ -321,17 +326,20 @@ class openaijson
         }
         
         $contextData=$contextDataCopy;
-
         
-        $contextData2=[];
-        $contextData2[]= ["role"=>"system","content"=>$pb["system"]];
-        $contextData2[]= ["role"=>"user","content"=>$pb["user"]];
-        
-        
-        // Compacting */
+        // Compact and remove context elements with empty content
         $contextDataCopy=[];
-        foreach ($contextData as $n=>$element) 
-            $contextDataCopy[]=$element;
+        foreach ($contextData as $n=>$element) {
+            if (!empty($element["content"])) {
+                $contextDataCopy[]=$element;
+            }
+        }
+        
+        if ((isset($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"])) && ($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"])) {
+            $GLOBALS["PATCH"]["PREAPPEND"]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",";
+            $contextDataCopy[]= ["role"=>"assistant","content"=>$GLOBALS["PATCH"]["PREAPPEND"]];
+        }
+        
         $contextData=$contextDataCopy;
         
         $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 1.0);
@@ -349,6 +357,14 @@ class openaijson
         $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
         if ($top_p > 1) $top_p = 1.0;
         else if ($top_p < 0.0) $top_p = 0.0; 
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($customParms["MAX_TOKENS"]); 
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
 
         // Forcing JSON output
 
@@ -402,34 +418,26 @@ class openaijson
 
         } // --- endif provider
             
-            if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
-                $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
-            }
-
-        if (isset($customParms["MAX_TOKENS"])) {
-            if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_completion_tokens"]);
-                
-            } elseif (isset($customParms["MAX_TOKENS"])) {
-                $data["max_completion_tokens"]=$customParms["MAX_TOKENS"]+0;
-            }
-            unset($customParms["MAX_TOKENS"]);
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
+            $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
         }
 
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_completion_tokens"]);
-            } else
-                $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
-            
+        if ($MAX_TOKENS<1) {
+            unset($data["max_completion_tokens"]); 
+            unset($data["max_tokens"]); 
         }
 
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+            }
+        }
+
+        /* foreach ($customParms as $k=>$v) {
+            $data[$k]=$v;
+        } */
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
-
-        foreach ($customParms as $k=>$v) {
-            $data[$k]=$v;
-        }
 
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 

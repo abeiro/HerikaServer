@@ -146,9 +146,9 @@ if ($method === "POST") {
         ];
 
         $prompt = [
-            ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . $profileContextString],
-            ["role" => "user", "content" => "Character name: " . $jsonDataInput["HERIKA_NAME"] . "\nCurrent Skills:\n" . $currentSkills],
-            ["role" => "user", "content" => $updatePrompt]
+            ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . ReplacePlayerNamePlaceholder($profileContextString)],
+            ["role" => "user", "content" => "Character name: " . $jsonDataInput["HERIKA_NAME"] . "\nCurrent Skills:\n" . ReplacePlayerNamePlaceholder($currentSkills)],
+            ["role" => "user", "content" => ReplacePlayerNamePlaceholder($updatePrompt)]
         ];
 
         $contextData = array_merge($head, $prompt);
@@ -173,8 +173,6 @@ if ($method === "POST") {
         $connectionHandler->close();
 
         $buffer = trim($buffer);
-
-        
         if (!empty($buffer)) {
             $skillsData=getInGameSkillDataFor($jsonDataInput["HERIKA_NAME"] );
             $buffer.="\n$skillsData";

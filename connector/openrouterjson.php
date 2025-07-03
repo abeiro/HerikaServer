@@ -35,7 +35,7 @@ class openrouterjson
     private $_output_buffer; 
     private $_timeout;
     private $_is_grok;
-
+    
     public function __construct()
     {
         $this->name="openrouterjson";
@@ -54,6 +54,7 @@ class openrouterjson
         $this->_cot_tag_base="think";
         $this->_output_buffer="";
         $this->_timeout=30;
+        $this->_is_grok=false;
         $this->_websearch=false;
         $this->_websearch_text="";
         $this->_websearch_index=0;
@@ -114,6 +115,8 @@ class openrouterjson
                 $i_pos = stripos($s_model, "qwen3-235b-a22b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwen3-30b-a3b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-32b");
             $b_res = (!($i_pos === false));
         }
         return $b_res;
@@ -137,16 +140,13 @@ class openrouterjson
                 $default_model = 'mistral-small-latest';
         }
 
-
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
-
-        // We shoud be able to overwrite model.
         
+        // We shoud be able to overwrite model.
         $this->_model = isset($customParms["model"]) ?$customParms["model"] :  $this->_model;
 
         $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
-
-
+        
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
             $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
@@ -191,7 +191,7 @@ class openrouterjson
             $prefix="";
         }
 
-        if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
+        if (stripos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle.";
         } else
             $speechReinforcement="";
@@ -199,7 +199,7 @@ class openrouterjson
         $zonosTones = $GLOBALS["TTSFUNCTION"] == "zonos_gradio" ? " (Response tones are mandatory in the response)" : "";
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
+            'content' => "{$prefix}. $speechReinforcement \nUse ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure $zonosTones: \n".json_encode($GLOBALS["responseTemplate"])
         ];
         $pb=[];
         $pb["user"]="";
@@ -300,7 +300,7 @@ class openrouterjson
                         $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
                         $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
-
+                        
                         // Seems we were missing this case
                         if (isset($assistantRoleBuffer) && !empty($assistantRoleBuffer)) {
                             $contextDataCopy[]=[
@@ -312,7 +312,7 @@ class openrouterjson
                             $assistantRoleBuffer="";
                             $lastrole=$element["role"];
 
-                        }
+                        }                        
                         
                         unset($contextData[$n]);
                     } else {
@@ -391,53 +391,51 @@ class openrouterjson
 
         $contextData=$contextDataCopy;
 
-        //print_r($contextData);
-        $contextData2=[];
-        $contextData2[]= ["role"=>"system","content"=>$pb["system"]];
-        $contextData2[]= ["role"=>"user","content"=>$pb["user"]];
-        
-        // Compacting */
+        // Compact and remove context elements with empty content
         $contextDataCopy=[];
-        foreach ($contextData as $n=>$element) 
-            $contextDataCopy[]=$element;
+        foreach ($contextData as $n=>$element) {
+            if (!empty($element["content"])) {
+                $contextDataCopy[]=$element;
+            }
+        }
         
-        if ($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"]) {
+        if ((isset($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"])) && ($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"])) {
             $GLOBALS["PATCH"]["PREAPPEND"]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",";
             $contextDataCopy[]= ["role"=>"assistant","content"=>$GLOBALS["PATCH"]["PREAPPEND"]];
         }
         
-        
         $contextData=$contextDataCopy;
         
         if (!$assistantAppearedInhistory) { // is this still needed?
-            // EXAMPLES
-            $contextExamples[]= [
-                'role' => 'user', 
-                'content' => "The Narrator: {$GLOBALS["PLAYER_NAME"]} looks at {$GLOBALS["HERIKA_NAME"]}"
-            ];
-            
-            $contextExamples[]= [
-                "role"=>"assistant",
-                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",\"listener\": \"{$GLOBALS["PLAYER_NAME"]}\", \"mood\": \"default\", \"action\": \"Talk\",\"target\": \"\", \"message\": \"What are you looking at?\"}"
-                    
-            ];
             
             if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
                 $contextExamples=[];
+            } else {
+                // EXAMPLES
+                $contextExamples[]= [
+                    'role' => 'user', 
+                    'content' => "The Narrator: {$GLOBALS["PLAYER_NAME"]} looks at {$GLOBALS["HERIKA_NAME"]}"
+                ];
+                
+                $contextExamples[]= [
+                    "role"=>"assistant",
+                    "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",\"listener\": \"{$GLOBALS["PLAYER_NAME"]}\", \"mood\": \"default\", \"action\": \"Talk\",\"target\": \"\", \"message\": \"What are you looking at?\"}"
+                        
+                ];
+                
+                $finalContextDataWithExamples=[];
+                foreach ($contextData as $n=>$final) {
+                    if ($final["role"]=="system") {
+                        $finalContextDataWithExamples[]=$final;
+                        foreach ($contextExamples as $example)
+                            $finalContextDataWithExamples[]=$example;
+                        }
+                    else
+                        $finalContextDataWithExamples[]=$final;
+                }
+               
+                $contextData=$finalContextDataWithExamples;
             }
-
-            $finalContextDataWithExamples=[];
-            foreach ($contextData as $n=>$final) {
-                if ($final["role"]=="system") {
-                    $finalContextDataWithExamples[]=$final;
-                    foreach ($contextExamples as $example)
-                        $finalContextDataWithExamples[]=$example;
-                    }
-                else
-                    $finalContextDataWithExamples[]=$final;
-            }
-            
-            $contextData=$finalContextDataWithExamples;
         }
 
         $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
@@ -470,6 +468,14 @@ class openrouterjson
 
         $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
         if ($top_k < 0) $top_k = 0; 
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($customParms["MAX_TOKENS"]);
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
         
         $data = array(
             'model' => $this->_model,
@@ -507,35 +513,18 @@ class openrouterjson
 
         if ($this->_is_grok) { //Argument not supported on this model: stop
             unset($data["stop"]); 
+        }  
 
-        } 
-
-        if (isset($customParms["MAX_TOKENS"])) {
-            if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
-            } elseif (isset($customParms["MAX_TOKENS"])) {
-                $data["max_tokens"]=$customParms["MAX_TOKENS"]+0;
-            }
+        if ($MAX_TOKENS<1) {
+            unset($data["max_completion_tokens"]); 
+            unset($data["max_tokens"]); 
         }
-
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
-            } else
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
-            
-        }
-
        
         if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
             $providers=explode(",",$GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"]);
-            
             $data["provider"]=["order"=>$providers];
-
         }
             
-        $data["transforms"]=[];
-
         if ($this->_is_reasoning) { // add parameter to hide <think> content
             $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
             //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
@@ -603,6 +592,12 @@ class openrouterjson
             ];
 
         } // --- end online search request
+
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+            }
+        }        
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
@@ -760,7 +755,7 @@ class openrouterjson
                 $this->_buffer.=$data["choices"][0]["delta"]["content"];
                 // Check to see if we've received something that looks like it starts with a JSON object
                 if (strlen($this->_buffer)>$buffer_preamble && strpos($this->_buffer, '{') === false) { 
-                    Logger::error("Error decoding JSON from LLM output: can't find JSON start mark after reading {$buffer_preamble} characters. LLM didn't output proper JSON object or there is a long non-JSON preamble.");
+                    Logger::error("{$this->name} Error decoding JSON from LLM {$this->_model} output: can't find JSON start mark after reading {$buffer_preamble} characters. LLM didn't output proper JSON object or there is a long non-JSON preamble. url:{$this->_url} buffer:{$this->_buffer} ");
                     return -1;
                 }
 
