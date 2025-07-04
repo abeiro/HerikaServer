@@ -24,6 +24,7 @@ class openrouterjson
     private $_is_mistral_ai;
     private $_is_streaming;
     private $_is_reasoning;
+    private $_is_openai;
     private $_model="";
     private $_url;
     private $_websearch=false;
@@ -55,6 +56,7 @@ class openrouterjson
         $this->_output_buffer="";
         $this->_timeout=30;
         $this->_is_grok=false;
+        $this->_is_openai=false;
         $this->_websearch=false;
         $this->_websearch_text="";
         $this->_websearch_index=0;
@@ -117,6 +119,39 @@ class openrouterjson
                 $i_pos = stripos($s_model, "qwen3-30b-a3b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwen3-32b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o4");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o1");
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+    private function isOpenAIModel($s_model="") { //OpenAI models have different parameters
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            // OpenRouter models
+            $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o4-mini");
+            // Nano-GPT models
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "azure-o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "azure-o3");
+            // OpenAI model names
+            if ($i_pos === false) { 
+                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
+                    ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
+                    (strpos($s_model, "o4-mini") == 0)) {
+                    $i_pos = 1;
+                }
+            }
             $b_res = (!($i_pos === false));
         }
         return $b_res;
@@ -146,11 +181,13 @@ class openrouterjson
         $this->_model = isset($customParms["model"]) ?$customParms["model"] :  $this->_model;
 
         $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
+        $this->_is_openai = $this->isOpenAIModel($this->_model);
         
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
-            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
-        $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
+            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model, use list of known reasoning models
+        
+        $this->_timeout = intval(($this->_is_reasoning) ? 90 : 30); // reasoning models could think more than 2 minutes
     }   
     
     public function open($contextData, $customParms)
@@ -503,17 +540,35 @@ class openrouterjson
                 $data["response_format"]=["type"=>"json_object"];
             }
         }
-        
             
         // Mistral AI API does not support penalty params
         if ($this->_is_mistral_ai) {
             unset($data["presence_penalty"]); 
             unset($data["frequency_penalty"]);
         } 
-
+        
         if ($this->_is_grok) { //Argument not supported on this model: stop
             unset($data["stop"]); 
         }  
+
+        if ($this->_is_reasoning) { // add parameter to hide <think> content
+            $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
+            //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
+            //Logger::debug("reasoning " . $this->_model);
+            if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
+                $data["enable_thinking"] = false;
+            }            
+        }
+        
+        if ($this->_is_openai) {
+            // OpenAI models use max_completion_tokens
+            $data['max_completion_tokens'] = $MAX_TOKENS;
+            unset($data['max_tokens']); 
+            if ($this->_is_reasoning) {
+                $data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            }
+        }
 
         if ($MAX_TOKENS<1) {
             unset($data["max_completion_tokens"]); 
@@ -525,17 +580,6 @@ class openrouterjson
             $data["provider"]=["order"=>$providers];
         }
             
-        if ($this->_is_reasoning) { // add parameter to hide <think> content
-            $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
-            //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
-            //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
-            //Logger::debug("reasoning " . $this->_model);
-            
-            if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
-                $data["enable_thinking"] = false;
-            }            
-        }
-
         if ($this->_websearch) { // online search request 
 
             $sx = $this->_model;
@@ -610,12 +654,13 @@ class openrouterjson
             "X-Title: Dwemer Dynamics"
         );
 
+        $timeout = max(intval(($GLOBALS["HTTP_TIMEOUT"]) ?? 30), $this->_timeout);
         $options = array(
             'http' => array(
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout,
+                'timeout' => $timeout, 
                 "ignore_errors" => true
             )
         );
