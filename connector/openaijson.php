@@ -24,6 +24,8 @@ class openaijson
     private $_is_cohere_ai;
     private $_is_streaming;
     private $_is_reasoning;
+    private $_is_grok;
+    private $_is_openai;
     private $_model;
     private $_url;
     private $_remove_cot;
@@ -45,6 +47,8 @@ class openaijson
         $this->_is_cohere_ai=false;
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
+        $this->_is_grok=false;
+        $this->_is_openai=false;
         $this->_model="";
         $this->_url="";
         $this->_remove_cot=true;
@@ -80,6 +84,49 @@ class openaijson
                 $i_pos = stripos($s_model, "qwen3-30b-a3b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwen3-32b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o4");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o1-preview");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o1-mini");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o4-mini");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o3-mini");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o3-pro");
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+    private function isOpenAIModel($s_model="") { //OpenAI models have different parameters
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            // OpenRouter models
+            $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o4");
+            // Nano-GPT models
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "azure-o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "azure-o3");
+            // OpenAI model names
+            if ($i_pos === false) { 
+                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
+                    ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
+                    (strpos($s_model, "o4-mini") == 0)) {
+                    $i_pos = 1;
+                }
+            }
             $b_res = (!($i_pos === false));
         }
         return $b_res;
@@ -124,6 +171,9 @@ class openaijson
         // We shoud be able to overwrite model.
         $this->_model = isset($customParms["model"]) ? $customParms["model"] : $this->_model;
         
+        $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
+        //$this->_is_openai = $this->isOpenAIModel($this->_model);
+
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
             $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
@@ -446,12 +496,13 @@ class openaijson
             "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}"
         );
 
+        $timeout = max(intval(($GLOBALS["HTTP_TIMEOUT"]) ?? 30), $this->_timeout);
         $options = array(
             'http' => array(
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout,
+                'timeout' => $timeout,
                 "ignore_errors" => true
             )
         );
