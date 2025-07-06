@@ -29,8 +29,11 @@ $debugPaneLink = false;
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 $db=new sql();
-$res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");
-$last_gamets=$res[0]["last_gamets"]+1;
+// loads the last ts and game_ts from database so chat-testing is continuing the conversation from skyrim
+$lastEventLogRowId=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0")[0]["rowid"];
+$maxTimestamps=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$lastEventLogRowId}");
+$ts = $maxTimestamps[0]["ts"]+1;
+$gamets = $maxTimestamps[0]["gamets"]+1;
 
 // Extract hash from profile filename if it exists
 $hash = '';
@@ -134,20 +137,14 @@ if (isset($_SESSION["PROFILE"])) {
                 "<p class='player'>" + 
                 document.getElementById('playerName').value + ': ' + 
                 input.value + "</p>";
-            
-            var currentDate = new Date();
-            var timestampInSeconds = parseInt(document.getElementById('last_gamets').value)+1;
+
+            let ts = parseInt(document.getElementById('ts').value);
+            let gamets = parseInt(document.getElementById('gamets').value);
             var profile = document.getElementById('profile').value;
             var xhr = new XMLHttpRequest();
 
-            var urlDataRaw = 'inputtext|' + 
-                document.getElementById('gamets').value + '|' + 
-                timestampInSeconds + '|' + 
-                document.getElementById('playerName').value + ': ' + 
-                input.value;
+            let urlDataRaw = `inputtext|${ts}|${gamets}|${document.getElementById('playerName').value}: ${input.value}`;
             var urlData = btoa(urlDataRaw);
-            document.getElementById('gamets').value = parseInt(document.getElementById('gamets').value)+10;
-            document.getElementById('last_gamets').value = parseInt(timestampInSeconds)+10;
 
             // Clear input immediately after sending
             input.value = '';
@@ -303,12 +300,13 @@ if (isset($_SESSION["PROFILE"])) {
             <input type='text' name='inputText' id='inputText' placeholder="Type your message and press Enter or Send"/>
 
             <input type='hidden' name='localts'   id='localts'   value='<?php echo time(); ?>' />
-            <input type='hidden' name='gamets'    id='gamets'    value='0' />
+            <input type='hidden' name='ts'        id='ts'        value='<?php echo $ts; ?>' />
+            <input type='hidden' name='gamets'    id='gamets'    value='<?php echo $gamets; ?>' />
             <input type='hidden' name='playerName' id='playerName' value='<?php echo $GLOBALS["PLAYER_NAME"]; ?>' />
             <input type='hidden' name='herikaName' id='herikaName' value='<?php echo $GLOBALS["HERIKA_NAME"]; ?>' />
             <input type='hidden' name='profile'    id='profile'    value='<?php echo $hash; ?>' />
             <input type='hidden' name='conf'       id='profile'    value='<?php echo $_SESSION["PROFILE"]; ?>' />
-            <input type='hidden' name='last_gamets' id='last_gamets' value='<?php echo $last_gamets; ?>' />
+            <input type='hidden' name='last_gamets' id='last_gamets' value='<?php echo $gamets; ?>' />
             <input type='button' name='send' id='sendButton' value='Send' onclick='reqSend()' class='btn-primary'/>
         </form>
     </main>
