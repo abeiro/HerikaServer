@@ -66,6 +66,9 @@ if (isset($_SESSION["PROFILE"])) {
                     reqSend();
                 }
             });
+
+            request('infonpc', `(beings in range:${document.getElementById('herikaName').value})`);
+            request('infonpc_close', `${document.getElementById('herikaName').value}/${document.getElementById('playerName').value}`);
         });
 
         function setLoadingState(loading) {
@@ -172,6 +175,19 @@ if (isset($_SESSION["PROFILE"])) {
             // Scroll chat window to bottom
             const chatWindow = document.getElementById('chatWindow');
             chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function request(type, content) {
+            setLoadingState(true);
+            let unixTimestamp = parseInt(document.getElementById('localts').value);
+            let gameTimestamp = parseInt(document.getElementById('last_gamets').value);
+            let ts = parseInt(document.getElementById('ts').value);
+            let gamets = parseInt(document.getElementById('gamets').value);
+            let urlData = `${type}|${ts}|${gamets}|${content}`;
+            fetch('/HerikaServer/comm.php?DATA=' + btoa(urlData))
+                .finally(() => setLoadingState(false));
+            // document.getElementById('last_gamets').value = unixTimestamp + 10;
+            // document.getElementById('gamets').value = gameTimestamp + 10;
         }
 
         function logChat(chatline) {
