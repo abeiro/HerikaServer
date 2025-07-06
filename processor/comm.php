@@ -655,10 +655,12 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         }
         
         // Trigger immediate background processing
+        close();
         triggerImmediateProfileProcessing();
     }
     
-        die("X-CUSTOM-CLOSE");
+    terminate();
+    //die("X-CUSTOM-CLOSE");
     
 } elseif (strpos($gameRequest[0], "updateprofile")===0) {    
     
