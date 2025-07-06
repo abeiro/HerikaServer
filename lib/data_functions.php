@@ -3414,8 +3414,8 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
         $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
-        Logger::info(DMgetCurrentModelFile()." ".$currentModelFilePath);
-        copy(DMgetCurrentModelFile(),$currentModelFilePath);
+        Logger::info(DMgetDefaultModelFile()." ".$currentModelFilePath);
+        copy(DMgetDefaultModelFile(),$currentModelFilePath);
         shell_exec("chmod 0775 {$currentModelFilePath}");
         
          // Character Map file

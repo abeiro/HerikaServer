@@ -18,22 +18,22 @@ function removeAndReturnNext(&$array, $value) {
 
 function DMgetCurrentModel() {
     
-    $lprof=isset($GLOBALS["active_profile"])?$GLOBALS["active_profile"]:"";
-    
+    $lprof=$GLOBALS["active_profile"] ?? "72dc4b1c501563d149fec99eb45b45f1"; // default profile: 72dc4b1c501563d149fec99eb45b45f1 = md5("The Narrator")
     $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
     if (!file_exists($file) || getenv("PHPUNIT_TEST")) {
         DMsetCurrentModel($GLOBALS["CONNECTORS"][0]);
     }
 
     $cmj=file_get_contents($file);
-    
-    return json_decode($cmj,true);
+
+    $s_res = json_decode($cmj,true);
+    return $s_res;
 
 }
 
 function DMgetCurrentModelFile() {
     
-    $lprof=isset($GLOBALS["active_profile"])?$GLOBALS["active_profile"]:"";
+    $lprof=$GLOBALS["active_profile"] ?? "72dc4b1c501563d149fec99eb45b45f1"; 
     
     $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
     if (!file_exists($file)) {
@@ -44,14 +44,35 @@ function DMgetCurrentModelFile() {
 
 }
 
-function DMsetCurrentModel($model) {
+function DMgetDefaultModelFile() {
+    
+    $lprof="72dc4b1c501563d149fec99eb45b45f1";
+    
+    $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
+    if (!file_exists($file)) {
+        $file_def=$file;
+        $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_.json";
+        if (!file_exists($file)) {
+            Logger::warn("DMgetDefaultModelFile: no default model file found!");
+            $model="openrouterjson";
+            $file=$file_def;
+            $cmj=file_put_contents($file,json_encode($model));
+            shell_exec("chmod 0777 {$file}");
+        }
+    }
+    
+    return $file;
+}
 
-    $lprof=isset($GLOBALS["active_profile"])?$GLOBALS["active_profile"]:"";
+function DMsetCurrentModel($model='') {
 
-        
+    $lprof=$GLOBALS["active_profile"] ?? "72dc4b1c501563d149fec99eb45b45f1"; 
+    
     $file=__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."CurrentModel_{$lprof}.json";
 
-    shell_exec("chmod 775 $file");
+    shell_exec("chmod 0777 {$file}");
+    if (empty($model))
+        $model="openrouterjson";
     $cmj=file_put_contents($file,json_encode($model));
 
 }
