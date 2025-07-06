@@ -19,6 +19,9 @@ if ($method === "POST") {
 
     if (isset($profile)) {
         $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"] = $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
+        
+        // Preserve global dynamic prompt settings before loading character profile
+        $OVERRIDES["DYNAMIC_PROMPT_RELATIONSHIPS"] = $GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"] ?? '';
 
         if (file_exists($profile)) {
             require_once $profile;
@@ -27,6 +30,9 @@ if ($method === "POST") {
         }
         $GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
         $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] = $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
+        
+        // Restore global dynamic prompt settings after loading character profile
+        $GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"] = $OVERRIDES["DYNAMIC_PROMPT_RELATIONSHIPS"];
     } else {
         Logger::info(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
         $GLOBALS["USING_DEFAULT_PROFILE"] = true;
@@ -112,8 +118,10 @@ if ($method === "POST") {
 
         // Get current relationships value and prompt
         $currentRelationships = isset($jsonDataInput["HERIKA_RELATIONSHIPS"]) ? $jsonDataInput["HERIKA_RELATIONSHIPS"] : '';
+        
+        // Use configured prompt or fallback to default
         $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"]) ? $GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"] : '';
-
+        
         if (empty($updatePrompt)) {
             echo json_encode(["status" => "error", "message" => "DYNAMIC_PROMPT_RELATIONSHIPS not configured"]);
             exit;
@@ -142,7 +150,7 @@ if ($method === "POST") {
 
         // Build prompt for relationships update
         $head = [
-            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update the character's relationships based on the information provided."]
+            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the relationships for the character named '{$jsonDataInput["HERIKA_NAME"]}'. Focus mostly on information about {$jsonDataInput["HERIKA_NAME"]} and ignore details about other characters mentioned in the dialogue."]
         ];
 
         $prompt = [

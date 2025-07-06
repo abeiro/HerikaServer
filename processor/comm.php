@@ -1543,7 +1543,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         
         // Build prompt for this specific field
         $head = [
-            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update the character's " . ucfirst($field) . " based on the information provided."]
+            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the " . ucfirst($field) . " for the character named '$npcName'. Focus mostly on information about $npcName and mostly ignore details about other characters mentioned in the dialogue."]
         ];
         
         $prompt = [
