@@ -69,6 +69,8 @@ if (isset($_SESSION["PROFILE"])) {
 
             request('infonpc', `(beings in range:${document.getElementById('herikaName').value})`);
             request('infonpc_close', `${document.getElementById('herikaName').value}/${document.getElementById('playerName').value}`);
+
+            initSTT();
         });
 
         function setLoadingState(loading) {
@@ -194,6 +196,65 @@ if (isset($_SESSION["PROFILE"])) {
             // Implementation left as-is or adjust as needed
             return;
         }
+
+        function initSTT() {
+            if (!"webkitSpeechRecognition" in window) {
+                console.warn('STT not available');
+                return;
+            }
+            const inputText = document.getElementById('inputText');
+            const originalInputTextPlaceholder = inputText.placeholder;
+            const sttButton = document.getElementById('stt');
+            const sendButton = document.getElementById('sendButton');
+            let listening = false;
+            let sendTimeoutTime = 1000; //TODO max wait time for more speech before sending
+            let sendTimeout;
+
+            speechRecognizer = new webkitSpeechRecognition();
+            speechRecognizer.continuous = true;
+            speechRecognizer.interimResults = true;
+            speechRecognizer.lang = 'en-US'; //TODO
+
+            speechRecognizer.onresult = function(event) {
+                let speech = "";
+                for (let result of event.results) {
+                    speech += result[0].transcript;
+                }
+                inputText.value = speech;
+
+                // start/restart wait time for sending speech to llm
+                clearTimeout(sendTimeout);
+                sendTimeout = setTimeout(() => {
+                    sendButton.click();
+                }, sendTimeoutTime);
+            };
+            speechRecognizer.onend = function(event) {
+                if (listening) {
+                    speechRecognizer.start();
+                }
+            };
+            speechRecognizer.onerror = function(event) {
+                console.error("Speech recognition error:", event.error);
+                listening = false;
+            };
+
+            // STT button
+            sttButton.classList.remove('d-none');
+            sttButton.addEventListener('click', (event) => {
+                listening = !listening;
+                // toggle button
+                sttButton.classList.remove('btn-save', 'btn-primary');
+                sttButton.classList.add((listening) ? 'btn-save' : 'btn-primary');
+                // input text placeholder
+                inputText.placeholder = (listening) ? 'Listening...' : originalInputTextPlaceholder;
+                // toggle speech recognition
+                if (listening) {
+                    speechRecognizer.start();
+                } else {
+                    speechRecognizer.stop();
+                }
+            });
+        }
     </script>
     <style>
         /* Override main container styles */
@@ -240,7 +301,6 @@ if (isset($_SESSION["PROFILE"])) {
 
         /* Chat window styling */
         #chatWindow {
-            width: 80%;
             height: 500px;
             overflow-y: auto;
             background-color: #3a3a3a;
@@ -253,7 +313,6 @@ if (isset($_SESSION["PROFILE"])) {
 
     
         input[type="text"] {
-            width: calc(100% - 120px);
             background-color: #3a3a3a;
             border: 1px solid #4a4a4a;
             color: #f8f9fa;
@@ -289,17 +348,14 @@ if (isset($_SESSION["PROFILE"])) {
             margin: -10px 0;
         }
 
-        /* iframe container styling */
-        iframe {
-            width: 80%;
-            min-height: 700px;
-            margin-top: 50px;
-            border: 1px solid #4a4a4a;
-            border-radius: 5px;
+        #inputRow {
+            display: flex;
         }
-
-        input[type="text"], input[type="number"], input[type="url"], textarea, select {
-            width: 75%;
+        #inputRow input[type=text] {
+            margin: 5px 5px 5px 0;
+        }
+        #inputRow #sendButton {
+            margin-right: 0;
         }
     </style>
 </head>
@@ -307,23 +363,26 @@ if (isset($_SESSION["PROFILE"])) {
     <main class="container">
         <h2>💬 CHIM Chat Testing</h2>
         <h3>Current Character: <b><?php echo $GLOBALS["HERIKA_NAME"]; ?></b><h3>
-        <h3>This is just for testing AI responses, do not use this as an indication of roleplay quality.</h3>
-        <h4>Currently with the default profile, use any other character instead.</h4>
+        <p>This chat is missing most of the context and expression of a conversation in skyrim. Do not use this as an indication of quality.</p>
         <div id='chatWindow'></div>
 
         <form action='index.php' method='post' id="chatForm">
             <p>Player: <b><?php echo $GLOBALS["PLAYER_NAME"]; ?></b></p>
-            <input type='text' name='inputText' id='inputText' placeholder="Type your message and press Enter or Send"/>
+            <div id="inputRow">
+                <input type='text' name='inputText' id='inputText' placeholder="Type your message and press Enter or Send"/>
 
-            <input type='hidden' name='localts'   id='localts'   value='<?php echo time(); ?>' />
-            <input type='hidden' name='ts'        id='ts'        value='<?php echo $ts; ?>' />
-            <input type='hidden' name='gamets'    id='gamets'    value='<?php echo $gamets; ?>' />
-            <input type='hidden' name='playerName' id='playerName' value='<?php echo $GLOBALS["PLAYER_NAME"]; ?>' />
-            <input type='hidden' name='herikaName' id='herikaName' value='<?php echo $GLOBALS["HERIKA_NAME"]; ?>' />
-            <input type='hidden' name='profile'    id='profile'    value='<?php echo $hash; ?>' />
-            <input type='hidden' name='conf'       id='profile'    value='<?php echo $_SESSION["PROFILE"]; ?>' />
-            <input type='hidden' name='last_gamets' id='last_gamets' value='<?php echo $gamets; ?>' />
-            <input type='button' name='send' id='sendButton' value='Send' onclick='reqSend()' class='btn-primary'/>
+                <input type="button" id='stt' value='🎤' class="btn-primary d-none">
+
+                <input type='hidden' name='localts'   id='localts'   value='<?php echo time(); ?>' />
+                <input type='hidden' name='ts'        id='ts'        value='<?php echo $ts; ?>' />
+                <input type='hidden' name='gamets'    id='gamets'    value='<?php echo $gamets; ?>' />
+                <input type='hidden' name='playerName' id='playerName' value='<?php echo $GLOBALS["PLAYER_NAME"]; ?>' />
+                <input type='hidden' name='herikaName' id='herikaName' value='<?php echo $GLOBALS["HERIKA_NAME"]; ?>' />
+                <input type='hidden' name='profile'    id='profile'    value='<?php echo $hash; ?>' />
+                <input type='hidden' name='conf'       id='profile'    value='<?php echo $_SESSION["PROFILE"]; ?>' />
+                <input type='hidden' name='last_gamets' id='last_gamets' value='<?php echo $gamets; ?>' />
+                <input type='button' name='send' id='sendButton' value='Send' onclick='reqSend()' class='btn-primary'/>
+            </div>
         </form>
     </main>
 </body>
