@@ -264,6 +264,11 @@ echo '<style>
                         </a>
                         </li>
                         <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/function_editor.php">
+                        Function editor
+                        </a>
+                        </li>
+                        <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/quickstart.php">
                             Quickstart Menu
                         </a>
