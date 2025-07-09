@@ -300,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="page-header">
-        <h1>AI Action Editor</h1>
+        <h1>AI Action Editor (Beta)</h1>
         <p>Configure which AI functions are available for AI actors in CHIM.</p>
     </div>
 
