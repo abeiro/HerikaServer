@@ -259,6 +259,11 @@ echo '<style>
                         </a>
                         </li>
                         <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/function_editor.php">
+                        AI Action Editor
+                        </a>
+                        </li>
+                        <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/customprompteditor.php">
                         Custom Prompt Editor
                         </a>

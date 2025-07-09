@@ -5,15 +5,11 @@ function getBaseUrlForSpeech(): string {
             $host = $_SERVER['SERVER_ADDR'];
             $port = $_SERVER['SERVER_PORT'];
 
-            $port = 8081; // Seems this is not being autodetected
 
-            // Check if the port is non-standard for the protocol
-            $isDefaultPort = ($protocol === "http://" && $port == 80) || ($protocol === "https://" && $port == 443);
-
-            return $protocol . $host . ($isDefaultPort ? '' : ':' . $port);
+            return $protocol . $host .  ':' . $port;
         }
 
-echo getBaseUrlForSpeech();
+echo getBaseUrlForSpeech().PHP_EOL;
 print_r($_SERVER);
 
 ?>

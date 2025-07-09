@@ -657,10 +657,12 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
         
         // Trigger immediate background processing
+        close();
         triggerImmediateProfileProcessing();
     }
     
-        die("X-CUSTOM-CLOSE");
+    terminate();
+    //die("X-CUSTOM-CLOSE");
     
 } elseif (strpos($gameRequest[0], "updateprofile")===0) {    
     
@@ -1205,6 +1207,35 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         // Include the NPC's profile
         include($profilePath);
         
+        // After loading character profile, ensure we use global dynamic prompts from main conf.php
+        // Character profiles should not override these global prompt settings
+        $mainConfPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+        if (file_exists($mainConfPath)) {
+            // Load just the DYNAMIC_PROMPT_* variables from main config
+            $tempGlobals = $GLOBALS; // Save current state
+            include($mainConfPath); // This will load the global prompts
+            
+            // Extract only the DYNAMIC_PROMPT_* variables and restore everything else
+            $globalPrompts = [
+                'DYNAMIC_PROMPT_PERSONALITY' => $DYNAMIC_PROMPT_PERSONALITY ?? '',
+                'DYNAMIC_PROMPT_RELATIONSHIPS' => $DYNAMIC_PROMPT_RELATIONSHIPS ?? '',
+                'DYNAMIC_PROMPT_OCCUPATION' => $DYNAMIC_PROMPT_OCCUPATION ?? '',
+                'DYNAMIC_PROMPT_SKILLS' => $DYNAMIC_PROMPT_SKILLS ?? '',
+                'DYNAMIC_PROMPT_SPEECHSTYLE' => $DYNAMIC_PROMPT_SPEECHSTYLE ?? '',
+                'DYNAMIC_PROMPT_GOALS' => $DYNAMIC_PROMPT_GOALS ?? ''
+            ];
+            
+            // Restore character-specific globals but override with global prompts
+            foreach ($tempGlobals as $globalKey => $globalValue) {
+                $GLOBALS[$globalKey] = $globalValue;
+            }
+            foreach ($globalPrompts as $key => $value) {
+                if (!empty($value)) {
+                    $GLOBALS[$key] = $value;
+                }
+            }
+        }
+        
         // Check if DYNAMIC_PROFILE is enabled for this NPC
         if (!isset($DYNAMIC_PROFILE) || !$DYNAMIC_PROFILE) {
             Logger::debug("processSingleDynamicProfile: DYNAMIC_PROFILE disabled for $npcName");
@@ -1545,13 +1576,13 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         
         // Build prompt for this specific field
         $head = [
-            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update the character's " . ucfirst($field) . " based on the information provided."]
+            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the " . ucfirst($field) . " for the character named '$npcName'. Focus mostly on information about $npcName and mostly ignore details about other characters mentioned in the dialogue."]
         ];
         
         $prompt = [
-            ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . $profileContextString],
-            ["role" => "user", "content" => "Character name: " . $npcName . "\nCurrent " . ucfirst($field) . ":\n" . $currentValue],
-            ["role" => "user", "content" => $updatePrompt]
+            ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . ReplacePlayerNamePlaceholder($profileContextString)],
+            ["role" => "user", "content" => "Character name: " . $npcName . "\nCurrent " . ucfirst($field) . ":\n" . ReplacePlayerNamePlaceholder($currentValue)],
+            ["role" => "user", "content" => ReplacePlayerNamePlaceholder($updatePrompt)]
         ];
         
         $contextData = array_merge($head, $prompt);

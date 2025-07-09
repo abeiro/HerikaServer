@@ -19,6 +19,9 @@ if ($method === "POST") {
 
     if (isset($profile)) {
         $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"] = $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
+        
+        // Preserve global dynamic prompt settings before loading character profile
+        $OVERRIDES["DYNAMIC_PROMPT_SPEECHSTYLE"] = $GLOBALS["DYNAMIC_PROMPT_SPEECHSTYLE"] ?? '';
 
         if (file_exists($profile)) {
             require_once $profile;
@@ -27,6 +30,9 @@ if ($method === "POST") {
         }
         $GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
         $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] = $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
+        
+        // Restore global dynamic prompt settings after loading character profile
+        $GLOBALS["DYNAMIC_PROMPT_SPEECHSTYLE"] = $OVERRIDES["DYNAMIC_PROMPT_SPEECHSTYLE"];
     } else {
         Logger::info(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
         $GLOBALS["USING_DEFAULT_PROFILE"] = true;
@@ -142,7 +148,7 @@ if ($method === "POST") {
 
         // Build prompt for speechstyle update
         $head = [
-            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update the character's speech style based on the information provided."]
+            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the speech style for the character named '{$jsonDataInput["HERIKA_NAME"]}'. Focus mostly on information about {$jsonDataInput["HERIKA_NAME"]} and ignore details about other characters mentioned in the dialogue."]
         ];
 
         $prompt = [

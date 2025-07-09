@@ -1711,7 +1711,7 @@ function DataGetCurrentPartyConf() {
         // We need to wrap it in brackets and remove trailing comma to make valid JSON
         $partyData = trim($results[0]["value"]);
         if (empty($partyData)) {
-            return "";
+            return json_encode([]);
         }
         
         // Remove trailing comma if present
@@ -1723,7 +1723,7 @@ function DataGetCurrentPartyConf() {
         $guys = json_decode($jsonString, true);
         if (!is_array($guys)) {
             Logger::warn("DataGetCurrentPartyConf: Failed to parse party JSON: " . $jsonString);
-            return "";
+            return json_encode([]);
         }
         
         $finalparty=[];
@@ -3417,8 +3417,8 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
         $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
-        Logger::info(DMgetCurrentModelFile()." ".$currentModelFilePath);
-        copy(DMgetCurrentModelFile(),$currentModelFilePath);
+        Logger::info(DMgetDefaultModelFile()." ".$currentModelFilePath);
+        copy(DMgetDefaultModelFile(),$currentModelFilePath);
         shell_exec("chmod 0775 {$currentModelFilePath}");
         
          // Character Map file
