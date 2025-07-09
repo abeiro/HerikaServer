@@ -224,34 +224,26 @@ if ($method === "POST") {
             }
             $connectionHandler->close();
 
-            $buffer = trim($buffer);
-            if (!empty($buffer)) {
-                // Save directly to profile file
-                $profile = $jsonDataInput["profile"];
-                $content = file_get_contents($profile);
-                $escapedValue = var_export($buffer, true);
-                
-                // Update or add variable
-                $pattern = '/\$' . $varName . '\s*=\s*[^;]+;/';
-                if (preg_match($pattern, $content)) {
-                    $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
-                } else {
-                    $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
-                }
-                
-                if (file_put_contents($profile, $content, LOCK_EX)) {
-                    return [
-                        "status" => "success", 
-                        "message" => ucfirst($field) . " updated successfully!",
-                        "updated_field" => $varName,
-                        "new_value" => $buffer
-                    ];
-                } else {
-                    return ["status" => "error", "message" => "Failed to save {$field} update to profile"];
-                }
+                    $buffer = trim($buffer);
+        if (!empty($buffer)) {
+            // Save using safe PHP assignment writer to prevent syntax errors
+            $profile = $jsonDataInput["profile"];
+            $FOLLOWER_CONF = extract_assignments($profile);
+            $FOLLOWER_CONF[$varName] = $buffer;
+            
+            if (write_php_assignments($FOLLOWER_CONF, $profile)) {
+                return [
+                    "status" => "success", 
+                    "message" => ucfirst($field) . " updated successfully!",
+                    "updated_field" => $varName,
+                    "new_value" => $buffer
+                ];
             } else {
-                return ["status" => "error", "message" => "No {$field} update generated"];
+                return ["status" => "error", "message" => "Failed to save {$field} update to profile"];
             }
+        } else {
+            return ["status" => "error", "message" => "No {$field} update generated"];
+        }
         }
 
         // Process each selected field
