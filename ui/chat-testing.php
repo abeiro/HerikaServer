@@ -57,6 +57,8 @@ if (isset($_SESSION["PROFILE"])) {
     </script>
     <script>
         var audioQueue = []; // plays voice lines one after the other
+        var loading = false;
+        var audioPlaying = false;
 
         // Add event listener for Enter key
         document.addEventListener('DOMContentLoaded', function() {
@@ -70,10 +72,28 @@ if (isset($_SESSION["PROFILE"])) {
             request('infonpc', `(beings in range:${document.getElementById('herikaName').value})`);
             request('infonpc_close', `${document.getElementById('herikaName').value}/${document.getElementById('playerName').value}`);
 
+            setInterval(() => {
+                let currentlyPlaying = isAudioPlaying();
+                if (currentlyPlaying && !audioPlaying) {
+                    audioPlaying = true;
+                    window.dispatchEvent(new Event('audio-start'))
+                }
+                if (!currentlyPlaying && audioPlaying) {
+                    audioPlaying = false;
+                    window.dispatchEvent(new Event('audio-end'))
+                }
+            }, 100);
+
             initSTT();
         });
 
-        function setLoadingState(loading) {
+        function setLoadingState(newState) {
+            if (newState === loading) {
+                return;
+            }
+            loading = newState;
+            window.dispatchEvent(new Event((loading) ? 'loading-start' : 'loading-end'));
+
             const form = document.getElementById('chatForm');
             const input = document.getElementById('inputText');
             const button = document.getElementById('sendButton');
@@ -88,6 +108,23 @@ if (isset($_SESSION["PROFILE"])) {
                 button.disabled = false;
                 input.focus(); // Return focus to input
             }
+        }
+
+        function doesUrlExist(url) {
+            return new Promise((resolve, reject) => {
+                const http = new XMLHttpRequest();
+                http.open('HEAD', url);
+                http.onreadystatechange = function() {
+                    if (this.readyState === this.DONE) {
+                        if (this.status !== 404) {
+                            resolve();
+                        } else {
+                            reject();
+                        }
+                    }
+                };
+                http.send();
+            });
         }
 
         function parseReq(inputString) {
@@ -105,7 +142,11 @@ if (isset($_SESSION["PROFILE"])) {
                     let audio = `<audio controls><source src="${audioUrl}" type="audio/wav"></audio>`;
                     let newline = `<p class='llm'>${actor}: ${text}<br/>${audio}</p>`;
                     document.getElementById("chatWindow").innerHTML += newline;
-                    logChat(parts[2]);
+                    // remove audio element when no audio was generated
+                    let audioSrcEl = document.querySelector(`#chatWindow audio [src="${audioUrl}"]`);
+                    doesUrlExist(audioUrl).catch(() => {
+                        audioSrcEl.parentElement.remove();
+                    });
                 }
             });
             setLoadingState(false);
@@ -125,6 +166,7 @@ if (isset($_SESSION["PROFILE"])) {
             if (!audioSrc) {
                 return;
             }
+
             let audioSrcEl = document.querySelector(`#chatWindow audio [src="${audioSrc}"]`);
             let audioEl = audioSrcEl.parentElement;
             audioEl.play();
@@ -132,7 +174,18 @@ if (isset($_SESSION["PROFILE"])) {
                 playVoiceLines();
             }, {once: true});
         }
+        function isAudioPlaying() {
+            for (let audio of document.getElementsByTagName('audio')) {
+                if (!audio.paused && !audio.ended && 0 < audio.currentTime) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
+        /**
+         * Send text input to chim for processing.
+         */
         function reqSend() {
             const input = document.getElementById('inputText');
             if (!input.value.trim()) return; // Don't send empty messages
@@ -179,24 +232,21 @@ if (isset($_SESSION["PROFILE"])) {
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
+        /**
+         * Sends info to be stored in event log
+         * @param type e.g. infonpc_close
+         * @param content e.g. (beings in range:Player)
+         */
         function request(type, content) {
             setLoadingState(true);
-            let unixTimestamp = parseInt(document.getElementById('localts').value);
-            let gameTimestamp = parseInt(document.getElementById('last_gamets').value);
             let ts = parseInt(document.getElementById('ts').value);
             let gamets = parseInt(document.getElementById('gamets').value);
             let urlData = `${type}|${ts}|${gamets}|${content}`;
             fetch('/HerikaServer/comm.php?DATA=' + btoa(urlData))
                 .finally(() => setLoadingState(false));
-            // document.getElementById('last_gamets').value = unixTimestamp + 10;
-            // document.getElementById('gamets').value = gameTimestamp + 10;
         }
 
-        function logChat(chatline) {
-            // Implementation left as-is or adjust as needed
-            return;
-        }
-
+        // Speech recognition
         function initSTT() {
             if (!"webkitSpeechRecognition" in window) {
                 console.warn('STT not available');
@@ -206,15 +256,17 @@ if (isset($_SESSION["PROFILE"])) {
             const originalInputTextPlaceholder = inputText.placeholder;
             const sttButton = document.getElementById('stt');
             const sendButton = document.getElementById('sendButton');
-            let listening = false;
+            let listening = false; // if the user wants it listening
+            let sttRunning = false; // if the stt is actually running (auto disabled during request & audio play)
             let sendTimeoutTime = 1000; //TODO max wait time for more speech before sending
             let sendTimeout;
 
-            speechRecognizer = new webkitSpeechRecognition();
+            const speechRecognizer = new webkitSpeechRecognition();
             speechRecognizer.continuous = true;
             speechRecognizer.interimResults = true;
             speechRecognizer.lang = 'en-US'; //TODO
 
+            // process voice recognition result and send to server
             speechRecognizer.onresult = function(event) {
                 let speech = "";
                 for (let result of event.results) {
@@ -228,31 +280,65 @@ if (isset($_SESSION["PROFILE"])) {
                     sendButton.click();
                 }, sendTimeoutTime);
             };
-            speechRecognizer.onend = function(event) {
-                if (listening) {
-                    speechRecognizer.start();
-                }
-            };
+
+            // update ui and state after listening started
+            speechRecognizer.addEventListener('start', (event) => {
+                console.debug('speech-recognizer-start');
+                sttRunning = true;
+                // toggle button
+                sttButton.classList.remove('btn-primary');
+                sttButton.classList.add('btn-save');
+                // input text placeholder
+                inputText.placeholder = 'Listening...';
+
+            });
+            // update ui and state after listening stopped
+            speechRecognizer.addEventListener('end', (event) => {
+                console.debug('speech-recognizer-end');
+                sttRunning = false;
+                // toggle button
+                sttButton.classList.remove('btn-save');
+                sttButton.classList.add('btn-primary');
+                // input text placeholder
+                inputText.placeholder = originalInputTextPlaceholder;
+
+                autoStartStopSTT();
+            });
+            // restart listening when no sound was detected. stop on other errors
             speechRecognizer.onerror = function(event) {
-                console.error("Speech recognition error:", event.error);
-                listening = false;
+                if (event.error === 'no-speech') {
+                    return; // still listening
+                } else {
+                    console.error("Speech recognition error:", event.error);
+                    listening = false;
+                }
             };
 
             // STT button
             sttButton.classList.remove('d-none');
             sttButton.addEventListener('click', (event) => {
                 listening = !listening;
-                // toggle button
-                sttButton.classList.remove('btn-save', 'btn-primary');
-                sttButton.classList.add((listening) ? 'btn-save' : 'btn-primary');
-                // input text placeholder
-                inputText.placeholder = (listening) ? 'Listening...' : originalInputTextPlaceholder;
                 // toggle speech recognition
                 if (listening) {
                     speechRecognizer.start();
                 } else {
                     speechRecognizer.stop();
                 }
+            });
+
+            // Start / Stop STT when stuff is loading or audio is playing
+            const autoStartStopSTT = function() {
+                if (sttRunning && (loading || audioPlaying)) {
+                    console.debug('stopping because loading or audio playing');
+                    speechRecognizer.stop();
+                }
+                if (listening && !sttRunning && !loading && !audioPlaying) {
+                    console.debug('restarting because loading or audio playing is finished');
+                    speechRecognizer.start();
+                }
+            };
+            ['loading-start', 'loading-end', 'audio-start', 'audio-end'].forEach((e) => {
+                window.addEventListener(e, autoStartStopSTT);
             });
         }
     </script>
