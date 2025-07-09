@@ -273,7 +273,7 @@ if (!empty($errorProfiles)) {
     echo "<h2>Profiles with Issues:</h2>";
     foreach ($errorProfiles as $profile) {
         if (strpos($profile, 'syntax error detected') !== false) {
-            echo "<p class='error'>⚠️ " . htmlspecialchars($profile) . " - <strong>This file had syntax errors and needs to be manually delted./strong></p>";
+            echo "<p class='error'>⚠️ " . htmlspecialchars($profile) . " - <strong>This file had syntax errors and needs to be manually delted.</strong></p>";
         } else {
             $displayName = isset($profileNames[$profile]) ? " - {$profileNames[$profile]}" : "";
             echo "<p class='error'>❌ " . htmlspecialchars($profile) . 
