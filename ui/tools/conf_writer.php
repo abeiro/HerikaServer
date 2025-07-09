@@ -36,6 +36,11 @@ if (isset($_GET["incomplete"])) {
 
 }
 
+function process_slashes($s_input)  {
+    $sx = str_replace("\\'", "'", $s_input);
+    return addcslashes($sx,"'"); 
+}
+
 foreach ($_POST as $k=>$v) {
     
     $fullNameHierch=explode("@",$k);
@@ -52,7 +57,7 @@ foreach ($_POST as $k=>$v) {
     else if ($confSchema[$plainNameHierch]["type"]=="boolean")
         $value=($v=="true")?"true":"false";
     else
-        $value="'".addcslashes($v,"'")."'";
+        $value="'".process_slashes($v)."'";
     
     
     
