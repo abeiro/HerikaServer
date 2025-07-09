@@ -182,11 +182,15 @@ if ($method === "POST") {
 
         $buffer = trim($buffer);
         if (!empty($buffer)) {
+            /*
             // Save directly to profile file
             $FOLLOWER_CONF=extract_assignments($profile);
             $FOLLOWER_CONF["HERIKA_RELATIONSHIPS"]=$buffer;
+            if (write_php_assignments($FOLLOWER_CONF,$profile)) {
+            */
             
-            /*$content = file_get_contents($profile);
+            // Save directly to profile file
+            $content = file_get_contents($profile);
             $escapedValue = var_export($buffer, true);
             
             // Update or add HERIKA_RELATIONSHIPS variable
@@ -198,8 +202,6 @@ if ($method === "POST") {
             }
             
             if (file_put_contents($profile, $content, LOCK_EX)) {
-            */
-            if (write_php_assignments($FOLLOWER_CONF,$profile)) {
                 echo json_encode([
                     "status" => "success", 
                     "message" => "Relationships updated successfully!",

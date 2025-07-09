@@ -182,10 +182,14 @@ if ($method === "POST") {
         if (!empty($buffer)) {
             $skillsData=getInGameSkillDataFor($jsonDataInput["HERIKA_NAME"] );
             $buffer.="\n$skillsData";
+            /*
             // Save directly to profile file
             $FOLLOWER_CONF=extract_assignments($profile);
             $FOLLOWER_CONF["HERIKA_SKILLS"]=$buffer;
-            /*
+            if (write_php_assignments($FOLLOWER_CONF,$profile)) {
+            */
+            
+            // Save directly to profile file
             $content = file_get_contents($profile);
             $escapedValue = var_export($buffer, true);
             
@@ -198,8 +202,6 @@ if ($method === "POST") {
             }
             
             if (file_put_contents($profile, $content, LOCK_EX)) {
-            */
-            if (write_php_assignments($FOLLOWER_CONF,$profile)) {
                 echo json_encode([
                     "status" => "success", 
                     "message" => "Skills updated successfully!",
