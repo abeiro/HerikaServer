@@ -3766,4 +3766,124 @@ ORDER BY type, usage_count DESC;
 
     return "* Fav.Spells: $spellsList\n* Fav. Weapons: $weaponsList\n";
 }
+
+/**
+ * Safely export a value to PHP code with comprehensive sanitization to prevent syntax errors
+ * 
+ * This function sanitizes AI-generated content to prevent PHP syntax errors that can occur
+ * with standard var_export() when dealing with special characters, encoding issues, etc.
+ * 
+ * @param mixed $value The value to export
+ * @param bool $return Whether to return the string instead of outputting it
+ * @return string|null The exported PHP code
+ */
+function safe_var_export($value, $return = true) {
+    // First, sanitize string values
+    if (is_string($value)) {
+        // Remove null bytes that can break PHP parsing
+        $value = str_replace("\0", '', $value);
+        
+        // Ensure valid UTF-8 encoding
+        if (!mb_check_encoding($value, 'UTF-8')) {
+            $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+        }
+        
+        // Remove or replace problematic characters
+        $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
+        
+        // Limit length to prevent extremely long strings
+        if (strlen($value) > 10000) {
+            $value = substr($value, 0, 10000) . '... [truncated]';
+        }
+        
+        // Ensure balanced quotes and backslashes don't break escaping
+        $value = str_replace(['\\', "'", '"'], ['\\\\', "\\'", '\\"'], $value);
+        $value = stripslashes($value); // Remove double escaping
+    }
+    
+    // Try var_export first
+    $exported = var_export($value, true);
+    
+    // Validate that the exported code is syntactically correct
+    $testCode = "<?php return $exported; ?>";
+    
+    // Use eval to test syntax (in a safe way)
+    $oldLevel = error_reporting(0);
+    $syntaxValid = @eval("return true; $testCode") !== false;
+    error_reporting($oldLevel);
+    
+    if (!$syntaxValid) {
+        // Fallback: manual string escaping for safety
+        if (is_string($value)) {
+            $exported = "'" . addcslashes($value, "'\\") . "'";
+        } else {
+            // For non-strings, convert to string safely
+            $exported = "'" . addcslashes((string)$value, "'\\") . "'";
+        }
+    }
+    
+    if ($return) {
+        return $exported;
+    } else {
+        echo $exported;
+        return null;
+    }
+}
+
+/**
+ * Safely update a PHP configuration file variable with proper error handling
+ * 
+ * @param string $filePath Path to the PHP file
+ * @param string $varName Variable name (without $)
+ * @param mixed $value New value
+ * @return array Result with success status and message
+ */
+function safe_update_php_variable($filePath, $varName, $value) {
+    if (!file_exists($filePath)) {
+        return ["success" => false, "error" => "File not found: " . basename($filePath)];
+    }
+    
+    // Read current content
+    $content = file_get_contents($filePath);
+    if ($content === false) {
+        return ["success" => false, "error" => "Cannot read file: " . basename($filePath)];
+    }
+    
+    // Use safe export
+    $escapedValue = safe_var_export($value, true);
+    
+    // Validate the escaped value produces valid PHP
+    $testAssignment = "\$$varName = $escapedValue;";
+    $testCode = "<?php $testAssignment ?>";
+    
+    $oldLevel = error_reporting(0);
+    $syntaxValid = @eval("return true; $testCode") !== false;
+    error_reporting($oldLevel);
+    
+    if (!$syntaxValid) {
+        return ["success" => false, "error" => "Generated PHP code would be invalid for variable $varName"];
+    }
+    
+    // Update or add variable
+    $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
+    if (preg_match($pattern, $content)) {
+        $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
+    } else {
+        // Add before closing 
+        $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
+    }
+    
+    // Write with atomic operation
+    $tempFile = $filePath . '.tmp.' . uniqid();
+    if (file_put_contents($tempFile, $content, LOCK_EX) === false) {
+        return ["success" => false, "error" => "Cannot write to temporary file"];
+    }
+    
+    if (!rename($tempFile, $filePath)) {
+        unlink($tempFile);
+        return ["success" => false, "error" => "Cannot update file: " . basename($filePath)];
+    }
+    
+    return ["success" => true, "message" => "Variable $varName updated successfully"];
+}
 ?>
