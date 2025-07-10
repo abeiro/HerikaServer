@@ -3685,9 +3685,28 @@ function write_php_assignments(array $assignments, string $filePath): bool {
             // Array literals - output as-is
             $finalValue = $cleaned;
         } else {
-            // String values - escape and quote with double quotes
-            $escaped = addslashes($cleaned);
-            $finalValue = "\"$escaped\"";
+            // String values - apply comprehensive sanitization for AI-generated content
+            if (is_string($cleaned)) {
+                // Sanitize AI-generated content to prevent PHP syntax errors
+                $cleaned = str_replace("\0", '', $cleaned); // Remove null bytes
+                $cleaned = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $cleaned); // Remove control chars
+                if (!mb_check_encoding($cleaned, 'UTF-8')) {
+                    $cleaned = mb_convert_encoding($cleaned, 'UTF-8', 'UTF-8'); // Fix encoding
+                }
+                if (strlen($cleaned) > 10000) {
+                    $cleaned = substr($cleaned, 0, 10000) . '... [truncated]'; // Limit length
+                }
+                $cleaned = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $cleaned); // Escape PHP tags
+                
+                // Additional sanitization for var_export compatibility
+                $cleaned = str_replace('\\', '\\\\', $cleaned); // Escape backslashes
+                $cleaned = str_replace("\r\n", "\n", $cleaned); // Normalize line endings
+                $cleaned = str_replace("\r", "\n", $cleaned); // Convert Mac line endings
+                $cleaned = preg_replace('/\n{3,}/', "\n\n", $cleaned); // Limit consecutive newlines
+            }
+            
+            // Use var_export for safer escaping instead of addslashes
+            $finalValue = var_export($cleaned, true);
         }
 
         // Build the assignment line

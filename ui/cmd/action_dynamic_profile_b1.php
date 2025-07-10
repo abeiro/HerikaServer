@@ -226,31 +226,16 @@ if ($method === "POST") {
 
             $buffer = trim($buffer);
             if (!empty($buffer)) {
-                // Sanitize AI output to prevent PHP syntax errors
+                // Simple sanitization before saving
                 $buffer = str_replace("\0", '', $buffer); // Remove null bytes
                 $buffer = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $buffer); // Remove control chars
-                if (!mb_check_encoding($buffer, 'UTF-8')) {
-                    $buffer = mb_convert_encoding($buffer, 'UTF-8', 'UTF-8'); // Fix encoding
-                }
-                if (strlen($buffer) > 5000) {
-                    $buffer = substr($buffer, 0, 5000) . '... [truncated]'; // Limit length
-                }
                 $buffer = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $buffer); // Escape PHP tags
                 
-                // Save directly to profile file
                 $profile = $jsonDataInput["profile"];
-                $content = file_get_contents($profile);
-                $escapedValue = var_export($buffer, true);
+                $FOLLOWER_CONF = extract_assignments($profile);
+                $FOLLOWER_CONF[$varName] = $buffer;
                 
-                // Update or add variable
-                $pattern = '/\$' . $varName . '\s*=\s*[^;]+;/';
-                if (preg_match($pattern, $content)) {
-                    $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
-                } else {
-                    $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
-                }
-                
-                if (file_put_contents($profile, $content, LOCK_EX)) {
+                if (write_php_assignments($FOLLOWER_CONF, $profile)) {
                     return [
                         "status" => "success", 
                         "message" => ucfirst($field) . " updated successfully!",
