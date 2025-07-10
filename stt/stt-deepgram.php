@@ -49,6 +49,8 @@ function stt($filePath)
     }
 
     $responseParsed = json_decode($response, true);
-
+    error_log($response);
     return $responseParsed['results']['channels'][0]['alternatives'][0]['transcript'];
 }
+
+

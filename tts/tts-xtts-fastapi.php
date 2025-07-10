@@ -184,11 +184,12 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
 
 		if ($GLOBALS)	
-		$data = array(
-			'text' => $newString,
-			'speaker_wav' => $voice,
-			'language' => $lang
-		);
+			$data = array(
+				'text' => $newString,
+				'speaker_wav' => $voice,
+				'language' => $lang
+			);
+			
 		$options = array(
 			'http' => array(
 				'header' => "Content-type: application/json\r\n" .
@@ -257,6 +258,14 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n$FFMPEG_FILTER\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
 			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in xtts-fast-api call";
+
+			if (isset($GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) && $GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) {
+				$rootPath=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" ;
+				$tfolder=$rootPath."/$voice";
+				@mkdir($tfolder);
+				copy($fname,$tfolder."/".basename($fname));
+
+			}
 			return "soundcache/" . md5(trim($stringforhash)) . ".wav";
 			
 		} else {

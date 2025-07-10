@@ -147,7 +147,7 @@ if ($GLOBALS["MINIME_T5"]) {
 
                         //error_log(print_r($query,true));
                         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) 
-                            $oghmaTopics=DataSearchOghmaByVector("$currentInputTopic $currentOghmaTopic $locationCtx $contextKeywords");
+                            $oghmaTopics=DataSearchOghmaByVector($currentInputTopic,$currentOghmaTopic,$locationCtx,$contextKeywords);
                         else
                             $oghmaTopics = $GLOBALS["db"]->fetchAll($query);
 

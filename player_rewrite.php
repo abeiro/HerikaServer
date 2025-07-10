@@ -1,15 +1,55 @@
 <?php 
-require_once(__DIR__ . '/../../../../lib/logger.php');
+$GLOBALS["ENGINE_ROOT"] = __DIR__.DIRECTORY_SEPARATOR;
+$enginePath = $GLOBALS["ENGINE_ROOT"];
+
+
+require_once("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
+require_once("{$GLOBALS["ENGINE_ROOT"]}/lib/logger.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "lib/rolemaster_helpers.php");
+
+$file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel_.json';
+$modelContents = file_get_contents($file);
+Logger::info("Current AI Model is set to $modelContents.");
+
+
+$GLOBALS["db"]=new sql();
+
+$GLOBALS["HERIKA_NAME"]="(actor)";
+
+// Initialize function parameters before requiring functions.php
+$GLOBALS["FUNCTION_PARM_INSPECT"] = [];
+$GLOBALS["FUNCTION_PARM_MOVETO"] = [];
+$GLOBALS["F_NAMES"] = [];
+
+
+require($enginePath . "functions/functions.php");
+
+// Make functions.php data global
+
+$GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;
+
+$GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
+
+// Some functions need this setted */
+$res=$GLOBALS["db"]->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog order by gamets desc limit 1 offset 0");
+$GLOBALS["gameRequest"]=["inputtext"];
+$GLOBALS["gameRequest"][2]=$res[0]["gamets"]+1;
+
 
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
 
 if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
-        logMsg("Choose a LLM model and connector. Used '{$GLOBALS["CURRENT_CONNECTOR"]}'",S_LOG_CRITICAL);
+        error_log("Choose a LLM model and connector. Used '{$GLOBALS["CURRENT_CONNECTOR"]}'");
 
     } else {
-        logMsg("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
+        error_log("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
         require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 
         $contextDataHistoric = DataLastDataExpandedFor("", -15);    // Full context
@@ -29,13 +69,34 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
 
         
        
-    // Database Prompt (Smart Impersonation)
-$commonprompt='';
-        if (!$GLOBALS["argv"][3]) {
+
+        // Build context for player character
+        $playerContext = "";
+        
+        // Ensure PLAYER_SPEECH_STYLE is available (it's a global config variable)
+        if (!isset($GLOBALS["PLAYER_SPEECH_STYLE"])) {
+            $GLOBALS["PLAYER_SPEECH_STYLE"] = "";
+        }
+        
+        if (!empty($GLOBALS["PLAYER_BIOS"])) {
+            $playerContext .= "Player Character Background: " . $GLOBALS["PLAYER_BIOS"] . "\n";
+        }
+        if (!empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {
+            $playerContext .= "Player Speech Style: " . $GLOBALS["PLAYER_SPEECH_STYLE"] . "\n";
+        }
+        
+        $commonprompt='';
+        if (!$_GET["speech"]) {
             $sysprompt="Write dialogue for {$GLOBALS["PLAYER_NAME"]}";
+            if (!empty($playerContext)) {
+                $sysprompt .= "\n\n# Character Context\n" . $playerContext;
+            }
             $userprompt="";
         } else {
-            $sysprompt="Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$GLOBALS["argv"][3]}\". Pay attention to comments between brackets, that can guide you in length and verbosity.";
+            $sysprompt="Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Pay attention to comments between brackets, that can guide you in length and verbosity.";
+            if (!empty($playerContext)) {
+                $sysprompt .= "\n\n# Character Context\n" . $playerContext;
+            }
             $userprompt="";
         }
         
@@ -58,6 +119,9 @@ $sysprompt
             ];
         };
         $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
+
+        // Log the player rewrite request to context_sent_to_llm.log (minimal logging)
+        file_put_contents(__DIR__."/log/context_sent_to_llm.log", date(DATE_ATOM)."\n=PLAYER_REWRITE for {$GLOBALS["PLAYER_NAME"]}=\n".var_export($prompt,true)."\n=\n", FILE_APPEND);
 
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
         $connectionHandler->open($prompt,$customParm);
@@ -89,27 +153,8 @@ $sysprompt
             $characterName = trim($response["character"] ?? 'Unknown');
             $instructionText = trim($response["dialogue"] ?? 'No instruction text');
         
-        
-            // Generate unique task ID
-            $taskId = uniqid();
-        
-            // Format action string
-            
-            $roleMasterAction = make_replacements("rolecommand|ImpersonatePlayer@{$instructionText}@inputtext");
-            
-        
-            // Insert into database
-            $GLOBALS["db"]->insert(
-                'responselog',
-                array(
-                    'localts' => time(),
-                    'sent' => 0,
-                    'actor' => "rolemaster",
-                    'text' => '',
-                    'action' => $roleMasterAction,
-                    'tag' => ""
-                )
-            );
+            echo  $instructionText.PHP_EOL;
+            while(@ob_end_flush());
         }
 
         function parseSceneNote($response) {

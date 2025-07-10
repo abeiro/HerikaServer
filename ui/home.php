@@ -64,6 +64,39 @@ class sql {
     public function escape($str) {
         return pg_escape_string($this->conn, $str);
     }
+
+    public function upsertRowOnConflict($tableName, $data, $conflictTarget) {
+        // Prepare the column names for the INSERT statement.
+        $columns = implode(', ', array_keys($data));
+    
+        // Take care of escaping here instead of requiring it before every upsert call
+        $values = array_map(function($value) {
+            return pg_escape_literal($this->conn, $value);
+        }, array_values($data));
+        $valuesString = implode(', ', $values);
+    
+        // EXCLUDED refers to the row that was attempted to be inserted.
+        // This loop constructs "column = EXCLUDED.column" for each column in the data.
+        $updateStatements = [];
+        foreach ($data as $column => $value) {
+            $updateStatements[] = "$column = EXCLUDED.$column";
+        }
+        $updateString = implode(', ', $updateStatements);
+    
+        // ON CONFLICT ... DO UPDATE is effectively an upsert
+        // If the constraint in $conflictTarget is violated during the insert, an update will be done instead
+        $sqlquery = "INSERT INTO $tableName ($columns) VALUES ($valuesString) " .
+                    "ON CONFLICT ($conflictTarget) DO UPDATE SET $updateString;";
+    
+        $result = pg_query($this->conn, $sqlquery);
+    
+        if (!$result) {
+            error_log("Database error: " . pg_last_error($this->conn));
+            return false; // Indicate failure
+        }
+    
+        return true; // Indicate success
+    }
 }
 
 $db = new sql();
@@ -72,6 +105,11 @@ $db = new sql();
 if (sizeof($_GET)==0) {
     require_once(__DIR__."/../debug/db_updates.php");
     require_once(__DIR__."/../debug/npc_removal.php");
+    
+    // Initialize automatic backup system now that database is ready
+    if (function_exists('deferredAutomaticBackupInit')) {
+        deferredAutomaticBackupInit();
+    }
 }
 /* END of check database for updates */
 
@@ -488,21 +526,51 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         .stat-card.double-width {
             grid-column: span 2;
             transition: all 0.3s ease;
+            position: relative;
         }
         
         .stat-card.double-width .stat-value {
             font-size: 1.8em;
         }
 
+        /* Clickable indicators for double-width cards */
+        .stat-card.double-width[style*="cursor: pointer"]::before {
+            content: "🔍";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.8em;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card.double-width[style*="cursor: pointer"] {
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(242, 124, 17, 0.2);
+        }
+
         .stat-card.double-width:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(242, 124, 17, 0.2);
-            background: #333333;
+            box-shadow: 
+                0 4px 15px rgba(242, 124, 17, 0.3),
+                0 0 20px rgba(242, 124, 17, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, #333333 0%, #2a2a2a 100%);
+            border-color: rgba(242, 124, 17, 0.4);
+        }
+
+        .stat-card.double-width[style*="cursor: pointer"]:hover::before {
+            opacity: 1;
         }
 
         .stat-card.double-width:active {
             transform: translateY(0);
-            box-shadow: 0 2px 10px rgba(255, 0, 198, 0.1);
+            box-shadow: 
+                0 2px 10px rgba(242, 124, 17, 0.2),
+                0 0 10px rgba(242, 124, 17, 0.05);
         }
 
         .stat-card.double-width::after {
@@ -516,6 +584,48 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
         .stat-card.double-width:hover::after {
             opacity: 0.7;
+        }
+
+        .stat-card.clickable-card {
+            transition: all 0.3s ease;
+            position: relative;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(242, 124, 17, 0.2);
+        }
+
+        /* Clickable indicator for regular cards */
+        .stat-card.clickable-card::before {
+            content: "👆";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.7em;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card.clickable-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 4px 15px rgba(242, 124, 17, 0.3),
+                0 0 20px rgba(242, 124, 17, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, #333333 0%, #2a2a2a 100%);
+            border-color: rgba(242, 124, 17, 0.4);
+        }
+
+        .stat-card.clickable-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-card.clickable-card:active {
+            transform: translateY(0);
+            box-shadow: 
+                0 2px 10px rgba(242, 124, 17, 0.2),
+                0 0 10px rgba(242, 124, 17, 0.05);
         }
 
         /* Modal styles */
@@ -580,14 +690,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         <h1>📊 Dwemer Dashboard</h1>
 
         <div class="dashboard-buttons">
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?table=eventlog'" class="dashboard-btn">
-                <span class="btn-icon">📜</span> Events
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?table=log'" class="dashboard-btn">
-                <span class="btn-icon">📋</span> Response Log
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?table=memory_summary'" class="dashboard-btn">
-                <span class="btn-icon">🧠</span> Memory Summaries
+            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/events-memories.php'" class="dashboard-btn">
+                <span class="btn-icon">📜</span> Events & Memories
             </button>
             <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php'" class="dashboard-btn">
                 <span class="btn-icon">🧙</span> Configuration Wizard
@@ -607,11 +711,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'" class="dashboard-btn">
                 <span class="btn-icon">🔌</span> Server Plugins
             </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/dwemer-diagnostics.php'" class="dashboard-btn">
-                <span class="btn-icon">🤖</span> Dwemer AI Diagnostics (WIP)
-            </button>
             <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/tests/apache2err.php'" class="dashboard-btn">
                 <span class="btn-icon">🌲</span> Server Logs
+            </button>
+            <button onclick="window.open('https://dwemerdynamics.hostwiki.io/', '_blank')" class="dashboard-btn">
+                <span class="btn-icon">📚</span> CHIM Wiki
+            </button>
+            <button onclick="window.open('https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105', '_blank')" class="dashboard-btn">
+                <span class="btn-icon">🥇</span> AI/LLM Tier List
             </button>
         </div>
 
@@ -711,42 +818,44 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         </table></div>";
                 }
                 
-                // Get current AI objective information
-                $currentMission = fetch_widget_stats($conn, "
-                    SELECT description, localts, gamets
-                    FROM {$schema}.currentmission
-                    WHERE description IS NOT NULL
-                    ORDER BY localts DESC
-                ");
+                // Get current AI objective information - HIDDEN
+                // $currentMission = fetch_widget_stats($conn, "
+                //     SELECT description, localts, gamets
+                //     FROM {$schema}.currentmission
+                //     WHERE description IS NOT NULL
+                //     ORDER BY localts DESC
+                // ");
                 
                 // Debug logging
-                error_log("Current Mission Query Results: " . print_r($currentMission, true));
+                // error_log("Current Mission Query Results: " . print_r($currentMission, true));
                 
-                $currentMissionContent = "<div class='quest-list'>
-                    <h4>Active AI Objectives</h4>
-                    <table class='widget-table'>
-                        <tr><th>Description</th><th>Time (UTC)</th><th><a href='https://en.uesp.net/wiki/Lore:Calendar' target='_blank'>Tamrielic Time</a></th></tr>";
+                $currentMissionContent = ""; // Hidden AI objectives section
                 
-                if (!isset($currentMission['error']) && !empty($currentMission)) {
-                    foreach ($currentMission as $mission) {
-                        $time = new DateTime("@{$mission['localts']}");
-                        $time->setTimezone(new DateTimeZone('UTC'));
-                        $tamrielicTime = '';
-                        if (isset($mission['gamets']) && $mission['gamets'] > 0) {
-                            $tamrielicTime = convert_gamets2skyrim_long_date2($mission['gamets']);
-                        }
-                        $currentMissionContent .= "<tr>
-                            <td>" . htmlspecialchars($mission['description']) . "</td>
-                            <td>{$time->format('jS F, Y, H:i')}</td>
-                            <td>{$tamrielicTime}</td>
-                        </tr>";
-                    }
-                } else {
-                    error_log("Current Mission Error or Empty: " . print_r($currentMission, true));
-                    $currentMissionContent .= "<tr><td colspan='3' style='text-align: center;'>No active objectives</td></tr>";
-                }
+                // $currentMissionContent = "<div class='quest-list'>
+                //     <h4>Active AI Objectives</h4>
+                //     <table class='widget-table'>
+                //         <tr><th>Description</th><th>Time (UTC)</th><th><a href='https://en.uesp.net/wiki/Lore:Calendar' target='_blank'>Tamrielic Time</a></th></tr>";
                 
-                $currentMissionContent .= "</table></div>";
+                // if (!isset($currentMission['error']) && !empty($currentMission)) {
+                //     foreach ($currentMission as $mission) {
+                //         $time = new DateTime("@{$mission['localts']}");
+                //         $time->setTimezone(new DateTimeZone('UTC'));
+                //         $tamrielicTime = '';
+                //         if (isset($mission['gamets']) && $mission['gamets'] > 0) {
+                //             $tamrielicTime = convert_gamets2skyrim_long_date2($mission['gamets']);
+                //         }
+                //         $currentMissionContent .= "<tr>
+                //             <td>" . htmlspecialchars($mission['description']) . "</td>
+                //             <td>{$time->format('jS F, Y, H:i')}</td>
+                //             <td>{$tamrielicTime}</td>
+                //         </tr>";
+                //     }
+                // } else {
+                //     error_log("Current Mission Error or Empty: " . print_r($currentMission, true));
+                //     $currentMissionContent .= "<tr><td colspan='3' style='text-align: center;'>No active objectives</td></tr>";
+                // }
+                
+                // $currentMissionContent .= "</table></div>";
                 
                 echo render_widget('Current Playthrough', "
                     <div class='quest-list'>
@@ -898,6 +1007,30 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             return '0/0 (0%)';
                         }
 
+                        // Event Types Data Fetching
+                        $eventTypesData = fetch_widget_stats($conn, "
+                            SELECT count(*) as event_count, type 
+                            FROM {$schema}.eventlog 
+                            GROUP BY type 
+                            ORDER BY count(*) DESC
+                        ");
+
+                        $eventTypesModal = '';
+                        if (!isset($eventTypesData['error']) && !empty($eventTypesData)) {
+                            $eventTypesModal = "<div id='eventTypesModal' class='modal'>
+                                                    <div class='modal-content'>
+                                                        <span class='close-btn' onclick=\"closeModal('eventTypesModal')\">&times;</span>
+                                                        <h3>Event Types</h3>
+                                                        <table class='modal-table'>
+                                                            <tr><th>Event Type</th><th>Count</th></tr>";
+                            foreach ($eventTypesData as $eventType) {
+                                $eventTypesModal .= "<tr><td>" . htmlspecialchars($eventType['type']) . "</td><td>" . number_format($eventType['event_count']) . "</td></tr>";
+                            }
+                            $eventTypesModal .= "</table>
+                                                    </div>
+                                                </div>";
+                        }
+
                         // Travel To Locations Data Fetching (moved before CHIM Stats rendering)
                         $locationsCheck = fetch_widget_stats($conn, "
                             SELECT EXISTS (
@@ -954,7 +1087,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         $chimStatsHtml = "
                             <div class='widget-stats'>
                                 " . (in_array('diarylog', $existingTables) ? "
-                                <div class='stat-card'>
+                                <div class='stat-card clickable-card' style='cursor: pointer;' onclick=\"openModal('eventTypesModal')\">
                                     <div class='stat-value'>{$stats[0]['total_events']}</div>
                                     <div class='stat-label'>Total Events</div>
                                 </div>
@@ -1015,6 +1148,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
                         echo render_widget('CHIM Stats', $chimStatsHtml);
                         echo $locationsModal; // Output modal HTML globally
+                        echo $eventTypesModal; // Output event types modal HTML globally
 
                         // Latest Diary Entry Widget
                         $latestDiary = fetch_widget_stats($conn, "
@@ -1046,7 +1180,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             $diaryContent = "
                                 <div class='diary-entry' style='background: #1a1a1a; padding: 25px; border-radius: 8px; max-width: 1200px; margin: 0 auto; text-align: center;'>
                                     <div style='color: #6c757d; font-size: 1.2em; padding: 40px 20px;'>
-                                        No diary entries found yet. Make sure to use the Diary hotkey!
+                                        No diary entries found yet.
                                     </div>
                                 </div>";
                         }
