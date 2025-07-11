@@ -182,11 +182,26 @@ if ($method === "POST") {
 
         $buffer = trim($buffer);
         if (!empty($buffer)) {
+            /*
             // Save directly to profile file
             $FOLLOWER_CONF=extract_assignments($profile);
             $FOLLOWER_CONF["HERIKA_RELATIONSHIPS"]=$buffer;
+            if (write_php_assignments($FOLLOWER_CONF,$profile)) {
+            */
             
-            /*$content = file_get_contents($profile);
+            // Sanitize AI output to prevent PHP syntax errors
+            $buffer = str_replace("\0", '', $buffer); // Remove null bytes
+            $buffer = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $buffer); // Remove control chars
+            if (!mb_check_encoding($buffer, 'UTF-8')) {
+                $buffer = mb_convert_encoding($buffer, 'UTF-8', 'UTF-8'); // Fix encoding
+            }
+            if (strlen($buffer) > 5000) {
+                $buffer = substr($buffer, 0, 5000) . '... [truncated]'; // Limit length
+            }
+            $buffer = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $buffer); // Escape PHP tags
+            
+            // Save directly to profile file
+            $content = file_get_contents($profile);
             $escapedValue = var_export($buffer, true);
             
             // Update or add HERIKA_RELATIONSHIPS variable
@@ -198,8 +213,6 @@ if ($method === "POST") {
             }
             
             if (file_put_contents($profile, $content, LOCK_EX)) {
-            */
-            if (write_php_assignments($FOLLOWER_CONF,$profile)) {
                 echo json_encode([
                     "status" => "success", 
                     "message" => "Relationships updated successfully!",
