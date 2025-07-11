@@ -836,9 +836,33 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
             }
 
             file_put_contents($newFile, implode('', $file_lines));
-            $escapedDynamic = var_export($responseParsed["HERIKA_DYNAMIC"], true);
-            if (!is_string($responseParsed["HERIKA_DYNAMIC"]) || !$escapedDynamic) {
-                $escapedDynamic = '';
+            
+            // Sanitize AI-generated dynamic content to prevent PHP syntax errors
+            $dynamicContent = $responseParsed["HERIKA_DYNAMIC"];
+            if (is_string($dynamicContent)) {
+                $dynamicContent = str_replace("\0", '', $dynamicContent); // Remove null bytes
+                $dynamicContent = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $dynamicContent); // Remove control chars
+                if (!mb_check_encoding($dynamicContent, 'UTF-8')) {
+                    $dynamicContent = mb_convert_encoding($dynamicContent, 'UTF-8', 'UTF-8'); // Fix encoding
+                }
+                if (strlen($dynamicContent) > 5000) {
+                    $dynamicContent = substr($dynamicContent, 0, 5000) . '... [truncated]'; // Limit length
+                }
+                $dynamicContent = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $dynamicContent); // Escape PHP tags
+                
+                // Additional sanitization for var_export compatibility
+                $dynamicContent = str_replace('\\', '\\\\', $dynamicContent); // Escape backslashes
+                $dynamicContent = str_replace("\r\n", "\n", $dynamicContent); // Normalize line endings
+                $dynamicContent = str_replace("\r", "\n", $dynamicContent); // Convert Mac line endings
+                $dynamicContent = preg_replace('/\n{3,}/', "\n\n", $dynamicContent); // Limit consecutive newlines
+                
+                $escapedDynamic = var_export($dynamicContent, true);
+            } else {
+                $escapedDynamic = var_export('', true);
+            }
+            
+            if (!$escapedDynamic) {
+                $escapedDynamic = var_export('', true);
             }
             file_put_contents($newFile, PHP_EOL.'$HERIKA_DYNAMIC='.$escapedDynamic.';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
@@ -1687,6 +1711,25 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
         foreach ($updatedFields as $field => $newValue) {
             if (!isset($fieldMapping[$field])) {
                 continue;
+            }
+            
+            // Sanitize AI-generated content to prevent PHP syntax errors
+            if (is_string($newValue)) {
+                $newValue = str_replace("\0", '', $newValue); // Remove null bytes
+                $newValue = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $newValue); // Remove control chars
+                if (!mb_check_encoding($newValue, 'UTF-8')) {
+                    $newValue = mb_convert_encoding($newValue, 'UTF-8', 'UTF-8'); // Fix encoding
+                }
+                if (strlen($newValue) > 5000) {
+                    $newValue = substr($newValue, 0, 5000) . '... [truncated]'; // Limit length
+                }
+                $newValue = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $newValue); // Escape PHP tags
+                
+                // Additional sanitization for var_export compatibility
+                $newValue = str_replace('\\', '\\\\', $newValue); // Escape backslashes
+                $newValue = str_replace("\r\n", "\n", $newValue); // Normalize line endings
+                $newValue = str_replace("\r", "\n", $newValue); // Convert Mac line endings
+                $newValue = preg_replace('/\n{3,}/', "\n\n", $newValue); // Limit consecutive newlines
             }
             
             $currentConfContent[$fieldMapping[$field]]=$newValue;
