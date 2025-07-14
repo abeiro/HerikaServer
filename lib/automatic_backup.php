@@ -63,14 +63,11 @@ class AutomaticBackup {
             
             Logger::info("Authentication setup complete");
             
-            // Execute pg_dump with error capture
-            $command = "HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost 2>&1";
-            $output = shell_exec($command);
+            // Execute pg_dump with direct file output to avoid memory issues
+            $command = "HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost > " . escapeshellarg($filepath) . " 2>&1";
+            $result = shell_exec($command);
             
-            // Write output to file
-            if ($output) {
-                file_put_contents($filepath, $output);
-            }
+            // pg_dump writes directly to file, so we don't need to handle output in memory
             
             // Check if backup was created successfully
             if (file_exists($filepath) && filesize($filepath) > 0) {
@@ -82,7 +79,7 @@ class AutomaticBackup {
                 
                 return true;
             } else {
-                Logger::warn("Automatic database backup failed: file not created or empty. Command output: " . substr($output, 0, 500));
+                Logger::warn("Automatic database backup failed: file not created or empty. Command result: " . substr($result, 0, 500));
                 return false;
             }
             
