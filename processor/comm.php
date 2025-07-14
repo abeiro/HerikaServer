@@ -97,7 +97,9 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $MUST_END=true;
 
 
-} if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about this)
+}
+
+if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about this)
     $now=time();
     $db->delete("eventlog", " 1=1");
     $db->delete("quests", " 1=1");

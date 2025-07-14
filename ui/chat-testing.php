@@ -29,8 +29,11 @@ $debugPaneLink = false;
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 $db=new sql();
-$res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");
-$last_gamets=$res[0]["last_gamets"]+1;
+// loads the last ts and game_ts from database so chat-testing is continuing the conversation from skyrim
+$lastEventLogRowId=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0")[0]["rowid"];
+$maxTimestamps=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$lastEventLogRowId}");
+$ts = $maxTimestamps[0]["ts"]+1;
+$gamets = $maxTimestamps[0]["gamets"]+1;
 
 // Extract hash from profile filename if it exists
 $hash = '';
@@ -54,6 +57,8 @@ if (isset($_SESSION["PROFILE"])) {
     </script>
     <script>
         var audioQueue = []; // plays voice lines one after the other
+        var loading = false;
+        var audioPlaying = false;
 
         // Add event listener for Enter key
         document.addEventListener('DOMContentLoaded', function() {
@@ -63,9 +68,32 @@ if (isset($_SESSION["PROFILE"])) {
                     reqSend();
                 }
             });
+
+            request('infonpc', `(beings in range:${document.getElementById('herikaName').value})`);
+            request('infonpc_close', `${document.getElementById('herikaName').value}/${document.getElementById('playerName').value}`);
+
+            setInterval(() => {
+                let currentlyPlaying = isAudioPlaying();
+                if (currentlyPlaying && !audioPlaying) {
+                    audioPlaying = true;
+                    window.dispatchEvent(new Event('audio-start'))
+                }
+                if (!currentlyPlaying && audioPlaying) {
+                    audioPlaying = false;
+                    window.dispatchEvent(new Event('audio-end'))
+                }
+            }, 100);
+
+            initSTT();
         });
 
-        function setLoadingState(loading) {
+        function setLoadingState(newState) {
+            if (newState === loading) {
+                return;
+            }
+            loading = newState;
+            window.dispatchEvent(new Event((loading) ? 'loading-start' : 'loading-end'));
+
             const form = document.getElementById('chatForm');
             const input = document.getElementById('inputText');
             const button = document.getElementById('sendButton');
@@ -80,6 +108,23 @@ if (isset($_SESSION["PROFILE"])) {
                 button.disabled = false;
                 input.focus(); // Return focus to input
             }
+        }
+
+        function doesUrlExist(url) {
+            return new Promise((resolve, reject) => {
+                const http = new XMLHttpRequest();
+                http.open('HEAD', url);
+                http.onreadystatechange = function() {
+                    if (this.readyState === this.DONE) {
+                        if (this.status !== 404) {
+                            resolve();
+                        } else {
+                            reject();
+                        }
+                    }
+                };
+                http.send();
+            });
         }
 
         function parseReq(inputString) {
@@ -97,7 +142,11 @@ if (isset($_SESSION["PROFILE"])) {
                     let audio = `<audio controls><source src="${audioUrl}" type="audio/wav"></audio>`;
                     let newline = `<p class='llm'>${actor}: ${text}<br/>${audio}</p>`;
                     document.getElementById("chatWindow").innerHTML += newline;
-                    logChat(parts[2]);
+                    // remove audio element when no audio was generated
+                    let audioSrcEl = document.querySelector(`#chatWindow audio [src="${audioUrl}"]`);
+                    doesUrlExist(audioUrl).catch(() => {
+                        audioSrcEl.parentElement.remove();
+                    });
                 }
             });
             setLoadingState(false);
@@ -117,6 +166,7 @@ if (isset($_SESSION["PROFILE"])) {
             if (!audioSrc) {
                 return;
             }
+
             let audioSrcEl = document.querySelector(`#chatWindow audio [src="${audioSrc}"]`);
             let audioEl = audioSrcEl.parentElement;
             audioEl.play();
@@ -124,7 +174,18 @@ if (isset($_SESSION["PROFILE"])) {
                 playVoiceLines();
             }, {once: true});
         }
+        function isAudioPlaying() {
+            for (let audio of document.getElementsByTagName('audio')) {
+                if (!audio.paused && !audio.ended && 0 < audio.currentTime) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
+        /**
+         * Send text input to chim for processing.
+         */
         function reqSend() {
             const input = document.getElementById('inputText');
             if (!input.value.trim()) return; // Don't send empty messages
@@ -134,20 +195,14 @@ if (isset($_SESSION["PROFILE"])) {
                 "<p class='player'>" + 
                 document.getElementById('playerName').value + ': ' + 
                 input.value + "</p>";
-            
-            var currentDate = new Date();
-            var timestampInSeconds = parseInt(document.getElementById('last_gamets').value)+1;
+
+            let ts = parseInt(document.getElementById('ts').value);
+            let gamets = parseInt(document.getElementById('gamets').value);
             var profile = document.getElementById('profile').value;
             var xhr = new XMLHttpRequest();
 
-            var urlDataRaw = 'inputtext|' + 
-                document.getElementById('gamets').value + '|' + 
-                timestampInSeconds + '|' + 
-                document.getElementById('playerName').value + ': ' + 
-                input.value;
+            let urlDataRaw = `inputtext|${ts}|${gamets}|${document.getElementById('playerName').value}: ${input.value}`;
             var urlData = btoa(urlDataRaw);
-            document.getElementById('gamets').value = parseInt(document.getElementById('gamets').value)+10;
-            document.getElementById('last_gamets').value = parseInt(timestampInSeconds)+10;
 
             // Clear input immediately after sending
             input.value = '';
@@ -177,9 +232,114 @@ if (isset($_SESSION["PROFILE"])) {
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        function logChat(chatline) {
-            // Implementation left as-is or adjust as needed
-            return;
+        /**
+         * Sends info to be stored in event log
+         * @param type e.g. infonpc_close
+         * @param content e.g. (beings in range:Player)
+         */
+        function request(type, content) {
+            setLoadingState(true);
+            let ts = parseInt(document.getElementById('ts').value);
+            let gamets = parseInt(document.getElementById('gamets').value);
+            let urlData = `${type}|${ts}|${gamets}|${content}`;
+            fetch('/HerikaServer/comm.php?DATA=' + btoa(urlData))
+                .finally(() => setLoadingState(false));
+        }
+
+        // Speech recognition
+        function initSTT() {
+            if (!"webkitSpeechRecognition" in window) {
+                console.warn('STT not available');
+                return;
+            }
+            const inputText = document.getElementById('inputText');
+            const originalInputTextPlaceholder = inputText.placeholder;
+            const sttButton = document.getElementById('stt');
+            const sendButton = document.getElementById('sendButton');
+            let listening = false; // if the user wants it listening
+            let sttRunning = false; // if the stt is actually running (auto disabled during request & audio play)
+            let sendTimeoutTime = 1000; //TODO max wait time for more speech before sending
+            let sendTimeout;
+
+            const speechRecognizer = new webkitSpeechRecognition();
+            speechRecognizer.continuous = true;
+            speechRecognizer.interimResults = true;
+            speechRecognizer.lang = 'en-US'; //TODO
+
+            // process voice recognition result and send to server
+            speechRecognizer.onresult = function(event) {
+                let speech = "";
+                for (let result of event.results) {
+                    speech += result[0].transcript;
+                }
+                inputText.value = speech;
+
+                // start/restart wait time for sending speech to llm
+                clearTimeout(sendTimeout);
+                sendTimeout = setTimeout(() => {
+                    sendButton.click();
+                }, sendTimeoutTime);
+            };
+
+            // update ui and state after listening started
+            speechRecognizer.addEventListener('start', (event) => {
+                console.debug('speech-recognizer-start');
+                sttRunning = true;
+                // toggle button
+                sttButton.classList.remove('btn-primary');
+                sttButton.classList.add('btn-save');
+                // input text placeholder
+                inputText.placeholder = 'Listening...';
+
+            });
+            // update ui and state after listening stopped
+            speechRecognizer.addEventListener('end', (event) => {
+                console.debug('speech-recognizer-end');
+                sttRunning = false;
+                // toggle button
+                sttButton.classList.remove('btn-save');
+                sttButton.classList.add('btn-primary');
+                // input text placeholder
+                inputText.placeholder = originalInputTextPlaceholder;
+
+                autoStartStopSTT();
+            });
+            // restart listening when no sound was detected. stop on other errors
+            speechRecognizer.onerror = function(event) {
+                if (event.error === 'no-speech') {
+                    return; // still listening
+                } else {
+                    console.error("Speech recognition error:", event.error);
+                    listening = false;
+                }
+            };
+
+            // STT button
+            sttButton.classList.remove('d-none');
+            sttButton.addEventListener('click', (event) => {
+                listening = !listening;
+                // toggle speech recognition
+                if (listening) {
+                    speechRecognizer.start();
+                } else {
+                    speechRecognizer.stop();
+                }
+            });
+
+            // Start / Stop STT when stuff is loading or audio is playing
+            const autoStartStopSTT = function() {
+                if (sttRunning && (loading || audioPlaying)) {
+                    console.debug('stopping because loading or audio playing');
+                    speechRecognizer.stop();
+                }
+                if (listening && !sttRunning && !loading && !audioPlaying) {
+                    console.debug('restarting because loading or audio playing is finished');
+                    speechRecognizer.start();
+                }
+            };
+            ['loading-start', 'loading-end', 'audio-start', 'audio-end'].forEach((e) => {
+                window.addEventListener(e, autoStartStopSTT);
+            });
         }
     </script>
     <style>
@@ -227,7 +387,6 @@ if (isset($_SESSION["PROFILE"])) {
 
         /* Chat window styling */
         #chatWindow {
-            width: 80%;
             height: 500px;
             overflow-y: auto;
             background-color: #3a3a3a;
@@ -240,7 +399,6 @@ if (isset($_SESSION["PROFILE"])) {
 
     
         input[type="text"] {
-            width: calc(100% - 120px);
             background-color: #3a3a3a;
             border: 1px solid #4a4a4a;
             color: #f8f9fa;
@@ -276,17 +434,14 @@ if (isset($_SESSION["PROFILE"])) {
             margin: -10px 0;
         }
 
-        /* iframe container styling */
-        iframe {
-            width: 80%;
-            min-height: 700px;
-            margin-top: 50px;
-            border: 1px solid #4a4a4a;
-            border-radius: 5px;
+        #inputRow {
+            display: flex;
         }
-
-        input[type="text"], input[type="number"], input[type="url"], textarea, select {
-            width: 75%;
+        #inputRow input[type=text] {
+            margin: 5px 5px 5px 0;
+        }
+        #inputRow #sendButton {
+            margin-right: 0;
         }
     </style>
 </head>
@@ -294,22 +449,26 @@ if (isset($_SESSION["PROFILE"])) {
     <main class="container">
         <h2>💬 CHIM Chat Testing</h2>
         <h3>Current Character: <b><?php echo $GLOBALS["HERIKA_NAME"]; ?></b><h3>
-        <h3>This is just for testing AI responses, do not use this as an indication of roleplay quality.</h3>
-        <h4>Currently with the default profile, use any other character instead.</h4>
+        <p>This chat is missing most of the context and expression of a conversation in skyrim. Do not use this as an indication of quality.</p>
         <div id='chatWindow'></div>
 
         <form action='index.php' method='post' id="chatForm">
             <p>Player: <b><?php echo $GLOBALS["PLAYER_NAME"]; ?></b></p>
-            <input type='text' name='inputText' id='inputText' placeholder="Type your message and press Enter or Send"/>
+            <div id="inputRow">
+                <input type='text' name='inputText' id='inputText' placeholder="Type your message and press Enter or Send"/>
 
-            <input type='hidden' name='localts'   id='localts'   value='<?php echo time(); ?>' />
-            <input type='hidden' name='gamets'    id='gamets'    value='0' />
-            <input type='hidden' name='playerName' id='playerName' value='<?php echo $GLOBALS["PLAYER_NAME"]; ?>' />
-            <input type='hidden' name='herikaName' id='herikaName' value='<?php echo $GLOBALS["HERIKA_NAME"]; ?>' />
-            <input type='hidden' name='profile'    id='profile'    value='<?php echo $hash; ?>' />
-            <input type='hidden' name='conf'       id='profile'    value='<?php echo $_SESSION["PROFILE"]; ?>' />
-            <input type='hidden' name='last_gamets' id='last_gamets' value='<?php echo $last_gamets; ?>' />
-            <input type='button' name='send' id='sendButton' value='Send' onclick='reqSend()' class='btn-primary'/>
+                <input type="button" id='stt' value='🎤' class="btn-primary d-none">
+
+                <input type='hidden' name='localts'   id='localts'   value='<?php echo time(); ?>' />
+                <input type='hidden' name='ts'        id='ts'        value='<?php echo $ts; ?>' />
+                <input type='hidden' name='gamets'    id='gamets'    value='<?php echo $gamets; ?>' />
+                <input type='hidden' name='playerName' id='playerName' value='<?php echo $GLOBALS["PLAYER_NAME"]; ?>' />
+                <input type='hidden' name='herikaName' id='herikaName' value='<?php echo $GLOBALS["HERIKA_NAME"]; ?>' />
+                <input type='hidden' name='profile'    id='profile'    value='<?php echo $hash; ?>' />
+                <input type='hidden' name='conf'       id='profile'    value='<?php echo $_SESSION["PROFILE"]; ?>' />
+                <input type='hidden' name='last_gamets' id='last_gamets' value='<?php echo $gamets; ?>' />
+                <input type='button' name='send' id='sendButton' value='Send' onclick='reqSend()' class='btn-primary'/>
+            </div>
         </form>
     </main>
 </body>

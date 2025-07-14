@@ -17,3 +17,11 @@ CHIM character biographies use material from the "Skyrim: Characters" articles o
 
 ## CHIM Mod Page
 [CHIM Skyrim Mod](https://www.nexusmods.com/skyrimspecialedition/mods/126330)
+
+## Data
+
+### Timestamps
+gamets: skyrim internal time. starts at 10'000'000 on save game creation  
+localts: unix timestamp of the server
+ts: no idea, but I am pretty sure it's coming from Skyrim
+
