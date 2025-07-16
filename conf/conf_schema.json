@@ -43,7 +43,7 @@
   "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Default profile only! Custom instructions added when generating summaries for memories. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Default profile only! Instructions for updating HERIKA_DYNAMIC. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","web_connector","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter","player2json"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Connectors Selection"},
-  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Is one of the SUMMARY connectors. Used for creating diary entries, dynamic profiles and summarized memories!<br><br><strong>You will need to place your API key in the (SUMMARY) connector for this to work!</strong>"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp","player2"],"description":"Is one of the SUMMARY connectors. Used for creating diary entries, dynamic profiles and summarized memories!<br><br><strong>You will need to place your API key in the (SUMMARY) connector for this to work!</strong>"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openrouterjson": {
@@ -124,7 +124,7 @@
     },
     "player2json": {
       "_title":"Player2 API (JSON)",
-      "url": {"type":"url","description":"Player2 API endpoint"}
+      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:port"}
     },
     "google_openaijson": {
       "_title":"Google OpenAI API (JSON/SUMMARY)",
@@ -171,6 +171,10 @@
       "use_default_badwordsids": {"type":"boolean","description":"Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token."},
       "eos_token": {"type":"string","description":"EOS token LLM uses. Only works if use_default_badwordsids is enabled."},
       "template": {"type":"select","values":["vicuna-1","vicuna-1.1","alpaca","synthia","extended-alpaca","superHOT","chatml","chatml-c","zephyr","openchat","dreamgen","neuralchat","phi","llama3","gromenauer","gemma2","mistral-ins"],"description":"Prompt Format. Specified in the HuggingFace model card"}
+    },
+    "player2": {
+      "_title":"Player2 API (SUMMARY)",
+      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:port"}
     }
   },
   "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
