@@ -25,6 +25,11 @@ class player2
         $this->_model="";
         $this->_url="";
         $this->_timeout=30;
+        
+        // Ensure MAX_TOKENS_MEMORY has a default value for diary operations
+        if (!isset($GLOBALS["CONNECTOR"][$this->name]["MAX_TOKENS_MEMORY"])) {
+            $GLOBALS["CONNECTOR"][$this->name]["MAX_TOKENS_MEMORY"] = "1024";
+        }
     }
 
     private function init_connector() {
@@ -104,6 +109,12 @@ class player2
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
         $this->primary_handler = $this->send($this->_url, $context);
+        
+        if (!$this->primary_handler) {
+            $error = error_get_last();
+            Logger::error("{$this->name} connector - Failed to connect: " . ($error["message"] ?? "Unknown error"));
+            return false;
+        }
 
         return true;
     }
@@ -117,6 +128,10 @@ class player2
 
     public function process()
     {
+        if (!$this->primary_handler) {
+            return "";
+        }
+        
         $line = fgets($this->primary_handler);
         $buffer="";
 
@@ -136,7 +151,9 @@ class player2
     // Method to close the data processing operation
     public function close()
     {
-        fclose($this->primary_handler);
+        if ($this->primary_handler) {
+            fclose($this->primary_handler);
+        }
         // Write the buffer to the log file without timestamp separators
         file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
         file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
@@ -150,6 +167,6 @@ class player2
 
     public function isDone()
     {
-        return feof($this->primary_handler);
+        return !$this->primary_handler || feof($this->primary_handler);
     }
 } 
