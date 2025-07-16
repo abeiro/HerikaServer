@@ -138,6 +138,8 @@ $CONNECTOR["openai"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
 $CONNECTOR["openai"]["top_p"]=1; //LLM parameter top_p.
 $CONNECTOR["openai"]["API_KEY"]=""; //API key.
 $CONNECTOR["openai"]["MAX_TOKENS_MEMORY"]="1024"; //Maximum tokens to generate when summarizing.
+//Player2 JSON
+$CONNECTOR["player2json"]["url"]="https://api.player2.ai/v1/chat/completions"; //API endpoint.
 //Google OpenAI JSON
 $CONNECTOR["google_openaijson"]["url"]="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"; //API endpoint.
 $CONNECTOR["google_openaijson"]["model"]='gemini-1.5-flash'; //LLM model.
