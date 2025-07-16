@@ -25,6 +25,8 @@ class openai
     private $_is_streaming;
     private $_is_reasoning;
     private $_use_tools;
+    private $_is_grok;
+    private $_is_openai;
     private $_model;
     private $_url;
     private $_remove_cot;
@@ -46,6 +48,8 @@ class openai
         $this->_is_cohere_ai=false; 
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
+        $this->_is_grok=false;
+        $this->_is_openai=false;
         $this->_use_tools=true;
         $this->_model="";
         $this->_url="";
@@ -79,12 +83,57 @@ class openai
                 $i_pos = stripos($s_model, "qwen3-235b-a22b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwen3-30b-a3b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-32b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o4");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o1-preview");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o1-mini");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o4-mini");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o3-mini");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "o3-pro");
             $b_res = (!($i_pos === false));
         }
         return $b_res;
     }
 
-    private function init_connector() {
+    private function isOpenAIModel($s_model="") { //OpenAI models have different parameters
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            // OpenRouter models
+            $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o4");
+            // Nano-GPT models
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "azure-o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "azure-o3");
+            // OpenAI model names
+            if ($i_pos === false) { 
+                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
+                    ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
+                    (strpos($s_model, "o4-mini") == 0)) {
+                    $i_pos = 1;
+                }
+            }
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+    private function init_connector($customParms) {
         $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
@@ -121,6 +170,12 @@ class openai
         }
 
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+        // We shoud be able to overwrite model.
+        $this->_model = isset($customParms["model"]) ? $customParms["model"] : $this->_model;
+        
+        $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
+        //$this->_is_openai = $this->isOpenAIModel($this->_model);
+
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
             $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
@@ -129,7 +184,7 @@ class openai
 
     public function open($contextData, $customParms)
     {
-        $this->init_connector();
+        $this->init_connector($customParms);
 
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
@@ -208,25 +263,25 @@ class openai
                                         
                                 ];
                             }
-                        } else
-                            unset($contextData[$n]);
+                        } /* else
+                            unset($contextData[$n]); */
                 }
             }
         }
         
-        $contextData2=[];
-        $contextData2[]= ["role"=>"system","content"=>$pb["system"]];
-        $contextData2[]= ["role"=>"user","content"=>$pb["user"]];
+        //$contextData2=[];
+        //$contextData2[]= ["role"=>"system","content"=>$pb["system"]];
+        //$contextData2[]= ["role"=>"user","content"=>$pb["user"]];
         
-        
-        // Compacting */
+        // Compact and remove context elements with empty content
         $contextDataCopy=[];
-        foreach ($contextData as $n=>$element) 
-            if (!empty($element["content"]))
+        foreach ($contextData as $n=>$element) {
+            if (!empty($element["content"])) {
                 $contextDataCopy[]=$element;
-        
+            }
+        }
         $contextData=$contextDataCopy;
-        
+
 
         $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 1.0);
         if ($temperature < 0.0) $temperature = 0.0;
@@ -244,6 +299,14 @@ class openai
         $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
         if ($top_p > 1) $top_p = 1.0;
         else if ($top_p < 0.0) $top_p = 0.0; 
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($customParms["MAX_TOKENS"]);
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
 
         $data = array(
             'model' => $this->_model,
@@ -280,6 +343,7 @@ class openai
             } elseif ($this->_is_mistral_ai) {
                 //unset($data["presence_penalty"]); 
                 //unset($data["frequency_penalty"]);
+                $this->_use_tools = false;
                 unset($data["max_completion_tokens"]);
                 $data['max_tokens'] = $MAX_TOKENS;
             } elseif ($this->_is_cohere_ai) {
@@ -294,24 +358,15 @@ class openai
                 if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
                     $data["enable_thinking"] = false;
             }
-
         } // --- endif provider
 
-        if (isset($customParms["MAX_TOKENS"])) {
-            if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_completion_tokens"]); 
-            } elseif (isset($customParms["MAX_TOKENS"])) {
-                $data["max_completion_tokens"]=intval($customParms["MAX_TOKENS"]);
-            }
+        if ($MAX_TOKENS<1) {
+            unset($data["max_completion_tokens"]); 
+            unset($data["max_tokens"]); 
         }
 
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_completion_tokens"]);
-            } else
-                $data["max_completion_tokens"]=intval($GLOBALS["FORCE_MAX_TOKENS"]);
-        }
-
+        $GLOBALS["FUNCTIONS_ARE_ENABLED"] = false;
+        /*
         if ($this->_use_tools) 
         {
             if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -321,13 +376,17 @@ class openai
                     $data["tool_choice"]=$GLOBALS["FUNCTIONS_FORCE_CALL"];
                 }
             }
-        }
+        } */
 
         if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;
             }
         }
+
+        /* foreach ($customParms as $k=>$v) {
+            $data[$k]=$v;
+        } */
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
@@ -336,12 +395,13 @@ class openai
             "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}"
         );
 
+        $timeout = max(intval(($GLOBALS["HTTP_TIMEOUT"]) ?? 30), $this->_timeout);
         $options = array(
             'http' => array(
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout
+                'timeout' => $timeout
             )
         );
 

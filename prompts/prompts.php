@@ -140,7 +140,7 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} what they found) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} to share what they found) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
-        "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked) {$gameRequest[3]})"],
+        "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked {$gameRequest[3]})"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("lockpick", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     // Database Prompt (After Attack)

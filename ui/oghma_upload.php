@@ -7,7 +7,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "📙CHIM - Oghma Infinium Management";
+$TITLE = "📙CHIM - Oghma Infinium";
 
 ob_start();
 
@@ -256,32 +256,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_dynamic_csv'])
                     $category             = $data[8] ?? '';
 
                     if (!empty($id_quest) && !empty($topic)) {
-                        $query = "
-                            INSERT INTO $schema.oghma_dynamic (
-                                id_quest,
-                                stage,
-                                topic,
-                                topic_desc,
-                                knowledge_class,
-                                topic_desc_basic,
-                                knowledge_class_basic,
-                                tags,
-                                category
-                            )
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        // Check if record with same id_quest, stage, and topic already exists
+                        $checkQuery = "
+                            SELECT id FROM $schema.oghma_dynamic 
+                            WHERE id_quest = $1 AND stage = $2 AND topic = $3
                         ";
+                        $checkResult = pg_query_params($conn, $checkQuery, [$id_quest, $stage, $topic]);
                         
-                        $result = pg_query_params($conn, $query, [
-                            $id_quest,
-                            $stage,
-                            $topic,
-                            $topic_desc,
-                            $knowledge_class,
-                            $topic_desc_basic,
-                            $knowledge_class_basic,
-                            $tags,
-                            $category
-                        ]);
+                        if ($checkResult && pg_num_rows($checkResult) > 0) {
+                            // Update existing record
+                            $existingRow = pg_fetch_assoc($checkResult);
+                            $updateQuery = "
+                                UPDATE $schema.oghma_dynamic 
+                                SET topic_desc = $1,
+                                    knowledge_class = $2,
+                                    topic_desc_basic = $3,
+                                    knowledge_class_basic = $4,
+                                    tags = $5,
+                                    category = $6
+                                WHERE id = $7
+                            ";
+                            
+                            $result = pg_query_params($conn, $updateQuery, [
+                                $topic_desc,
+                                $knowledge_class,
+                                $topic_desc_basic,
+                                $knowledge_class_basic,
+                                $tags,
+                                $category,
+                                $existingRow['id']
+                            ]);
+                        } else {
+                            // Insert new record
+                            $query = "
+                                INSERT INTO $schema.oghma_dynamic (
+                                    id_quest,
+                                    stage,
+                                    topic,
+                                    topic_desc,
+                                    knowledge_class,
+                                    topic_desc_basic,
+                                    knowledge_class_basic,
+                                    tags,
+                                    category
+                                )
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                            ";
+                            
+                            $result = pg_query_params($conn, $query, [
+                                $id_quest,
+                                $stage,
+                                $topic,
+                                $topic_desc,
+                                $knowledge_class,
+                                $topic_desc_basic,
+                                $knowledge_class_basic,
+                                $tags,
+                                $category
+                            ]);
+                        }
 
                         if ($result) {
                             $rowCount++;
@@ -449,37 +482,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_dynamic'])) {
     $category             = htmlspecialchars($_POST['dynamic_category']             ?? '');
 
     if (!empty($id_quest) && !empty($topic)) {
-        $query = "
-            INSERT INTO $schema.oghma_dynamic (
-                id_quest,
-                stage,
-                topic,
-                topic_desc,
-                knowledge_class,
-                topic_desc_basic,
-                knowledge_class_basic,
-                tags,
-                category
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        // Check if record with same id_quest, stage, and topic already exists
+        $checkQuery = "
+            SELECT id FROM $schema.oghma_dynamic 
+            WHERE id_quest = $1 AND stage = $2 AND topic = $3
         ";
+        $checkResult = pg_query_params($conn, $checkQuery, [$id_quest, $stage, $topic]);
         
-        $result = pg_query_params($conn, $query, [
-            $id_quest,
-            $stage,
-            $topic,
-            $topic_desc,
-            $knowledge_class,
-            $topic_desc_basic,
-            $knowledge_class_basic,
-            $tags,
-            $category
-        ]);
-
-        if ($result) {
-            $message .= "<p>Dynamic entry added successfully!</p>";
+        if ($checkResult && pg_num_rows($checkResult) > 0) {
+            $message .= "<p style='color: orange;'>A dynamic entry with Quest ID '$id_quest', Stage '$stage', and Topic '$topic' already exists. Please edit the existing entry or use different values.</p>";
         } else {
-            $message .= "<p>Error adding dynamic entry: " . pg_last_error($conn) . "</p>";
+            // Insert new record
+            $query = "
+                INSERT INTO $schema.oghma_dynamic (
+                    id_quest,
+                    stage,
+                    topic,
+                    topic_desc,
+                    knowledge_class,
+                    topic_desc_basic,
+                    knowledge_class_basic,
+                    tags,
+                    category
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ";
+            
+            $result = pg_query_params($conn, $query, [
+                $id_quest,
+                $stage,
+                $topic,
+                $topic_desc,
+                $knowledge_class,
+                $topic_desc_basic,
+                $knowledge_class_basic,
+                $tags,
+                $category
+            ]);
+
+            if ($result) {
+                $message .= "<p>Dynamic entry added successfully!</p>";
+            } else {
+                $message .= "<p>Error adding dynamic entry: " . pg_last_error($conn) . "</p>";
+            }
         }
     } else {
         $message .= '<p>Please fill in at least the "Quest ID" and "Topic" fields.</p>';
@@ -581,7 +626,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     main {
         padding-top: 160px; /* Space for navbar */
         padding-bottom: 40px; /* Reduced space for footer */
-        padding-left: 10px;
+        padding-left: 10%;
+        padding-right: 10%;
+        width: 100%;
+        margin: 0;
     }
     
     /* Override footer styles */
@@ -592,6 +640,249 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         height: 20px; /* Reduced footer height */
         background: #031633;
         z-index: 100;
+    }
+
+    /* Tab Navigation */
+    .tab-navigation {
+        display: flex;
+        border-bottom: 2px solid #4a4a4a;
+        margin-bottom: 30px;
+        background: #2a2a2a;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 15px 20px;
+        background: #3a3a3a;
+        color: rgb(242, 124, 17);
+        border: none;
+        cursor: pointer;
+        font-family: 'MagicCards', serif;
+        font-size: 18px;
+        font-weight: bold;
+        word-spacing: 8px;
+        transition: all 0.3s ease;
+        border-radius: 8px 8px 0 0;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .tab-button:first-child {
+        border-right: 1px solid #4a4a4a;
+    }
+
+    .tab-button.active {
+        background: rgb(242, 124, 17);
+        color: #000;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(255,255,255,0.3);
+    }
+
+    .tab-button:hover:not(.active) {
+        background: #4a4a4a;
+        color: rgb(255, 140, 30);
+    }
+
+    /* Tab Content */
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* Content Layout Improvements */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .content-section {
+        background: #2a2a2a;
+        padding: 25px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .content-section h2 {
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        margin-bottom: 15px;
+        font-size: 1.4em;
+    }
+
+    .full-width-section {
+        grid-column: 1 / -1;
+    }
+
+    .full-width-section h2 {
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        margin-bottom: 15px;
+        font-size: 1.6em;
+        text-align: center;
+    }
+
+    /* Form Improvements */
+    .form-container {
+        background: #2a2a2a;
+        padding: 25px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        margin-bottom: 20px;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    /* Font Face Declaration */
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+
+    /* Header Styling */
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .page-header h1 {
+        margin-bottom: 15px;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    #title-text {
+        font-family: 'MagicCards', serif;
+    }
+
+    /* Header content transitions */
+    #header-content > div {
+        transition: opacity 0.3s ease-in-out;
+        opacity: 1;
+    }
+
+    #title-text {
+        transition: all 0.3s ease-in-out;
+    }
+
+    #dynamic-header-content {
+        opacity: 0;
+    }
+
+    /* Logic Section Styling */
+    .logic-section {
+        margin: 25px 0;
+        padding: 20px;
+        background: #1a1a1a;
+        border-radius: 8px;
+        border: 2px solid rgb(242, 124, 17);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .logic-title {
+        text-align: center;
+        color: rgb(242, 124, 17);
+        margin-bottom: 20px;
+        font-size: 1.3em;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        font-family: 'MagicCards', serif;
+        word-spacing: 6px;
+    }
+
+    .logic-steps {
+        display: grid;
+        gap: 15px;
+    }
+
+    .logic-step {
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 15px;
+        background: #2a2a2a;
+        border-radius: 6px;
+        border-left: 4px solid rgb(242, 124, 17);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .logic-step:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(242, 124, 17, 0.2);
+    }
+
+    .step-number {
+        flex-shrink: 0;
+        width: 30px;
+        height: 30px;
+        background: rgb(242, 124, 17);
+        color: #000;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .step-content {
+        flex: 1;
+    }
+
+    .step-content strong {
+        color: rgb(242, 124, 17);
+        display: block;
+        margin-bottom: 5px;
+        font-size: 1.1em;
+    }
+
+    .step-content p {
+        margin: 0;
+        line-height: 1.4;
+        color: #e0e0e0;
+    }
+
+    .step-content code {
+        background: #4a4a4a;
+        padding: 2px 6px;
+        border-radius: 3px;
+        color: #ffeb3b;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+    }
+
+    .step-content em {
+        color: #81c784;
+        font-style: italic;
     }
 
     /* Modal specific overrides */
@@ -647,431 +938,753 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     /* Table container height adjustment */
     .table-container {
-        max-height: calc(100vh - 400px) !important;
+        max-height: calc(100vh - 450px) !important;
+        margin-top: 20px;
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    /* Table styling improvements */
+    .table-container table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+    }
+
+    /* Column width optimization */
+    .table-container th:nth-child(1), /* Topic */
+    .table-container td:nth-child(1) {
+        width: 12%;
+        min-width: 120px;
+    }
+
+    .table-container th:nth-child(2), /* Topic Description */
+    .table-container td:nth-child(2) {
+        width: 25%;
+        min-width: 200px;
+    }
+
+    .table-container th:nth-child(3), /* Knowledge Class */
+    .table-container td:nth-child(3) {
+        width: 12%;
+        min-width: 120px;
+    }
+
+    .table-container th:nth-child(4), /* Topic Description (Basic) */
+    .table-container td:nth-child(4) {
+        width: 20%;
+        min-width: 180px;
+    }
+
+    .table-container th:nth-child(5), /* Knowledge Class (Basic) */
+    .table-container td:nth-child(5) {
+        width: 12%;
+        min-width: 120px;
+    }
+
+    .table-container th:nth-child(6), /* Tags */
+    .table-container td:nth-child(6) {
+        width: 8%;
+        min-width: 80px;
+    }
+
+    .table-container th:nth-child(7), /* Category */
+    .table-container td:nth-child(7) {
+        width: 8%;
+        min-width: 80px;
+    }
+
+    .table-container th:nth-child(8), /* Action */
+    .table-container td:nth-child(8) {
+        width: 8%;
+        min-width: 80px;
+    }
+
+    /* Text wrapping and overflow handling */
+    .table-container td {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        vertical-align: top;
+        padding: 8px;
+        line-height: 1.4;
+    }
+
+    .table-container th {
+        padding: 10px 8px;
+        font-weight: bold;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    /* Responsive table for smaller screens */
+    @media (max-width: 1200px) {
+        .table-container {
+            font-size: 0.9em;
+        }
+        
+        .table-container th:nth-child(2), /* Topic Description */
+        .table-container td:nth-child(2) {
+            width: 30%;
+        }
+        
+        .table-container th:nth-child(4), /* Topic Description (Basic) */
+        .table-container td:nth-child(4) {
+            width: 25%;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .table-container {
+            font-size: 0.8em;
+        }
+        
+        .table-container th,
+        .table-container td {
+            padding: 6px 4px;
+        }
+    }
+
+    /* Filter improvements */
+    .filter-section {
+        background: #2a2a2a;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        margin-bottom: 20px;
+    }
+
+    .action-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .search-container {
+        display: flex;
+        gap: 10px;
+        min-width: 300px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        main {
+            padding-left: 5%;
+            padding-right: 5%;
+        }
+        
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .tab-button {
+            padding: 12px 15px;
+            font-size: 16px;
+            color: rgb(242, 124, 17);
+        }
+        
+        .search-container {
+            min-width: 200px;
+        }
+        
+        .action-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .page-header {
+            padding: 15px;
+        }
+        
+        .content-section {
+            padding: 15px;
+        }
+        
+        .logic-section {
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .logic-step {
+            padding: 12px;
+            gap: 12px;
+        }
+        
+        .step-number {
+            width: 25px;
+            height: 25px;
+            font-size: 12px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        main {
+            padding-left: 2%;
+            padding-right: 2%;
+        }
+        
+        .page-header h1 {
+            font-size: 1.5em;
+        }
+        
+        .tab-button {
+            padding: 10px 12px;
+            font-size: 15px;
+            color: rgb(242, 124, 17);
+        }
+        
+        .logic-section {
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .logic-step {
+            padding: 10px;
+            gap: 10px;
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .step-number {
+            align-self: center;
+        }
     }
 </style>
 
 <main>
-<div class="indent5">
-<h1><img src="<?php echo $webRoot; ?>/ui/images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> Oghma Infinium Management</h1>
-
     <div id="toast" class="toast-notification">
         <span class="message"></span>
     </div>
 
-    <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
-    <p>This is done by detecting topics during conversations, and injecting the appropiate information into the AI's prompt.</p>
-    <p>To use it you must have <b>[MINIME_T5]</b> and <b></b>[OGHMA_INFINIUM]</b> enabled in the default profile. You also need Minime-T5 installed and running.</p>
-    <br>
-    <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
-
-    <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
-    <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
-    <br>
-    <p>
-    <b>Logic for searching articles:</b> <br>
-    1. NPC will search for oghma article based on most relevant keyword. <br>
-    2. Check knowledge_class to see if they access to the advanced article (topic_desc). <br>
-    3. Check knowledge_class_basic to see if they access to the basic article (topic_desc_basic). <br>
-    4. If all above fails, send "You do not know about X" to the prompt.
-</p>
-    <?php
-    // Display messages - REMOVING THIS BLOCK
-    /*if (!empty($message)) {
-        echo '<div class="message">';
-        echo $message;
-        echo '</div>';
-    }*/
-    ?>
-    <br>
-    <h1>Batch Upload</h1>
-    <div class="form-container">
-        <form action="" method="post" enctype="multipart/form-data">
-            <div>
-                <label for="csv_file">Select .csv file to upload:</label>
-                <br>
-                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+    <div class="page-header">
+        <h1 id="page-title">
+            <img src="<?php echo $webRoot; ?>/ui/images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> 
+            <span id="title-text">Oghma Infinium</span>
+            <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener" 
+               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
+               title="View detailed documentation about Oghma Infinium"
+               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
+               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
+        </h1>
+        
+        <div id="header-content">
+            <!-- Regular Oghma Content -->
+            <div id="oghma-header-content">
+                <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
+                <p>This is done by detecting topics during conversations, and injecting the appropriate information into the AI's prompt.</p>
+                <p>To use it you must have <b>[MINIME_T5]</b> and <b>[OGHMA_INFINIUM]</b> enabled in the default profile. You also need Minime-T5 installed and running.</p>
+                
+                <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
+                <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
+                <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
+                
+                <div class="logic-section">
+                    <h3 class="logic-title">🔍 Article Search Logic</h3>
+                    <div class="logic-steps">
+                        <div class="logic-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <strong>Keyword Search</strong>
+                                <p>NPC searches for oghma article based on most relevant keyword during conversations.</p>
+                            </div>
+                        </div>
+                        <div class="logic-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <strong>Advanced Access Check</strong>
+                                <p>Check <code>knowledge_class</code> to see if they have access to the advanced article (<code>topic_desc</code>)</p>
+                            </div>
+                        </div>
+                        <div class="logic-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <strong>Basic Access Check</strong>
+                                <p>Check <code>knowledge_class_basic</code> to see if they have access to the basic article (<code>topic_desc_basic</code>)</p>
+                            </div>
+                        </div>
+                        <div class="logic-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <strong>Fallback Response</strong>
+                                <p>If all above fails, send <em>"You do not know about X"</em> to the prompt</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="button-group">
-                <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
-                <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
+            
+            <!-- Dynamic Oghma Content -->
+            <div id="dynamic-header-content" style="display: none;">
+                <p>Entries in the <b>Dynamic Oghma</b> table will update the Oghma table above whenever the quest ID & stage ID for a quest is reached.</p>
+                <p>Any changes from a topic in this table will override whatever is in the Oghma table.</p>
+                <p>You can leave cells empty so they do not overwrite specific cells from the Oghma table.</p>
+                <p>If a cell has the text <b>"clearall"</b> in it, it will clear that cell in the Oghma table.</p>
+                <p>You also can introduce new topics to the Oghma table as well.</p>
+                <p>It is currently empty by default. We need your help adding more entries!</p>
+                <p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Would you like to know more?</a></p>
             </div>
-        </form>
-
-        <p>You can verify that the entry has been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma</b></p>
-        <p>You can see how it picks a relevant article during conversation by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> audit_memory</b></p>
-        <p>All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
-        <br>
-
-        <form action="" method="post">
-            <input type="hidden" name="action" value="delete_all">
-            <input type="submit" class="btn-danger" value="Delete All Oghma Entries" 
-                   onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
-        </form>
-        <br>
-        <form action="<?php echo $webRoot; ?>/ui/oghma_reset.php" method="post">
-            <input type="submit" class="btn-danger" value="Factory Reset Oghma Database" 
-                   onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
-        </form>
-        <p>You can download a backup of the full Oghma database in the <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener">csv files channel in our discord</a>.</p>
+        </div>
     </div>
 
-    <br>
-    
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+        <button class="tab-button active" onclick="switchTab('oghma-tab')">
+            📚 Oghma Infinium
+        </button>
+        <button class="tab-button" onclick="switchTab('dynamic-tab')">
+            ⚡ Dynamic Oghma
+        </button>
+    </div>
 
+    <!-- Regular Oghma Tab -->
+    <div id="oghma-tab" class="tab-content active">
+        <div class="content-grid">
+            <div class="content-section">
+                <h2>Batch Upload</h2>
+                <form action="" method="post" enctype="multipart/form-data">
+                    <div>
+                        <label for="csv_file">Select .csv file to upload:</label>
+                        <input type="file" name="csv_file" id="csv_file" accept=".csv" required style="margin-top: 10px;">
+                    </div>
+                    <div class="button-group">
+                        <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
+                        <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
+                    </div>
+                </form>
+                
+                <p style="margin-top: 15px;">All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+            </div>
 
-<?php
-/********************************************************************
- *  5) DISPLAY THE OGHMA ENTRIES
- ********************************************************************/
-// Fetch categories
-$catQuery = "SELECT DISTINCT category FROM $schema.oghma WHERE category IS NOT NULL AND category <> '' ORDER BY category";
-$catResult = pg_query($conn, $catQuery);
-$categories = [];
-if ($catResult) {
-    while ($row = pg_fetch_assoc($catResult)) {
-        $categories[] = $row['category'];
-    }
-}
+            <div class="content-section">
+                <h2>Database Management</h2>
+                <p>Verify uploads: <br><b>Server Actions → Database Manager → dwemer → public → oghma</b></p>
+                <p>View conversation usage: <br><b>Server Actions → Database Manager → dwemer → public → audit_memory</b></p>
+                
+                <div class="button-group" style="margin-top: 20px;">
+                    <form action="" method="post" style="display: inline;">
+                        <input type="hidden" name="action" value="delete_all">
+                        <input type="submit" class="btn-danger" value="Delete All Entries" 
+                               onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
+                    </form>
+                    
+                    <form action="<?php echo $webRoot; ?>/ui/oghma_reset.php" method="post" style="display: inline;">
+                        <input type="submit" class="btn-danger" value="Factory Reset Database" 
+                               onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
+                    </form>
+                </div>
+                
+                <p style="margin-top: 15px;">Download backup: <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener" style="color: yellow;">Discord CSV files channel</a></p>
+            </div>
+        </div>
+        <div class="full-width-section">
+            <?php
+            /********************************************************************
+             *  5) DISPLAY THE OGHMA ENTRIES
+             ********************************************************************/
+            // Fetch categories
+            $catQuery = "SELECT DISTINCT category FROM $schema.oghma WHERE category IS NOT NULL AND category <> '' ORDER BY category";
+            $catResult = pg_query($conn, $catQuery);
+            $categories = [];
+            if ($catResult) {
+                while ($row = pg_fetch_assoc($catResult)) {
+                    $categories[] = $row['category'];
+                }
+            }
 
-// Grab filters
-$selectedCategory = $_GET['cat']   ?? '';
-$letter          = strtoupper($_GET['letter'] ?? '');
+            // Grab filters
+            $selectedCategory = $_GET['cat']   ?? '';
+            $letter          = strtoupper($_GET['letter'] ?? '');
 
-// Sorting
-$order = 'ASC';
-if (isset($_GET['order'])) {
-    $requestedOrder = strtolower($_GET['order']);
-    if ($requestedOrder === 'asc' || $requestedOrder === 'desc') {
-        $order = strtoupper($requestedOrder);
-    }
-}
-echo '<br>';
-// Category buttons
-echo '<div>';
-echo '<h1 id="entries">Oghma Infinium Entries</h1>';
-echo '<div class="action-container">';
-echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
-echo '<div class="search-container">';
-echo '<input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">';
-echo '<button onclick="applySearch()" class="action-button edit ">Search</button>';
-echo '</div>';
-echo '</div>';
-echo '<br>';
+            // Sorting
+            $order = 'ASC';
+            if (isset($_GET['order'])) {
+                $requestedOrder = strtolower($_GET['order']);
+                if ($requestedOrder === 'asc' || $requestedOrder === 'desc') {
+                    $order = strtoupper($requestedOrder);
+                }
+            }
+            ?>
+            
+            <h2 id="entries">📋 Oghma Infinium Entries</h2>
+            
+            <div class="action-container">
+                <button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>
+                <div class="search-container">
+                    <input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
+                    <button onclick="applySearch()" class="action-button edit">Search</button>
+                </div>
+            </div>
 
-// Filter buttons
-echo '<div class="filter-buttons">';
-echo '<a class="alphabet-button" href="?#entries">All Categories</a>';
-foreach ($categories as $cat) {
-    $catEncoded = urlencode($cat);
-    $style = ($selectedCategory === $cat) ? 'style="background-color:#0056b3;"' : '';
-    echo "<a class=\"alphabet-button\" $style href=\"?cat=$catEncoded#entries\">" . htmlspecialchars($cat) . "</a>";
-}
-echo '<br>';
-// Sorting links
-$baseUrl = '?';
-if ($selectedCategory) $baseUrl .= 'cat=' . urlencode($selectedCategory) . '&';
-if ($letter) $baseUrl .= 'letter=' . urlencode($letter) . '&';
+            <div class="filter-section">
+                <div style="margin-bottom: 15px;">
+                    <strong>Filter by Category:</strong><br>
+                    <div class="filter-buttons" style="margin-top: 10px;">
+                        <a class="alphabet-button" href="?#entries">All Categories</a>
+                        <?php
+                        foreach ($categories as $cat) {
+                            $catEncoded = urlencode($cat);
+                            $style = ($selectedCategory === $cat) ? 'style="background-color:#0056b3;"' : '';
+                            echo "<a class=\"alphabet-button\" $style href=\"?cat=$catEncoded#entries\">" . htmlspecialchars($cat) . "</a>";
+                        }
+                        ?>
+                    </div>
+                </div>
+                
+                <div>
+                    <strong>Sort Order:</strong><br>
+                    <?php
+                    $baseUrl = '?';
+                    if ($selectedCategory) $baseUrl .= 'cat=' . urlencode($selectedCategory) . '&';
+                    if ($letter) $baseUrl .= 'letter=' . urlencode($letter) . '&';
+                    ?>
+                    <div style="margin-top: 10px;">
+                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=asc#entries">🔼 Ascending</a>
+                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=desc#entries">🔽 Descending</a>
+                    </div>
+                </div>
+            </div>
 
-echo '</div>';
-echo '<a class="alphabet-button" href="' . $baseUrl . 'order=asc#entries">🔼 Ascending</a>';
-echo '<a class="alphabet-button" href="' . $baseUrl . 'order=desc#entries">🔽 Descending</a>';
-// Build query
-$searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
+            <?php
+            // Build query
+            $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
 
-if ($selectedCategory && $letter && $searchTerm) {
-    $query = "
-        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-               knowledge_class_basic, tags, category
-        FROM $schema.oghma
-        WHERE category = $1
-          AND topic ILIKE $2
-          AND topic ILIKE $3
-        ORDER BY topic $order
-    ";
-    $params = [$selectedCategory, $letter . '%', '%' . $searchTerm . '%'];
-} elseif ($selectedCategory && $searchTerm) {
-    $query = "
-        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-               knowledge_class_basic, tags, category
-        FROM $schema.oghma
-        WHERE category = $1
-          AND topic ILIKE $2
-        ORDER BY topic $order
-    ";
-    $params = [$selectedCategory, '%' . $searchTerm . '%'];
-} elseif ($letter && $searchTerm) {
-    $query = "
-        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-               knowledge_class_basic, tags, category
-        FROM $schema.oghma
-        WHERE topic ILIKE $1
-          AND topic ILIKE $2
-        ORDER BY topic $order
-    ";
-    $params = [$letter . '%', '%' . $searchTerm . '%'];
-} elseif ($searchTerm) {
-    $query = "
-        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-               knowledge_class_basic, tags, category
-        FROM $schema.oghma
-        WHERE topic ILIKE $1
-        ORDER BY topic $order
-    ";
-    $params = ['%' . $searchTerm . '%'];
-} elseif ($selectedCategory && $letter) {
-    $query = "
-        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-               knowledge_class_basic, tags, category
-        FROM $schema.oghma
-        WHERE category = $1
-          AND topic ILIKE $2
-        ORDER BY topic $order
-    ";
-    $params = [$selectedCategory, $letter . '%'];
-} elseif ($selectedCategory) {
-    $query = "
-        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-               knowledge_class_basic, tags, category
-        FROM $schema.oghma
-        WHERE category = $1
-        ORDER BY topic $order
-    ";
-    $params = [$selectedCategory];
-} elseif ($letter) {
-    $query = "
-        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-               knowledge_class_basic, tags, category
-        FROM $schema.oghma
-        WHERE topic ILIKE $1
-        ORDER BY topic $order
-    ";
-    $params = [$letter . '%'];
-} else {
-    $query = "
-        SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-               knowledge_class_basic, tags, category
-        FROM $schema.oghma
-        ORDER BY topic $order
-    ";
-    $params = [];
-}
+            if ($selectedCategory && $letter && $searchTerm) {
+                $query = "
+                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+                           knowledge_class_basic, tags, category
+                    FROM $schema.oghma
+                    WHERE category = $1
+                      AND topic ILIKE $2
+                      AND topic ILIKE $3
+                    ORDER BY topic $order
+                ";
+                $params = [$selectedCategory, $letter . '%', '%' . $searchTerm . '%'];
+            } elseif ($selectedCategory && $searchTerm) {
+                $query = "
+                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+                           knowledge_class_basic, tags, category
+                    FROM $schema.oghma
+                    WHERE category = $1
+                      AND topic ILIKE $2
+                    ORDER BY topic $order
+                ";
+                $params = [$selectedCategory, '%' . $searchTerm . '%'];
+            } elseif ($letter && $searchTerm) {
+                $query = "
+                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+                           knowledge_class_basic, tags, category
+                    FROM $schema.oghma
+                    WHERE topic ILIKE $1
+                      AND topic ILIKE $2
+                    ORDER BY topic $order
+                ";
+                $params = [$letter . '%', '%' . $searchTerm . '%'];
+            } elseif ($searchTerm) {
+                $query = "
+                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+                           knowledge_class_basic, tags, category
+                    FROM $schema.oghma
+                    WHERE topic ILIKE $1
+                    ORDER BY topic $order
+                ";
+                $params = ['%' . $searchTerm . '%'];
+            } elseif ($selectedCategory && $letter) {
+                $query = "
+                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+                           knowledge_class_basic, tags, category
+                    FROM $schema.oghma
+                    WHERE category = $1
+                      AND topic ILIKE $2
+                    ORDER BY topic $order
+                ";
+                $params = [$selectedCategory, $letter . '%'];
+            } elseif ($selectedCategory) {
+                $query = "
+                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+                           knowledge_class_basic, tags, category
+                    FROM $schema.oghma
+                    WHERE category = $1
+                    ORDER BY topic $order
+                ";
+                $params = [$selectedCategory];
+            } elseif ($letter) {
+                $query = "
+                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+                           knowledge_class_basic, tags, category
+                    FROM $schema.oghma
+                    WHERE topic ILIKE $1
+                    ORDER BY topic $order
+                ";
+                $params = [$letter . '%'];
+            } else {
+                $query = "
+                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
+                           knowledge_class_basic, tags, category
+                    FROM $schema.oghma
+                    ORDER BY topic $order
+                ";
+                $params = [];
+            }
 
-$result = pg_query_params($conn, $query, $params);
+            $result = pg_query_params($conn, $query, $params);
 
-echo '<a id="entries"></a>';
-echo '<div class="table-container">';
-echo '<table>';
-echo '<tr>
-        <th>Topic</th>
-        <th>Topic Description</th>
-        <th>Knowledge Class</th>
-        <th>Topic Description (Basic)</th>
-        <th>Knowledge Class (Basic)</th>
-        <th>Tags</th>
-        <th>Category</th>
-        <th>Action</th> 
-      </tr>';
+            echo '<a id="entries"></a>';
+            echo '<div class="table-container">';
+            echo '<table>';
+            echo '<tr>
+                    <th>Topic</th>
+                    <th>Topic Description</th>
+                    <th>Knowledge Class</th>
+                    <th>Topic Description (Basic)</th>
+                    <th>Knowledge Class (Basic)</th>
+                    <th>Tags</th>
+                    <th>Category</th>
+                    <th>Action</th> 
+                  </tr>';
 
-if ($result) {
-    $rowCount = 0;
-    while ($row = pg_fetch_assoc($result)) {
-        $topic                = htmlspecialchars($row['topic']                ?? '');
-        $topic_desc           = htmlspecialchars($row['topic_desc']           ?? '');
-        $knowledge_class      = htmlspecialchars($row['knowledge_class']      ?? '');
-        $topic_desc_basic     = htmlspecialchars($row['topic_desc_basic']     ?? '');
-        $knowledge_class_basic= htmlspecialchars($row['knowledge_class_basic']?? '');
-        $tags                 = htmlspecialchars($row['tags']                 ?? '');
-        $category             = htmlspecialchars($row['category']             ?? '');
+            if ($result) {
+                $rowCount = 0;
+                while ($row = pg_fetch_assoc($result)) {
+                    $topic                = htmlspecialchars($row['topic']                ?? '');
+                    $topic_desc           = htmlspecialchars($row['topic_desc']           ?? '');
+                    $knowledge_class      = htmlspecialchars($row['knowledge_class']      ?? '');
+                    $topic_desc_basic     = htmlspecialchars($row['topic_desc_basic']     ?? '');
+                    $knowledge_class_basic= htmlspecialchars($row['knowledge_class_basic']?? '');
+                    $tags                 = htmlspecialchars($row['tags']                 ?? '');
+                    $category             = htmlspecialchars($row['category']             ?? '');
 
-        // Normal row display
-        echo '<tr>';
-        echo '<td>' . $topic . '</td>';
-        echo '<td>' . nl2br($topic_desc) . '</td>';
-        echo '<td>' . nl2br($knowledge_class) . '</td>';
-        echo '<td>' . nl2br($topic_desc_basic) . '</td>';
-        echo '<td>' . nl2br($knowledge_class_basic) . '</td>';
-        echo '<td>' . nl2br($tags) . '</td>';
-        echo '<td>' . nl2br($category) . '</td>';
+                    // Normal row display
+                    echo '<tr>';
+                    echo '<td>' . $topic . '</td>';
+                    echo '<td>' . nl2br($topic_desc) . '</td>';
+                    
+                    // Knowledge Class column with badge styling
+                    echo '<td style="font-size: 1.5em; line-height: 1.4;">';
+                    if (!empty(trim($knowledge_class))) {
+                        $knowledgeClasses = array_map('trim', explode(',', $knowledge_class));
+                        foreach ($knowledgeClasses as $class) {
+                            if (!empty($class)) {
+                                echo '<span style="display: inline-block; background: rgba(242, 124, 17, 0.2); color: rgb(242, 124, 17); padding: 3px 8px; margin: 2px; border-radius: 4px; font-size: 0.85em; font-weight: 500;">' . htmlspecialchars($class) . '</span>';
+                            }
+                        }
+                    } else {
+                        echo '<span style="color: #888; font-style: italic;">Everyone</span>';
+                    }
+                    echo '</td>';
+                    
+                    echo '<td>' . nl2br($topic_desc_basic) . '</td>';
+                    
+                    // Knowledge Class Basic column with badge styling
+                    echo '<td style="font-size: 1.5em; line-height: 1.4;">';
+                    if (!empty(trim($knowledge_class_basic))) {
+                        $knowledgeClassesBasic = array_map('trim', explode(',', $knowledge_class_basic));
+                        foreach ($knowledgeClassesBasic as $class) {
+                            if (!empty($class)) {
+                                echo '<span style="display: inline-block; background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 3px 8px; margin: 2px; border-radius: 4px; font-size: 0.85em; font-weight: 400;">' . htmlspecialchars($class) . '</span>';
+                            }
+                        }
+                    } else {
+                        echo '<span style="color: #888; font-style: italic;">Everyone</span>';
+                    }
+                    echo '</td>';
+                    
+                    echo '<td>' . nl2br($tags) . '</td>';
+                    echo '<td>' . nl2br($category) . '</td>';
 
-        // Action column
-        echo '<td style="white-space: nowrap;">';
-        echo '<div style="display: flex; gap: 4px;">';
-        
-        // Edit button only
-        echo '<button onclick="openEditModal(' . 
-            htmlspecialchars(json_encode([
-                'topic' => $topic,
-                'topic_desc' => $topic_desc,
-                'knowledge_class' => $knowledge_class,
-                'topic_desc_basic' => $topic_desc_basic,
-                'knowledge_class_basic' => $knowledge_class_basic,
-                'tags' => $tags,
-                'category' => $category
-            ]), ENT_QUOTES, 'UTF-8') . 
-            ')" class="action-button edit">Edit</button>';
-        
-        echo '</div>';
-        echo '</td>';
-        echo '</tr>';
+                    // Action column
+                    echo '<td style="white-space: nowrap;">';
+                    echo '<div style="display: flex; gap: 4px;">';
+                    
+                    // Edit button only
+                    echo '<button onclick="openEditModal(' . 
+                        htmlspecialchars(json_encode([
+                            'topic' => $topic,
+                            'topic_desc' => $topic_desc,
+                            'knowledge_class' => $knowledge_class,
+                            'topic_desc_basic' => $topic_desc_basic,
+                            'knowledge_class_basic' => $knowledge_class_basic,
+                            'tags' => $tags,
+                            'category' => $category
+                        ]), ENT_QUOTES, 'UTF-8') . 
+                        ')" class="action-button edit">Edit</button>';
+                    
+                    echo '</div>';
+                    echo '</td>';
+                    echo '</tr>';
 
-        $rowCount++;
-    }
+                    $rowCount++;
+                }
 
-    echo '</table>';
-    echo '</div>';
+                echo '</table>';
+                echo '</div>';
 
-    if ($rowCount === 0) {
-        echo '<p>No entries found.</p>';
-    }
-} else {
-    echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
-}
+                if ($rowCount === 0) {
+                    echo '<p>No entries found.</p>';
+                }
+            } else {
+                echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
+            }
+            ?>
+        </div>
+    </div>
 
-// Add Dynamic Oghma Entries Section
-echo '<br><br>';
-echo '<h1>Dynamic Oghma</h1>';
-echo '<p>Entires in the Dynamic Oghma table will update the Oghma table above whenever the quest ID & stage ID for a quest is reached.</p>';
-echo '<p>Any changes from a topic in this table will override whatever is in the Oghma table.</p>';
-echo '<p>You can leave cells empty so they do not overwrite specific cells from the Oghma table.</p>';
-echo '<p>If a cell has the text "clearall" in it, it will clear that cell in the Oghma table.</p>';
-echo '<p>You also can introduce new topics to the Oghma table as well.</p>';
-echo '<p>It is currently empty by default. We need your help adding more entries!</p>';
-echo '<p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Would you like to know more?</a></p>';
-echo '<br>';
-echo '<h1>Batch Upload</h1>';
-echo '<div class="form-container">';
-echo '<form action="" method="post" enctype="multipart/form-data">';
-echo '<div>';
-echo '<label for="dynamic_csv_file">Select .csv file to upload dynamic entries:</label>';
-echo '<br>';
-echo '<input type="file" name="dynamic_csv_file" id="dynamic_csv_file" accept=".csv" required>';
-echo '</div>';
-echo '<div class="button-group">';
-echo '<input type="submit" name="submit_dynamic_csv" value="Upload CSV" class="action-button upload-csv">';
-echo '<a href="../data/oghma_dynamic_example.csv" class="action-button download-csv">Download Example CSV</a>';
-echo '</div>';
-echo '</form>';
-echo '<p>You can verify that the entries have been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma_dynamic</b></p>';
-echo '<p>You see what quests CHIM have detected by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> questlog</b></p>';
-echo '<p>All uploaded entries will be saved into the <code>oghma_dynamic</code> table.</p>';
-echo '<br>';
-echo '<form action="" method="post">';
-echo '<input type="hidden" name="action" value="delete_all_dynamic">';
-echo '<input type="submit" class="btn-danger" value="Delete All Dynamic Entries" onclick="return confirm(\'Are you sure you want to delete ALL dynamic entries? This cannot be undone!\');">';
-echo '</form>';
-echo '<br>';
-echo '</div>';
-echo '<br>';
-echo '<br>';
-echo '<h1>Dynamic Oghma Entries</h1>';
-echo '<div class="action-container">';
-echo '<button onclick="openNewDynamicEntryModal()" class="action-button add-new">Add New Dynamic Entry</button>';
-echo '</div>';
+    <!-- Dynamic Oghma Tab -->
+    <div id="dynamic-tab" class="tab-content">
+        <div class="content-grid">
+            <div class="content-section">
+                <h2>Batch Upload</h2>
+                <form action="" method="post" enctype="multipart/form-data">
+                    <div>
+                        <label for="dynamic_csv_file">Select .csv file to upload dynamic entries:</label>
+                        <br>
+                        <input type="file" name="dynamic_csv_file" id="dynamic_csv_file" accept=".csv" required>
+                    </div>
+                    <div class="button-group">
+                        <input type="submit" name="submit_dynamic_csv" value="Upload CSV" class="action-button upload-csv">
+                        <a href="../data/oghma_dynamic_example.csv" class="action-button download-csv">Download Example CSV</a>
+                    </div>
+                </form>
+                <p>You can verify that the entries have been uploaded successfully by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> oghma_dynamic</b></p>
+                <p>You see what quests CHIM have detected by navigating to <br><b>Server Actions -> Database Manager -> dwemer -> public -> questlog</b></p>
+                <p>All uploaded entries will be saved into the <code>oghma_dynamic</code> table.</p>
+            </div>
 
-// Fetch categories for dynamic entries
-$dynamicCatQuery = "SELECT DISTINCT category FROM $schema.oghma_dynamic WHERE category IS NOT NULL AND category <> '' ORDER BY category";
-$dynamicCatResult = pg_query($conn, $dynamicCatQuery);
-$dynamicCategories = [];
-if ($dynamicCatResult) {
-    while ($row = pg_fetch_assoc($dynamicCatResult)) {
-        $dynamicCategories[] = $row['category'];
-    }
-}
+            <div class="content-section">
+                <h2>Database Management</h2>
+                <p>Verify uploads: <br><b>Server Actions → Database Manager → dwemer → public → oghma_dynamic</b></p>
+                <p>View conversation usage: <br><b>Server Actions → Database Manager → dwemer → public → audit_memory</b></p>
+                
+                <div class="button-group" style="margin-top: 20px;">
+                    <form action="" method="post" style="display: inline;">
+                        <input type="hidden" name="action" value="delete_all_dynamic">
+                        <input type="submit" class="btn-danger" value="Delete All Dynamic Entries" onclick="return confirm('Are you sure you want to delete ALL dynamic entries? This cannot be undone!');">
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="full-width-section">
+            <h2 id="dynamic">📋 Dynamic Oghma Entries</h2>
+            
+            <div class="action-container">
+                <button onclick="openNewDynamicEntryModal()" class="action-button add-new">Add New Dynamic Entry</button>
+            </div>
+            
+            <?php
+            // Fetch categories for dynamic entries
+            $dynamicCatQuery = "SELECT DISTINCT category FROM $schema.oghma_dynamic WHERE category IS NOT NULL AND category <> '' ORDER BY category";
+            $dynamicCatResult = pg_query($conn, $dynamicCatQuery);
+            $dynamicCategories = [];
+            if ($dynamicCatResult) {
+                while ($row = pg_fetch_assoc($dynamicCatResult)) {
+                    $dynamicCategories[] = $row['category'];
+                }
+            }
 
-// Get selected category for dynamic entries
-$selectedDynamicCategory = $_GET['dynamic_cat'] ?? '';
+            // Get selected category for dynamic entries
+            $selectedDynamicCategory = $_GET['dynamic_cat'] ?? '';
+            ?>
+            
+            <div class="filter-section">
+                <div>
+                    <strong>Filter by Category:</strong><br>
+                    <div class="filter-buttons" style="margin-top: 10px;">
+                        <a class="alphabet-button" href="?#dynamic">All Categories</a>
+                        <?php
+                        foreach ($dynamicCategories as $cat) {
+                            $catEncoded = urlencode($cat);
+                            $style = ($selectedDynamicCategory === $cat) ? 'style="background-color:#0056b3;"' : '';
+                            echo "<a class=\"alphabet-button\" $style href=\"?dynamic_cat=$catEncoded#dynamic\">" . htmlspecialchars($cat) . "</a>";
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+            
+            <?php
 
-// Filter buttons for dynamic entries
-echo '<div class="filter-buttons">';
-echo '<a class="alphabet-button" href="?' . (isset($_GET['cat']) ? 'cat=' . urlencode($_GET['cat']) . '&' : '') . '#dynamic">All Categories</a>';
-foreach ($dynamicCategories as $cat) {
-    $catEncoded = urlencode($cat);
-    $style = ($selectedDynamicCategory === $cat) ? 'style="background-color:#0056b3;"' : '';
-    echo "<a class=\"alphabet-button\" $style href=\"?" . (isset($_GET['cat']) ? 'cat=' . urlencode($_GET['cat']) . '&' : '') . "dynamic_cat=$catEncoded#dynamic\">" . htmlspecialchars($cat) . "</a>";
-}
-echo '</div><br>';
+            // Query for dynamic entries with category filter
+            $dynamicQuery = "
+                SELECT id, id_quest, stage, topic, topic_desc, knowledge_class, topic_desc_basic,
+                       knowledge_class_basic, tags, category
+                FROM $schema.oghma_dynamic
+            ";
 
-// Query for dynamic entries with category filter
-$dynamicQuery = "
-    SELECT id, id_quest, stage, topic, topic_desc, knowledge_class, topic_desc_basic,
-           knowledge_class_basic, tags, category
-    FROM $schema.oghma_dynamic
-";
+            if ($selectedDynamicCategory) {
+                $dynamicQuery .= " WHERE category = $1
+                ORDER BY id_quest, stage ASC";
+                $dynamicResult = pg_query_params($conn, $dynamicQuery, [$selectedDynamicCategory]);
+            } else {
+                $dynamicQuery .= " ORDER BY id_quest, stage ASC";
+                $dynamicResult = pg_query($conn, $dynamicQuery);
+            }
 
-if ($selectedDynamicCategory) {
-    $dynamicQuery .= " WHERE category = $1
-    ORDER BY id_quest, stage ASC";
-    $dynamicResult = pg_query_params($conn, $dynamicQuery, [$selectedDynamicCategory]);
-} else {
-    $dynamicQuery .= " ORDER BY id_quest, stage ASC";
-    $dynamicResult = pg_query($conn, $dynamicQuery);
-}
+            echo '<div class="table-container">';
+            echo '<table>';
+            echo '<tr>
+                    <th>Quest ID</th>
+                    <th>Stage</th>
+                    <th>Topic</th>
+                    <th>Topic Description</th>
+                    <th>Knowledge Class</th>
+                    <th>Topic Description (Basic)</th>
+                    <th>Knowledge Class (Basic)</th>
+                    <th>Tags</th>
+                    <th>Category</th>
+                    <th>Action</th>
+                  </tr>';
 
-echo '<div class="table-container">';
-echo '<table>';
-echo '<tr>
-        <th>Quest ID</th>
-        <th>Stage</th>
-        <th>Topic</th>
-        <th>Topic Description</th>
-        <th>Knowledge Class</th>
-        <th>Topic Description (Basic)</th>
-        <th>Knowledge Class (Basic)</th>
-        <th>Tags</th>
-        <th>Category</th>
-        <th>Action</th>
-      </tr>';
+            if ($dynamicResult) {
+                $rowCount = 0;
+                while ($row = pg_fetch_assoc($dynamicResult)) {
+                    echo '<tr>';
+                    echo '<td>' . htmlspecialchars($row['id_quest'] ?? '') . '</td>';
+                    echo '<td>' . htmlspecialchars($row['stage'] ?? '') . '</td>';
+                    echo '<td>' . htmlspecialchars($row['topic'] ?? '') . '</td>';
+                    echo '<td>' . nl2br(htmlspecialchars($row['topic_desc'] ?? '')) . '</td>';
+                    echo '<td>' . nl2br(htmlspecialchars($row['knowledge_class'] ?? '')) . '</td>';
+                    echo '<td>' . nl2br(htmlspecialchars($row['topic_desc_basic'] ?? '')) . '</td>';
+                    echo '<td>' . nl2br(htmlspecialchars($row['knowledge_class_basic'] ?? '')) . '</td>';
+                    echo '<td>' . nl2br(htmlspecialchars($row['tags'] ?? '')) . '</td>';
+                    echo '<td>' . nl2br(htmlspecialchars($row['category'] ?? '')) . '</td>';
+                    
+                    // Add edit button column
+                    echo '<td style="white-space: nowrap;">';
+                    echo '<div style="display: flex; gap: 4px;">';
+                    echo '<button onclick="openDynamicEditModal(' . 
+                        htmlspecialchars(json_encode([
+                            'id' => $row['id'],
+                            'id_quest' => $row['id_quest'],
+                            'stage' => $row['stage'],
+                            'topic' => $row['topic'],
+                            'topic_desc' => $row['topic_desc'],
+                            'knowledge_class' => $row['knowledge_class'],
+                            'topic_desc_basic' => $row['topic_desc_basic'],
+                            'knowledge_class_basic' => $row['knowledge_class_basic'],
+                            'tags' => $row['tags'],
+                            'category' => $row['category']
+                        ]), ENT_QUOTES, 'UTF-8') . 
+                        ')" class="action-button edit">Edit</button>';
+                    echo '</div>';
+                    echo '</td>';
+                    echo '</tr>';
+                    $rowCount++;
+                }
 
-if ($dynamicResult) {
-    $rowCount = 0;
-    while ($row = pg_fetch_assoc($dynamicResult)) {
-        echo '<tr>';
-        echo '<td>' . htmlspecialchars($row['id_quest'] ?? '') . '</td>';
-        echo '<td>' . htmlspecialchars($row['stage'] ?? '') . '</td>';
-        echo '<td>' . htmlspecialchars($row['topic'] ?? '') . '</td>';
-        echo '<td>' . nl2br(htmlspecialchars($row['topic_desc'] ?? '')) . '</td>';
-        echo '<td>' . nl2br(htmlspecialchars($row['knowledge_class'] ?? '')) . '</td>';
-        echo '<td>' . nl2br(htmlspecialchars($row['topic_desc_basic'] ?? '')) . '</td>';
-        echo '<td>' . nl2br(htmlspecialchars($row['knowledge_class_basic'] ?? '')) . '</td>';
-        echo '<td>' . nl2br(htmlspecialchars($row['tags'] ?? '')) . '</td>';
-        echo '<td>' . nl2br(htmlspecialchars($row['category'] ?? '')) . '</td>';
-        
-        // Add edit button column
-        echo '<td style="white-space: nowrap;">';
-        echo '<div style="display: flex; gap: 4px;">';
-        echo '<button onclick="openDynamicEditModal(' . 
-            htmlspecialchars(json_encode([
-                'id' => $row['id'],
-                'id_quest' => $row['id_quest'],
-                'stage' => $row['stage'],
-                'topic' => $row['topic'],
-                'topic_desc' => $row['topic_desc'],
-                'knowledge_class' => $row['knowledge_class'],
-                'topic_desc_basic' => $row['topic_desc_basic'],
-                'knowledge_class_basic' => $row['knowledge_class_basic'],
-                'tags' => $row['tags'],
-                'category' => $row['category']
-            ]), ENT_QUOTES, 'UTF-8') . 
-            ')" class="action-button edit">Edit</button>';
-        echo '</div>';
-        echo '</td>';
-        echo '</tr>';
-        $rowCount++;
-    }
+                echo '</table>';
+                echo '</div>';
 
-    echo '</table>';
-    echo '</div>';
-
-    if ($rowCount === 0) {
-        echo '<p>No dynamic entries found.</p>';
-    }
-} else {
-    echo '<p>Error fetching Dynamic Oghma entries: ' . pg_last_error($conn) . '</p>';
-}
-
-pg_close($conn);
-?>
+                if ($rowCount === 0) {
+                    echo '<p>No dynamic entries found.</p>';
+                }
+            } else {
+                echo '<p>Error fetching Dynamic Oghma entries: ' . pg_last_error($conn) . '</p>';
+            }
+            ?>
+        </div>
+    </div>
 
 <div id="editModal" class="modal-backdrop">
     <div class="modal-container">
@@ -1285,6 +1898,116 @@ pg_close($conn);
 <script>
 // Define webRoot for JavaScript
 var webRoot = '<?php echo $webRoot; ?>';
+
+// Tab switching functionality
+function switchTab(tabId) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Add active class to clicked button
+    const clickedButton = event.target;
+    clickedButton.classList.add('active');
+    
+    // Update header content based on active tab
+    updateHeaderContent(tabId);
+    
+    // Store active tab in localStorage
+    localStorage.setItem('activeOghmaTab', tabId);
+}
+
+// Function to update header content based on tab
+function updateHeaderContent(tabId) {
+    const titleText = document.getElementById('title-text');
+    const oghmaContent = document.getElementById('oghma-header-content');
+    const dynamicContent = document.getElementById('dynamic-header-content');
+    
+    // Fade out current content
+    oghmaContent.style.opacity = '0';
+    dynamicContent.style.opacity = '0';
+    
+    setTimeout(() => {
+        if (tabId === 'dynamic-tab') {
+            // Switch to Dynamic Oghma
+            titleText.textContent = 'Dynamic Oghma';
+            oghmaContent.style.display = 'none';
+            dynamicContent.style.display = 'block';
+            
+            // Fade in new content
+            setTimeout(() => {
+                dynamicContent.style.opacity = '1';
+            }, 50);
+        } else {
+            // Switch to regular Oghma
+            titleText.textContent = 'Oghma Infinium';
+            oghmaContent.style.display = 'block';
+            dynamicContent.style.display = 'none';
+            
+            // Fade in new content
+            setTimeout(() => {
+                oghmaContent.style.opacity = '1';
+            }, 50);
+        }
+    }, 150);
+}
+
+// Restore active tab on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTab = localStorage.getItem('activeOghmaTab');
+    if (savedTab) {
+        // Manually switch to saved tab
+        switchTabDirectly(savedTab);
+    } else {
+        // Default to oghma tab
+        updateHeaderContent('oghma-tab');
+    }
+});
+
+// Function to switch tab without event dependency
+function switchTabDirectly(tabId) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Find and activate the corresponding button
+    const buttons = document.querySelectorAll('.tab-button');
+    buttons.forEach(button => {
+        if (button.getAttribute('onclick') && button.getAttribute('onclick').includes(tabId)) {
+            button.classList.add('active');
+        }
+    });
+    
+    // Update header content
+    updateHeaderContent(tabId);
+}
 
 function openEditModal(data) {
     try {

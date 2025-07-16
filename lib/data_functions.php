@@ -1,25 +1,31 @@
 <?php
 
-require_once("utils.php");
-
+require_once(__DIR__."/utils.php");
 // used for openai_token_count table
 
-require_once("utils_game_timestamp.php");
+require_once(__DIR__."/utils_game_timestamp.php");
+require_once(__DIR__."/model_dynmodel.php");
 
+
+function ChangeHerikaName($new_name="") {
+    if ($new_name > "") {
+        SaveOriginalHerikaName();
+        $GLOBALS["HERIKA_NAME"] = $new_name;
+    }
+}
 
 function SaveOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
     if (!$b_already_saved) {
         $herika = ($GLOBALS["HERIKA_NAME"] ?? "");
-        if (($herika > "") && ($herika != "The Narrator") && (stripos($herika, "actor") === false)) {
+        if (($herika > "") && ($herika != "The Narrator") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
         } else {
-            Logger::warn("SaveOriginalHerikaName: invalid value for HERIKA_NAME {$herika}");
+            Logger::debug("SaveOriginalHerikaName: ignored new value for HERIKA_NAME {$herika}");
         }
     }
 }
-
 
 function GetOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
@@ -30,6 +36,18 @@ function GetOriginalHerikaName() {
     }
     return $herika;
 } 
+
+function ReplacePlayerNamePlaceholder($s_input) {
+    //replace #PLAYER_NAME# with player name
+    $s_res = $s_input;
+    if ((strlen(trim($s_input))) > 12) {
+        $s_res = strtr($s_input, [
+            "#HERIKA_NAME#" =>$GLOBALS["HERIKA_NAME"],
+            "#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"] 
+        ]);
+    }
+    return $s_res;
+}
 
 
 function DataDequeue()
@@ -114,6 +132,9 @@ function DataLastDataFor($actor, $lastNelements = -10)
 
 }
 
+/**
+ * Get context for actor to send to llm
+ */
 function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
     
@@ -178,7 +199,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         if (!empty($actorDetailedListWithProfileSanitized))
             $actorsInRange=implode("\n## ",$actorDetailedListWithProfileSanitized);
         else 
-            $actorsInRange="No more actors in scene";// Catch
+            $actorsInRange="\nNo more actors in scene";// Catch
     }
 
     
@@ -208,7 +229,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Rolemaster notes
     
     $timeCut=time();
-    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where localts+ttl>$timeCut order by localts asc");
+    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scene_note' and localts+ttl>$timeCut order by localts asc");
     if (is_array($rolemasterNotes)) {
         $notes=[];
         foreach ($rolemasterNotes as $note)
@@ -713,7 +734,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             else {
                 $timeGapInHours=round(($row["gamets"]-$lastGameTs)* 0.0000024, 0);
                 
-                if ($timeGapInHours>72) {
+                if ($timeGapInHours>36) {
                     $timeGapInDays=round($timeGapInHours/24,1);
                     $lastDialogFull[] = array('role' => "narratorci", 'content' => "NOTE: THERE IS BIG TIME JUMP HERE OF ABOUT $timeGapInDays days. Current location is $currentLocation)  ");
                 }
@@ -977,7 +998,7 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
       
 
     // Cases of self rechat
-    if ((sizeof($ctx3)>3)&&($GLOBALS["gameRequest"][3]=="rechat")) {
+    if ((sizeof($ctx3)>3)&&(($GLOBALS["gameRequest"][3] ?? "")=="rechat")) {
         $lastElement = $ctx3[sizeof($ctx3)-1];
         // Last element is assistant
         if ($lastElement["role"]=="assistant") {
@@ -1348,7 +1369,35 @@ function DataDiaryLogIndex($topic)
 function DataGetCurrentTask()
 {
     global $db;
-    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission order by gamets desc");
+
+    $hourThreshold= DataLastKnownGameTS()-(2/ 0.0000024);
+
+    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission where sess='ephemeral' and gamets>$hourThreshold order by gamets desc");
+    error_log("SElECT  distinct description as description,gamets FROM currentmission where sess='ephemeral' and gamets>$hourThreshold order by gamets desc");
+
+    if (!$results) {
+        $results=[];
+    } else {
+        return $results[0]["description"];
+
+    }
+
+    $data = "";
+
+    $n = 0;
+    foreach ($results as $row) {
+
+        if ($n == 0) {
+            $data = "Current plan: {$row["description"]}.";
+        } elseif ($n == 1) {
+            $data .= "Previous plan: {$row["description"]}.";
+        } else {
+            break;
+        }
+        $n++;
+    }
+
+    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission where sess<>'ephemeral' order by gamets desc");
     if (!$results) {
         $results=[];
     }
@@ -1658,7 +1707,25 @@ function DataGetCurrentPartyConf() {
 
     $results = $db->fetchAll("select value from conf_opts where id='CurrentParty'");
     if (is_array($results) && sizeof($results)>0) {
-        $guys=json_decode("[{$results[0]["value"]}\"\"]",true);
+        // The C++ code stores party data like: {"name":"Lydia"},{"name":"Serana"},
+        // We need to wrap it in brackets and remove trailing comma to make valid JSON
+        $partyData = trim($results[0]["value"]);
+        if (empty($partyData)) {
+            return json_encode([]);
+        }
+        
+        // Remove trailing comma if present
+        $partyData = rtrim($partyData, ',');
+        
+        // Wrap in brackets to make it a valid JSON array
+        $jsonString = "[" . $partyData . "]";
+        
+        $guys = json_decode($jsonString, true);
+        if (!is_array($guys)) {
+            Logger::warn("DataGetCurrentPartyConf: Failed to parse party JSON: " . $jsonString);
+            return json_encode([]);
+        }
+        
         $finalparty=[];
         foreach ($guys as $guy) {
             if (isset($guy["name"]))
@@ -1667,7 +1734,7 @@ function DataGetCurrentPartyConf() {
     
         return json_encode($finalparty);
     } else
-        return "";
+        return json_encode([]);
     
 }
 
@@ -1731,7 +1798,7 @@ function DataBeingsInRangeExcluding($excludeNPC="", $excludePlayer=true)
 }
 
 
-function DataBeingsInCloseRange()
+function DataBeingsInCloseRange($excludeFarAway=false)
 {
 
     global $db;
@@ -1745,13 +1812,15 @@ function DataBeingsInCloseRange()
     $beingsArray=explode("/",$beings);
     $beingsArrayNew=[];
     foreach ($beingsArray as $k=>$v) {
+        if ($excludeFarAway && strpos($v,"(far away)")>0)
+            continue;
         //if (strpos($v,")")===false) 
             if (strpos($v,"Horse")!==0) 
                 if (strpos($v,"Chicken")!==0) 
                     $beingsArrayNew[]=$v;
             
-        
     }
+
     $beingsFormatted=implode("|",$beingsArrayNew);
     
     return "|".$beingsFormatted."|";
@@ -2038,9 +2107,13 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
         $pattern = '/\(talking to [^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
-        $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
+        if (empty($npcfilter)) {
+            $npcfilter=$GLOBALS["HERIKA_NAME"];
+        }
 
+        $contextKeywords  = implode(" ", lastKeyWordsContext(5, $npcfilter));
 
+        
         $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
         $data = [
             'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
@@ -2133,10 +2206,10 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
     
 }
 
-
-function DataSearchOghmaByVector($rawstring) {
+function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$contextKeywords) {
+//function DataSearchOghmaByVector($rawstring) {
     
-  
+    
     Logger::info("Using DataSearchOghmaByVector");
     $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
     $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
@@ -2148,40 +2221,59 @@ function DataSearchOghmaByVector($rawstring) {
     $pattern = '/\(talking to [^()]+\)/i';
     $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
-    $contextKeywords  = implode(" ", lastKeyWordsContext(5, "%"));
+   
+    Logger::info("DataSearchOghmaByVector Expanded keywords: <$currentOghmaTopic> <$locationCtx> <$contextKeywords>");
+    /***/
 
+    $embeddingFunction=function($text) {
+        if (empty($text))
+            return ["embedding"=>array_fill(0, 384, 0)];
 
-    $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
-    $data = [
-        'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
-    ];
+        $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+        $data = [
+            'text' => $text   // We add previous keywords
+        ];
 
-    // Convert to JSON
-    $options = [
-        'http' => [
-            'method'  => 'POST',
-            'header'  => "Content-Type: application/json\r\n" .
-                        "Accept: application/json\r\n",
-            'content' => json_encode($data),
-            'ignore_errors' => true // to capture error messages if any
-        ]
-    ];
+        // Convert to JSON
+        $options = [
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Content-Type: application/json\r\n" .
+                            "Accept: application/json\r\n",
+                'content' => json_encode($data),
+                'ignore_errors' => true // to capture error messages if any
+            ]
+        ];
 
-    // Create context and send the request
-    $context  = stream_context_create($options);
-    $response = file_get_contents($url, false, $context);
+        // Create context and send the request
+        $context  = stream_context_create($options);
+        $response = file_get_contents($url, false, $context);
 
-    // Output the response
-    if ($response === false) {
-        Logger::error("Request failed.\n");
-    } else {
-        Logger::info("Request done: Searched: {$data["text"]}\n");
+        // Output the response
+        if ($response === false) {
+            Logger::error("Request failed.\n");
+        } else {
+            Logger::info("Request done: Searched: {$data["text"]}\n");
 
-    }
+        }
 
-    $vector=json_decode($response,true);
-    if (is_array($vector) && isset($vector["embedding"])) {
-        $vectorString="'[".implode(",",$vector["embedding"])."]'";
+        $vector=json_decode($response,true);
+        return sizeof($vector)>0?$vector:["embedding"=>array_fill(0, 384, 0)];
+
+    };
+
+    $vector1=$embeddingFunction($TEST_TEXT);
+    $vector2=$embeddingFunction($locationCtx);
+    $vector3=$embeddingFunction($contextKeywords);
+    $vector4=$embeddingFunction($currentOghmaTopic);
+    
+    
+
+    if (is_array($vector1) && isset($vector1["embedding"])) {
+        $vectorString1="'[".implode(",",$vector1["embedding"])."]'";
+        $vectorString2="'[".implode(",",$vector2["embedding"])."]'";
+        $vectorString3="'[".implode(",",$vector3["embedding"])."]'";
+        $vectorString4="'[".implode(",",$vector4["embedding"])."]'";
 
         $memory=$GLOBALS["db"]->fetchAll("
             SELECT  topic_desc,
@@ -2189,18 +2281,24 @@ function DataSearchOghmaByVector($rawstring) {
                                 knowledge_class,
                                 knowledge_class_basic,
                                 topic_desc_basic, 
-                    vector384 <-> $vectorString as distance
+                    vector384 <-> $vectorString1 as distance1,
+                    vector384 <-> $vectorString2 as distance2,
+                    vector384 <-> $vectorString3 as distance3,
+                    vector384 <-> $vectorString4 as distance4,
+                    ((vector384 <-> $vectorString1) + (vector384 <-> $vectorString2)/4 + (vector384 <-> $vectorString3)/2 + (vector384 <-> $vectorString4)/2 )/2 as distance
                 FROM public.oghma 
                 WHERE vector384 IS NOT NULL
-                ORDER BY vector384 <-> $vectorString
+                ORDER BY ((vector384 <-> $vectorString1) + (vector384 <-> $vectorString2)/4 + (vector384 <-> $vectorString3)/2 + (vector384 <-> $vectorString4)/2 )/4 ASC
                 LIMIT 5 OFFSET 0
             ");
-                
+        
+        
+
         if (!isset($memory[0]))
             $memory[0]=["combined_rank"=>null];
         else {
-             $memory[0]['combined_rank']=(7.40-$memory[0]["distance"]);
-             $memory[0]['combined_rank']=(7.40-$memory[0]["distance"]);
+             $memory[0]['combined_rank']=(7.95-$memory[0]["distance"]);
+             $memory[0]['combined_rank']=(7.95-$memory[0]["distance"]);
         }
         
         $GLOBALS["db"]->insert(
@@ -2654,6 +2752,19 @@ function call_llm() {
         
 
 
+                        } else if ($actionParts2[0]=="SetCurrentTask") {
+                            // Lets polish the parammeters
+                            if (empty(trim($actionParts2[1]))) {
+                                $speech=implode(" ".$talkedSoFar);
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|SetCurrentTask@$speech";
+                                error_log("[ACTION POSTFILTER SetCurrentTask, using speech as parameter $speech] ");
+                            
+                            } else {
+                                error_log("[ACTION POSTFILTER SetCurrentTask, using target as parameter {$actionParts2[1]}] ");
+                            }
+
+                            
+
                         }
                     }
                     
@@ -2728,7 +2839,10 @@ function DataRetrieveFirstTimeMet($s_player_name, $s_npc_name) {
 
 	$s_res = "";
 
-	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0)) {
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
+        if (($s_npc_name == "Herika") || ($s_player_name == "Herika")) { // Herika easter egg
+            return "{$s_player_name} met {$s_npc_name} for the first time on 0199-04-26, 15:36:00, years ago.";
+        }
 		$s_player = $db->escape($s_player_name);
 		$s_npc = $db->escape($s_npc_name);
 
@@ -2822,25 +2936,26 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 			$hours_ago = convert_gamets2hours($gts_ago);
 			if ($hours_ago > 3) {
 				if ($hours_ago < 48) {
-					$s_res = "{$s_player_name} and {$s_npc_name} spoke last {$hours_ago} hours ago.";
+					$s_res = "{$s_player_name} and {$s_npc_name} last spoke {$hours_ago} hours ago.";
 				} else {
 					$days_ago = convert_gamets2days($gts_ago);
 					if ($days_ago < 31) {
-						$s_res = "{$s_player_name} and {$s_npc_name} spoke last {$days_ago} days ago.";
+						$s_res = "{$s_player_name} and {$s_npc_name} last spoke {$days_ago} days ago.";
 					} else {
-						$months_ago = intval($days_ago / 30);
+						$months_ago = intval($days_ago * 0.03333333);
 						if ($months_ago < 12) {
-							$s_res = "{$s_player_name} and {$s_npc_name} spoke last {$months_ago} months ago on {$s_date}.";
+							$s_res = "{$s_player_name} and {$s_npc_name} last spoke {$months_ago} months ago on {$s_date}.";
 						} else {
-							$s_res = "{$s_player_name} and {$s_npc_name} spoke last long time ago on {$s_date}.";
+							$s_res = "{$s_player_name} and {$s_npc_name} last spoke long time ago on {$s_date}.";
 						}
 					}
 				}	
 			} else {
-				$s_res = "{$s_player_name} and {$s_npc_name} spoke recently.";
+                Logger::debug("DataRetrieveLastTimeTalk: {$s_player_name} and {$s_npc_name} spoke recently");
+				//$s_res = "{$s_player_name} and {$s_npc_name} spoke recently.";
 			}
 		} else { 
-			Logger::info("DataRetrieveLastTimeTalk: NO match found");
+			Logger::debug("DataRetrieveLastTimeTalk: NO match found for {$s_player_name} - {$s_npc_name}");
 			//$s_res = "There is no record of when {$s_player_name} and {$s_npc_name} last spoke.";
 		}
 	}
@@ -3127,6 +3242,8 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
+            // Query for new HERIKA fields
+            $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
         } else {
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
@@ -3135,6 +3252,11 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                 $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
                 $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
                 $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
+                // Query for new HERIKA fields
+                $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
+            } else {
+                // For translated templates, set empty new fields for now
+                $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
             }
         }
                 
@@ -3171,6 +3293,26 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($npcdynamic[0]["npc_dynamic"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
             file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\'' . addslashes(implode(', ', array_unique(array_merge(array_filter(array_map('trim', explode(',', $npcknowledge[0]["npc_misc"] ?? ''))), [$codename])))) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
+            
+            // Add new HERIKA fields if available
+            if (isset($npcNewFields[0]) && is_array($npcNewFields[0])) {
+                $newFields = [
+                    'HERIKA_BACKGROUND' => $npcNewFields[0]["npc_background"] ?? '',
+                    'HERIKA_PERSONALITY' => $npcNewFields[0]["npc_personality"] ?? '',
+                    'HERIKA_APPEARANCE' => $npcNewFields[0]["npc_appearance"] ?? '',
+                    'HERIKA_RELATIONSHIPS' => $npcNewFields[0]["npc_relationships"] ?? '',
+                                'HERIKA_OCCUPATION' => $npcNewFields[0]["npc_occupation"] ?? '',
+            'HERIKA_SKILLS' => $npcNewFields[0]["npc_skills"] ?? '',
+            'HERIKA_SPEECHSTYLE' => $npcNewFields[0]["npc_speechstyle"] ?? '',
+            'HERIKA_GOALS' => $npcNewFields[0]["npc_goals"] ?? ''
+                ];
+                
+                foreach ($newFields as $fieldName => $fieldValue) {
+                    if (!empty(trim($fieldValue))) {
+                        file_put_contents($newFile, '$'.$fieldName.'=\''.addslashes(trim($fieldValue)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                    }
+                }
+            }
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
             // 4. Query #2: Try bracket-stripped match only if Query #1 was empty
@@ -3182,12 +3324,35 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                                         FROM combined_npc_templates
                                         WHERE npc_name='".$db->escape($bracketMatch)."'");
 
+            // Query for new HERIKA fields for bracket match
+            $npcNewFields2 = $db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
+
             if (!empty($npcTemlate2[0])) {
                 // Found a row by bracket match
                 file_put_contents($newFile,'$HERIKA_PERS=\''.addslashes(trim($npcTemlate2[0]["npc_pers"])).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
                 $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
                 file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
                 file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes(trim($npcknowledge2[0]["npc_misc"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);  
+                
+                // Add new HERIKA fields if available for bracket match
+                if (isset($npcNewFields2[0]) && is_array($npcNewFields2[0])) {
+                    $newFields = [
+                        'HERIKA_BACKGROUND' => $npcNewFields2[0]["npc_background"] ?? '',
+                        'HERIKA_PERSONALITY' => $npcNewFields2[0]["npc_personality"] ?? '',
+                        'HERIKA_APPEARANCE' => $npcNewFields2[0]["npc_appearance"] ?? '',
+                        'HERIKA_RELATIONSHIPS' => $npcNewFields2[0]["npc_relationships"] ?? '',
+                        'HERIKA_OCCUPATION' => $npcNewFields2[0]["npc_occupation"] ?? '',
+                        'HERIKA_SKILLS' => $npcNewFields2[0]["npc_skills"] ?? '',
+                        'HERIKA_SPEECHSTYLE' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
+                        'HERIKA_GOALS' => $npcNewFields2[0]["npc_goals"] ?? ''
+                    ];
+                    
+                    foreach ($newFields as $fieldName => $fieldValue) {
+                        if (!empty(trim($fieldValue))) {
+                            file_put_contents($newFile, '$'.$fieldName.'=\''.addslashes(trim($fieldValue)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                        }
+                    }
+                }
             } else {
                 // Fallback if neither query found anything
                 file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
@@ -3198,6 +3363,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         } else {
             // 5. Fallback if no bracket or no match found
             file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
+            file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes($codename).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
             
@@ -3251,8 +3417,8 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
 
         $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
-        Logger::info(DMgetCurrentModelFile()." ".$currentModelFilePath);
-        copy(DMgetCurrentModelFile(),$currentModelFilePath);
+        Logger::info(DMgetDefaultModelFile()." ".$currentModelFilePath);
+        copy(DMgetDefaultModelFile(),$currentModelFilePath);
         shell_exec("chmod 0775 {$currentModelFilePath}");
         
          // Character Map file
@@ -3285,7 +3451,79 @@ function getConfFileFor($npcname) {
     
 }
 
+function buildDynamicBiography(array $FOLLOWER_CONF) {
+    /**
+     * Build dynamic biography from new HERIKA fields, with fallback to legacy HERIKA_DYNAMIC
+     * @return string The dynamic biography content
+     */
+    $dynamicBio = '';
+    
+    // List of new HERIKA fields to include
+    $herikaFields = [
+        'HERIKA_BACKGROUND' => 'Background',
+        'HERIKA_PERSONALITY' => 'Personality', 
+        'HERIKA_APPEARANCE' => 'Appearance',
+        'HERIKA_RELATIONSHIPS' => 'Relationships',
+        'HERIKA_OCCUPATION' => 'Occupation',
+        'HERIKA_SKILLS' => 'Skills',
+        'HERIKA_SPEECHSTYLE' => 'SpeechStyle',
+        'HERIKA_GOALS' => 'Goals'
+    ];
+    
+    foreach ($herikaFields as $fieldName => $label) {
+        if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
+            $dynamicBio .= "\n\n#$label\n" . trim($FOLLOWER_CONF[$fieldName]);
+        }
+    }
+    
+    // Fall back to HERIKA_DYNAMIC if no new fields are set
+    if (empty(trim($dynamicBio)) && isset($FOLLOWER_CONF["HERIKA_DYNAMIC"]) && !empty(trim($FOLLOWER_CONF["HERIKA_DYNAMIC"]))) {
+        $dynamicBio = $FOLLOWER_CONF["HERIKA_DYNAMIC"];
+    }
+    
+    return $dynamicBio;
+}
+
+function buildDynamicProfileDisplay() {
+    /**
+     * Build formatted dynamic profile display for profile updates
+     * @return string The formatted dynamic profile content
+     */
+    $currentDynamicProfile = '';
+    $herikaFields = [
+        'HERIKA_BACKGROUND' => 'Background',
+        'HERIKA_PERSONALITY' => 'Personality', 
+        'HERIKA_APPEARANCE' => 'Appearance',
+        'HERIKA_RELATIONSHIPS' => 'Relationships',
+        'HERIKA_OCCUPATION' => 'Occupation',
+        'HERIKA_SKILLS' => 'Skills',
+        'HERIKA_SPEECHSTYLE' => 'Speech Style',
+        'HERIKA_GOALS' => 'Goals'
+    ];
+    
+    foreach ($herikaFields as $fieldName => $label) {
+        if (isset($GLOBALS[$fieldName]) && !empty(trim($GLOBALS[$fieldName]))) {
+            $currentDynamicProfile .= "\n$label:\n" . trim($GLOBALS[$fieldName]) . "\n";
+        }
+    }
+    
+    // Fall back to HERIKA_DYNAMIC if no new fields are set
+    if (empty(trim($currentDynamicProfile)) && isset($GLOBALS["HERIKA_DYNAMIC"]) && !empty(trim($GLOBALS["HERIKA_DYNAMIC"]))) {
+        $currentDynamicProfile = "Legacy Dynamic Profile:\n" . $GLOBALS["HERIKA_DYNAMIC"];
+    }
+    
+    if (empty(trim($currentDynamicProfile))) {
+        $currentDynamicProfile = "No dynamic profile information available.";
+    }
+    
+    return $currentDynamicProfile;
+}
+
+
 function requireFilesRecursively($dir,$name) {
+    
+    global $gameRequest;
+
     $files = scandir($dir);
     foreach ($files as $file) {
         if ($file === '.' || $file === '..') {
@@ -3303,4 +3541,371 @@ function requireFilesRecursively($dir,$name) {
 }
 
 
+/**
+ * Parses a PHP file and extracts variable assignments into an associative array.
+ *
+ * Handles:
+ * - Scalars: $name = 'Herika';
+ * - Arrays: $data = ["a", "b"];
+ * - Nested array keys: $a["x"]["y"] = 123;
+ *
+ * All values are returned in raw form (e.g., quoted strings are unquoted).
+ *
+ * @param string $filePath Path to the PHP file to parse.
+ * @return array Associative array of variable names (or paths) => raw values.
+ */
+function extract_assignments($filePath) {
+    $code = file_get_contents($filePath);
+    $tokens = token_get_all($code);
+
+    $variables = [];
+    $varName = '';
+    $indexStack = [];
+    $collectValue = false;
+    $valueBuffer = '';
+    $bracketDepth = 0;
+    $expectingKey = false;
+
+    foreach ($tokens as $i => $token) {
+        if (is_array($token)) {
+            [$id, $text] = $token;
+
+            if ($id === T_VARIABLE) {
+                $varName = substr($text, 1);
+                $indexStack = [];
+                $collectValue = false;
+                $valueBuffer = '';
+                $bracketDepth = 0;
+                $expectingKey = false;
+            }
+
+            elseif ($expectingKey && in_array($id, [T_CONSTANT_ENCAPSED_STRING, T_STRING, T_LNUMBER, T_DNUMBER])) {
+                $indexStack[] = trim($text, "'\"");
+                $expectingKey = false;
+            }
+
+            elseif ($collectValue) {
+                $valueBuffer .= $text;
+            }
+
+        } else {
+            // Symbolic tokens
+            if ($token === '[' && !$collectValue) {
+                $expectingKey = true;
+            }
+
+            elseif ($token === '=' && !$collectValue) {
+                $collectValue = true;
+                $valueBuffer = '';
+                $bracketDepth = 0;
+            }
+
+            elseif ($collectValue) {
+                if ($token === '[') {
+                    $bracketDepth++;
+                    $valueBuffer .= $token;
+                } elseif ($token === ']') {
+                    $bracketDepth--;
+                    $valueBuffer .= $token;
+                } elseif (($token === ';' || $token === ',') && $bracketDepth === 0) {
+                    // Don't add the terminating character to the buffer
+                    $rawValue = trim($valueBuffer);
+
+                    // Remove quotes and unescape if present
+                    if (strlen($rawValue) >= 2) {
+                        if ($rawValue[0] === '"' && $rawValue[-1] === '"') {
+                            // Double-quoted string - remove quotes and unescape
+                            $rawValue = stripcslashes(substr($rawValue, 1, -1));
+                        } elseif ($rawValue[0] === "'" && $rawValue[-1] === "'") {
+                            // Single-quoted string - remove quotes and unescape single quotes and backslashes
+                            $rawValue = substr($rawValue, 1, -1);
+                            $rawValue = str_replace(["\\'", "\\\\"], ["'", "\\"], $rawValue);
+                        }
+                    }
+
+                    // Build full key
+                    $fullKey = $varName;
+                    foreach ($indexStack as $key) {
+                        $fullKey .= "['$key']";
+                    }
+
+                    $variables[$fullKey] = $rawValue;
+
+                    // Reset state
+                    $collectValue = false;
+                    $valueBuffer = '';
+                    $indexStack = [];
+                } else {
+                    $valueBuffer .= $token;
+                }
+            }
+
+            // Reset expectingKey if we see closing bracket
+            if ($token === ']' && !$collectValue) {
+                $expectingKey = false;
+            }
+        }
+    }
+
+    return $variables;
+}
+
+
+/**
+ * Writes variable assignments to a PHP file using clean formatting.
+ *
+ * Accepts keys like 'VAR' or 'ARRAY["KEY"]["SUB"]' and writes them back to PHP code.
+ * Automatically quotes strings, and leaves numbers, booleans, null, and arrays untouched.
+ *
+ * @param array $assignments The variable assignments, as [name => raw_value]
+ * @param string $filePath Path to save the output PHP code
+ */
+function write_php_assignments(array $assignments, string $filePath): bool {
+    $output = "<?php\n\n";
+
+    foreach ($assignments as $key => $value) {
+        // Clean the value - remove trailing semicolons and trim whitespace
+        $cleaned = rtrim(trim($value), ';');
+        
+        // If the value is already quoted, unquote it first
+        if (strlen($cleaned) >= 2) {
+            if (($cleaned[0] === '"' && $cleaned[-1] === '"') || 
+                ($cleaned[0] === "'" && $cleaned[-1] === "'")) {
+                $cleaned = substr($cleaned, 1, -1);
+            }
+        }
+        
+        // Now determine the correct output format based on the cleaned value
+        $lowerCleaned = strtolower($cleaned);
+        
+        if (in_array($lowerCleaned, ['true', 'false', 'null'], true)) {
+            // Boolean or null values - output as-is
+            $finalValue = $lowerCleaned;
+        } elseif (is_numeric($cleaned) && !str_contains($cleaned, ' ')) {
+            // Numeric values - output as-is
+            $finalValue = $cleaned;
+        } elseif (preg_match('/^\s*\[.*\]\s*$/s', $cleaned)) {
+            // Array literals - output as-is
+            $finalValue = $cleaned;
+        } else {
+            // String values - apply comprehensive sanitization for AI-generated content
+            if (is_string($cleaned)) {
+                // Sanitize AI-generated content to prevent PHP syntax errors
+                $cleaned = str_replace("\0", '', $cleaned); // Remove null bytes
+                $cleaned = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $cleaned); // Remove control chars
+                if (!mb_check_encoding($cleaned, 'UTF-8')) {
+                    $cleaned = mb_convert_encoding($cleaned, 'UTF-8', 'UTF-8'); // Fix encoding
+                }
+                if (strlen($cleaned) > 10000) {
+                    $cleaned = substr($cleaned, 0, 10000) . '... [truncated]'; // Limit length
+                }
+                $cleaned = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $cleaned); // Escape PHP tags
+                
+                // Additional sanitization for var_export compatibility
+                $cleaned = str_replace('\\', '\\\\', $cleaned); // Escape backslashes
+                $cleaned = str_replace("\r\n", "\n", $cleaned); // Normalize line endings
+                $cleaned = str_replace("\r", "\n", $cleaned); // Convert Mac line endings
+                $cleaned = preg_replace('/\n{3,}/', "\n\n", $cleaned); // Limit consecutive newlines
+            }
+            
+            // Use var_export for safer escaping instead of addslashes
+            $finalValue = var_export($cleaned, true);
+        }
+
+        // Build the assignment line
+        if (strpos($key, '[') !== false) {
+            $line = "\${$key} = {$finalValue};";
+        } else {
+            $line = "\$$key = {$finalValue};";
+        }
+
+        $output .= $line . "\n";
+    }
+
+    return file_put_contents($filePath, $output, LOCK_EX);
+}
+
+function getInGameSkillDataFor($npcnName) {
+
+    $npcEscapedName=$GLOBALS["db"]->escape($npcnName);
+    $query="
+WITH npc_spells AS (
+  SELECT
+    TRIM(SUBSTRING(data FROM '$npcEscapedName casts\s+(.+)$')) AS spell
+  FROM public.eventlog
+  WHERE type = 'npcspellcast' AND data LIKE '$npcEscapedName casts%'
+),
+
+npc_weapons AS (
+  SELECT
+    TRIM(SUBSTRING(data FROM 'using weapon\s+(.+)$')) AS weapon
+  FROM public.eventlog
+  WHERE type = 'death' AND data LIKE '%$npcEscapedName has defeated%'
+)
+
+SELECT
+  'spell' AS type,
+  spell AS item,
+  COUNT(*) AS usage_count
+FROM npc_spells
+where spell is not null
+GROUP BY spell
+HAVING COUNT(*)>1
+
+UNION ALL
+
+SELECT
+  'weapon' AS type,
+  weapon AS item,
+  COUNT(*) AS usage_count
+FROM npc_weapons
+where weapon is not null
+GROUP BY weapon
+HAVING COUNT(*)>1
+
+ORDER BY type, usage_count DESC;
+";
+    $skillsData=$GLOBALS["db"]->fetchAll($query);
+
+    if (sizeof ($skillsData)==0)
+        return "";
+
+    $spells = [];
+    $weapons = [];
+
+    foreach ($skillsData as $entry) {
+        if ($entry['type'] === 'spell') {
+            $spells[] = $entry['item'];
+        } elseif ($entry['type'] === 'weapon') {
+            $weapons[] = $entry['item'];
+        }
+    }
+
+    // Store in strings
+    $spellsList = sizeof($spells)>0?implode(', ', $spells):"none";
+    $weaponsList = sizeof($weapons)>0?implode(', ', $weapons):"none";
+    
+
+    return "* Fav.Spells: $spellsList\n* Fav. Weapons: $weaponsList\n";
+}
+
+/**
+ * Safely export a value to PHP code with comprehensive sanitization to prevent syntax errors
+ * 
+ * This function sanitizes AI-generated content to prevent PHP syntax errors that can occur
+ * with standard var_export() when dealing with special characters, encoding issues, etc.
+ * 
+ * @param mixed $value The value to export
+ * @param bool $return Whether to return the string instead of outputting it
+ * @return string|null The exported PHP code
+ */
+function safe_var_export($value, $return = true) {
+    // First, sanitize string values
+    if (is_string($value)) {
+        // Remove null bytes that can break PHP parsing
+        $value = str_replace("\0", '', $value);
+        
+        // Ensure valid UTF-8 encoding
+        if (!mb_check_encoding($value, 'UTF-8')) {
+            $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+        }
+        
+        // Remove or replace problematic characters
+        $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
+        
+        // Limit length to prevent extremely long strings
+        if (strlen($value) > 10000) {
+            $value = substr($value, 0, 10000) . '... [truncated]';
+        }
+        
+        // Ensure balanced quotes and backslashes don't break escaping
+        $value = str_replace(['\\', "'", '"'], ['\\\\', "\\'", '\\"'], $value);
+        $value = stripslashes($value); // Remove double escaping
+    }
+    
+    // Try var_export first
+    $exported = var_export($value, true);
+    
+    // Validate that the exported code is syntactically correct
+    $testCode = "<?php return $exported; ?>";
+    
+    // Use eval to test syntax (in a safe way)
+    $oldLevel = error_reporting(0);
+    $syntaxValid = @eval("return true; $testCode") !== false;
+    error_reporting($oldLevel);
+    
+    if (!$syntaxValid) {
+        // Fallback: manual string escaping for safety
+        if (is_string($value)) {
+            $exported = "'" . addcslashes($value, "'\\") . "'";
+        } else {
+            // For non-strings, convert to string safely
+            $exported = "'" . addcslashes((string)$value, "'\\") . "'";
+        }
+    }
+    
+    if ($return) {
+        return $exported;
+    } else {
+        echo $exported;
+        return null;
+    }
+}
+
+/**
+ * Safely update a PHP configuration file variable with proper error handling
+ * 
+ * @param string $filePath Path to the PHP file
+ * @param string $varName Variable name (without $)
+ * @param mixed $value New value
+ * @return array Result with success status and message
+ */
+function safe_update_php_variable($filePath, $varName, $value) {
+    if (!file_exists($filePath)) {
+        return ["success" => false, "error" => "File not found: " . basename($filePath)];
+    }
+    
+    // Read current content
+    $content = file_get_contents($filePath);
+    if ($content === false) {
+        return ["success" => false, "error" => "Cannot read file: " . basename($filePath)];
+    }
+    
+    // Use safe export
+    $escapedValue = safe_var_export($value, true);
+    
+    // Validate the escaped value produces valid PHP
+    $testAssignment = "\$$varName = $escapedValue;";
+    $testCode = "<?php $testAssignment ?>";
+    
+    $oldLevel = error_reporting(0);
+    $syntaxValid = @eval("return true; $testCode") !== false;
+    error_reporting($oldLevel);
+    
+    if (!$syntaxValid) {
+        return ["success" => false, "error" => "Generated PHP code would be invalid for variable $varName"];
+    }
+    
+    // Update or add variable
+    $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
+    if (preg_match($pattern, $content)) {
+        $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
+    } else {
+        // Add before closing 
+        $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
+    }
+    
+    // Write with atomic operation
+    $tempFile = $filePath . '.tmp.' . uniqid();
+    if (file_put_contents($tempFile, $content, LOCK_EX) === false) {
+        return ["success" => false, "error" => "Cannot write to temporary file"];
+    }
+    
+    if (!rename($tempFile, $filePath)) {
+        unlink($tempFile);
+        return ["success" => false, "error" => "Cannot update file: " . basename($filePath)];
+    }
+    
+    return ["success" => true, "message" => "Variable $varName updated successfully"];
+}
 ?>

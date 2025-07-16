@@ -249,6 +249,7 @@
 
                 speechRecognizer.onerror = function (event) {
                     console.error("Speech recognition error:", event.error);
+                    isListening = false;
                     // You may choose to handle or display the error
                 };
 

@@ -13,16 +13,23 @@ $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to 
     . "Your goal is to comment on #PLAYER_NAME#'s playthrough, and occasionally give hints. NO SPOILERS. " 
     . "Talk about quests and last events."; //NPC personality.
 $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically. 
-$DYNAMIC_PROFILE=false; //Dynamic profile updates during certain ingame events.
+$DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to prevent spam. If a diary hotkey is pressed within this time period, the request will be ignored.
+$DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
+$AUTO_DIARY=false; //Automatically create diary entries for all current followers when sleeping. Wait events are controlled by AUTO_DIARY_WAIT setting. Each follower respects their individual diary cooldown timer.
+$AUTO_DIARY_WAIT=true; //When AUTO_DIARY is enabled, this controls whether diary entries are created during wait events. If false, auto diary will only trigger on sleep events.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
+$PLAYER_RESPEECH=true; //Use default diary connector AI to rewrite player speech. Currently only triggers when starting speech with **.
+$PLAYER_SPEECH_STYLE=""; //Instructions for how the player character speaks and communicates. Used as context when rewriting player dialogue.
 
 //[Advanced Configuration]
 $RECHAT_H=2; //Rechat Rounds. Higher values will increase the amount of rounds NPC's will talk amongst themselves.
 $RECHAT_P=50; //Rechat Probability.
 $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random conversation after a set period of time.
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
+$CONTEXT_HISTORY_DIARY="100"; //Amount of context history specifically for diary entries. Set to 0 to use regular CONTEXT_HISTORY value.
+$CONTEXT_HISTORY_DYNAMIC_PROFILE="50"; //Amount of context history specifically for dynamic profile updates. Set to 0 to use regular CONTEXT_HISTORY value.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=false; //Leave as is - read only
@@ -60,7 +67,7 @@ $EMOTEMOODS="sassy,"
 $REMOVE_ASTERISKS_FROM_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=false;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
-$DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA COMMENTARY I.E. NPC NAME. NO META-DATA, or DISCLAIMERS OF TASK! I.E. \"UPDATING NPC PROFILE\". Use concise, fragmented prose for the following output.) "
+$DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
     . "Last in-game date/time found: [date or \"No date\"] "
     . "1. RECENT HIGHLIGHTS (3–5 bullet points) "
     . "   - Write one sentence per bullet with objective facts (locations, quest progress, important decisions). Re-list older relevant events DO NOT REMOVE ENTRIES that are still important. "
@@ -68,6 +75,48 @@ $DYNAMIC_PROMPT = "(MANDATORY FORMAT – DO NOT ADD INTRO/OUTRO, HEADER OR EXTRA
     . "   - Describe the NPC's evolving feelings or stance toward the dragonborn, key individuals or groups. Always re-list unchanged but relevant relationships. "
     . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2–3 bullet points) "
     . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
+
+$DYNAMIC_PROFILE_FIELDS = ["relationships", "goals"];
+
+$DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, update #HERIKA_NAME# personality traits. "
+    . "Maintain all existing relevant personality traits and add new ones based on recent experiences. "
+    . "Focus on behavioral changes, emotional growth/regression, new traits that emerged, and changes in confidence or outlook. "
+    . "Return ONLY the updated personality description in 3-5 sentences. Do not include any introductory text, meta-commentary, or phrases like 'Here is the updated personality' or 'The character's personality is'. "
+    . "Start directly with the personality content.";
+
+$DYNAMIC_PROMPT_RELATIONSHIPS = "Based on recent interactions, update #HERIKA_NAME# relationships with other people and factions. "
+    . "Maintain all existing relevant relationships and add new ones or modify existing ones based on recent interactions. "
+    . "Focus on changed relationships, new relationships formed, evolved existing ones, and only remove relationships that are clearly no longer relevant. "
+    . "Return ONLY a bulleted list using * Name/Faction - Description format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated relationships' or 'The character's relationships include'. "
+    . "Start directly with the first bullet point.";
+
+$DYNAMIC_PROMPT_OCCUPATION = "Based on story progression and events, update #HERIKA_NAME# occupation and role. "
+    . "Maintain the current occupation unless significant changes have occurred. Add new responsibilities, changes in social status, and professional affiliations. "
+    . "Focus on job changes, new duties, and evolving professional relationships. "
+    . "Return ONLY the updated occupation description in 2-3 sentences. Do not include any introductory text, meta-commentary, or phrases like 'The character's occupation is' or 'Here is the updated occupation'. "
+    . "Start directly with the occupation content.";
+
+$DYNAMIC_PROMPT_SKILLS = "Based on experiences and training, update #HERIKA_NAME# skills and abilities. "
+    . "Maintain all existing relevant skills and add new ones based on recent experiences. "
+    . "Focus on new skills learned, existing skills improved, any skills that deteriorated, and combat/magical knowledge gained. "
+    . "Return ONLY a bulleted list using * Skill - Description format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated skills' or 'The character's skills include'. "
+    . "Start directly with the first bullet point.";
+
+$DYNAMIC_PROMPT_SPEECHSTYLE = "Based on recent interactions, update how #HERIKA_NAME# speaks and communicates. "
+    . "Maintain existing consistent speech patterns and add new ones based on recent interactions. "
+    . "Focus on changes in vocabulary, new mannerisms, accent changes, and confidence level in speech. "
+    . "Return ONLY the updated speech style description in 2-3 sentences. Do not include any introductory text, meta-commentary, or phrases like 'The character speaks' or 'Here is the updated speech style'. "
+    . "Start directly with the speech style content.";
+
+$DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update the #HERIKA_NAME# goals and aspirations. "
+    . "Maintain existing relevant goals and add new ones. Only remove goals that have been clearly completed or are no longer applicable. "
+    . "Focus on new aspirations that emerged, modified existing goals due to circumstances, and updated long-term objectives. "
+    . "Return ONLY a bulleted list using * Goal description as actionable aspiration format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated goals' or 'The character's goals are'. "
+    . "Start directly with the first bullet point.";
+$DIARY_PROMPT = "Please write a short summary of {\$GLOBALS[\"PLAYER_NAME\"]} and {\$GLOBALS[\"HERIKA_NAME\"]}s last dialogues and events written above into {\$GLOBALS[\"HERIKA_NAME\"]}s diary . WRITE AS IF YOU WERE {\$GLOBALS[\"HERIKA_NAME\"]}. Start the diary entry with the current date and time.";
+
+// Dynamic profile utility button
+$dynamic_profile_b1 = false; // Utility button for updating all dynamic profile fields
 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
 $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.
@@ -98,6 +147,10 @@ $CONNECTOR["openrouterjson"]["API_KEY"]=""; //API key.
 $CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $CONNECTOR["openrouterjson"]["xtitle"]="CHIM"; //Stub needed header.
 $CONNECTOR["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
+// Utility buttons for autofilling parameters
+$CONNECTOR["openrouterjson"]["get_parms1"] = false; // Utility button for low randomness parameters
+$CONNECTOR["openrouterjson"]["get_parms5"] = false; // Utility button for medium randomness parameters  
+$CONNECTOR["openrouterjson"]["get_parms9"] = false; // Utility button for high randomness parameters
 //OpenRouter (Legacy)
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.
@@ -115,6 +168,10 @@ $CONNECTOR["openrouter"]["MAX_TOKENS_MEMORY"]="1024"; //Maximum tokens to genera
 $CONNECTOR["openrouter"]["API_KEY"]=""; //API key.
 $CONNECTOR["openrouter"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $CONNECTOR["openrouter"]["xtitle"]="CHIM"; //Stub needed header.
+// Utility buttons for autofilling parameters
+$CONNECTOR["openrouter"]["get_parms1"] = false; // Utility button for low randomness parameters
+$CONNECTOR["openrouter"]["get_parms5"] = false; // Utility button for medium randomness parameters  
+$CONNECTOR["openrouter"]["get_parms9"] = false; // Utility button for high randomness parameters
 //OpenAI JSON
 $CONNECTOR["openaijson"]["url"]="https://api.openai.com/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openaijson"]["model"]='gpt-4o-mini'; //LLM model.

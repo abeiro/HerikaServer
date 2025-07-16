@@ -56,8 +56,8 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $db=new sql();
    
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
-            echo "Using pgvector search (text2vec)";
-            $res=DataSearchMemoryByVector($argv[2],'');
+            echo "Using pgvector search (text2vec)".PHP_EOL;
+            $res=DataSearchMemoryByVector($argv[2],$argv[3]);
         }
         else {
             echo "Using fts search";
@@ -74,8 +74,20 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $db=new sql();
    
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
-            echo "Using pgvector search";
-            $res=DataSearchOghmaByVector($argv[2],'');
+            echo "Using pgvector search".PHP_EOL;
+            
+            $currentOghmaTopic_req = $db->fetchOne("SELECT value FROM conf_opts WHERE id='current_oghma_topic'");
+            $currentOghmaTopic     = getArrayKey($currentOghmaTopic_req, "value");
+        
+            // Get location and context keywords
+            $locationCtx      = DataLastKnownLocationHuman(false);
+            $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
+            error_log("DataSearchOghmaByVector Expanded keywords: <$currentOghmaTopic> <$locationCtx> <$contextKeywords>");
+
+            $res=DataSearchOghmaByVector($argv[2],$currentOghmaTopic,$locationCtx,$contextKeywords);
+
+        } else {
+            die("FTS oghma search still not supported in this script");
         }
         
 

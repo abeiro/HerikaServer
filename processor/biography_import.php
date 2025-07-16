@@ -87,6 +87,55 @@ try {
             $xvasynth_voiceid = ($temp !== '') ? $temp : null;
         }
         
+        // Extract extended biography fields
+        $npc_background = null;
+        if (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
+            $temp = trim($data[$headerMap['npc_background']]);
+            $npc_background = ($temp !== '') ? $temp : null;
+        }
+        
+        $npc_personality = null;
+        if (isset($headerMap['npc_personality']) && isset($data[$headerMap['npc_personality']])) {
+            $temp = trim($data[$headerMap['npc_personality']]);
+            $npc_personality = ($temp !== '') ? $temp : null;
+        }
+        
+        $npc_appearance = null;
+        if (isset($headerMap['npc_appearance']) && isset($data[$headerMap['npc_appearance']])) {
+            $temp = trim($data[$headerMap['npc_appearance']]);
+            $npc_appearance = ($temp !== '') ? $temp : null;
+        }
+        
+        $npc_relationships = null;
+        if (isset($headerMap['npc_relationships']) && isset($data[$headerMap['npc_relationships']])) {
+            $temp = trim($data[$headerMap['npc_relationships']]);
+            $npc_relationships = ($temp !== '') ? $temp : null;
+        }
+        
+        $npc_occupation = null;
+        if (isset($headerMap['npc_occupation']) && isset($data[$headerMap['npc_occupation']])) {
+            $temp = trim($data[$headerMap['npc_occupation']]);
+            $npc_occupation = ($temp !== '') ? $temp : null;
+        }
+        
+        $npc_skills = null;
+        if (isset($headerMap['npc_skills']) && isset($data[$headerMap['npc_skills']])) {
+            $temp = trim($data[$headerMap['npc_skills']]);
+            $npc_skills = ($temp !== '') ? $temp : null;
+        }
+        
+        $npc_speechstyle = null;
+        if (isset($headerMap['npc_speechstyle']) && isset($data[$headerMap['npc_speechstyle']])) {
+            $temp = trim($data[$headerMap['npc_speechstyle']]);
+            $npc_speechstyle = ($temp !== '') ? $temp : null;
+        }
+        
+        $npc_goals = null;
+        if (isset($headerMap['npc_goals']) && isset($data[$headerMap['npc_goals']])) {
+            $temp = trim($data[$headerMap['npc_goals']]);
+            $npc_goals = ($temp !== '') ? $temp : null;
+        }
+        
         // Skip if required fields are missing
         if (empty($npc_name) || empty($npc_pers)) {
             Logger::warn("Biography Import: Skipping row with missing npc_name or npc_pers");
@@ -105,7 +154,15 @@ try {
                     'npc_misc' => $npc_misc,
                     'melotts_voiceid' => $melotts_voiceid,
                     'xtts_voiceid' => $xtts_voiceid,
-                    'xvasynth_voiceid' => $xvasynth_voiceid
+                    'xvasynth_voiceid' => $xvasynth_voiceid,
+                    'npc_background' => $npc_background,
+                    'npc_personality' => $npc_personality,
+                    'npc_appearance' => $npc_appearance,
+                    'npc_relationships' => $npc_relationships,
+                    'npc_occupation' => $npc_occupation,
+                    'npc_skills' => $npc_skills,
+                    'npc_speechstyle' => $npc_speechstyle,
+                    'npc_goals' => $npc_goals
                 ),
                 'npc_name'
             );
@@ -122,43 +179,12 @@ try {
     
     Logger::info("Biography Import: Processing complete. $processedCount records processed, $errorCount errors");
     
-    // Log the event for audit purposes
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => 'biography_import',
-            'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-            'sess' => 'web',
-            'localts' => time(),
-            'people' => '',
-            'location' => '',
-            'party' => ''
-        )
-    );
-    
 } catch (Exception $e) {
     Logger::error("Biography Import: Fatal error processing CSV: " . $e->getMessage());
     // Clean up temp file if it exists
     if (isset($tempFile) && file_exists($tempFile)) {
         unlink($tempFile);
     }
-    // Log the error event
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => 'biography_import',
-            'data' => "CSV upload failed: " . $e->getMessage(),
-            'sess' => 'web',
-            'localts' => time(),
-            'people' => '',
-            'location' => '',
-            'party' => ''
-        )
-    );
 }
 
 ?>

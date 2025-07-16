@@ -57,6 +57,7 @@ $sysprompt
                 "scene_note"=>"Something other actors should know about the instruction, if the instruction also involves another actors"
             ];
         };
+        $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
 
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
         $connectionHandler->open($prompt,$customParm);

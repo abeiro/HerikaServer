@@ -62,4 +62,12 @@ if (isset($PROMPTS[$gameRequest[0]]["extra"])) {
 
 }
 
+if (file_exists(__DIR__."/functions/user_pref.json")) {
+    $currentOnes=json_decode(file_get_contents(__DIR__."/functions/user_pref.json"),true);
+	if (is_array($currentOnes))
+		$GLOBALS["ENABLED_FUNCTIONS"]=$currentOnes;
+
+
+} 
+
 ?>

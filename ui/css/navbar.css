@@ -60,6 +60,22 @@ body.auto-refresh .chim-status-nav {
     font-family: 'Futura CondensedLight', Arial, sans-serif;
 }
 
+/* Homepage Logo Images Hover Effects */
+.navbar-brand img {
+    transition: all 0.3s ease-in-out;
+    filter: brightness(1) drop-shadow(0 0 0px transparent);
+}
+
+.navbar-brand:hover img {
+    transform: scale(1.05);
+    filter: brightness(1.1) drop-shadow(0 0 8px rgba(242, 124, 17, 0.6));
+}
+
+.navbar-brand:active img {
+    transform: scale(0.98);
+    filter: brightness(1.2) drop-shadow(0 0 12px rgba(242, 124, 17, 0.8));
+}
+
 /* Main Navbar Items */
 .nav-item.dropdown.mx-2 {
     font-family: 'MagicCards', sans-serif;
