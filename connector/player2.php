@@ -86,7 +86,8 @@ class player2
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
         
         $headers = array(
-            'Content-Type: application/json'
+            'Content-Type: application/json',
+            'player2-game-key: CHIM'
         );
 
         $options = array(

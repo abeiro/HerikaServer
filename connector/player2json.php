@@ -330,7 +330,8 @@ class player2json
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
         $headers = array(
-            'Content-Type: application/json'
+            'Content-Type: application/json',
+            'player2-game-key: CHIM'
         );
         
         $options = array(
