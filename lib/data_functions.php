@@ -2375,7 +2375,6 @@ function call_llm() {
     }
 
 
-
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
     if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
         $gameRequestCopy=$gameRequest;
