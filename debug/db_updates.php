@@ -15,7 +15,7 @@ $checkVersion = function($tablename) {
     if (sizeof($existsColumn) == 0 || !$existsColumn[0]["version"] )
         return -1;
     else
-        return $existsColumn[0]["version"]+0;
+        return intval($existsColumn[0]["version"]);
 };
 
 $updateVersion = function($tablename,$version) {
@@ -315,8 +315,15 @@ if (sizeof($existsColumn) > 0 && $existsColumn[0]["bad_syntax_exists"]) {
         $codename=strtr(strtolower(trim($currentName)),[" "=>"_","'"=>"+"]);
         $cn=$db->escape($codename);
         $on=$db->escape($currentName);
-        $db->execQuery("update npc_templates_custom set npc_name='$cn' where npc_name='$on'");
 
+        // before updating primary key, check if the new value exists
+        $rx = $db->fetchAll("SELECT count(*) as n_recs FROM npc_templates_custom WHERE npc_name='$cn' ");
+        if (isset($rx[0]) && ($rx[0]["n_recs"] > 0)) { // corrected npc name already exists, delete malformed one
+            Logger::warn(" npc_templates_custom: potential duplicate primary key value deleted ({$on} => {$cn}) ");
+            $db->execQuery("DELETE FROM npc_templates_custom WHERE npc_name='$on' "); 
+        } else { // safe to update
+            $db->execQuery("UPDATE npc_templates_custom SET npc_name='$cn' WHERE npc_name='$on' ");
+        }
     }
     Logger::info("Silent npc_templates_custom patch applied");
 }
@@ -1259,6 +1266,7 @@ if ($checkVersion("npc_templates")<20250619001) {
         $sqlFile = __DIR__."/../data/npc_templates_20250618001.sql";
         if (file_exists($sqlFile)) {
             // Create temporary table for new data
+            $db->execQuery("DROP TABLE IF EXISTS npc_templates_new");
             $db->execQuery("CREATE TEMP TABLE npc_templates_new AS SELECT * FROM npc_templates WHERE 1=0");
             
             // Load new data, handling the SQL file properly
@@ -1290,7 +1298,7 @@ if ($checkVersion("npc_templates")<20250619001) {
                     npc_goals = EXCLUDED.npc_goals
             ");
             
-            $db->execQuery("DROP TABLE npc_templates_new");
+            //$db->execQuery("DROP TABLE IF EXISTS npc_templates_new");
             Logger::info("NPC template data loaded/updated successfully");
         }
     } catch (Exception $e) {
