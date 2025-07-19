@@ -7,7 +7,7 @@ define("MAXIMUM_SENTENCE_SIZE", 125);
 define("MINIMUM_SENTENCE_SIZE", 15);
 
 
-$file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel_.json';
+$file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel_72dc4b1c501563d149fec99eb45b45f1.json';
 $enginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 $modelContents = file_get_contents($file);

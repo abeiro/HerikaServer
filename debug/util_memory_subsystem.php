@@ -2,7 +2,7 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-$file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel_.json';
+$file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel_72dc4b1c501563d149fec99eb45b45f1.json';
 $enginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 
@@ -212,7 +212,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 ");
                     $prompt[] = array('role' => 'user', 'content' =>"#CHAT HISTORY#\\n{$row["packed_message"]}\\n#END OF CHAT HISTORY#\\n");
                     $prompt[] = array('role' => 'user', 
-                                      'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. using this format:\\n$CLFORMAT");
+                                      'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. Use this format:\\n$CLFORMAT");
                     
                     $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
                     $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
