@@ -234,6 +234,16 @@
       "vocoder":{"type":"string","description":"Vocoder"},
       "distroname":{"type":"string","description":"Leave as default!"}
     },
+    "PIPERTTS": {
+      "_title":"Piper-TTS",
+      "endpoint": {"type":"url","description":"Piper-TTS endpoint URL. The IP address of the machine where Piper-TTS is installed."},
+      "voiceid": {"type":"string","description":"Voice ID code. Model voices are stored in 'models' folder in .onnx files. Voice ID is the file name without extension."},
+      "length_scale": {"userlvl":"pro","type":"number","description":"speaking time scale. Use a value over 1.0 to play slower, a value under 1.0 is faster."},
+      "noise_scale": {"userlvl":"pro","type":"number","description":"speaking variability. Leave 0 to use voice model internal value. Experiment with values around 0.667"},
+      "noise_w_scale": {"userlvl":"pro","type":"number","description":"phoneme width variability. Leave 0 to use voice model internal value. Experiment with values around 0.8"},
+      "speaker": {"userlvl":"pro","type":"string","description":"Name of speaker for multi-speaker voices (if you have an .onnx voice file with multiple voices)."},
+      "speaker_id": {"userlvl":"pro","type":"string","description":"Speaker id for multi-speaker voices, overrides speaker name if used."}
+    },
     "ZONOS_GRADIO": {
       "_title": "Zonos TTS",
       "endpoint":{"userlvl":"basic", "type":"url","description":"Manual for Zonos <a href='https://dwemerdynamics.hostwiki.io/en/TTS-Options' target='_blank'>can be found here.</a> Endpoint URL. Can be ran on : <a href='https://cloud.vast.ai/?ref_id=177752&creator_id=177752&name=CHIM-Zonos%20(WORKING)' target='_blank'>Vast.ai</a>"},

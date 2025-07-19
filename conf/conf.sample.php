@@ -352,6 +352,15 @@ $TTS["ZONOS_GRADIO"]["pitch_std"]=45;	//Pitch standard deviation
 $TTS["ZONOS_GRADIO"]["speaking_rate"]=14.6;	//Speaking rate
 $TTS["ZONOS_GRADIO"]["cfg_scale"]=4.5;	//Context-free guidance scale
 
+//PiperTTS
+$TTS["PIPERTTS"]["endpoint"]='http://127.0.0.1:5000'; //piper-tts API endpoint.
+$TTS["PIPERTTS"]["voiceid"]='en_US-amy-low'; //Voice ID.
+$TTS["PIPERTTS"]["length_scale"]=1.0; //speaking speed; defaults to 1
+$TTS["PIPERTTS"]["noise_scale"]=0.0; //speaking variability - default 0.667
+$TTS["PIPERTTS"]["noise_w_scale"]=0.0; //phoneme width variability - default 0.8
+$TTS["PIPERTTS"]["speaker"]=''; // name of speaker for multi-speaker voices
+$TTS["PIPERTTS"]["speaker_id"]=''; //id of speaker for multi-speaker voices; overrides speaker
+
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
