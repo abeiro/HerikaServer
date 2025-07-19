@@ -85,7 +85,6 @@ class player2
                             if ($testHandle !== false) {
                                 fclose($testHandle);
                                 $this->_url = $newUrl;
-                                Logger::info("{$this->name} connector - Successfully using hardcoded IP: {$hardcodedIp}");
                             } else {
                                 Logger::warn("{$this->name} connector - Failed to connect to hardcoded IP {$hardcodedIp}, falling back to original URL: {$this->_url}");
                             }
