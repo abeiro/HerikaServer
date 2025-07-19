@@ -193,7 +193,7 @@
     },
     "player2json": {
       "_title":"Player2 API (JSON)",
-      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the url. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
+      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
     }
   },
   "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
