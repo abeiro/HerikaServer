@@ -147,7 +147,7 @@
     },
     "player2json": {
       "_title":"Player2 API (JSON)",
-      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:port"}
+      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro!"}
     },
     "google_openaijson": {
       "_title":"Google OpenAI API (JSON/SUMMARY)",
@@ -197,7 +197,7 @@
     },
     "player2": {
       "_title":"Player2 API (SUMMARY)",
-      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:port"}
+      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro!"}
     }
   },
   "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
