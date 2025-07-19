@@ -441,6 +441,81 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
     }
 }
 
+//
+// ────────────────────────────────────────────────────────────────────
+//   EXPORT CUSTOM NPC DATA
+// ────────────────────────────────────────────────────────────────────
+//
+if (isset($_GET['action']) && $_GET['action'] === 'export_custom_npcs') {
+    // Query to get all custom NPC data
+    $export_query = "
+        SELECT 
+            npc_name, npc_dynamic, npc_pers, npc_misc, 
+            melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
+            npc_background, npc_personality, npc_appearance, 
+            npc_relationships, npc_occupation, npc_skills, 
+            npc_speechstyle, npc_goals
+        FROM {$schema}.npc_templates_custom 
+        ORDER BY npc_name ASC
+    ";
+    
+    $export_result = pg_query($conn, $export_query);
+    
+    if ($export_result) {
+        // Set headers for CSV download
+        $filename = 'custom_npc_export_' . date('Y-m-d_H-i-s') . '.csv';
+        header('Content-Description: File Transfer');
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        
+        // Clean any existing output
+        ob_end_clean();
+        
+        // Open output stream
+        $output = fopen('php://output', 'w');
+        
+        // Write CSV header
+        $csv_headers = [
+            'npc_name', 'npc_dynamic', 'npc_pers', 'npc_misc',
+            'melotts_voiceid', 'xtts_voiceid', 'xvasynth_voiceid',
+            'npc_background', 'npc_personality', 'npc_appearance',
+            'npc_relationships', 'npc_occupation', 'npc_skills',
+            'npc_speechstyle', 'npc_goals'
+        ];
+        fputcsv($output, $csv_headers);
+        
+        // Write data rows
+        while ($row = pg_fetch_assoc($export_result)) {
+            $csv_row = [
+                $row['npc_name'] ?? '',
+                $row['npc_dynamic'] ?? '',
+                $row['npc_pers'] ?? '',
+                $row['npc_misc'] ?? '',
+                $row['melotts_voiceid'] ?? '',
+                $row['xtts_voiceid'] ?? '',
+                $row['xvasynth_voiceid'] ?? '',
+                $row['npc_background'] ?? '',
+                $row['npc_personality'] ?? '',
+                $row['npc_appearance'] ?? '',
+                $row['npc_relationships'] ?? '',
+                $row['npc_occupation'] ?? '',
+                $row['npc_skills'] ?? '',
+                $row['npc_speechstyle'] ?? '',
+                $row['npc_goals'] ?? ''
+            ];
+            fputcsv($output, $csv_row);
+        }
+        
+        fclose($output);
+        exit;
+    } else {
+        $message .= '<p>Error exporting custom NPC data: ' . pg_last_error($conn) . '</p>';
+    }
+}
+
 // 1. Update the edit modal form to match the Oghma styling:
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_single') {
     $npc_name_original = $_POST['npc_name_original'] ?? '';
@@ -895,12 +970,14 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <div class="button-group">
                     <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
                     <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
+                    <a href="?action=export_custom_npcs" class="action-button" style="background: rgba(242, 124, 17, 0.8);">Export Custom NPCs</a>
                 </div>
                 <p>You can verify that NPC data has been uploaded successfully by going to 
                 <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b>.</p>
                 <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
                 <p>Also you can check the merged table at 
                 <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.</p>
+                <p><strong>Export Custom NPCs:</strong> Download all your custom NPC entries as a CSV file for backup or sharing purposes. The exported file will include all custom entries with their extended profiles and voice overrides.</p>
             </form>
             <form action="" method="post">
                 <input 
