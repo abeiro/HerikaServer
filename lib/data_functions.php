@@ -132,6 +132,9 @@ function DataLastDataFor($actor, $lastNelements = -10)
 
 }
 
+/**
+ * Get context for actor to send to llm
+ */
 function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
     

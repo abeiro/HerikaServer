@@ -12,7 +12,12 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib/rolemaster_helpers.php");
 
-$file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel_.json';
+/* 'CurrentModel_.json' does not always contain the connector for the 'default' profile, 
+because 'active_profile' is calculated in various places as md5(npcName) without testing the case where 'npcName' is 'The Narrator'. 
+The convention that the connector is in the file 'CurrentModel_72dc4b1c501563d149fec99eb45b45f1.json' 
+corresponding to 'active_profile' = md5('The narrator') is easier to implement and is mainly managed in 'model_dynmodel.php'.
+*/
+$file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel_72dc4b1c501563d149fec99eb45b45f1.json';
 $modelContents = file_get_contents($file);
 Logger::info("Current AI Model is set to $modelContents.");
 

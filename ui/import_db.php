@@ -224,24 +224,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'backup') {
         $filename = "manual_backup_" . date("Y-m-d_H-i-s") . ".sql";
         $backupFile = $rootPath . 'data/export_' . $filename;
         
-        // Execute pg_dump with error capture (same approach as AutomaticBackup class)
-        $command = "HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost 2>&1";
-        $output = shell_exec($command);
+        // Execute pg_dump with direct file output to avoid memory issues
+        $command = "HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost > " . escapeshellarg($backupFile) . " 2>&1";
+        $result = shell_exec($command);
         
-        // Write output to file if we got data
-        if ($output && strlen($output) > 0) {
-            file_put_contents($backupFile, $output);
-        }
+        // pg_dump writes directly to file, so we don't need to handle output in memory
         
         // Check if backup was created successfully
         if (file_exists($backupFile) && filesize($backupFile) > 0) {
             $fileSize = filesize($backupFile);
             
             // Check if the file contains error messages instead of actual backup data
-            $firstLine = substr($output, 0, 100);
+            $firstLine = file_get_contents($backupFile, false, null, 0, 100);
             if (strpos($firstLine, 'pg_dump: error:') !== false || strpos($firstLine, 'FATAL:') !== false) {
                 $message = "<p><strong>Error:</strong> Database backup failed.</p>";
-                $message .= "<pre>" . htmlspecialchars(substr($output, 0, 500)) . "</pre>";
+                $message .= "<pre>" . htmlspecialchars(substr($firstLine, 0, 500)) . "</pre>";
                 if (file_exists($backupFile)) {
                     unlink($backupFile);
                 }
@@ -268,9 +265,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'backup') {
             }
         } else {
             $message = "<p><strong>Error:</strong> Backup creation failed or file is empty.</p>";
-            if ($output) {
+            if ($result) {
                 $message .= "<p><strong>pg_dump output:</strong></p>";
-                $message .= "<pre>" . htmlspecialchars(substr($output, 0, 1000)) . "</pre>";
+                $message .= "<pre>" . htmlspecialchars(substr($result, 0, 1000)) . "</pre>";
             }
         }
         

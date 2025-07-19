@@ -6,7 +6,7 @@ $GLOBALS["TASKS"]["rolemaster"]["fn"]=function() {
     $enginePath = $GLOBALS["ENGINE_ROOT"];
 
     /* Connector to use */
-    $file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel_.json';
+    $file = $GLOBALS["ENGINE_ROOT"].'/data/CurrentModel_72dc4b1c501563d149fec99eb45b45f1.json';
     $modelContents = file_get_contents($file);
     Logger::info("Current AI Model is set to $modelContents.");
 

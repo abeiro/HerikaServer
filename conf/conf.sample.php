@@ -124,7 +124,7 @@ $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude fro
 
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).
-$CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp"]; //Creates diary entries and memories.
+$CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp","player2"]; //Creates diary entries and memories.
 
 //[AI/LLM Connectors]
 //OpenRouter JSON
@@ -195,6 +195,8 @@ $CONNECTOR["openai"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
 $CONNECTOR["openai"]["top_p"]=1; //LLM parameter top_p.
 $CONNECTOR["openai"]["API_KEY"]=""; //API key.
 $CONNECTOR["openai"]["MAX_TOKENS_MEMORY"]="1024"; //Maximum tokens to generate when summarizing.
+//Player2 JSON
+$CONNECTOR["player2json"]["url"]="http://localhost:4315/v1/chat/completions"; //API endpoint.
 //Google OpenAI JSON
 $CONNECTOR["google_openaijson"]["url"]="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"; //API endpoint.
 $CONNECTOR["google_openaijson"]["model"]='gemini-1.5-flash'; //LLM model.
@@ -232,6 +234,8 @@ $CONNECTOR["koboldcpp"]["newline_as_stopseq"]=false; //A newline in the output t
 $CONNECTOR["koboldcpp"]["use_default_badwordsids"]=false; //Unban End of Sentence (EOS) tokens. If set to false the LLM will stop generating when it detects an EOS token.
 $CONNECTOR["koboldcpp"]["eos_token"]='<|im_end|>'; //EOS token LLM uses. Only works if use_default_badwordsids is enabled.
 $CONNECTOR["koboldcpp"]["template"]='chatml'; //Prompt Format. Specified in the HuggingFace model card.
+//Player2 (Summary)
+$CONNECTOR["player2"]["url"]="http://localhost:4315/v1/chat/completions"; //API endpoint.
 //Oobabooga
 $CONNECTOR["oobabooga"]["HOST"]="127.0.0.1"; //API Endpoint.
 $CONNECTOR["oobabooga"]["PORT"]="5005"; //API server port.
