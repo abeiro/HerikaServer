@@ -408,6 +408,9 @@ class player2json
 
         $context = stream_context_create($options);
         
+        // Add delay to prevent rate limiting (100ms)
+        usleep(100000);
+        
         $this->primary_handler = fopen($this->_url, 'r', false, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();

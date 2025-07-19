@@ -85,6 +85,7 @@ class player2
                             if ($testHandle !== false) {
                                 fclose($testHandle);
                                 $this->_url = $newUrl;
+                                Logger::info("{$this->name} connector - Successfully using hardcoded IP: {$hardcodedIp}");
                             } else {
                                 Logger::warn("{$this->name} connector - Failed to connect to hardcoded IP {$hardcodedIp}, falling back to original URL: {$this->_url}");
                             }
@@ -171,6 +172,9 @@ class player2
         
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
+        // Add small delay to prevent rate limiting (50ms)
+        usleep(50000);
+        
         $this->primary_handler = $this->send($this->_url, $context);
         
         if (!$this->primary_handler) {
@@ -220,6 +224,8 @@ class player2
         // Write the buffer to the log file without timestamp separators
         file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
         file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
+        
+        return $this->_buffer;
     }
 
     // Diary connectors don't process actions
