@@ -242,7 +242,7 @@
       "noise_scale": {"userlvl":"pro","type":"number","description":"speaking variability. Leave 0 to use voice model internal value. Experiment with values around 0.667"},
       "noise_w_scale": {"userlvl":"pro","type":"number","description":"phoneme width variability. Leave 0 to use voice model internal value. Experiment with values around 0.8"},
       "speaker": {"userlvl":"pro","type":"string","description":"Name of speaker for multi-speaker voices (if you have an .onnx voice file with multiple voices)."},
-      "speaker_id": {"userlvl":"pro","type":"string","description":"Speaker id for multi-speaker voices, overrides speaker name if used."}
+      "speaker_id": {"userlvl":"pro","type":"integer","description":"Speaker id for multi-speaker voices, overrides speaker name if used. 0 is default (first) speaker."}
     },
     "ZONOS_GRADIO": {
       "_title": "Zonos TTS",
