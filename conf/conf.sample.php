@@ -359,7 +359,7 @@ $TTS["PIPERTTS"]["length_scale"]=1.0; //speaking speed; defaults to 1
 $TTS["PIPERTTS"]["noise_scale"]=0.0; //speaking variability - default 0.667
 $TTS["PIPERTTS"]["noise_w_scale"]=0.0; //phoneme width variability - default 0.8
 $TTS["PIPERTTS"]["speaker"]=''; // name of speaker for multi-speaker voices
-$TTS["PIPERTTS"]["speaker_id"]=''; //id of speaker for multi-speaker voices; overrides speaker
+$TTS["PIPERTTS"]["speaker_id"]=0; //id of speaker for multi-speaker voices; overrides speaker
 
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";

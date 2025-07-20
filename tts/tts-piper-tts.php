@@ -49,7 +49,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$noise_w_scale = 0.0;
 
 		$speaker_name = trim($GLOBALS["TTS"]["PIPERTTS"]["speaker"] ?? "");
-		$speaker_id = trim($GLOBALS["TTS"]["PIPERTTS"]["speaker_id"] ?? "");
+		$speaker_id = intval($GLOBALS["TTS"]["PIPERTTS"]["speaker_id"] ?? 0);
 
 		$data = array(
 			'text' => $newString,
@@ -63,7 +63,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$data['noise_w_scale'] = $noise_w_scale; // optional
 		if (strlen($speaker_name) > 0)
 			$data['speaker'] = $speaker_name; // optional
-		if (strlen($speaker_id) > 0)
+		if ($speaker_id > 0)
 			$data['speaker_id'] = $speaker_id; // optional, overrides speaker
 
 		$j_data = json_encode($data);
@@ -102,7 +102,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n$FFMPEG_FILTER\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
-			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in Piper-TTS call, voice id={$voice}.";
+			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in Piper-TTS call, voice id={$voice} / {$speaker_name} / {$speaker_id}.";
 
 			/* if (isset($GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) && $GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) {
 				$rootPath=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" ;
