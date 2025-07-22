@@ -364,6 +364,7 @@ $TTS["PIPERTTS"]["speaker_id"]=0; //id of speaker for multi-speaker voices; over
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
+$TTSFUNCTION_PLAYER_VOICE_ID=0; // id for multivoice models
 $TTSFUNCTION_PLAYER_LANGUAGE="";
 
 //[Translation]

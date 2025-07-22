@@ -18,7 +18,7 @@ function SaveOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
     if (!$b_already_saved) {
         $herika = ($GLOBALS["HERIKA_NAME"] ?? "");
-        if (($herika > "") && ($herika != "The Narrator") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
+        if ((strlen($herika) > 0) && ($herika != "Player") && ($herika != "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
         } else {
