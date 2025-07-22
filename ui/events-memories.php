@@ -763,6 +763,7 @@ function getTimeColor($time) {
                     width: 100%;
                 }
                 .summary-section {
+                    max-width: 75vw;
                     margin-bottom: 8px;
                     padding: 5px;
                     border-bottom: 1px solid #444;

@@ -387,6 +387,29 @@ class sql
         return true; // Indicate success
     }
 
-}
+    /*
+     * Class Method Summary:
+     * Note. Singleton object is available on $GLOBALS["db].
+     * __construct(): Establishes a database connection using pg_connect.
+     * __destruct(): Closes the database connection when the object is destroyed.
+     * close(): Closes the database connection.
+     * GetLastError(): Returns the last error message from the database.
+     * insert($table, $data): Inserts data into a specified table.
+     * query($query): Executes a raw SQL query.
+     * delete($table, $where = "FALSE"): Deletes rows from a table based on a WHERE clause.
+     * truncate($table, $restart = false, $cascade = false): Truncates a table, optionally restarting identity and cascading.
+     * update($table, $set, $where = "FALSE"): Updates data in a table based on a WHERE clause.
+     * execQuery($sqlquery): Executes a SQL query and returns the result.
+     * execQueryVerbose($sqlquery): Executes a SQL query and returns either an empty string on success or the error message on failure.
+     * fetchAll($q): Executes a query and returns all rows as an associative array.
+     * fetchOne($q): Executes a query and returns the first row as an associative array.
+     * fetchArray($res): Fetches a row as an array.
+     * escape($string): Escapes a string for use in a SQL query.
+     * updateRow($table, $data, $where): Updates a row in a table using parameterized queries.
+     * upsertRow($table, $data, $where): Inserts or updates a row in a table based on whether it exists.
+     * upsertRowTrx($table, $data, $whereCondition): Performs an upsert operation within a transaction for data integrity.
+     * upsertRowOnConflict($tableName, $data, $conflictTarget): Performs an upsert based on an existing index constraint.
+     */
 
+}
 ?>
