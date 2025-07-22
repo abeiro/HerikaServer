@@ -88,6 +88,68 @@ class player2json
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
 
+        // Check for hardcoded IP address override in conf_opts table
+        if (isset($GLOBALS["db"]) && is_object($GLOBALS["db"])) {
+            try {
+                $hostIpRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='Network/HOST_IP'");
+                if (!empty($hostIpRecord) && !empty(trim($hostIpRecord[0]['value']))) {
+                    $hardcodedIp = trim($hostIpRecord[0]['value']);
+                    
+                    // Parse the original URL and replace the host with hardcoded IP
+                    $urlParts = parse_url($this->_url);
+                    
+                    if ($urlParts !== false && isset($urlParts['scheme']) && isset($urlParts['host'])) {
+                        // Reconstruct URL with hardcoded IP
+                        $newUrl = $urlParts['scheme'] . '://' . $hardcodedIp;
+                        
+                        // Handle port - use explicit port or default based on scheme
+                        if (isset($urlParts['port']) && !empty($urlParts['port'])) {
+                            $newUrl .= ':' . $urlParts['port'];
+                        } elseif ($urlParts['scheme'] === 'https') {
+                            $newUrl .= ':443';
+                        } elseif ($urlParts['scheme'] === 'http') {
+                            $newUrl .= ':80';
+                        }
+                        
+                        // Add path
+                        if (isset($urlParts['path']) && !empty($urlParts['path'])) {
+                            $newUrl .= $urlParts['path'];
+                        }
+                        
+                        // Add query string
+                        if (isset($urlParts['query']) && !empty($urlParts['query'])) {
+                            $newUrl .= '?' . $urlParts['query'];
+                        }
+                        
+                        // Validate the reconstructed URL
+                        if (filter_var($newUrl, FILTER_VALIDATE_URL)) {
+                            // Test the connection with the new URL
+                            $testContext = stream_context_create([
+                                'http' => [
+                                    'method' => 'GET',
+                                    'timeout' => 5,
+                                    'ignore_errors' => true
+                                ]
+                            ]);
+                            
+                            $testHandle = @fopen($newUrl, 'r', false, $testContext);
+                            if ($testHandle !== false) {
+                                fclose($testHandle);
+                                $this->_url = $newUrl;
+                            } else {
+                                Logger::warn("{$this->name} connector - Failed to connect to hardcoded IP {$hardcodedIp}, falling back to original URL: {$this->_url}");
+                            }
+                        } else {
+                            Logger::warn("{$this->name} connector - Invalid reconstructed URL, falling back to original");
+                        }
+                    } else {
+                        Logger::warn("{$this->name} connector - Failed to parse original URL, using original: {$this->_url}");
+                    }
+                }
+            } catch (Exception $e) {
+                Logger::warn("{$this->name} connector - Error checking Network/HOST_IP: " . $e->getMessage());
+            }
+        }
 
         $default_model = 'gpt-4o-mini';
 
@@ -345,6 +407,9 @@ class player2json
         );
 
         $context = stream_context_create($options);
+        
+        // Add delay to prevent rate limiting (100ms)
+        usleep(100000);
         
         $this->primary_handler = fopen($this->_url, 'r', false, $context);
         if (!$this->primary_handler) {

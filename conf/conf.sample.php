@@ -196,7 +196,7 @@ $CONNECTOR["openai"]["top_p"]=1; //LLM parameter top_p.
 $CONNECTOR["openai"]["API_KEY"]=""; //API key.
 $CONNECTOR["openai"]["MAX_TOKENS_MEMORY"]="1024"; //Maximum tokens to generate when summarizing.
 //Player2 JSON
-$CONNECTOR["player2json"]["url"]="https://api.player2.ai/v1/chat/completions"; //API endpoint.
+$CONNECTOR["player2json"]["url"]="http://localhost:4315/v1/chat/completions"; //API endpoint.
 //Google OpenAI JSON
 $CONNECTOR["google_openaijson"]["url"]="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"; //API endpoint.
 $CONNECTOR["google_openaijson"]["model"]='gemini-1.5-flash'; //LLM model.
@@ -235,7 +235,7 @@ $CONNECTOR["koboldcpp"]["use_default_badwordsids"]=false; //Unban End of Sentenc
 $CONNECTOR["koboldcpp"]["eos_token"]='<|im_end|>'; //EOS token LLM uses. Only works if use_default_badwordsids is enabled.
 $CONNECTOR["koboldcpp"]["template"]='chatml'; //Prompt Format. Specified in the HuggingFace model card.
 //Player2 (Summary)
-$CONNECTOR["player2"]["url"]="https://api.player2.ai/v1/chat/completions"; //API endpoint.
+$CONNECTOR["player2"]["url"]="http://localhost:4315/v1/chat/completions"; //API endpoint.
 //Oobabooga
 $CONNECTOR["oobabooga"]["HOST"]="127.0.0.1"; //API Endpoint.
 $CONNECTOR["oobabooga"]["PORT"]="5005"; //API server port.
@@ -351,6 +351,15 @@ $TTS["ZONOS_GRADIO"]["voiceid"]='TheNarrator';	//Voice id
 $TTS["ZONOS_GRADIO"]["pitch_std"]=45;	//Pitch standard deviation
 $TTS["ZONOS_GRADIO"]["speaking_rate"]=14.6;	//Speaking rate
 $TTS["ZONOS_GRADIO"]["cfg_scale"]=4.5;	//Context-free guidance scale
+
+//PiperTTS
+$TTS["PIPERTTS"]["endpoint"]='http://127.0.0.1:5000'; //piper-tts API endpoint.
+$TTS["PIPERTTS"]["voiceid"]='en_US-amy-low'; //Voice ID.
+$TTS["PIPERTTS"]["length_scale"]=1.0; //speaking speed; defaults to 1
+$TTS["PIPERTTS"]["noise_scale"]=0.0; //speaking variability - default 0.667
+$TTS["PIPERTTS"]["noise_w_scale"]=0.0; //phoneme width variability - default 0.8
+$TTS["PIPERTTS"]["speaker"]=''; // name of speaker for multi-speaker voices
+$TTS["PIPERTTS"]["speaker_id"]=0; //id of speaker for multi-speaker voices; overrides speaker
 
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
