@@ -200,7 +200,7 @@
       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:port"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -268,6 +268,12 @@
       "voice":{"type":"select","values":["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],"description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
       "model_id":{"type":"select","values":["tts-1", "tts-1-hd", "gpt-4o-mini-tts"],"description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
       "instructions":{"type":"longstring","description":"Control the voice of your generated audio with additional instructions. Does not work with tts-1 or tts-1-hd.","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
+    },
+    "deepgram": {
+      "_title":"Deepgram TTS",
+      "API_KEY":{"type":"apikey","description":"API KEY"},
+      "model":{"type":"string","description":"Voice ID","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"},
+      "bitrate":{"userlvl":"pro", "type":"number","description":"Model","helpurl":"https://platform.openai.com/docs/guides/text-to-speech"}
     },
     "ELEVEN_LABS": {
       "_title":"ElevenLabs Text-To-Speech",
