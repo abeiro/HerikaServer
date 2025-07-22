@@ -23,12 +23,17 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$lang = $GLOBALS["TTS"]["PIPERTTS"]["language"] ?? "EN";
 		*/
 		
-		//$voice = isset($GLOBALS["TTS"]["FORCED_VOICE_DEV"]) ? $GLOBALS["TTS"]["FORCED_VOICE_DEV"] : $GLOBALS["TTS"]["PIPERTTS"]["voiceid"];
-		//if (empty($voice))
+		$voice = $GLOBALS["TTS"]["FORCED_VOICE_DEV"] ?? $GLOBALS["TTS"]["PIPERTTS"]["voiceid"];
+		if (empty($voice))
 			$voice = $GLOBALS["TTS"]["PIPERTTS"]["voiceid"] ?? "en_US-amy-low";
+
+		$speaker_name = trim($GLOBALS["TTS"]["PIPERTTS"]["speaker"] ?? "");
+		$speaker_id = intval($GLOBALS["TTS"]["PIPERTTS"]["speaker_id"] ?? 0);
 	
-		if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
+		if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"])) {
 			$voice = $GLOBALS["PATCH_OVERRIDE_VOICE"];
+			$speaker_id = intval($GLOBALS["PATCH_OVERRIDE_VOICE_ID"] ?? 0);
+		}
 
 		$timescale = floatval($GLOBALS["TTS"]["PIPERTTS"]["length_scale"] ?? 1.0);
 		if ($timescale > 4.0)
@@ -47,9 +52,6 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$noise_w_scale = 1.0;
 		elseif ($noise_w_scale < 0.1)
 			$noise_w_scale = 0.0;
-
-		$speaker_name = trim($GLOBALS["TTS"]["PIPERTTS"]["speaker"] ?? "");
-		$speaker_id = intval($GLOBALS["TTS"]["PIPERTTS"]["speaker_id"] ?? 0);
 
 		$data = array(
 			'text' => $newString,
@@ -80,9 +82,13 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		$context = stream_context_create($options);
 		$response = file_get_contents($url, false, $context);
 
-		if (is_array($GLOBALS["TTS_FFMPEG_FILTERS"])) {
+
+		if (isset($GLOBALS["TTS_FFMPEG_FILTERS"]) && is_array($GLOBALS["TTS_FFMPEG_FILTERS"])) {
 			$GLOBALS["TTS_FFMPEG_FILTERS"]["adelay"]="adelay=150|150";
 			$FFMPEG_FILTER='-af "'.implode(",",$GLOBALS["TTS_FFMPEG_FILTERS"]).'"';
+
+			if (isset($GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"])) 
+				error_log(" filter: $FFMPEG_FILTER - exec trace ");
         } else {
 			$FFMPEG_FILTER='-filter:a "adelay=150|150"';
 		}
