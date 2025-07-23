@@ -3403,6 +3403,14 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
 
+        // PiperTTS voiceid - uses same voice IDs as MeloTTS
+        if (!empty($melottsid[0]['melotts_voiceid'])) {
+            // Use the melotts_voiceid value for PiperTTS as well
+            file_put_contents($newFile,'$TTS["PIPERTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
+        } else {
+            file_put_contents($newFile, '$TTS["PIPERTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
+
         //xvansynth logic from override table
         if (!empty($xvasynthid[0]['xvasynth_voiceid'])) {
 
