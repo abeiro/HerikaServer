@@ -1233,13 +1233,17 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         
         // After loading character profile, ensure we use global dynamic prompts from main conf.php
         // Character profiles should not override these global prompt settings
+        // BUT preserve character-specific DYNAMIC_PROFILE setting
+        $characterDynamicProfile = isset($DYNAMIC_PROFILE) ? $DYNAMIC_PROFILE : false;
+        $characterDynamicProfileFields = isset($DYNAMIC_PROFILE_FIELDS) ? $DYNAMIC_PROFILE_FIELDS : [];
+        
         $mainConfPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php";
         if (file_exists($mainConfPath)) {
-            // Load just the DYNAMIC_PROMPT_* variables from main config
-            $tempGlobals = $GLOBALS; // Save current state
+            // Save current state before loading main config
+            $tempGlobals = $GLOBALS;
             include($mainConfPath); // This will load the global prompts
             
-            // Extract only the DYNAMIC_PROMPT_* variables and restore everything else
+            // Extract only the DYNAMIC_PROMPT_* variables from main config
             $globalPrompts = [
                 'DYNAMIC_PROMPT_PERSONALITY' => $DYNAMIC_PROMPT_PERSONALITY ?? '',
                 'DYNAMIC_PROMPT_RELATIONSHIPS' => $DYNAMIC_PROMPT_RELATIONSHIPS ?? '',
@@ -1257,6 +1261,14 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
                 if (!empty($value)) {
                     $GLOBALS[$key] = $value;
                 }
+            }
+            
+            // Restore character-specific DYNAMIC_PROFILE settings
+            $DYNAMIC_PROFILE = $characterDynamicProfile;
+            $GLOBALS['DYNAMIC_PROFILE'] = $characterDynamicProfile;
+            if (!empty($characterDynamicProfileFields)) {
+                $DYNAMIC_PROFILE_FIELDS = $characterDynamicProfileFields;
+                $GLOBALS['DYNAMIC_PROFILE_FIELDS'] = $characterDynamicProfileFields;
             }
         }
         
