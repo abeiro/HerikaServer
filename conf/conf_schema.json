@@ -237,7 +237,7 @@
     "PIPERTTS": {
       "_title":"Piper-TTS",
       "endpoint": {"type":"url","description":"Piper-TTS endpoint URL. The IP address of the machine where Piper-TTS is installed."},
-      "voiceid": {"type":"string","description":"Voice ID code. Model voices are stored in 'models' folder in .onnx files. Voice ID is the file name without extension."},
+      "voiceid": {"type":"string","description":"MUST DOWNLOAD VOICES MANUALLY! CLICK HELP LINK FOR INSTRUCTIONS! Voice ID code. Model voices are stored in 'models' folder in .onnx files. Voice ID is the file name without extension.","helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pipertts"},
       "length_scale": {"userlvl":"pro","type":"number","description":"speaking time scale. Use a value over 1.0 to play slower, a value under 1.0 is faster."},
       "noise_scale": {"userlvl":"pro","type":"number","description":"speaking variability. Leave 0 to use voice model internal value. Experiment with values around 0.667"},
       "noise_w_scale": {"userlvl":"pro","type":"number","description":"phoneme width variability. Leave 0 to use voice model internal value. Experiment with values around 0.8"},
