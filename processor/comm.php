@@ -1056,6 +1056,10 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
 
         $contextData = array_merge($head, $prompt);
         
+        // Set the request type for diary so connector knows to use diary grammar
+        $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
+        $GLOBALS["gameRequest"] = [0 => "diary", 1 => time(), 2 => $gameRequest[2], 3 => "Auto diary for " . $npcName];
+        
         // Generate diary entry using LLM
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$NPC_CONF["CONNECTORS_DIARY"]}.php");
         
@@ -1084,6 +1088,13 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
         }
         
         $connectionHandler->close();
+        
+        // Restore original gameRequest after diary generation
+        if ($originalGameRequest !== null) {
+            $GLOBALS["gameRequest"] = $originalGameRequest;
+        } else {
+            unset($GLOBALS["gameRequest"]);
+        }
         
         if (!empty(trim($buffer))) {
             // Save diary entry to database
@@ -1430,6 +1441,10 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
 
         $contextData = array_merge($head, $prompt);
         
+        // Set the request type for diary so connector knows to use diary grammar
+        $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
+        $GLOBALS["gameRequest"] = [0 => "diary", 1 => time(), 2 => $gameRequest[2], 3 => "Auto diary for " . $followerName];
+        
         // Generate diary entry using LLM
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$FOLLOWER_CONF["CONNECTORS_DIARY"]}.php");
         
@@ -1458,6 +1473,13 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         }
         
         $connectionHandler->close();
+        
+        // Restore original gameRequest after diary generation
+        if ($originalGameRequest !== null) {
+            $GLOBALS["gameRequest"] = $originalGameRequest;
+        } else {
+            unset($GLOBALS["gameRequest"]);
+        }
         
         if (!empty(trim($buffer))) {
             // Save diary entry to database
