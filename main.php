@@ -484,7 +484,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
             $host = $_SERVER['HTTP_HOST'];
             $port = $_SERVER['SERVER_PORT'];
             
-            $port = 8081; // Seems this is not being autodetected
+            if (empty($port))
+                $port = 8081; // Seems this is not being autodetected
 
             // Check if the port is non-standard for the protocol
             $isDefaultPort = ($protocol === "http://" && $port == 80) || ($protocol === "https://" && $port == 443);
@@ -512,7 +513,9 @@ if (isset($_GET["profile"])) {
     //$OVERRIDES["PROMPT_HEAD"]=$GLOBALS["PROMPT_HEAD"];
     
     if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
-       // error_log("PROFILE: {$_GET["profile"]}");
+        // error_log("PROFILE: {$_GET["profile"]}");
+        // Migration here to new system
+
         require($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
 
     } else {

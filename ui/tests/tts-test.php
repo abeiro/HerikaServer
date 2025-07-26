@@ -156,7 +156,7 @@ if (Translation::isTextEnabled()) {
             ?>
 
             <form action="" method="POST">
-                <textarea name="customstring" placeholder="Write your own text" style="width:100%; max-width:500px; height:100px;"><?=$_POST["customstring"]?></textarea><br/>
+                <textarea name="customstring" placeholder="Write your own text" style="width:100%; max-width:500px; height:100px;"><?=($_POST["customstring"] ?? "")?></textarea><br/>
                 <input type="submit" class="action-button edit" value="Test TTS" />
                 <?php if ($file): ?>
                     <a href="../../soundcache/<?php echo htmlspecialchars($file); ?>?ts=<?php echo htmlspecialchars($ts); ?>" 
