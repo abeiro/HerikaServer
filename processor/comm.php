@@ -992,9 +992,17 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
         if (function_exists('getConfFileFor')) {
             $confFile = getConfFileFor($npcName);
             if (!empty($confFile) && file_exists($confFile)) {
-                // Save original values
+                // Save original values for all extended fields
                 $originalHerikaData = [
                     'HERIKA_PERS' => isset($GLOBALS["HERIKA_PERS"]) ? $GLOBALS["HERIKA_PERS"] : '',
+                    'HERIKA_BACKGROUND' => isset($GLOBALS["HERIKA_BACKGROUND"]) ? $GLOBALS["HERIKA_BACKGROUND"] : '',
+                    'HERIKA_PERSONALITY' => isset($GLOBALS["HERIKA_PERSONALITY"]) ? $GLOBALS["HERIKA_PERSONALITY"] : '',
+                    'HERIKA_APPEARANCE' => isset($GLOBALS["HERIKA_APPEARANCE"]) ? $GLOBALS["HERIKA_APPEARANCE"] : '',
+                    'HERIKA_RELATIONSHIPS' => isset($GLOBALS["HERIKA_RELATIONSHIPS"]) ? $GLOBALS["HERIKA_RELATIONSHIPS"] : '',
+                    'HERIKA_OCCUPATION' => isset($GLOBALS["HERIKA_OCCUPATION"]) ? $GLOBALS["HERIKA_OCCUPATION"] : '',
+                    'HERIKA_SKILLS' => isset($GLOBALS["HERIKA_SKILLS"]) ? $GLOBALS["HERIKA_SKILLS"] : '',
+                    'HERIKA_SPEECHSTYLE' => isset($GLOBALS["HERIKA_SPEECHSTYLE"]) ? $GLOBALS["HERIKA_SPEECHSTYLE"] : '',
+                    'HERIKA_GOALS' => isset($GLOBALS["HERIKA_GOALS"]) ? $GLOBALS["HERIKA_GOALS"] : '',
                     'HERIKA_DYNAMIC' => isset($GLOBALS["HERIKA_DYNAMIC"]) ? $GLOBALS["HERIKA_DYNAMIC"] : ''
                 ];
                 
@@ -1051,7 +1059,7 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
         }
 
-        $diaryPrompt = strtr($GLOBALS["DIARY_PROMPT"], ["#PLAYER_NAME#" => $NPC_CONF["PLAYER_NAME"], "#HERIKA_NAME#" => $npcName]);
+        $diaryPrompt = strtr($GLOBALS["DIARY_PROMPT"], ['{$GLOBALS["HERIKA_NAME"]}'=>$npcName,'{$GLOBALS["PLAYER_NAME"]}'=>$NPC_CONF["PLAYER_NAME"]]);
         $prompt[] = ["role" => "user", "content" => $diaryPrompt];
 
         $contextData = array_merge($head, $prompt);
@@ -1133,6 +1141,14 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
         // Restore original profile data if we loaded an NPC profile
         if (!empty($originalHerikaData)) {
             $GLOBALS["HERIKA_PERS"] = $originalHerikaData['HERIKA_PERS'];
+            $GLOBALS["HERIKA_BACKGROUND"] = $originalHerikaData['HERIKA_BACKGROUND'];
+            $GLOBALS["HERIKA_PERSONALITY"] = $originalHerikaData['HERIKA_PERSONALITY'];
+            $GLOBALS["HERIKA_APPEARANCE"] = $originalHerikaData['HERIKA_APPEARANCE'];
+            $GLOBALS["HERIKA_RELATIONSHIPS"] = $originalHerikaData['HERIKA_RELATIONSHIPS'];
+            $GLOBALS["HERIKA_OCCUPATION"] = $originalHerikaData['HERIKA_OCCUPATION'];
+            $GLOBALS["HERIKA_SKILLS"] = $originalHerikaData['HERIKA_SKILLS'];
+            $GLOBALS["HERIKA_SPEECHSTYLE"] = $originalHerikaData['HERIKA_SPEECHSTYLE'];
+            $GLOBALS["HERIKA_GOALS"] = $originalHerikaData['HERIKA_GOALS'];
             $GLOBALS["HERIKA_DYNAMIC"] = $originalHerikaData['HERIKA_DYNAMIC'];
         }
     }
@@ -1369,30 +1385,100 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         // Load follower's profile if it exists
         $profileLoaded = false;
         $originalHerikaData = [];
+        $FOLLOWER_CONF = [];
         
         // Try to load profile data for this follower
         if (function_exists('getConfFileFor')) {
             $confFile = getConfFileFor($followerName);
             if (!empty($confFile) && file_exists($confFile)) {
-                // Save original values
+                // Save original values for all extended fields
                 $originalHerikaData = [
                     'HERIKA_PERS' => isset($GLOBALS["HERIKA_PERS"]) ? $GLOBALS["HERIKA_PERS"] : '',
+                    'HERIKA_BACKGROUND' => isset($GLOBALS["HERIKA_BACKGROUND"]) ? $GLOBALS["HERIKA_BACKGROUND"] : '',
+                    'HERIKA_PERSONALITY' => isset($GLOBALS["HERIKA_PERSONALITY"]) ? $GLOBALS["HERIKA_PERSONALITY"] : '',
+                    'HERIKA_APPEARANCE' => isset($GLOBALS["HERIKA_APPEARANCE"]) ? $GLOBALS["HERIKA_APPEARANCE"] : '',
+                    'HERIKA_RELATIONSHIPS' => isset($GLOBALS["HERIKA_RELATIONSHIPS"]) ? $GLOBALS["HERIKA_RELATIONSHIPS"] : '',
+                    'HERIKA_OCCUPATION' => isset($GLOBALS["HERIKA_OCCUPATION"]) ? $GLOBALS["HERIKA_OCCUPATION"] : '',
+                    'HERIKA_SKILLS' => isset($GLOBALS["HERIKA_SKILLS"]) ? $GLOBALS["HERIKA_SKILLS"] : '',
+                    'HERIKA_SPEECHSTYLE' => isset($GLOBALS["HERIKA_SPEECHSTYLE"]) ? $GLOBALS["HERIKA_SPEECHSTYLE"] : '',
+                    'HERIKA_GOALS' => isset($GLOBALS["HERIKA_GOALS"]) ? $GLOBALS["HERIKA_GOALS"] : '',
                     'HERIKA_DYNAMIC' => isset($GLOBALS["HERIKA_DYNAMIC"]) ? $GLOBALS["HERIKA_DYNAMIC"] : ''
                 ];
                 
                 // Load follower's profile
-                //include($confFile);
-                $FOLLOWER_CONF=extract_assignments($confFile);
-                //print_r($FOLLOWER_CONF);
+                $FOLLOWER_CONF = extract_assignments($confFile);
                 $profileLoaded = true;
                 Logger::info("AUTO_DIARY: Loaded profile for $followerName");
             }
         }
         
         if (!$profileLoaded) {
-            // Use default follower personality if no specific profile exists
-            $GLOBALS["HERIKA_PERS"] = "A loyal companion and follower of " . $GLOBALS["PLAYER_NAME"] . ".";
-            $GLOBALS["HERIKA_DYNAMIC"] = "Currently traveling and adventuring alongside " . $GLOBALS["PLAYER_NAME"] . ".";
+            // Create default follower configuration array if no specific profile exists
+            $FOLLOWER_CONF = [
+                "HERIKA_NAME" => $followerName,
+                "PLAYER_NAME" => $GLOBALS["PLAYER_NAME"],
+                "HERIKA_PERS" => "A loyal companion and follower of " . $GLOBALS["PLAYER_NAME"] . ".",
+                "HERIKA_BACKGROUND" => "A trusted companion who has joined " . $GLOBALS["PLAYER_NAME"] . " on their adventures through Skyrim.",
+                "HERIKA_PERSONALITY" => "Loyal, brave, and dependable. Shows dedication to their companions and faces challenges with determination.",
+                "HERIKA_APPEARANCE" => "A capable-looking adventurer equipped for the dangers of Skyrim.",
+                "HERIKA_RELATIONSHIPS" => "Close companion and trusted ally of " . $GLOBALS["PLAYER_NAME"] . ". Values friendship and loyalty above all else.",
+                "HERIKA_OCCUPATION" => "Adventurer and companion, skilled in combat and survival.",
+                "HERIKA_SKILLS" => "Proficient in combat, survival skills, and supporting allies in dangerous situations.",
+                "HERIKA_SPEECHSTYLE" => "Speaks with loyalty and respect, often showing concern for companions' wellbeing.",
+                "HERIKA_GOALS" => "To support " . $GLOBALS["PLAYER_NAME"] . " in their adventures and protect innocent people from harm.",
+                "PROMPT_HEAD" => isset($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "You are a companion in the world of Skyrim.",
+                "COMMAND_PROMPT" => isset($GLOBALS["COMMAND_PROMPT"]) ? $GLOBALS["COMMAND_PROMPT"] : "",
+                "CONTEXT_HISTORY" => isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25,
+                "CONTEXT_HISTORY_DIARY" => isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0,
+                "CONNECTORS_DIARY" => $GLOBALS["CONNECTORS_DIARY"],
+                "CONNECTOR" => isset($GLOBALS["CONNECTOR"]) ? $GLOBALS["CONNECTOR"] : []
+            ];
+            Logger::info("AUTO_DIARY: Using default configuration for $followerName");
+        } else {
+            // Ensure required fields exist in loaded configuration with fallbacks
+            if (!isset($FOLLOWER_CONF["HERIKA_NAME"])) {
+                $FOLLOWER_CONF["HERIKA_NAME"] = $followerName;
+            }
+            if (!isset($FOLLOWER_CONF["PLAYER_NAME"])) {
+                $FOLLOWER_CONF["PLAYER_NAME"] = $GLOBALS["PLAYER_NAME"];
+            }
+            if (!isset($FOLLOWER_CONF["CONNECTORS_DIARY"])) {
+                $FOLLOWER_CONF["CONNECTORS_DIARY"] = $GLOBALS["CONNECTORS_DIARY"];
+            }
+            if (!isset($FOLLOWER_CONF["CONNECTOR"])) {
+                $FOLLOWER_CONF["CONNECTOR"] = isset($GLOBALS["CONNECTOR"]) ? $GLOBALS["CONNECTOR"] : [];
+            }
+            if (!isset($FOLLOWER_CONF["CONTEXT_HISTORY"])) {
+                $FOLLOWER_CONF["CONTEXT_HISTORY"] = isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25;
+            }
+            if (!isset($FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"])) {
+                $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"] = isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0;
+            }
+            // Ensure extended profile fields have fallbacks if they don't exist
+            if (!isset($FOLLOWER_CONF["HERIKA_BACKGROUND"])) {
+                $FOLLOWER_CONF["HERIKA_BACKGROUND"] = "";
+            }
+            if (!isset($FOLLOWER_CONF["HERIKA_PERSONALITY"])) {
+                $FOLLOWER_CONF["HERIKA_PERSONALITY"] = "";
+            }
+            if (!isset($FOLLOWER_CONF["HERIKA_APPEARANCE"])) {
+                $FOLLOWER_CONF["HERIKA_APPEARANCE"] = "";
+            }
+            if (!isset($FOLLOWER_CONF["HERIKA_RELATIONSHIPS"])) {
+                $FOLLOWER_CONF["HERIKA_RELATIONSHIPS"] = "";
+            }
+            if (!isset($FOLLOWER_CONF["HERIKA_OCCUPATION"])) {
+                $FOLLOWER_CONF["HERIKA_OCCUPATION"] = "";
+            }
+            if (!isset($FOLLOWER_CONF["HERIKA_SKILLS"])) {
+                $FOLLOWER_CONF["HERIKA_SKILLS"] = "";
+            }
+            if (!isset($FOLLOWER_CONF["HERIKA_SPEECHSTYLE"])) {
+                $FOLLOWER_CONF["HERIKA_SPEECHSTYLE"] = "";
+            }
+            if (!isset($FOLLOWER_CONF["HERIKA_GOALS"])) {
+                $FOLLOWER_CONF["HERIKA_GOALS"] = "";
+            }
         }
         
         // Use the same prompt system as regular diary entries
@@ -1431,7 +1517,7 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
             $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
         }
 
-        $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],["#PLAYER_NAME#"=>$FOLLOWER_CONF["PLAYER_NAME"],"#HERIKA_NAME#"=>$followerName]);
+        $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$followerName,'{$GLOBALS["PLAYER_NAME"]}'=>$FOLLOWER_CONF["PLAYER_NAME"]]);
 
         $prompt[] = 
             ["role" => "user", "content" => $diaryPrompt
@@ -1523,6 +1609,14 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         // Restore original profile data if we loaded a follower profile
         if (!empty($originalHerikaData)) {
             $GLOBALS["HERIKA_PERS"] = $originalHerikaData['HERIKA_PERS'];
+            $GLOBALS["HERIKA_BACKGROUND"] = $originalHerikaData['HERIKA_BACKGROUND'];
+            $GLOBALS["HERIKA_PERSONALITY"] = $originalHerikaData['HERIKA_PERSONALITY'];
+            $GLOBALS["HERIKA_APPEARANCE"] = $originalHerikaData['HERIKA_APPEARANCE'];
+            $GLOBALS["HERIKA_RELATIONSHIPS"] = $originalHerikaData['HERIKA_RELATIONSHIPS'];
+            $GLOBALS["HERIKA_OCCUPATION"] = $originalHerikaData['HERIKA_OCCUPATION'];
+            $GLOBALS["HERIKA_SKILLS"] = $originalHerikaData['HERIKA_SKILLS'];
+            $GLOBALS["HERIKA_SPEECHSTYLE"] = $originalHerikaData['HERIKA_SPEECHSTYLE'];
+            $GLOBALS["HERIKA_GOALS"] = $originalHerikaData['HERIKA_GOALS'];
             $GLOBALS["HERIKA_DYNAMIC"] = $originalHerikaData['HERIKA_DYNAMIC'];
         }
     }
