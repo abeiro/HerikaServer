@@ -205,8 +205,8 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                     $prompt[] = array('role' => 'system', 
                                       'content' => "This is a playthrough in Skyrim. 
 {$GLOBALS["PLAYER_NAME"]} is the player.
-{$row["companions"]} are {$GLOBALS["PLAYER_NAME"]}'s followers/companions.
-You must write {$GLOBALS["PLAYER_NAME"]} memories by analyzing the chat history.
+{$row["companions"]} are nearby NPCs.
+You must write a memory summary by analyzing the chat history.
 Pay attention to details that can change character's behavior, feelings, and also tag names and locations.
 Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 ");
