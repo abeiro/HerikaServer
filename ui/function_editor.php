@@ -78,12 +78,13 @@ $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+$GLOBALS["db"]=new sql(); // if we delay creating new instance, functions.php inclusion in line 86 could trigger errors in plugins
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 require_once($enginePath."lib/utils.php");
 require_once($enginePath."functions/functions.php");
-$GLOBALS["db"]=new sql();
+
 $currentList = $GLOBALS["ENABLED_FUNCTIONS"];
 
 // Handle form submission
