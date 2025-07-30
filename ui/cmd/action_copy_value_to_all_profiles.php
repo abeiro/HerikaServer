@@ -16,7 +16,6 @@ if ($method === 'POST') {
 
   // Read JSON data from the request
     $jsonDataInput = json_decode(file_get_contents("php://input"), true);
-
     $files=glob($configFilepath . 'conf_????????????????????????????????.php');
     $files[]=$configFilepath. 'conf.php';
 
@@ -24,7 +23,9 @@ if ($method === 'POST') {
     $skipped = [];
 
     foreach ($files as $mconf ) {
+
         if (file_exists($mconf)) {
+          
             // First, check if this profile is locked and get character name
             $isLocked = false;
             $original=file_get_contents($mconf);
@@ -47,7 +48,8 @@ if ($method === 'POST') {
                 }
             }
 
-            $pattern = '/<\?php(.*?)\?>/s';
+            /* $pattern = '/<\?php(.*?)\?>/s';   */
+            $pattern = '/<\?php(.*?)(?:\?>|$)/s'; /* sometime the file ends without PHP end mark '?>'. In this case read till EOF */
 
             // Use preg_match to find the content between the PHP tags
             if (preg_match($pattern, $original, $matches)) {
@@ -55,7 +57,7 @@ if ($method === 'POST') {
                 $php_code = trim($matches[1]);
 
             } else {
-                Logger::warn("No PHP code found in the file.");
+                Logger::error("No PHP code found in the file. {$characterName} {$mconf} ");
                 continue;
             }
 
@@ -91,10 +93,9 @@ if ($method === 'POST') {
             Logger::trace("Written to " . $characterName . "'s profile");
 
         } else {
-            Logger::warn("Does not exists $mconf");
+            Logger::warn("$mconf file does not exists!");
         }
     }
-
 
     echo json_encode([
         "updated" => $updated,
