@@ -29,6 +29,13 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php"); 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
 
+// New profile system
+require_once($path . "lib/core/npc_master.class.php");
+require_once($path . "lib/core/api_badge.class.php");
+require_once($path . "lib/core/llm_connector.class.php");
+require_once($path . "lib/core/tts_connector.class.php");
+require_once($path . "lib/core/core_profiles.class.php");
+
 $GLOBALS["ENGINE_PATH"]=$path;
 
 // PARSE GET RESPONSE into $gameRequest
@@ -516,10 +523,66 @@ if (isset($_GET["profile"])) {
         // error_log("PROFILE: {$_GET["profile"]}");
         // Migration here to new system
 
-        require($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
+        $npcMaster=new NpcMaster();
+        $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+    
+        if (!$currentNpcData) {
+            
+            require($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
+
+            $npcMaster->create(["npc_name"=>$GLOBALS["HERIKA_NAME"]]);
+            $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+
+            if ($currentNpcData) {
+                $newNpcData=$npcMaster->migrateFromOldProfile($currentNpcData,$GLOBALS);
+                if ($newNpcData) {
+                    $npcMaster->updateByArray($newNpcData);
+                }
+                
+            }
+
+            $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+
+        } 
+
+        // Profile has been migrated
+        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+        $profile=new CoreProfile();
+        $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+    
+        $connector=new LLMConnector();
+        $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
+
+        if (isset($currentActiveModelProfile["value"])) {
+            if ($currentActiveModelProfile["value"]==1) 
+                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+            else if ($currentActiveModelProfile["value"]==2) 
+                $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
+            else if ($currentActiveModelProfile["value"]==3) 
+                $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
+            else if ($currentActiveModelProfile["value"]==4) 
+                $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
+            else
+                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+
+        } else
+                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+        
+    
+        $connector->setOldGlobals($currentConnectorData);
+        $profile->setOldGlobals($currentProfileData);
+        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+        
+        error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} profile: {$currentProfileData["label"]}");
+        error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]}");
+
 
     } else {
-        // error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
+        
+        error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
     }
     
     $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];

@@ -502,8 +502,22 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (!profile_exists($localName))
         AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
 
+    
     createProfile($localName,[],false,$baseProfile);
     audit_log("comm.php addnpc $localName");
+
+    // Update new data
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByName($localName);
+    if ($currentNpcData) {
+        $currentNpcData["gender"]=$splitNameBase[2];
+        $currentNpcData["race"]=$splitNameBase[3];
+        $currentNpcData["refid"]=$splitNameBase[4];
+        $npcMaster->updateByArray($currentNpcData);
+        
+        
+    }
+
     $MUST_END=true;
     
     
@@ -1681,6 +1695,21 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
     }
     
     try {
+
+        //
+
+        $npcMaster=new NpcMaster();
+        $currentNpcData=$npcMaster->getByName($npcName);
+    
+        if ($currentNpcData) {
+            foreach ($updatedFields as $field => $newValue) {
+                $currentNpcData[$field]=$newValue;
+            }
+            
+            $npcMaster->updateByArray($currentNpcData);
+            
+        }
+        
         // Create backup
         copy($configFile, $path . "conf" . DIRECTORY_SEPARATOR . ".conf_{$newConfFile}_" . time() . ".php");
         
