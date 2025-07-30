@@ -1,0 +1,369 @@
+<?php
+
+class NpcMaster {
+    private $table = "core_npc_master";
+    private $db;
+
+    public static function profileExists($npcName, $checkLegacyFile = false) {
+        // Access global DB instance
+        $db = $GLOBALS["db"];
+        $escaped = $db->escape($npcName);
+        $query = "SELECT 1 FROM core_npc_master WHERE npc_name = '{$escaped}' LIMIT 1";
+        $result = $db->fetchOne($query);
+
+        if ($result) {
+            return true; // Found in database
+        }
+
+        return false;
+    }
+
+    public function __construct() {
+        $this->db = $GLOBALS["db"];
+    }
+
+    // Create (Insert)
+    public function create($data) {
+        $fields = [
+            "npc_name",
+            "npc_favorite",
+            "lock_profile",
+            "prompt_head",
+            "npc_static_bio",
+            "npc_dynamic_bio",
+            "oghma_knowledge_tags",
+            "emote_moods",
+            "personality",
+            "relationships",
+            "occupation",
+            "skills",
+            "speechstyle",
+            "goals",
+            "voiceid",
+            "metadata",
+            "extended_data",
+            "gender",
+            "race",
+            "refid",
+            "profile_id",
+            "dynamic_profile",
+            "md5",
+            "gamets_last_updated"
+        ];
+
+        foreach ($data as $k => $v) {
+            if (empty($v)) {
+                $data[$k] = null;
+            }
+        }
+        $data["md5"]=md5($data["npc_name"]);
+        $filtered = array_intersect_key($data, array_flip($fields));
+        return $this->db->insert($this->table, $filtered);
+    }
+
+    // Read NPC by ID
+    public function getById($id) {
+        $id = (int)$id;
+        $query = "SELECT * FROM {$this->table} WHERE id = $id LIMIT 1";
+        return $this->db->fetchOne($query);
+    }
+
+    // Read NPC by unique name
+    public function getByName($npcName) {
+        $escaped = $this->escape($npcName);
+        $query = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' LIMIT 1";
+        return $this->db->fetchOne($query);
+    }
+
+     // Read NPC by md5
+     public function getByMD5($npcName) {
+        $escaped = $this->escape($npcName);
+        $query = "SELECT * FROM {$this->table} WHERE md5 = '{$escaped}' LIMIT 1";
+        return $this->db->fetchOne($query);
+    }
+
+
+    // Read all NPCs (optional WHERE)
+    public function getAll($where = "TRUE") {
+        $query = "SELECT * FROM {$this->table} WHERE $where";
+        return $this->db->fetchAll($query);
+    }
+
+    // Update NPC by ID
+    public function update($id, $data) {
+        $fields = [
+            "npc_name",
+            "npc_favorite",
+            "lock_profile",
+            "prompt_head",
+            "npc_static_bio",
+            "npc_dynamic_bio",
+            "oghma_knowledge_tags",
+            "emote_moods",
+            "personality",
+            "relationships",
+            "occupation",
+            "skills",
+            "speechstyle",
+            "goals",
+            "voiceid",
+            "metadata",
+            "extended_data",
+            "gender",
+            "race",
+            "refid",
+            "profile_id",
+            "dynamic_profile",
+            "md5",
+            "gamets_last_updated"
+        ];
+
+        $id = (int)$id;
+        $where = "id = $id";
+
+        foreach ($data as $k => $v) {
+            if (empty($v)) {
+                $data[$k] = null;
+            }
+        }
+
+        $id = intval($id);
+        $where = "id = {$id}";
+        $filtered = array_intersect_key($data, array_flip($fields));
+        return $GLOBALS["db"]->updateRow($this->table, $filtered, $where);
+       
+    }
+
+    // Update NPC using an array (id key required)
+    public function updateByArray($data) {
+        if (!isset($data['id'])) {
+            return false;
+        }
+
+        $id = (int)$data['id'];
+        unset($data['id']); // Remove 'id' from the data array to avoid updating it
+
+        
+        return $this->update($id,$data);
+    }
+
+    // Delete NPC by ID
+    public function delete($id) {
+        $id = (int)$id;
+        $where = "id = $id";
+        return $this->db->delete($this->table, $where);
+    }
+
+    // Truncate table (dangerous!)
+    public function truncate($restart = false, $cascade = false) {
+        return $this->db->truncate($this->table, $restart, $cascade);
+    }
+
+    // Upsert using ON CONFLICT
+    public function upsert($data, $conflictTarget) {
+        return $this->db->upsertRowOnConflict($this->table, $data, $conflictTarget);
+    }
+
+    // Escape strings for raw queries
+    public function escape($str) {
+        return $this->db->escape($str);
+    }
+
+    // Convert NPC name to codename
+    public function npcNameToCodename($npcName) {
+        $codename = mb_convert_encoding($npcName, 'UTF-8', mb_detect_encoding($npcName));
+        $codename = strtr(strtolower(trim($codename)), [" " => "_", "'" => "+"]);
+        $codename = preg_replace('/[^\w+-]/u', '', $codename);
+        return $codename;
+    }
+
+    public function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '') {
+        if ($npcname === "The Narrator") {
+            return; // refuse narrator
+        }
+
+        $codename = $this->npcNameToCodename($npcname);
+        $baseprofileName = $this->npcNameToCodename($baseprofile);
+
+        // Check if NPC already exists in DB
+        $existing = $this->getByName($npcname);
+
+        if ($existing && !$overwrite) {
+            // Profile exists, and no overwrite requested — bail
+            return;
+        }
+
+        // Fetch NPC templates
+        $templateRow = $this->fetchTemplateRow($codename);
+
+        // Override with FORCE_PARMS
+        foreach ($FORCE_PARMS as $key => $value) {
+            $templateRow[$key] = $value;
+        }
+
+        // Compose knowledge string (OGHMA_KNOWLEDGE)
+        $templateRow['npc_misc'] = $this->composeKnowledgeString($templateRow['npc_misc'], $codename);
+
+        // Fetch voice IDs
+        $voiceData = $this->fetchVoiceData($codename);
+
+        // Compose the row data to insert/update
+        $rowData = array_merge($templateRow, $voiceData, [
+            'npc_name' => $npcname,
+            'npc_codename' => $codename
+        ]);
+
+        // Insert or update into DB
+        if ($existing) {
+            $this->update($existing['id'], $rowData);
+        } else {
+            $this->create($rowData);
+        }
+
+        // Log success
+        Logger::info("NPC profile created/updated for '{$npcname}' in DB.");
+    }
+
+    private function fetchTemplateRow($codename) {
+        $lang = $GLOBALS["CORE_LANG"] ?? '';
+        if ($lang) {
+            $templateRow = $this->db->fetchOne("SELECT npc_pers FROM npc_templates_trl WHERE name_trl = '$codename' AND lang = '$lang'");
+        }
+
+        if (!$templateRow) {
+            $templateRow = $this->db->fetchOne("SELECT npc_pers, npc_dynamic, npc_misc, npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates WHERE npc_name = '$codename'");
+        }
+
+        
+        return $templateRow ?: [
+            'npc_pers' => 'Roleplay as ' . $codename,
+            'npc_dynamic' => '',
+            'npc_misc' => $codename,
+            'npc_background' => '',
+            'npc_personality' => '',
+            'npc_appearance' => '',
+            'npc_relationships' => '',
+            'npc_occupation' => '',
+            'npc_skills' => '',
+            'npc_speechstyle' => '',
+            'npc_goals' => ''
+        ];
+    }
+
+    private function composeKnowledgeString($misc, $codename) {
+        $miscParts = array_unique(array_filter(array_map('trim', explode(',', $misc))));
+        if (!in_array($codename, $miscParts)) {
+            $miscParts[] = $codename;
+        }
+        return implode(', ', $miscParts);
+    }
+
+    private function fetchVoiceData($codename) {
+        $voiceData = $this->db->fetchOne("SELECT xtts_voiceid, melotts_voiceid, xvasynth_voiceid FROM combined_npc_templates WHERE npc_name = '$codename'");
+        $voicetypeString = $this->fetchVoicetype($codename);
+
+        return array_merge($voiceData ?: [], ['voicetype' => $voicetypeString]);
+    }
+
+    private function fetchVoicetype($codename) {
+        $cn = $this->db->escape("Voicetype/$codename");
+        $vtypeRows = $this->db->fetchAll("SELECT value FROM conf_opts WHERE id = '$cn'");
+        return $vtypeRows[0]['value'] ?? '';
+    }
+
+    public function migrateFromOldProfile($currentNpcData,$OLD_GLOBALS_ARRAY) {
+
+        $currentNpcData['npc_favorite'] = 0; // Default
+        $currentNpcData['lock_profile'] =  $OLD_GLOBALS_ARRAY['LOCK_PROFILE']?1:0; // Default
+        $currentNpcData['dynamic_profile'] = $OLD_GLOBALS_ARRAY['DYNAMIC_PROFILE']?1:0;
+        $currentNpcData['prompt_head'] = $OLD_GLOBALS_ARRAY['PROMPT_HEAD'] ?? null;
+        $currentNpcData['npc_static_bio'] = $OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'] ?? null;
+        $currentNpcData['npc_dynamic_bio'] = $OLD_GLOBALS_ARRAY['HERIKA_DYNAMIC'] ?? null;
+        $currentNpcData['oghma_knowledge_tags'] = $OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'] ?? null;
+        $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'] ?? ($GLOBALS['HERIKA_PERS'] ?? null);
+        $currentNpcData['relationships'] = $OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'] ?? null;
+        $currentNpcData['occupation'] = $GLOBALS['HERIKA_OCCUPATION'] ?? null;
+        $currentNpcData['skills'] = $OLD_GLOBALS_ARRAY['HERIKA_SKILLS'] ?? null;
+        $currentNpcData['speechstyle'] = $OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'] ?? null;
+        $currentNpcData['emote_moods'] = $GLOBALS['EMOTEMOODS'] ?? null;
+        $currentNpcData['goals'] = $OLD_GLOBALS_ARRAY['HERIKA_GOALS'] ?? null;
+        $currentNpcData['voiceid'] = $OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'] ?? null;
+
+        foreach ($OLD_GLOBALS_ARRAY as $k=>$v) {
+            if (!is_array($v)) {
+                if (in_array($k,["DIARY_COOLDOWN", "AUTO_DIARY", "AUTO_DIARY_WAIT", "MINIME_T5", "OGHMA_INFINIUM", "OGHMA_AMOUNT", "RECHAT_H", "RECHAT_P", "RECHAT_ALLOW_ACTIONS", "BORED_EVENT", "BORED_EVENT_SERVERSIDE", "CONTEXT_HISTORY", "CONTEXT_HISTORY_DIARY", "CONTEXT_HISTORY_DYNAMIC_PROFILE", "ALIVE_MESSAGE", "TIME_AWARENESS", "QUEST_COMMENT", "QUEST_COMMENT_CHANCE", "CURRENT_TASK", "HERIKA_ANIMATIONS", "CORE_LANG", "LANG_LLM_XTTS", "MAX_WORDS_LIMIT", "REMOVE_ASTERISKS_FROM_OUTPUT", "ENFORCE_ACTIONS_PROMPT", "DIARY_PROMPT"]))
+                    $overrides[$k]=$v;
+            }
+        }
+        $currentNpcData['metadata'] = json_encode($overrides);
+        $currentNpcData['extended_data'] = json_encode(["chim_core_migrated"=>1]);
+        $currentNpcData['gender'] = null; // Optional: you might use HERIKA_PERSONALITY/gender logic
+        $currentNpcData['race'] = null; // Optional: no race found
+        $currentNpcData['refid'] = null; // Optional: no race found
+        $currentNpcData['profile_id'] = 1; // Default profile
+        $currentNpcData['md5'] = md5($currentNpcData["npc_name"]); // Default profile
+
+        return $currentNpcData;
+
+    }
+
+    public function setOldGlobalsFromCurrentNpcData($currentNpcData) {
+        
+        $GLOBALS['HERIKA_NAME'] = $currentNpcData['npc_name'] ?? null;
+        $GLOBALS['LOCK_PROFILE'] = $currentNpcData['lock_profile'] ? true : false;
+        $GLOBALS['DYNAMIC_PROFILE'] = $currentNpcData['dynamic_profile'] ? true : false;
+        $GLOBALS['PROMPT_HEAD'] = $currentNpcData['prompt_head'] ?? null;
+        $GLOBALS['HERIKA_BACKGROUND'] = $currentNpcData['npc_static_bio'] ?? null;
+        $GLOBALS['HERIKA_DYNAMIC'] = $currentNpcData['npc_dynamic_bio'] ?? null;
+        $GLOBALS['OGHMA_KNOWLEDGE'] = $currentNpcData['oghma_knowledge_tags'] ?? null;
+        $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'] ?? null;
+        $GLOBALS['HERIKA_RELATIONSHIPS'] = $currentNpcData['relationships'] ?? null;
+        $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'] ?? null;
+        $GLOBALS['HERIKA_SKILLS'] = $currentNpcData['skills'] ?? null;
+        $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'] ?? null;
+        $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'] ?? null;
+        $GLOBALS['HERIKA_GOALS'] = $currentNpcData['goals'] ?? null;
+
+        // Check this
+        $GLOBALS['TTS']['XTTSFASTAPI']['voiceid'] = $currentNpcData['voiceid'] ?? null;
+
+        // Decode metadata and extended_data if available
+        $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
+        if (is_array($metadata)) {
+            foreach ($metadata as $key => $value) {
+                $GLOBALS[$key] = $value;
+            }
+        }
+
+        
+    }
+
+    public function getAllFk($field) {
+        // Map foreign key fields to their respective tables
+        $fkMap = [
+            "profile_id"     => "core_profiles"
+        ];
+    
+        if (!array_key_exists($field, $fkMap)) {
+            return []; // Unknown field
+        }
+    
+        $table = $fkMap[$field];
+        $query = "SELECT id, label FROM {$table} ORDER BY id ASC";
+        return $GLOBALS["db"]->fetchAll($query);
+    }
+
+    public function getExtendedData($currentNpcData) {
+
+    
+
+    }
+
+    public function setExtendedData($currentNpcData,$data) {
+
+    
+
+    }
+}
+
+?>
