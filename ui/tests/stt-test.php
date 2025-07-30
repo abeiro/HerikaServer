@@ -28,7 +28,8 @@ if ($STTFUNCTION == "azure") {
 } else if ($STTFUNCTION == "deepgram") {
     require_once($enginePath . "stt" . DIRECTORY_SEPARATOR . "stt-deepgram.php");
 } else {
-    $error_message = "Unknown STT function: $STTFUNCTION";
+    require_once($enginePath . "stt" . DIRECTORY_SEPARATOR . "stt-none.php");
+    //$error_message = "Unknown STT function: $STTFUNCTION";
 }
 
 ini_set('display_errors', 1);
@@ -203,8 +204,13 @@ if (php_sapi_name() != "cli") {
             // Display similarity percentage
             echo '<div class="message accuracy">Similarity: ' . number_format($similarity, 2) . '%</div>';
         } else {
-            echo '<div class="status"><span class="label error">Transcription Failed</span></div>';
-            echo '<div class="error-message">Transcription failed or returned an empty result.</div>';
+            if ($STTFUNCTION == "none") {
+                echo '<div class="status"><span class="label error">Transcription not possible</span></div>';
+                echo '<div class="error-message">Transcription service is not selected.</div>';
+            } else {
+                echo '<div class="status"><span class="label error">Transcription Failed</span></div>';
+                echo '<div class="error-message">Transcription failed or returned an empty result.</div>';
+            }
         }
 
         echo '<div class="message">Service used: <strong>' . htmlspecialchars($GLOBALS['STTFUNCTION']) . '</strong></div>';
