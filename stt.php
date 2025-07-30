@@ -3,12 +3,10 @@
 
 /* STT entry point */
 
-
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
-
 
 
 $startTime = microtime(true);
@@ -44,7 +42,10 @@ if ($STTFUNCTION=="azure") {
     require_once($path."stt/stt-deepgram.php");
     $text= stt($finalName);
     
-}
+} else {
+    require_once($path."stt/stt-none.php");
+    $text= stt($finalName);
+} 
 
 echo $text;
 
