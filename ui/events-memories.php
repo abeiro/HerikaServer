@@ -426,9 +426,9 @@ function getTimeColor($time) {
                     
                     // Special handling for chat events
                     if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
-                        $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value) . '</span>';
+                        $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value ?? '') . '</span>';
                     } else {
-                        $value = htmlspecialchars($value);
+                        $value = htmlspecialchars($value ?? '');
                     }
                     
                     // Map ROWID to lowercase rowid for delete functionality
@@ -531,10 +531,10 @@ function getTimeColor($time) {
                 $mappedRow = [];
                 foreach ($row as $key => $value) {
                     if ($key === 'prompt') {
-                        $escapedContent = htmlspecialchars($value, ENT_QUOTES);
+                        $escapedContent = htmlspecialchars($value ?? '', ENT_QUOTES);
                         $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">🧾</button>';
                     } else if ($key === 'response') {
-                        $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value)) . '</div>';
+                        $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value ?? '')) . '</div>';
                     } else if ($key === 'localts' && !empty($value)) {
                         $dt = new DateTime("@$value");
                         $dt->setTimezone(new DateTimeZone('UTC'));
@@ -646,15 +646,15 @@ function getTimeColor($time) {
             foreach ($results as $row) {
                 $displayHtml = "<div id='display-{$row['rowid']}'>
                     <div class='summary-section'>
-                        <span class='summary-content'>" . nl2br(htmlspecialchars($row['summary'])) . "</span>
+                        <span class='summary-content'>" . nl2br(htmlspecialchars($row['summary'] ?? '')) . "</span>
                     </div>
                     <div class='summary-section'>
                         <span class='summary-label'>People:</span>
-                        <span class='summary-content'>" . htmlspecialchars($row['companions']) . "</span>
+                        <span class='summary-content'>" . htmlspecialchars($row['companions'] ?? '') . "</span>
                     </div>
                     <div class='subcategory-section'>
                         <span class='summary-label subcategory-label'>Tags:</span>
-                        <span class='summary-content subcategory-content'>" . htmlspecialchars($row['tags']) . "</span>
+                        <span class='summary-content subcategory-content'>" . htmlspecialchars($row['tags'] ?? '') . "</span>
                     </div>
                     <div class='subcategory-section'>
                         <span class='summary-label subcategory-label'>Embedding:</span>
@@ -668,7 +668,7 @@ function getTimeColor($time) {
                         <span class='summary-label'>Packed Memory Content:</span>
                     </div>
                     <div class='memory-cell'>
-                        <textarea readonly class='memory-content'>" . htmlspecialchars($row['packed_message']) . "</textarea>
+                        <textarea readonly class='memory-content'>" . htmlspecialchars($row['packed_message'] ?? '') . "</textarea>
                     </div>
                 </div>";
                 
@@ -676,11 +676,11 @@ function getTimeColor($time) {
                     <input type='hidden' name='rowid' value='{$row['rowid']}'>
                     <input type='hidden' name='save_memory_edit' value='1'>
                     <label>Summary:</label>
-                    <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['summary']) . "</textarea>
+                    <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['summary'] ?? '') . "</textarea>
                     <label>Tags:</label>
-                    <input type='text' name='tags' class='edit-input form-control' value='" . htmlspecialchars($row['tags']) . "'>
+                    <input type='text' name='tags' class='edit-input form-control' value='" . htmlspecialchars($row['tags'] ?? '') . "'>
                     <label>People:</label>
-                    <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions']) . "'>
+                    <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions'] ?? '') . "'>
                     <div class='button-group' style='margin-top: 10px;'>
                         <button type='submit' class='btn-base action-button add-new'>Save</button>
                         <button type='button' class='btn-base btn-cancel' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
@@ -887,7 +887,7 @@ function getTimeColor($time) {
                     if ($key === 'ROWID') {
                         $mappedRow['rowid'] = $value;
                     } else if (isset($columnHeaders[$key])) {
-                        $mappedRow[$columnHeaders[$key]] = htmlspecialchars($value);
+                        $mappedRow[$columnHeaders[$key]] = htmlspecialchars($value ?? '');
                     }
                 }
                 return $mappedRow;
