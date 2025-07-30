@@ -461,6 +461,11 @@ function returnLines($lines,$writeOutput=true)
                 require_once(__DIR__."/../tts/tts-mimic3.php");
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
+            } else if ($GLOBALS["TTSFUNCTION"] == "piper-tts") {
+
+                require_once(__DIR__."/../tts/tts-piper-tts.php");
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
+
             } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
 
                 require_once(__DIR__."/../tts/tts-11labs.php");

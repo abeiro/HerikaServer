@@ -197,6 +197,7 @@
     }
   },
   "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
@@ -236,7 +237,7 @@
     "PIPERTTS": {
       "_title":"Piper-TTS",
       "endpoint": {"type":"url","description":"Piper-TTS endpoint URL. The IP address of the machine where Piper-TTS is installed."},
-      "voiceid": {"type":"string","description":"Voice ID code. Model voices are stored in 'models' folder in .onnx files. Voice ID is the file name without extension."},
+      "voiceid": {"type":"string","description":"MUST DOWNLOAD VOICES MANUALLY! CLICK HELP LINK FOR INSTRUCTIONS! Voice ID code. Model voices are stored in 'models' folder in .onnx files. Voice ID is the file name without extension.","helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pipertts"},
       "length_scale": {"userlvl":"pro","type":"number","description":"speaking time scale. Use a value over 1.0 to play slower, a value under 1.0 is faster."},
       "noise_scale": {"userlvl":"pro","type":"number","description":"speaking variability. Leave 0 to use voice model internal value. Experiment with values around 0.667"},
       "noise_w_scale": {"userlvl":"pro","type":"number","description":"phoneme width variability. Leave 0 to use voice model internal value. Experiment with values around 0.8"},
@@ -318,8 +319,9 @@
       "voice": {"type":"string","description":"Voice to use"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
+  "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character.<br/>If blank, the NPC's TTS language will be used."},
   "TRANSLATION_FUNCTION": {"type":"select","userlvl":"basic","values":["none","DeepL"],"description":"Translate subtitles and/or audio into a different language.","_title":"Translation Service"},
   "TRANSLATION": {
