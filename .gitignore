@@ -14,3 +14,4 @@ conf/conf_*.php
 !conf/conf_schema.php
 /data/voices/*
 !/data/voices/TheNarrator.wav
+*/Zone.Identifier
