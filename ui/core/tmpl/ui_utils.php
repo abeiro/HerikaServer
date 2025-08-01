@@ -3,6 +3,7 @@
 function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") {
     $options = $obj->getAllFk($fieldName);
     $html = "<label for='{$fieldName}'>{$labelText}</label><br>";
+    $html = "<br>";
     $html .= "<select name='{$fieldName}' id='{$fieldName}'>";
     $html .= "<option value=''>-- Select {$labelText} --</option>";
     foreach ($options as $opt) {

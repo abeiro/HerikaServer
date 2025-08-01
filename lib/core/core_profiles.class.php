@@ -10,6 +10,7 @@ class CoreProfile {
             "default_narrator",
             "tts_connector_id",
             "itt_connector_id",
+            "diary_connector_id",
             "llm_primary_id",
             "llm_secondary_id",
             "llm_tertiary_id",
@@ -50,6 +51,7 @@ class CoreProfile {
             "default_narrator",
             "tts_connector_id",// fk to table  core_tts_connector
             "itt_connector_id",// fk to table  core_itt_connector
+            "diary_connector_id",// fk to table  core_diary_connector
             "llm_primary_id",// fk to table  core_llm_connector
             "llm_secondary_id",// fk to table  core_llm_connector
             "llm_tertiary_id",// fk to table  core_llm_connector
@@ -83,6 +85,7 @@ class CoreProfile {
         $fkMap = [
             "tts_connector_id"     => "core_tts_connector",
             "itt_connector_id"     => "core_itt_connector",
+            "diary_connector_id"   => "core_llm_connector",
             "llm_primary_id"       => "core_llm_connector",
             "llm_secondary_id"     => "core_llm_connector",
             "llm_tertiary_id"      => "core_llm_connector",
@@ -101,12 +104,19 @@ class CoreProfile {
     public function setOldGlobals($currentProfileData) {
 
         // Decode metadata and extended_data if available
+        
+        $ttsConMgr=new TTSConnector();
+        $ttsCon=$ttsConMgr->getById($currentProfileData["tts_connector_id"]);
+
+        $GLOBALS["TTS_FUNCTION"]=$ttsCon["driver"];
+        
         $metadata = json_decode($currentProfileData['metadata'] ?? '{}', true);
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
                 $GLOBALS[$key] = $value;
             }
         }
+        
 
         
     }

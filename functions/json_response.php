@@ -66,7 +66,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target actor| action's destination location name ",
+                    "target"=>"action target actor|action destination location name",
                     "lang"=>"en|es"
                 ];
             } else {
@@ -76,7 +76,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target actor| action's destination location name "
+                    "target"=>"action target actor|action destination location name "
                 ];
             }
         } else {
@@ -86,7 +86,7 @@
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target actor| action's destination location name ",
+                    "target"=>"action target actor|action destination location name",
                     "lang"=>"en|es",
                     "message"=>"lines of dialogue"
                 ];
@@ -96,7 +96,7 @@
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target actor| action's destination location name ",
+                    "target"=>"action target actor|action destination location name",
                     "message"=>"lines of dialogue"
                 ];
             }
@@ -163,7 +163,7 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                            "description" => "action's target actor| action's destination location name "
+                            "description" => "action target actor| action destination location name"
                         )
                     ),
                     "required" => [

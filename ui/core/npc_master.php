@@ -11,6 +11,9 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 
 require_once("{$enginePath}/lib/core/npc_master.class.php");
 
+
+$CONF_SAMPLE_VARS=extract_assignments("$enginePath/conf/conf.php");
+
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from below file
 include(__DIR__."/tmpl/ui_utils.php");
@@ -65,75 +68,75 @@ include("tmpl/header.php");
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
     <?php endif; ?>
 
-    <label>NPC Name</label>
-    <input type="text" name="npc_name" value="<?= htmlspecialchars($editItem["npc_name"] ?? "") ?>">
+    <label for="npc_name">NPC Name</label>
+    <input type="text" id="npc_name" name="npc_name" value="<?= htmlspecialchars($editItem["npc_name"] ?? "") ?>">
 
-    <label>
-        <input type="checkbox" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
+    <label for="npc_favorite">
+        <input type="checkbox" id="npc_favorite" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
         Favorite
     </label><br>
 
-    <label>
-        <input type="checkbox" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
+    <label for="lock_profile">
+        <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
         Lock Profile
     </label><br>
 
-    <label>Prompt Head</label>
-    <input type="text" name="prompt_head" value="<?= htmlspecialchars($editItem["prompt_head"] ?? "") ?>">
+    <label for="prompt_head">Prompt Head</label>
+    <textarea id="prompt_head" name="prompt_head"><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
 
-    <label>Static Bio</label>
-    <textarea name="npc_static_bio"><?= htmlspecialchars($editItem["npc_static_bio"] ?? "") ?></textarea>
+    <label for="npc_static_bio">Static Bio</label>
+    <textarea id="npc_static_bio" name="npc_static_bio"><?= htmlspecialchars($editItem["npc_static_bio"] ?? "") ?></textarea>
 
-    <label>Dynamic Bio</label>
-    <textarea name="npc_dynamic_bio"><?= htmlspecialchars($editItem["npc_dynamic_bio"] ?? "") ?></textarea>
+    <label for="npc_dynamic_bio">Dynamic Bio</label>
+    <textarea id="npc_dynamic_bio" name="npc_dynamic_bio"><?= htmlspecialchars($editItem["npc_dynamic_bio"] ?? "") ?></textarea>
 
-    <label>OGHMA Knowledge Tags</label>
-    <textarea name="oghma_knowledge_tags"><?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?></textarea>
+    <label for="oghma_knowledge_tags">OGHMA Knowledge Tags</label>
+    <textarea id="oghma_knowledge_tags" name="oghma_knowledge_tags"><?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?></textarea>
 
-    <label>Emote Moods</label>
-    <textarea name="emote_moods"><?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
+    <label for="emote_moods">Emote Moods</label>
+    <textarea id="emote_moods" name="emote_moods"><?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
 
-    <label>Personality</label>
-    <textarea name="personality"><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
+    <label for="personality">Personality</label>
+    <textarea id="personality" name="personality"><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
 
-    <label>Relationships</label>
-    <textarea name="relationships"><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
+    <label for="relationships">Relationships</label>
+    <textarea id="relationships" name="relationships"><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
 
-    <label>Occupation</label>
-    <textarea name="occupation"><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
+    <label for="occupation">Occupation</label>
+    <textarea id="occupation" name="occupation"><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
 
-    <label>Skills</label>
-    <textarea name="skills"><?= htmlspecialchars($editItem["skills"] ?? "") ?></textarea>
+    <label for="skills">Skills</label>
+    <textarea id="skills" name="skills"><?= htmlspecialchars($editItem["skills"] ?? "") ?></textarea>
 
-    <label>Speech Style</label>
-    <textarea name="speechstyle"><?= htmlspecialchars($editItem["speechstyle"] ?? "") ?></textarea>
+    <label for="speechstyle">Speech Style</label>
+    <textarea id="speechstyle" name="speechstyle"><?= htmlspecialchars($editItem["speechstyle"] ?? "") ?></textarea>
 
-    <label>Goals</label>
-    <textarea name="goals"><?= htmlspecialchars($editItem["goals"] ?? "") ?></textarea>
+    <label for="goals">Goals</label>
+    <textarea id="goals" name="goals"><?= htmlspecialchars($editItem["goals"] ?? "") ?></textarea>
 
-    <label>Voice ID</label>
-    <input type="text" name="voiceid" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
+    <label for="voiceid">Voice ID</label>
+    <input type="text" id="voiceid" name="voiceid" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
 
-    <label>Gender</label>
-    <input type="text" name="gender" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
+    <label for="gender">Gender</label>
+    <input type="text" id="gender" name="gender" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
 
-    <label>Race</label>
-    <input type="text" name="race" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
+    <label for="race">Race</label>
+    <input type="text" id="race" name="race" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
 
-    <label>Ref ID</label>
-    <input type="text" name="refid" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
+    <label for="refid">Ref ID</label>
+    <input type="text" id="refid" name="refid" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
 
-    <label>Profile ID</label>
+    <label for="profile_id">Profile ID</label>
     <?= renderSelect($npc, "profile_id", "Profile", $editItem["profile_id"] ?? "") ?>
 
-    <label>
-        <input type="checkbox" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
+    <label for="dynamic_profile">
+        <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
         Dynamic Profile
     </label>
 
     <br/>
-    <label>Metadata (JSON)</label>
-    <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea><br>
+    <label for="metadata">Metadata (JSON)</label>
+    <textarea id="metadata" name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea><br>
     <div id="metadata"></div>
 
     <input type="submit" name="<?= $editItem ? "update" : "create" ?>" value="<?= $editItem ? "Update" : "Create" ?>">

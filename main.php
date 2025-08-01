@@ -30,10 +30,10 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
 
 // New profile system
-require_once($path . "lib/core/npc_master.class.php");
 require_once($path . "lib/core/api_badge.class.php");
 require_once($path . "lib/core/llm_connector.class.php");
 require_once($path . "lib/core/tts_connector.class.php");
+require_once($path . "lib/core/npc_master.class.php");
 require_once($path . "lib/core/core_profiles.class.php");
 
 $GLOBALS["ENGINE_PATH"]=$path;
@@ -707,7 +707,7 @@ if ($gameRequest[0] == "npcspellcast") {
 }
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
-    "travelcancel","infoplayer","infosave","status_msg","util_npcname","bleedout","spellcast"])) {
+    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close'])) {

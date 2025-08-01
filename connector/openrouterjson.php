@@ -972,4 +972,146 @@ class openrouterjson
         return !$this->primary_handler || feof($this->primary_handler);
     }
 
+    public function fast_request($contextData, $customParms)
+    {
+        
+        $this->init_connector($customParms);
+        
+
+        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
+        if ($temperature < 0.0) $temperature = 0.0;
+        else if ($temperature > 2.0) $temperature = 2.0; 
+
+        $presence_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ? : 0.0);
+        if ($presence_penalty < -2.0) $presence_penalty = -2.0;
+        else if ($presence_penalty > 2.0) $presence_penalty = 2.0; 
+
+        $frequency_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ? : 0.0); 
+        if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
+        else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
+
+        $repetition_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ? : 0.0);
+        if ($repetition_penalty < 0.0) $repetition_penalty = 0.0;
+        else if ($repetition_penalty > 2.0) $repetition_penalty = 2.0; 
+
+        $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
+        if ($top_p > 1) $top_p = 1.0;
+        else if ($top_p < 0.0) $top_p = 0.0; 
+
+        $min_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ? : 0.0);
+        if ($min_p > 1) $min_p = 1.0;
+        else if ($min_p < 0.0) $min_p = 0.0; 
+
+        $top_a = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ? : 0.0);
+        if ($top_a > 1) $top_a = 1.0;
+        else if ($top_a < 0.0) $top_a = 0.0; 
+
+        $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
+        if ($top_k < 0) $top_k = 0; 
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($customParms["MAX_TOKENS"]);
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
+        
+        $data = array(
+            'model' => $this->_model,
+            'messages' => $contextData,
+            'stream' => false, 
+            'max_tokens' => $MAX_TOKENS,
+            'temperature' => $temperature, 
+            'top_k' => $top_k,
+            'top_p' => $top_p, 
+            'min_p' => $min_p,
+            'top_a' => $top_a,
+            'presence_penalty' => $presence_penalty, 
+            'frequency_penalty' => $frequency_penalty, 
+            'repetition_penalty' => $repetition_penalty,
+            'stop'=>[
+                    'USER',
+                ],
+            'transforms'=>[]
+        );
+
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["stop"])&&sizeof($GLOBALS["CONNECTOR"][$this->name]["stop"])>0) {
+            $data["stop"]=$GLOBALS["CONNECTOR"][$this->name]["stop"];
+        }
+        // Override
+
+       
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            if ($customParms["MAX_TOKENS"]==0) {
+                unset($data["max_tokens"]);
+            } elseif ($customParms["MAX_TOKENS"]) {
+                $data["max_tokens"]=$customParms["MAX_TOKENS"];
+            }
+        }
+
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
+                unset($data["max_tokens"]);
+            } else {
+                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
+
+            }
+        }
+        
+
+        foreach ($customParms as $parm=>$value) {
+            $data[$parm]=$value;
+        }
+        
+        $data["transforms"]=[];
+
+        $GLOBALS["DEBUG_DATA"]["full"]=($data);
+     
+        $data["max_tokens"]+=0;
+        
+        $headers = array(
+            'Content-Type: application/json',
+            "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
+            "HTTP-Referer:  https://dwemerdynamics.com/",
+            "X-Title: Dwemer Dynamics"
+        );
+
+        $options = array(
+            'http' => array(
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers),
+                'content' => json_encode($data),
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+            )
+        );
+
+        $context = stream_context_create($options);
+        
+        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
+
+        $json_response=file_get_contents($this->_url, false, $context);
+        file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+
+        if ($json_response) {
+            $text_response=json_decode($json_response,true);
+            if (is_valid_array($text_response)) {
+               
+                return $text_response["choices"][0]["message"]["content"];    
+            }
+            else {
+                log_msg("Error in openrouter request '$url':$json_response", 3);
+                return "";
+                
+            }
+            
+        }
+            
+
+
+    }
+
 }

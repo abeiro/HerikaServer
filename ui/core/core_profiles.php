@@ -22,6 +22,7 @@ $profiles = new CoreProfile();
 // Populate arrays for connector labels at the beginning of the file
 $ttsOptions = getSelectOptions($profiles, "tts_connector_id");
 $ittOptions = getSelectOptions($profiles, "itt_connector_id");
+$diaryOptions = getSelectOptions($profiles, "diary_connector_id");
 $llmPrimaryOptions = getSelectOptions($profiles, "llm_primary_id");
 $llmSecondaryOptions = getSelectOptions($profiles, "llm_secondary_id");
 $llmTertiaryOptions = getSelectOptions($profiles, "llm_tertiary_id");
@@ -89,6 +90,7 @@ include("tmpl/header.php");
 
     <?= renderSelect($profiles, "tts_connector_id", "TTS Connector", $editItem["tts_connector_id"] ?? "") ?>
     <?= renderSelect($profiles, "itt_connector_id", "ITT Connector", $editItem["itt_connector_id"] ?? "") ?>
+    <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
     <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
     <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
     <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
@@ -117,6 +119,7 @@ include("tmpl/header.php");
             <th>LLM 2</th>
             <th>LLM 3</th>
             <th>LLM 4</th>
+            <th>Diary ID</th>
             <th>Metadata</th>
             <th>Actions</th>
         </tr>
@@ -134,6 +137,7 @@ include("tmpl/header.php");
                 <td><?= $llmSecondaryOptions[array_search($row["llm_secondary_id"], array_column($llmSecondaryOptions, 'id'))]['label'] ?? '' ?></td>
                 <td><?= $llmTertiaryOptions[array_search($row["llm_tertiary_id"], array_column($llmTertiaryOptions, 'id'))]['label'] ?? '' ?></td>
                 <td><?= $llmQuaternaryOptions[array_search($row["llm_quaternary_id"], array_column($llmQuaternaryOptions, 'id'))]['label'] ?? '' ?></td>
+                <td><?= $diaryOptions[array_search($row["diary_connector_id"], array_column($diaryOptions, 'id'))]['label'] ?? '' ?></td>
                 <td><?= substr(htmlspecialchars($row["metadata"]),0,50) ?></td>
                 <td class="actions">
                     <a href="?edit=<?= $row["id"] ?>">Edit</a>

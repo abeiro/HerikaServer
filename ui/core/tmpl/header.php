@@ -52,7 +52,9 @@
         table { border-collapse: collapse; width: 100%; margin-top: 20px; }
         th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
         form { margin-top: 20px; }
-        input[type="text"], textarea { width: 100%; padding: 6px; margin: 4px 0; }
+        input[type="text"] { width: 100%; padding: 6px; margin: 4px 0; }
+        textarea { width: 100%; padding: 6px; margin: 4px 0; min-height:90px}
+
         input[type="submit"] { padding: 8px 16px; }
         .actions a { margin-right: 10px; }
 
@@ -62,6 +64,9 @@
             text-overflow: ellipsis;
             max-width: 300px;
         }
+
+        label {display:block;margin-top:10px}
+        br {margin-bottom:10px}
 
     </style>
 </head>

@@ -274,24 +274,30 @@ class NpcMaster {
     public function migrateFromOldProfile($currentNpcData,$OLD_GLOBALS_ARRAY) {
 
         $currentNpcData['npc_favorite'] = 0; // Default
-        $currentNpcData['lock_profile'] =  $OLD_GLOBALS_ARRAY['LOCK_PROFILE']?1:0; // Default
-        $currentNpcData['dynamic_profile'] = $OLD_GLOBALS_ARRAY['DYNAMIC_PROFILE']?1:0;
-        $currentNpcData['prompt_head'] = $OLD_GLOBALS_ARRAY['PROMPT_HEAD'] ?? null;
-        $currentNpcData['npc_static_bio'] = $OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'] ?? null;
-        $currentNpcData['npc_dynamic_bio'] = $OLD_GLOBALS_ARRAY['HERIKA_DYNAMIC'] ?? null;
-        $currentNpcData['oghma_knowledge_tags'] = $OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'] ?? null;
-        $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'] ?? ($GLOBALS['HERIKA_PERS'] ?? null);
-        $currentNpcData['relationships'] = $OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'] ?? null;
-        $currentNpcData['occupation'] = $GLOBALS['HERIKA_OCCUPATION'] ?? null;
-        $currentNpcData['skills'] = $OLD_GLOBALS_ARRAY['HERIKA_SKILLS'] ?? null;
-        $currentNpcData['speechstyle'] = $OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'] ?? null;
-        $currentNpcData['emote_moods'] = $GLOBALS['EMOTEMOODS'] ?? null;
-        $currentNpcData['goals'] = $OLD_GLOBALS_ARRAY['HERIKA_GOALS'] ?? null;
-        $currentNpcData['voiceid'] = $OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'] ?? null;
+        $currentNpcData['lock_profile'] = isset($OLD_GLOBALS_ARRAY['LOCK_PROFILE']) ? ($OLD_GLOBALS_ARRAY['LOCK_PROFILE'] ? 1 : 0) : 0;
+        $currentNpcData['dynamic_profile'] = isset($OLD_GLOBALS_ARRAY['DYNAMIC_PROFILE']) ? ($OLD_GLOBALS_ARRAY['DYNAMIC_PROFILE'] ? 1 : 0) : 0;
+        if (isset($OLD_GLOBALS_ARRAY['PROMPT_HEAD'])) $currentNpcData['prompt_head'] = $OLD_GLOBALS_ARRAY['PROMPT_HEAD'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'])) $currentNpcData['npc_static_bio'] = $OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_DYNAMIC'])) $currentNpcData['npc_dynamic_bio'] = $OLD_GLOBALS_ARRAY['HERIKA_DYNAMIC'];
+        if (isset($OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'])) $currentNpcData['oghma_knowledge_tags'] = $OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'])) $currentNpcData['relationships'] = $OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'])) $currentNpcData['occupation'] = $OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_SKILLS'])) $currentNpcData['skills'] = $OLD_GLOBALS_ARRAY['HERIKA_SKILLS'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'])) $currentNpcData['speechstyle'] = $OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'];
+        if (isset($OLD_GLOBALS_ARRAY['EMOTEMOODS'])) $currentNpcData['emote_moods'] = $OLD_GLOBALS_ARRAY['EMOTEMOODS'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_GOALS'])) $currentNpcData['goals'] = $OLD_GLOBALS_ARRAY['HERIKA_GOALS'];
+        if (isset($OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'])) $currentNpcData['voiceid'] = $OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'];
 
         foreach ($OLD_GLOBALS_ARRAY as $k=>$v) {
             if (!is_array($v)) {
-                if (in_array($k,["DIARY_COOLDOWN", "AUTO_DIARY", "AUTO_DIARY_WAIT", "MINIME_T5", "OGHMA_INFINIUM", "OGHMA_AMOUNT", "RECHAT_H", "RECHAT_P", "RECHAT_ALLOW_ACTIONS", "BORED_EVENT", "BORED_EVENT_SERVERSIDE", "CONTEXT_HISTORY", "CONTEXT_HISTORY_DIARY", "CONTEXT_HISTORY_DYNAMIC_PROFILE", "ALIVE_MESSAGE", "TIME_AWARENESS", "QUEST_COMMENT", "QUEST_COMMENT_CHANCE", "CURRENT_TASK", "HERIKA_ANIMATIONS", "CORE_LANG", "LANG_LLM_XTTS", "MAX_WORDS_LIMIT", "REMOVE_ASTERISKS_FROM_OUTPUT", "ENFORCE_ACTIONS_PROMPT", "DIARY_PROMPT"]))
+                if (in_array($k,[
+                 "DIARY_COOLDOWN", "AUTO_DIARY", "AUTO_DIARY_WAIT", "MINIME_T5",
+                 "OGHMA_INFINIUM", "OGHMA_AMOUNT", "RECHAT_H", "RECHAT_P", "RECHAT_ALLOW_ACTIONS", "BORED_EVENT", 
+                 "BORED_EVENT_SERVERSIDE", "CONTEXT_HISTORY", "CONTEXT_HISTORY_DIARY", "CONTEXT_HISTORY_DYNAMIC_PROFILE",
+                 "ALIVE_MESSAGE", "TIME_AWARENESS", "QUEST_COMMENT", "QUEST_COMMENT_CHANCE", "CURRENT_TASK", 
+                 "HERIKA_ANIMATIONS", "CORE_LANG", "LANG_LLM_XTTS", "MAX_WORDS_LIMIT", 
+                 "REMOVE_ASTERISKS_FROM_OUTPUT", "ENFORCE_ACTIONS_PROMPT", "DIARY_PROMPT"]))
                     $overrides[$k]=$v;
             }
         }
@@ -309,23 +315,32 @@ class NpcMaster {
 
     public function setOldGlobalsFromCurrentNpcData($currentNpcData) {
         
-        $GLOBALS['HERIKA_NAME'] = $currentNpcData['npc_name'] ?? null;
-        $GLOBALS['LOCK_PROFILE'] = $currentNpcData['lock_profile'] ? true : false;
-        $GLOBALS['DYNAMIC_PROFILE'] = $currentNpcData['dynamic_profile'] ? true : false;
-        $GLOBALS['PROMPT_HEAD'] = $currentNpcData['prompt_head'] ?? null;
-        $GLOBALS['HERIKA_BACKGROUND'] = $currentNpcData['npc_static_bio'] ?? null;
-        $GLOBALS['HERIKA_DYNAMIC'] = $currentNpcData['npc_dynamic_bio'] ?? null;
-        $GLOBALS['OGHMA_KNOWLEDGE'] = $currentNpcData['oghma_knowledge_tags'] ?? null;
-        $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'] ?? null;
-        $GLOBALS['HERIKA_RELATIONSHIPS'] = $currentNpcData['relationships'] ?? null;
-        $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'] ?? null;
-        $GLOBALS['HERIKA_SKILLS'] = $currentNpcData['skills'] ?? null;
-        $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'] ?? null;
-        $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'] ?? null;
-        $GLOBALS['HERIKA_GOALS'] = $currentNpcData['goals'] ?? null;
+        if (isset($currentNpcData['npc_name'])) $GLOBALS['HERIKA_NAME'] = $currentNpcData['npc_name'];
+        if (isset($currentNpcData['lock_profile'])) $GLOBALS['LOCK_PROFILE'] = $currentNpcData['lock_profile'] ? true : false;
+        if (isset($currentNpcData['dynamic_profile'])) $GLOBALS['DYNAMIC_PROFILE'] = $currentNpcData['dynamic_profile'] ? true : false;
+        if (isset($currentNpcData['prompt_head'])) $GLOBALS['PROMPT_HEAD'] = $currentNpcData['prompt_head'];
+        if (isset($currentNpcData['npc_static_bio'])) $GLOBALS['HERIKA_BACKGROUND'] = $currentNpcData['npc_static_bio'];
+        if (isset($currentNpcData['npc_dynamic_bio'])) $GLOBALS['HERIKA_DYNAMIC'] = $currentNpcData['npc_dynamic_bio'];
+        if (isset($currentNpcData['oghma_knowledge_tags'])) $GLOBALS['OGHMA_KNOWLEDGE'] = $currentNpcData['oghma_knowledge_tags'];
+        if (isset($currentNpcData['personality'])) $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'];
+        if (isset($currentNpcData['relationships'])) $GLOBALS['HERIKA_RELATIONSHIPS'] = $currentNpcData['relationships'];
+        if (isset($currentNpcData['occupation'])) $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'];
+        if (isset($currentNpcData['skills'])) $GLOBALS['HERIKA_SKILLS'] = $currentNpcData['skills'];
+        if (isset($currentNpcData['speechstyle'])) $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'];
+        if (isset($currentNpcData['emote_moods'])) $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'];
+        if (isset($currentNpcData['goals'])) $GLOBALS['HERIKA_GOALS'] = $currentNpcData['goals'];
 
         // Check this
-        $GLOBALS['TTS']['XTTSFASTAPI']['voiceid'] = $currentNpcData['voiceid'] ?? null;
+        if (isset($currentNpcData['voiceid']) && $currentNpcData['voiceid']) {
+            
+            $GLOBALS['TTS']['XTTSFASTAPI']['voiceid'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['MELOTTS']['voiceid'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['MIMIC3']['voice'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['XVASYNTH']['model'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['PIPERTTS']['voiceid'] = $currentNpcData['voiceid'];
+
+        }
 
         // Decode metadata and extended_data if available
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
@@ -353,16 +368,63 @@ class NpcMaster {
         return $GLOBALS["db"]->fetchAll($query);
     }
 
-    public function getExtendedData($currentNpcData) {
-
-    
-
+    public function getExtendedData($currentNpcData): array {
+        return json_decode($currentNpcData['extended_data'] ?? '{}', true) ?: [];
     }
 
-    public function setExtendedData($currentNpcData,$data) {
+    public function setExtendedData($currentNpcData, array $data) {
+        
+        $currentNpcData['extended_data'] = json_encode($data);
+        return $currentNpcData;
+    }
 
+    public function backupNpcById($id) {
+        $id = (int)$id;
+        
+        // Retrieve the current NPC
+        $npc = $this->getById($id);
+        if (!$npc) {
+            return false; // NPC not found
+        }
+    
+        // Remove the original 'id' field, since the history table likely has its own auto-increment ID
+        unset($npc['id']);
+    
+        // Add a reference to the original NPC ID
+        $npc['npc_id'] = $id;
+    
+        // Add the current timestamp for tracking purposes (optional)
+        $npc['created'] = date('Y-m-d H:i:s');
+    
+        // Insert the data into the history table
+        return $this->db->insert('core_npc_master_history', $npc);
+    }
     
 
+    public function backupAllNpcs($timestamp) {
+        // Validate the timestamp (ensure it's a float or numeric format, as per your schema)
+        if (!is_numeric($timestamp)) {
+            throw new InvalidArgumentException("Invalid timestamp value.");
+        }
+    
+        // Fetch all current NPCs
+        $npcs = $this->getAll();
+    
+        foreach ($npcs as $npc) {
+            // Remove original ID
+            $npc_id = $npc['id'];
+            unset($npc['id']);
+    
+            // Set the reference and override timestamps
+            $npc['npc_id'] = $npc_id;
+            $npc['gamets_last_updated'] = $timestamp;
+            $npc['created'] = date('Y-m-d H:i:s'); // Current timestamp
+    
+            // Insert into history
+            $this->db->insert('core_npc_master_history', $npc);
+        }
+    
+        return true;
     }
 }
 
