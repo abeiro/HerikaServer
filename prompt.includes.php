@@ -64,10 +64,18 @@ if (isset($PROMPTS[$gameRequest[0]]["extra"])) {
 
 if (file_exists(__DIR__."/functions/user_pref.json")) {
     $currentOnes=json_decode(file_get_contents(__DIR__."/functions/user_pref.json"),true);
-	if (is_array($currentOnes))
-		$GLOBALS["ENABLED_FUNCTIONS"]=$currentOnes;
-
-
+	if (isset($currentOnes) && is_array($currentOnes) && (count($currentOnes) > 0)) {
+		$arr_func=$GLOBALS["ENABLED_FUNCTIONS"]; // current functions from CHIM and plugins  
+		$arr_plugins=[];
+		foreach ($arr_func as $func) {
+			if ((stripos($func, 'ExtCmd') !== false) || (stripos($func, 'WebCmd') !== false)) {// function from plugin, keep it
+				$arr_plugins[]=$func;
+			}
+		}
+		$GLOBALS["ENABLED_FUNCTIONS"]=array_merge($currentOnes, $arr_plugins); // add functions from plugins to existing selection
+		//error_log("JSON: " . implode('|', $GLOBALS["ENABLED_FUNCTIONS"]) ); //debug		
+	}
 } 
+
 
 ?>
