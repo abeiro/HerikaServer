@@ -770,12 +770,15 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 		// Use the global DYNAMIC_PROMPT
         $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
 		// Database Prompt (Dynamic Profile Head)    
-		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
+		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue for {$GLOBALS["HERIKA_NAME"]} and then update the profile for {$GLOBALS["HERIKA_NAME"]} based on the information provided. " ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
 		// Use centralized function from data_functions.php
-		$currentDynamicProfile = buildDynamicProfileDisplay();
-        
-		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "\nCharacter static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $currentDynamicProfile];
+		// Log the dynamic profile update event
+        $gameRequest[0] = 'updateprofile';
+        logEvent($gameRequest);
+        // Re-fetch the dynamic profile after logging
+        $currentDynamicProfile = buildDynamicProfileDisplay();
+        $prompt[] = ["role" => "user", "content" => "Character to update:"  . $GLOBALS["HERIKA_NAME"] . "\nCharacter biography information:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $currentDynamicProfile];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
@@ -1685,11 +1688,13 @@ function getDynamicProfileHistoryData($npcName) {
     return $historyData;
 }
 
+
+
 function updateDynamicProfileField($npcName, $field, $historyData) {
     // Map field names to their corresponding HERIKA variables and prompts
     $fieldMapping = [
         'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
-                    'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
+        'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
         'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
         'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
         'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
