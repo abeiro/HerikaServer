@@ -1,5 +1,4 @@
 <?php 
-
 // Function to process diary entries for all nearby NPCs (triggered by C++ with 400 unit range)
 function processNearbyDiary($gameRequest, $eventType) {
     global $db;
@@ -717,13 +716,11 @@ function getDynamicProfileHistoryData($npcName) {
     return $historyData;
 }
 
-
-
 function updateDynamicProfileField($npcName, $field, $historyData) {
     // Map field names to their corresponding HERIKA variables and prompts
     $fieldMapping = [
         'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
-        'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
+                    'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
         'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
         'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
         'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
@@ -789,14 +786,21 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
         
+        
+        $connector=new LLMConnector();
+        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+        $connector->setOldGlobals($currentConnectorData);
+
         // Get max tokens for this connector
         $maxTokens = 800; // Default for field updates
-        switch($GLOBALS["CONNECTORS_DIARY"]) {
-            case "openrouter":
+        switch($currentConnectorData["driver"]) {
+            case "openrouterjson":
                 $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
                     min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
-            case "openai":
+            case "openaijson":
                 $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
                     min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
@@ -804,28 +808,13 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
                 $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
                     min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
-            case "koboldcpp":
+            case "koboldcppjson":
                 $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
                     min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
         }
         
-        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
-        
-        $buffer = "";
-        $breakFlag = false;
-        
-        while (true) {
-            if ($breakFlag) {
-                break;
-            }
-            
-            if ($connectionHandler->isDone()) {
-                $breakFlag = true;
-            }
-            
-            $buffer .= $connectionHandler->process();
-        }
+        $buffer=$connectionHandler->fast_request($contextData, ["max_tokens" => $maxTokens]);
         
         $connectionHandler->close();
         
@@ -868,6 +857,10 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
                 $currentNpcData[$field]=$newValue;
             }
             
+            // Backup NPC.
+            $npcMaster->backupNpcById($currentNpcData["id"]);
+
+            $currentNpcData["gamets_last_updated"]=DataLastKnownGameTS();
             $npcMaster->updateByArray($currentNpcData);
             
         }
