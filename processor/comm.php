@@ -984,4 +984,3 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
 } 
 
-require($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
