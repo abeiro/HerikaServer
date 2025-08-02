@@ -5,6 +5,11 @@ $MUST_END=false;
 
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
+
+// Moved Dynamic Updates functions here
+require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
+
+
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
     // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
     // Moved Dynamic Updates functions here
@@ -479,6 +484,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
     $MUST_END=true;
     
+} elseif (strpos($gameRequest[0], "infosave")===0) {    // user saves. lets backup all NPC state.
+
+    error_log("[INFOSAVE] Backup all profiles");
+    
+    $npcMaster=new NpcMaster();
+    $npcMaster->backupAllNpcs($gameRequest[2]);
+    $MUST_END=true;
+    
 } elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever requests
 
     logEvent($gameRequest);
@@ -504,8 +517,22 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (!profile_exists($localName))
         AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
 
+    
     createProfile($localName,[],false,$baseProfile);
     audit_log("comm.php addnpc $localName");
+
+    // Update new data
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByName($localName);
+    if ($currentNpcData) {
+        $currentNpcData["gender"]=$splitNameBase[2];
+        $currentNpcData["race"]=$splitNameBase[3];
+        $currentNpcData["refid"]=$splitNameBase[4];
+        $npcMaster->updateByArray($currentNpcData);
+        
+        
+    }
+
     $MUST_END=true;
     
     
@@ -957,5 +984,6 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-}
+} 
+
 

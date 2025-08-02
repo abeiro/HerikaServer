@@ -36,6 +36,13 @@ function __jpd__extractContentBetweenBraces($inputString) {
     }
 }
 
+function is_valid_array($mixdata) {
+	if (isset($mixdata))
+		if (is_array($mixdata))
+			return $mixdata;
+	return false;
+}
+
 function returnObject($arr) {
  
     

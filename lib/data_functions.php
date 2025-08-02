@@ -2363,6 +2363,13 @@ function call_llm() {
     
     $outputWasValid = true;
     $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
+
+    if (isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
+        $connector=new LLMConnector();
+        $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
+        error_log("[CORE SYSTEM] Using new profile system {$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["model"]}");
+    }
+
     $connectionHandler->open($contextData,$overrideParameters);
 
     /* *****
@@ -2373,6 +2380,7 @@ function call_llm() {
     if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
         require(__DIR__."/../processor/player_tts.php");
     }
+
 
 
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
