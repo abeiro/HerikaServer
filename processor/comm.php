@@ -1,4 +1,5 @@
 <?php
+require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
 
 $MUST_END=false;
 
@@ -11,6 +12,7 @@ require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
 
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
     // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
+    // Moved Dynamic Updates functions here
     if ($gameRequest[2] == "10000000") {
         Logger::warn("Ignoring init with a gamets of 10000000.");
         $MUST_END=true;
@@ -984,3 +986,4 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
 } 
 
+?>
