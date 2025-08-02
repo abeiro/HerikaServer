@@ -716,11 +716,12 @@ function getDynamicProfileHistoryData($npcName) {
     return $historyData;
 }
 
+
 function updateDynamicProfileField($npcName, $field, $historyData) {
     // Map field names to their corresponding HERIKA variables and prompts
     $fieldMapping = [
         'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
-                    'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
+        'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
         'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
         'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
         'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
@@ -786,7 +787,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
         
-        
         $connector=new LLMConnector();
         $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
         $connectionHandler = $connector->getConnector($currentConnectorData);
@@ -801,6 +801,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
                     min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
             case "openaijson":
+
                 $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
                     min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
@@ -808,7 +809,9 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
                 $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
                     min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
+
             case "koboldcppjson":
+
                 $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
                     min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
                 break;
@@ -846,6 +849,7 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
     }
     
     try {
+
 
         //
 
@@ -1040,5 +1044,8 @@ function triggerImmediateProfileProcessing() {
         // Always remove lock
         $db->delete("conf_opts", "id = '$lockId'");
     }
+
+
 }
 ?>
+
