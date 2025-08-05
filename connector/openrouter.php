@@ -20,6 +20,11 @@ class openrouter
     private $_is_grok;
     private $_is_openai;
     private $_model;
+    private $_fallback_models;
+    private $_providers_sort;
+    private $_provider_quantizations;
+    private $_providers2ignore;
+    private $_provider_max_price;
     private $_url;
     private $_remove_cot;
     private $_cot_tag_base;
@@ -41,6 +46,11 @@ class openrouter
         $this->_is_openai=false;
         $this->_use_tools=true;
         $this->_model="";
+        $this->_fallback_models=null;
+        $this->_providers_sort="";
+        $this->_provider_quantizations=null;
+        $this->_providers2ignore=null;
+        $this->_provider_max_price=null;
         $this->_url="";
         $this->_remove_cot=true;
         $this->_cot_tag_base="think";
@@ -132,6 +142,32 @@ class openrouter
 
         $default_model = 'meta-llama/llama-3.3-70b-instruct';
 
+        $s_fallback = trim($GLOBALS["CONNECTOR"][$this->name]["fallback_models"] ?? ""); //"google/gemini-2.0-flash-001,google/gemini-2.5-flash-lite,meta-llama/llama-4-scout"
+        if (strlen($s_fallback) > 1)
+            $this->_fallback_models = explode(",",$s_fallback); 
+
+        $this->_providers_sort = strtolower(trim($GLOBALS["CONNECTOR"][$this->name]["providers_sort"] ?? ""));
+
+        $s_providers2ignore = trim($GLOBALS["CONNECTOR"][$this->name]["providers_to_ignore"] ?? ""); //"Nebius AI Studio, Together, Infermatic";
+        if (strlen($s_providers2ignore) > 1)
+            $this->_providers2ignore = explode(",", $s_providers2ignore);
+        
+        $s_quantizations = trim($GLOBALS["CONNECTOR"][$this->name]["provider_quantizations"] ?? "");  //'fp8,fp16,bf16,fp32,unknown';
+        if (strlen($s_quantizations) > 1)
+            $this->_provider_quantizations = explode(",", $s_quantizations); 
+
+        $f_max_price_prompt = floatval($GLOBALS["CONNECTOR"][$this->name]["provider_max_price_input"] ?? 0.0); //0.50
+        $f_max_price_completition = floatval($GLOBALS["CONNECTOR"][$this->name]["provider_max_price_output"] ?? 0.0); //2.99
+        if ($f_max_price_completition < 0.001 )
+            $f_max_price_completition = 0.0;
+        if ($f_max_price_prompt < 0.001 )
+            $f_max_price_prompt = 0.0;
+        else {
+            if ($f_max_price_completition < 0.001 )
+                $f_max_price_completition = 9999.0;
+            $this->_provider_max_price = ['prompt' => $f_max_price_prompt, 'completion' => $f_max_price_completition];
+        }
+
         $this->_is_nanogpt_com = (stripos($this->_url, "nano-gpt.com") > 0 ); //https://nano-gpt.com/api/v1/chat/completions
         if ($this->_is_nanogpt_com) {    
             $default_model = 'meta-llama/llama-4-scout';
@@ -167,7 +203,7 @@ class openrouter
 
                                                                                                 Tyler, 2023/11/09
         ****/
-        
+        /*
         if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] && false) {
             // This is deprecated
             foreach ($contextData as $n=>$contextline)  {
@@ -177,7 +213,7 @@ class openrouter
                     $contextData[$n]["content"]=str_replace($GLOBALS["MEMORY_STATEMENT"],"(USE MEMORY reference)",$contextline["content"]);
                 }
             }
-        }
+        }*/
 
         // Remove context elements with empty content
         $contextDataCopy=[];
@@ -281,6 +317,34 @@ class openrouter
         if ($MAX_TOKENS<1) {
             unset($data["max_completion_tokens"]); 
             unset($data["max_tokens"]); 
+        }
+
+        if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
+            $providers=explode(",",$GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"]);
+            $data["provider"]=["order"=>$providers];
+        } 
+
+        if (isset($this->_fallback_models) && (is_array($this->_fallback_models)) && (count($this->_fallback_models) > 0)) {
+            $data['models'] = $this->_fallback_models;
+        }
+
+
+        if (isset($this->_providers_sort) && (in_array($this->_providers_sort,['price','throughput','latency']))) {
+            $data['provider']['sort'] = $this->_providers_sort; 
+        }
+
+        if (isset($this->_providers2ignore) && (is_array($this->_providers2ignore)) && (count($this->_providers2ignore) > 0)) {
+            $data['provider']['ignore'] = $this->_providers2ignore; 
+        }
+
+        if (isset($this->_provider_quantizations) && (is_array($this->_provider_quantizations)) && (count($this->_provider_quantizations) > 0)) {
+            $data['provider']['quantizations'] = $this->_provider_quantizations; 
+        }
+
+        if (isset($this->_provider_max_price) && (is_array($this->_provider_max_price)) && (count($this->_provider_max_price) == 2)) {
+            $json_price = json_encode($this->_provider_max_price); 
+            if (isset($json_price))
+                $data['provider']['max_price'] = json_decode($json_price);
         }
         
         $GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;
