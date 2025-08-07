@@ -808,7 +808,7 @@ function lastSpeech($npcname)
     
     
     $speaker=$db->escape($npcname);
-    $pj=$GLOBALS["PLAYER_NAME"];
+    $pj=$db->escape($GLOBALS["PLAYER_NAME"]);
     $lastRecords = $db->fetchAll("SELECT * from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) order by rowid desc LIMIT 5 OFFSET 0");
     $buffer="";
     foreach (array_reverse($lastRecords) as $record) {
@@ -828,7 +828,7 @@ function lastKeyWordsContext($n, $npcname='')
     
     $m=$n+1;
     $speaker=$db->escape($npcname);
-    $pj=$GLOBALS["PLAYER_NAME"];
+    $pj=$db->escape($GLOBALS["PLAYER_NAME"]);
 
     if (isset($gameRequest[2]))
         $whileago=round($gameRequest[2] - (2/ 0.0000024));
