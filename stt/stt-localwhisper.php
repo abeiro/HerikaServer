@@ -37,17 +37,28 @@ function stt($file)
     // Send the request and get the response
     $response = file_get_contents($url, false, $context);
 
-    // Manejar la respuesta
+    // Handle the response
     if ($response === false) {
-        // Error handling
-    } else {
-        // Procesar la respuesta
-
+        error_log("STT LocalWhisper: Failed to get response from server");
+        return "";
     }
-    $reponseParsed = json_decode($response);
-
-    //echo $reponseParsed->text;
-    return $reponseParsed->text;
+    
+    $responseParsed = json_decode($response);
+    
+    if ($responseParsed === null) {
+        error_log("STT LocalWhisper: Failed to parse JSON response: " . $response);
+        return "";
+    }
+    
+    // Support both 'text' and 'transcription' keys in the response
+    if (isset($responseParsed->text)) {
+        return $responseParsed->text;
+    } elseif (isset($responseParsed->transcription)) {
+        return $responseParsed->transcription;
+    } else {
+        error_log("STT LocalWhisper: No text or transcription found in response: " . json_encode($responseParsed));
+        return "";
+    }
 
 
 }
