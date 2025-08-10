@@ -153,7 +153,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async"];
+    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -507,7 +507,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     }
 }
 
-// Profile selection
+// Profile selection and migration
+
 if (isset($_GET["profile"])) {
     
     $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
@@ -535,6 +536,10 @@ if (isset($_GET["profile"])) {
 
             if ($currentNpcData) {
                 $newNpcData=$npcMaster->migrateFromOldProfile($currentNpcData,$GLOBALS);
+
+
+                $ingameDataRef=getBaseDataForNpcFromLog($GLOBALS["HERIKA_NAME"]);
+                $newNpcData=array_merge($newNpcData,$ingameDataRef);
                 if ($newNpcData) {
                     $npcMaster->updateByArray($newNpcData);
                 }
@@ -582,6 +587,66 @@ if (isset($_GET["profile"])) {
 
     } else {
         
+        // This is supossed to migrate the Narrator
+
+        $npcMaster=new NpcMaster();
+        $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+    
+        if (!$currentNpcData) {
+            
+            $npcMaster->create(["npc_name"=>$GLOBALS["HERIKA_NAME"]]);
+            $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+
+            if ($currentNpcData) {
+                $newNpcData=$npcMaster->migrateFromOldProfile($currentNpcData,$GLOBALS);
+
+
+                //$ingameDataRef=getBaseDataForNpcFromLog($GLOBALS["HERIKA_NAME"]);
+                //$newNpcData=array_merge($newNpcData,$ingameDataRef);
+                if ($newNpcData) {
+                    $npcMaster->updateByArray($newNpcData);
+                }
+                
+            }
+
+            $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+
+        } 
+
+        // Profile has been migrated
+        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+        $profile=new CoreProfile();
+        $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+    
+        $connector=new LLMConnector();
+        $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
+
+        if (isset($currentActiveModelProfile["value"])) {
+            if ($currentActiveModelProfile["value"]==1) 
+                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+            else if ($currentActiveModelProfile["value"]==2) 
+                $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
+            else if ($currentActiveModelProfile["value"]==3) 
+                $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
+            else if ($currentActiveModelProfile["value"]==4) 
+                $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
+            else
+                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+
+        } else
+                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+        
+    
+        $connector->setOldGlobals($currentConnectorData);
+        $profile->setOldGlobals($currentProfileData);
+        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+        
+        error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} profile: {$currentProfileData["label"]}");
+        error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]}");
+
         error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
     }
     
@@ -905,6 +970,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
 
 
 
+
 /*
  Safe stop
 */
@@ -972,6 +1038,10 @@ if (($gameRequest[0] == "diary" || $gameRequest[0] == "diary_followers") && isse
     $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 }
 
+if ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
+    $lastNDataForContext=$GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT_HISTORY"];
+}
+
 // Historic context (last dialogues, events,...)
 //if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator"))
 if (($GLOBALS["HERIKA_NAME"]=="The Narrator"))
@@ -1036,7 +1106,10 @@ if (in_array($gameRequest[0],["rechat"]) ) {
 
         if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
             $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+            if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
+                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
+            else
+                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
         }
         
         // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
@@ -1090,11 +1163,14 @@ if (in_array($gameRequest[0],["instruction"]) ) {
     
 }
 
+
 if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+    if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
+    else
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
 }
-
 
 // Cooldown definitions
 $COOLDOWNMAP["ComeCloser"]=120/0.00864;
@@ -1139,10 +1215,15 @@ if (isset($npcRoleMastered["is_rolemastered"])) {
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"].="(consider character's goal and traits)";
-
+        /*if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
+            $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+            if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
+                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
+            else
+                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+        }*/
     }
 } 
-
 
 // MINIME_T5 STUFF, command assiastant
 
@@ -1219,18 +1300,23 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
 // Use centralized function from data_functions.php
 $dynamicBiography = buildDynamicBiography($GLOBALS);
 
-if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
+if (isset($GLOBALS["PROFILE_PROMPT"])) {
+    $dynamicBiography.="\n\n#Part of a group\n{$GLOBALS["PROFILE_PROMPT"]}";
+}
 
+if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
+    
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n" . $GLOBALS["OGHMA_HINT"]."\n". $GLOBALS["COMMAND_PROMPT"],
-        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#Knowlegde\n" . $GLOBALS["OGHMA_HINT"]."\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
+        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n". $GLOBALS["COMMAND_PROMPT"],
-        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
+        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
 }
+
 
 
 
@@ -1313,7 +1399,81 @@ if ($gameRequest[0] == "funcret") {
 //returnLines(["Mmm..let me think"]);
 
 
+// Diary stuff 
+if ($gameRequest[0] == "diary") {
+    // TO-DO move this to its own processor file.
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
 
+
+    $profile=new CoreProfile();
+    $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+        
+    $connector=new LLMConnector();
+    $currentConnectorData=$connector->getById($currentProfileData["diary_connector_id"]); 
+            
+        
+    $connector->setOldGlobals($currentConnectorData);
+    $profile->setOldGlobals($currentProfileData);
+    $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+    
+    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+
+    unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
+    
+    $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
+    
+
+    error_log("[CORE SYSTEM] Using new profile system {$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["driver"]}/{$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["model"]}");
+    $overrideParameters["max_tokens"]=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["MAX_TOKENS_MEMORY"]??500;
+    $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
+
+    $talkedSoFar=explode("\n",$buffer);
+    $topic=DataLastKnowDate();
+    $location=DataLastKnownLocation();
+    
+    // Format diary content into paragraphs
+    $formattedContent = "";
+    $currentParagraph = [];
+    $sentenceCount = 0;
+    
+    foreach ($talkedSoFar as $sentence) {
+        $currentParagraph[] = $sentence;
+        $sentenceCount++;
+        
+        // Start new paragraph if we have 2-4 sentences or this is the last sentence
+        if ($sentenceCount >= 2 && $sentenceCount <= 4 || $sentence === end($talkedSoFar)) {
+            $formattedContent .= implode(" ", $currentParagraph) . "\n\n";
+            $currentParagraph = [];
+            $sentenceCount = 0;
+        }
+    }
+    
+    $db->insert(
+        'diarylog',
+        array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'topic' => "$topic",
+            'content' => trim($formattedContent),
+            'tags' => "Pending",
+            'people' => $GLOBALS["HERIKA_NAME"],
+            'location' => "$location",
+            'sess' => 'pending',
+            'localts' => time()
+        )
+    );
+
+    // Log Memory also.
+    if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
+        logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
+
+    // Diary entries are silent by default - send notification instead of speech
+    echo $GLOBALS["HERIKA_NAME"]."|rolecommand|DebugNotification@Diary Entry Written for ".$GLOBALS["HERIKA_NAME"].PHP_EOL;
+    @ob_flush(); 
+    @flush();
+    terminate();
+}
 
 /**********************
 CALL INITIALIZATION
@@ -1387,60 +1547,7 @@ if (sizeof($talkedSoFar) == 0) {
 
     if (!$ERROR_TRIGGERED) {
         if ($gameRequest[0] == "diary") {
-            $topic=DataLastKnowDate();
-            $location=DataLastKnownLocation();
-            
-            // Format diary content into paragraphs
-            $formattedContent = "";
-            $currentParagraph = [];
-            $sentenceCount = 0;
-            
-            foreach ($talkedSoFar as $sentence) {
-                $currentParagraph[] = $sentence;
-                $sentenceCount++;
-                
-                // Start new paragraph if we have 2-4 sentences or this is the last sentence
-                if ($sentenceCount >= 2 && $sentenceCount <= 4 || $sentence === end($talkedSoFar)) {
-                    $formattedContent .= implode(" ", $currentParagraph) . "\n\n";
-                    $currentParagraph = [];
-                    $sentenceCount = 0;
-                }
-            }
-            
-            $db->insert(
-                'diarylog',
-                array(
-                    'ts' => $gameRequest[1],
-                    'gamets' => $gameRequest[2],
-                    'topic' => "$topic",
-                    'content' => trim($formattedContent),
-                    'tags' => "Pending",
-                    'people' => $GLOBALS["HERIKA_NAME"],
-                    'location' => "$location",
-                    'sess' => 'pending',
-                    'localts' => time()
-                )
-            );
-            /*
-            $db->insert(
-            'diarylogv2',
-                array(
-                    'topic' => ($topic),
-                    'content' => (implode(" ", $talkedSoFar)),
-                    'tags' => "Pending",
-                    'people' => "Pending",
-                    'location' => "$location"
-                )
-            );
-            */
-            // Log Memory also.
-            if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
-                logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
-
-            // Diary entries are silent by default - send notification instead of speech
-            echo $GLOBALS["HERIKA_NAME"]."|rolecommand|DebugNotification@Diary Entry Written for ".$GLOBALS["HERIKA_NAME"].PHP_EOL;
-            @ob_flush(); 
-            @flush();
+         
 
         } else {
             

@@ -211,8 +211,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
 
         if ($followername==$GLOBALS["PLAYER_NAME"]) {
             $followers[]="$followername (roleplayed by player)";
-        } else 
-            $followers[]="$followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+
+        } else {
+            if (isset($followerdata["core"]))
+                $followers[]="{$followerdata["core"]} level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+            else
+                $followers[]="$followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+
+        }
+            
     }
 
     $followers[]="{$GLOBALS["PLAYER_NAME"]}";
@@ -567,6 +574,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     $query="select  
     case 
+      when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
       when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'CONTEXTI'
       when a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
@@ -582,6 +590,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='waitstop' then 'CONTEXTI' 
       when type='spellcast' then 'CONTEXTI' 
       when type='npcspellcast' then 'CONTEXTI' 
+      when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
@@ -619,7 +628,12 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $beingsPresent=null;
     $lastlocation="";
     $lastGameTs=0;
-    foreach ($orderedData as $row) {
+    $memoryLogToRemove=[];
+
+    $focusOnChat=$GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"];
+
+
+    foreach ($orderedData as $n=>$row) {
         $rowData = $row["data"];
         
         if ($rowData==="The Narrator:") // Hunt empty rows
@@ -673,7 +687,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ($row["type"]=="vision") {
             $speaker = "user";
             
-        }  else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
+        } else if ($row["subtype"]=="MEMORY") {
+            $speaker = "memory";
+            
+        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
             $speaker = "assistant";
             
         } 
@@ -684,39 +701,69 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $speaker = "narratorchat";
             
         } else if ($row["subtype"]=="BACKDIAG") {
+            if ($focusOnChat)
+                continue;
             $speaker = "backgroundchat";
             
         } else if ($row["subtype"]=="BOOKEVT") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="CONTEXTI") {
+            if ($focusOnChat) {
+                if (strpos($rowData," uses ")!==false) 
+                    continue;
+                if (strpos($rowData," uses ")!==false) 
+                    continue;
+            }
+                
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="QUEST") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="ITEM") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_WORD") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_LVL") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_SPAWN") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_SHOUT") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_DEATH") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
             
         } else if ($row["subtype"]=="RPG_DEFEAT") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
+            
+        } else if ($row["subtype"]=="PLUGIN") {
+            $speaker = $row["type"];
             
         } else {
             
@@ -762,6 +809,29 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker));
 
     }
+
+ 
+
+    // Remove memory logs, only leave last one.
+    $lastDialogFullOnlyLastMemory=[];
+    $localFlag=0;
+    foreach (array_reverse($lastDialogFull) as $element) {
+        if ($element["role"]=="memory") {
+            if ($localFlag==0) {
+                $element["role"]="narratorci";
+                $lastDialogFullOnlyLastMemory[]=$element;
+                $localFlag++;
+            } else {
+                $localFlag++;
+            }
+        } else {
+            $lastDialogFullOnlyLastMemory[]=$element;
+        }
+    }
+
+    error_log("[buildHistoricContext] $localFlag memories removed");
+    $lastDialogFull=array_reverse($lastDialogFullOnlyLastMemory);
+    // En of memory logs cleaning
 
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($lastDialogFull,true));
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($query,true),FILE_APPEND);
@@ -981,11 +1051,16 @@ function replaceRoles($lastDialogFull,$actor,$lastNelements) {
 
 
 
-
+    error_log("[CHIM] Using effective context limit of : $lastNelements");
     $orderedData = array_slice($lastDialogFull, $lastNelements);
 
     file_put_contents(__DIR__."/../log/context_for_$actor.txt",print_r($orderedData,true));
-    return $orderedData;
+    $GLOBALS["CONTEXT_BUILDING_DATA"]=$orderedData;
+    requireFilesRecursively(__DIR__."/../ext/","context_building.php");
+
+    file_put_contents(__DIR__."/../log/context_for_{$actor}_ext.txt",print_r($GLOBALS["CONTEXT_BUILDING_DATA"],true));
+
+    return $GLOBALS["CONTEXT_BUILDING_DATA"];
 
 }
 
@@ -994,6 +1069,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
     $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
     $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
+
+    
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
 
@@ -1610,7 +1687,7 @@ function PackIntoSummary()
     foreach ( $db->fetchAll("select * from memory_summary where companions is null ") as $row) {
         $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
 
-        preg_match_all("/[A-Za-z' \-]+/", $people[0]["people"], $matches);
+        preg_match_all("/[A-Za-z' \-\[\]]+/", $people[0]["people"], $matches);
         // $matches[0] will contain the list of names
         
         $names = array_map('trim', $matches[0]);
@@ -1728,8 +1805,14 @@ function DataGetCurrentPartyConf() {
         
         $finalparty=[];
         foreach ($guys as $guy) {
-            if (isset($guy["name"]))
+            if (isset($guy["name"])) {
                 $finalparty[$guy["name"]]=$guy;
+                $npcMaster=new NpcMaster();
+                $currentNpcData=$npcMaster->getByName($guy["name"]);
+                if (isset($currentNpcData["core"])&&!empty($currentNpcData["core"]))
+                    $finalparty[$guy["name"]]["core"]=$currentNpcData["core"];
+
+            }
         }
     
         return json_encode($finalparty);
@@ -2070,7 +2153,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
 
         ORDER BY rank_all DESC, rank_any DESC;
-        ");
+        ",true);
             
         if (!isset($memory[0]))
             $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
@@ -2185,6 +2268,18 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                  $memory[0]['rank_all']=(1.40-$memory[0]["distance"]);
             }
             
+            /*error_log("
+                SELECT summary, gamets_truncated,
+                        embedding <-> $vectorString as distance,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    ORDER BY embedding <-> $vectorString
+                    LIMIT 5 OFFSET 0
+                ");*/
+
             $GLOBALS["db"]->insert(
                     'audit_memory',
                     array(
@@ -3922,5 +4017,47 @@ function safe_update_php_variable($filePath, $varName, $value) {
     }
     
     return ["success" => true, "message" => "Variable $varName updated successfully"];
+}
+
+
+/**
+ * Retrieves base data for an NPC from the event log based on the NPC's name.
+ *
+ * This function queries the database for the most recent log entry of type 'addnpc'
+ * that matches the given NPC name. It extracts and returns the NPC's gender, race,
+ * and reference ID from the log data. If the NPC name is empty, no matching data is found,
+ * or the data is insufficient, the function returns null.
+ *
+ * @param string $npcname The name of the NPC to retrieve data for.
+ * @return array|null An associative array containing 'gender', 'race', and 'refid' keys,
+ *                    or null if no valid data is found.
+ */
+function getBaseDataForNpcFromLog($npcname) {
+    if (empty($npcname)) {
+        error_log("getBaseDataForNpcFromLog: NPC name is empty.");
+        return null;
+    }
+
+    $npcNameEscaped = $GLOBALS["db"]->escape($npcname);
+    $result = $GLOBALS["db"]->fetchOne("SELECT data FROM eventlog WHERE type='addnpc' AND data LIKE '$npcNameEscaped%' ORDER BY rowid DESC LIMIT 1");
+
+    if (!$result || !isset($result["data"])) {
+        error_log("getBaseDataForNpcFromLog: No data found for NPC '$npcname'.");
+        return null;
+    }
+
+    $splitNameBase = explode("@", $result["data"]);
+    if (count($splitNameBase) < 5) {
+        error_log("getBaseDataForNpcFromLog: Insufficient data for NPC '$npcname'. Data: " . print_r($result["data"], true));
+        return null;
+    }
+
+    $currentNpcData = [
+        "gender" => $splitNameBase[2],
+        "race" => $splitNameBase[3],
+        "refid" => $splitNameBase[4]
+    ];
+
+    return $currentNpcData;
 }
 ?>

@@ -101,21 +101,38 @@ include("tmpl/header.php");
     echo "<input type='text' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "'><br>";
     ?>
 
-    <br/>
-    <label for='reasoning_model'>Reasoning Model</label>
-    <input type="checkbox" name="reasoning_model" value="1" <?= !empty($editItem["reasoning_model"]) ? "checked" : "" ?>>
-    <br/>
-
-    <label for='enforce_json'>Enforce JSON</label>
-    <input type="checkbox" name="enforce_json" value="1" <?= !empty($editItem["enforce_json"]) ? "checked" : "" ?>>
-    <br/>
-
-    <label for='json_schema'>JSON Schema</label>
-    <input type="checkbox" name="json_schema" value="1" <?= !empty($editItem["json_schema"]) ? "checked" : "" ?>>
+    <label>Is reasoning model:</label>
+    
+    <input type="radio" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
+    True
+    <input type="radio" name="reasoning_model" value="0" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 0 ? "checked" : "" ?>>
+    False
     <br/>
 
-    <label for='prefill_json'>Prefill JSON</label>
-    <input type="checkbox" name="prefill_json" value="1" <?= !empty($editItem["prefill_json"]) ? "checked" : "" ?>>
+    <label>Enforce JSON:</label><br>
+    <input type="radio" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>>
+    True
+    <input type="radio" name="enforce_json" value="0" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 0 ? "checked" : "" ?>>
+    False
+
+
+    <label>JSON schema:</label><br>
+
+    <input type="radio" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>>
+    True
+    <input type="radio" name="json_schema" value="0" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 0 ? "checked" : "" ?>>
+    False
+
+
+    <label>Prefill JSON</label><br>
+    
+    <input type="radio" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>>
+    True
+
+    <input type="radio" name="prefill_json" value="0" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 0 ? "checked" : "" ?>>
+    False
+    
+
     <br/>
     <br/>
     <label for='metadata'>Metadata</label><br>

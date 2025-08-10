@@ -588,7 +588,7 @@ class openrouterjson
         }  
 
         if ($this->_is_reasoning) { // add parameter to hide <think> content
-            $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
+            $data["reasoning"] = array ('exclude' => true,'enabled'=>false); // Use reasoning but don't include it in the response
             //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
             //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
             //Logger::debug("reasoning " . $this->_model);
@@ -701,6 +701,12 @@ class openrouterjson
                 $data[$k]=$v;
             }
         }        
+
+        if (stripos($data["model"], "openai/gpt-5-nano")===0) {
+            unset($data["temperature"]);
+            unset($data["top_p"]);
+        }
+
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
@@ -1082,6 +1088,7 @@ class openrouterjson
             'model' => $this->_model,
             'messages' => $contextData,
             'stream' => false, 
+            'usage'=> true,
             'max_tokens' => $MAX_TOKENS,
             'temperature' => $temperature, 
             'top_k' => $top_k,
@@ -1122,6 +1129,69 @@ class openrouterjson
         }
         
 
+        // Mistral AI API does not support penalty params
+        if ($this->_is_mistral_ai) {
+            unset($data["presence_penalty"]); 
+            unset($data["frequency_penalty"]);
+        } 
+        
+        if ($this->_is_grok) { //Argument not supported on this model: stop
+            unset($data["stop"]); 
+        }  
+
+        if ($this->_is_reasoning) { // add parameter to hide <think> content
+            $data["reasoning"] = array ('exclude' => true,'enabled'=>false); // Use reasoning but don't include it in the response
+            //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
+            //Logger::debug("reasoning " . $this->_model);
+            if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
+                $data["enable_thinking"] = false;
+            }            
+        }
+        
+        if ($this->_is_openai) {
+            // OpenAI models use max_completion_tokens
+            $data['max_completion_tokens'] = $MAX_TOKENS;
+            unset($data['max_tokens']); 
+            if ($this->_is_reasoning) {
+                $data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            }
+        }
+
+        if ($MAX_TOKENS<1) {
+            unset($data["max_completion_tokens"]); 
+            unset($data["max_tokens"]); 
+        }
+
+        if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
+            $providers=explode(",",$GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"]);
+            $data["provider"]=["order"=>$providers];
+        } 
+
+        if (isset($this->_fallback_models) && (is_array($this->_fallback_models)) && (count($this->_fallback_models) > 0)) {
+            $data['models'] = $this->_fallback_models;
+        }
+
+
+        if (isset($this->_providers_sort) && (in_array($this->_providers_sort,['price','throughput','latency']))) {
+            $data['provider']['sort'] = $this->_providers_sort; 
+        }
+
+        if (isset($this->_providers2ignore) && (is_array($this->_providers2ignore)) && (count($this->_providers2ignore) > 0)) {
+            $data['provider']['ignore'] = $this->_providers2ignore; 
+        }
+
+        if (isset($this->_provider_quantizations) && (is_array($this->_provider_quantizations)) && (count($this->_provider_quantizations) > 0)) {
+            $data['provider']['quantizations'] = $this->_provider_quantizations; 
+        }
+
+        if (isset($this->_provider_max_price) && (is_array($this->_provider_max_price)) && (count($this->_provider_max_price) == 2)) {
+            $json_price = json_encode($this->_provider_max_price); 
+            if (isset($json_price))
+                $data['provider']['max_price'] = json_decode($json_price);
+        }
+        
+        
         foreach ($customParms as $parm=>$value) {
             $data[$parm]=$value;
         }
@@ -1150,7 +1220,7 @@ class openrouterjson
 
         $context = stream_context_create($options);
         
-        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
         $json_response=file_get_contents($this->_url, false, $context);
         file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);

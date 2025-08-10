@@ -136,12 +136,15 @@ class sql
         return "";
     }
 
-    public function fetchAll($q)
+    public function fetchAll($q,$log=false)
     {
         $startTime = microtime(true);
         $result = pg_query(self::$link, $q);
         $endTime = microtime(true);
 
+        if ($log) {
+            error_log($q);
+        }
         $elapsedTime = $endTime - $startTime;
         if ($elapsedTime > $this->queryTimeThreshold) {
             Logger::error("FetchAll query execution time exceeded threshold: {$elapsedTime} seconds.");

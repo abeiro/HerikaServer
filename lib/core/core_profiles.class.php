@@ -15,7 +15,8 @@ class CoreProfile {
             "llm_secondary_id",
             "llm_tertiary_id",
             "llm_quaternary_id",
-            "metadata"
+            "metadata",
+            "prompt"
         ];
 
         foreach ($data as $k=>$v)
@@ -56,7 +57,8 @@ class CoreProfile {
             "llm_secondary_id",// fk to table  core_llm_connector
             "llm_tertiary_id",// fk to table  core_llm_connector
             "llm_quaternary_id",// fk to table  core_llm_connector
-            "metadata"
+            "metadata",
+            "prompt"
         ];
 
         foreach ($data as $k=>$v)
@@ -109,16 +111,30 @@ class CoreProfile {
         $ttsCon=$ttsConMgr->getById($currentProfileData["tts_connector_id"]);
 
         $GLOBALS["TTS_FUNCTION"]=$ttsCon["driver"];
-        
+
         $metadata = json_decode($currentProfileData['metadata'] ?? '{}', true);
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
                 $GLOBALS[$key] = $value;
             }
         }
+        if (isset($currentProfileData["prompt"]))
+            $GLOBALS["PROFILE_PROMPT"]=$currentProfileData["prompt"];
         
+    }
 
-        
+    public function clone($id) {
+        $id = intval($id);
+        $original = $this->readOne($id);
+
+        if (!$original) {
+            return false; // Original record not found
+        }
+
+        unset($original['id']); // Remove the ID to create a new record
+        $original['label'] = $original['label'] . ' (Copy)'; // Modify label to indicate it's a clone
+
+        return $this->create($original);
     }
     
 }

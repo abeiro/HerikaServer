@@ -79,7 +79,6 @@ $F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives item to a s
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
 
-$GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
 
 
 
@@ -118,7 +117,6 @@ $F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives items to 
 $F_RETURNMESSAGES_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_RETURNMESSAGES_LOCAL["UseSoulGaze"]="{$GLOBALS["HERIKA_NAME"]} used soulgaze";
 
-$GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
 
 
 
@@ -162,12 +160,15 @@ $F_NAMES_LOCAL["GoToSleep"]="GoToSleep";
 $F_NAMES_LOCAL["UseSoulGaze"]="UseSoulGaze";
 
 
-$GLOBALS["F_NAMES"]=$F_NAMES_LOCAL;
 
 if (isset($GLOBALS["CORE_LANG"]))
-	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
+	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) {
 		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php");
+    }
     
+$GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
+$GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
+$GLOBALS["F_NAMES"]=$F_NAMES_LOCAL;
     
     
 $GLOBALS["FUNCTIONS"] = [
@@ -775,6 +776,8 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'Brawl',
         'GiveGoldTo',
         'GiveItemTo',
+        'GoToSleep',
+
     ];
 } else {
     $GLOBALS["ENABLED_FUNCTIONS"]=[
@@ -797,7 +800,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'IncreaseWalkSpeed',
         'DecreaseWalkSpeed',
         'WaitHere',
-        'SetCurrentTask',
+        //'SetCurrentTask',
         'ComeCloser',
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
@@ -822,6 +825,8 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS[
     require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
 }
 
+
+
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
     require(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php");
 }
@@ -830,8 +835,14 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
 
 foreach ($GLOBALS["FUNCTIONS"] as $n=>$v)
     if (!in_array(getFunctionCodeName($v["name"]),$GLOBALS["ENABLED_FUNCTIONS"])) {
-            unset($GLOBALS["FUNCTIONS"][$n]);
+        error_log("[FUNCTION] Removing $n {$v["name"]}:".getFunctionCodeName($v["name"]));
+        unset($GLOBALS["FUNCTIONS"][$n]);
     }
+
+
+file_put_contents(__DIR__."/../log/bug_func.txt",print_r($GLOBALS["FUNCTIONS"],true));
+file_put_contents(__DIR__."/../log/bug_func.txt",print_r($GLOBALS["ENABLED_FUNCTIONS"],true),FILE_APPEND);
+file_put_contents(__DIR__."/../log/bug_func.txt",print_r($GLOBALS["ENABLED_FUNCTIONS"],true),FILE_APPEND);
 
 $GLOBALS["FUNCTIONS"]=array_values($GLOBALS["FUNCTIONS"]); //Get rid of array keys
 

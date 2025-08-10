@@ -44,7 +44,7 @@ if (isset($_GET["delete"])) {
 }
 
 // Fetch Data
-$data = $npc->getAll();
+$data = $npc->getAll("1=1 order by coalesce(gamets_last_updated,0) desc");
 $editItem = null;
 
 if (isset($_GET["edit"])) {
@@ -84,11 +84,11 @@ include("tmpl/header.php");
     <label for="prompt_head">Prompt Head</label>
     <textarea id="prompt_head" name="prompt_head"><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
 
+    <label for="core">Core </label>
+    <textarea id="core" name="core"><?= htmlspecialchars($editItem["core"] ?? "") ?></textarea>
+
     <label for="npc_static_bio">Static Bio</label>
     <textarea id="npc_static_bio" name="npc_static_bio"><?= htmlspecialchars($editItem["npc_static_bio"] ?? "") ?></textarea>
-
-    <label for="npc_dynamic_bio">Dynamic Bio</label>
-    <textarea id="npc_dynamic_bio" name="npc_dynamic_bio"><?= htmlspecialchars($editItem["npc_dynamic_bio"] ?? "") ?></textarea>
 
     <label for="oghma_knowledge_tags">OGHMA Knowledge Tags</label>
     <textarea id="oghma_knowledge_tags" name="oghma_knowledge_tags"><?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?></textarea>
@@ -120,8 +120,12 @@ include("tmpl/header.php");
     <label for="gender">Gender</label>
     <input type="text" id="gender" name="gender" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
 
+    <label for="base">Base</label>
+    <input type="text" id="base" name="base" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
+
     <label for="race">Race</label>
     <input type="text" id="race" name="race" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
+
 
     <label for="refid">Ref ID</label>
     <input type="text" id="refid" name="refid" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
@@ -134,16 +138,24 @@ include("tmpl/header.php");
         Dynamic Profile
     </label>
 
+    <label for="tags">Tags</label>
+    <input type="text" id="tags" name="tags" value="<?= htmlspecialchars($editItem["tags"] ?? "") ?>">
+
+
     <br/>
     <label for="metadata">Metadata (JSON)</label>
-    <textarea id="metadata" name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea><br>
+    <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea><br>
     <div id="metadata"></div>
+
+    <label for="extended_data">Extended data (JSON)</label>
+    <textarea name="extended_data" style="display:none"><?= htmlspecialchars($editItem["extended_data"] ?? "") ?></textarea><br>
+    <div id="extended_data"></div>
 
     <input type="submit" name="<?= $editItem ? "update" : "create" ?>" value="<?= $editItem ? "Update" : "Create" ?>">
 </form>
 
 <h2>All NPCs</h2>
-<table>
+<table id="npc_table">
     <thead>
         <tr>
             <th>ID</th>
@@ -151,12 +163,12 @@ include("tmpl/header.php");
             <th>Favorite</th>
             <th>Locked</th>
             <th>Voice</th>
-            <th>Prompt</th>
-            <th>Occupation</th>
-            <th>Goals</th>
             <th>Race</th>
+            <th>Core</th>
+            <th>Base</th>
             <th>RefID</th>
             <th>Profile ID</th>
+            <th>Last autoupdated</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -167,16 +179,18 @@ include("tmpl/header.php");
             <td><?= htmlspecialchars($row["npc_name"]) ?></td>
             <td><?= !empty($row["npc_favorite"]) ? "✔" : "" ?></td>
             <td><?= !empty($row["lock_profile"]) ? "🔒" : "" ?></td>
-            <td class="truncate-multiline"><?= htmlspecialchars($row["voiceid"]) ?></td>
-            <td class="truncate-multiline"><?= htmlspecialchars($row["prompt_head"]) ?></td>
-            <td class="truncate-multiline"><?= htmlspecialchars($row["occupation"]) ?></td>
-            <td class="truncate-multiline"><?= htmlspecialchars($row["goals"]) ?></td>
-            <td ><?= htmlspecialchars($row["race"]) ?></td>
-            <td><?= htmlspecialchars($row["refid"]) ?></td>
-            <td><?= htmlspecialchars($row["profile_id"]) ?></td>
+            <td class="truncate-multiline"><?= htmlspecialchars($row["voiceid"]??"") ?></td>
+            <td ><?= htmlspecialchars($row["race"]??"") ?></td>
+            <td ><?= htmlspecialchars($row["core"]??"") ?></td>
+            <td><?= htmlspecialchars($row["base"]??"") ?></td>
+            <td><?= htmlspecialchars($row["refid"]??"") ?></td>
+            <td><?= htmlspecialchars($row["profile_id"]??"") ?></td>
+            <td><?= htmlspecialchars($row["gamets_last_updated"]??"") ?></td>
+            
             <td class="actions">
                 <a href="?edit=<?= $row["id"] ?>">Edit</a>
                 <a href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
+                <a href="?tag=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Tag</a>
             </td>
         </tr>
     <?php endforeach; ?>
@@ -189,5 +203,7 @@ include("tmpl/header.php");
 <?php
  // Provides a JSON editor for metadata field and form consolidation function (only needed if metadata field is present)
  include(__DIR__."/tmpl/metadata_json_editor.php");
+// Provides Datatables
+ include(__DIR__."/tmpl/data_tables.php");
  ?>
 </html>

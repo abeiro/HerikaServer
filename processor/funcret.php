@@ -19,7 +19,9 @@
 	if (isset($returnFunction[2])) {
 		// Patch. 
 		$returnFunction[2]=trim($returnFunction[2]);
-
+ 
+		error_log("[CHIM] Checking $functionCodeName {$returnFunction[2]}");
+		
 		if ($functionCodeName == "GetTopicInfo") {
 			$argName = "topic";
 			// Lets overwrite this

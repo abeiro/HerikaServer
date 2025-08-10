@@ -416,255 +416,119 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
 function generateFollowerDiary($followerName, $gameRequest, $eventType) {
     global $db;
     
-    // Check if we have the diary connector configured
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
-        Logger::info("AUTO_DIARY: No diary connector configured for $followerName");
-        return false;
+    error_log("generateFollowerDiary called for $followerName");
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByName($followerName);
+    
+    $profile=new CoreProfile();
+    $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+        
+    $connector=new LLMConnector();
+    $currentConnectorData=$connector->getById($currentProfileData["diary_connector_id"]);
+   
+    $connector->setOldGlobals($currentConnectorData);
+    $profile->setOldGlobals($currentProfileData);
+    $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+
+    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+
+    unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
+
+        
+    // Use the same prompt system as regular diary entries
+    // Build standard system prompt like main.php does
+        
+    // Use centralized function from data_functions.php
+    $dynamicBiography = buildDynamicBiography($GLOBALS);
+        
+    $head[] = array('role' => 'system', 'content' =>  
+    strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
+        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
+    );
+        
+    // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
+    if (isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) && $GLOBALS["CONTEXT_HISTORY_DIARY"] > 0) {
+        $lastNDataForContext = $GLOBALS["CONTEXT_HISTORY_DIARY"]+0;
+    } else {
+        $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]+0) : 25;
+    }
+
+    $sqlfilter=" and type<>'prechat'";
+    $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
+    $historyData="";
+    foreach ($contextDataHistoric as $element) {
+    
+        $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
+        
+    }
+
+
+    // Build user prompt for diary generation (like regular diary)
+    
+    if (!empty($contextDataHistoric)) {
+        $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
+    }
+
+    $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$followerName,'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],"#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]]);
+
+    $prompt[] = 
+        ["role" => "user", "content" => $diaryPrompt
+        ]
+    ;
+    
+
+    $contextData = array_merge($head, $prompt);
+    
+    // Set the request type for diary so connector knows to use diary grammar
+    $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
+    $GLOBALS["gameRequest"] = [0 => "diary", 1 => time(), 2 => $gameRequest[2], 3 => "Auto diary for " . $followerName];
+    
+    $overrideParameters["max_tokens"]=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["MAX_TOKENS_MEMORY"]??500;
+    $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
+    $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
+
+    
+    // Restore original gameRequest after diary generation
+    if ($originalGameRequest !== null) {
+        $GLOBALS["gameRequest"] = $originalGameRequest;
+    } else {
+        unset($GLOBALS["gameRequest"]);
+    }
+        
+    if (!empty(trim($buffer))) {
+        // Save diary entry to database
+        $topic = DataLastKnowDate();
+        $location = DataLastKnownLocation();
+        
+        $db->insert(
+            'diarylog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'topic' => $topic . " (Auto-diary: $eventType)",
+                'content' => trim($buffer),
+                'tags' => "Auto-diary,$eventType",
+                'people' => $followerName,
+                'location' => $location,
+                'sess' => 'pending',
+                'localts' => time()
+            )
+        );
+            
+        // Log memory
+        if (function_exists('logMemory')) {
+            logMemory($followerName, $followerName, trim($buffer), time(), $gameRequest[2], 'auto_diary', $gameRequest[1]);
+        }
+        
+        // Send notification to plugin for this follower (same format as manual diary)
+        echo $followerName."|rolecommand|DebugNotification@Diary Entry Written for ".$followerName.PHP_EOL;
+        @ob_flush();
+        @flush();
+        
+        return true;
     }
     
-    // Temporarily switch context to this follower
-    $originalHerikaName = $GLOBALS["HERIKA_NAME"];
-    $GLOBALS["HERIKA_NAME"] = $followerName;
-    
-    try {
-        // Load follower's profile if it exists
-        $profileLoaded = false;
-        $originalHerikaData = [];
-        $FOLLOWER_CONF = [];
-        
-        // Try to load profile data for this follower
-        if (function_exists('getConfFileFor')) {
-            $confFile = getConfFileFor($followerName);
-            if (!empty($confFile) && file_exists($confFile)) {
-                // Save original values for all extended fields
-                $originalHerikaData = [
-                    'HERIKA_PERS' => isset($GLOBALS["HERIKA_PERS"]) ? $GLOBALS["HERIKA_PERS"] : '',
-                    'HERIKA_BACKGROUND' => isset($GLOBALS["HERIKA_BACKGROUND"]) ? $GLOBALS["HERIKA_BACKGROUND"] : '',
-                    'HERIKA_PERSONALITY' => isset($GLOBALS["HERIKA_PERSONALITY"]) ? $GLOBALS["HERIKA_PERSONALITY"] : '',
-                    'HERIKA_APPEARANCE' => isset($GLOBALS["HERIKA_APPEARANCE"]) ? $GLOBALS["HERIKA_APPEARANCE"] : '',
-                    'HERIKA_RELATIONSHIPS' => isset($GLOBALS["HERIKA_RELATIONSHIPS"]) ? $GLOBALS["HERIKA_RELATIONSHIPS"] : '',
-                    'HERIKA_OCCUPATION' => isset($GLOBALS["HERIKA_OCCUPATION"]) ? $GLOBALS["HERIKA_OCCUPATION"] : '',
-                    'HERIKA_SKILLS' => isset($GLOBALS["HERIKA_SKILLS"]) ? $GLOBALS["HERIKA_SKILLS"] : '',
-                    'HERIKA_SPEECHSTYLE' => isset($GLOBALS["HERIKA_SPEECHSTYLE"]) ? $GLOBALS["HERIKA_SPEECHSTYLE"] : '',
-                    'HERIKA_GOALS' => isset($GLOBALS["HERIKA_GOALS"]) ? $GLOBALS["HERIKA_GOALS"] : '',
-                    'HERIKA_DYNAMIC' => isset($GLOBALS["HERIKA_DYNAMIC"]) ? $GLOBALS["HERIKA_DYNAMIC"] : ''
-                ];
-                
-                // Load follower's profile
-                $FOLLOWER_CONF = extract_assignments($confFile);
-                $profileLoaded = true;
-                Logger::info("AUTO_DIARY: Loaded profile for $followerName");
-            }
-        }
-        
-        if (!$profileLoaded) {
-            // Create default follower configuration array if no specific profile exists
-            $FOLLOWER_CONF = [
-                "HERIKA_NAME" => $followerName,
-                "PLAYER_NAME" => $GLOBALS["PLAYER_NAME"],
-                "HERIKA_PERS" => "A loyal companion and follower of " . $GLOBALS["PLAYER_NAME"] . ".",
-                "HERIKA_BACKGROUND" => "A trusted companion who has joined " . $GLOBALS["PLAYER_NAME"] . " on their adventures through Skyrim.",
-                "HERIKA_PERSONALITY" => "Loyal, brave, and dependable. Shows dedication to their companions and faces challenges with determination.",
-                "HERIKA_APPEARANCE" => "A capable-looking adventurer equipped for the dangers of Skyrim.",
-                "HERIKA_RELATIONSHIPS" => "Close companion and trusted ally of " . $GLOBALS["PLAYER_NAME"] . ". Values friendship and loyalty above all else.",
-                "HERIKA_OCCUPATION" => "Adventurer and companion, skilled in combat and survival.",
-                "HERIKA_SKILLS" => "Proficient in combat, survival skills, and supporting allies in dangerous situations.",
-                "HERIKA_SPEECHSTYLE" => "Speaks with loyalty and respect, often showing concern for companions' wellbeing.",
-                "HERIKA_GOALS" => "To support " . $GLOBALS["PLAYER_NAME"] . " in their adventures and protect innocent people from harm.",
-                "PROMPT_HEAD" => isset($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "You are a companion in the world of Skyrim.",
-                "COMMAND_PROMPT" => isset($GLOBALS["COMMAND_PROMPT"]) ? $GLOBALS["COMMAND_PROMPT"] : "",
-                "CONTEXT_HISTORY" => isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25,
-                "CONTEXT_HISTORY_DIARY" => isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0,
-                "CONNECTORS_DIARY" => $GLOBALS["CONNECTORS_DIARY"],
-                "CONNECTOR" => isset($GLOBALS["CONNECTOR"]) ? $GLOBALS["CONNECTOR"] : []
-            ];
-            Logger::info("AUTO_DIARY: Using default configuration for $followerName");
-        } else {
-            // Ensure required fields exist in loaded configuration with fallbacks
-            if (!isset($FOLLOWER_CONF["HERIKA_NAME"])) {
-                $FOLLOWER_CONF["HERIKA_NAME"] = $followerName;
-            }
-            if (!isset($FOLLOWER_CONF["PLAYER_NAME"])) {
-                $FOLLOWER_CONF["PLAYER_NAME"] = $GLOBALS["PLAYER_NAME"];
-            }
-            if (!isset($FOLLOWER_CONF["CONNECTORS_DIARY"])) {
-                $FOLLOWER_CONF["CONNECTORS_DIARY"] = $GLOBALS["CONNECTORS_DIARY"];
-            }
-            if (!isset($FOLLOWER_CONF["CONNECTOR"])) {
-                $FOLLOWER_CONF["CONNECTOR"] = isset($GLOBALS["CONNECTOR"]) ? $GLOBALS["CONNECTOR"] : [];
-            }
-            if (!isset($FOLLOWER_CONF["CONTEXT_HISTORY"])) {
-                $FOLLOWER_CONF["CONTEXT_HISTORY"] = isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25;
-            }
-            if (!isset($FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"])) {
-                $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"] = isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0;
-            }
-            // Ensure extended profile fields have fallbacks if they don't exist
-            if (!isset($FOLLOWER_CONF["HERIKA_BACKGROUND"])) {
-                $FOLLOWER_CONF["HERIKA_BACKGROUND"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_PERSONALITY"])) {
-                $FOLLOWER_CONF["HERIKA_PERSONALITY"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_APPEARANCE"])) {
-                $FOLLOWER_CONF["HERIKA_APPEARANCE"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_RELATIONSHIPS"])) {
-                $FOLLOWER_CONF["HERIKA_RELATIONSHIPS"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_OCCUPATION"])) {
-                $FOLLOWER_CONF["HERIKA_OCCUPATION"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_SKILLS"])) {
-                $FOLLOWER_CONF["HERIKA_SKILLS"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_SPEECHSTYLE"])) {
-                $FOLLOWER_CONF["HERIKA_SPEECHSTYLE"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_GOALS"])) {
-                $FOLLOWER_CONF["HERIKA_GOALS"] = "";
-            }
-        }
-        
-        // Use the same prompt system as regular diary entries
-        // Build standard system prompt like main.php does
-        
-        // Use centralized function from data_functions.php
-        $dynamicBio = buildDynamicBiography($FOLLOWER_CONF);
-        
-        $head = [
-            ["role" => "system", "content" => strtr(
-                $FOLLOWER_CONF["PROMPT_HEAD"] . "\n" . $FOLLOWER_CONF["HERIKA_PERS"] . $dynamicBio . "\n" . $FOLLOWER_CONF["COMMAND_PROMPT"],
-                ["#PLAYER_NAME#" => $FOLLOWER_CONF["PLAYER_NAME"]]
-            )]
-        ];
-        
-        // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
-        if (isset($FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"]) && $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"] > 0) {
-            $lastNDataForContext = $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"]+0;
-        } else {
-            $lastNDataForContext = (isset($FOLLOWER_CONF["CONTEXT_HISTORY"])) ? ($FOLLOWER_CONF["CONTEXT_HISTORY"]+0) : 25;
-        }
-
-        $sqlfilter=" and type<>'prechat'";
-        $contextDataHistoric = DataLastDataExpandedFor("{$FOLLOWER_CONF["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
-        $historyData="";
-        foreach ($contextDataHistoric as $element) {
-        
-            $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
-            
-        }
-
-
-        // Build user prompt for diary generation (like regular diary)
-       
-        if (!empty($contextDataHistoric)) {
-            $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
-        }
-
-        $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$followerName,'{$GLOBALS["PLAYER_NAME"]}'=>$FOLLOWER_CONF["PLAYER_NAME"]]);
-
-        $prompt[] = 
-            ["role" => "user", "content" => $diaryPrompt
-            ]
-        ;
-        
-
-        $contextData = array_merge($head, $prompt);
-        
-        // Set the request type for diary so connector knows to use diary grammar
-        $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
-        $GLOBALS["gameRequest"] = [0 => "diary", 1 => time(), 2 => $gameRequest[2], 3 => "Auto diary for " . $followerName];
-        
-        // Generate diary entry using LLM
-        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$FOLLOWER_CONF["CONNECTORS_DIARY"]}.php");
-        
-        $connectionHandler = new $FOLLOWER_CONF["CONNECTORS_DIARY"];
-        $maxTokens = isset($FOLLOWER_CONF["CONNECTOR"][$FOLLOWER_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"]) 
-            ? $FOLLOWER_CONF["CONNECTOR"][$FOLLOWER_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"] 
-            : 1500;
-            
-        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
-        
-        $buffer = "";
-        $totalBuffer = "";
-        $breakFlag = false;
-        
-        while (true) {
-            if ($breakFlag) {
-                break;
-            }
-            
-            if ($connectionHandler->isDone()) {
-                $breakFlag = true;
-            }
-            
-            $buffer .= $connectionHandler->process();
-            $totalBuffer .= $buffer;
-        }
-        
-        $connectionHandler->close();
-        
-        // Restore original gameRequest after diary generation
-        if ($originalGameRequest !== null) {
-            $GLOBALS["gameRequest"] = $originalGameRequest;
-        } else {
-            unset($GLOBALS["gameRequest"]);
-        }
-        
-        if (!empty(trim($buffer))) {
-            // Save diary entry to database
-            $topic = DataLastKnowDate();
-            $location = DataLastKnownLocation();
-            
-            $db->insert(
-                'diarylog',
-                array(
-                    'ts' => $gameRequest[1],
-                    'gamets' => $gameRequest[2],
-                    'topic' => $topic . " (Auto-diary: $eventType)",
-                    'content' => trim($buffer),
-                    'tags' => "Auto-diary,$eventType",
-                    'people' => $followerName,
-                    'location' => $location,
-                    'sess' => 'pending',
-                    'localts' => time()
-                )
-            );
-            
-            // Log memory
-            if (function_exists('logMemory')) {
-                logMemory($followerName, $followerName, trim($buffer), time(), $gameRequest[2], 'auto_diary', $gameRequest[1]);
-            }
-            
-            // Send notification to plugin for this follower (same format as manual diary)
-            echo $followerName."|rolecommand|DebugNotification@Diary Entry Written for ".$followerName.PHP_EOL;
-            @ob_flush();
-            @flush();
-            
-            return true;
-        }
-        
-    } catch (Exception $e) {
-        Logger::error("AUTO_DIARY: Error generating diary for $followerName: " . $e->getMessage());
-    } finally {
-        // Restore original context
-        $GLOBALS["HERIKA_NAME"] = $originalHerikaName;
-        
-        // Restore original profile data if we loaded a follower profile
-        if (!empty($originalHerikaData)) {
-            $GLOBALS["HERIKA_PERS"] = $originalHerikaData['HERIKA_PERS'];
-            $GLOBALS["HERIKA_BACKGROUND"] = $originalHerikaData['HERIKA_BACKGROUND'];
-            $GLOBALS["HERIKA_PERSONALITY"] = $originalHerikaData['HERIKA_PERSONALITY'];
-            $GLOBALS["HERIKA_APPEARANCE"] = $originalHerikaData['HERIKA_APPEARANCE'];
-            $GLOBALS["HERIKA_RELATIONSHIPS"] = $originalHerikaData['HERIKA_RELATIONSHIPS'];
-            $GLOBALS["HERIKA_OCCUPATION"] = $originalHerikaData['HERIKA_OCCUPATION'];
-            $GLOBALS["HERIKA_SKILLS"] = $originalHerikaData['HERIKA_SKILLS'];
-            $GLOBALS["HERIKA_SPEECHSTYLE"] = $originalHerikaData['HERIKA_SPEECHSTYLE'];
-            $GLOBALS["HERIKA_GOALS"] = $originalHerikaData['HERIKA_GOALS'];
-            $GLOBALS["HERIKA_DYNAMIC"] = $originalHerikaData['HERIKA_DYNAMIC'];
-        }
-    }
     
     return false;
 }

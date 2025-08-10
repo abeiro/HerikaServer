@@ -5,7 +5,8 @@ ini_set('display_errors', 1);
 $file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel_72dc4b1c501563d149fec99eb45b45f1.json';
 $enginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-
+$GLOBALS["ENGINE_ROOT"]=$enginePath;
+$GLOBALS["ENGINE_PATH"]=$GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
@@ -22,6 +23,8 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
 
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php");
 
 if (!isset($argv[1])) {
     die(
@@ -61,7 +64,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         }
         else {
             echo "Using fts search";
-            $res=DataSearchMemory($argv[2],'');
+            $res=DataSearchMemory($argv[2],$argv[3]);
         }
 
         print_r($res);
@@ -169,14 +172,23 @@ Note: Memories are stored in memory_summary table, which holds info from events/
             echo "No new entries found to summarize and compact.".PHP_EOL;
         } else {
             echo "Found {$entries_to_process_count} entries to process. Starting summarization...".PHP_EOL;
-            $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
-            require_once($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
-            
-            Logger::info("Using connector {$GLOBALS["CURRENT_CONNECTOR"]}");
+
+            $CONF_SAMPLE_VARS=extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
+
+            $connector=new LLMConnector();
+            $currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_SUMMARY"]);
+            $connectionHandler = $connector->getConnector($currentConnectorData);
+
+            $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+            $GLOBALS["CURRENT_CONNECTOR"]=$currentConnectorData["driver"];
+            $connector->setOldGlobals($currentConnectorData);
+
+            error_log("Using connector {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             
             $results_query = "select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where (gamets_truncated>{$maxRow} or summary is null) order by rowid asc ";
             $results = $db->query($results_query);
             
+
             $toUpdate=[];
             
             while ($row = $db->fetchArray($results)) {
@@ -215,19 +227,10 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
                                       'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. Use this format:\\n$CLFORMAT");
                     
                     $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
-                    $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
-                    $connectionHandler->open($prompt, []);
-                    $buffer="";
-                    $totalBuffer=""; // totalBuffer was not used later, buffer holds the final result
-                    $breakFlag=false;
-                    while (true) {
-                        if ($breakFlag) break;
-                        $current_chunk = $connectionHandler->process(); // Renamed to avoid conflict
-                        $buffer.=$current_chunk; 
-                        // $totalBuffer.=$buffer; // This line seems to accumulate exponentially, $totalBuffer wasn't used.
-                        if ($connectionHandler->isDone()) $breakFlag=true;
-                    }
-                    $connectionHandler->close();
+                    
+                    $buffer=$connectionHandler->fast_request($prompt,[]);
+
+
                     $TEST_TEXT=strtr($buffer,["**"=>""]); // Use the final buffer
                     $toUpdate[]=["rowid"=>$row["rowid"],"summary"=>$TEST_TEXT];
                 }
@@ -243,7 +246,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
                 // The "Run a sync later" message aligns with this.
                 // So, no embedding happens here. We'll add a message about 'noembed' argument after the loop.
 
-                $pattern = '/#Tags:(.+)/';
+                $pattern = '/Tags:(.+)/';
                 preg_match($pattern, $TEST_TEXT, $matches);
                 $tagsCol=''; // Initialize tagsCol
                 if (isset($matches[1])) {
