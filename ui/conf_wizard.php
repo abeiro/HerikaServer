@@ -185,6 +185,143 @@ function syncInputs(rangeId, numberId, source) {
         rangeInput.value = numberInput.value;
     }
 }
+
+// Toast notification system
+function showToast(message, type = 'info', duration = 5000) {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.toast-notification');
+    existingToasts.forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification toast-' + type;
+    toast.innerHTML = message;
+    
+    // Add toast styles
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        font-size: 14px;
+        z-index: 10000;
+        max-width: 400px;
+        word-wrap: break-word;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Set background color based on type
+    switch(type) {
+        case 'success':
+            toast.style.backgroundColor = 'rgba(34, 197, 94, 0.9)';
+            toast.style.border = '1px solid rgba(34, 197, 94, 0.5)';
+            break;
+        case 'error':
+            toast.style.backgroundColor = 'rgba(239, 68, 68, 0.9)';
+            toast.style.border = '1px solid rgba(239, 68, 68, 0.5)';
+            break;
+        case 'warning':
+            toast.style.backgroundColor = 'rgba(245, 158, 11, 0.9)';
+            toast.style.border = '1px solid rgba(245, 158, 11, 0.5)';
+            break;
+        default: // info
+            toast.style.backgroundColor = 'rgba(59, 130, 246, 0.9)';
+            toast.style.border = '1px solid rgba(59, 130, 246, 0.5)';
+    }
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, duration);
+}
+
+// Enhanced callHelper function for dynamic profile updates
+function callDynamicProfileHelper(actionFile, fieldLabel) {
+    showToast(fieldLabel + '...', 'info', 10000);
+    
+    // Collect all form data like the regular callHelper function does
+    var formData = new FormData(document.getElementById('top'));
+    var jsonData = {};
+    
+    // Convert FormData to JSON object
+    for (var pair of formData.entries()) {
+        if (pair[0].endsWith('[]')) {
+            // Handle array fields (like selectmultiple)
+            var key = pair[0].slice(0, -2);
+            if (!jsonData[key]) {
+                jsonData[key] = [];
+            }
+            jsonData[key].push(pair[1]);
+        } else {
+            jsonData[pair[0]] = pair[1];
+        }
+    }
+    
+    fetch('cmd/' + actionFile, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(jsonData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            showToast(data.message || (fieldLabel + ' updated successfully!'), 'success');
+            // Reload the page immediately to show updated field values
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1500);
+        } else {
+            showToast(data.message || ('Failed to update ' + fieldLabel), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error updating ' + fieldLabel + ': ' + error.message, 'error');
+    });
+}
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
 </script>";
 
 foreach ($currentConf as $pname=>$parms) {
@@ -286,6 +423,44 @@ foreach ($currentConf as $pname=>$parms) {
 
     } else if ($parms["type"]=="longstring") {
         echo "<p class='conf-item'><label for='$fieldName'>$pname</label><textarea $FORCE_DISABLED name='$fieldName'>".htmlspecialchars($fieldValue,ENT_QUOTES)."</textarea><span>{$parms["description"]}</span></p> ".PHP_EOL;
+        
+        // Add individual dynamic profile update buttons for relevant bio fields
+        $dynamicFields = [
+            "HERIKA_PERSONALITY" => ["field" => "personality", "label" => "Update Personality"],
+            "HERIKA_RELATIONSHIPS" => ["field" => "relationships", "label" => "Update Relationships"], 
+            "HERIKA_OCCUPATION" => ["field" => "occupation", "label" => "Update Occupation"],
+            "HERIKA_SKILLS" => ["field" => "skills", "label" => "Update Skills"],
+            "HERIKA_SPEECHSTYLE" => ["field" => "speechstyle", "label" => "Update Speech Style"],
+            "HERIKA_GOALS" => ["field" => "goals", "label" => "Update Goals"]
+        ];
+        
+        if (isset($dynamicFields[$fieldName]) && !$DEFAULT_PROFILE) {
+            $fieldInfo = $dynamicFields[$fieldName];
+            $actionFile = "action_dynamic_profile_{$fieldInfo['field']}.php";
+            
+            echo "<button class='dynamic-profile-btn' type='button' style='
+                padding: 6px 12px;
+                background-color: rgba(139, 69, 19, 0.8);
+                color: #ffffff;
+                border: 1px solid rgba(160, 82, 45, 0.5);
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 12px;
+                text-decoration: none;
+                display: inline-block;
+                transition: all 0.2s ease-in-out;
+                font-weight: 500;
+                letter-spacing: 0.3px;
+                backdrop-filter: blur(5px);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2),
+                            inset 0 1px rgba(255, 255, 255, 0.1);
+                margin: 5px 0;
+                ' 
+                onclick=\"callDynamicProfileHelper('$actionFile', '{$fieldInfo['label']}')\"
+                onmouseover=\"this.style.backgroundColor='rgba(160, 82, 45, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';\"
+                onmouseout=\"this.style.backgroundColor='rgba(139, 69, 19, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';\">
+                {$fieldInfo['label']}</button>";
+        }
 
     } else if ($parms["type"]=="url") {
         $checkButton="<button class='url' type='button' style='
@@ -445,6 +620,60 @@ foreach ($currentConf as $pname=>$parms) {
                 <span>{$parms["description"]}</span>
                 </p>" . PHP_EOL;
     
+    } else if ($pname === "DIARY_COOLDOWN") {
+        // DIARY_COOLDOWN: 10-1200
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='10' max='1200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='10' max='1200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:80px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
+    } else if ($pname === "CONTEXT_HISTORY_DIARY") {
+        // CONTEXT_HISTORY_DIARY: 0-400
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:70px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
+    } else if ($pname === "CONTEXT_HISTORY_DYNAMIC_PROFILE") {
+        // CONTEXT_HISTORY_DYNAMIC_PROFILE: 0-400
+        echo "<p class='conf-item'>
+                <label for='$fieldName'>$pname</label>
+                <input type='range' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    name='$fieldName'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                    id='{$fieldName}_range'
+                    $FORCE_DISABLED>
+                
+                <input type='number' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                    style='width:70px;'
+                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                    id='{$fieldName}_number'>
+                
+                <span>{$parms["description"]}</span>
+                </p>" . PHP_EOL;
+    
     } else {
         // Default integer handling
         echo "<p class='conf-item'>
@@ -575,7 +804,7 @@ foreach ($currentConf as $pname=>$parms) {
         $jsid = strtr($fieldName,["@"=>"_"]);
     }
     
-    if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid", "OGHMA_KNOWLEDGE"]))
+    if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","HERIKA_BACKGROUND","HERIKA_PERSONALITY","HERIKA_APPEARANCE","HERIKA_RELATIONSHIPS","HERIKA_OCCUPATION","HERIKA_SKILLS","HERIKA_SPEECHSTYLE","HERIKA_GOALS","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid","TTS@PIPERTTS@voiceid", "OGHMA_KNOWLEDGE"]))
         if (!in_array($parms["type"],["util"]))
             if (!isset($parms["scope"]) || !in_array($parms["scope"],["global","constant"]))
                 echo "<button class='ctapb' title='Copy $fieldName to all profiles' style='

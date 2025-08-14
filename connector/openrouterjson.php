@@ -24,6 +24,7 @@ class openrouterjson
     private $_is_mistral_ai;
     private $_is_streaming;
     private $_is_reasoning;
+    private $_is_openai;
     private $_model="";
     private $_url;
     private $_websearch=false;
@@ -34,7 +35,8 @@ class openrouterjson
     private $_cot_tag_base;
     private $_output_buffer; 
     private $_timeout;
-
+    private $_is_grok;
+    
     public function __construct()
     {
         $this->name="openrouterjson";
@@ -53,6 +55,8 @@ class openrouterjson
         $this->_cot_tag_base="think";
         $this->_output_buffer="";
         $this->_timeout=30;
+        $this->_is_grok=false;
+        $this->_is_openai=false;
         $this->_websearch=false;
         $this->_websearch_text="";
         $this->_websearch_index=0;
@@ -113,12 +117,47 @@ class openrouterjson
                 $i_pos = stripos($s_model, "qwen3-235b-a22b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "qwen3-30b-a3b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-32b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o4");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o1");
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+    private function isOpenAIModel($s_model="") { //OpenAI models have different parameters
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            // OpenRouter models
+            $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/o4-mini");
+            // Nano-GPT models
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "azure-o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "azure-o3");
+            // OpenAI model names
+            if ($i_pos === false) { 
+                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
+                    ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
+                    (strpos($s_model, "o4-mini") == 0)) {
+                    $i_pos = 1;
+                }
+            }
             $b_res = (!($i_pos === false));
         }
         return $b_res;
     }
    
-    private function init_connector() {
+    private function init_connector($customParms) {
         $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
@@ -137,16 +176,24 @@ class openrouterjson
         }
 
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+        
+        // We shoud be able to overwrite model.
+        $this->_model = isset($customParms["model"]) ?$customParms["model"] :  $this->_model;
+
+        $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
+        $this->_is_openai = $this->isOpenAIModel($this->_model);
+        
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
-            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
-        $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
+            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model, use list of known reasoning models
+        
+        $this->_timeout = intval(($this->_is_reasoning) ? 90 : 30); // reasoning models could think more than 2 minutes
     }   
     
     public function open($contextData, $customParms)
     {
 
-        $this->init_connector();
+        $this->init_connector($customParms);
 
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
@@ -181,7 +228,7 @@ class openrouterjson
             $prefix="";
         }
 
-        if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
+        if (stripos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle.";
         } else
             $speechReinforcement="";
@@ -189,7 +236,7 @@ class openrouterjson
         $zonosTones = $GLOBALS["TTSFUNCTION"] == "zonos_gradio" ? " (Response tones are mandatory in the response)" : "";
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
+            'content' => "{$prefix}. $speechReinforcement \nUse ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure $zonosTones: \n".json_encode($GLOBALS["responseTemplate"])
         ];
         $pb=[];
         $pb["user"]="";
@@ -290,7 +337,7 @@ class openrouterjson
                         $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
                         $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
-
+                        
                         // Seems we were missing this case
                         if (isset($assistantRoleBuffer) && !empty($assistantRoleBuffer)) {
                             $contextDataCopy[]=[
@@ -302,7 +349,7 @@ class openrouterjson
                             $assistantRoleBuffer="";
                             $lastrole=$element["role"];
 
-                        }
+                        }                        
                         
                         unset($contextData[$n]);
                     } else {
@@ -381,53 +428,51 @@ class openrouterjson
 
         $contextData=$contextDataCopy;
 
-        //print_r($contextData);
-        $contextData2=[];
-        $contextData2[]= ["role"=>"system","content"=>$pb["system"]];
-        $contextData2[]= ["role"=>"user","content"=>$pb["user"]];
-        
-        // Compacting */
+        // Compact and remove context elements with empty content
         $contextDataCopy=[];
-        foreach ($contextData as $n=>$element) 
-            $contextDataCopy[]=$element;
+        foreach ($contextData as $n=>$element) {
+            if (!empty($element["content"])) {
+                $contextDataCopy[]=$element;
+            }
+        }
         
-        if ($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"]) {
+        if ((isset($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"])) && ($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"])) {
             $GLOBALS["PATCH"]["PREAPPEND"]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",";
             $contextDataCopy[]= ["role"=>"assistant","content"=>$GLOBALS["PATCH"]["PREAPPEND"]];
         }
         
-        
         $contextData=$contextDataCopy;
         
         if (!$assistantAppearedInhistory) { // is this still needed?
-            // EXAMPLES
-            $contextExamples[]= [
-                'role' => 'user', 
-                'content' => "The Narrator: {$GLOBALS["PLAYER_NAME"]} looks at {$GLOBALS["HERIKA_NAME"]}"
-            ];
-            
-            $contextExamples[]= [
-                "role"=>"assistant",
-                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",\"listener\": \"{$GLOBALS["PLAYER_NAME"]}\", \"mood\": \"default\", \"action\": \"Talk\",\"target\": \"\", \"message\": \"What are you looking at?\"}"
-                    
-            ];
             
             if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
                 $contextExamples=[];
+            } else {
+                // EXAMPLES
+                $contextExamples[]= [
+                    'role' => 'user', 
+                    'content' => "The Narrator: {$GLOBALS["PLAYER_NAME"]} looks at {$GLOBALS["HERIKA_NAME"]}"
+                ];
+                
+                $contextExamples[]= [
+                    "role"=>"assistant",
+                    "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",\"listener\": \"{$GLOBALS["PLAYER_NAME"]}\", \"mood\": \"default\", \"action\": \"Talk\",\"target\": \"\", \"message\": \"What are you looking at?\"}"
+                        
+                ];
+                
+                $finalContextDataWithExamples=[];
+                foreach ($contextData as $n=>$final) {
+                    if ($final["role"]=="system") {
+                        $finalContextDataWithExamples[]=$final;
+                        foreach ($contextExamples as $example)
+                            $finalContextDataWithExamples[]=$example;
+                        }
+                    else
+                        $finalContextDataWithExamples[]=$final;
+                }
+               
+                $contextData=$finalContextDataWithExamples;
             }
-
-            $finalContextDataWithExamples=[];
-            foreach ($contextData as $n=>$final) {
-                if ($final["role"]=="system") {
-                    $finalContextDataWithExamples[]=$final;
-                    foreach ($contextExamples as $example)
-                        $finalContextDataWithExamples[]=$example;
-                    }
-                else
-                    $finalContextDataWithExamples[]=$final;
-            }
-            
-            $contextData=$finalContextDataWithExamples;
         }
 
         $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
@@ -460,6 +505,14 @@ class openrouterjson
 
         $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
         if ($top_k < 0) $top_k = 0; 
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($customParms["MAX_TOKENS"]);
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
         
         $data = array(
             'model' => $this->_model,
@@ -487,51 +540,46 @@ class openrouterjson
                 $data["response_format"]=["type"=>"json_object"];
             }
         }
-        
             
         // Mistral AI API does not support penalty params
         if ($this->_is_mistral_ai) {
             unset($data["presence_penalty"]); 
             unset($data["frequency_penalty"]);
         } 
-
-        if (isset($customParms["MAX_TOKENS"])) {
-            if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
-            } elseif (isset($customParms["MAX_TOKENS"])) {
-                $data["max_tokens"]=$customParms["MAX_TOKENS"]+0;
-            }
-        }
-
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
-            } else
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"]+0;
-            
-        }
-
-       
-        if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
-            $providers=explode(",",$GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"]);
-            
-            $data["provider"]=["order"=>$providers];
-
-        }
-            
-        $data["transforms"]=[];
+        
+        if ($this->_is_grok) { //Argument not supported on this model: stop
+            unset($data["stop"]); 
+        }  
 
         if ($this->_is_reasoning) { // add parameter to hide <think> content
             $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
             //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
             //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
             //Logger::debug("reasoning " . $this->_model);
-            
             if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
                 $data["enable_thinking"] = false;
             }            
         }
+        
+        if ($this->_is_openai) {
+            // OpenAI models use max_completion_tokens
+            $data['max_completion_tokens'] = $MAX_TOKENS;
+            unset($data['max_tokens']); 
+            if ($this->_is_reasoning) {
+                $data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            }
+        }
 
+        if ($MAX_TOKENS<1) {
+            unset($data["max_completion_tokens"]); 
+            unset($data["max_tokens"]); 
+        }
+       
+        if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
+            $providers=explode(",",$GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"]);
+            $data["provider"]=["order"=>$providers];
+        }
+            
         if ($this->_websearch) { // online search request 
 
             $sx = $this->_model;
@@ -589,6 +637,12 @@ class openrouterjson
 
         } // --- end online search request
 
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+            }
+        }        
+
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
@@ -600,12 +654,13 @@ class openrouterjson
             "X-Title: Dwemer Dynamics"
         );
 
+        $timeout = max(intval(($GLOBALS["HTTP_TIMEOUT"]) ?? 30), $this->_timeout);
         $options = array(
             'http' => array(
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout,
+                'timeout' => $timeout, 
                 "ignore_errors" => true
             )
         );
@@ -622,7 +677,9 @@ class openrouterjson
                 'audit_request',
                     array(
                         'request' => json_encode($data),
-                        'result' => $error["message"]
+                        'result' => $error["message"],
+                        'connector'=>$this->name,
+                        'url'=>$this->_url
                     ));
             }
             return null;
@@ -639,7 +696,9 @@ class openrouterjson
                     'audit_request',
                         array(
                             'request' => json_encode($data),
-                            'result' => $error_message
+                            'result' => $error_message,
+                            'connector'=>$this->name,
+                            'url'=>$this->_url
                         ));
                 }
 
@@ -652,7 +711,9 @@ class openrouterjson
                     'audit_request',
                     array(
                         'request' => json_encode($data),
-                        'result' => "Ok"
+                        'result' => "Ok",
+                        'connector'=>$this->name,
+                        'url'=>$this->_url
                     ));
                 }
             }
@@ -739,7 +800,7 @@ class openrouterjson
                 $this->_buffer.=$data["choices"][0]["delta"]["content"];
                 // Check to see if we've received something that looks like it starts with a JSON object
                 if (strlen($this->_buffer)>$buffer_preamble && strpos($this->_buffer, '{') === false) { 
-                    Logger::error("Error decoding JSON from LLM output: can't find JSON start mark after reading {$buffer_preamble} characters. LLM didn't output proper JSON object or there is a long non-JSON preamble.");
+                    Logger::error("{$this->name} Error decoding JSON from LLM {$this->_model} output: can't find JSON start mark after reading {$buffer_preamble} characters. LLM didn't output proper JSON object or there is a long non-JSON preamble. url:{$this->_url} buffer:{$this->_buffer} ");
                     return -1;
                 }
 

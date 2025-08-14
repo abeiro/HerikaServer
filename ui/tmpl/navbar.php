@@ -15,113 +15,287 @@ if (!isset($webRoot)) {
     $webRoot = rtrim($webRoot, '/');
 }
 
+// Ensure conf.php is loaded for $GLOBALS["DBDRIVER"] and other settings
+if (defined('BASE_PATH') && !isset($GLOBALS["DBDRIVER"])) {
+    @include_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+}
+
+// Function to validate plugin version format - just check it's not too long
+function isValidPluginVersion($version) {
+    // Simple validation: version should be 10 characters or less
+    return strlen($version) <= 10;
+}
+
+$pluginVersionDisplay = 'N/A'; // Default value
+
+// Attempt to use a global $db object if available and valid
+if (isset($GLOBALS['db']) && is_object($GLOBALS['db'])) {
+    try {
+        if (method_exists($GLOBALS['db'], 'fetchOne')) {
+            $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
+                $version = trim($pluginVersionRow['value']);
+                // Validate that the version follows the expected format
+                if (isValidPluginVersion($version)) {
+                    $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                }
+            }
+        } elseif (method_exists($GLOBALS['db'], 'fetchAll')) {
+            // Fallback to fetchAll on global $db if fetchOne not found
+            $rows = $GLOBALS['db']->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
+            if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
+                $version = trim($rows[0]['value']);
+                // Validate that the version follows the expected format
+                if (isValidPluginVersion($version)) {
+                    $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Just keep the default value and log the error
+        error_log("Error fetching plugin version using global \$db: " . $e->getMessage());
+    }
+} else {
+    // Only attempt to create a new DB connection if we don't already have a global one
+    // and only if we have all the required components
+    try {
+        if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
+            $dbDriverFile = BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
+            
+            // Only try to load the SQL class if it doesn't already exist
+            if (!class_exists('sql') && file_exists($dbDriverFile)) {
+                @require_once($dbDriverFile);
+            }
+            
+            // Only create a new connection if the class was loaded successfully
+            if (class_exists('sql')) {
+                // Suppress warnings/errors in this section as it's purely for UI decoration
+                @$localDb = new sql();
+                
+                if ($localDb && is_object($localDb)) {
+                    if (method_exists($localDb, 'fetchOne')) {
+                        $pluginVersionRow = @$localDb->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
+                        if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
+                            $version = trim($pluginVersionRow['value']);
+                            // Validate that the version follows the expected format
+                            if (isValidPluginVersion($version)) {
+                                $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                            }
+                        }
+                    } elseif (method_exists($localDb, 'fetchAll')) {
+                        $rows = @$localDb->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
+                        if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
+                            $version = trim($rows[0]['value']);
+                            // Validate that the version follows the expected format
+                            if (isValidPluginVersion($version)) {
+                                $pluginVersionDisplay = htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Just continue with the default value
+        error_log("Error in navbar fallback DB connection: " . $e->getMessage());
+    }
+}
+
 // Add link to navbar CSS
 echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
+
+// Add custom CSS for centered navbar layout
+echo '<style>
+.chim-navbar .container-fluid {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.server-version-info {
+    display: flex;
+    align-items: center;
+    color: #6c757d;
+    font-size: 0.75em;
+    font-family: Arial, sans-serif;
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.navbar-content-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.social-links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 120px;
+    flex-shrink: 0;
+    justify-content: flex-end;
+}
+
+.social-link img {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease;
+}
+
+.social-link:hover img {
+    transform: scale(1.1);
+}
+
+.navbar-left {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    margin: 0 15px 0 0 !important;
+}
+
+.navbar-center {
+    display: flex;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin: 0 20px;
+}
+
+.navbar-right {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    margin: 0 0 0 15px !important;
+}
+
+.navbar-center .navbar-brand {
+    margin: 0;
+    padding: 0;
+}
+
+/* Dropdown positioning */
+.nav-item.dropdown .dropdown-menu {
+    min-width: 280px;
+}
+
+@media (max-width: 992px) {
+    .container-fluid {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .server-version-info,
+    .social-links {
+        order: 2;
+        width: auto;
+    }
+    
+    .navbar-content-wrapper {
+        flex-direction: column;
+        gap: 10px;
+        order: 1;
+    }
+    
+    .navbar-left,
+    .navbar-right {
+        justify-content: center;
+        flex: none;
+        margin: 0 !important;
+    }
+    
+    .navbar-center {
+        order: -1;
+        margin: 0;
+    }
+    
+    /* Center dropdowns on mobile */
+    .dropdown-menu {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+</style>';
 
 ?>
 <div class="chim-navbar-wrapper">
     <nav class="navbar navbar-expand-lg chim-navbar">
         <div class="container-fluid mx-1">
-            <!-- PLEASE LEAVE THIS LINK TO index.php, as database update checks are being made there -->
-            <!--<a class="navbar-brand mr-2 Title" href="/HerikaServer/ui/conf_wizard.php" title="CHIM Server :: Go to Home Page"><img src="images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> CHIM</a> -->
-            <a class="navbar-brand mr-2 Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
-                <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
-                <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
-            </a> 
+            <!-- Server Version Info - Far Left -->
+            <div class="server-version-info">
+                Server: 1.3.5.3b<br>
+                Plugin: <?php echo $pluginVersionDisplay; ?>
+            </div>
             
-            <a class="navbar-brand mr-2 button" href="<?php echo $webRoot; ?>/ui/index.php?togglemodel=true" title="Click to change active connector" style="display:none">
-            <!--[IGNORE THIS] Active LLM/AI: <?php echo trim(json_decode(file_get_contents(__DIR__.DIRECTORY_SEPARATOR.'../../data/CurrentModel_.json'), true)); ?>-->
-            </a>
-            
-
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <div class="navbar-content-wrapper">
+                <!-- Left Navigation -->
+                <ul class="navbar-nav navbar-left">
                 <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Events & Memories</a>
-                    <ul class="dropdown-menu">
-
-                    <!-- Events Category -->
-                    <li><h6 class="dropdown-header">Events and Objectives</h6></li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=eventlog">Event Log</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=eventlog&autorefresh=true">Monitor Events</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=quests">Active Quests</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=currentmission">Dynamic AI Objective</a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <!-- Logs Category -->
-                    <li><h6 class="dropdown-header">Logs</h6></li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=log">Response Log</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=books">Book Log</a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-
-                    <!-- Memories Category -->
-                    <li><h6 class="dropdown-header">Memories</h6></li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=memory">Memories (WIP)</a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?table=memory_summary">Memory Summaries</a>
-                    </li>
-
-                    </ul>
+                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a>
                 </li>
+
+
                 <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server  Actions</a>
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
                     <ul class="dropdown-menu">
 
-                        <!-- First Category Header -->
-                        <li><h6 class="dropdown-header">Event Management</h6></li>
-                        <!-- <li>
-                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="Delete sent events." onclick="return confirm('Sure?')">
-                            Clean Sent Events
+                        
+                        <li><h6 class="dropdown-header">Configuration Tools</h6></li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/conf_wizard.php">Configuration Wizard</a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/npc_upload.php" title="Edit NPC biographies entries.">
+                            NPC Biography Management
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="index.php?clean=true&table=response" title="This will clear the short term context buffer of events that will be sent with the AI prompt (CONTEXT_HISTORY). Will not delete events from the event log." onclick="return confirm('This will clear the short term context buffer of events that will be sent with the AI prompt (CONTEXT_HISTORY). Will not delete events from the event log. ARE YOU SURE?')">
-                            Clear Current Context Events Buffer
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/oghma_upload.php" title="Edit Oghma Infinium entries.">
+                            Oghma Infinium Management
                         </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/function_editor.php">
+                        AI Action Editor
+                        </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/customprompteditor.php">
+                        Custom Prompt Editor
+                        </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/quickstart.php">
+                            Quickstart Menu
+                        </a>
+                        </li>
+
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">TTS Voice Management</h6></li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS FastAPI voices."rel="noopener noreferrer">
+                            CHIM XTTS Management
+                        </a>
+                        </li>
+
+                        <!-- li>
+                        <a class="dropdown-item" href="<?= htmlspecialchars($GLOBALS["TTS"]["ZONOS_GRADIO"]["endpoint"]) ?>" title="Test Zonos Settings" target="_blank">
+                            Zonos Gradio Management
+                        </a>
+                        </li -->
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Web Extensions</h6></li>
+                        <li>
+                        <a class="dropdown-item" href="#" onclick="window.open('/HerikaServer/ui/addons/pmstt', 'ChromeSTT', 'width=800,height=600,resizable=yes,scrollbars=yes'); return false;">Chrome Free Speech-to-Text</a>
+                        </li>
+                        <!--<li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/websocket" target="_blank">Websocket Configuration (WIP)</a>
                         </li>-->
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?reset=true&table=event" title="Delete all events." onclick="return confirm('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG! EVENTS ARE USED FOR CONTEXT. ARE YOU SURE?')">
-                            Delete All Events
-                        </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-
-                        <!-- Second Category Header -->
-                        <li><h6 class="dropdown-header">Response Log Management</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?cleanlog=true" title="Clean AI Log table." onclick="return confirm('This will clear all the entries in the Response Log. ARE YOU SURE?')">
-                            Clean Response Log
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/index.php?export=log" title="Export Response Log (debugging purposes)." target="_blank">
-                            Export Response Log
-                        </a>
-                        </li>
-
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Memory Management</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/vector-compact-chromadb.php" title="Compact and Sync Memories." onclick="return confirm('Will use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')">
-                            Sync & Create Memory Summaries
-                        </a>
-                        </li><li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/vector-delete-memory_summary.php" title="Compact and Sync Memories." onclick="return confirm('Will delete all summarized memories. ARE YOU SURE?')">
-                            Delete All Memory Summaries
-                        </a>
-                        </li>
 
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Character Profiles</h6></li>
@@ -145,135 +319,20 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                             Regenerate Character Map
                         </a>
                         </li>
-
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Database Operations</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="/pgAdmin/" target="_blank" title="pgAdmin Database Manager. User & Password is 'dwemer'">
-                            <strong>Database Manager (Both User & Password = dwemer)</strong>
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/export_db.php" target="_blank" title="Exports current database into a file.">
-                            Backup Current Database
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Reimport an exported database file.">
-                            Restore Current Database 
-                        </a>
-                        </li>
-                        <li>
-                        <button class="dropdown-item" style="letter-spacing:0.5px" 
-                        title="Maintenance operations - clean and optimize the database, reclaim unused space. Skyrim game must be stopped."
-                        onclick="if (confirm('Vacuum operation will compact and optimize the database. \n- Make sure Skyrim game is stopped. \n- To reclaim unused space, free temporary space is required, do not start this if your disk is almost full. \n- During this operation tables will be locked, do not access the database and do not interrupt. \nThis could take some time, please wait until you see the confirmation.')) {
-                            window.open('<?php echo $webRoot; ?>/ui/vacuum_db.php', 'Database_maintenance', 
-                                'resizable=yes,scrollbars=yes,titlebar=no' ); 
-                                return false;
-                        }">Database Maintenance - vacuum</button>
-                        </li>
-                        <!--
-                        <li>
-                        <a class="dropdown-item" href="index.php?reinstall=true&delete=true" title="Fully reinstalls the CHIM Database." 
-                        onclick="return confirm('This will wipe and reinstall the entire database!!! If you want to delete configurations, delete conf.php and conf_*.php files from HerikaServer conf folder. ARE YOU SURE?')">
-                            Factory Reset Server Database
-                        </a>
-                        </li>
-                        -->
-
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Utilities</h6></li>
-                        <li>
-                        <div style="
-                            display: flex; 
-                            justify-content: center; 
-                            align-items: center; 
-                            margin-top: 20px;">
-                            <button style="
-                                font-weight: bold;
-                                font-family: 'Futura CondensedLight', Arial, sans-serif;
-                                border: 1px solid;
-                                transition: background-color 0.3s, color 0.3s;
-                                border-radius: 4px;
-                                text-align: center;
-                                text-decoration: none;
-                                background-color: #ffc107;
-                                color: black;
-                                padding: 6px 12px;
-                                font-size: 14px;
-                                cursor: pointer;
-                            " 
-                            onmouseover="this.style.backgroundColor='#e6ac00';"
-                            onmouseout="this.style.backgroundColor='#ffc107';"
-                            onclick="window.open('<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php', '_blank')" 
-                            title="Generate AIAgent.ini file for the mod file.">
-                                <strong>Create Custom AIAgent.ini Mod<br>(Install with mod manager, override AIAgent mod folder)</strong>
-                            </button>
-                        </div>
-                        </li>
                     </ul>
                 </li>
+                </ul>
 
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
-                    <ul class="dropdown-menu">
+                <!-- Center Logo -->
+                <div class="navbar-center">
+                    <a class="navbar-brand Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
+                        <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+                        <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+                    </a>
+                </div>
 
-                        
-                        <li><h6 class="dropdown-header">Configuration Tools</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/conf_wizard.php">Configuration Wizard</a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/npc_upload.php" title="Edit NPC biographies entries.">
-                            NPC Biography Management
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/oghma_upload.php" title="Edit Oghma Infinium entries.">
-                            Oghma Infinium Management
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/customprompteditor.php">
-                        Custom Prompt Editor
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/quickstart.php">
-                            Quickstart Menu
-                        </a>
-                        </li>
-
-
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">TTS Voice Management</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS FastAPI voices."rel="noopener noreferrer">
-                            CHIM XTTS Management
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="http://localhost:59125" title="Find Mimic3 voices." target="_blank">
-                            Mimic3 Management
-                        </a>
-                        </li>
-                        <!-- li>
-                        <a class="dropdown-item" href="<?= htmlspecialchars($GLOBALS["TTS"]["ZONOS_GRADIO"]["endpoint"]) ?>" title="Test Zonos Settings" target="_blank">
-                            Zonos Gradio Management
-                        </a>
-                        </li -->
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Web Extensions</h6></li>
-                        <li>
-                        <a class="dropdown-item" href="#" onclick="window.open('/HerikaServer/ui/addons/pmstt', 'ChromeSTT', 'width=800,height=600,resizable=yes,scrollbars=yes'); return false;">Chrome Free Speech-to-Text</a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/addons/websocket" target="_blank">Websocket Configuration (WIP)</a>
-                        </li>
-                    </ul>
-                </li>
-
-
+                <!-- Right Navigation -->
+                <ul class="navbar-nav navbar-right">
                 <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
                 <ul class="dropdown-menu">
@@ -303,9 +362,51 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                     <li>
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
                     </li>
-                    <!--<li>
-                    <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
-                    </li>-->
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Database Controls</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Complete database management - backup, restore, maintenance, and pgAdmin access.">
+                        Database Manager
+                    </a>
+                    </li>
+                                         <li><hr class="dropdown-divider"></li>
+                     <li><h6 class="dropdown-header">Debugging</h6></li>
+                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>
+                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=audit_request' title="">Request Logs</a></li>
+
+                     <li><hr class="dropdown-divider"></li>
+                     <li><h6 class="dropdown-header">Utilities</h6></li>
+                     <li>
+                     <div style="
+                         display: flex; 
+                         justify-content: center; 
+                         align-items: center; 
+                         margin-top: 20px;">
+                         <button style="
+                             font-weight: bold;
+                             font-family: 'Futura CondensedLight', Arial, sans-serif;
+                             border: 1px solid;
+                             transition: background-color 0.3s, color 0.3s;
+                             border-radius: 4px;
+                             text-align: center;
+                             text-decoration: none;
+                             background-color: #ffc107;
+                             color: black;
+                             padding: 6px 12px;
+                             font-size: 14px;
+                             cursor: pointer;
+                         " 
+                         onmouseover="this.style.backgroundColor='#e6ac00';"
+                         onmouseout="this.style.backgroundColor='#ffc107';"
+                         onclick="window.open('<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php', '_blank')" 
+                         title="Generate AIAgent.ini file for the mod file.">
+                             <strong>Create Custom AIAgent.ini Mod<br>(Install with mod manager, override AIAgent mod folder)</strong>
+                         </button>
+                     </div>
+                     </li>
+                     <!--<li>
+                     <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
+                     </li>-->
                 </ul>
                 </li>
 
@@ -322,147 +423,34 @@ echo '<link rel="stylesheet" href="' . $webRoot . '/ui/css/navbar.css">';
                 </li>
 
                 <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Server Plugins</a>
-                    <ul class="dropdown-menu">
-                        <li><h6 class="dropdown-header">CHIM Extensions</h6></li>
-                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'>Plugin Manager</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Debugging</h6></li>
-                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>
-                        <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=audit_request' title="">Request Logs</a></li>
-                        <div style="
-                        display: flex; 
-                        justify-content: center; 
-                        align-items: center; 
-                        margin-top: 20px;">
-                        <button style="
-                            font-weight: bold;
-                            border: 1px solid;
-                            font-family: 'Futura CondensedLight', Arial, sans-serif;
-                            transition: background-color 0.3s, color 0.3s;
-                            border-radius: 4px;
-                            text-align: center;
-                            text-decoration: none;
-                            background-color: #dc3545; /* Red background */
-                            color: black;
-                            padding: 6px 12px;
-                            font-size: 14px;
-                            cursor: pointer;
-                        " 
-                        onmouseover="this.style.backgroundColor='#c82333';"
-                        onmouseout="this.style.backgroundColor='#dc3545';"
-                        onclick="if (confirm('This will wipe and reinstall the entire database to the default configuration. ARE YOU SURE?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }"
-                        title="Fully reinstalls the CHIM Database.">
-                            <strong>Factory Reset Server Database</strong>
-                        </button>
-                    </div>
+                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/index.php?plugins_show=true">Server Plugins</a>
+                </li>
 
-                    </li>
-                </ul>
-            </li>
-            <li class="nav-item dropdown mx-2">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Guides</a>
-                <ul class="dropdown-menu">
-                    <li><h6 class="dropdown-header">GUIDES</h6></li>
-                    <!--<li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?notes=true'>CHIM 101 Quick Guide</a></li>-->
-                    <li><a class="dropdown-item" href='https://dwemerdynamics.hostwiki.io/' target="_blank">CHIM Wiki</a></li>
-                    <!--<li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1cLoJRT1AsjoICg8E4PzXylsWUSYzqlKvj32F6Q5clpg/edit?gid=0#gid=0" target="_blank">AI/LLM Supported Models List</a></li>-->
-                    <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105" target="_blank">AI/LLM Tier List</a></li>
-                </ul>
-            </li>
             <?php 
             // menu extension - last list element
             $plug_file = BASE_PATH . DIRECTORY_SEPARATOR . "ui" . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar_custom.php";
             if (file_exists($plug_file)) 
                 include($plug_file); 
             ?>                       
-        </ul>
-    </div>
+                </ul>
+            </div>
+            
+            <!-- Social Media Links - Far Right -->
+            <div class="social-links">
+                <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
+                    <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
+                </a>
+                <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
+                    <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord">
+                </a>
+                <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
+                    <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon">
+                </a>
+            </div>
+        </div>
 
-    <?php
-    // Ensure conf.php is loaded for $GLOBALS["DBDRIVER"] and other settings
-    if (defined('BASE_PATH') && !isset($GLOBALS["DBDRIVER"])) {
-        @include_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-    }
 
-    $pluginVersionDisplay = 'N/A'; // Default value
-
-    // Attempt to use a global $db object if available and valid
-    if (isset($GLOBALS['db']) && is_object($GLOBALS['db'])) {
-        try {
-            if (method_exists($GLOBALS['db'], 'fetchOne')) {
-                $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-                if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
-                    $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
-                }
-            } elseif (method_exists($GLOBALS['db'], 'fetchAll')) {
-                // Fallback to fetchAll on global $db if fetchOne not found
-                $rows = $GLOBALS['db']->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
-                if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
-                    $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
-                }
-            }
-        } catch (Exception $e) {
-            // Just keep the default value and log the error
-            error_log("Error fetching plugin version using global \$db: " . $e->getMessage());
-        }
-    } else {
-        // Only attempt to create a new DB connection if we don't already have a global one
-        // and only if we have all the required components
-        try {
-            if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
-                $dbDriverFile = BASE_PATH . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
-                
-                // Only try to load the SQL class if it doesn't already exist
-                if (!class_exists('sql') && file_exists($dbDriverFile)) {
-                    @require_once($dbDriverFile);
-                }
-                
-                // Only create a new connection if the class was loaded successfully
-                if (class_exists('sql')) {
-                    // Suppress warnings/errors in this section as it's purely for UI decoration
-                    @$localDb = new sql();
-                    
-                    if ($localDb && is_object($localDb)) {
-                        if (method_exists($localDb, 'fetchOne')) {
-                            $pluginVersionRow = @$localDb->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-                            if ($pluginVersionRow && isset($pluginVersionRow['value']) && trim($pluginVersionRow['value']) !== '') {
-                                $pluginVersionDisplay = htmlspecialchars(trim($pluginVersionRow['value']), ENT_QUOTES, 'UTF-8');
-                            }
-                        } elseif (method_exists($localDb, 'fetchAll')) {
-                            $rows = @$localDb->fetchAll("SELECT value FROM conf_opts WHERE id='plugin_dll_version' LIMIT 1");
-                            if ($rows && isset($rows[0]) && isset($rows[0]['value']) && trim($rows[0]['value']) !== '') {
-                                $pluginVersionDisplay = htmlspecialchars(trim($rows[0]['value']), ENT_QUOTES, 'UTF-8');
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception $e) {
-            // Just continue with the default value
-            error_log("Error in navbar fallback DB connection: " . $e->getMessage());
-        }
-    }
-    ?>
-    <div style="display: inline-flex; align-items: center; margin-right: 10px; color: #6c757d; font-size: 0.75em; font-family: 'MagicCardsNormal'; width: 120px;">
-        Server: 1.3.3b
-        <br>
-        Plugin: <?php echo $pluginVersionDisplay; ?>
-    </div>
-
-    <div class="social-links">
-        <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
-            <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
-        </a>
-        <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
-            <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord">
-        </a>
-        <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
-            <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon">
-        </a>
-    </div>
-
-    </nav>
+        </nav>
 
 <?php
 // Start the session if not already started

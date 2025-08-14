@@ -61,6 +61,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Check for delete all action
+    if (isset($_POST['action']) && $_POST['action'] === 'delete_all') {
+        // Delete all diary entries
+        $query = "DELETE FROM {$schema}.diarylog";
+        $result = pg_query($conn, $query);
+
+        if ($result) {
+            $deletedCount = pg_affected_rows($result);
+            http_response_code(200);
+            echo json_encode(['success' => true, 'message' => "Successfully deleted {$deletedCount} diary entries"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to delete all entries: ' . pg_last_error($conn)]);
+        }
+        exit;
+    }
+
     // Existing update logic
     $rowid = filter_input(INPUT_POST, 'rowid', FILTER_VALIDATE_INT);
     $topic = filter_input(INPUT_POST, 'topic', FILTER_SANITIZE_STRING);
@@ -581,8 +598,6 @@ if ($allDatesResult) {
                         'date' => $dateRow['date'],
                         'day' => $eventDay,
                         'localts' => $dateRow['localts'],
-                        'type' => $dateRow['type'],
-                        'data' => $dateRow['data'],
                         'people' => $dateRow['people'],
                         'location' => $dateRow['location']
                     ];
@@ -611,8 +626,6 @@ if ($allDatesResult) {
                         'gamets' => $gamets,
                         'localts' => $dateRow['localts'],
                         'day' => $eventDay,
-                        'type' => $dateRow['type'],
-                        'data' => $dateRow['data'],
                         'people' => $dateRow['people'],
                         'location' => $dateRow['location']
                     ];
@@ -884,6 +897,9 @@ if ($shouldFetchEvents) {
             }
             echo "<button type='submit' class='btn-save'>Download All Diary Entries</button>";
             echo "</form>";
+
+            // Delete all button
+            echo "<button onclick='deleteAllEntries()' class='btn-danger' style='margin-left: 10px;'>Delete All Diary Entries</button>";
 
             echo "</div>";
         }
@@ -1345,6 +1361,39 @@ if ($shouldFetchEvents) {
                 } catch (error) {
                     console.error('Error deleting entry:', error);
                     alert('Failed to delete entry. Please try again.');
+                }
+            }
+
+            async function deleteAllEntries() {
+                const confirmMessage = 'Are you sure you want to delete ALL diary entries? This action cannot be undone.\n\nType "DELETE ALL" to confirm:';
+                const userInput = prompt(confirmMessage);
+                
+                if (userInput !== 'DELETE ALL') {
+                    if (userInput !== null) {
+                        alert('Deletion cancelled. You must type "DELETE ALL" exactly to confirm.');
+                    }
+                    return;
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'delete_all');
+
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(result.message || 'All diary entries have been deleted successfully.');
+                        window.location.reload();
+                    } else {
+                        alert('Failed to delete all entries: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error deleting all entries:', error);
+                    alert('Failed to delete all entries. Please try again.');
                 }
             }
 

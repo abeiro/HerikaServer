@@ -164,13 +164,43 @@ foreach ($patterns as $pattern) {
             // Include the file to check for LOCK_PROFILE and get HERIKA_NAME
             $LOCK_PROFILE = false;
             $HERIKA_NAME = '';
-            include($file);
+            
+            // Safely include the file with error handling for syntax errors
+            $includeError = false;
+            set_error_handler(function($severity, $message, $file, $line) {
+                // Convert errors to exceptions to catch them
+                throw new ErrorException($message, 0, $severity, $file, $line);
+            });
+            
+            try {
+                include($file);
+            } catch (ParseError $e) {
+                // PHP syntax error in the config file
+                $includeError = true;
+                $HERIKA_NAME = '[SYNTAX ERROR - ' . basename($file) . ']';
+            } catch (ErrorException $e) {
+                // Other include errors
+                $includeError = true;
+                $HERIKA_NAME = '[ERROR - ' . basename($file) . ']';
+            } catch (Throwable $e) {
+                // Any other errors
+                $includeError = true;
+                $HERIKA_NAME = '[UNKNOWN ERROR - ' . basename($file) . ']';
+            }
+            
+            restore_error_handler();
             
             $filename = basename($file);
             $profileNames[$filename] = $HERIKA_NAME;
             $availableProfiles[] = $filename;
             
-            if ($LOCK_PROFILE === true) {
+            // If there was an error, mark it as problematic but still allow deletion
+            if ($includeError) {
+                $errorProfiles[] = $filename . ' (syntax error detected)';
+            }
+            
+            // Only check for LOCK_PROFILE if file included successfully
+            if (!$includeError && $LOCK_PROFILE === true) {
                 $lockedProfiles[] = $filename;
                 continue;
             }
@@ -240,11 +270,15 @@ if (!empty($deletedProfiles)) {
 }
 
 if (!empty($errorProfiles)) {
-    echo "<h2>Failed to Delete:</h2>";
+    echo "<h2>Profiles with Issues:</h2>";
     foreach ($errorProfiles as $profile) {
-        $displayName = isset($profileNames[$profile]) ? " - {$profileNames[$profile]}" : "";
-        echo "<p class='error'>❌ " . htmlspecialchars($profile) . 
-             "<span class='profile-name'>" . htmlspecialchars($displayName) . "</span></p>";
+        if (strpos($profile, 'syntax error detected') !== false) {
+            echo "<p class='error'>⚠️ " . htmlspecialchars($profile) . " - <strong>This file had syntax errors and needs to be manually delted.</strong></p>";
+        } else {
+            $displayName = isset($profileNames[$profile]) ? " - {$profileNames[$profile]}" : "";
+            echo "<p class='error'>❌ " . htmlspecialchars($profile) . 
+                 "<span class='profile-name'>" . htmlspecialchars($displayName) . "</span></p>";
+        }
     }
 }
 

@@ -29,6 +29,12 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
             
         }
+        
+        $recap=$GLOBALS["db"]->fetchOne("SELECT * FROM rolemaster where type='story_summary' ORDER BY rowid DESC LIMIT 1");
+        if (isset($recap["data"])) {
+            $historyData=$recap["data"]."\n".$historyData;
+
+        }
 
         
         // Function stuff      
@@ -243,7 +249,7 @@ In addition, follow these general scene rules as a game director:
         
         if (isset($GLOBALS["argv"][4]) && $GLOBALS["argv"][4]=="notify") {
             $pluginVersionRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='plugin_dll_version'");
-            if ($pluginVersionRow && isset($pluginVersionRow['value']) && in_array(trim($pluginVersionRow['value']),['1.3.1','1.3.2'])) {
+            if ($pluginVersionRow && isset($pluginVersionRow['value'])) {
                 if ($allOk)
                     $GLOBALS["db"]->insert(
                         'responselog',

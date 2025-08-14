@@ -57,7 +57,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         $nameRandom="Start by letter \"$randomLetter\"";
 
         // Database Prompt (Spawn Character)
-        $prompt[] = array('role' => 'system', 'content' => "$sysprompt");
+        $prompt[] = array('role' => 'system', 'content' => $GLOBALS["PROMPT_HEAD"]."\n$sysprompt");
         $prompt[] = array('role' => 'user', 'content' =>"
 
  * Use Tamrielic names. Use Name and Surname (example Hans Ulfon) or name nickname (Example: Orik Stormbreaker, Nidia the Witch)
@@ -88,6 +88,9 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             ];
         };
 
+        $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
+        $GLOBALS["CHIM_NO_EXAMPLES"]=false;
+
         $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
         $connectionHandler->open($prompt,$customParm);
 
@@ -112,8 +115,11 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         
         $rawbuffer=$connectionHandler->close();
         
+        unset($GLOBALS["_JSON_BUFFER"]);
+        $response=__jpd_decode_lazy($rawbuffer);
         
-        $response=json_decode($rawbuffer,true);
+        if (isset($response[0]["name"]))
+            $response=$response[0];
 
         
         

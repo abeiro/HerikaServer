@@ -293,7 +293,12 @@ function getEndOfSentencePunctuation() {
 
 function unmoodSentence($sentence) {
     global $forceMood;
+    
     if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
+        $GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"]=true;
+    }
+
+    if (isset($GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"]) && $GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"] == true) {
         // Check to see if the LLM responded with the entire message in **'s.
         if (str_starts_with($sentence, "*") && str_ends_with($sentence, "*")) {
             $output = ltrim($sentence, "*");
@@ -454,6 +459,11 @@ function returnLines($lines,$writeOutput=true)
             } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
 
                 require_once(__DIR__."/../tts/tts-mimic3.php");
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
+
+            } else if ($GLOBALS["TTSFUNCTION"] == "piper-tts") {
+
+                require_once(__DIR__."/../tts/tts-piper-tts.php");
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
@@ -646,7 +656,10 @@ function returnLines($lines,$writeOutput=true)
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
+                // Output here.
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+
+                
                 $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
                 if ($outBuffer["actor"]!="Player" && isset($GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"])) {
                     $GLOBALS["db"]->insert(
@@ -811,13 +824,18 @@ function lastSpeech($npcname)
 function lastKeyWordsContext($n, $npcname='')
 {
 
-    global $db;
+    global $db,$gameRequest;
     
     $m=$n+1;
     $speaker=$db->escape($npcname);
     $pj=$GLOBALS["PLAYER_NAME"];
 
-    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) 
+    if (isset($gameRequest[2]))
+        $whileago=round($gameRequest[2] - (2/ 0.0000024));
+    else
+        $whileago=0;
+    
+    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech,gamets from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) and gamets>$whileago
         order by gamets desc limit $m offset 0");
     
     
@@ -870,6 +888,7 @@ function lastKeyWordsContext($n, $npcname='')
     unset($words["Maybe"]);
     unset($words["Looks"]);
     unset($words["Just"]);
+    unset($words["Narrator"]);
     
     
     foreach ($words as $n=>$e) {
@@ -1536,8 +1555,8 @@ function logEvent($dataArray,$forcePeople='')
 {
     global $db;
 
-    if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-        $GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange(); // DataBeingsInRange() won't work as depends on user input
+    if (!isset($GLOBALS["CACHE_PEOPLE_LIMITED"])) {
+        $GLOBALS["CACHE_PEOPLE_LIMITED"]=DataBeingsInCloseRange(true); // DataBeingsInRange() won't work as depends on user input
     } 
     
     if (!isset($GLOBALS["CACHE_LOCATION"])) {
@@ -1566,7 +1585,7 @@ function logEvent($dataArray,$forcePeople='')
                 'data' => $dataArray[3],
                 'sess' => 'pending',
                 'localts' => time(),
-                'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE"],
+                'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE_LIMITED"],
                 'location'=>$GLOBALS["CACHE_LOCATION"],
                 'party'=>$GLOBALS["CACHE_PARTY"]
             )

@@ -2,7 +2,7 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-$file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel_.json';
+$file = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.'CurrentModel_72dc4b1c501563d149fec99eb45b45f1.json';
 $enginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
 
@@ -56,8 +56,8 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $db=new sql();
    
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
-            echo "Using pgvector search (text2vec)";
-            $res=DataSearchMemoryByVector($argv[2],'');
+            echo "Using pgvector search (text2vec)".PHP_EOL;
+            $res=DataSearchMemoryByVector($argv[2],$argv[3]);
         }
         else {
             echo "Using fts search";
@@ -74,8 +74,20 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $db=new sql();
    
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
-            echo "Using pgvector search";
-            $res=DataSearchOghmaByVector($argv[2],'');
+            echo "Using pgvector search".PHP_EOL;
+            
+            $currentOghmaTopic_req = $db->fetchOne("SELECT value FROM conf_opts WHERE id='current_oghma_topic'");
+            $currentOghmaTopic     = getArrayKey($currentOghmaTopic_req, "value");
+        
+            // Get location and context keywords
+            $locationCtx      = DataLastKnownLocationHuman(false);
+            $contextKeywords  = implode(" ", lastKeyWordsContext(5, $GLOBALS["HERIKA_NAME"]));
+            error_log("DataSearchOghmaByVector Expanded keywords: <$currentOghmaTopic> <$locationCtx> <$contextKeywords>");
+
+            $res=DataSearchOghmaByVector($argv[2],$currentOghmaTopic,$locationCtx,$contextKeywords);
+
+        } else {
+            die("FTS oghma search still not supported in this script");
         }
         
 
@@ -193,14 +205,14 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                     $prompt[] = array('role' => 'system', 
                                       'content' => "This is a playthrough in Skyrim. 
 {$GLOBALS["PLAYER_NAME"]} is the player.
-{$row["companions"]} are {$GLOBALS["PLAYER_NAME"]}'s followers/companions.
-You must write {$GLOBALS["PLAYER_NAME"]} memories by analyzing the chat history.
+{$row["companions"]} are nearby NPCs.
+You must write a memory summary by analyzing the chat history.
 Pay attention to details that can change character's behavior, feelings, and also tag names and locations.
 Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 ");
                     $prompt[] = array('role' => 'user', 'content' =>"#CHAT HISTORY#\\n{$row["packed_message"]}\\n#END OF CHAT HISTORY#\\n");
                     $prompt[] = array('role' => 'user', 
-                                      'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. using this format:\\n$CLFORMAT");
+                                      'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. Use this format:\\n$CLFORMAT");
                     
                     $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
                     $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
