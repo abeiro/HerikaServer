@@ -151,15 +151,27 @@ $sysprompt
         }
         
         $rawbuffer=$connectionHandler->close();
+		// Handle models that wrap JSON in Markdown code fences (e.g., DeepSeek)
+		$startsFence = function_exists('str_starts_with') ? str_starts_with($rawbuffer, "```") : (substr($rawbuffer, 0, 3) === "```");
+		$endsFence = function_exists('str_ends_with') ? str_ends_with($rawbuffer, "```") : (substr($rawbuffer, -3) === "```");
+		if ($startsFence && !$endsFence) {
+			$rawbuffer .= "```";
+		}
+
+		// Strip optional ```json fenced blocks to keep only the JSON payload
+		$rawbuffer = preg_replace('/^```(?:json)?\s*(.*)\s*```$/s', '$1', $rawbuffer);
         
         function parseInstruction($response) {
             // Extract the character name and the instruction line
             
             $characterName = trim($response["character"] ?? 'Unknown');
             $instructionText = trim($response["dialogue"] ?? 'No instruction text');
-        
-            echo  $instructionText.PHP_EOL;
-            while(@ob_end_flush());
+			
+			echo $instructionText . PHP_EOL;
+			if (function_exists('ob_get_level') && ob_get_level() > 0) {
+				@ob_flush();
+			}
+			flush();
         }
 
         function parseSceneNote($response) {
