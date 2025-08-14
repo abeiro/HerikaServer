@@ -201,7 +201,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 
 
 } elseif ($gameRequest[0] == "_uquest") {
-
+    
     $questParsedData = explode("@",$gameRequest[3]);
     
     if (!empty($questParsedData[0])) {

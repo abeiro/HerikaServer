@@ -20,6 +20,20 @@ class openrouterjson
     public $_extractedbuffer;
     private $_rawbuffer;
     private $_forcedClose=false;
+    private $_is_nanogpt_com;
+    private $_is_mistral_ai;
+    private $_is_streaming;
+    private $_is_reasoning;
+    private $_model="";
+    private $_url;
+    private $_websearch=false;
+    private $_websearch_text="";
+    private $_websearch_index=0;
+    private $_webbackup_func=false;
+    private $_remove_cot;
+    private $_cot_tag_base;
+    private $_output_buffer; 
+    private $_timeout;
 
     public function __construct()
     {
@@ -27,18 +41,114 @@ class openrouterjson
         $this->_commandBuffer=[];
         $this->_stopProc=false;
         $this->_extractedbuffer="";
+        $this->_buffer="";
+        $this->_forcedClose=false;
+        $this->_is_nanogpt_com=false;
+        $this->_is_mistral_ai=false;
+        $this->_model="";
+        $this->_url="";
+        $this->_is_streaming=true;
+        $this->_is_reasoning=false;
+        $this->_remove_cot=true;
+        $this->_cot_tag_base="think";
+        $this->_output_buffer="";
+        $this->_timeout=30;
+        $this->_websearch=false;
+        $this->_websearch_text="";
+        $this->_websearch_index=0;
+        $this->_webbackup_func=false;
         require_once(__DIR__."/__jpd.php");
     }
 
 
+    private function isWebSearchInMessage($s_msg="") {
+        $b_res = false;
+        if (strlen($s_msg) > 7) {
+            $i_pos = stripos($s_msg, "Skyrim search");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_msg, "Search Skyrim");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_msg, "Find knowledge in Skyrim");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_msg, "Search Elder Scrolls");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_msg, "Find knowledge in Elder Scrolls");
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+
+    private function isReasoningModel($s_model="") { //recognize a reasoning model that can hide <think> cot part with dedicated parameters
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            $i_pos = stripos($s_model, "deepseek-r"); 
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-32b"); 
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwq-max");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, ":thinking");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "-reasoning");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "grok-3-mini"); 
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "sonar-deep-research");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "r1-1776");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "dolphin3.0-r1-mistral");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "aion-1.0");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "reka-flash-3");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "olympiccoder-");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "MAI-DS-R1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-235b-a22b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "qwen3-30b-a3b");
+            $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
    
+    private function init_connector() {
+        $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
+        if (strlen($this->_url) < 6)
+            Logger::error("{$this->name} connector - missing url!");
+
+        $this->_remove_cot = (isset($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"])) ? $GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] : true;
+
+        $default_model = 'meta-llama/llama-3.3-70b-instruct';
+
+        $this->_is_nanogpt_com = (stripos($this->_url, "nano-gpt.com") > 0 ); //https://nano-gpt.com/api/v1/chat/completions
+        if ($this->_is_nanogpt_com) {    
+            $default_model = 'meta-llama/llama-4-scout';
+        } else {
+            $this->_is_mistral_ai = (stripos($this->_url, "mistral.ai") > 0 ); //https://api.mistral.ai/v1/chat/completions
+            if ($this->_is_mistral_ai)    
+                $default_model = 'mistral-small-latest';
+        }
+
+        $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
+        $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
+        if (!$this->_is_reasoning)
+            $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+        $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
+    }   
     
     public function open($contextData, $customParms)
     {
-        $url = $GLOBALS["CONNECTOR"][$this->name]["url"];
 
-        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+        $this->init_connector();
 
+        $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
 
         /***
@@ -49,7 +159,7 @@ class openrouterjson
         
         if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] && isset($GLOBALS["MEMORY_STATEMENT"]) ) {
             foreach ($contextData as $n=>$contextline)  {
-                if (is_array($contextline)) {
+                if (is_array($contextline) && isset($contextline["content"])) {
                     if (strpos($contextline["content"],"#MEMORY")===0) {
                         $contextData[$n]["content"]=str_replace("#MEMORY","##\nMEMORY\n",$contextline["content"]."\n##\n");
                     } else if (strpos($contextline["content"],$GLOBALS["MEMORY_STATEMENT"])!==false) {
@@ -64,11 +174,12 @@ class openrouterjson
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
         }
-
+        
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+        } else {
+            $prefix="";
         }
-        $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
 
         if (strpos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
             $speechReinforcement="Use #SpeechStyle.";
@@ -78,26 +189,53 @@ class openrouterjson
         $zonosTones = $GLOBALS["TTSFUNCTION"] == "zonos_gradio" ? " (Response tones are mandatory in the response)" : "";
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement Use ONLY this JSON object to give your answer. ONLY 1 object.Do not send any other characters outside of this JSON structure$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
+            'content' => "{$prefix}. $speechReinforcement Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: ".json_encode($GLOBALS["responseTemplate"])
         ];
         $pb=[];
         $pb["user"]="";
-      
+        $pb["system"]="";
         
         $contextDataOrig=array_values($contextData);
         $lastrole="";
         $assistantAppearedInhistory=false;
         $lastTargetBuffer="";
         $assistantRoleBuffer="";
+        $n_ctxsize = sizeof($contextDataOrig); 
+        $this->_webbackup_func = $GLOBALS["FUNCTIONS_ARE_ENABLED"] ?: false;
+
         foreach ($contextDataOrig as $n=>$element) {
             
             if (!is_array($element)) {
-                error_log("Warning: $n=>$element was not an array");
+                Logger::debug("$n=>$element was not an array");
                 continue;
 
             }
+
+            if (isset($element["content"]) && ($element["role"]!="tool") && ($n < ($n_ctxsize-2)) && ($n > ($n_ctxsize-6)) ) { // start online search request check
+                //$s_msg = $element["content"];
+                $i_pos = $this->isWebSearchInMessage($element["content"]); //check search trigger
+
+                if ($this->_websearch && ($this->_websearch_index < $n) && ($element["role"] == "user")) {
+                    if($i_pos === false) {
+                        if (strpos($element["content"], "##") === false) { //is not memory mark
+                            $this->_websearch = false; //previous web search was found in context history, do not repeat the search 
+                            $GLOBALS["FUNCTIONS_ARE_ENABLED"] = $this->_webbackup_func;
+                            Logger::debug("online FALSE, {$n}/{$n_ctxsize} line: ".$element["content"]);
+                        }
+                    }
+                }
+
+                if(!($i_pos === false)) { // found search trigger
+                    $this->_websearch_text = $element["content"];
+                    $this->_websearch_index = $n;
+                    $this->_websearch = true;
+                    $GLOBALS["FUNCTIONS_ARE_ENABLED"] = false;
+                    $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] = false;
+                    Logger::debug("online TRUE, {$n}/{$n_ctxsize} src: " . $this->_websearch_text);
+                }
+            } // --- end online search 
             
-            if ($n>=(sizeof($contextDataOrig)-1) && $element["role"]!="tool") {
+            if ($n>=($n_ctxsize-1) && $element["role"]!="tool") {
                 // Last element
                 $pb["user"].=$element["content"];
                 $contextDataCopy[]=$element;
@@ -122,7 +260,7 @@ class openrouterjson
                     
                 } else if ($element["role"]=="user") {
                     if (empty($element["content"])) {
-                        error_log("Empty element[content]".__FILE__." ".__LINE__);
+                        Logger::debug("Empty element[content]".__FILE__." ".__LINE__);
                         //unset($contextData[$n]);
                     } else
                         $contextDataCopy[]=$element;
@@ -131,16 +269,18 @@ class openrouterjson
                     
                 } else if ($element["role"]=="assistant") {
                     $assistantAppearedInhistory=true;
+                    $dialogueTarget=extractDialogueTarget($element["content"]) ?? "none"; // moved here to be available in tool_calls 
                     if (isset($element["tool_calls"])) {
                         $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
                         $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}";
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
-                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
+                        if (isset($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName])) {
+                            $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
                                         "#TARGET#"=>current($localArguments),
                                         ]);
-                        
+                        }
                         $contextDataCopy[]=[
                                 "role"=>"assistant",
                                 "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
@@ -176,7 +316,7 @@ class openrouterjson
                         } else {
                             //error_log("#### ".$element["content"]);
                             $pb["system"].=$element["content"]."\n";
-                            $dialogueTarget=extractDialogueTarget($element["content"]);
+                            //$dialogueTarget=extractDialogueTarget($element["content"]); // moved up
                             // Trying to provide examples
                             if (true) {
                                 $assistantRoleBuffer.=$dialogueTarget["cleanedString"];                                
@@ -275,6 +415,7 @@ class openrouterjson
             if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
                 $contextExamples=[];
             }
+
             $finalContextDataWithExamples=[];
             foreach ($contextData as $n=>$final) {
                 if ($final["role"]=="system") {
@@ -289,48 +430,70 @@ class openrouterjson
             $contextData=$finalContextDataWithExamples;
         }
 
-        
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
+        if ($temperature < 0.0) $temperature = 0.0;
+        else if ($temperature > 2.0) $temperature = 2.0; 
+
+        $presence_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ? : 0.0);
+        if ($presence_penalty < -2.0) $presence_penalty = -2.0;
+        else if ($presence_penalty > 2.0) $presence_penalty = 2.0; 
+
+        $frequency_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ? : 0.0); 
+        if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
+        else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
+
+        $repetition_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ? : 0.0);
+        if ($repetition_penalty < 0.0) $repetition_penalty = 0.0;
+        else if ($repetition_penalty > 2.0) $repetition_penalty = 2.0; 
+
+        $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
+        if ($top_p > 1) $top_p = 1.0;
+        else if ($top_p < 0.0) $top_p = 0.0; 
+
+        $min_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ? : 0.0);
+        if ($min_p > 1) $min_p = 1.0;
+        else if ($min_p < 0.0) $min_p = 0.0; 
+
+        $top_a = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ? : 0.0);
+        if ($top_a > 1) $top_a = 1.0;
+        else if ($top_a < 0.0) $top_a = 0.0; 
+
+        $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
+        if ($top_k < 0) $top_k = 0; 
         
         $data = array(
-            'model' => (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'gpt-3.5-turbo-1106',
-            'messages' =>
-                $contextData
-            ,
-            'stream' => true,
-            'max_tokens'=>$MAX_TOKENS,
+            'model' => $this->_model,
+            'messages' => $contextData,
+            'stream' => $this->_is_streaming, 
+            'max_tokens' => $MAX_TOKENS,
+            'temperature' => $temperature, 
+            'top_k' => $top_k,
+            'top_p' => $top_p, 
+            'min_p' => $min_p,
+            'top_a' => $top_a,
+            'presence_penalty' => $presence_penalty, 
+            'frequency_penalty' => $frequency_penalty, 
+            'repetition_penalty' => $repetition_penalty,
             'stop'=>[
                     'USER',
                 ],
-            //'response_format'=>["type"=>"json_object"]
-            
+            'transforms'=>[]
         );
-        
-        
-        $data["temperature"]=floatval($GLOBALS["CONNECTOR"][$this->name]["temperature"]+0);
-         $data["frequency_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]+0);
-         $data["presence_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]+0);
-         $data["repetition_penalty"]=floatval($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]+0);
-         $data["min_p"]=$GLOBALS["CONNECTOR"][$this->name]["min_p"]+0;
-         $data["top_a"]=$GLOBALS["CONNECTOR"][$this->name]["top_a"]+0;
-         $data["top_k"]=$GLOBALS["CONNECTOR"][$this->name]["top_k"]+0;
-         $data["top_p"]=$GLOBALS["CONNECTOR"][$this->name]["top_p"]+0;
          
-         if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
+        if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
             if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
                 $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
             } else {
                 $data["response_format"]=["type"=>"json_object"];
             }
-         }
+        }
         
             
         // Mistral AI API does not support penalty params
-        if (strpos($url, "mistral") === false) {
-            $data["presence_penalty"]=floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ?: 0);
-            $data["frequency_penalty"]=floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ?: 0);
-        }
-  
-        
+        if ($this->_is_mistral_ai) {
+            unset($data["presence_penalty"]); 
+            unset($data["frequency_penalty"]);
+        } 
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
@@ -358,6 +521,74 @@ class openrouterjson
             
         $data["transforms"]=[];
 
+        if ($this->_is_reasoning) { // add parameter to hide <think> content
+            $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
+            //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
+            //Logger::debug("reasoning " . $this->_model);
+            
+            if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
+                $data["enable_thinking"] = false;
+            }            
+        }
+
+        if ($this->_websearch) { // online search request 
+
+            $sx = $this->_model;
+            if (strpos($sx, ":online") === false) 
+                $sx = $sx . ":online";   
+            $this->_model = $sx;
+
+            $data["model"] = $this->_model;
+            
+            $search_text = $this->_websearch_text;
+            $target = "";
+            $i_pos = strpos($search_text, ":");
+            if (!($i_pos === false)) {
+                $target = substr($this->_websearch_text, 0, $i_pos);
+                $search_text = substr($this->_websearch_text,strlen($target)+1);
+                $i_pos2 = strripos($search_text, "(Talking to");
+                if (!($i_pos2 === false)) {
+                    $search_text = substr($search_text, 0, $i_pos2); 
+                }
+            }
+            if (stripos($search_text, "Skyrim") === false) 
+                $s_prefix = "Skyrim lore ";
+            else
+                $s_prefix = "";
+
+            $data["response_format"] = array ('type' => 'json_object');
+            $data["stream"] = true;
+
+            $data["messages"] = array(); //clean everything 
+            $data["messages"] = [
+                ['role' => 'system', 
+                 'content' => "" // "Role-play in Skyrim universe. "
+                 ."You are an expert with extensive knowledge about Skyrim lore focusing on puzzle solutions, quests, places and people." 
+                 ." Use web sources like gamerant.com, en.uesp.net, elderscrolls.fandom.com, gaming.stackexchange.com and avoid video sources like youtube.com "
+                ],
+                ['role' => 'user',
+                 'content' => $s_prefix . trim($search_text)
+                ],
+                ['role' => 'user',
+                 'content' => trim(" {$speechReinforcement} Always use this JSON object to give your answer: ".json_encode($GLOBALS["responseTemplate"], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ))
+                ]
+            ];
+
+            $data["plugins"] = array();
+            $data["plugins"] = [
+                ['id' => 'web', 
+                 'search_prompt' => "Search the web to find relevant information related to Skyrim universe. "
+                    . "Include relevant search results to provide most informative response. "
+                    . "Write your answer from first person point of view. "
+                    //. "IMPORTANT: avoid markdown and any text formatting, lists, numbered lists, step by step instructions. " 
+                    . "Never mention web sources. ", // production
+                 'max_results' => 2 
+                ]
+            ];
+
+        } // --- end online search request
+
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
@@ -374,17 +605,17 @@ class openrouterjson
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => 30,
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: $this->_timeout,
                 "ignore_errors" => true
             )
         );
 
         $context = stream_context_create($options);
         
-        $this->primary_handler = fopen($url, 'r', false, $context);
+        $this->primary_handler = $this->send($this->_url, $context);
         if (!$this->primary_handler) {
             $error=error_get_last();
-            error_log(print_r($error,true));
+            Logger::error(trim(print_r($error,true)));
 
             if ($GLOBALS["db"]) {
                 $GLOBALS["db"]->insert(
@@ -396,15 +627,11 @@ class openrouterjson
             }
             return null;
         } else {
-            // Get HTTP response code
-            $response_info = stream_get_meta_data($this->primary_handler);
-            $status_line = $response_info['wrapper_data'][0];
-            preg_match('/\d{3}/', $status_line, $matches); // get three digits (200, 300, 404, etc)
-            $status_code = isset($matches[0]) ? intval($matches[0]) : null;
-
+            $status_code = $this->getHttpStatusCode();
             if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
-                $error_message = "Request to openrouterjson connector failed: {$status_line}.\nResponse body: {$response}";
+                //$error_message = "Request to openrouterjson connector failed: {$status_line}.\nResponse body: {$response}";
+                $error_message = "Request to openrouterjson connector failed: {$status_code}.\n Response body: {$response}.\n model: {$this->_model}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
@@ -439,6 +666,24 @@ class openrouterjson
 
     }
 
+    public function send($url, $context) {
+        if (isset($GLOBALS['mockConnectorSend'])) {
+            return call_user_func($GLOBALS['mockConnectorSend'], $url, $context);
+        }
+        return fopen($url, 'r', false, $context);
+    }
+
+    public function getHttpStatusCode() {
+        if (isset($GLOBALS['mockConnectorResponseMetaData'])) {
+            $responseInfo = call_user_func($GLOBALS['mockConnectorResponseMetaData']);
+        } else {
+            $responseInfo = stream_get_meta_data($this->primary_handler);
+        }
+
+        $statusLine = $responseInfo['wrapper_data'][0];
+        preg_match('/\d{3}/', $statusLine, $matches); // get three digits (200, 300, 404, etc)
+        return isset($matches[0]) ? intval($matches[0]) : null;
+    }
     
 
     public function process()
@@ -458,12 +703,12 @@ class openrouterjson
         if ($this->isDone()) {
             if (!$this->_buffer || empty(trim($this->_buffer))) {
                 $line = "";    
-                error_log("LLM didn't output anything");
+                Logger::warn("LLM didn't output anything");
             }
         } else {
             if ((time()-$GLOBALS["patch_openrouter_timeout"])>60) {
                 $this->_rawbuffer.="Error, timeout when receiving data from LLM";
-                error_log("Error, timeout when receiving data from LLM");
+                Logger::error("Error, timeout when receiving data from LLM");
                 $this->_forcedClose=true;
                 return -1;
             }
@@ -475,17 +720,26 @@ class openrouterjson
         
         // Check for error response
         if (strpos($line, '"error"') !== false) {
-            error_log("Error response from LLM: $line");
+            Logger::error("Error response from LLM: $line");
             return -1;
         }
         
         $data=json_decode(substr($line, 6), true);
+
+        if ($this->_is_reasoning)
+            $buffer_preamble=4096; // some reasoning models output CoT part before JSON
+        elseif ($this->_websearch)
+            $buffer_preamble=256; 
+        else
+            $buffer_preamble=64; //was 10, 10 is not enough, some LLMs output a prefix tag/markup before JSON or "here is your JSON ..."
+
         if (isset($data["choices"][0]["delta"]["content"])) {
             if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
                 $buffer.=$data["choices"][0]["delta"]["content"];
                 $this->_buffer.=$data["choices"][0]["delta"]["content"];
                 // Check to see if we've received something that looks like it starts with a JSON object
-                if (strlen($this->_buffer)>10 && strpos($this->_buffer, '{') === false) {
+                if (strlen($this->_buffer)>$buffer_preamble && strpos($this->_buffer, '{') === false) { 
+                    Logger::error("Error decoding JSON from LLM output: can't find JSON start mark after reading {$buffer_preamble} characters. LLM didn't output proper JSON object or there is a long non-JSON preamble.");
                     return -1;
                 }
 
@@ -574,7 +828,7 @@ class openrouterjson
         global $alreadysent;
 
         if ($this->_functionName) {
-            error_log("Old function scheme");
+            Logger::info("Old function scheme");
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
                 $parameter = current($parameterArr); // Only support for one parameter
@@ -601,26 +855,31 @@ class openrouterjson
                 if (isset($parsedResponse[0]["action"])) {
                     $parsedResponse=$parsedResponse[0];
                 }
+
+                if (!isset($parsedResponse["target"]))    
+                    $parsedResponse["target"] = "";
                 
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
                         
                         $functionDef=findFunctionByName(trim($parsedResponse["action"]));
-                        if ($functionDef) {
+                        if (isset($functionDef)) {
                             $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
                             if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
                                 if (!empty($parsedResponse["target"])) {
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                                 }
                                 else {
-                                    error_log("Missing required parameter");
+                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
+                                    Logger::warn("openrouterjson: Missing required parameter: target");
+                                    // Change. we allow this. Post filter maybe can fix.
                                 }
                                     
                             } else {
                                 $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
                             }
                         } elseif ($parsedResponse["action"] != "Talk") {
-                            error_log("Function not found for {$parsedResponse["action"]}");
+                            Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]}");
                         }
                         
                         //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
@@ -629,14 +888,14 @@ class openrouterjson
                         $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
                     
                     } else {
-                          error_log("Function not found for {$parsedResponse["action"]} already sent");
+                         Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]} already sent");
                     }
                         
                 }
                 
                 if (ob_get_level()) @ob_flush();
             } else {
-                error_log("No actions");
+                Logger::info("No actions");
                 return [];
             }
         }

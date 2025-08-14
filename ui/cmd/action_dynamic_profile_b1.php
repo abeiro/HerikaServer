@@ -123,6 +123,7 @@ if ($method === "POST") {
 		}
 
 		$connectionHandler->open($contextData, ["max_tokens"=>$maxTokens]);
+
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;
