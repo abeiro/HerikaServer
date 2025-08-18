@@ -22,7 +22,7 @@ function stt($filePath)
         $keywords = lastKeyWordsNew(30);
         foreach ($keywords as $keyword)
             $url .= "&keyterm=" . urlencode($keyword) . "%3A1";
-        if (stripos(" multi, en, en-US, ", $stt_lang) === false) {
+        if (stripos(" multi, en, en-US, de, nl, sv, sv-SE, da, da-DK ", $stt_lang) === false) {
             $stt_lang = 'en';
         }
     } else if (strpos($stt_model, "whisper") === false) {   //WHISPER MODELS DONT SUPPORT KEYWORDS
