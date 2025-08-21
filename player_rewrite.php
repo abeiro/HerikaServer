@@ -84,7 +84,8 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         }
         
         if (!empty($GLOBALS["PLAYER_BIOS"])) {
-            $playerContext .= "Player Character Background: " . $GLOBALS["PLAYER_BIOS"] . "\n";
+            $bio = strtr($GLOBALS["PLAYER_BIOS"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]]);
+            $playerContext .= "Player Character Background: " . $bio . "\n";
         }
         if (!empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {
             $playerContext .= "Player Speech Style: " . $GLOBALS["PLAYER_SPEECH_STYLE"] . "\n";
