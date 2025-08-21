@@ -233,7 +233,6 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
                     // if the llm repeats tags we tidy them up
                     $pattern = '/(.+)#Tags:(.+)/';
                     preg_match($pattern, $TEST_TEXT, $matches);
-                    $tagsCol=''; // Initialize tagsCol
                     if (isset($matches[2])) {
                         // make data consistent (copied from tagsCol creation below)
                         $tagsString = strtr($matches[2],["*"=>""]);
