@@ -117,7 +117,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 } else if ($gameRequest[0] == "diary") {
 	// Use configurable DIARY_PROMPT or fallback to default
 	$diaryPrompt = isset($GLOBALS["DIARY_PROMPT"]) && !empty($GLOBALS["DIARY_PROMPT"]) 
-		? strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$GLOBALS["HERIKA_NAME"],'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"]])
+		? strtr($GLOBALS["DIARY_PROMPT"],['#HERIKA_NAME#'=>$GLOBALS["HERIKA_NAME"],'#PLAYER_NAME#'=>$GLOBALS["PLAYER_NAME"]])
 		: "Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}.";
 	
 	// Add current game date/time context to the prompt

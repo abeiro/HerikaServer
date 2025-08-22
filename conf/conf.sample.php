@@ -113,7 +113,7 @@ $DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update th
     . "Focus on new aspirations that emerged, modified existing goals due to circumstances, and updated long-term objectives. "
     . "Return ONLY a bulleted list using * Goal description as actionable aspiration format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated goals' or 'The character's goals are'. "
     . "Start directly with the first bullet point.";
-$DIARY_PROMPT = "Please write a short summary of {\$GLOBALS[\"PLAYER_NAME\"]} and {\$GLOBALS[\"HERIKA_NAME\"]}s last dialogues and events written above into {\$GLOBALS[\"HERIKA_NAME\"]}s diary . WRITE AS IF YOU WERE {\$GLOBALS[\"HERIKA_NAME\"]}. Start the diary entry with the current date and time.";
+$DIARY_PROMPT = "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#s last dialogues and events written above into #HERIKA_NAME#s diary . WRITE AS IF YOU WERE #HERIKA_NAME#. Start the diary entry with the current date and time.";
 
 // Dynamic profile utility button
 $dynamic_profile_b1 = false; // Utility button for updating all dynamic profile fields
