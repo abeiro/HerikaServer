@@ -113,7 +113,7 @@ $DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update th
     . "Focus on new aspirations that emerged, modified existing goals due to circumstances, and updated long-term objectives. "
     . "Return ONLY a bulleted list using * Goal description as actionable aspiration format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated goals' or 'The character's goals are'. "
     . "Start directly with the first bullet point.";
-$DIARY_PROMPT = "Please write a short summary of {\$GLOBALS[\"PLAYER_NAME\"]} and {\$GLOBALS[\"HERIKA_NAME\"]}s last dialogues and events written above into {\$GLOBALS[\"HERIKA_NAME\"]}s diary . WRITE AS IF YOU WERE {\$GLOBALS[\"HERIKA_NAME\"]}. Start the diary entry with the current date and time.";
+$DIARY_PROMPT = "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#s last dialogues and events written above into #HERIKA_NAME#s diary . WRITE AS IF YOU WERE #HERIKA_NAME#. Start the diary entry with the current date and time.";
 
 // Dynamic profile utility button
 $dynamic_profile_b1 = false; // Utility button for updating all dynamic profile fields
@@ -142,7 +142,7 @@ $CONNECTOR["openrouterjson"]["max_tokens"]='1024'; //Maximum tokens to generate.
 $CONNECTOR["openrouterjson"]["temperature"]=0.6; //LLM parameter temperature.
 $CONNECTOR["openrouterjson"]["presence_penalty"]=0; //LLM parameter presence_penalty.
 $CONNECTOR["openrouterjson"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
-$CONNECTOR["openrouterjson"]["repetition_penalty"]=0;	//LLM parameter repetition_penalty.
+$CONNECTOR["openrouterjson"]["repetition_penalty"]=1;	//LLM parameter repetition_penalty.
 $CONNECTOR["openrouterjson"]["top_p"]=1; //LLM parameter top_p.
 $CONNECTOR["openrouterjson"]["min_p"]=0; //LLM parameter min_p.
 $CONNECTOR["openrouterjson"]["top_k"]=0; //LLM parameter top_k.
@@ -173,7 +173,7 @@ $CONNECTOR["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
 $CONNECTOR["openrouter"]["temperature"]=0.6; //LLM parameter temperature.
 $CONNECTOR["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty.
 $CONNECTOR["openrouter"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
-$CONNECTOR["openrouter"]["repetition_penalty"]=0;	//LLM parameter repetition_penalty.
+$CONNECTOR["openrouter"]["repetition_penalty"]=1;	//LLM parameter repetition_penalty.
 $CONNECTOR["openrouter"]["top_p"]=1; //LLM parameter top_p.
 $CONNECTOR["openrouter"]["min_p"]=0; //LLM parameter min_p.
 $CONNECTOR["openrouter"]["top_k"]=0; //LLM parameter top_k.

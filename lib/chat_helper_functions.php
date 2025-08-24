@@ -293,48 +293,59 @@ function getEndOfSentencePunctuation() {
 
 function unmoodSentence($sentence) {
     global $forceMood;
-    
-    if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
-        $GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"]=true;
+
+    $output = $sentence;
+
+    // Determine whether to process asterisks:
+    // - strip_emotes_from_output (if set) overrides
+    // - otherwise fall back to REMOVE_ASTERISKS_FROM_OUTPUT
+    if (array_key_exists('strip_emotes_from_output', $GLOBALS)) {
+        $processAsterisks = (bool)$GLOBALS['strip_emotes_from_output'];
+    } else {
+        $processAsterisks = !empty($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']);
     }
 
-    if (isset($GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"]) && $GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"] == true) {
-        // Check to see if the LLM responded with the entire message in **'s.
-        if (str_starts_with($sentence, "*") && str_ends_with($sentence, "*")) {
-            $output = ltrim($sentence, "*");
-            $output = rtrim($sentence, "*");
-        }
-        else {
-            $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
+    if ($processAsterisks) {
+        // If the entire message is wrapped in asterisks, strip them from both ends
+        if (str_starts_with($output, '*') && str_ends_with($output, '*')) {
+            $output = trim($output, '*'); // correct trimming of leading/trailing asterisks
+        } else {
+            // Remove text between single-pair asterisks
+            $output = preg_replace('/\*([^*]+)\*/', '', $output);
         }
     }
+    // is this the users intention if they set REMOVE_ASTERISKS false?
     else {
-        $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+        // Remove text bewteen * * if two or more words inside
+        $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence);
     }
-    $sentence=$output;
-    $output = strtr($sentence,[
-                    "*Smirks*"=>"","*smirks*"=>"",
-                    "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*Giggles*"=>"","*laughs*"=>"",
-                    "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
-                    "*pant*"=>"",
-                    "*cough*"=>"",
-                    "*hiccup*"=>"",
-                    "*whimper*"=>""
-                    ]
-                    ); // Manual cases
 
-    
-    $cleaned = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove #ACTIONS .... (Gemini seems prone to doing this)
-    $output = preg_replace('/#[A-Za-z]+/', '', $cleaned);       // Remove #<text> .... (Gemini seems prone to doing this)
+    // Remove common emote tokens wrapped in asterisks (user intention?)
+    $output = strtr($output, [
+        "*Smirks*" => "", "*smirks*" => "",
+        "*winks*" => "", "*wink*" => "", "*smirk*" => "", "*gasps*" => "", "*chuckles*" => "", "*giggles*" => "", "*Giggles*" => "", "*laughs*" => "",
+        "*gasp*" => "", "*moans*" => "", "*whispers*" => "", "*moan*" => "",
+        "*pant*" => "", "*cough*" => "", "*hiccup*" => "", "*whimper*" => ""
+    ]);
 
-    $cleaned=$output;
-    $sentence = preg_replace('/"/', '', $cleaned); // Remove "
+    // Non-asterisk-related cleanup always applies
+    $output = strtr($output, [
+        "#SpeechStyle" => "",
+        "#SpeechStyle:" => ""
+    ]);
 
-    preg_match_all('/\((.*?)\)/', $sentence, $matches); // Unused?
+    $output = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove "#ACTIONS ..."
+    $output = preg_replace('/#[A-Za-z]+/', '', $output);       // Remove "#<text>"
 
-    $responseTextUnmooded = trim(preg_replace('/\((.*?)\)/', '', $sentence));
+    // Remove quotes
+    $output = preg_replace('/"/', '', $output);
 
-    if (stripos($responseTextUnmooded, "whispering:") !== false) { // Very very nasty, but solves lots of isses. We must keep log clean.
+    // Remove parenthesized content and trim the result
+    $output = preg_replace('/\((.*?)\)/i', '', $output);
+    $responseTextUnmooded = trim($output);
+
+    // Handle whispering mood marker
+    if (stripos($responseTextUnmooded, "whispering:") !== false) {
         $responseTextUnmooded = str_ireplace("whispering:", "", $responseTextUnmooded);
         $forceMood = "whispering";
     }
@@ -808,7 +819,7 @@ function lastSpeech($npcname)
     
     
     $speaker=$db->escape($npcname);
-    $pj=$GLOBALS["PLAYER_NAME"];
+    $pj=$db->escape($GLOBALS["PLAYER_NAME"]);
     $lastRecords = $db->fetchAll("SELECT * from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) order by rowid desc LIMIT 5 OFFSET 0");
     $buffer="";
     foreach (array_reverse($lastRecords) as $record) {
@@ -828,7 +839,7 @@ function lastKeyWordsContext($n, $npcname='')
     
     $m=$n+1;
     $speaker=$db->escape($npcname);
-    $pj=$GLOBALS["PLAYER_NAME"];
+    $pj=$db->escape($GLOBALS["PLAYER_NAME"]);
 
     if (isset($gameRequest[2]))
         $whileago=round($gameRequest[2] - (2/ 0.0000024));

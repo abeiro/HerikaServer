@@ -229,6 +229,29 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
                     }
                     $connectionHandler->close();
                     $TEST_TEXT=strtr($buffer,["**"=>""]); // Use the final buffer
+
+                    // if the llm repeats tags we tidy them up
+                    $pattern = '/#Tags:/';
+                    $split = preg_split($pattern, $TEST_TEXT, 2);
+                    if (isset($split[1])) {
+                        // make data consistent (copied from tagsCol creation below)
+                        $tagsString = strtr($split[1],["*"=>""]);
+                        $tagsArray = array_map('trim', explode(',', $tagsString));
+                        $tagsCol=implode(" ",$tagsArray);
+                        $tagsArray = array_map('trim', explode(' ', $tagsCol));
+
+                        // Remove duplicates and last tag if duplicates found
+                        $uniqueTagsArray = array_unique($tagsArray);
+                        if (count($uniqueTagsArray) < count($tagsArray)) {
+                            // Duplicates found - remove last tag as it may be truncated
+                            array_pop($uniqueTagsArray);
+                            Logger::debug("Corrected duplicate tags:\nOriginal tags: [" . implode(' ', $tagsArray) . "]\nUnique tags: [" . implode(' ', $uniqueTagsArray) . "]");
+                            $tagsCol = implode(" ", array_values($uniqueTagsArray));
+                            // Reconstruct TEST_TEXT with corrected tags
+                            $TEST_TEXT = trim($split[0]) . "\n#Tags: " . $tagsCol;
+                        }
+                    }
+
                     $toUpdate[]=["rowid"=>$row["rowid"],"summary"=>$TEST_TEXT];
                 }
                 // Summarization logic ends, $TEST_TEXT contains the summary or packed_message

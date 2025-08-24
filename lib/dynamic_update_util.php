@@ -104,7 +104,7 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
         }
 
-        $diaryPrompt = strtr($GLOBALS["DIARY_PROMPT"], ['{$GLOBALS["HERIKA_NAME"]}'=>$npcName,'{$GLOBALS["PLAYER_NAME"]}'=>$NPC_CONF["PLAYER_NAME"]]);
+        $diaryPrompt = strtr($GLOBALS["DIARY_PROMPT"], ['#HERIKA_NAME#'=>$npcName,'#PLAYER_NAME#'=>$NPC_CONF["PLAYER_NAME"]]);
         $prompt[] = ["role" => "user", "content" => $diaryPrompt];
 
         $contextData = array_merge($head, $prompt);
@@ -562,7 +562,7 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
             $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
         }
 
-        $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$followerName,'{$GLOBALS["PLAYER_NAME"]}'=>$FOLLOWER_CONF["PLAYER_NAME"]]);
+        $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['#HERIKA_NAME#'=>$followerName,'#PLAYER_NAME#'=>$FOLLOWER_CONF["PLAYER_NAME"]]);
 
         $prompt[] = 
             ["role" => "user", "content" => $diaryPrompt
