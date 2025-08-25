@@ -237,7 +237,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     
     $timeCut=time();
     $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scene_note' and localts+ttl>$timeCut order by localts asc");
-    if (is_array($rolemasterNotes)) {
+    if (is_array($rolemasterNotes) && sizeof($rolemasterNotes)>0) {
         $notes=[];
         foreach ($rolemasterNotes as $note)
             $notes[]= $note["data"];
@@ -783,7 +783,11 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
                 
                 if ($timeGapInHours>36) {
                     $timeGapInDays=round($timeGapInHours/24,1);
-                    $lastDialogFull[] = array('role' => "narratorci", 'content' => "NOTE: THERE IS BIG TIME JUMP HERE OF ABOUT $timeGapInDays days. Current location is $currentLocation)  ");
+                    $lastDialogFull[] = array('role' => "narratorci", 'content' => "!!! IMPORTANT CONTEXT !!!
+A MAJOR TIME JUMP HAS OCCURRED.
+Elapsed time since last interaction: ~$timeGapInDays days
+New setting: $currentLocation
+!!! END CONTEXT !!! ");
                 }
                 $lastGameTs=$row["gamets"];
             }
@@ -1643,39 +1647,52 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
 }
 
 
-function PackIntoSummary()
+function PackIntoSummary($onlyMissingDiary=false)
 {
 
     global $db;
 
-    $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
+    if ($onlyMissingDiary) {
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
+        select gamets,1,message,message,'diary',uid,speaker
+        from memory
+        where event in ('diary','auto_diary')
+        and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary'))");
 
-    $maxRow=$results[0]["gamets_truncated"]+0;
 
-    $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
 
-    $results = $db->query("insert into memory_summary select * from ( 
-                                select max(gamets) as gamets_truncated,count(*) as n,
-                                STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
-                                NULL as summary,'dialogue' as classifier,max(uid) as uid
-                                from memory_v
-                                where 
-                                message not like 'Dear Diary%'
-                                group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
-                              ) as T where gamets_truncated>$maxRow
-                            ");
-    
-    Logger::info("Main insert done");
-    //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
-    
-    $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-                                select gamets,1,message,message,'diary',uid,speaker
-                                from memory
-                                where event='diary'
-                                and gamets>$maxRow
-                            ");
+        Logger::info("Missing diary insert done");
 
-    Logger::info("Diary insert done");
+    } else {
+        $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
+
+        $maxRow=$results[0]["gamets_truncated"]+0;
+
+        $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
+
+        $results = $db->query("insert into memory_summary select * from ( 
+                                    select max(gamets) as gamets_truncated,count(*) as n,
+                                    STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
+                                    NULL as summary,'dialogue' as classifier,max(uid) as uid
+                                    from memory_v
+                                    where 
+                                    message not like 'Dear Diary%'
+                                    group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
+                                ) as T where gamets_truncated>$maxRow
+                                ");
+        
+        Logger::info("Main insert done");
+        //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
+        
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
+                                    select gamets,1,message,message,'diary',uid,speaker
+                                    from memory
+                                    where event='diary'
+                                    and gamets>$maxRow
+                                ");
+
+        Logger::info("Diary insert done");
+    }
 
     
     $people=$db->fetchAll("SELECT distinct split_part(data, '@', 1) as npc from eventlog where type='addnpc'");
@@ -2196,10 +2213,13 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
 
         $contextKeywords  = implode(" ", lastKeyWordsContext(5, $npcfilter));
 
-        
-        $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+        if (isset($GLOBALS["LLM_LANG"]) && $GLOBALS["LLM_LANG"]!="en")
+            $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/tembed';
+        else
+            $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+
         $data = [
-            'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
+            'text' => $TEST_TEXT." / ".$contextKeywords   // We add previous keywords
         ];
 
         // Convert to JSON
@@ -3294,7 +3314,7 @@ function profile_exists($npcname) {
 }
 
 function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile='') {
-   
+    // This should be done at NpcMaster::createProfile
     global $db; 
 
     if ($npcname=="The Narrator")   // Refuse to add Narrator
@@ -3306,11 +3326,13 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
     $codename = npcNameToCodename($npcname);
     $baseprofileName = npcNameToCodename($baseprofile);
     
-   
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByName($npcname);
 
-    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
+
+    if (!$currentNpcData || $overwrite) {
         
-        //error_log("Overwritting conf");
+        error_log("Creating/overwriting:$overwrite  profile for $npcname");
         //sleep (1);
         $cn=$db->escape("Voicetype/$codename");
         $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
@@ -3323,29 +3345,13 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         $melottsid=$db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
         $xvasnythid=$db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
 
-        // Do customizations here
-        $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
-        copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
-        
-        chmod($newFile,0777);
-        $file_lines = file($newFile);
-
-        for ($i = count($file_lines) - 1; $i >= 0; $i--) {
-            // If the line is not empty, break the loop // Will remove first entry 
-            if (trim($file_lines[$i]) !== '') {
-                unset($file_lines[$i]);
-                break;
-            }
-            unset($file_lines[$i]);
-        }
-        
 
         if (empty($GLOBALS["CORE_LANG"])) {
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
             // Query for new HERIKA fields
-            $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
+            $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
         } else {
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
@@ -3355,7 +3361,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                 $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
                 $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
                 // Query for new HERIKA fields
-                $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
+                $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
             } else {
                 // For translated templates, set empty new fields for now
                 $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
@@ -3374,11 +3380,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             }
         }
 
-        // 1. Save the file lines
-        file_put_contents($newFile, implode('', $file_lines));
-        // 2. Save the original $npcname to HERIKA_NAME
-        file_put_contents($newFile, '$HERIKA_NAME=\''.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        
+    
 
         // 3. Extract the bracketed portion and convert it to the "stripped" version
         //    e.g. Bofesar [Whiterun Guard] -> whiterun_guard
@@ -3392,86 +3394,62 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         // Original logic for pulling from database
         if (isset($npcTemlate[0]) && is_array($npcTemlate[0])) {
 
-            file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-            file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($npcdynamic[0]["npc_dynamic"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-            file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\'' . addslashes(implode(', ', array_unique(array_merge(array_filter(array_map('trim', explode(',', $npcknowledge[0]["npc_misc"] ?? ''))), [$codename])))) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
-            
-            // Add new HERIKA fields if available
-            if (isset($npcNewFields[0]) && is_array($npcNewFields[0])) {
-                $newFields = [
-                    'HERIKA_BACKGROUND' => $npcNewFields[0]["npc_background"] ?? '',
-                    'HERIKA_PERSONALITY' => $npcNewFields[0]["npc_personality"] ?? '',
-                    'HERIKA_APPEARANCE' => $npcNewFields[0]["npc_appearance"] ?? '',
-                    'HERIKA_RELATIONSHIPS' => $npcNewFields[0]["npc_relationships"] ?? '',
-                                'HERIKA_OCCUPATION' => $npcNewFields[0]["npc_occupation"] ?? '',
-            'HERIKA_SKILLS' => $npcNewFields[0]["npc_skills"] ?? '',
-            'HERIKA_SPEECHSTYLE' => $npcNewFields[0]["npc_speechstyle"] ?? '',
-            'HERIKA_GOALS' => $npcNewFields[0]["npc_goals"] ?? ''
-                ];
-                
-                foreach ($newFields as $fieldName => $fieldValue) {
-                    if (!empty(trim($fieldValue))) {
-                        file_put_contents($newFile, '$'.$fieldName.'=\''.addslashes(trim($fieldValue)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-                    }
-                }
-            }
+           
+
+            $npcMaster->create([
+
+                "npc_name"=>$npcname,
+                'npc_static_bio' => $npcNewFields[0]["npc_background"] ?? '',
+                'personality' => $npcNewFields[0]["npc_personality"] ?? '' .".".$npcdynamic ?? '',
+                'core' => $npcname.".".$npcNewFields[0]["npc_appearance"] ?? '',
+                'relationships' => $npcNewFields[0]["npc_relationships"] ?? '',
+                'occupation' => $npcNewFields[0]["npc_occupation"] ?? '',
+                'skills' => $npcNewFields[0]["npc_skills"] ?? '',
+                'speechstyle' => $npcNewFields[0]["npc_speechstyle"] ?? '',
+                'goals' => $npcNewFields[0]["npc_goals"] ?? ''
+                ]
+            );
+
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
-            // 4. Query #2: Try bracket-stripped match only if Query #1 was empty
-            $npcTemlate2 = $db->fetchAll("SELECT npc_pers 
-                                        FROM combined_npc_templates
-                                        WHERE npc_name='".$db->escape($bracketMatch)."'");
-
-            $npcknowledge2 = $db->fetchAll("SELECT npc_misc
-                                        FROM combined_npc_templates
-                                        WHERE npc_name='".$db->escape($bracketMatch)."'");
+           
 
             // Query for new HERIKA fields for bracket match
-            $npcNewFields2 = $db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
+            $npcNewFields2 = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
 
-            if (!empty($npcTemlate2[0])) {
-                // Found a row by bracket match
-                file_put_contents($newFile,'$HERIKA_PERS=\''.addslashes(trim($npcTemlate2[0]["npc_pers"])).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-                $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
-                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-                file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes(trim($npcknowledge2[0]["npc_misc"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);  
+            if (!empty($npcNewFields2[0])) {
+                if (is_array($npcNewFields2) && $npcNewFields2!=null  && isset($npcNewFields2[0]) && isset($npcNewFields2[0]["npc_appearance"]))
+                    $core_data=".".$npcNewFields2[0]["npc_appearance"];
+                else
+                    $core_data="";
+
+                $npcMaster->create([
+                    "npc_name"=>$npcname,
+                    'npc_static_bio' => $npcNewFields2[0]["npc_background"] ?? '',
+                    'personality' => $npcNewFields2[0]["npc_personality"] ?? '',
+                    'core' => $npcname.$core_data,
+                    'relationships' => $npcNewFields2[0]["npc_relationships"] ?? '',
+                    'occupation' => $npcNewFields2[0]["npc_occupation"] ?? '',
+                    'skills' => $npcNewFields2[0]["npc_skills"] ?? '',
+                    'speechstyle' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
+                    'goals' => $npcNewFields2[0]["npc_goals"] ?? '',
+                    'oghma_knowledge_tags'=>$npcNewFields2[0]["npc_misc"]
+                    ]
+                );
                 
-                // Add new HERIKA fields if available for bracket match
-                if (isset($npcNewFields2[0]) && is_array($npcNewFields2[0])) {
-                    $newFields = [
-                        'HERIKA_BACKGROUND' => $npcNewFields2[0]["npc_background"] ?? '',
-                        'HERIKA_PERSONALITY' => $npcNewFields2[0]["npc_personality"] ?? '',
-                        'HERIKA_APPEARANCE' => $npcNewFields2[0]["npc_appearance"] ?? '',
-                        'HERIKA_RELATIONSHIPS' => $npcNewFields2[0]["npc_relationships"] ?? '',
-                        'HERIKA_OCCUPATION' => $npcNewFields2[0]["npc_occupation"] ?? '',
-                        'HERIKA_SKILLS' => $npcNewFields2[0]["npc_skills"] ?? '',
-                        'HERIKA_SPEECHSTYLE' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
-                        'HERIKA_GOALS' => $npcNewFields2[0]["npc_goals"] ?? ''
-                    ];
-                    
-                    foreach ($newFields as $fieldName => $fieldValue) {
-                        if (!empty(trim($fieldValue))) {
-                            file_put_contents($newFile, '$'.$fieldName.'=\''.addslashes(trim($fieldValue)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-                        }
-                    }
-                }
-            } else {
-                // Fallback if neither query found anything
-                file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-                $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
-                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-            }
+                
+                
+            } 
 
         } else {
-            // 5. Fallback if no bracket or no match found
-            file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-            file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes($codename).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+            $npcMaster->create([
+                "npc_name"=>$npcname
+                ]
+            );
         }
 
             
-        foreach ($FORCE_PARMS as $p=>$v) {
-            file_put_contents($newFile, '$'.$p.'=\''.addslashes($v).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        }
+        $currentData=$npcMaster->GetByName($npcname);
 
         // XTTS voiceid override from table. if fails then xtts voicelogic pick
         $voiceid = isset($voicetype) && sizeof($voicetype) >= 4 ? $voicetype[3] : "";
@@ -3483,67 +3461,16 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
         }
 
-        if (!empty($xttsid[0]['xtts_voiceid'])) {
-            file_put_contents(
-                $newFile,
-                '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $xttsid[0]['xtts_voiceid'] . '\';' . PHP_EOL,
-                FILE_APPEND | LOCK_EX
-            );
-        } else {
-            if ($voicelogic === "voicetype") {
-                file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
-                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
-            } else {
-                file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
-                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
-            }
-        }
-        // MeloTTS voiceid override from table, if fails then generated normally.
-        if (!empty($melottsid[0]['melotts_voiceid'])) {
-            // Use the melotts_voiceid value
-            file_put_contents($newFile,'$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
-        } else {
-            file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        }
+        $currentData=$npcMaster->GetByName($npcname);
+        $currentData["voiceid"]=$voiceid;
 
-        // PiperTTS voiceid - uses same voice IDs as MeloTTS
-        if (!empty($melottsid[0]['melotts_voiceid'])) {
-            // Use the melotts_voiceid value for PiperTTS as well
-            file_put_contents($newFile,'$TTS["PIPERTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
-        } else {
-            file_put_contents($newFile, '$TTS["PIPERTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        }
+        $currentData['metadata'] = json_encode([]);
+        $currentData['extended_data'] = json_encode(["chim_core_migrated"=>2]);
+        $currentData['profile_id'] = 1; // Default profile
+        $currentData['md5'] = md5($currentData["npc_name"]); 
 
-        //xvansynth logic from override table
-        if (!empty($xvasynthid[0]['xvasynth_voiceid'])) {
+        $npcMaster->updateByArray($currentData);
 
-            file_put_contents($newFile,'$TTS["XVASYNTH"]["model"]=\'' . strtolower($xvasnythid[0]['xvasynth_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
-        }
-        else {
-            file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_' . strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        }
-
-
-        file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
-
-        $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
-        Logger::info(DMgetDefaultModelFile()." ".$currentModelFilePath);
-        copy(DMgetDefaultModelFile(),$currentModelFilePath);
-        shell_exec("chmod 0775 {$currentModelFilePath}");
-        
-         // Character Map file
-        if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json")) {
-            
-            $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
-            if (!$characterMap)
-                $characterMap=[];
-
-            Logger::info("Loading character map: ".sizeof($characterMap));
-        }
-
-
-        $characterMap[md5($npcname)]=$npcname;
-        file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
         
     }
 

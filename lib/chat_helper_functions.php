@@ -310,7 +310,9 @@ function unmoodSentence($sentence) {
     }
     else {
         $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+        $output=$sentence;
     }
+
     $sentence=$output;
     $output = strtr($sentence,[
                     "*Smirks*"=>"","*smirks*"=>"",
@@ -743,7 +745,7 @@ function logMemory($speaker, $listener, $message, $momentum, $gamets,$event,$ts)
                 'listener' => $listener,
                 'message' => $message,
                 'gamets' => $gamets,
-                'session' => "pending",
+                'session' => $momentum,
                 'momentum'=>$momentum,
                 'event'=>$event,
                 'ts'=>$ts

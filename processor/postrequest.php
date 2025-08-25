@@ -44,15 +44,21 @@ if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) {
     
 
     if (($gameRequest[2]-$maxRow)>($pfi)) {
-        
+        error_log("[SUMMARY] memory creation gameRequest[2]-maxRow > pfi  ($gameRequest[2]-$maxRow)>($pfi) ");
+
         Logger::info(shell_exec("php ".__DIR__."/../debug/util_memory_subsystem.php compact noembed 2 &"));
         
     } else {
         
-        
+        error_log("[SUMMARY]  Skipping memory creation gameRequest[2]-maxRow > pfi  ($gameRequest[2]-$maxRow)>($pfi) ");
        
 
     }
+
+} else {
+        
+    error_log("[SUMMARY]  Skipping memory creation as  AUTO_CREATE_SUMMARYS  is {$GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]}");
+   
 
 }
 

@@ -523,6 +523,7 @@ if (isset($_GET["profile"])) {
     if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
         // error_log("PROFILE: {$_GET["profile"]}");
         // Migration here to new system
+        error_log("[CHIM CORE] MIGRATING PROFILE");
 
         $npcMaster=new NpcMaster();
         $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
@@ -530,6 +531,7 @@ if (isset($_GET["profile"])) {
         if (!$currentNpcData) {
             
             require($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
+            error_log("[CHIM CORE] CREATING EMPTY PROFILE for {$GLOBALS["HERIKA_NAME"]}");
 
             $npcMaster->create(["npc_name"=>$GLOBALS["HERIKA_NAME"]]);
             $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
@@ -579,75 +581,62 @@ if (isset($_GET["profile"])) {
         $profile->setOldGlobals($currentProfileData);
         $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
+        $npcMaster->updateByArray($currentNpcData);
+        
         $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
         
-        error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} profile: {$currentProfileData["label"]}");
-        error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]}");
+        @error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} profile: {$currentProfileData["label"]}");
+        @error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]}");
 
+        rename($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php",$path . "conf/.old/".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
 
     } else {
         
-        // This is supossed to migrate the Narrator
-
         $npcMaster=new NpcMaster();
         $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
     
         if (!$currentNpcData) {
+            error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
+
+        
+        } else {
+            error_log("[CHIM CORE] USING CORE PROFILE")    ;
+        
+
+            // Profile has been migrated
+            $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+            $profile=new CoreProfile();
+            $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+        
+            $connector=new LLMConnector();
+            $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
+
+            if (isset($currentActiveModelProfile["value"])) {
+                if ($currentActiveModelProfile["value"]==1) 
+                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+                else if ($currentActiveModelProfile["value"]==2) 
+                    $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
+                else if ($currentActiveModelProfile["value"]==3) 
+                    $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
+                else if ($currentActiveModelProfile["value"]==4) 
+                    $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
+                else
+                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+
+            } else
+                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
             
-            $npcMaster->create(["npc_name"=>$GLOBALS["HERIKA_NAME"]]);
-            $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
-
-            if ($currentNpcData) {
-                $newNpcData=$npcMaster->migrateFromOldProfile($currentNpcData,$GLOBALS);
-
-
-                //$ingameDataRef=getBaseDataForNpcFromLog($GLOBALS["HERIKA_NAME"]);
-                //$newNpcData=array_merge($newNpcData,$ingameDataRef);
-                if ($newNpcData) {
-                    $npcMaster->updateByArray($newNpcData);
-                }
-                
-            }
-
-            $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
-
-        } 
-
-        // Profile has been migrated
-        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
-
-        $profile=new CoreProfile();
-        $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
-    
-        $connector=new LLMConnector();
-        $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
-
-        if (isset($currentActiveModelProfile["value"])) {
-            if ($currentActiveModelProfile["value"]==1) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-            else if ($currentActiveModelProfile["value"]==2) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
-            else if ($currentActiveModelProfile["value"]==3) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
-            else if ($currentActiveModelProfile["value"]==4) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
-            else
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-
-        } else
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
         
-    
-        $connector->setOldGlobals($currentConnectorData);
-        $profile->setOldGlobals($currentProfileData);
-        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+            $connector->setOldGlobals($currentConnectorData);
+            $profile->setOldGlobals($currentProfileData);
+            $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
-        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
-        
-        error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} profile: {$currentProfileData["label"]}");
-        error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]}");
-
-        error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
+            $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+            
+            error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} profile: {$currentProfileData["label"]}");
+            error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]}");
+        }
     }
     
     $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
@@ -770,6 +759,8 @@ if ($gameRequest[0] == "npcspellcast") {
     }
     terminate(); // Always exit, whether logged or not
 }
+
+// Exit if only a event info log.
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
     "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast"])) {
@@ -1038,7 +1029,7 @@ if (($gameRequest[0] == "diary" || $gameRequest[0] == "diary_followers") && isse
     $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 }
 
-if ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
+if ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==1) {
     $lastNDataForContext=$GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT_HISTORY"];
 }
 
@@ -1398,80 +1389,18 @@ if ($gameRequest[0] == "funcret") {
 //error_log("*TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 //returnLines(["Mmm..let me think"]);
 
+// Global switch. Needed id we need to stop processing because sme function requires it. Example, funret conditions.
+if (isset($GLOBALS["AVOID_LLM_CALL"])&&($GLOBALS["AVOID_LLM_CALL"])) {
+    Logger::info("Terminated by AVOID_LLM_CALL");
+    terminate();
+}
 
 // Diary stuff 
 if ($gameRequest[0] == "diary") {
     // TO-DO move this to its own processor file.
-    $npcMaster=new NpcMaster();
-    $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
 
-
-    $profile=new CoreProfile();
-    $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
-        
-    $connector=new LLMConnector();
-    $currentConnectorData=$connector->getById($currentProfileData["diary_connector_id"]); 
-            
-        
-    $connector->setOldGlobals($currentConnectorData);
-    $profile->setOldGlobals($currentProfileData);
-    $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+    generateFollowerDiary($GLOBALS["HERIKA_NAME"],$gameRequest,"diary");
     
-    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
-
-    unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
-    
-    $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
-    
-
-    error_log("[CORE SYSTEM] Using new profile system {$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["driver"]}/{$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["model"]}");
-    $overrideParameters["max_tokens"]=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["MAX_TOKENS_MEMORY"]??500;
-    $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
-
-    $talkedSoFar=explode("\n",$buffer);
-    $topic=DataLastKnowDate();
-    $location=DataLastKnownLocation();
-    
-    // Format diary content into paragraphs
-    $formattedContent = "";
-    $currentParagraph = [];
-    $sentenceCount = 0;
-    
-    foreach ($talkedSoFar as $sentence) {
-        $currentParagraph[] = $sentence;
-        $sentenceCount++;
-        
-        // Start new paragraph if we have 2-4 sentences or this is the last sentence
-        if ($sentenceCount >= 2 && $sentenceCount <= 4 || $sentence === end($talkedSoFar)) {
-            $formattedContent .= implode(" ", $currentParagraph) . "\n\n";
-            $currentParagraph = [];
-            $sentenceCount = 0;
-        }
-    }
-    
-    $db->insert(
-        'diarylog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'topic' => "$topic",
-            'content' => trim($formattedContent),
-            'tags' => "Pending",
-            'people' => $GLOBALS["HERIKA_NAME"],
-            'location' => "$location",
-            'sess' => 'pending',
-            'localts' => time()
-        )
-    );
-
-    // Log Memory also.
-    if ((php_sapi_name()!="cli") || getenv('PHPUNIT_TEST'))	
-        logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"],implode(" ", $talkedSoFar), $momentum, $gameRequest[2],$gameRequest[0],$gameRequest[1]);
-
-    // Diary entries are silent by default - send notification instead of speech
-    echo $GLOBALS["HERIKA_NAME"]."|rolecommand|DebugNotification@Diary Entry Written for ".$GLOBALS["HERIKA_NAME"].PHP_EOL;
-    @ob_flush(); 
-    @flush();
     terminate();
 }
 

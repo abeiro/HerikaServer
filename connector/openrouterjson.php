@@ -1159,8 +1159,11 @@ class openrouterjson
         }
 
         if ($MAX_TOKENS<1) {
+            $data["max_tokens"]+=0;
+
             unset($data["max_completion_tokens"]); 
             unset($data["max_tokens"]); 
+
         }
 
         if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
@@ -1200,7 +1203,6 @@ class openrouterjson
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
      
-        $data["max_tokens"]+=0;
         
         $headers = array(
             'Content-Type: application/json',

@@ -153,7 +153,7 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             // Save diary entry to database
             $topic = DataLastKnowDate();
             $location = DataLastKnownLocation();
-            
+            $momentum=time();
             $db->insert(
                 'diarylog',
                 array(
@@ -164,14 +164,14 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
                     'tags' => "Nearby-diary,$eventType",
                     'people' => $npcName,
                     'location' => $location,
-                    'sess' => 'pending',
+                    'sess' => $momentum,
                     'localts' => time()
                 )
             );
             
             // Log memory
             if (function_exists('logMemory')) {
-                logMemory($npcName, $npcName, trim($buffer), time(), $gameRequest[2], 'nearby_diary', $gameRequest[1]);
+                logMemory($npcName, $npcName, trim($buffer), $momentum, $gameRequest[2], 'nearby_diary', $gameRequest[1]);
             }
             
             return true;
@@ -454,7 +454,7 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]+0) : 25;
     }
 
-    $sqlfilter=" and type<>'prechat'";
+    $sqlfilter=" and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' ";
     $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
     $historyData="";
     foreach ($contextDataHistoric as $element) {
@@ -500,7 +500,7 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         // Save diary entry to database
         $topic = DataLastKnowDate();
         $location = DataLastKnownLocation();
-        
+        $momentum=time();
         $db->insert(
             'diarylog',
             array(
@@ -511,14 +511,14 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
                 'tags' => "Auto-diary,$eventType",
                 'people' => $followerName,
                 'location' => $location,
-                'sess' => 'pending',
+                'sess' => $momentum,
                 'localts' => time()
             )
         );
             
         // Log memory
         if (function_exists('logMemory')) {
-            logMemory($followerName, $followerName, trim($buffer), time(), $gameRequest[2], 'auto_diary', $gameRequest[1]);
+            logMemory($followerName, $followerName, trim($buffer),  $momentum, $gameRequest[2], 'auto_diary', $gameRequest[1]);
         }
         
         // Send notification to plugin for this follower (same format as manual diary)

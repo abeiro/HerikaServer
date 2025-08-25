@@ -25,6 +25,10 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
 
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php");
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/tts_connector.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/npc_master.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/core_profiles.class.php");
+
 
 if (!isset($argv[1])) {
     die(
@@ -58,6 +62,23 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
         $db=new sql();
    
+        if (isset($argv[3])) {
+            $npcMaster=new NpcMaster();
+            $currentNpcData=$npcMaster->getByName($argv[3]);
+            
+            $profile=new CoreProfile();
+            $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+                
+            $connector=new LLMConnector();
+            $currentConnectorData=$connector->getById($currentProfileData["diary_connector_id"]);
+        
+            $connector->setOldGlobals($currentConnectorData);
+            $profile->setOldGlobals($currentProfileData);
+            $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+    
+            $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+        }
+
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
             echo "Using pgvector search (text2vec)".PHP_EOL;
             $res=DataSearchMemoryByVector($argv[2],$argv[3]);
@@ -158,6 +179,11 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
         echo "Packing existing data into summary...".PHP_EOL;
         $maxRow=PackIntoSummary();
+        echo "Packing complete. Max gamets_truncated row ID from existing summaries: {$maxRow}".PHP_EOL;
+
+
+        echo "Packing missing diary entries into summary...".PHP_EOL;
+        $maxRowIgnored=PackIntoSummary(true);
         echo "Packing complete. Max gamets_truncated row ID from existing summaries: {$maxRow}".PHP_EOL;
 
         echo "Checking for new entries to summarize and compact...".PHP_EOL;

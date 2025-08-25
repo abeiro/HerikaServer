@@ -11,7 +11,9 @@
 	$functionLocaleName=getFunctionTrlName($returnFunction[1]);
 	
 	$functionCodeName=$functionLocaleName;
-
+	
+	$functionCodeName=$returnFunction[1];
+	
 	$useFunctionsAgain = false;
 	
 	$forceAttackingText = false;
@@ -20,8 +22,8 @@
 		// Patch. 
 		$returnFunction[2]=trim($returnFunction[2]);
  
-		error_log("[CHIM] Checking $functionCodeName {$returnFunction[2]}");
-		
+		error_log("[CHIM] Checking <$functionCodeName> <{$returnFunction[1]}>");
+
 		if ($functionCodeName == "GetTopicInfo") {
 			$argName = "topic";
 			// Lets overwrite this
@@ -119,19 +121,32 @@
 			die();
 
 		} else {
-			
+			error_log("[CHIM] Checking <$functionCodeName> in external declarations");
+
 			if (isset($GLOBALS["FUNCRET"][$functionCodeName])) {
 				
-					$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName],["gameRequest"=>$gameRequest]);
-					
-					if (isset($frResponse["argName"]))
-						$argName = $frResponse["argName"];
-					if (isset($frResponse["request"]))
-						$request = $frResponse["request"];
-					if (isset($frResponse["useFunctionsAgain"]))
-						$useFunctionsAgain = $frResponse["useFunctionsAgain"];
+				$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName],["gameRequest"=>$gameRequest]);
+				
+				if (isset($frResponse["argName"]))
+					$argName = $frResponse["argName"];
+				if (isset($frResponse["request"]))
+					$request = $frResponse["request"];
+				if (isset($frResponse["useFunctionsAgain"]))
+					$useFunctionsAgain = $frResponse["useFunctionsAgain"];
 				
 				
+			} else if (isset($GLOBALS["FUNCRET"][$returnFunction[1]])) {	// Patch, search also by codename
+				
+				$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$returnFunction[1]],[]);
+				
+				if (isset($frResponse["argName"]))
+					$argName = $frResponse["argName"];
+				if (isset($frResponse["request"]))
+					$request = $frResponse["request"];
+				if (isset($frResponse["useFunctionsAgain"]))
+					$useFunctionsAgain = $frResponse["useFunctionsAgain"];
+			
+			
 			} else
 				$argName = "target";
 

@@ -20,6 +20,7 @@ $currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_DI
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
 $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+$GLOBALS["CURRENT_CONNECTOR"]=$currentConnectorData["driver"];
 
 $connector->setOldGlobals($currentConnectorData);
 

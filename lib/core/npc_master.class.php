@@ -235,7 +235,7 @@ class NpcMaster {
         }
 
         if (!$templateRow) {
-            $templateRow = $this->db->fetchOne("SELECT npc_pers, npc_dynamic, npc_misc, npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates WHERE npc_name = '$codename'");
+            $templateRow = $this->db->fetchOne("SELECT npc_pers, npc_dynamic, npc_misc, npc_background, coalesce(npc_personality,npc_pers) as npc_personality,  npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates WHERE npc_name = '$codename'");
         }
 
         
@@ -308,6 +308,9 @@ class NpcMaster {
             }
         }
         */
+        if (empty($currentNpcData['personality']) && isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) {
+            $currentNpcData['personality']=$OLD_GLOBALS_ARRAY['HERIKA_PERS'];
+        }
         $currentNpcData['metadata'] = json_encode($overrides);
         $currentNpcData['extended_data'] = json_encode(["chim_core_migrated"=>1]);
         $currentNpcData['gender'] = null; // Optional: you might use HERIKA_PERSONALITY/gender logic

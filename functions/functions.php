@@ -690,7 +690,10 @@ function getFunctionCodeName($key) {
 }
 
 function getFunctionTrlName($key) {
-    return $GLOBALS["F_NAMES"][$key];
+    if (isset($GLOBALS["F_NAMES"][$key] )&& !empty($GLOBALS["F_NAMES"][$key]))
+        return $GLOBALS["F_NAMES"][$key];
+    else
+        return $key;
     
 }
 
