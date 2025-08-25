@@ -227,7 +227,7 @@ echo '<style>
         <div class="container-fluid mx-1">
             <!-- Server Version Info - Far Left -->
             <div class="server-version-info">
-                Server: 1.3.5.3b<br>
+                Server: 1.3.5.3b dev<br>
                 Plugin: <?php echo $pluginVersionDisplay; ?>
             </div>
             

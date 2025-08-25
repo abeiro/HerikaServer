@@ -94,58 +94,56 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
     
     
 
-    // Build context for player character
-    $playerContext = "";
-    
-    // Ensure PLAYER_SPEECH_STYLE is available (it's a global config variable)
-    if (!isset($GLOBALS["PLAYER_SPEECH_STYLE"])) {
-        $GLOBALS["PLAYER_SPEECH_STYLE"] = "";
-    }
-    
-    if (!empty($GLOBALS["PLAYER_BIOS"])) {
-        $playerContext .= "Player Character Background: " . $GLOBALS["PLAYER_BIOS"] . "\n";
-    }
-    if (!empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {
-        $playerContext .= "Player Speech Style: " . $GLOBALS["PLAYER_SPEECH_STYLE"] . "\n";
-    }
-    
-    $commonprompt='';
-    if (!$_GET["speech"]) {
-        $sysprompt="Write dialogue for {$GLOBALS["PLAYER_NAME"]}";
-        if (!empty($playerContext)) {
-            $sysprompt .= "\n\n# Character Context\n" . $playerContext;
+        // Build context for player character
+        $playerContext = "";
+        
+        // Ensure PLAYER_SPEECH_STYLE is available (it's a global config variable)
+        if (!isset($GLOBALS["PLAYER_SPEECH_STYLE"])) {
+            $GLOBALS["PLAYER_SPEECH_STYLE"] = "";
         }
-        $userprompt="";
-    } else {
-        $sysprompt="";
-        if (!empty($playerContext)) {
-            $sysprompt .= "\n\n# Character Context\n" . $playerContext;
+        
+        if (!empty($GLOBALS["PLAYER_BIOS"])) {
+            $bio = strtr($GLOBALS["PLAYER_BIOS"],["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]]);
+            $playerContext .= "Player Character Background: " . $bio . "\n";
         }
-        $sysprompt="Instruction: Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source:\n \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\".\n Pay attention to comments between brackets, that can guide you in length and verbosity.";
-
-        $userprompt="";
-    }
-    
-    $prompt[] = array('role' => 'system', 'content' => "You are an actor/actress roleplaying as {$GLOBALS["PLAYER_NAME"]}, and we are roleplaying Skyrim in the Tamriel universe. ");
-    $prompt[] = array('role' => 'user', 'content' => "# Contextual data\n$historyData");
-    $prompt[] = array('role' => 'user', 'content' =>$sysprompt);
-    
-    
-    
-    $customParm["response_format"]=["type"=>"json_object"];
-    $customParm["MAX_TOKENS"]=4000;
-    
-    unset($GLOBALS["HERIKA_PERS"]);
-
-    $GLOBALS["HOOKS"]["JSON_TEMPLATE"][]=function() {
-        $GLOBALS["responseTemplate"] = [
-            "character"=>"{$GLOBALS["PLAYER_NAME"]}",
-            "dialogue"=>"Dialogue for character",
-            "scene_note"=>"Optional. Something other actors should know about the instruction, if the instruction also involves another actors"
-        ];
-    };
-    $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
-
+        if (!empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {
+            $playerContext .= "Player Speech Style: " . $GLOBALS["PLAYER_SPEECH_STYLE"] . "\n";
+        }
+        
+        $commonprompt='';
+        if (!$_GET["speech"]) {
+            $sysprompt="Write dialogue for {$GLOBALS["PLAYER_NAME"]}";
+            if (!empty($playerContext)) {
+                $sysprompt .= "\n\n# Character Context\n" . $playerContext;
+            }
+            $userprompt="";
+        } else {
+            $sysprompt="Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Pay attention to comments between brackets, that can guide you in length and verbosity.";
+            if (!empty($playerContext)) {
+                $sysprompt .= "\n\n# Character Context\n" . $playerContext;
+            }
+            $userprompt="";
+        }
+        
+        $prompt[] = array('role' => 'system', 'content' => "You are an actor/actress roleplaying as {$GLOBALS["PLAYER_NAME"]}, and we are roleplaying Skyrim in the Tamriel universe. ");
+        $prompt[] = array('role' => 'user', 'content' => "# Contextual data\n$historyData");
+        $prompt[] = array('role' => 'user', 'content' =>"
+$sysprompt
+");
+        
+        
+        
+        $customParm["response_format"]=["type"=>"json_object"];
+        $customParm["MAX_TOKENS"]=4000;
+        
+        $GLOBALS["HOOKS"]["JSON_TEMPLATE"][]=function() {
+            $GLOBALS["responseTemplate"] = [
+                "character"=>"{$GLOBALS["PLAYER_NAME"]}",
+                "dialogue"=>"Dialogue for character",
+                "scene_note"=>"Something other actors should know about the instruction, if the instruction also involves another actors"
+            ];
+        };
+        $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
 
     // Log the player rewrite request to context_sent_to_llm.log (minimal logging)
     file_put_contents(__DIR__."/log/context_sent_to_llm.log", date(DATE_ATOM)."\n=PLAYER_REWRITE for {$GLOBALS["PLAYER_NAME"]}=\n".var_export($prompt,true)."\n=\n", FILE_APPEND);

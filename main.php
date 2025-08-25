@@ -42,6 +42,23 @@ $GLOBALS["ENGINE_PATH"]=$path;
 $cooldownPeriod = 600;
 
 
+function getBaseUrlForSpeech(): string {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+    //$host = $_SERVER['HTTP_HOST']; // host could contain port for some configurations
+    $host = $_SERVER['SERVER_ADDR'];
+    $port = intval($_SERVER['SERVER_PORT']); // under Apache 2, UseCanonicalName = On as well as UseCanonicalPhysicalPort = On must be set in order to get the real port, otherwise, this value can be spoofed.
+    
+    if (empty($port) || ($port == 80))
+        $port = 8081; // Seems this is not being autodetected
+
+    // Check if the port is non-standard for the protocol
+    $isDefaultPort = ($protocol === "http://" && $port == 80) || ($protocol === "https://" && $port == 443);
+    //error_log(" getBaseUrlForSpeech: $protocol - $host  -  $port "); //debug
+
+    return $protocol . $host . ($isDefaultPort ? '' : ':' . $port);
+}
+
+
 if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     // You can run this script directly with php: main.php "Player text"
     $GLOBALS["db"] = new sql();
@@ -486,20 +503,6 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     if (strpos($gameRequest[3],"**")===0 || strpos($cleaned_player_dialogue,"**")===0 ) {
         // If player speech starts with **
         error_log("Overwritting user prompt $cleaned_player_dialogue");
-        function getBaseUrlForSpeech(): string {
-            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-            $host = $_SERVER['HTTP_HOST'];
-            $port = $_SERVER['SERVER_PORT'];
-            
-            if (empty($port))
-                $port = 8081; // Seems this is not being autodetected
-
-            // Check if the port is non-standard for the protocol
-            $isDefaultPort = ($protocol === "http://" && $port == 80) || ($protocol === "https://" && $port == 443);
-        
-            return $protocol . $host . ($isDefaultPort ? '' : ':' . $port);
-        }
-        
 
         $newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$newSpeech";
