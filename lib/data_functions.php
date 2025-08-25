@@ -229,8 +229,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Rolemaster notes
     
     $timeCut=time();
-    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scene_note' and localts+ttl>$timeCut order by localts asc");
-    if (is_array($rolemasterNotes)) {
+    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scenenote' and localts+ttl>$timeCut order by localts asc");
+    if (is_array($rolemasterNotes) && !empty($rolemasterNotes)) {
         $notes=[];
         foreach ($rolemasterNotes as $note)
             $notes[]= $note["data"];
