@@ -1827,10 +1827,10 @@ function DataBeingsInRange()
     $beingsArrayNew=[];
     $beingsArrayNew[]="{$GLOBALS["PLAYER_NAME"]}";  // Add player to beings in range
     foreach ($beingsArray as $k=>$v) {
-        if (strpos($v,")")===false) 
+        if (strpos($v,"(")===false) 
             if (strpos($v,"Horse")!==0) 
                 if (strpos($v,"Chicken")!==0) 
-                    $beingsArrayNew[]=$v;
+                    $beingsArrayNew[]=strtr($v,[")"=>""]);
             
         
     }
