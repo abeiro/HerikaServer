@@ -1311,6 +1311,39 @@ if ($checkVersion("npc_templates")<20250619001) {
     echo '<script>alert("NPC Templates have been updated with extended profile fields!");</script>';
 }
 
+if ($checkVersion("core_api_badge") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+}
+
+if ($checkVersion("core_itt_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
+}
+
+if ($checkVersion("core_llm_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
+}
+
+if ($checkVersion("core_npc_master") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
+}
+
+if ($checkVersion("core_npc_master_history") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master_history.sql"));
+}
+
+if ($checkVersion("core_profiles") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
+}
+
+if ($checkVersion("core_stt_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
+}
+
+if ($checkVersion("core_tts_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
+}
+
+
 //----------------------------------------------------
 
 Logger::info(__FILE__." update file processed");
