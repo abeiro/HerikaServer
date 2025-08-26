@@ -1375,76 +1375,50 @@ function DataGetCurrentTask()
     $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission where sess='ephemeral' and gamets>$hourThreshold order by gamets desc");
     error_log("SElECT  distinct description as description,gamets FROM currentmission where sess='ephemeral' and gamets>$hourThreshold order by gamets desc");
 
-    if (!$results) {
-        $results=[];
-    } else {
-        return $results[0]["description"];
-
+    if (!empty($results)) {
+        // couldnt find usages of ephemeral quests so didnt modify this apart from new lines
+        return "\n{$results[0]["description"]}\n";
     }
 
     $data = "";
-
-    $n = 0;
-    foreach ($results as $row) {
-
-        if ($n == 0) {
-            $data = "Current plan: {$row["description"]}.";
-        } elseif ($n == 1) {
-            $data .= "Previous plan: {$row["description"]}.";
-        } else {
-            break;
+    $results = $db->fetchAll("SElECT distinct description as description,gamets FROM currentmission where sess<>'ephemeral' order by gamets desc");
+    if (!empty($results)) {
+        $data = "\n#PLANS\n";
+        $n = 0;
+        foreach ($results as $row) {
+            if ($n == 0) {
+                $data .= "Current plan: {$row["description"]}.\n";
+            } elseif ($n == 1) {
+                $data .= "Previous plan: {$row["description"]}.\n";
+            } else {
+                break;
+            }
+            $n++;
         }
-        $n++;
     }
 
-    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission where sess<>'ephemeral' order by gamets desc");
-    if (!$results) {
-        $results=[];
-    }
-
-    $data = "";
-
-    $n = 0;
-    foreach ($results as $row) {
-
-        if ($n == 0) {
-            $data = "Current plan: {$row["description"]}.";
-        } elseif ($n == 1) {
-            $data .= "Previous plan: {$row["description"]}.";
-        } else {
-            break;
-        }
-        $n++;
-    }
-
+    // quests are an unordered list (because of how the aiagent plugin works - delete current, bulk update)
+    // we would need to get clever with ignoring _questreset or expiring untouched quests, and using upserts on _quest
+    // quests, and making "current" if _questdata updates after initial insert
+    // for now lets just list all active quests rather than saying Current: xxx Previous: yyy
     $results = $db->fetchAll("SElECT  distinct name,briefing as description,gamets FROM quests order by gamets desc");
     if (!$results) {
         Logger::info("No quests ".__FILE__);
         return $data;
     }
-    
-    if (sizeof($results)>2) {
-        Logger::info("Too much quests ".__FILE__);
-        return $data;
-    }
 
-    //$data = "";
+    // dont think we need to limit it now since we dont require exactly two to format Current: xxx Previous: yyy
+//    if (sizeof($results)>2) {
+//        Logger::info("Too much quests ".__FILE__);
+//        return $data;
+//    }
 
-    $n = 0;
+    $data .= "\n#ACTIVE QUESTS\n";
     foreach ($results as $row) {
-
-        if ($n == 0) {
-            $data .= "Current quest: {$row["name"]}/{$row["description"]}.";
-        } elseif ($n == 1) {
-            $data .= "Previous quest: {$row["name"]}/{$row["description"]}.";
-        } else {
-            break;
-        }
-        $n++;
+        $data .= "* {$row["name"]}/".trim($row["description"])."\n";
     }
-    
-    return $data;
 
+    return $data;
 }
 
 

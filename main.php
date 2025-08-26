@@ -995,7 +995,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
     if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator")) {
         $task=DataGetCurrentTask();
         if (empty($task)) {
-            $task="No active quests right now.";
+            $task="\n#QUESTS\nNo active quests right now.";
         }
         $GLOBALS["COMMAND_PROMPT"].=$task;
     } else {
@@ -1183,11 +1183,9 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                 } 
             }
         }
-
-       
     }
-
-    $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+    //command prompt function now injected in json_response.php with actions
+    //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
 }
 
 
@@ -1223,16 +1221,19 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
 $dynamicBiography = buildDynamicBiography($GLOBALS);
 
 if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
-
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n" . $GLOBALS["OGHMA_HINT"]."\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n" . $GLOBALS["OGHMA_HINT"]."\n" . $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
     );
+    //avoid reinjecting command prompt that we have already appended
+    $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n" . $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]])
     );
+    //avoid reinjecting command prompt that we have already appended
+    $GLOBALS["COMMAND_PROMPT"] = "";
 }
 
 
