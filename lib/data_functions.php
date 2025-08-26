@@ -236,8 +236,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Rolemaster notes
     
     $timeCut=time();
-    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scene_note' and localts+ttl>$timeCut order by localts asc");
-    if (is_array($rolemasterNotes) && sizeof($rolemasterNotes)>0) {
+    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scenenote' and localts+ttl>$timeCut order by localts asc");
+    if (is_array($rolemasterNotes) && !empty($rolemasterNotes)) {
         $notes=[];
         foreach ($rolemasterNotes as $note)
             $notes[]= $note["data"];
@@ -3351,7 +3351,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
             // Query for new HERIKA fields
-            $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
+            $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates where npc_name='$codename'");
         } else {
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
@@ -3361,7 +3361,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                 $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
                 $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
                 // Query for new HERIKA fields
-                $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
+                $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_misc  FROM combined_npc_templates where npc_name='$codename'");
             } else {
                 // For translated templates, set empty new fields for now
                 $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
@@ -3400,13 +3400,15 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
 
                 "npc_name"=>$npcname,
                 'npc_static_bio' => $npcNewFields[0]["npc_background"] ?? '',
-                'personality' => $npcNewFields[0]["npc_personality"] ?? '' .".".$npcdynamic ?? '',
+                'personality' => ($npcNewFields[0]["npc_personality"] ?? '') .".".($npcdynamic ?? ''),
                 'core' => $npcname.".".$npcNewFields[0]["npc_appearance"] ?? '',
                 'relationships' => $npcNewFields[0]["npc_relationships"] ?? '',
                 'occupation' => $npcNewFields[0]["npc_occupation"] ?? '',
                 'skills' => $npcNewFields[0]["npc_skills"] ?? '',
                 'speechstyle' => $npcNewFields[0]["npc_speechstyle"] ?? '',
-                'goals' => $npcNewFields[0]["npc_goals"] ?? ''
+                'goals' => $npcNewFields[0]["npc_goals"] ?? '',
+                'oghma_knowledge_tags'=>$npcNewFields[0]["npc_misc"]
+
                 ]
             );
 
