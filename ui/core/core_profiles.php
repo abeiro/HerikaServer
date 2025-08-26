@@ -147,9 +147,9 @@ include("tmpl/header.php");
         <?php foreach ($data as $row): ?>
             <tr>
                 <td><?= $row["id"] ?></td>
-                <td><?= htmlspecialchars($row["label"]) ?></td>
-                <td><?= htmlspecialchars($row["default_npc"]) ?></td>
-                <td><?= htmlspecialchars($row["default_narrator"]) ?></td>
+                <td><?= htmlspecialchars($row["label"]??'') ?></td>
+                <td><?= htmlspecialchars($row["default_npc"]??'') ?></td>
+                <td><?= htmlspecialchars($row["default_narrator"]??'') ?></td>
                 <td><?= $ttsOptions[array_search($row["tts_connector_id"], array_column($ttsOptions, 'id'))]['label'] ?? '' ?></td>
                 <td><?= $ittOptions[array_search($row["itt_connector_id"], array_column($ittOptions, 'id'))]['label'] ?? '' ?></td>
                 <td><?= $llmPrimaryOptions[array_search($row["llm_primary_id"], array_column($llmPrimaryOptions, 'id'))]['label'] ?? '' ?></td>

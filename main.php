@@ -540,7 +540,6 @@ if (isset($_GET["profile"])) {
         } 
 
         // Profile has been migrated
-        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
         $profile=new CoreProfile();
         $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
