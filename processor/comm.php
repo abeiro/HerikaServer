@@ -472,6 +472,22 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     // logEvent($gameRequest);
 
     $vars=explode("@",$gameRequest[3]);
+    if ($vars[0]=="chim_context_mode") {
+        $cRw=$db->fetchOne("select value from conf_opts where id='{$vars[0]}'");
+        $vars[1]=(isset($cRw["value"])&&$cRw["value"]=="1")?"0":"1";
+        $GLOBALS["db"]->insert(
+            'responselog',
+                array(
+                    'localts' => time(),
+                    'sent' => 0,
+                    'actor' => "rolemaster",
+                    'text' => '',
+                    'action' => "rolecommand|DebugNotification@Focus on Chat mode ".($vars[1]?"enabled":"disabled"),
+                    'tag' => ""
+                )
+            );
+    }
+
     $db->upsertRowOnConflict(
         'conf_opts',
         array(
@@ -525,6 +541,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($localName);
     if ($currentNpcData) {
+        $currentNpcData["base"]=$splitNameBase[1];
         $currentNpcData["gender"]=$splitNameBase[2];
         $currentNpcData["race"]=$splitNameBase[3];
         $currentNpcData["refid"]=$splitNameBase[4];
@@ -984,6 +1001,28 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "core_profile_assign")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+    
+    logEvent($gameRequest);
+
+    if (isset($_GET["profile"])) {
+        $npcMaster=new NpcMaster();
+        $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+        
+        if (is_array($currentNpcData)) {
+            $currentNpcData["profile_id"]=$gameRequest[3];
+            $npcMaster->updateByArray($currentNpcData);
+            
+        } else {
+            error_log("[CORE SYSTEM] No valid NPC found {$_GET["profile"]}");
+        }
+    } else {
+        error_log("[CORE SYSTEM] No valid profile specified");
+    }
+    
+    $MUST_END=true;
+    
+    
 } 
 
-
+?>

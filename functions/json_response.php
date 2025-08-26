@@ -68,7 +68,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "lang"=>"en|es"
+                    "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es",
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -88,7 +88,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "lang"=>"en|es",
+                    "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es",
                     "message"=>"lines of dialogue"
                 ];
             } else {
@@ -181,6 +181,29 @@
             )
         );
 
+        if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
+            if (isset($GLOBALS["LLM_LANG"])) {
+
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                    $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                        "lang" => array(
+                            "type" => "string",
+                            "description" => "Language to use. Must be {$GLOBALS["LLM_LANG"]}"
+                        )
+                    ));
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="lang";
+            } else {
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                    $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                        "lang" => array(
+                            "type" => "string",
+                            "description" => "Language to use"
+                        )
+                    ));
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="lang";    
+            }
+
+        }
         // request speaking tones from the LLM when using zonos TTS
         if (zonosIsActive()) {
             $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(

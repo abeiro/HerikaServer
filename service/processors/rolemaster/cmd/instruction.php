@@ -4,7 +4,8 @@ require_once(__DIR__ . '/../../../../lib/logger.php');
 
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php");
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php");
-
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/npc_master.class.php");
+require_once($GLOBALS["ENGINE_ROOT"]  . "lib/core/core_profiles.class.php");
 
 $GLOBALS["ENGINE_PATH"]=$GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
 
@@ -14,13 +15,12 @@ $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will t
 
 $CONF_SAMPLE_VARS=extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
 
-
-
 $connector=new LLMConnector();
 $currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_DIRECTOR"]);
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
 $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+$GLOBALS["CURRENT_CONNECTOR"]=$currentConnectorData["driver"];
 
 $connector->setOldGlobals($currentConnectorData);
 

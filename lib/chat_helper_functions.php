@@ -754,7 +754,7 @@ function logMemory($speaker, $listener, $message, $momentum, $gamets,$event,$ts)
                 'listener' => $listener,
                 'message' => $message,
                 'gamets' => $gamets,
-                'session' => "pending",
+                'session' => $momentum,
                 'momentum'=>$momentum,
                 'event'=>$event,
                 'ts'=>$ts

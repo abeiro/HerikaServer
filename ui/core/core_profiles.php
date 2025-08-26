@@ -49,6 +49,13 @@ if (isset($_GET["delete"])) {
     exit;
 }
 
+// Add a new action for cloning a connector
+if (isset($_GET["clone"])) {
+    $profiles->clone($_GET["clone"]);
+    header("Location: core_profiles.php");
+    exit;
+}
+
 // Fetch Data
 $data = $profiles->readAll();
 $editItem = null;
@@ -77,14 +84,24 @@ include("tmpl/header.php");
     <label for='label'>Label</label><br>
     <input type="text" name="label" placeholder="Label" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
     
+    <label>Default NPC:</label><br>
     <label>
-        <input type="checkbox" name="default_npc" value="1" <?= !empty($editItem["default_npc"]) ? "checked" : "" ?>>
-        Default NPC
+        <input type="radio" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
+        True
+    </label>
+    <label>
+        <input type="radio" name="default_npc" value="0" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 0 ? "checked" : "" ?>>
+        False
     </label>
     <br>
+    <label>Default Narrator:</label><br>
     <label>
-        <input type="checkbox" name="default_narrator" value="1" <?= !empty($editItem["default_narrator"]) ? "checked" : "" ?>>
-        Default Narrator
+        <input type="radio" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>>
+        True
+    </label>
+    <label>
+        <input type="radio" name="default_narrator" value="0" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 0 ? "checked" : "" ?>>
+        False
     </label>
     <br>
 
@@ -96,6 +113,8 @@ include("tmpl/header.php");
     <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
     <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
 
+    <label for="prompt">Profile Prompt</label>
+    <textarea name="prompt" placeholder=""><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
 
     <!-- Metadata -->
     <textarea name="metadata" style="display:none" placeholder="Metadata"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
@@ -128,9 +147,9 @@ include("tmpl/header.php");
         <?php foreach ($data as $row): ?>
             <tr>
                 <td><?= $row["id"] ?></td>
-                <td><?= htmlspecialchars($row["label"]) ?></td>
-                <td><?= htmlspecialchars($row["default_npc"]) ?></td>
-                <td><?= htmlspecialchars($row["default_narrator"]) ?></td>
+                <td><?= htmlspecialchars($row["label"]??'') ?></td>
+                <td><?= htmlspecialchars($row["default_npc"]??'') ?></td>
+                <td><?= htmlspecialchars($row["default_narrator"]??'') ?></td>
                 <td><?= $ttsOptions[array_search($row["tts_connector_id"], array_column($ttsOptions, 'id'))]['label'] ?? '' ?></td>
                 <td><?= $ittOptions[array_search($row["itt_connector_id"], array_column($ittOptions, 'id'))]['label'] ?? '' ?></td>
                 <td><?= $llmPrimaryOptions[array_search($row["llm_primary_id"], array_column($llmPrimaryOptions, 'id'))]['label'] ?? '' ?></td>
@@ -142,6 +161,7 @@ include("tmpl/header.php");
                 <td class="actions">
                     <a href="?edit=<?= $row["id"] ?>">Edit</a>
                     <a href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this profile?');">Delete</a>
+                    <a href="?clone=<?= $row["id"] ?>">Clone</a>
                 </td>
             </tr>
         <?php endforeach; ?>

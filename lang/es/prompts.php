@@ -1,6 +1,9 @@
 <?php 
 $TEMPLATE_DIALOG="genera las siguientes lineas de dialogo para {$GLOBALS["HERIKA_NAME"]}. Evita narraciones.";
 
+$COMMAND_PROMPT_ENFORCE_ACTIONS_LANG="(Si {$GLOBALS["HERIKA_NAME"]} sólamente habla, usa la acción \"Talk\". Si otra acciones es contextualmente apropiada, úsala incluso si tienes dudas.)";
+
+
 $PROMPTS=array(
     "location"=>[
             "cue"=>["(Chatea como {$GLOBALS["HERIKA_NAME"]})"],

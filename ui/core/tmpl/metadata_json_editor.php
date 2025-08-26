@@ -2,6 +2,8 @@
  
 <script>
 let jsonEditor ;
+let jsonEditor2 ;
+
 function consolidation() {
     const content = jsonEditor.get()
     try {
@@ -13,8 +15,22 @@ function consolidation() {
     }
 
     
+    if (document.forms[0].extended_data!=undefined) {
+        const content2 = jsonEditor2.get()
+
+        try {
+            document.forms[0].extended_data.value=JSON.stringify(content2.json, null, 0)
+        } catch (idontcare) {}
+        
+        if (document.forms[0].extended_data.value=='')  {
+            return confirm("Extended data is empty. You sure?");
+        }
+    }
+
     return true;
 }
+
+
 </script>
 
 <script type="module">
@@ -38,6 +54,31 @@ function consolidation() {
             }
         }
         })
+        console.log("javascript init done");
+
+    });
+
+
+    document.addEventListener("DOMContentLoaded", function() {
+        let content = {
+            text: undefined,
+            json: <?php echo (!empty($editItem["extended_data"])?$editItem["extended_data"]:"{}") ?>
+            
+        }
+
+        if (document.getElementById('extended_data')) {
+            jsonEditor2 = createJSONEditor({
+            target: document.getElementById('extended_data'),
+            props: {
+                content,
+                onChange: (updatedContent, previousContent, { contentErrors, patchResult }) => {
+                // content is an object { json: JSONData } | { text: string }
+                console.log('onChange', { updatedContent, previousContent, contentErrors, patchResult })
+                content = updatedContent
+                }
+            }
+            })
+        }
         console.log("javascript init done");
 
     });

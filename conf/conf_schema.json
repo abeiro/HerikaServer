@@ -72,6 +72,7 @@
   "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for summaries. "},
   "CORE_CONNECTOR_MEDIUMTERM": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate mid-term memories. Should have very long context >32k. Use a cheap one!."},
   "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate/update NPC profiles","scope":"global"},
+  "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Historic context to use when Focus on Chat mode. Should be lower than normal context.","scope":"global"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openrouterjson": {

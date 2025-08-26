@@ -1,6 +1,7 @@
 <?php 
 $GLOBALS["ENGINE_ROOT"] = __DIR__.DIRECTORY_SEPARATOR;
 $enginePath = $GLOBALS["ENGINE_ROOT"];
+$GLOBALS["ENGINE_PATH"] = __DIR__.DIRECTORY_SEPARATOR;
 
 
 require_once("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
@@ -11,6 +12,15 @@ require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib/rolemaster_helpers.php");
+
+
+// New profile system
+require_once($path . "lib/core/api_badge.class.php");
+require_once($path . "lib/core/llm_connector.class.php");
+require_once($path . "lib/core/tts_connector.class.php");
+require_once($path . "lib/core/npc_master.class.php");
+require_once($path . "lib/core/core_profiles.class.php");
+
 
 /* 'CurrentModel_.json' does not always contain the connector for the 'default' profile, 
 because 'active_profile' is calculated in various places as md5(npcName) without testing the case where 'npcName' is 'The Narrator'. 
@@ -34,11 +44,20 @@ $GLOBALS["F_NAMES"] = [];
 
 require($enginePath . "functions/functions.php");
 
+
+$connector=new LLMConnector();
+$currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PLAYER"]);
+$connectionHandler = $connector->getConnector($currentConnectorData);
+
+$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+$GLOBALS["CURRENT_CONNECTOR"]=$currentConnectorData["driver"];
+
+$connector->setOldGlobals($currentConnectorData);
+
 // Make functions.php data global
 
 $GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;
 
-$GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
 
 // Some functions need this setted */
 $res=$GLOBALS["db"]->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog order by gamets desc limit 1 offset 0");
@@ -46,34 +65,34 @@ $GLOBALS["gameRequest"]=["inputtext"];
 $GLOBALS["gameRequest"][2]=$res[0]["gamets"]+1;
 
 
-$GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
 
-if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
-        error_log("Choose a LLM model and connector. Used '{$GLOBALS["CURRENT_CONNECTOR"]}'");
+if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
+    error_log("Choose a LLM model and connector. Used connector: '{$GLOBALS["CORE_CONNECTOR_DIRECTOR"]}'",S_LOG_CRITICAL);
 
-    } else {
-        error_log("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
-        require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
+} else {
+    
+    error_log("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
+    
 
-        $contextDataHistoric = DataLastDataExpandedFor("", -15);    // Full context
-        
-        $contextDataHistoric =array_merge([["role"=>"user","content"=>"# HISTORIC DIALOGUE AND EVENTS IN CHRONOLOGICAL ORDER"]], $contextDataHistoric);
+    $contextDataHistoric = DataLastDataExpandedFor("", -15);    // Full context
+    
+    $contextDataHistoric =array_merge([["role"=>"user","content"=>"# HISTORIC DIALOGUE AND EVENTS IN CHRONOLOGICAL ORDER"]], $contextDataHistoric);
 
-        $contextDataWorld = DataLastInfoFor("", -2,$addNPCDescriptions=false,$excludeBusy=true);
-        $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
-        $historyData="";
-
-            
-        foreach ($contextDataFull as $element) {
-        
-            $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
-            
-        }
+    $contextDataWorld = DataLastInfoFor("", -2,$addNPCDescriptions=false,$excludeBusy=true);
+    $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
+    $historyData="";
 
         
-       
+    foreach ($contextDataFull as $element) {
+    
+        $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
+        
+    }
+
+    
+    
 
         // Build context for player character
         $playerContext = "";
@@ -126,95 +145,82 @@ $sysprompt
         };
         $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
 
-        // Log the player rewrite request to context_sent_to_llm.log (minimal logging)
-        file_put_contents(__DIR__."/log/context_sent_to_llm.log", date(DATE_ATOM)."\n=PLAYER_REWRITE for {$GLOBALS["PLAYER_NAME"]}=\n".var_export($prompt,true)."\n=\n", FILE_APPEND);
+    // Log the player rewrite request to context_sent_to_llm.log (minimal logging)
+    file_put_contents(__DIR__."/log/context_sent_to_llm.log", date(DATE_ATOM)."\n=PLAYER_REWRITE for {$GLOBALS["PLAYER_NAME"]}=\n".var_export($prompt,true)."\n=\n", FILE_APPEND);
 
-        $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
-        $connectionHandler->open($prompt,$customParm);
+    $connectionHandler->open($prompt,$customParm);
 
-        $buffer="";
-        $totalBuffer="";
-        $breakFlag=false;
-        
-        while (true) {
+    $buffer="";
+    $totalBuffer="";
+    $breakFlag=false;
+    
+    while (true) {
 
-            if ($breakFlag) {
-                break;
-            }
-
-            $buffer=$connectionHandler->process();
-            $totalBuffer.=$buffer;
-
-            if ($connectionHandler->isDone()) {
-                $breakFlag=true;
-            }
-            
-        }
-        
-        $rawbuffer=$connectionHandler->close();
-		// Handle models that wrap JSON in Markdown code fences (e.g., DeepSeek)
-		$startsFence = function_exists('str_starts_with') ? str_starts_with($rawbuffer, "```") : (substr($rawbuffer, 0, 3) === "```");
-		$endsFence = function_exists('str_ends_with') ? str_ends_with($rawbuffer, "```") : (substr($rawbuffer, -3) === "```");
-		if ($startsFence && !$endsFence) {
-			$rawbuffer .= "```";
-		}
-
-		// Strip optional ```json fenced blocks to keep only the JSON payload
-		$rawbuffer = preg_replace('/^```(?:json)?\s*(.*)\s*```$/s', '$1', $rawbuffer);
-        
-        function parseInstruction($response) {
-            // Extract the character name and the instruction line
-            
-            $characterName = trim($response["character"] ?? 'Unknown');
-            $instructionText = trim($response["dialogue"] ?? 'No instruction text');
-			
-			echo $instructionText . PHP_EOL;
-			if (function_exists('ob_get_level') && ob_get_level() > 0) {
-				@ob_flush();
-			}
-			flush();
+        if ($breakFlag) {
+            break;
         }
 
-        function parseSceneNote($response) {
-            // Extract scene note after "Scene Note:"
-            $characterName = trim($response["character"] ?? 'Unknown');
-            $noteContent = trim($response["scene_note"] ?? 'No instruction text');
-            
-        
-            // Generate unique task ID
-            $taskId = uniqid();
-        
-            // Format action string
-            $action = make_replacements("$noteContent");
-        
-            // Insert into database
-            $GLOBALS["db"]->insert(
-                'rolemaster',
-                array(
-                    'localts' => time(),
-                    'ttl' => 60,
-                    'type' => "scenenote",
-                    'data' => $action
-                )
-            );
-        }
-        
-        
+        $buffer=$connectionHandler->process();
+        $totalBuffer.=$buffer;
 
-        
-        $response=__jpd_decode_lazy($rawbuffer);
-        
-        if (isset($response[0]) && is_array($response[0])) {
-            $response=$response[0];
+        if ($connectionHandler->isDone()) {
+            $breakFlag=true;
         }
-        //print_r($response);
-        parseInstruction($response);
-        parseSceneNote($response);
         
     }
     
+    $rawbuffer=$connectionHandler->close();
+    
+    function parseInstruction($response) {
+        // Extract the character name and the instruction line
+        
+        $characterName = trim($response["character"] ?? 'Unknown');
+        $instructionText = trim($response["dialogue"] ?? 'No instruction text');
+    
+        echo  $instructionText.PHP_EOL;
+        while(@ob_end_flush());
+    }
 
-    Logger::info("Successfully logged instruction command to responselog");
+    function parseSceneNote($response) {
+        // Extract scene note after "Scene Note:"
+        $characterName = trim($response["character"] ?? 'Unknown');
+        $noteContent = trim($response["scene_note"] ?? 'No instruction text');
+        
+    
+        // Generate unique task ID
+        $taskId = uniqid();
+    
+        // Format action string
+        $action = make_replacements("$noteContent");
+    
+        // Insert into database
+        $GLOBALS["db"]->insert(
+            'rolemaster',
+            array(
+                'localts' => time(),
+                'ttl' => 60,
+                'type' => "scenenote",
+                'data' => $action
+            )
+        );
+    }
+    
+    
+
+    
+    $response=__jpd_decode_lazy($rawbuffer);
+    
+    if (isset($response[0]) && is_array($response[0])) {
+        $response=$response[0];
+    }
+    //print_r($response);
+    parseInstruction($response);
+    parseSceneNote($response);
+    
+}
+    
+
+Logger::info("Successfully logged instruction command to responselog");
 
     
    

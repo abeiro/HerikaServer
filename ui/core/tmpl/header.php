@@ -10,7 +10,7 @@
             padding-top: 60px;
             background-color: #f9f9f9;
         }
-        nav {
+        nav.mainmenu {
             background-color: #333;
             color: white;
             position: fixed;
@@ -22,17 +22,17 @@
             align-items: center;
             width: 100%;
         }
-        nav .title {
+        nav.mainmenu .title {
             font-size: 1.2em;
             font-weight: bold;
           
         }
-        nav a {
+        nav.mainmenu a {
             color: white;
             margin-left: 20px;
             text-decoration: none;
         }
-        nav a:hover {
+        nav.mainmenu a:hover {
             text-decoration: underline;
         }
         main {
@@ -51,6 +51,8 @@
         body { font-family: Arial; margin: 0px; }
         table { border-collapse: collapse; width: 100%; margin-top: 20px; }
         th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+
+        td.actions { white-space: nowrap; }
         form { margin-top: 20px; }
         input[type="text"] { width: 100%; padding: 6px; margin: 4px 0; }
         textarea { width: 100%; padding: 6px; margin: 4px 0; min-height:90px}
@@ -69,10 +71,11 @@
         br {margin-bottom:10px}
 
     </style>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.css" />
 </head>
 <body>
 
-<nav>
+<nav class="mainmenu">
     <div class="title">🧠 Admin Tools</div>
     <div>
         

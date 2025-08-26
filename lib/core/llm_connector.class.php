@@ -45,7 +45,7 @@ class LLMConnector {
         ];
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            if (empty("$v") && $v!=="0") {
                 $data[$k] = null;
             }
         }
@@ -112,8 +112,8 @@ class LLMConnector {
         } else if ($currentConnectorData["driver"] == "openrouterjson") {
 
             $apiBadge=new ApiBadge();
-            $apiKetData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
-
+            $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
+            error_log("[CORE SYSTEM] Using new profile system CONNECTOR openrouterjson {$currentConnectorData["id"]}");
             $GLOBALS["CONNECTOR"]["openrouterjson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
@@ -129,18 +129,20 @@ class LLMConnector {
             $GLOBALS["CONNECTOR"]["openrouterjson"]["top_a"] = $currentConnectorData["top_a"] ?? 0;
             $GLOBALS["CONNECTOR"]["openrouterjson"]["ENFORCE_JSON"] = $currentConnectorData["enforce_json"] ?? true;
             $GLOBALS["CONNECTOR"]["openrouterjson"]["PREFILL_JSON"] = $currentConnectorData["prefill_json"] ?? false;
-            $GLOBALS["CONNECTOR"]["openrouterjson"]["API_KEY"] = $apiKetData["api_key"];
+            $GLOBALS["CONNECTOR"]["openrouterjson"]["API_KEY"] = $apiKeyData["api_key"];
             $GLOBALS["CONNECTOR"]["openrouterjson"]["json_schema"] = $currentConnectorData["json_schema"] ?? true;
 
+             // Decode metadata and extended_data if available
+            $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
+            if (is_array($metadata)) {
+                foreach ($metadata as $key => $value) {
+                    $GLOBALS["CONNECTOR"]["openrouterjson"][$key] = $value;
+                }
+            }
+
         }
 
-        // Decode metadata and extended_data if available
-        $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
-        if (is_array($metadata)) {
-            foreach ($metadata as $key => $value) {
-                $GLOBALS[$key] = $value;
-            }
-        }
+       
 
     }
 
