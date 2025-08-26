@@ -61,6 +61,15 @@ ALTER SEQUENCE public.api_badge_id_seq OWNED BY public.core_api_badge.id;
 
 ALTER TABLE ONLY public.core_api_badge ALTER COLUMN id SET DEFAULT nextval('public.api_badge_id_seq'::regclass);
 
+
+--
+-- Data for Name: core_api_badge; Type: TABLE DATA; Schema: public; Owner: dwemer
+--
+
+INSERT INTO public.core_api_badge VALUES (1, 'openrouter api key', '');
+INSERT INTO public.core_api_badge VALUES (2, 'openai api key ', '');
+
+
 --
 -- Name: api_badge_id_seq; Type: SEQUENCE SET; Schema: public; Owner: dwemer
 --
