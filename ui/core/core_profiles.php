@@ -64,6 +64,17 @@ $llmQuaternaryOptions = getSelectOptions($profiles, "llm_quaternary_id");
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
+    // Server-side merge of visual metadata with JSON editor content
+    if (isset($_POST['meta_vis'])) {
+        $base = [];
+        if (!empty($_POST['metadata'])) {
+            $tmp = json_decode($_POST['metadata'], true);
+            if (is_array($tmp)) $base = $tmp;
+        }
+        foreach ((array)$_POST['meta_vis'] as $k=>$v) unset($base[$k]);
+        foreach ((array)$_POST['meta_vis'] as $k=>$v) $base[$k] = $v;
+        $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+    }
     $profiles->create($_POST);
     header("Location: core_profiles.php");
     exit;
@@ -71,6 +82,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
 
 // Handle Update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
+    // Server-side merge of visual metadata with JSON editor content
+    if (isset($_POST['meta_vis'])) {
+        $base = [];
+        if (!empty($_POST['metadata'])) {
+            $tmp = json_decode($_POST['metadata'], true);
+            if (is_array($tmp)) $base = $tmp;
+        }
+        foreach ((array)$_POST['meta_vis'] as $k=>$v) unset($base[$k]);
+        foreach ((array)$_POST['meta_vis'] as $k=>$v) $base[$k] = $v;
+        $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+    }
     $profiles->update($_POST["id"], $_POST);
     header("Location: core_profiles.php");
     exit;
@@ -108,7 +130,7 @@ if (isset($_GET["edit"])) {
 <?php endif; ?>
 
 <div class="form-container wide-centered">
-<form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
+<form id="core_profile_form" method="post" onsubmit='return consolidation(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
@@ -184,8 +206,9 @@ if (isset($_GET["edit"])) {
     <label for="prompt">Profile Prompt</label>
     <textarea name="prompt" placeholder=""><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
 
-    <!-- Metadata -->
+    <!-- Metadata visual + JSON editors -->
     <textarea name="metadata" style="display:none" placeholder="Metadata"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
+    <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
     <div id="metadata"></div>
 
     <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
@@ -250,7 +273,7 @@ if (isset($_GET["edit"])) {
     document.addEventListener('DOMContentLoaded', initConnectorPreviews);
     </script>
 
-</form>
+    </form>
 </div>
 
 
@@ -300,7 +323,7 @@ if (isset($_GET["edit"])) {
 </table>
 </div>
 
-<?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
+<?php /* moved metadata editor into the form above */ ?>
 
 </main>
 
