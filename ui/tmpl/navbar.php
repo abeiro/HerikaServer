@@ -261,8 +261,8 @@ echo '<style>
                         </a>
                         </li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/api_badge.php" title="Manage API badges/keys.">
-                            API Badges
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/api_badge.php" title="Manage API keys.">
+                            API Keys
                         </a>
                         </li>
                         <li>
