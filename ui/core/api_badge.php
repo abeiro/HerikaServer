@@ -31,6 +31,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+.wide-centered { max-width: 900px; margin: 0 auto; }
+</style>
 
 <main>
     <div id="toast" class="toast-notification">
@@ -172,7 +175,7 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
     <h2 onclick='document.forms[0].style.display="block"'>Add Custom Key</h2>
 <?php endif; ?>
 
-<div class="form-container">
+<div class="form-container wide-centered">
     <form method="post">
         <input type="hidden" name="save_all" value="1">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
@@ -181,7 +184,7 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
         </div>
 
         <h3>Preset Keys</h3>
-        <div class="content-section" style="margin-bottom:20px;">
+        <div class="content-section wide-centered" style="margin-bottom:20px;">
             <?php foreach ($presetRows as $slug => $row): ?>
                 <div class="conf-item" style="max-width:800px;">
                     <label><?= htmlspecialchars($presetMap[$slug]) ?></label>
@@ -195,7 +198,7 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
         </div>
 
         <h3>Custom Keys</h3>
-        <div id="custom-keys" class="content-section" style="margin-bottom:10px;">
+        <div id="custom-keys" class="content-section wide-centered" style="margin-bottom:10px;">
             <?php foreach ($customRows as $row): ?>
                 <div class="conf-item" style="max-width:800px;">
                     <input type="hidden" name="custom[id][]" value="<?= htmlspecialchars($row['id']) ?>">
