@@ -12,8 +12,33 @@ require_once("{$enginePath}/lib/core/llm_connector.class.php");
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from bewlow file
 include(__DIR__."/tmpl/ui_utils.php");
-  
 
+// Determine web root and bring in site chrome like oghma_upload
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$uiPos = strpos($scriptPath, '/ui/');
+if ($uiPos !== false) {
+    $webRoot = substr($scriptPath, 0, $uiPos);
+} else {
+    $webRoot = '';
+}
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
+require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+$TITLE = "🧠 CHIM - LLM Connectors";
+ob_start();
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+?>
+
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+
+<main>
+    <div id="toast" class="toast-notification">
+        <span class="message"></span>
+    </div>
+
+<?php
 $GLOBALS["db"] = new sql();
 $llm = new LLMConnector();
 
@@ -51,9 +76,6 @@ $editItem = null;
 if (isset($_GET["edit"])) {
     $editItem = $llm->getById($_GET["edit"]);
 }
-
-$pageTitle = "NPC Master";
-include("tmpl/header.php");
 ?>
 
 <h1>LLM Connectors</h1>
@@ -64,7 +86,8 @@ include("tmpl/header.php");
     <h2 onclick='document.forms[0].style.display="block"'>Create New Connector</h2>
 <?php endif; ?>
 
-<form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?'':"display:none"?>'>
+<div class="form-container">
+<form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
@@ -139,10 +162,12 @@ include("tmpl/header.php");
     <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea><br>
     <div id="metadata"></div>
 
-    <input type="submit" name="<?= $editItem ? "update" : "create" ?>" value="<?= $editItem ? "Update" : "Create" ?>">
+    <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
 </form>
+</div>
 
 <h2>All LLM Connectors</h2>
+<div class="table-container">
 <table>
     <thead>
         <tr>
@@ -163,22 +188,29 @@ include("tmpl/header.php");
             <td><?= htmlspecialchars($row["model"]) ?></td>
             <td><?= htmlspecialchars($row["driver"]) ?></td>
             <td class="actions">
-                <a href="?edit=<?= $row["id"] ?>">Edit</a>
-                <a href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this connector?');">Delete</a>
-                <a href="?clone=<?= $row["id"] ?>">Clone</a>
+                <a class="action-button edit" href="?edit=<?= $row["id"] ?>">Edit</a>
+                <a class="btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this connector?');">Delete</a>
+                <a class="action-button" href="?clone=<?= $row["id"] ?>">Clone</a>
             </td>
         </tr>
     <?php endforeach; ?>
     </tbody>
 </table>
-
-</body>
-</body>
+</div>
 
 <?php
  // Provides a JSON editor for metadata field and form consolidation function (only needed if metadata field is present)
  include(__DIR__."/tmpl/metadata_json_editor.php");
  ?>
 
-</html>
+</main>
+
+<?php
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/footer.html");
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>
 

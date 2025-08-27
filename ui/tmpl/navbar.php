@@ -246,6 +246,26 @@ echo '<style>
                         
                         <li><h6 class="dropdown-header">Configuration Tools</h6></li>
                         <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/npc_master.php" title="Manage NPC master data.">
+                            NPC Master
+                        </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/core_profiles.php" title="Manage core profiles and defaults.">
+                            Core Profiles
+                        </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/llm_connectors.php" title="Manage LLM connectors.">
+                            LLM Connectors
+                        </a>
+                        </li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/api_badge.php" title="Manage API badges/keys.">
+                            API Badges
+                        </a>
+                        </li>
+                        <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/conf_wizard.php">Configuration Wizard</a>
                         </li>
                         <li>

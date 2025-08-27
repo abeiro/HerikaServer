@@ -15,6 +15,33 @@ require_once "{$enginePath}/lib/core/core_profiles.class.php";
 //function include from below file
 include(__DIR__."/tmpl/ui_utils.php");
 
+// Determine web root similar to oghma_upload
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$uiPos = strpos($scriptPath, '/ui/');
+if ($uiPos !== false) {
+    $webRoot = substr($scriptPath, 0, $uiPos);
+} else {
+    $webRoot = '';
+}
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
+
+// Site chrome
+require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+$TITLE = "👤 CHIM - Core Profiles";
+ob_start();
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+?>
+
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+
+<main>
+    <div id="toast" class="toast-notification">
+        <span class="message"></span>
+    </div>
+
+<?php
 $GLOBALS["db"]=new sql();
 
 $profiles = new CoreProfile();
@@ -63,9 +90,6 @@ $editItem = null;
 if (isset($_GET["edit"])) {
     $editItem = $profiles->getById($_GET["edit"]);
 }
-
-$pageTitle = "NPC Master";
-include("tmpl/header.php");
 ?>
 
 <h1>Core Profiles</h1>
@@ -76,7 +100,8 @@ include("tmpl/header.php");
     <h2 onclick='document.forms[0].style.display="block"'>Create New Profile</h2>
 <?php endif; ?>
 
-<form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?'':"display:none"?>'>
+<div class="form-container">
+<form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
@@ -87,16 +112,6 @@ include("tmpl/header.php");
     <label>Default NPC:</label><br>
     <label>
         <input type="radio" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
-        True
-    </label>
-    <label>
-        <input type="radio" name="default_npc" value="0" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 0 ? "checked" : "" ?>>
-        False
-    </label>
-    <br>
-    <label>Default Narrator:</label><br>
-    <label>
-        <input type="radio" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>>
         True
     </label>
     <label>
@@ -120,11 +135,13 @@ include("tmpl/header.php");
     <textarea name="metadata" style="display:none" placeholder="Metadata"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
     <div id="metadata"></div>
 
-    <input type="submit" name="<?= $editItem ? "update" : "create" ?>" value="<?= $editItem ? "Update" : "Create" ?>">
+    <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
 </form>
+</div>
 
 
 <h2>All Profiles</h2>
+<div class="table-container">
 <table>
     <thead>
         <tr>
@@ -159,17 +176,25 @@ include("tmpl/header.php");
                 <td><?= $diaryOptions[array_search($row["diary_connector_id"], array_column($diaryOptions, 'id'))]['label'] ?? '' ?></td>
                 <td><?= substr(htmlspecialchars($row["metadata"]),0,50) ?></td>
                 <td class="actions">
-                    <a href="?edit=<?= $row["id"] ?>">Edit</a>
-                    <a href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this profile?');">Delete</a>
-                    <a href="?clone=<?= $row["id"] ?>">Clone</a>
+                    <a class="action-button edit" href="?edit=<?= $row["id"] ?>">Edit</a>
+                    <a class="btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this profile?');">Delete</a>
+                    <a class="action-button" href="?clone=<?= $row["id"] ?>">Clone</a>
                 </td>
             </tr>
         <?php endforeach; ?>
     </tbody>
 </table>
-
-</body>
+</div>
 
 <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
 
-</html>
+</main>
+
+<?php
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/footer.html");
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>

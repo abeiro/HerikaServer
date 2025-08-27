@@ -11,14 +11,38 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 
 require_once("{$enginePath}/lib/core/npc_master.class.php");
 
-
 $CONF_SAMPLE_VARS=extract_assignments("$enginePath/conf/conf.php");
 
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from below file
 include(__DIR__."/tmpl/ui_utils.php");
 
+// Determine web root and include site chrome like oghma_upload
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$uiPos = strpos($scriptPath, '/ui/');
+if ($uiPos !== false) {
+    $webRoot = substr($scriptPath, 0, $uiPos);
+} else {
+    $webRoot = '';
+}
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
 
+require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+$TITLE = "🧙 CHIM - NPC Master";
+ob_start();
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+?>
+
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+
+<main>
+    <div id="toast" class="toast-notification">
+        <span class="message"></span>
+    </div>
+
+<?php
 $GLOBALS["db"] = new sql();
 $npc = new NpcMaster();
 
@@ -50,9 +74,6 @@ $editItem = null;
 if (isset($_GET["edit"])) {
     $editItem = $npc->getById($_GET["edit"]);
 }
-
-$pageTitle = "NPC Master";
-include("tmpl/header.php");
 ?>
 
 <h1>NPC Master</h1>
@@ -63,7 +84,8 @@ include("tmpl/header.php");
     <h2 onclick='document.forms[0].style.display="block"'>Create New NPC</h2>
 <?php endif; ?>
 
-<form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?'':"display:none"?>'>
+<div class="form-container">
+<form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
     <?php endif; ?>
@@ -151,10 +173,12 @@ include("tmpl/header.php");
     <textarea name="extended_data" style="display:none"><?= htmlspecialchars($editItem["extended_data"] ?? "") ?></textarea><br>
     <div id="extended_data"></div>
 
-    <input type="submit" name="<?= $editItem ? "update" : "create" ?>" value="<?= $editItem ? "Update" : "Create" ?>">
+    <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
 </form>
+</div>
 
 <h2>All NPCs</h2>
+<div class="table-container">
 <table id="npc_table">
     <thead>
         <tr>
@@ -188,22 +212,30 @@ include("tmpl/header.php");
             <td><?= htmlspecialchars($row["gamets_last_updated"]??"") ?></td>
             
             <td class="actions">
-                <a href="?edit=<?= $row["id"] ?>">Edit</a>
-                <a href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
-                <a href="?tag=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Tag</a>
+                <a class="action-button edit" href="?edit=<?= $row["id"] ?>">Edit</a>
+                <a class="btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
+                <a class="action-button" href="?tag=<?= $row["id"] ?>">Tag</a>
             </td>
         </tr>
     <?php endforeach; ?>
     </tbody>
 </table>
-
-</body>
-</html>
+</div>
 
 <?php
  // Provides a JSON editor for metadata field and form consolidation function (only needed if metadata field is present)
  include(__DIR__."/tmpl/metadata_json_editor.php");
 // Provides Datatables
  include(__DIR__."/tmpl/data_tables.php");
- ?>
-</html>
+?>
+
+</main>
+
+<?php
+include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/footer.html");
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>
