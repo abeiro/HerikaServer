@@ -22,8 +22,12 @@ if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
     if (is_array($tmp)) $metadataCurrent = $tmp;
 }
 
+// Show visual controls only on core_profiles page
+$currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
+$showVisual = ($currentScript === 'core_profiles.php');
+
 $visualKeysLookup = array_flip($visualKeys);
-$nonVisualCurrent = array_diff_key($metadataCurrent, $visualKeysLookup);
+$nonVisualCurrent = $showVisual ? array_diff_key($metadataCurrent, $visualKeysLookup) : $metadataCurrent;
 
 function renderMetaInput($key, $schema, $value) {
     $type = $schema["type"] ?? 'string';
@@ -98,18 +102,20 @@ function renderMetaInput($key, $schema, $value) {
 }
 ?>
 
-<div class="content-section" style="margin-bottom:10px;">
-    <h3 style="margin-top:0;">Profile Settings</h3>
-    <p style="margin-bottom:10px; color:#bbb">These common options are saved into Metadata automatically. Use the JSON editor below for advanced/custom edits.</p>
-    <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
-        <?php
-        foreach ($visualKeys as $k) {
-            $schemaEntry = $confSchema[$k] ?? [];
-            echo renderMetaInput($k, $schemaEntry, $metadataCurrent[$k] ?? '');
-        }
-        ?>
+<?php if ($showVisual): ?>
+    <div class="content-section" style="margin-bottom:10px;">
+        <h3 style="margin-top:0;">Profile Settings</h3>
+        <p style="margin-bottom:10px; color:#bbb">These common options are saved into Metadata automatically. Use the JSON editor below for advanced/custom edits.</p>
+        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+            <?php
+            foreach ($visualKeys as $k) {
+                $schemaEntry = $confSchema[$k] ?? [];
+                echo renderMetaInput($k, $schemaEntry, $metadataCurrent[$k] ?? '');
+            }
+            ?>
+        </div>
     </div>
-</div>
+<?php endif; ?>
  
 <script>
 let jsonEditor ;
@@ -129,6 +135,7 @@ function metaClamp(rangeId, numberId, min, max){
 }
 
 function consolidation() {
+    const SHOW_VISUAL = <?= $showVisual ? 'true' : 'false' ?>
     const VISUAL_KEYS = <?= json_encode($visualKeys, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>
     const content = jsonEditor.get()
     let base = {}
@@ -136,30 +143,41 @@ function consolidation() {
         base = content.json || {}
     } catch (idontcare) { base = {} }
 
-    // Remove any visual keys from JSON editor content to avoid duplication
-    VISUAL_KEYS.forEach(k => { if (k in base) delete base[k] })
+    // Remove any visual keys from JSON editor content to avoid duplication (only on core_profiles page)
+    if (SHOW_VISUAL) {
+        VISUAL_KEYS.forEach(k => { if (k in base) delete base[k] })
+    }
 
     // Collect visual fields (explicitly iterate over known keys to capture false for checkboxes)
     const form = document.getElementById('core_profile_form') || document.forms[0]
     const visual = {}
-    VISUAL_KEYS.forEach(key => {
-        // Boolean toggle uses hidden input
-        let inp = form.querySelector(`[name="meta_vis[${key}]"]`)
-        if (!inp) return
-        const tag = (inp.tagName || '').toLowerCase()
-        if (tag === 'input' && (inp.type === 'hidden' || inp.type === 'text' || inp.type === 'number')){
-            const v = inp.value
-            if (v !== '') visual[key] = (v === 'true') ? true : (v === 'false' ? false : v)
-        } else if (tag === 'textarea' || tag === 'select') {
-            const v = inp.value
-            if (v !== '') visual[key] = v
-        }
-    })
+    if (SHOW_VISUAL) {
+        VISUAL_KEYS.forEach(key => {
+            let inp = form.querySelector(`[name="meta_vis[${key}]"]`)
+            if (!inp) return
+            const tag = (inp.tagName || '').toLowerCase()
+            if (tag === 'input' && (inp.type === 'hidden' || inp.type === 'text' || inp.type === 'number' || inp.type === 'radio')){
+                let v
+                if (inp.type === 'radio') {
+                    const chk = form.querySelector(`[name="meta_vis[${key}]"]:checked`)
+                    v = chk ? chk.value : ''
+                } else {
+                    v = inp.value
+                }
+                if (v !== '') visual[key] = (v === 'true') ? true : (v === 'false' ? false : v)
+            } else if (tag === 'textarea' || tag === 'select') {
+                const v = inp.value
+                if (v !== '') visual[key] = v
+            }
+        })
+    }
 
     // Build ordered object: base first (non-visual), then visual keys appended
     const merged = {}
     Object.keys(base).forEach(k => { merged[k] = base[k] })
-    VISUAL_KEYS.forEach(k => { if (k in visual) merged[k] = visual[k] })
+    if (SHOW_VISUAL) {
+        VISUAL_KEYS.forEach(k => { if (k in visual) merged[k] = visual[k] })
+    }
 
     try {
         form.metadata.value = JSON.stringify(merged, null, 0)
