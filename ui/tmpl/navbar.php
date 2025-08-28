@@ -251,16 +251,9 @@ $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_
                         <li><h6 class="dropdown-header">Configuration Tools</h6></li>
                         <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php" title="Unified configuration hub with tabs.">
-                            Config Hub (NPC/LLM/Profiles/Keys)
+                            Config Hub
                         </a>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/npc_master.php" title="Manage NPC master data.">
-                            NPC Master
-                        </a>
-                        </li>
-                        
                         <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/conf_wizard.php">Configuration Wizard</a>
                         </li>
