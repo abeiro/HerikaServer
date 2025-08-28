@@ -86,6 +86,75 @@ if (isset($_GET["edit"])) {
     <h2 onclick='document.forms[0].style.display="block"'>Create New Connector</h2>
 <?php endif; ?>
 
+<div class="llm-layout">
+    <div class="llm-left">
+        <div class="list-filters">
+            <input id="llmlist_q" type="text" placeholder="Search connectors...">
+            <select id="llmlist_driver">
+                <option value="">All drivers</option>
+                <option value="openrouterjson">openrouterjson</option>
+                <option value="openaijson">openaijson</option>
+                <option value="google_openaijson">google_openaijson</option>
+                <option value="koboldcppjson">koboldcppjson</option>
+            </select>
+            <span id="llmlist_count" class="badge"></span>
+        </div>
+        <div id="llm_list" class="conn-list"></div>
+        <script>
+        (function(){
+            const RAW = <?= json_encode($data ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+            const ACTIVE_ID = <?= json_encode($_GET['edit'] ?? '') ?>;
+            const list = document.getElementById('llm_list');
+            const q = document.getElementById('llmlist_q');
+            const drv = document.getElementById('llmlist_driver');
+            const count = document.getElementById('llmlist_count');
+            function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+            function pass(row){
+                const qq=(q.value||'').toLowerCase();
+                const dd=(drv.value||'');
+                if (dd && String(row.driver)!==dd) return false;
+                if (qq){
+                    const hay=[row.label,row.provider,row.model,row.driver].map(v=>String(v||'').toLowerCase()).join('\n');
+                    if (!hay.includes(qq)) return false;
+                }
+                return true;
+            }
+            function render(){
+                const rows=(RAW||[]).filter(pass);
+                count.textContent = rows.length+" shown";
+                let html='';
+                rows.forEach(r=>{
+                    const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';
+                    html += `
+                        <div class="conn-li${active}" data-id="${String(r.id)}">
+                            <div class="head">
+                                <div class="title">${escapeHtml(r.label||('Connector #'+r.id))}</div>
+                                <div class="badge">${escapeHtml(r.driver||'')}</div>
+                            </div>
+                            <div class="sub">${escapeHtml(r.model||'')}</div>
+                            <div class="actions">
+                                <a class="btn-danger" href="?delete=${r.id}" onclick="return confirm('Are you sure you want to delete this connector?');">Delete</a>
+                                <a class="action-button" href="?clone=${r.id}">Clone</a>
+                            </div>
+                        </div>`;
+                });
+                list.innerHTML = html || '<div class="conn-li"><em>No connectors match filters.</em></div>';
+                // Make rows clickable to open editor, but ignore clicks on action links
+                list.querySelectorAll('.conn-li').forEach(li => {
+                    li.addEventListener('click', (ev) => {
+                        if (ev.target.closest('a')) return;
+                        const id = li.getAttribute('data-id');
+                        if (id) window.location.href = `?edit=${id}`;
+                    });
+                });
+            }
+            q.addEventListener('input', render);
+            drv.addEventListener('change', render);
+            render();
+        })();
+        </script>
+    </div>
+    <div class="llm-right">
 <div class="form-container wide-centered">
 <style>
 .wide-centered { max-width: 1100px; margin: 0 auto; }
@@ -106,6 +175,22 @@ if (isset($_GET["edit"])) {
 .orm-note { padding:6px 10px; font-size:12px; color:#97a6ba; border-bottom:1px dashed rgba(138,155,182,0.25); background:#0c0f14; }
 .orm-muted { color:#97a6ba; }
 .orm-err { color:#ff6b6b; padding:8px 10px; }
+/* Split layout: list left, editor right */
+.llm-layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; align-items:start; }
+@media (max-width: 1100px) { .llm-layout { grid-template-columns: 1fr; } }
+.llm-left { position: sticky; top: 72px; align-self:start; max-height: calc(100vh - 110px); overflow:auto; padding-right:4px; }
+.llm-right { min-width: 0; }
+.list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
+.list-filters input[type="text"]{ width: 100%; max-width: 260px; }
+.conn-list { display:flex; flex-direction:column; gap:8px; }
+.conn-li { border:1px solid rgba(138,155,182,0.35); background:#0d1117; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
+.conn-li:hover { background:#121826; transform: translateY(-1px); }
+.conn-li.active { outline:2px solid rgb(242,124,17); }
+.conn-li .head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.conn-li .title { font-weight:600; color:#e9efff; }
+.conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid rgba(138,155,182,0.4); border-radius:999px; color:#9fb1c9; }
+.conn-li .sub { font-size:12px; color:#9fb1c9; margin-top:3px; overflow-wrap:anywhere; }
+.conn-li .actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
 </style>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
@@ -227,6 +312,8 @@ if (isset($_GET["edit"])) {
 
     <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
 </form>
+</div>
+    </div>
 </div>
 
 <script>
@@ -643,37 +730,7 @@ function llmClamp(rangeId, numberId, min, max){
 })();
 </script>
 
-<h2>All LLM Connectors</h2>
-<div class="table-container">
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Label</th>
-            <th>Provider</th>
-            <th>Model</th>
-            <th>Driver</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($data as $row): ?>
-        <tr>
-            <td><?= $row["id"] ?></td>
-            <td><?= htmlspecialchars($row["label"]) ?></td>
-            <td><?= htmlspecialchars($row["provider"]) ?></td>
-            <td><?= htmlspecialchars($row["model"]) ?></td>
-            <td><?= htmlspecialchars($row["driver"]) ?></td>
-            <td class="actions">
-                <a class="action-button edit" href="?edit=<?= $row["id"] ?>">Edit</a>
-                <a class="btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this connector?');">Delete</a>
-                <a class="action-button" href="?clone=<?= $row["id"] ?>">Clone</a>
-            </td>
-        </tr>
-    <?php endforeach; ?>
-    </tbody>
-</table>
-</div>
+<!-- list/grid moved to left pane -->
 
 <?php
  // Provides a JSON editor for metadata field and form consolidation function (only needed if metadata field is present)
