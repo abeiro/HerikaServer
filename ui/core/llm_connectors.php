@@ -241,6 +241,7 @@ if (isset($_GET["edit"])) {
     const select = document.getElementById('service_select');
     const providerRow = document.getElementById('provider_row');
     const urlInput = document.querySelector('input[name="url"]');
+    const driverInput = document.querySelector('input[name="driver"]');
     const icons = document.querySelectorAll('.service-icon');
 
     function setActive(service){
@@ -249,10 +250,18 @@ if (isset($_GET["edit"])) {
         });
     }
 
+    const driverDefaults = {
+        openrouter: 'openrouterjson',
+        openai: 'openaijson',
+        google: 'google_openaijson',
+        kobold: 'koboldcppjson'
+    };
+
     function applyService(service){
         select.value = service;
         if (defaults[service]) urlInput.value = defaults[service];
         providerRow.style.display = (service === 'openrouter') ? '' : 'none';
+        if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service];
         setActive(service);
     }
 
