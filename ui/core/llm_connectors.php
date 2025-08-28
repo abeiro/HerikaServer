@@ -369,6 +369,9 @@ function llmClamp(rangeId, numberId, min, max){
             el.addEventListener('click', () => {
                 const id = el.getAttribute('data-id') || '';
                 modelInput.value = id;
+                // notify listeners (e.g., provider auto-fill)
+                try { modelInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+                try { modelInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
                 closeDropdown();
             });
         });
@@ -433,6 +436,178 @@ function llmClamp(rangeId, numberId, min, max){
 
     // Close dropdown when service changes
     serviceSelect.addEventListener('change', () => { closeDropdown(); });
+})();
+</script>
+
+<script>
+// OpenRouter providers dropdown for Provider textbox + auto-fill from model
+(function(){
+    const serviceSelect = document.getElementById('service_select');
+    const providerInput = document.querySelector('input[name="provider"]');
+    const modelInput = document.querySelector('input[name="model"]');
+    if (!serviceSelect || !providerInput || !modelInput) return;
+
+    let providersCache = null;
+    let dropdown = null;
+    let isOpen = false;
+
+    function ensureDropdown(){
+        if (dropdown) return dropdown;
+        dropdown = document.createElement('div');
+        dropdown.className = 'orm-dropdown';
+        document.body.appendChild(dropdown);
+        dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); });
+        return dropdown;
+    }
+
+    function positionDropdown(){
+        const rect = providerInput.getBoundingClientRect();
+        const style = dropdown.style;
+        style.left = (rect.left + window.scrollX) + 'px';
+        style.top = (rect.bottom + window.scrollY + 4) + 'px';
+        style.width = rect.width + 'px';
+        style.display = 'block';
+        isOpen = true;
+    }
+
+    function closeDropdown(){
+        if (!dropdown) return;
+        dropdown.style.display = 'none';
+        isOpen = false;
+    }
+
+    function escapeHtml(s){
+        return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    }
+    function encodeHtmlAttr(s){
+        return (s==null? '': String(s)).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function renderList(items, filterText, relevantSlugs){
+        ensureDropdown();
+        const q = (filterText || '').toLowerCase();
+        const slugAllow = Array.isArray(relevantSlugs) ? new Set(relevantSlugs.filter(Boolean)) : null;
+        const filteredByRelevance = (items || []).filter(p => {
+            if (slugAllow && slugAllow.size>0) return slugAllow.has((p.slug||''));
+            return true;
+        });
+        const list = filteredByRelevance.filter(p => {
+            if (!q) return true;
+            const slug = (p.slug || '').toLowerCase();
+            const name = (p.name || '').toLowerCase();
+            return slug.includes(q) || name.includes(q);
+        });
+
+        let html = '';
+        html += '<div class="orm-head">OpenRouter Providers</div>';
+        html += '<div class="orm-note">Click to select. Value set to provider slug.</div>';
+
+        if (list.length === 0){
+            const hasRelevantFilter = (slugAllow && slugAllow.size>0);
+            const note = hasRelevantFilter ? 'No relevant providers for the selected model.' : 'No matches';
+            html += `<div class="orm-muted" style="padding:8px 10px;">${note}</div>`;
+        } else {
+            list.forEach(p => {
+                const name = p.name ? ` — ${escapeHtml(p.name)}` : '';
+                html += `<div class=\"orm-item\" data-slug=\"${encodeHtmlAttr(p.slug)}\" title=\"${encodeHtmlAttr(p.name||p.slug)}\">`+
+                        `<div>${escapeHtml(p.slug)}${name}</div>`+
+                        `<div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">`+
+                        `${p.privacy_policy_url? 'Privacy: '+escapeHtml(p.privacy_policy_url): ''}`+
+                        `${p.terms_of_service_url? (p.privacy_policy_url? ' • ': '')+'TOS: '+escapeHtml(p.terms_of_service_url): ''}`+
+                        `</div>`+
+                    `</div>`;
+            });
+        }
+
+        dropdown.innerHTML = html;
+        dropdown.querySelectorAll('.orm-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const slug = el.getAttribute('data-slug') || '';
+                providerInput.value = slug;
+                try { providerInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+                try { providerInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                closeDropdown();
+            });
+        });
+
+        positionDropdown();
+    }
+
+    async function loadProviders(){
+        if (providersCache) return providersCache;
+        ensureDropdown();
+        dropdown.innerHTML = '<div class="orm-head">OpenRouter Providers</div><div class="orm-note">Loading…</div>';
+        positionDropdown();
+        try {
+            const res = await fetch('https://openrouter.ai/api/v1/providers');
+            if (!res.ok) throw new Error('HTTP '+res.status);
+            const json = await res.json();
+            const data = Array.isArray(json && json.data) ? json.data : [];
+            providersCache = data.map(p => ({
+                name: p.name || '',
+                slug: p.slug || '',
+                privacy_policy_url: p.privacy_policy_url || '',
+                terms_of_service_url: p.terms_of_service_url || '',
+                status_page_url: p.status_page_url || ''
+            })).filter(p => p.slug);
+            providersCache.sort((a,b)=> (a.slug||'').localeCompare(b.slug||''));
+            return providersCache;
+        } catch (e) {
+            dropdown.innerHTML = '<div class="orm-head">OpenRouter Providers</div><div class="orm-err">Failed to load providers. Check network/CORS.</div>';
+            positionDropdown();
+            throw e;
+        }
+    }
+
+    function getRelevantProviderSlugs(){
+        const val = (modelInput.value || '').trim();
+        const ix = val.indexOf('/');
+        if (ix > 0){
+            const slug = val.slice(0, ix).trim();
+            if (slug) return [slug];
+        }
+        return [];
+    }
+
+    async function maybeOpenDropdown(){
+        if (serviceSelect.value !== 'openrouter') return;
+        try {
+            const items = await loadProviders();
+            renderList(items, providerInput.value, getRelevantProviderSlugs());
+        } catch (_e) {}
+    }
+
+    function extractProviderSlugFromModel(val){
+        if (!val) return '';
+        const s = String(val);
+        const ix = s.indexOf('/');
+        if (ix <= 0) return '';
+        return s.slice(0, ix).trim();
+    }
+
+    // Auto-fill provider when model looks like "provider/model"
+    function maybeAutofillProvider(){
+        if (serviceSelect.value !== 'openrouter') return;
+        const slug = extractProviderSlugFromModel(modelInput.value);
+        if (!slug) return;
+        providerInput.value = slug;
+        try { providerInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+        try { providerInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+    }
+
+    // Events
+    providerInput.addEventListener('focus', () => { if (serviceSelect.value==='openrouter') maybeOpenDropdown(); });
+    providerInput.addEventListener('click', () => { if (serviceSelect.value==='openrouter') maybeOpenDropdown(); });
+    providerInput.addEventListener('input', () => { if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
+    providerInput.addEventListener('blur', () => { setTimeout(closeDropdown, 120); });
+    window.addEventListener('resize', () => { if (isOpen) positionDropdown(); });
+    window.addEventListener('scroll', () => { if (isOpen) positionDropdown(); }, true);
+    document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeDropdown(); });
+    serviceSelect.addEventListener('change', () => { closeDropdown(); });
+
+    // Hook model changes
+    modelInput.addEventListener('change', () => { maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
+    modelInput.addEventListener('input', () => { maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
 })();
 </script>
 
