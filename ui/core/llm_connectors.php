@@ -97,6 +97,15 @@ if (isset($_GET["edit"])) {
 .service-icons { display:flex; gap:8px; align-items:center; }
 .service-icon { width:56px; height:56px; border:1px solid rgba(138,155,182,0.3); border-radius:8px; cursor:pointer; opacity:0.8; }
 .service-icon.active { outline:2px solid rgb(242,124,17); opacity:1; }
+/* OpenRouter model dropdown */
+.orm-dropdown { position:absolute; z-index: 9999; max-height: 360px; overflow:auto; background:#111; border:1px solid rgba(138,155,182,0.3); border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); display:none; }
+.orm-item { padding:8px 10px; cursor:pointer; border-bottom:1px solid rgba(138,155,182,0.15); }
+.orm-item:last-child { border-bottom:none; }
+.orm-item:hover { background:#1a1f29; }
+.orm-head { padding:8px 10px; font-weight:bold; position:sticky; top:0; background:#0c0f14; border-bottom:1px solid rgba(138,155,182,0.3); }
+.orm-note { padding:6px 10px; font-size:12px; color:#97a6ba; border-bottom:1px dashed rgba(138,155,182,0.25); background:#0c0f14; }
+.orm-muted { color:#97a6ba; }
+.orm-err { color:#ff6b6b; padding:8px 10px; }
 </style>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
@@ -277,6 +286,154 @@ function llmClamp(rangeId, numberId, min, max){
     n.value = v
     r.value = v
 }
+</script>
+
+<script>
+// OpenRouter models dropdown for Model textbox
+(function(){
+    const serviceSelect = document.getElementById('service_select');
+    const modelInput = document.querySelector('input[name="model"]');
+    if (!serviceSelect || !modelInput) return;
+
+    let cache = null; // cached models
+    let dropdown = null;
+    let isOpen = false;
+
+    function ensureDropdown(){
+        if (dropdown) return dropdown;
+        dropdown = document.createElement('div');
+        dropdown.className = 'orm-dropdown';
+        document.body.appendChild(dropdown);
+        // Prevent blur-close when clicking inside
+        dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); });
+        return dropdown;
+    }
+
+    function positionDropdown(){
+        const rect = modelInput.getBoundingClientRect();
+        const style = dropdown.style;
+        style.left = (rect.left + window.scrollX) + 'px';
+        style.top = (rect.bottom + window.scrollY + 4) + 'px';
+        style.width = rect.width + 'px';
+        style.display = 'block';
+        isOpen = true;
+    }
+
+    function closeDropdown(){
+        if (!dropdown) return;
+        dropdown.style.display = 'none';
+        isOpen = false;
+    }
+
+    function formatPrice(n){
+        if (n === undefined || n === null || n === '' || isNaN(parseFloat(n))) return 'N/A';
+        const perTok = parseFloat(n);
+        const perK = perTok * 1000.0;
+        return '$' + perK.toFixed(4) + ' / 1K tok';
+    }
+
+    function renderList(models, filterText){
+        ensureDropdown();
+        const q = (filterText || '').toLowerCase();
+        const list = (models || []).filter(m => {
+            if (!q) return true;
+            const id = (m.id || '').toLowerCase();
+            const name = (m.name || '').toLowerCase();
+            return id.includes(q) || name.includes(q);
+        });
+
+        let html = '';
+        html += '<div class="orm-head">OpenRouter Models</div>';
+        html += '<div class="orm-note">Click to select. Pricing shown per 1K tokens (prompt/completion).</div>';
+
+        if (list.length === 0){
+            html += '<div class="orm-muted" style="padding:8px 10px;">No matches</div>';
+        } else {
+            list.forEach(m => {
+                const prompt = formatPrice(m.pricing && m.pricing.prompt);
+                const completion = formatPrice(m.pricing && m.pricing.completion);
+                const ctx = (m.top_provider && m.top_provider.context_length) || m.context_length || '';
+                const name = m.name ? ' — ' + escapeHtml(m.name) : '';
+                const line = `${escapeHtml(m.id)}${name}`;
+                const sub = `Pricing: ${prompt} • ${completion}` + (ctx? ` • ctx ${ctx}` : '');
+                html += `<div class="orm-item" data-id="${encodeHtmlAttr(m.id)}" title="${encodeHtmlAttr(m.description||m.name||m.id)}">`+
+                        `<div>${line}</div>`+
+                        `<div class="orm-muted" style="font-size:12px; margin-top:2px;">${sub}</div>`+
+                    `</div>`;
+            });
+        }
+
+        dropdown.innerHTML = html;
+        // Attach click handlers
+        dropdown.querySelectorAll('.orm-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const id = el.getAttribute('data-id') || '';
+                modelInput.value = id;
+                closeDropdown();
+            });
+        });
+
+        positionDropdown();
+    }
+
+    function escapeHtml(s){
+        return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    }
+    function encodeHtmlAttr(s){
+        return (s==null? '': String(s)).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    async function loadModels(){
+        if (cache) return cache;
+        ensureDropdown();
+        dropdown.innerHTML = '<div class="orm-head">OpenRouter Models</div><div class="orm-note">Loading…</div>';
+        positionDropdown();
+        try {
+            const res = await fetch('https://openrouter.ai/api/v1/models');
+            if (!res.ok) throw new Error('HTTP '+res.status);
+            const json = await res.json();
+            const data = Array.isArray(json && json.data) ? json.data : [];
+            // Normalize important fields
+            cache = data.map(m => ({
+                id: m.id || m.canonical_slug || '',
+                name: m.name || '',
+                pricing: m.pricing || {},
+                top_provider: m.top_provider || {},
+                context_length: m.context_length || undefined,
+                description: m.description || ''
+            }));
+            // Sort by name then id
+            cache.sort((a,b)=> (a.name||'').localeCompare(b.name||'') || (a.id||'').localeCompare(b.id||''));
+            return cache;
+        } catch (e) {
+            dropdown.innerHTML = '<div class="orm-head">OpenRouter Models</div><div class="orm-err">Failed to load models. Check network/CORS.</div>';
+            positionDropdown();
+            throw e;
+        }
+    }
+
+    async function maybeOpenDropdown(){
+        if (serviceSelect.value !== 'openrouter') return;
+        try {
+            const models = await loadModels();
+            renderList(models, modelInput.value);
+        } catch (_e) {
+            // already rendered error in dropdown
+        }
+    }
+
+    // Events
+    modelInput.addEventListener('focus', () => { if (serviceSelect.value==='openrouter') maybeOpenDropdown(); });
+    modelInput.addEventListener('click', () => { if (serviceSelect.value==='openrouter') maybeOpenDropdown(); });
+    modelInput.addEventListener('input', () => { if (isOpen && cache) renderList(cache, modelInput.value); });
+    modelInput.addEventListener('blur', () => { setTimeout(closeDropdown, 120); });
+    window.addEventListener('resize', () => { if (isOpen) positionDropdown(); });
+    window.addEventListener('scroll', () => { if (isOpen) positionDropdown(); }, true);
+    document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeDropdown(); });
+
+    // Close dropdown when service changes
+    serviceSelect.addEventListener('change', () => { closeDropdown(); });
+})();
 </script>
 
 <h2>All LLM Connectors</h2>
