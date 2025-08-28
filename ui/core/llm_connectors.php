@@ -242,6 +242,7 @@ if (isset($_GET["edit"])) {
     const providerRow = document.getElementById('provider_row');
     const urlInput = document.querySelector('input[name="url"]');
     const driverInput = document.querySelector('input[name="driver"]');
+    const apiBadgeSelect = document.getElementById('api_badge_id');
     const icons = document.querySelectorAll('.service-icon');
 
     function setActive(service){
@@ -257,11 +258,33 @@ if (isset($_GET["edit"])) {
         kobold: 'koboldcppjson'
     };
 
+    const apiBadgeLabelMatch = {
+        openrouter: ['openrouter'],
+        openai: ['openai'],
+        google: ['google']
+        // kobold intentionally omitted (no API key)
+    };
+
+    function syncApiBadge(service){
+        if (!apiBadgeSelect) return;
+        if (service === 'kobold') { apiBadgeSelect.value = ''; return; }
+        const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase());
+        if (targets.length === 0) return;
+        let selectedVal = '';
+        for (let i = 0; i < apiBadgeSelect.options.length; i++) {
+            const opt = apiBadgeSelect.options[i];
+            const label = (opt.textContent || opt.innerText || '').toLowerCase();
+            if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; }
+        }
+        if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = '';
+    }
+
     function applyService(service){
         select.value = service;
         if (defaults[service]) urlInput.value = defaults[service];
         providerRow.style.display = (service === 'openrouter') ? '' : 'none';
         if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service];
+        syncApiBadge(service);
         setActive(service);
     }
 
