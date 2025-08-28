@@ -10,6 +10,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 require_once "{$enginePath}/lib/core/core_profiles.class.php";
+require_once "{$enginePath}/lib/core/llm_connector.class.php";
 
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from below file
@@ -105,6 +106,43 @@ if (isset($_GET["delete"])) {
     exit;
 }
 
+// Inline update handler for LLM connectors (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connector"])) {
+    header('Content-Type: application/json');
+    try {
+        $llm = new LLMConnector();
+        $id = intval($_POST['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
+
+        $allowed = [
+            'label','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema'
+        ];
+        $data = [];
+        foreach ($allowed as $k) {
+            if (!array_key_exists($k, $_POST)) continue;
+            $v = $_POST[$k];
+            if (in_array($k, ['enforce_json','prefill_json','reasoning_model','json_schema'], true)) {
+                $data[$k] = ($v==='1' || $v==='true' || $v===1) ? 1 : 0;
+            } else if (in_array($k, ['max_tokens','top_k'], true)) {
+                $data[$k] = ($v === '' ? null : intval($v));
+            } else if (in_array($k, ['temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','min_p','top_a'], true)) {
+                $data[$k] = ($v === '' ? null : floatval($v));
+            } else {
+                $data[$k] = ($v === '' ? null : $v);
+            }
+        }
+        $ok = $llm->update($id, $data);
+        if ($ok === false) {
+            echo json_encode(["ok"=>false, "error"=>($llm->getLastError() ?: 'Update failed')]);
+        } else {
+            echo json_encode(["ok"=>true]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
 // Add a new action for cloning a connector
 if (isset($_GET["clone"])) {
     $profiles->clone($_GET["clone"]);
@@ -154,6 +192,7 @@ if (isset($_GET["edit"])) {
     $llmRows = $GLOBALS["db"]->fetchAll("SELECT c.*, b.label AS api_badge_label FROM core_llm_connector c LEFT JOIN core_api_badge b ON b.id=c.api_badge_id ORDER BY c.id ASC");
     $ttsRows = $GLOBALS["db"]->fetchAll("SELECT t.*, b.label AS api_badge_label FROM core_tts_connector t LEFT JOIN core_api_badge b ON b.id=t.api_badge_id ORDER BY t.id ASC");
     $ittRows = $GLOBALS["db"]->fetchAll("SELECT * FROM core_itt_connector ORDER BY id ASC");
+    $apiBadgeRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_api_badge ORDER BY id ASC");
 
     $byId = function($rows){
         $out = [];
@@ -179,27 +218,27 @@ if (isset($_GET["edit"])) {
         <div class="connector-card">
             <div class="connector-title">Diary Connector</div>
             <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
-            <div id="preview_diary_connector_id"></div>
+            <div class="inline-editor" id="editor_diary_connector_id" style="margin-top:8px;"></div>
         </div>
         <div class="connector-card">
             <div class="connector-title">LLM Primary</div>
             <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
-            <div id="preview_llm_primary_id"></div>
+            <div class="inline-editor" id="editor_llm_primary_id" style="margin-top:8px;"></div>
         </div>
         <div class="connector-card">
             <div class="connector-title">LLM Secondary</div>
             <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
-            <div id="preview_llm_secondary_id"></div>
+            <div class="inline-editor" id="editor_llm_secondary_id" style="margin-top:8px;"></div>
         </div>
         <div class="connector-card">
             <div class="connector-title">LLM Tertiary</div>
             <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
-            <div id="preview_llm_tertiary_id"></div>
+            <div class="inline-editor" id="editor_llm_tertiary_id" style="margin-top:8px;"></div>
         </div>
         <div class="connector-card">
             <div class="connector-title">LLM Quaternary</div>
             <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
-            <div id="preview_llm_quaternary_id"></div>
+            <div class="inline-editor" id="editor_llm_quaternary_id" style="margin-top:8px;"></div>
         </div>
     </div>
 
@@ -230,47 +269,210 @@ if (isset($_GET["edit"])) {
         return html;
     }
 
-    function updatePreview(selectId, containerId, type){
-        const sel = document.getElementById(selectId);
+    function renderEditor(containerId, conn, type){
         const container = document.getElementById(containerId);
-        if (!sel || !container) return;
-        const id = sel.value || '';
-        if (type==='tts'){
-            const o = TTS_DETAILS[id];
-            container.innerHTML = renderKVList(o, ['label','driver','url','voice_field','api_badge_label'], ['Label','Driver','URL','Voice Field','API Badge']);
-        } else if (type==='itt'){
-            const o = ITT_DETAILS[id];
-            container.innerHTML = renderKVList(o, ['label','driver','metadata'], ['Label','Driver','Metadata']);
-        } else if (type==='llm'){
-            const o = LLM_DETAILS[id];
-            container.innerHTML = renderKVList(o, ['label','provider','model','driver','url','api_badge_label','temperature','max_tokens','enforce_json','prefill_json','reasoning_model'], ['Label','Provider','Model','Driver','URL','API Badge','Temperature','Max Tokens','Enforce JSON','Prefill JSON','Reasoning Model']);
+        if (!container) return;
+        if (!conn) { container.innerHTML = '<em style="color:#888">No connector selected.</em>'; return; }
+        const bool = v => (v==1||v===true||v==='1') ? 'checked' : '';
+        const val = k => (conn[k]===null||conn[k]===undefined? '' : String(conn[k]));
+        if (type==='llm'){
+            container.innerHTML = `
+                <div style="display:grid; grid-template-columns: 180px 1fr; gap:6px; align-items:center;">
+                    <div>Label</div><input name="label" value="${escapeHtml(val('label'))}">
+                    <div>URL</div><input name="url" value="${escapeHtml(val('url'))}">
+                    <div>Provider</div><input name="provider" value="${escapeHtml(val('provider'))}">
+                    <div>Model</div><input name="model" value="${escapeHtml(val('model'))}">
+                    <div>Driver</div><input name="driver" value="${escapeHtml(val('driver'))}">
+                    <div>API Badge</div>${renderApiBadgeSelect('api_badge_id', val('api_badge_id'))}
+                    <div>Temperature</div><input name="temperature" type="number" step="0.01" value="${escapeHtml(val('temperature'))}">
+                    <div>Max Tokens</div><input name="max_tokens" type="number" step="1" value="${escapeHtml(val('max_tokens'))}">
+                    <div>Presence Penalty</div><input name="presence_penalty" type="number" step="0.01" value="${escapeHtml(val('presence_penalty'))}">
+                    <div>Frequency Penalty</div><input name="frequency_penalty" type="number" step="0.01" value="${escapeHtml(val('frequency_penalty'))}">
+                    <div>Repetition Penalty</div><input name="repetition_penalty" type="number" step="0.01" value="${escapeHtml(val('repetition_penalty'))}">
+                    <div>top_p</div><input name="top_p" type="number" step="0.01" value="${escapeHtml(val('top_p'))}">
+                    <div>top_k</div><input name="top_k" type="number" step="1" value="${escapeHtml(val('top_k'))}">
+                    <div>min_p</div><input name="min_p" type="number" step="0.01" value="${escapeHtml(val('min_p'))}">
+                    <div>top_a</div><input name="top_a" type="number" step="0.01" value="${escapeHtml(val('top_a'))}">
+                    <div>Enforce JSON</div><input name="enforce_json" type="checkbox" value="1" ${bool(conn.enforce_json)}>
+                    <div>Prefill JSON</div><input name="prefill_json" type="checkbox" value="1" ${bool(conn.prefill_json)}>
+                    <div>Reasoning Model</div><input name="reasoning_model" type="checkbox" value="1" ${bool(conn.reasoning_model)}>
+                    <div>JSON Schema</div><input name="json_schema" type="checkbox" value="1" ${bool(conn.json_schema)}>
+                </div>
+                <div style="margin-top:8px; display:flex; gap:8px;">
+                    <button type="button" class="action-button save">Save</button>
+                </div>
+            `;
+        } else if (type==='itt' || type==='diary'){
+            container.innerHTML = `
+                <div style=\"display:grid; grid-template-columns: 180px 1fr; gap:6px; align-items:center;\">
+                    <div>Label</div><input name=\"label\" value=\"${escapeHtml(val('label'))}\">
+                    <div>Driver</div><input name=\"driver\" value=\"${escapeHtml(val('driver'))}\">
+                    <div>Metadata</div><input name=\"metadata\" value=\"${escapeHtml(val('metadata'))}\">
+                </div>
+                <div style=\"margin-top:8px; display:flex; gap:8px;\">
+                    <button type=\"button\" class=\"action-button save\">Save</button>
+                </div>
+            `;
+        } else if (type==='tts'){
+            container.innerHTML = `
+                <div style=\"display:grid; grid-template-columns: 180px 1fr; gap:6px; align-items:center;\">
+                    <div>Label</div><input name=\"label\" value=\"${escapeHtml(val('label'))}\">
+                    <div>Driver</div><input name=\"driver\" value=\"${escapeHtml(val('driver'))}\">
+                    <div>URL</div><input name=\"url\" value=\"${escapeHtml(val('url'))}\">
+                    <div>Voice Field</div><input name=\"voice_field\" value=\"${escapeHtml(val('voice_field'))}\">
+                    <div>API Badge</div>${renderApiBadgeSelect('api_badge_id', val('api_badge_id'))}
+                </div>
+                <div style=\"margin-top:8px; display:flex; gap:8px;\">
+                    <button type=\"button\" class=\"action-button save\">Save</button>
+                </div>
+            `;
         }
     }
 
-    function initConnectorPreviews(){
-        updatePreview('tts_connector_id','preview_tts_connector_id','tts');
-        updatePreview('itt_connector_id','preview_itt_connector_id','itt');
-        updatePreview('diary_connector_id','preview_diary_connector_id','llm');
-        updatePreview('llm_primary_id','preview_llm_primary_id','llm');
-        updatePreview('llm_secondary_id','preview_llm_secondary_id','llm');
-        updatePreview('llm_tertiary_id','preview_llm_tertiary_id','llm');
-        updatePreview('llm_quaternary_id','preview_llm_quaternary_id','llm');
+    function renderApiBadgeSelect(name, selected){
+        const options = <?= json_encode($apiBadgeRows ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+        let html = `<select name="${name}"><option value="">-- Select API Badge --</option>`;
+        options.forEach(o => {
+            const sel = String(o.id) === String(selected) ? ' selected' : '';
+            html += `<option value="${String(o.id)}"${sel}>${escapeHtml(o.label)}</option>`;
+        });
+        html += '</select>';
+        return html;
+    }
+
+    function wireEditorSave(editorEl, id, type){
+        const saveBtn = editorEl.querySelector('button.save');
+        if (!saveBtn) return;
+        saveBtn.addEventListener('click', async ()=>{
+            const formData = new FormData();
+            formData.append('inline_update_connector','1');
+            formData.append('id', id);
+            editorEl.querySelectorAll('input,select,textarea').forEach(inp=>{
+                const n = inp.name; if (!n) return;
+                if (inp.type==='checkbox') formData.append(n, inp.checked ? '1' : '0'); else formData.append(n, inp.value);
+            });
+            const res = await fetch('core_profiles.php', { method:'POST', body: formData });
+            let json = {}; try { json = await res.json(); } catch(_){}
+            if (!json.ok){ alert('Save failed: '+(json.error||res.status)); return; }
+            const updated = Object.fromEntries(Array.from(formData.entries()).filter(([k])=>k!=='inline_update_connector'&&k!=='id'));
+            // Merge back into correct cache
+            if (type==='llm') Object.assign(LLM_DETAILS[id] = (LLM_DETAILS[id]||{}), updated);
+            if (type==='tts') Object.assign(TTS_DETAILS[id] = (TTS_DETAILS[id]||{}), updated);
+            if (type==='itt') Object.assign(ITT_DETAILS[id] = (ITT_DETAILS[id]||{}), updated);
+            // No separate preview; editor is the source of truth
+        });
+    }
+
+    function refreshEditorFor(selectId, containerId, type){
+        const sel = document.getElementById(selectId);
+        const id = sel ? (sel.value||'') : '';
+        let conn = null;
+        if (type==='llm') conn = LLM_DETAILS[id];
+        else if (type==='tts') conn = TTS_DETAILS[id];
+        else if (type==='itt') conn = ITT_DETAILS[id];
+        renderEditor(containerId, conn, type);
+        const editorEl = document.getElementById(containerId);
+        if (editorEl) wireEditorSave(editorEl, id, type);
+    }
+
+    function initInlineEditors(){
+        refreshEditorFor('tts_connector_id','preview_tts_connector_id','tts');
+        refreshEditorFor('itt_connector_id','preview_itt_connector_id','itt');
+        refreshEditorFor('diary_connector_id','editor_diary_connector_id','llm');
+        refreshEditorFor('llm_primary_id','editor_llm_primary_id','llm');
+        refreshEditorFor('llm_secondary_id','editor_llm_secondary_id','llm');
+        refreshEditorFor('llm_tertiary_id','editor_llm_tertiary_id','llm');
+        refreshEditorFor('llm_quaternary_id','editor_llm_quaternary_id','llm');
 
         ['tts_connector_id','itt_connector_id','diary_connector_id','llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id'].forEach(id=>{
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', ()=>{
-                if (id==='tts_connector_id') updatePreview(id,'preview_tts_connector_id','tts');
-                else if (id==='itt_connector_id') updatePreview(id,'preview_itt_connector_id','itt');
-                else if (id==='diary_connector_id') updatePreview(id,'preview_diary_connector_id','llm');
-                else if (id==='llm_primary_id') updatePreview(id,'preview_llm_primary_id','llm');
-                else if (id==='llm_secondary_id') updatePreview(id,'preview_llm_secondary_id','llm');
-                else if (id==='llm_tertiary_id') updatePreview(id,'preview_llm_tertiary_id','llm');
-                else if (id==='llm_quaternary_id') updatePreview(id,'preview_llm_quaternary_id','llm');
+                if (id==='tts_connector_id') refreshEditorFor(id,'preview_tts_connector_id','tts');
+                else if (id==='itt_connector_id') refreshEditorFor(id,'preview_itt_connector_id','itt');
+                else if (id==='diary_connector_id') refreshEditorFor(id,'editor_diary_connector_id','llm');
+                else if (id==='llm_primary_id') refreshEditorFor(id,'editor_llm_primary_id','llm');
+                else if (id==='llm_secondary_id') refreshEditorFor(id,'editor_llm_secondary_id','llm');
+                else if (id==='llm_tertiary_id') refreshEditorFor(id,'editor_llm_tertiary_id','llm');
+                else if (id==='llm_quaternary_id') refreshEditorFor(id,'editor_llm_quaternary_id','llm');
             });
         });
     }
 
-    document.addEventListener('DOMContentLoaded', initConnectorPreviews);
+    document.addEventListener('DOMContentLoaded', initInlineEditors);
+
+    // Inline editor for LLM connectors
+    function buildInlineEditorHTML(conn){
+        if (!conn) return '<em style="color:#888">No connector selected.</em>';
+        const bool = v => (v==1||v===true||v==='1') ? 'checked' : '';
+        const val = k => (conn[k]===null||conn[k]===undefined? '' : String(conn[k]));
+        return `
+            <div style="display:grid; grid-template-columns: 160px 1fr; gap:6px; align-items:center;">
+                <div>Label</div><input name="label" value="${escapeHtml(val('label'))}">
+                <div>URL</div><input name="url" value="${escapeHtml(val('url'))}">
+                <div>Provider</div><input name="provider" value="${escapeHtml(val('provider'))}">
+                <div>Model</div><input name="model" value="${escapeHtml(val('model'))}">
+                <div>Driver</div><input name="driver" value="${escapeHtml(val('driver'))}">
+                <div>Temperature</div><input name="temperature" type="number" step="0.01" value="${escapeHtml(val('temperature'))}">
+                <div>Max Tokens</div><input name="max_tokens" type="number" step="1" value="${escapeHtml(val('max_tokens'))}">
+                <div>Presence Penalty</div><input name="presence_penalty" type="number" step="0.01" value="${escapeHtml(val('presence_penalty'))}">
+                <div>Frequency Penalty</div><input name="frequency_penalty" type="number" step="0.01" value="${escapeHtml(val('frequency_penalty'))}">
+                <div>Repetition Penalty</div><input name="repetition_penalty" type="number" step="0.01" value="${escapeHtml(val('repetition_penalty'))}">
+                <div>top_p</div><input name="top_p" type="number" step="0.01" value="${escapeHtml(val('top_p'))}">
+                <div>top_k</div><input name="top_k" type="number" step="1" value="${escapeHtml(val('top_k'))}">
+                <div>min_p</div><input name="min_p" type="number" step="0.01" value="${escapeHtml(val('min_p'))}">
+                <div>top_a</div><input name="top_a" type="number" step="0.01" value="${escapeHtml(val('top_a'))}">
+                <div>Enforce JSON</div><input name="enforce_json" type="checkbox" value="1" ${bool(conn.enforce_json)}>
+                <div>Prefill JSON</div><input name="prefill_json" type="checkbox" value="1" ${bool(conn.prefill_json)}>
+                <div>Reasoning Model</div><input name="reasoning_model" type="checkbox" value="1" ${bool(conn.reasoning_model)}>
+                <div>JSON Schema</div><input name="json_schema" type="checkbox" value="1" ${bool(conn.json_schema)}>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px;">
+                <button type="button" class="action-button save">Save</button>
+                <button type="button" class="btn-secondary cancel">Cancel</button>
+            </div>
+        `;
+    }
+
+    function escapeHtml(s){
+        return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    }
+
+    function openInlineEditor(selectId){
+        const sel = document.getElementById(selectId);
+        const editor = document.getElementById('inline_'+selectId);
+        if (!sel || !editor) return;
+        const id = sel.value || '';
+        const conn = LLM_DETAILS[id];
+        editor.innerHTML = buildInlineEditorHTML(conn);
+        editor.style.display = 'block';
+
+        const saveBtn = editor.querySelector('button.save');
+        const cancelBtn = editor.querySelector('button.cancel');
+        if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ editor.style.display='none'; editor.innerHTML=''; });
+        if (saveBtn) saveBtn.addEventListener('click', async ()=>{
+            const formData = new FormData();
+            formData.append('inline_update_connector','1');
+            formData.append('id', id);
+            editor.querySelectorAll('input').forEach(inp=>{
+                const n = inp.name; if (!n) return;
+                if (inp.type==='checkbox') formData.append(n, inp.checked ? '1' : '0'); else formData.append(n, inp.value);
+            });
+            const res = await fetch('core_profiles.php', { method:'POST', body: formData });
+            let json = {};
+            try { json = await res.json(); } catch (_) {}
+            if (!json.ok){ alert('Save failed: '+(json.error||res.status)); return; }
+            // Update local cache and preview
+            const updated = Object.fromEntries(Array.from(formData.entries()).filter(([k])=>k!=='inline_update_connector'&&k!=='id'));
+            Object.assign(LLM_DETAILS[id] = (LLM_DETAILS[id]||{}), updated);
+            updatePreview(selectId, 'preview_'+selectId, 'llm');
+            editor.style.display='none'; editor.innerHTML='';
+        });
+    }
+
+    document.querySelectorAll('button[data-edit-for]').forEach(btn=>{
+        btn.addEventListener('click', ()=> openInlineEditor(btn.getAttribute('data-edit-for')));
+    });
+    </script>
     </script>
 
     </form>
