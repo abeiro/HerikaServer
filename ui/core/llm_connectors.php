@@ -86,8 +86,11 @@ if (isset($_GET["edit"])) {
     <h2 onclick='document.forms[0].style.display="block"'>Create New Connector</h2>
 <?php endif; ?>
 
-<div class="form-container">
+<div class="form-container wide-centered">
 <style>
+.wide-centered { max-width: 1100px; margin: 0 auto; }
+.two-col-llm { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 1000px) { .two-col-llm { grid-template-columns: 1fr; } }
 .kv-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; }
 .inline-num { width: 90px; }
 .service-picker { display:flex; align-items:center; gap:12px; margin: 6px 0 12px; }
@@ -100,77 +103,80 @@ if (isset($_GET["edit"])) {
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
 
-    <label for='label'>Label</label><br>
-    <input type="text" name="label" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>"><br>
+    <div class="two-col-llm">
+        <div>
+            <label for='label'>Label</label><br>
+            <input type="text" name="label" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>"><br>
 
-    <label>Service</label>
-    <div class="service-picker">
-        <select id="service_select">
-            <option value="openrouter">OpenRouter</option>
-            <option value="openai">OpenAI</option>
-            <option value="google">Google</option>
-            <option value="kobold">Kobold</option>
-        </select>
-        <div class="service-icons">
-            <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.png" alt="OpenRouter" class="service-icon" data-service="openrouter" />
-            <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.png" alt="OpenAI" class="service-icon" data-service="openai" />
-            <img src="<?= $webRoot; ?>/ui/images/core/icons/google.png" alt="Google" class="service-icon" data-service="google" />
-            <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.png" alt="Kobold" class="service-icon" data-service="kobold" />
+            <label>Service</label>
+            <div class="service-picker">
+                <select id="service_select">
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="google">Google</option>
+                    <option value="kobold">Kobold</option>
+                </select>
+                <div class="service-icons">
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.png" alt="OpenRouter" class="service-icon" data-service="openrouter" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.png" alt="OpenAI" class="service-icon" data-service="openai" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/google.png" alt="Google" class="service-icon" data-service="google" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.png" alt="Kobold" class="service-icon" data-service="kobold" />
+                </div>
+            </div>
+
+            <label for='url'>URL</label><br>
+            <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>"><br>
+
+            <label for='model'>Model</label><br>
+            <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
+
+            <div id="provider_row">
+                <label for='provider'>Provider</label><br>
+                <input type="text" name="provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
+            </div>
+
+            <label for='driver'>Driver</label><br>
+            <input type="text" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>"><br>
+
+            <?= renderSelect($llm, "api_badge_id", "API Badge", $editItem["api_badge_id"] ?? "") ?>
+        </div>
+
+        <div>
+            <?php
+            // Numeric controls with ranges based on conf schema/common defaults
+            $ranges = [
+                'temperature' => ['min'=>0,'max'=>2,'step'=>0.01],
+                'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
+                'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
+                'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.01],
+                'top_p' => ['min'=>0,'max'=>1,'step'=>0.01],
+                'top_k' => ['min'=>0,'max'=>100,'step'=>1],
+                'min_p' => ['min'=>0,'max'=>1,'step'=>0.01],
+                'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
+            ];
+
+            echo "<div class='kv-grid'>";
+            foreach ($ranges as $field => $conf) {
+                $label = ucfirst(str_replace('_',' ', $field));
+                $rid = "rng_{$field}";
+                $nid = "num_{$field}";
+                $val = htmlspecialchars($editItem[$field] ?? "");
+                $min = $conf['min'];
+                $max = $conf['max'];
+                $step = $conf['step'];
+                echo "<div><label for='{$rid}'>{$label}</label></div>";
+                echo "<div>";
+                echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
+                echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\"></div>";
+                echo "</div>";
+            }
+            echo "</div>";
+
+            echo "<label for='max_tokens' style='margin-top:10px; display:block;'>Max Tokens</label>";
+            echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
+            ?>
         </div>
     </div>
-
-    <label for='url'>URL</label><br>
-    <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>"><br>
-
-    <label for='model'>Model</label><br>
-    <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
-
-    <div id="provider_row">
-        <label for='provider'>Provider</label><br>
-        <input type="text" name="provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
-    </div>
-
-    <label for='driver'>Driver</label><br>
-    <input type="text" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>"><br>
-
-   
-
-    <?= renderSelect($llm, "api_badge_id", "API Badge", $editItem["api_badge_id"] ?? "") ?>
-
-
-    <?php
-    // Numeric controls with ranges based on conf schema/common defaults
-    $ranges = [
-        'temperature' => ['min'=>0,'max'=>2,'step'=>0.01],
-        'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-        'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-        'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.01],
-        'top_p' => ['min'=>0,'max'=>1,'step'=>0.01],
-        'top_k' => ['min'=>0,'max'=>100,'step'=>1],
-        'min_p' => ['min'=>0,'max'=>1,'step'=>0.01],
-        'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
-    ];
-
-    echo "<div class='kv-grid'>";
-    foreach ($ranges as $field => $conf) {
-        $label = ucfirst(str_replace('_',' ', $field));
-        $rid = "rng_{$field}";
-        $nid = "num_{$field}";
-        $val = htmlspecialchars($editItem[$field] ?? "");
-        $min = $conf['min'];
-        $max = $conf['max'];
-        $step = $conf['step'];
-        echo "<div><label for='{$rid}'>{$label}</label></div>";
-        echo "<div>";
-        echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
-        echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\"></div>";
-        echo "</div>";
-    }
-    echo "</div>";
-
-    echo "<label for='max_tokens' style='margin-top:10px; display:block;'>Max Tokens</label>";
-    echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
-    ?>
 
     <label>Is reasoning model:</label>
     
