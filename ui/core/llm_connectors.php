@@ -176,12 +176,15 @@ if (isset($_GET["edit"])) {
 .orm-muted { color:#97a6ba; }
 .orm-err { color:#ff6b6b; padding:8px 10px; }
 /* Split layout: list left, editor right */
-.llm-layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; align-items:start; }
-@media (max-width: 1100px) { .llm-layout { grid-template-columns: 1fr; } }
+.llm-layout { display:grid; grid-template-columns: minmax(240px, 340px) 1fr; gap:16px; align-items:start; }
+/* Keep two-column layout even on narrower screens so half-screen works */
+@media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
+@media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
 .llm-left { position: sticky; top: 72px; align-self:start; max-height: calc(100vh - 110px); overflow:auto; padding-right:4px; }
 .llm-right { min-width: 0; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
 .list-filters input[type="text"]{ width: 100%; max-width: 260px; }
+.list-filters select { max-width: 200px; }
 .conn-list { display:flex; flex-direction:column; gap:8px; }
 .conn-li { border:1px solid rgba(138,155,182,0.35); background:#0d1117; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
 .conn-li:hover { background:#121826; transform: translateY(-1px); }
