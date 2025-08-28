@@ -311,6 +311,9 @@ if (isset($_GET["edit"])) {
     <div id="metadata"></div>
 
     <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
+    <?php if ($editItem): ?>
+        <button type="button" id="btn_test_connector" class="action-button" style="margin-left:8px;">Test</button>
+    <?php endif; ?>
 </form>
 </div>
     </div>
@@ -408,6 +411,61 @@ function llmClamp(rangeId, numberId, min, max){
 </script>
 
 <script>
+// LLM Test Modal
+(function(){
+    const MODAL_ID = 'llmtest_modal';
+    const modal = document.createElement('div');
+    modal.id = MODAL_ID;
+    modal.style.cssText = 'position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
+    modal.innerHTML = `
+        <div style="width:90%; max-width:1200px; height:80vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
+            <button id=\"llmtest_close\" style=\"position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;\">Close</button>
+            <div id=\"llmtest_loading\" style=\"position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;\">
+                <div style=\"width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: llmspin 1s linear infinite;\"></div>
+            </div>
+            <iframe id=\"llmtest_iframe\" src=\"about:blank\" style=\"width:100%; height:100%; border:0; background:#0e1624; position:relative; z-index:1;\"></iframe>
+        </div>
+        <style>@keyframes llmspin{to{transform:rotate(360deg)}}</style>`;
+    document.body.appendChild(modal);
+
+    function openModal(url){
+        const iframe = document.getElementById('llmtest_iframe');
+        const loader = document.getElementById('llmtest_loading');
+        if (loader) loader.style.display = 'flex';
+        // attach onload to hide loader
+        iframe.onload = function(){ if (loader) loader.style.display = 'none'; };
+        iframe.src = url;
+        modal.style.display = 'flex';
+    }
+    function closeModal(){ modal.style.display = 'none'; try { document.getElementById('llmtest_iframe').src='about:blank'; } catch(_){} }
+    document.addEventListener('click', function(e){ if (e.target && e.target.id==='llmtest_close') closeModal(); });
+    modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
+    document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+
+    const testBtn = document.getElementById('btn_test_connector');
+    if (testBtn){
+        testBtn.addEventListener('click', async function(){
+            const form = document.querySelector('form[method="post"]');
+            if (!form) return;
+            // Save current edits first to ensure test uses latest config
+            try {
+                const fd = new FormData(form);
+                // Ensure update action is present
+                if (!fd.has('update') && !fd.has('create')) fd.append('update','1');
+                // show modal early with loader while saving
+                const idInputEarly = form.querySelector('input[name="id"]');
+                const cidEarly = idInputEarly ? idInputEarly.value : '';
+                openModal('about:blank');
+                await fetch('llm_connectors.php', { method:'POST', body: fd });
+            } catch (e) { /* ignore */ }
+            // Open test page for this connector id (DB-backed)
+            const idInput = form.querySelector('input[name="id"]');
+            const cid = idInput ? idInput.value : '';
+            openModal('<?= $webRoot; ?>/ui/core/tests/llmtest.php' + (cid ? ('?connector_id='+encodeURIComponent(cid)) : ''));
+        });
+    }
+})();
+
 // OpenRouter models dropdown for Model textbox
 (function(){
     const serviceSelect = document.getElementById('service_select');
