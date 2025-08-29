@@ -77,50 +77,21 @@ if (isset($_GET["edit"])) {
 }
 ?>
 
-<h1>LLM Connectors</h1>
-
-<?php if ($editItem): ?>
-    <h2>Edit Connector (ID: <?= htmlspecialchars($editItem["id"]) ?>)</h2>
-<?php else: ?>
-    <h2 onclick='document.forms[0].style.display="block"'>Create New Connector</h2>
-<?php endif; ?>
+<?php /* Title moved into left panel; edit header removed */ ?>
 
 <div class="llm-layout">
     <div class="llm-left">
-        <div class="list-filters">
-            <input id="llmlist_q" type="text" placeholder="Search connectors...">
-            <select id="llmlist_driver">
-                <option value="">All drivers</option>
-                <option value="openrouterjson">openrouterjson</option>
-                <option value="openaijson">openaijson</option>
-                <option value="google_openaijson">google_openaijson</option>
-                <option value="koboldcppjson">koboldcppjson</option>
-            </select>
-            <span id="llmlist_count" class="badge"></span>
-        </div>
+        <h1 class="llm-title">LLM Connectors</h1>
         <div id="llm_list" class="conn-list"></div>
         <script>
         (function(){
             const RAW = <?= json_encode($data ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ACTIVE_ID = <?= json_encode($_GET['edit'] ?? '') ?>;
             const list = document.getElementById('llm_list');
-            const q = document.getElementById('llmlist_q');
-            const drv = document.getElementById('llmlist_driver');
-            const count = document.getElementById('llmlist_count');
             function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-            function pass(row){
-                const qq=(q.value||'').toLowerCase();
-                const dd=(drv.value||'');
-                if (dd && String(row.driver)!==dd) return false;
-                if (qq){
-                    const hay=[row.label,row.provider,row.model,row.driver].map(v=>String(v||'').toLowerCase()).join('\n');
-                    if (!hay.includes(qq)) return false;
-                }
-                return true;
-            }
+            function pass(_row){ return true; }
             function render(){
                 const rows=(RAW||[]).filter(pass);
-                count.textContent = rows.length+" shown";
                 let html='';
                 rows.forEach(r=>{
                     const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';
@@ -147,8 +118,6 @@ if (isset($_GET["edit"])) {
                     });
                 });
             }
-            q.addEventListener('input', render);
-            drv.addEventListener('change', render);
             render();
         })();
         </script>
@@ -165,6 +134,14 @@ if (isset($_GET["edit"])) {
 .service-icons { display:flex; gap:8px; align-items:center; }
 .service-icon { width:56px; height:56px; border:1px solid rgba(138,155,182,0.3); border-radius:8px; cursor:pointer; opacity:0.8; }
 .service-icon.active { outline:2px solid rgb(242,124,17); opacity:1; }
+/* Fancy tooltip for slider labels */
+.tip-label { position: relative; cursor: help; }
+.tip-label::after { content: attr(data-tip); position: absolute; left: 0; top: 120%; max-width: 560px; padding: 8px 10px; background: #0c0f14; color: #cfe0ff; border: 1px solid rgba(138,155,182,0.35); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); white-space: normal; line-height: 1.3; font-size: 12px; opacity: 0; transform: translateY(-4px); transition: opacity .12s ease, transform .12s ease; pointer-events: none; z-index: 9999; }
+.tip-label:hover::after { opacity: 1; transform: translateY(0); }
+/* API key notice */
+.api-key-notice { margin-top:6px; font-size:12px; }
+.api-key-notice.warn { color:#ffb862; }
+.api-key-notice.ok { color:#6dd19c; }
 /* OpenRouter model dropdown */
 .orm-dropdown { position:absolute; z-index: 9999; max-height: 360px; overflow:auto; background:#111; border:1px solid rgba(138,155,182,0.3); border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); display:none; }
 .orm-item { padding:8px 10px; cursor:pointer; border-bottom:1px solid rgba(138,155,182,0.15); }
@@ -180,6 +157,7 @@ if (isset($_GET["edit"])) {
 @media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
 @media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
 .llm-left { position: sticky; top: 72px; align-self:start; max-height: calc(100vh - 110px); overflow:auto; padding-right:4px; }
+.llm-left .llm-title { margin: 6px 0 10px 4px; font-size: 20px; color: #e9efff; }
 .llm-right { min-width: 0; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
 .list-filters input[type="text"]{ width: 100%; max-width: 260px; }
@@ -201,22 +179,17 @@ if (isset($_GET["edit"])) {
 
     <div class="two-col-llm">
         <div>
-            <label for='label'>Label</label><br>
+            <label for='label'>Name</label><br>
             <input type="text" name="label" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>"><br>
 
             <label>Service</label>
             <div class="service-picker">
-                <select id="service_select">
-                    <option value="openrouter">OpenRouter</option>
-                    <option value="openai">OpenAI</option>
-                    <option value="google">Google</option>
-                    <option value="kobold">Kobold</option>
-                </select>
                 <div class="service-icons">
-                    <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.png" alt="OpenRouter" class="service-icon" data-service="openrouter" />
-                    <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.png" alt="OpenAI" class="service-icon" data-service="openai" />
-                    <img src="<?= $webRoot; ?>/ui/images/core/icons/google.png" alt="Google" class="service-icon" data-service="google" />
-                    <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.png" alt="Kobold" class="service-icon" data-service="kobold" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.jpg" alt="Kobold" class="service-icon" data-service="kobold" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/custom.jpg" alt="Custom" class="service-icon" data-service="custom" />
                 </div>
             </div>
 
@@ -231,10 +204,53 @@ if (isset($_GET["edit"])) {
                 <input type="text" name="provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
             </div>
 
-            <label for='driver'>Driver</label><br>
-            <input type="text" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>"><br>
+            <div id="driver_row" style="display:none;">
+                <label for='driver'>Driver</label><br>
+                <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>"><br>
+            </div>
 
-            <?= renderSelect($llm, "api_badge_id", "API Badge", $editItem["api_badge_id"] ?? "") ?>
+            <div id="api_key_row">
+            <?php
+            // API Key select with non-empty keys first + notice
+            $apiRows = $GLOBALS["db"]->fetchAll("SELECT id, label, api_key FROM core_api_badge ORDER BY label ASC");
+            $selectedApi = $editItem["api_badge_id"] ?? "";
+            $withKey = [];
+            $noKey = [];
+            $isEmptyKey = function($v){
+                $raw = trim((string)$v);
+                if ($raw === '') return true;
+                if (preg_match('/^(?:\*+|null|none|n\\/a)$/i', $raw)) return true;
+                if (preg_match('/^[^A-Za-z0-9]+$/', $raw)) return true; // only punctuation/whitespace
+                return false;
+            };
+            foreach ($apiRows as $r){ if (!$isEmptyKey($r['api_key'] ?? '')) $withKey[]=$r; else $noKey[]=$r; }
+            echo "<label for='api_badge_id'>API Key</label><br>";
+            echo "<select id='api_badge_id' name='api_badge_id'>";
+            echo "<option value=''>-- Select API Key --</option>";
+            foreach ($withKey as $r){
+                $id = htmlspecialchars($r['id']);
+                $labRaw = ($r['label'] ?? ('Key #'.$r['id']));
+                $disp = '🟢 ' . $labRaw;
+                $lab = htmlspecialchars($disp);
+                $sel = (string)$selectedApi === (string)$r['id'] ? ' selected' : '';
+                echo "<option value='{$id}' data-empty='0'{$sel}>{$lab}</option>";
+            }
+            if (!empty($noKey)){
+                echo "<optgroup label='Missing Key'>";
+                foreach ($noKey as $r){
+                    $id = htmlspecialchars($r['id']);
+                    $labRaw = ($r['label'] ?? ('Key #'.$r['id'])) . ' — No key';
+                    $disp = '🔴 ' . $labRaw;
+                    $lab = htmlspecialchars($disp);
+                    $sel = (string)$selectedApi === (string)$r['id'] ? ' selected' : '';
+                    echo "<option value='{$id}' data-empty='1'{$sel}>{$lab}</option>";
+                }
+                echo "</optgroup>";
+            }
+            echo "</select>";
+            echo "<div id='api_key_notice' class='api-key-notice'></div>";
+            ?>
+            </div>
         </div>
 
         <div>
@@ -251,6 +267,17 @@ if (isset($_GET["edit"])) {
                 'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
             ];
 
+            $tips = [
+                'temperature' => 'Controls randomness; higher = more creative, lower = more focused. [0-2]',
+                'presence_penalty' => 'Reduces repetition by discouraging repeated topics. [(-2)-2]',
+                'frequency_penalty' => 'Reduces repeated words or phrases. [0-2]',
+                'repetition_penalty' => 'Stops the model from repeating itself. [0-2]',
+                'top_p' => 'Chooses tokens with a combined probability up to p. [0-1]',
+                'top_k' => 'Picks from the top k most likely words. [0-100]',
+                'min_p' => 'Ignore words with very low probability. [0-1]',
+                'top_a' => 'Adjusts word probabilities for better balance. [0-1]'
+            ];
+
             echo "<div class='kv-grid'>";
             foreach ($ranges as $field => $conf) {
                 $label = ucfirst(str_replace('_',' ', $field));
@@ -260,7 +287,9 @@ if (isset($_GET["edit"])) {
                 $min = $conf['min'];
                 $max = $conf['max'];
                 $step = $conf['step'];
-                echo "<div><label for='{$rid}'>{$label}</label></div>";
+                $tip = isset($tips[$field]) ? $tips[$field] : '';
+                $labelHtml = $tip ? ("<span class='tip-label' data-tip='" . htmlspecialchars($tip, ENT_QUOTES) . "'>" . $label . "</span>") : $label;
+                echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
                 echo "<div>";
                 echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
                 echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\"></div>";
@@ -268,42 +297,35 @@ if (isset($_GET["edit"])) {
             }
             echo "</div>";
 
-            echo "<label for='max_tokens' style='margin-top:10px; display:block;'>Max Tokens</label>";
+            $tipMaxTokens = 'Maximum tokens the model can generate for a response. Higher = longer answers; may increase cost/latency. [>= 0]';
+            echo "<label for='max_tokens' style='margin-top:10px; display:block;'><span class='tip-label' data-tip='" . htmlspecialchars($tipMaxTokens, ENT_QUOTES) . "'>Max Tokens</span></label>";
             echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
             ?>
         </div>
     </div>
 
-    <label>Is reasoning model:</label>
-    
-    <input type="radio" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
-    True
-    <input type="radio" name="reasoning_model" value="0" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 0 ? "checked" : "" ?>>
-    False
-    <br/>
-
-    <label>Enforce JSON:</label><br>
-    <input type="radio" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>>
-    True
-    <input type="radio" name="enforce_json" value="0" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 0 ? "checked" : "" ?>>
-    False
-
-
-    <label>JSON schema:</label><br>
-
-    <input type="radio" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>>
-    True
-    <input type="radio" name="json_schema" value="0" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 0 ? "checked" : "" ?>>
-    False
-
-
-    <label>Prefill JSON</label><br>
-    
-    <input type="radio" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>>
-    True
-
-    <input type="radio" name="prefill_json" value="0" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 0 ? "checked" : "" ?>>
-    False
+    <div style="display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; margin-top:8px;">
+        <div><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span></div>
+        <div>
+            <input type="hidden" name="reasoning_model" value="0">
+            <label><input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+        </div>
+        <div><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span></div>
+        <div>
+            <input type="hidden" name="enforce_json" value="0">
+            <label><input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+        </div>
+        <div><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span></div>
+        <div>
+            <input type="hidden" name="json_schema" value="0">
+            <label><input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+        </div>
+        <div><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span></div>
+        <div>
+            <input type="hidden" name="prefill_json" value="0">
+            <label><input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+        </div>
+    </div>
     
 
     <br/>
@@ -322,20 +344,39 @@ if (isset($_GET["edit"])) {
 </div>
 
 <script>
+// Sync On/Off labels for checkboxes
+(function(){
+    const names = ['reasoning_model','enforce_json','json_schema','prefill_json'];
+    names.forEach(n=>{
+        const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
+        if (!cb) return;
+        const label = cb.closest('label');
+        const span = label ? label.querySelector('.toggle-text') : null;
+        function sync(){ if (span) span.textContent = cb.checked ? 'On' : 'Off'; }
+        sync();
+        cb.addEventListener('change', sync);
+    });
+})();
+</script>
+
+<script>
 // Service selection and defaults
 (function(){
     const defaults = {
         openrouter: 'https://openrouter.ai/api/v1/chat/completions',
         openai: 'https://api.openai.com/v1/chat/completions',
         google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-        kobold: 'http://127.0.0.1:5001'
+        kobold: 'http://127.0.0.1:5001',
+        custom: ''
     };
-    const select = document.getElementById('service_select');
+    // No dropdown; selection by icons only
     const providerRow = document.getElementById('provider_row');
     const urlInput = document.querySelector('input[name="url"]');
     const driverInput = document.querySelector('input[name="driver"]');
+    const driverRow = document.getElementById('driver_row');
     const apiBadgeSelect = document.getElementById('api_badge_id');
     const icons = document.querySelectorAll('.service-icon');
+    const apiKeyRow = document.getElementById('api_key_row');
 
     function setActive(service){
         icons.forEach(ic=>{
@@ -347,7 +388,8 @@ if (isset($_GET["edit"])) {
         openrouter: 'openrouterjson',
         openai: 'openaijson',
         google: 'google_openaijson',
-        kobold: 'koboldcppjson'
+        kobold: 'koboldcppjson',
+        custom: ''
     };
 
     const apiBadgeLabelMatch = {
@@ -372,12 +414,13 @@ if (isset($_GET["edit"])) {
     }
 
     function applyService(service){
-        select.value = service;
         if (defaults[service]) urlInput.value = defaults[service];
         providerRow.style.display = (service === 'openrouter') ? '' : 'none';
         if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service];
         syncApiBadge(service);
         setActive(service);
+        if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : '';
+        if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none';
     }
 
     // Initialize from current URL heuristic
@@ -387,12 +430,12 @@ if (isset($_GET["edit"])) {
         if (val.includes('openai.com')) service = 'openai';
         else if (val.includes('generativelanguage.googleapis.com')) service = 'google';
         else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold';
+        else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai';
+        else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google';
+        else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold';
+        else service = 'custom';
         applyService(service);
     })();
-
-    select.addEventListener('change', (e)=>{
-        applyService(e.target.value);
-    });
 
     icons.forEach(ic=>{
         ic.addEventListener('click', ()=> applyService(ic.dataset.service));
@@ -470,9 +513,8 @@ function llmClamp(rangeId, numberId, min, max){
 
 // OpenRouter models dropdown for Model textbox
 (function(){
-    const serviceSelect = document.getElementById('service_select');
     const modelInput = document.querySelector('input[name="model"]');
-    if (!serviceSelect || !modelInput) return;
+    if (!modelInput) return;
 
     let cache = null; // cached models
     let dropdown = null;
@@ -594,8 +636,13 @@ function llmClamp(rangeId, numberId, min, max){
         }
     }
 
+    function isOpenRouter(){
+        const url = (document.querySelector('input[name="url"]').value||'');
+        const driver = (document.querySelector('input[name="driver"]').value||'');
+        return url.includes('openrouter.ai') || /openrouter/.test(driver);
+    }
     async function maybeOpenDropdown(){
-        if (serviceSelect.value !== 'openrouter') return;
+        if (!isOpenRouter()) return;
         try {
             const models = await loadModels();
             renderList(models, modelInput.value);
@@ -605,26 +652,55 @@ function llmClamp(rangeId, numberId, min, max){
     }
 
     // Events
-    modelInput.addEventListener('focus', () => { if (serviceSelect.value==='openrouter') maybeOpenDropdown(); });
-    modelInput.addEventListener('click', () => { if (serviceSelect.value==='openrouter') maybeOpenDropdown(); });
+    modelInput.addEventListener('focus', () => { if (isOpenRouter()) maybeOpenDropdown(); });
+    modelInput.addEventListener('click', () => { if (isOpenRouter()) maybeOpenDropdown(); });
     modelInput.addEventListener('input', () => { if (isOpen && cache) renderList(cache, modelInput.value); });
     modelInput.addEventListener('blur', () => { setTimeout(closeDropdown, 120); });
     window.addEventListener('resize', () => { if (isOpen) positionDropdown(); });
     window.addEventListener('scroll', () => { if (isOpen) positionDropdown(); }, true);
     document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeDropdown(); });
 
-    // Close dropdown when service changes
-    serviceSelect.addEventListener('change', () => { closeDropdown(); });
+    // Close dropdown when service likely changed (url/driver edits)
+    document.querySelector('input[name="url"]').addEventListener('change', () => closeDropdown());
+    document.querySelector('input[name="driver"]').addEventListener('change', () => closeDropdown());
+})();
+
+// API key notice logic
+(function(){
+    const sel = document.getElementById('api_badge_id');
+    const note = document.getElementById('api_key_notice');
+    if (!sel || !note) return;
+    function showToast(msg){
+        try {
+            const toast = document.getElementById('toast');
+            if (toast){ toast.querySelector('.message').textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2500); }
+        } catch (_e){}
+    }
+    function update(){
+        const opt = sel.options[sel.selectedIndex];
+        const empty = opt ? opt.getAttribute('data-empty') === '1' : true;
+        if (!opt || sel.value === ''){
+            note.className = 'api-key-notice warn';
+            note.textContent = 'No API key selected. Some services require a key.';
+            return;
+        }
+        if (empty){
+            note.className = 'api-key-notice warn';
+        } else {
+            note.className = 'api-key-notice ok';
+        }
+    }
+    sel.addEventListener('change', update);
+    update();
 })();
 </script>
 
 <script>
 // OpenRouter providers dropdown for Provider textbox + auto-fill from model
 (function(){
-    const serviceSelect = document.getElementById('service_select');
     const providerInput = document.querySelector('input[name="provider"]');
     const modelInput = document.querySelector('input[name="model"]');
-    if (!serviceSelect || !providerInput || !modelInput) return;
+    if (!providerInput || !modelInput) return;
 
     let providersCache = null;
     let dropdown = null;
@@ -748,8 +824,13 @@ function llmClamp(rangeId, numberId, min, max){
         return [];
     }
 
+    function isOpenRouter(){
+        const url = (document.querySelector('input[name="url"]').value||'');
+        const driver = (document.querySelector('input[name="driver"]').value||'');
+        return url.includes('openrouter.ai') || /openrouter/.test(driver);
+    }
     async function maybeOpenDropdown(){
-        if (serviceSelect.value !== 'openrouter') return;
+        if (!isOpenRouter()) return;
         try {
             const items = await loadProviders();
             renderList(items, providerInput.value, getRelevantProviderSlugs());
@@ -775,14 +856,15 @@ function llmClamp(rangeId, numberId, min, max){
     }
 
     // Events
-    providerInput.addEventListener('focus', () => { if (serviceSelect.value==='openrouter') maybeOpenDropdown(); });
-    providerInput.addEventListener('click', () => { if (serviceSelect.value==='openrouter') maybeOpenDropdown(); });
+    providerInput.addEventListener('focus', () => { if (isOpenRouter()) maybeOpenDropdown(); });
+    providerInput.addEventListener('click', () => { if (isOpenRouter()) maybeOpenDropdown(); });
     providerInput.addEventListener('input', () => { if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
     providerInput.addEventListener('blur', () => { setTimeout(closeDropdown, 120); });
     window.addEventListener('resize', () => { if (isOpen) positionDropdown(); });
     window.addEventListener('scroll', () => { if (isOpen) positionDropdown(); }, true);
     document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeDropdown(); });
-    serviceSelect.addEventListener('change', () => { closeDropdown(); });
+    document.querySelector('input[name="url"]').addEventListener('change', () => closeDropdown());
+    document.querySelector('input[name="driver"]').addEventListener('change', () => closeDropdown());
 
     // Hook model changes
     modelInput.addEventListener('change', () => { maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
