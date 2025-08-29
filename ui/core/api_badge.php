@@ -31,7 +31,33 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-.wide-centered { max-width: 900px; margin: 0 auto; }
+.wide-centered { max-width: 1200px; margin: 0 auto; }
+/* Provider cards */
+.provider-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; margin-bottom: 20px; }
+.provider-card { background:#0d1117; border:1px solid rgba(138,155,182,0.35); border-radius:10px; padding:12px; }
+.provider-card .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.provider-card .provider-title { display:flex; align-items:center; gap:10px; font-weight:600; color:#e9efff; }
+.provider-card .provider-icon { width:28px; height:28px; border-radius:6px; background:#121826; display:flex; align-items:center; justify-content:center; font-size:16px; }
+.provider-card .provider-links { display:flex; gap:10px; }
+.provider-card .provider-links a { font-size:12px; color:#9fb1c9; text-decoration:underline; }
+.provider-card .provider-body { display:flex; gap:8px; align-items:center; }
+.provider-card input[type="password"],
+.provider-card input[type="text"] { flex:1; }
+.provider-note { font-size:12px; color:#97a6ba; margin-top:6px; }
+/* Custom keys grid */
+#custom-keys { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
+.custom-card { background:#0f1320; border:1px solid rgba(138,155,182,0.25); border-radius:10px; padding:12px; }
+.custom-card.has-key { background:#122017; border-color:#2d6a4f; box-shadow: 0 0 0 1px rgba(45,106,79,0.35) inset; }
+.custom-card .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.custom-card .provider-title { display:flex; align-items:center; gap:10px; font-weight:600; color:#e9efff; }
+.custom-card .provider-icon { width:28px; height:28px; border-radius:6px; background:#121826; display:flex; align-items:center; justify-content:center; font-size:16px; }
+.custom-card .provider-body { display:flex; gap:8px; align-items:center; }
+.custom-card input[type="password"],
+.custom-card input[type="text"] { flex:1; }
+@media (max-width: 900px) {
+    .provider-grid { grid-template-columns: 1fr; }
+    #custom-keys { grid-template-columns: 1fr; }
+}
 </style>
 
 <main>
@@ -51,6 +77,16 @@ $presetMap = [
     'google'      => 'Google',
     'azure'       => 'Azure',
     'elevenlabs'  => 'ElevenLabs'
+];
+
+// Provider key/dashboard links
+$providerLinks = [
+    'openrouter' => 'https://openrouter.ai/keys',
+    'openai' => 'https://platform.openai.com/api-keys',
+    'deepgram' => 'https://console.deepgram.com/',
+    'google' => 'https://console.cloud.google.com/apis/credentials',
+    'azure' => 'https://ai.azure.com/',
+    'elevenlabs' => 'https://elevenlabs.io/app/settings/api-keys'
 ];
 
 // Seed presets if missing
@@ -183,13 +219,23 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
         </div>
 
         <h3>Preset Keys</h3>
-        <div class="content-section wide-centered" style="margin-bottom:20px;">
+        <div class="provider-grid">
             <?php foreach ($presetRows as $slug => $row): ?>
-                <div class="conf-item" style="max-width:800px;">
-                    <label><?= htmlspecialchars($presetMap[$slug]) ?></label>
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🔑</div>
+                            <div><?= htmlspecialchars($presetMap[$slug]) ?></div>
+                        </div>
+                        <div class="provider-links">
+                            <?php if (!empty($providerLinks[$slug])): ?>
+                                <a href="<?= htmlspecialchars($providerLinks[$slug]) ?>" target="_blank" rel="noopener">Create Key</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                     <input type="hidden" name="presets[<?= htmlspecialchars($slug) ?>][id]" value="<?= htmlspecialchars($row['id']) ?>">
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <input type="password" name="presets[<?= htmlspecialchars($slug) ?>][api_key]" value="<?= htmlspecialchars($row['api_key']) ?>" placeholder="Paste API key" style="flex:1;">
+                    <div class="provider-body">
+                        <input type="password" name="presets[<?= htmlspecialchars($slug) ?>][api_key]" value="<?= htmlspecialchars($row['api_key']) ?>" placeholder="Paste API key">
                         <button type="button" class="button" onclick="toggleVisibility(this)">Show</button>
                     </div>
                 </div>
@@ -199,13 +245,20 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
         <h3>Custom Keys</h3>
         <div id="custom-keys" class="content-section wide-centered" style="margin-bottom:10px;">
             <?php foreach ($customRows as $row): ?>
-                <div class="conf-item" style="max-width:800px;">
+                <?php $hasKey = trim($row['api_key'] ?? '') !== ''; ?>
+                <div class="custom-card <?= $hasKey ? 'has-key' : '' ?>">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🧩</div>
+                            <div>Custom Key</div>
+                        </div>
+                    </div>
                     <input type="hidden" name="custom[id][]" value="<?= htmlspecialchars($row['id']) ?>">
                     <label>Label</label>
                     <input type="text" name="custom[label][]" value="<?= htmlspecialchars($row['label']) ?>" placeholder="Provider label (e.g., MyService)">
                     <label>API Key</label>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <input type="password" name="custom[api_key][]" value="<?= htmlspecialchars($row['api_key']) ?>" placeholder="Paste API key" style="flex:1;">
+                    <div class="provider-body">
+                        <input type="password" name="custom[api_key][]" value="<?= htmlspecialchars($row['api_key']) ?>" placeholder="Paste API key">
                         <button type="button" class="button" onclick="toggleVisibility(this)">Show</button>
                     </div>
                 </div>
@@ -234,15 +287,20 @@ function toggleVisibility(btn){
 function addCustomKey(){
     const container = document.getElementById('custom-keys');
     const wrapper = document.createElement('div');
-    wrapper.className = 'conf-item';
-    wrapper.style.maxWidth = '800px';
+    wrapper.className = 'custom-card';
     wrapper.innerHTML = `
+        <div class="provider-head">
+            <div class="provider-title">
+                <div class="provider-icon">🧩</div>
+                <div>Custom Key</div>
+            </div>
+        </div>
         <input type="hidden" name="custom[id][]" value="">
         <label>Label</label>
         <input type="text" name="custom[label][]" value="" placeholder="Provider label (e.g., MyService)">
         <label>API Key</label>
-        <div style="display:flex; gap:10px; align-items:center;">
-            <input type="password" name="custom[api_key][]" value="" placeholder="Paste API key" style="flex:1;">
+        <div class="provider-body">
+            <input type="password" name="custom[api_key][]" value="" placeholder="Paste API key">
             <button type="button" class="button" onclick="toggleVisibility(this)">Show</button>
         </div>
     `;
