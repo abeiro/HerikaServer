@@ -61,6 +61,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .conn-li .actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
 .pf-badges { display:flex; gap:6px; align-items:center; }
 .pf-flag { font-size:11px; padding:2px 6px; border:1px solid rgba(138,155,182,0.4); border-radius:999px; color:#9fb1c9; }
+.pf-tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0 10px; border-bottom: 2px solid #3a3a3a; }
+.pf-tab { background:#2a2a2a; border:none; padding:8px 12px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all .2s ease; font-size:0.95em; }
+.pf-tab:hover { background:#3a3a3a; }
+.pf-tab.active { background:#1a1a1a; border-bottom: 2px solid rgb(242,124,17); margin-bottom:-2px; }
+.pf-pane { display:none; }
+.pf-pane.active { display:block; }
 .pf-lines { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
 .pf-line { display:flex; align-items:center; gap:8px; font-size:12px; color:#cfd9ea; }
 .pf-icon { width:18px; text-align:center; opacity:0.9; }
@@ -305,41 +311,44 @@ $ittById = $byId($ittRows);
 
     <?php /* connector details preloaded above for both panes */ ?>
 
-    <div class="two-col-grid">
-        <div class="connector-card">
-            <div class="connector-title">TTS Connector</div>
-            <?= renderSelect($profiles, "tts_connector_id", "TTS Connector", $editItem["tts_connector_id"] ?? "") ?>
-            <div id="preview_tts_connector_id"></div>
+    <div class="connector-card">
+        <div class="connector-title">Connectors</div>
+        <div class="pf-tabs" id="pf_tabs">
+            <button type="button" class="pf-tab active" data-pane="pane_llm1">LLM 1</button>
+            <button type="button" class="pf-tab" data-pane="pane_llm2">LLM 2</button>
+            <button type="button" class="pf-tab" data-pane="pane_llm3">LLM 3</button>
+            <button type="button" class="pf-tab" data-pane="pane_llm4">LLM 4</button>
+            <button type="button" class="pf-tab" data-pane="pane_diary">Diary</button>
+            <button type="button" class="pf-tab" data-pane="pane_tts">TTS</button>
+            <button type="button" class="pf-tab" data-pane="pane_itt">ITT</button>
         </div>
-        <div class="connector-card">
-            <div class="connector-title">ITT Connector</div>
-            <?= renderSelect($profiles, "itt_connector_id", "ITT Connector", $editItem["itt_connector_id"] ?? "") ?>
-            <div id="preview_itt_connector_id"></div>
-        </div>
-        <div class="connector-card">
-            <div class="connector-title">Diary Connector</div>
-            <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
-            <div class="inline-editor" id="editor_diary_connector_id" style="margin-top:8px;"></div>
-        </div>
-        <div class="connector-card">
-            <div class="connector-title">LLM Primary</div>
+        <div class="pf-pane active" id="pane_llm1">
             <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
             <div class="inline-editor" id="editor_llm_primary_id" style="margin-top:8px;"></div>
         </div>
-        <div class="connector-card">
-            <div class="connector-title">LLM Secondary</div>
+        <div class="pf-pane" id="pane_llm2">
             <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
             <div class="inline-editor" id="editor_llm_secondary_id" style="margin-top:8px;"></div>
         </div>
-        <div class="connector-card">
-            <div class="connector-title">LLM Tertiary</div>
+        <div class="pf-pane" id="pane_llm3">
             <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
             <div class="inline-editor" id="editor_llm_tertiary_id" style="margin-top:8px;"></div>
         </div>
-        <div class="connector-card">
-            <div class="connector-title">LLM Quaternary</div>
+        <div class="pf-pane" id="pane_llm4">
             <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
             <div class="inline-editor" id="editor_llm_quaternary_id" style="margin-top:8px;"></div>
+        </div>
+        <div class="pf-pane" id="pane_diary">
+            <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
+            <div class="inline-editor" id="editor_diary_connector_id" style="margin-top:8px;"></div>
+        </div>
+        <div class="pf-pane" id="pane_tts">
+            <?= renderSelect($profiles, "tts_connector_id", "TTS Connector", $editItem["tts_connector_id"] ?? "") ?>
+            <div id="preview_tts_connector_id" style="margin-top:8px;"></div>
+        </div>
+        <div class="pf-pane" id="pane_itt">
+            <?= renderSelect($profiles, "itt_connector_id", "ITT Connector", $editItem["itt_connector_id"] ?? "") ?>
+            <div id="preview_itt_connector_id" style="margin-top:8px;"></div>
         </div>
     </div>
 
@@ -497,6 +506,17 @@ $ittById = $byId($ittRows);
                 else if (id==='llm_quaternary_id') refreshEditorFor(id,'editor_llm_quaternary_id','llm');
             });
         });
+
+        // Tabs wiring
+        const tabs = document.querySelectorAll('.pf-tab');
+        tabs.forEach(tb=>tb.addEventListener('click', ()=>{
+            const target = tb.getAttribute('data-pane');
+            document.querySelectorAll('.pf-tab').forEach(t=>t.classList.remove('active'));
+            document.querySelectorAll('.pf-pane').forEach(p=>p.classList.remove('active'));
+            tb.classList.add('active');
+            const pane = document.getElementById(target);
+            if (pane) pane.classList.add('active');
+        }));
     }
 
     document.addEventListener('DOMContentLoaded', initInlineEditors);
