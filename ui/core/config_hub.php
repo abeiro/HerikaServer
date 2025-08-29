@@ -45,8 +45,8 @@ main { padding-top: 160px; }
     <h1>Configuration Hub</h1>
     <div class="tab-buttons">
         <button class="tab-button active" data-tab="npc">NPC Master</button>
-        <button class="tab-button" data-tab="llm">LLM Connectors</button>
         <button class="tab-button" data-tab="profiles">Core Profiles</button>
+        <button class="tab-button" data-tab="llm">LLM Connectors</button>
         <button class="tab-button" data-tab="keys">API Keys</button>
     </div>
 
@@ -55,14 +55,14 @@ main { padding-top: 160px; }
             <iframe class="embed" loading="eager" src="<?php echo $webRoot; ?>/ui/core/npc_master.php?embed=1"></iframe>
         </div>
     </div>
-    <div id="llm" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/llm_connectors.php?embed=1"></iframe>
-        </div>
-    </div>
     <div id="profiles" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/core_profiles.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="llm" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/llm_connectors.php?embed=1"></iframe>
         </div>
     </div>
     <div id="keys" class="tab-content">

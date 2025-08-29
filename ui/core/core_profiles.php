@@ -41,6 +41,31 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .connector-card { background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 8px; padding: 12px; }
 .connector-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.1em; }
 @media (max-width: 1000px) { .two-col-grid { grid-template-columns: 1fr; } }
+/* Split layout like LLM Connectors */
+.llm-layout { display:grid; grid-template-columns: minmax(260px, 420px) 1fr; gap:16px; align-items:start; }
+@media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
+@media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
+.llm-left { position: sticky; top: 72px; align-self:start; max-height: calc(100vh - 110px); overflow:auto; padding-right:4px; }
+.llm-right { min-width: 0; }
+.list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
+.list-filters input[type="text"]{ width: 100%; max-width: 260px; }
+.list-filters select { max-width: 200px; }
+.conn-list { display:flex; flex-direction:column; gap:8px; }
+.conn-li { border:1px solid rgba(138,155,182,0.35); background:#0d1117; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
+.conn-li:hover { background:#121826; transform: translateY(-1px); }
+.conn-li.active { outline:2px solid rgb(242,124,17); }
+.conn-li .head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.conn-li .title { font-weight:600; color:#e9efff; }
+.conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid rgba(138,155,182,0.4); border-radius:999px; color:#9fb1c9; }
+.conn-li .sub { font-size:12px; color:#9fb1c9; margin-top:3px; overflow-wrap:anywhere; }
+.conn-li .actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
+.pf-badges { display:flex; gap:6px; align-items:center; }
+.pf-flag { font-size:11px; padding:2px 6px; border:1px solid rgba(138,155,182,0.4); border-radius:999px; color:#9fb1c9; }
+.pf-lines { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
+.pf-line { display:flex; align-items:center; gap:8px; font-size:12px; color:#cfd9ea; }
+.pf-icon { width:18px; text-align:center; opacity:0.9; }
+.pf-key { color:#9fb1c9; min-width:44px; font-weight:600; }
+.pf-val { overflow-wrap:anywhere; }
 </style>
 
 <main>
@@ -156,18 +181,110 @@ $editItem = null;
 if (isset($_GET["edit"])) {
     $editItem = $profiles->getById($_GET["edit"]);
 }
+// Preload connector details for left list and editors
+$llmRows = $GLOBALS["db"]->fetchAll("SELECT c.*, b.label AS api_badge_label FROM core_llm_connector c LEFT JOIN core_api_badge b ON b.id=c.api_badge_id ORDER BY c.id ASC");
+$ttsRows = $GLOBALS["db"]->fetchAll("SELECT t.*, b.label AS api_badge_label FROM core_tts_connector t LEFT JOIN core_api_badge b ON b.id=t.api_badge_id ORDER BY t.id ASC");
+$ittRows = $GLOBALS["db"]->fetchAll("SELECT * FROM core_itt_connector ORDER BY id ASC");
+$apiBadgeRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_api_badge ORDER BY id ASC");
+
+$byId = function($rows){
+    $out = [];
+    foreach ($rows as $r) { $out[(string)($r['id']??'')] = $r; }
+    return $out;
+};
+$llmById = $byId($llmRows);
+$ttsById = $byId($ttsRows);
+$ittById = $byId($ittRows);
 ?>
 
 <h1>Core Profiles</h1>
 
-<?php if ($editItem): ?>
-    <h2>Edit Profile (ID: <?= htmlspecialchars($editItem["id"]) ?>)</h2>
-<?php else: ?>
-    <h2 onclick='document.forms[0].style.display="block"'>Create New Profile</h2>
-<?php endif; ?>
+<div class="llm-layout">
+    <div class="llm-left">
+        <div class="list-filters">
+            <input id="pflist_q" type="text" placeholder="Search profiles...">
+            <span id="pflist_count" class="badge"></span>
+        </div>
+        <div id="profiles_list" class="conn-list"></div>
+        <script>
+        (function(){
+            const RAW = <?= json_encode($data ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+            const ACTIVE_ID = <?= json_encode($_GET['edit'] ?? '') ?>;
+            const list = document.getElementById('profiles_list');
+            const q = document.getElementById('pflist_q');
+            const count = document.getElementById('pflist_count');
+            const LLM = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+            const TTS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+            const ITT = <?= json_encode($ittById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+            function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+            function labelOf(map, id){ if (!id) return ''; const k=String(id); const row=map[k]; return row && (row.label||row.model||row.driver) ? (row.label||'') : ''; }
+            function pass(row){
+                const qq=(q.value||'').toLowerCase();
+                if (!qq) return true;
+                const hay=[row.label,row.llm_primary_id,row.llm_secondary_id,row.llm_tertiary_id,row.llm_quaternary_id,row.tts_connector_id,row.itt_connector_id,row.diary_connector_id]
+                    .map(v=>String(v||'').toLowerCase()).join('\n');
+                return hay.includes(qq);
+            }
+            function render(){
+                const rows=(RAW||[]).filter(pass);
+                count.textContent = rows.length+" shown";
+                let html='';
+                rows.forEach(r=>{
+                    const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';
+                    const llm1 = escapeHtml(labelOf(LLM, r.llm_primary_id));
+                    const llm2 = escapeHtml(labelOf(LLM, r.llm_secondary_id));
+                    const llm3 = escapeHtml(labelOf(LLM, r.llm_tertiary_id));
+                    const llm4 = escapeHtml(labelOf(LLM, r.llm_quaternary_id));
+                    const tts = escapeHtml(labelOf(TTS, r.tts_connector_id));
+                    const itt = escapeHtml(labelOf(ITT, r.itt_connector_id));
+                    const diary = escapeHtml(labelOf(LLM, r.diary_connector_id));
+                    const flags = [];
+                    if (String(r.default_npc)==='1') flags.push('<span class="pf-flag">NPC</span>');
+                    if (String(r.default_narrator)==='1') flags.push('<span class="pf-flag">Narrator</span>');
+                    html += `
+                        <div class="conn-li${active}" data-id="${String(r.id)}">
+                            <div class="head">
+                                <div class="title">${escapeHtml(r.label||('Profile #'+r.id))}</div>
+                                <div class="pf-badges">${flags.join(' ')}</div>
+                            </div>
+                            <div class="pf-lines">
+                                <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM1</span><span class="pf-val">${llm1||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM2</span><span class="pf-val">${llm2||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM3</span><span class="pf-val">${llm3||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM4</span><span class="pf-val">${llm4||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🔊</span><span class="pf-key">TTS</span><span class="pf-val">${tts||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🎙️</span><span class="pf-key">ITT</span><span class="pf-val">${itt||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">📓</span><span class="pf-key">Diary</span><span class="pf-val">${diary||'—'}</span></div>
+                            </div>
+                            <div class="actions">
+                                <a class="btn-danger" href="?delete=${r.id}" onclick="return confirm('Delete this profile?');">Delete</a>
+                                <a class="action-button" href="?clone=${r.id}">Clone</a>
+                            </div>
+                        </div>`;
+                });
+                list.innerHTML = html || '<div class="conn-li"><em>No profiles match filters.</em></div>';
+                list.querySelectorAll('.conn-li').forEach(li => {
+                    li.addEventListener('click', (ev) => {
+                        if (ev.target.closest('a')) return;
+                        const id = li.getAttribute('data-id');
+                        if (id) window.location.href = `?edit=${id}`;
+                    });
+                });
+            }
+            q.addEventListener('input', render);
+            render();
+        })();
+        </script>
+    </div>
+    <div class="llm-right">
+        <?php if ($editItem): ?>
+            <h2>Edit Profile (ID: <?= htmlspecialchars($editItem["id"]) ?>)</h2>
+        <?php else: ?>
+            <h2 onclick='document.forms[0].style.display="block"'>Create New Profile</h2>
+        <?php endif; ?>
 
-<div class="form-container wide-centered">
-<form id="core_profile_form" method="post" onsubmit='return consolidation(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
+        <div class="form-container wide-centered">
+        <form id="core_profile_form" method="post" onsubmit='return consolidation(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
@@ -186,22 +303,7 @@ if (isset($_GET["edit"])) {
     </label>
     <br>
 
-    <?php
-    // Preload connector details for reactive previews
-    $llmRows = $GLOBALS["db"]->fetchAll("SELECT c.*, b.label AS api_badge_label FROM core_llm_connector c LEFT JOIN core_api_badge b ON b.id=c.api_badge_id ORDER BY c.id ASC");
-    $ttsRows = $GLOBALS["db"]->fetchAll("SELECT t.*, b.label AS api_badge_label FROM core_tts_connector t LEFT JOIN core_api_badge b ON b.id=t.api_badge_id ORDER BY t.id ASC");
-    $ittRows = $GLOBALS["db"]->fetchAll("SELECT * FROM core_itt_connector ORDER BY id ASC");
-    $apiBadgeRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_api_badge ORDER BY id ASC");
-
-    $byId = function($rows){
-        $out = [];
-        foreach ($rows as $r) { $out[(string)($r['id']??'')] = $r; }
-        return $out;
-    };
-    $llmById = $byId($llmRows);
-    $ttsById = $byId($ttsRows);
-    $ittById = $byId($ittRows);
-    ?>
+    <?php /* connector details preloaded above for both panes */ ?>
 
     <div class="two-col-grid">
         <div class="connector-card">
@@ -475,56 +577,11 @@ if (isset($_GET["edit"])) {
     </script>
 
     </form>
-</div>
+    </div>
+    </div>
 
 
-<h2>All Profiles</h2>
-<div class="table-container">
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Label</th>
-            <th>Default NPC</th>
-            <th>Default Narrator</th>
-            <th>TTS ID</th>
-            <th>ITT ID</th>
-            <th>LLM 1</th>
-            <th>LLM 2</th>
-            <th>LLM 3</th>
-            <th>LLM 4</th>
-            <th>Diary ID</th>
-            <th>Metadata</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach ($data as $row): ?>
-            <tr>
-                <td><?= $row["id"] ?></td>
-                <td><?= htmlspecialchars($row["label"]??'') ?></td>
-                <td><?= htmlspecialchars($row["default_npc"]??'') ?></td>
-                <td><?= htmlspecialchars($row["default_narrator"]??'') ?></td>
-                <td><?= $ttsOptions[array_search($row["tts_connector_id"], array_column($ttsOptions, 'id'))]['label'] ?? '' ?></td>
-                <td><?= $ittOptions[array_search($row["itt_connector_id"], array_column($ittOptions, 'id'))]['label'] ?? '' ?></td>
-                <td><?= $llmPrimaryOptions[array_search($row["llm_primary_id"], array_column($llmPrimaryOptions, 'id'))]['label'] ?? '' ?></td>
-                <td><?= $llmSecondaryOptions[array_search($row["llm_secondary_id"], array_column($llmSecondaryOptions, 'id'))]['label'] ?? '' ?></td>
-                <td><?= $llmTertiaryOptions[array_search($row["llm_tertiary_id"], array_column($llmTertiaryOptions, 'id'))]['label'] ?? '' ?></td>
-                <td><?= $llmQuaternaryOptions[array_search($row["llm_quaternary_id"], array_column($llmQuaternaryOptions, 'id'))]['label'] ?? '' ?></td>
-                <td><?= $diaryOptions[array_search($row["diary_connector_id"], array_column($diaryOptions, 'id'))]['label'] ?? '' ?></td>
-                <td><?= substr(htmlspecialchars($row["metadata"]),0,50) ?></td>
-                <td class="actions">
-                    <a class="action-button edit" href="?edit=<?= $row["id"] ?>">Edit</a>
-                    <a class="btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this profile?');">Delete</a>
-                    <a class="action-button" href="?clone=<?= $row["id"] ?>">Clone</a>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-    </tbody>
-</table>
-</div>
-
-<?php /* moved metadata editor into the form above */ ?>
+<?php /* bottom table removed; use left list instead */ ?>
 
 </main>
 
