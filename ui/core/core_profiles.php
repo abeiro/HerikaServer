@@ -36,7 +36,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-.wide-centered { max-width: 1100px; margin: 0 auto; }
+.wide-centered { max-width: 1300px; margin: 0 auto; }
 .two-col-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .connector-card { background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 8px; padding: 12px; }
 .connector-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.1em; }
@@ -72,6 +72,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .pf-icon { width:18px; text-align:center; opacity:0.9; }
 .pf-key { color:#9fb1c9; min-width:44px; font-weight:600; }
 .pf-val { overflow-wrap:anywhere; }
+/* Ensure inputs fit within card borders */
+.connector-card input[type="text"],
+.connector-card input[type="number"],
+.connector-card input[type="password"],
+.connector-card select,
+.connector-card textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
 </style>
 
 <main>
@@ -203,10 +209,9 @@ $ttsById = $byId($ttsRows);
 $ittById = $byId($ittRows);
 ?>
 
-<h1>Core Profiles</h1>
-
 <div class="llm-layout">
     <div class="llm-left">
+        <h1 class="llm-title">Core Profiles</h1>
         <div class="list-filters">
             <input id="pflist_q" type="text" placeholder="Search profiles...">
             <span id="pflist_count" class="badge"></span>
@@ -283,11 +288,6 @@ $ittById = $byId($ittRows);
         </script>
     </div>
     <div class="llm-right">
-        <?php if ($editItem): ?>
-            <h2>Edit Profile (ID: <?= htmlspecialchars($editItem["id"]) ?>)</h2>
-        <?php else: ?>
-            <h2 onclick='document.forms[0].style.display="block"'>Create New Profile</h2>
-        <?php endif; ?>
 
         <div class="form-container wide-centered">
         <form id="core_profile_form" method="post" onsubmit='return consolidation(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
@@ -295,19 +295,26 @@ $ittById = $byId($ittRows);
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
 
-    <label for='label'>Label</label><br>
-    <input type="text" name="label" placeholder="Label" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
-    
-    <label>Default NPC:</label><br>
-    <label>
-        <input type="radio" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
-        True
-    </label>
-    <label>
-        <input type="radio" name="default_narrator" value="0" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 0 ? "checked" : "" ?>>
-        False
-    </label>
-    <br>
+    <div class="connector-card" style="margin-bottom:12px;">
+        <div class="connector-title">Profile Settings</div>
+        <label for='label'>Name</label><br>
+        <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
+        
+        <div style="height:8px;"></div>
+        <label>Default NPC:</label><br>
+        <label>
+            <input type="radio" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
+            True
+        </label>
+        <label>
+            <input type="radio" name="default_narrator" value="0" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 0 ? "checked" : "" ?>>
+            False
+        </label>
+
+        <div style="height:8px;"></div>
+        <label for="prompt">Profile Prompt</label>
+        <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
+    </div>
 
     <?php /* connector details preloaded above for both panes */ ?>
 
@@ -361,9 +368,6 @@ $ittById = $byId($ittRows);
             <div id="preview_itt_connector_id" style="margin-top:8px;"></div>
         </div>
     </div>
-
-    <label for="prompt">Profile Prompt</label>
-    <textarea name="prompt" placeholder=""><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
 
     <!-- Metadata visual + JSON editors -->
     <textarea name="metadata" style="display:none" placeholder="Metadata"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
