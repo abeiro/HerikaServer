@@ -48,10 +48,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     exit;
 }
 
-// Handle Update
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
-    $llm->update($_POST["id"], $_POST);
-    header("Location: llm_connectors.php");
+// Handle Save (update without leaving current connector)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_POST["update"])) ) {
+    $id = $_POST["id"] ?? '';
+    $llm->update($id, $_POST);
+    $redir = 'llm_connectors.php' . ($id !== '' ? ('?edit=' . urlencode($id)) : '');
+    header("Location: $redir");
     exit;
 }
 
@@ -104,7 +106,7 @@ if (isset($_GET["edit"])) {
                             <div class="sub">${escapeHtml(r.model||'')}</div>
                             <div class="actions">
                                 <a class="btn-danger" href="?delete=${r.id}" onclick="return confirm('Are you sure you want to delete this connector?');">Delete</a>
-                                <a class="action-button" href="?clone=${r.id}">Clone</a>
+                                <a class="btn-save" href="?clone=${r.id}">Clone</a>
                             </div>
                         </div>`;
                 });
@@ -125,7 +127,7 @@ if (isset($_GET["edit"])) {
     <div class="llm-right">
 <div class="form-container wide-centered">
 <style>
-.wide-centered { max-width: 1100px; margin: 0 auto; }
+.wide-centered { max-width: 1300px; margin: 0 auto; }
 .two-col-llm { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 1000px) { .two-col-llm { grid-template-columns: 1fr; } }
 .kv-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; }
@@ -156,7 +158,7 @@ if (isset($_GET["edit"])) {
 /* Keep two-column layout even on narrower screens so half-screen works */
 @media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
 @media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
-.llm-left { position: sticky; top: 72px; align-self:start; max-height: calc(100vh - 110px); overflow:auto; padding-right:4px; }
+.llm-left { position: sticky; top: 16px; align-self:start; max-height: calc(100vh - 110px); overflow:auto; padding-right:4px; }
 .llm-left .llm-title { margin: 6px 0 10px 4px; font-size: 20px; color: #e9efff; }
 .llm-right { min-width: 0; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
@@ -171,6 +173,13 @@ if (isset($_GET["edit"])) {
 .conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid rgba(138,155,182,0.4); border-radius:999px; color:#9fb1c9; }
 .conn-li .sub { font-size:12px; color:#9fb1c9; margin-top:3px; overflow-wrap:anywhere; }
 .conn-li .actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
+/* Collapsible block for Metadata */
+.collapsible { margin-top: 8px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117; }
+.collapsible-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; cursor:pointer; user-select:none; color:#e9efff; font-weight:600; }
+.collapsible-header::after { content:'\25BE'; font-size:12px; color:#9fb1c9; transition: transform .12s ease; }
+.collapsible[open] .collapsible-header { border-bottom:1px solid rgba(138,155,182,0.35); }
+.collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
+.collapsible-content { padding:10px; }
 </style>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
@@ -179,6 +188,14 @@ if (isset($_GET["edit"])) {
 
     <div class="two-col-llm">
         <div>
+            <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                <?php if ($editItem): ?>
+                    <button type="submit" name="save" class="btn-save">Save</button>
+                    <button type="button" id="btn_test_connector" class="btn-save">Test</button>
+                <?php else: ?>
+                    <button type="submit" name="create" class="btn-save">Create</button>
+                <?php endif; ?>
+            </div>
             <label for='label'>Name</label><br>
             <input type="text" name="label" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>"><br>
 
@@ -236,7 +253,7 @@ if (isset($_GET["edit"])) {
                 echo "<option value='{$id}' data-empty='0'{$sel}>{$lab}</option>";
             }
             if (!empty($noKey)){
-                echo "<optgroup label='Missing Key'>";
+                echo "<option value='' disabled>— Missing Key —</option>";
                 foreach ($noKey as $r){
                     $id = htmlspecialchars($r['id']);
                     $labRaw = ($r['label'] ?? ('Key #'.$r['id'])) . ' — No key';
@@ -245,16 +262,40 @@ if (isset($_GET["edit"])) {
                     $sel = (string)$selectedApi === (string)$r['id'] ? ' selected' : '';
                     echo "<option value='{$id}' data-empty='1'{$sel}>{$lab}</option>";
                 }
-                echo "</optgroup>";
             }
             echo "</select>";
             echo "<div id='api_key_notice' class='api-key-notice'></div>";
             ?>
             </div>
+            <div id="reasoning_row">
+                <label><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span></label><br>
+                <input type="hidden" name="reasoning_model" value="0">
+                <label><input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+            </div>
+            <div id="json_toggles" style="margin-top:8px;">
+                <label><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span></label><br>
+                <input type="hidden" name="enforce_json" value="0">
+                <label><input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+
+                <div style="height:6px;"></div>
+                <label><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span></label><br>
+                <input type="hidden" name="json_schema" value="0">
+                <label><input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+
+                <div style="height:6px;"></div>
+                <label><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span></label><br>
+                <input type="hidden" name="prefill_json" value="0">
+                <label><input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+            </div>
         </div>
 
         <div>
             <?php
+            // Max tokens first
+            $tipMaxTokens = 'Maximum tokens the model can generate for a response. Higher = longer answers; may increase cost/latency. [>= 0]';
+            echo "<label for='max_tokens' style='margin-top:10px; display:block;'><span class='tip-label' data-tip='" . htmlspecialchars($tipMaxTokens, ENT_QUOTES) . "'>Max Tokens</span></label>";
+            echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
+
             // Numeric controls with ranges based on conf schema/common defaults
             $ranges = [
                 'temperature' => ['min'=>0,'max'=>2,'step'=>0.01],
@@ -296,48 +337,35 @@ if (isset($_GET["edit"])) {
                 echo "</div>";
             }
             echo "</div>";
-
-            $tipMaxTokens = 'Maximum tokens the model can generate for a response. Higher = longer answers; may increase cost/latency. [>= 0]';
-            echo "<label for='max_tokens' style='margin-top:10px; display:block;'><span class='tip-label' data-tip='" . htmlspecialchars($tipMaxTokens, ENT_QUOTES) . "'>Max Tokens</span></label>";
-            echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
             ?>
         </div>
     </div>
 
-    <div style="display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; margin-top:8px;">
-        <div><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span></div>
-        <div>
-            <input type="hidden" name="reasoning_model" value="0">
-            <label><input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
-        </div>
-        <div><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span></div>
-        <div>
-            <input type="hidden" name="enforce_json" value="0">
-            <label><input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
-        </div>
-        <div><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span></div>
-        <div>
-            <input type="hidden" name="json_schema" value="0">
-            <label><input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
-        </div>
-        <div><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span></div>
-        <div>
-            <input type="hidden" name="prefill_json" value="0">
-            <label><input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
-        </div>
-    </div>
+    
     
 
-    <br/>
-    <br/>
-    <label for='metadata'>Metadata</label><br>
-    <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea><br>
-    <div id="metadata"></div>
+    <details id="metadata_section" class="collapsible">
+        <summary class="collapsible-header">Metadata</summary>
+        <div class="collapsible-content">
+            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
+            <div id="metadata"></div>
+        </div>
+    </details>
+    <script>
+    (function(){
+        var d = document.getElementById('metadata_section');
+        if (!d) return;
+        try { d.open = false; } catch(e){}
+        d.addEventListener('toggle', function(){
+            if (d.open) {
+                try { window.dispatchEvent(new Event('resize')); } catch(e){}
+                try { setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 50); } catch(e){}
+            }
+        });
+    })();
+    </script>
 
-    <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
-    <?php if ($editItem): ?>
-        <button type="button" id="btn_test_connector" class="action-button" style="margin-left:8px;">Test</button>
-    <?php endif; ?>
+    
 </form>
 </div>
     </div>
