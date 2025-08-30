@@ -324,23 +324,33 @@ $ittById = $byId($ittRows);
         </div>
         <div class="pf-pane active" id="pane_llm1">
             <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
-            <div class="inline-editor" id="editor_llm_primary_id" style="margin-top:8px;"></div>
+            <div style="margin-top:8px;">
+                <iframe id="frame_llm_primary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+            </div>
         </div>
         <div class="pf-pane" id="pane_llm2">
             <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
-            <div class="inline-editor" id="editor_llm_secondary_id" style="margin-top:8px;"></div>
+            <div style="margin-top:8px;">
+                <iframe id="frame_llm_secondary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+            </div>
         </div>
         <div class="pf-pane" id="pane_llm3">
             <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
-            <div class="inline-editor" id="editor_llm_tertiary_id" style="margin-top:8px;"></div>
+            <div style="margin-top:8px;">
+                <iframe id="frame_llm_tertiary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+            </div>
         </div>
         <div class="pf-pane" id="pane_llm4">
             <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
-            <div class="inline-editor" id="editor_llm_quaternary_id" style="margin-top:8px;"></div>
+            <div style="margin-top:8px;">
+                <iframe id="frame_llm_quaternary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+            </div>
         </div>
         <div class="pf-pane" id="pane_diary">
             <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
-            <div class="inline-editor" id="editor_diary_connector_id" style="margin-top:8px;"></div>
+            <div style="margin-top:8px;">
+                <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+            </div>
         </div>
         <div class="pf-pane" id="pane_tts">
             <?= renderSelect($profiles, "tts_connector_id", "TTS Connector", $editItem["tts_connector_id"] ?? "") ?>
@@ -385,34 +395,7 @@ $ittById = $byId($ittRows);
         if (!conn) { container.innerHTML = '<em style="color:#888">No connector selected.</em>'; return; }
         const bool = v => (v==1||v===true||v==='1') ? 'checked' : '';
         const val = k => (conn[k]===null||conn[k]===undefined? '' : String(conn[k]));
-        if (type==='llm'){
-            container.innerHTML = `
-                <div style="display:grid; grid-template-columns: 180px 1fr; gap:6px; align-items:center;">
-                    <div>Label</div><input name="label" value="${escapeHtml(val('label'))}">
-                    <div>URL</div><input name="url" value="${escapeHtml(val('url'))}">
-                    <div>Provider</div><input name="provider" value="${escapeHtml(val('provider'))}">
-                    <div>Model</div><input name="model" value="${escapeHtml(val('model'))}">
-                    <div>Driver</div><input name="driver" value="${escapeHtml(val('driver'))}">
-                    <div>API Badge</div>${renderApiBadgeSelect('api_badge_id', val('api_badge_id'))}
-                    <div>Temperature</div><input name="temperature" type="number" step="0.01" value="${escapeHtml(val('temperature'))}">
-                    <div>Max Tokens</div><input name="max_tokens" type="number" step="1" value="${escapeHtml(val('max_tokens'))}">
-                    <div>Presence Penalty</div><input name="presence_penalty" type="number" step="0.01" value="${escapeHtml(val('presence_penalty'))}">
-                    <div>Frequency Penalty</div><input name="frequency_penalty" type="number" step="0.01" value="${escapeHtml(val('frequency_penalty'))}">
-                    <div>Repetition Penalty</div><input name="repetition_penalty" type="number" step="0.01" value="${escapeHtml(val('repetition_penalty'))}">
-                    <div>top_p</div><input name="top_p" type="number" step="0.01" value="${escapeHtml(val('top_p'))}">
-                    <div>top_k</div><input name="top_k" type="number" step="1" value="${escapeHtml(val('top_k'))}">
-                    <div>min_p</div><input name="min_p" type="number" step="0.01" value="${escapeHtml(val('min_p'))}">
-                    <div>top_a</div><input name="top_a" type="number" step="0.01" value="${escapeHtml(val('top_a'))}">
-                    <div>Enforce JSON</div><input name="enforce_json" type="checkbox" value="1" ${bool(conn.enforce_json)}>
-                    <div>Prefill JSON</div><input name="prefill_json" type="checkbox" value="1" ${bool(conn.prefill_json)}>
-                    <div>Reasoning Model</div><input name="reasoning_model" type="checkbox" value="1" ${bool(conn.reasoning_model)}>
-                    <div>JSON Schema</div><input name="json_schema" type="checkbox" value="1" ${bool(conn.json_schema)}>
-                </div>
-                <div style="margin-top:8px; display:flex; gap:8px;">
-                    <button type="button" class="action-button save">Save</button>
-                </div>
-            `;
-        } else if (type==='itt' || type==='diary'){
+        if (type==='itt' || type==='diary'){
             container.innerHTML = `
                 <div style=\"display:grid; grid-template-columns: 180px 1fr; gap:6px; align-items:center;\">
                     <div>Label</div><input name=\"label\" value=\"${escapeHtml(val('label'))}\">
@@ -477,33 +460,43 @@ $ittById = $byId($ittRows);
         const sel = document.getElementById(selectId);
         const id = sel ? (sel.value||'') : '';
         let conn = null;
-        if (type==='llm') conn = LLM_DETAILS[id];
-        else if (type==='tts') conn = TTS_DETAILS[id];
+        if (type==='tts') conn = TTS_DETAILS[id];
         else if (type==='itt') conn = ITT_DETAILS[id];
         renderEditor(containerId, conn, type);
         const editorEl = document.getElementById(containerId);
         if (editorEl) wireEditorSave(editorEl, id, type);
     }
 
+    // Embedded LLM editor via iframe (mirrors connectors UI 1:1)
+    function refreshEmbeddedEditor(selectId, frameId){
+        const sel = document.getElementById(selectId);
+        const frame = document.getElementById(frameId);
+        if (!frame) return;
+        const id = sel ? (sel.value||'') : '';
+        if (!id) { frame.src = 'about:blank'; return; }
+        const base = <?= json_encode($webRoot) ?> + '/ui/core/llm_connectors.php?partial=editor&edit=' + encodeURIComponent(id);
+        frame.src = base;
+    }
+
     function initInlineEditors(){
         refreshEditorFor('tts_connector_id','preview_tts_connector_id','tts');
         refreshEditorFor('itt_connector_id','preview_itt_connector_id','itt');
-        refreshEditorFor('diary_connector_id','editor_diary_connector_id','llm');
-        refreshEditorFor('llm_primary_id','editor_llm_primary_id','llm');
-        refreshEditorFor('llm_secondary_id','editor_llm_secondary_id','llm');
-        refreshEditorFor('llm_tertiary_id','editor_llm_tertiary_id','llm');
-        refreshEditorFor('llm_quaternary_id','editor_llm_quaternary_id','llm');
+        refreshEmbeddedEditor('diary_connector_id','frame_diary_connector_id');
+        refreshEmbeddedEditor('llm_primary_id','frame_llm_primary_id');
+        refreshEmbeddedEditor('llm_secondary_id','frame_llm_secondary_id');
+        refreshEmbeddedEditor('llm_tertiary_id','frame_llm_tertiary_id');
+        refreshEmbeddedEditor('llm_quaternary_id','frame_llm_quaternary_id');
 
         ['tts_connector_id','itt_connector_id','diary_connector_id','llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id'].forEach(id=>{
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', ()=>{
                 if (id==='tts_connector_id') refreshEditorFor(id,'preview_tts_connector_id','tts');
                 else if (id==='itt_connector_id') refreshEditorFor(id,'preview_itt_connector_id','itt');
-                else if (id==='diary_connector_id') refreshEditorFor(id,'editor_diary_connector_id','llm');
-                else if (id==='llm_primary_id') refreshEditorFor(id,'editor_llm_primary_id','llm');
-                else if (id==='llm_secondary_id') refreshEditorFor(id,'editor_llm_secondary_id','llm');
-                else if (id==='llm_tertiary_id') refreshEditorFor(id,'editor_llm_tertiary_id','llm');
-                else if (id==='llm_quaternary_id') refreshEditorFor(id,'editor_llm_quaternary_id','llm');
+                else if (id==='diary_connector_id') refreshEmbeddedEditor(id,'frame_diary_connector_id');
+                else if (id==='llm_primary_id') refreshEmbeddedEditor(id,'frame_llm_primary_id');
+                else if (id==='llm_secondary_id') refreshEmbeddedEditor(id,'frame_llm_secondary_id');
+                else if (id==='llm_tertiary_id') refreshEmbeddedEditor(id,'frame_llm_tertiary_id');
+                else if (id==='llm_quaternary_id') refreshEmbeddedEditor(id,'frame_llm_quaternary_id');
             });
         });
 
