@@ -199,8 +199,8 @@ if (isset($_GET["edit"])) {
     <tbody>
     <?php foreach ($data as $row): ?>
         <tr>
-            <td><?= htmlspecialchars($row["id"]) ?></td>
-            <td><?= htmlspecialchars($row["npc_name"]) ?></td>
+            <td style="text-wrap-mode: nowrap;"><?= htmlspecialchars($row["id"]) ?></td>
+            <td style="text-wrap-mode: nowrap;"><?= htmlspecialchars($row["npc_name"]) ?></td>
             <td><?= !empty($row["npc_favorite"]) ? "✔" : "" ?></td>
             <td><?= !empty($row["lock_profile"]) ? "🔒" : "" ?></td>
             <td class="truncate-multiline"><?= htmlspecialchars($row["voiceid"]??"") ?></td>
@@ -211,7 +211,7 @@ if (isset($_GET["edit"])) {
             <td><?= htmlspecialchars($row["profile_id"]??"") ?></td>
             <td><?= htmlspecialchars($row["gamets_last_updated"]??"") ?></td>
             
-            <td class="actions">
+            <td class="actions" style="text-wrap-mode: nowrap;">
                 <a class="action-button edit" href="?edit=<?= $row["id"] ?>">Edit</a>
                 <a class="btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
                 <a class="action-button" href="?tag=<?= $row["id"] ?>">Tag</a>
