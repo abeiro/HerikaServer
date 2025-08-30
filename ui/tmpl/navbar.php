@@ -221,6 +221,10 @@ echo '<style>
 }
 </style>';
 
+// Determine whether to show the secondary status navbar
+$currentPageName = basename($_SERVER['PHP_SELF'] ?? '');
+$SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_wizard.php']);
+
 ?>
 <div class="chim-navbar-wrapper">
     <nav class="navbar navbar-expand-lg chim-navbar">
@@ -246,23 +250,8 @@ echo '<style>
                         
                         <li><h6 class="dropdown-header">Configuration Tools</h6></li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/npc_master.php" title="Manage NPC master data.">
-                            NPC Master
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/core_profiles.php" title="Manage core profiles and defaults.">
-                            Core Profiles
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/llm_connectors.php" title="Manage LLM connectors.">
-                            LLM Connectors
-                        </a>
-                        </li>
-                        <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/api_badge.php" title="Manage API keys.">
-                            API Keys
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php" title="Unified configuration hub with tabs.">
+                            Config Hub
                         </a>
                         </li>
                         <li>
@@ -591,9 +580,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </head>
     <body>
         <!-- Trigger Link to Open Overlay -->
+        <?php if ($SHOW_STATUS_NAV): ?>
         <button id="profileSelectorBtn" class="btn-npcprofile" onclick="event.preventDefault(); document.getElementById('overlay').style.display = 'block'; document.body.classList.add('overlay-active');">
             <?php echo isset($GLOBALS["CURRENT_PROFILE_CHAR"]) ? htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"], ENT_QUOTES, 'UTF-8') : 'Select Profile'; ?>
         </button>
+        <?php endif; ?>
         <!-- The Overlay -->
         <div id="overlay" class="overlay" style="display: none;">
             <!-- Overlay Content -->
@@ -699,6 +690,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </script>
     </body>
 </html>
+            <?php if ($SHOW_STATUS_NAV): ?>
+            <div class="chim-status-nav">
+            <div class="chim-status-container">
             <div style="display: inline-block; font-size: 10px; height: 40px; padding-right: 10px; vertical-align: top;">
             <span style="margin-right: 5px; font-size: 14px; vertical-align: middle; font-weight: bold">Configuration Depth</span>
             
@@ -759,6 +753,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ?>
     </div>
     </div>
+    </div>
+            <?php endif; ?>
 
     </nav>
 </div>

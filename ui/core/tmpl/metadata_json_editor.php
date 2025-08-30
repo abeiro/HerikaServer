@@ -38,11 +38,9 @@ function renderMetaInput($key, $schema, $value) {
     if ($desc) $html .= "<span>" . $desc . "</span>";
     if ($type === 'boolean') {
         $isTrue = ($value === true || $value === 'true' || $value === 1 || $value === '1');
-        $idTrue = 'meta_'.$key.'_true';
-        $idFalse = 'meta_'.$key.'_false';
         $html .= "<div>";
-        $html .= "<input type=\"radio\" id=\"$idTrue\" name=\"meta_vis[$key]\" value=\"true\"" . ($isTrue ? ' checked' : '') . "> <label for=\"$idTrue\">True</label> ";
-        $html .= "<input type=\"radio\" id=\"$idFalse\" name=\"meta_vis[$key]\" value=\"false\"" . (!$isTrue ? ' checked' : '') . "> <label for=\"$idFalse\">False</label>";
+        $html .= "<input type=\"hidden\" name=\"meta_vis[$key]\" value=\"false\">";
+        $html .= "<label><input class=\"meta-toggle\" type=\"checkbox\" name=\"meta_vis[$key]\" value=\"true\"" . ($isTrue ? ' checked' : '') . "> <span class=\"toggle-text\">" . ($isTrue ? 'On' : 'Off') . "</span></label>";
         $html .= "</div>";
     } elseif ($type === 'select' && is_array($values) && count($values)>0) {
         $html .= "<select name=\"meta_vis[$key]\">";
@@ -115,6 +113,17 @@ function renderMetaInput($key, $schema, $value) {
             ?>
         </div>
     </div>
+    <script>
+    (function(){
+        // Sync On/Off labels for metadata boolean checkboxes
+        document.querySelectorAll('.meta-toggle').forEach(cb => {
+            const label = cb.closest('label');
+            const span = label ? label.querySelector('.toggle-text') : null;
+            function sync(){ if (span) span.textContent = cb.checked ? 'On' : 'Off'; }
+            cb.addEventListener('change', sync);
+        });
+    })();
+    </script>
 <?php endif; ?>
  
 <script>
