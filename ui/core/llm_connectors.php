@@ -204,6 +204,16 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     'min_p' => ['min'=>0,'max'=>1,'step'=>0.01],
                     'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
                 ];
+                $displayDefaults = [
+                    'temperature' => 1.05,
+                    'presence_penalty' => 0,
+                    'frequency_penalty' => 0,
+                    'repetition_penalty' => 1,
+                    'top_p' => 0.7,
+                    'top_k' => 0,
+                    'min_p' => 0,
+                    'top_a' => 0,
+                ];
                 $tips = [
                     'temperature' => 'Controls randomness; higher = more creative, lower = more focused. [0-2]',
                     'presence_penalty' => 'Reduces repetition by discouraging repeated topics. [(-2)-2]',
@@ -219,7 +229,9 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     $label = ucfirst(str_replace('_',' ', $field));
                     $rid = "rng_{$field}";
                     $nid = "num_{$field}";
-                    $val = htmlspecialchars($editItem[$field] ?? "");
+                    $raw = $editItem[$field] ?? '';
+                    $use = ($raw === '' || $raw === null) ? ($displayDefaults[$field] ?? '') : $raw;
+                    $val = htmlspecialchars($use);
                     $min = $conf['min'];
                     $max = $conf['max'];
                     $step = $conf['step'];
@@ -664,12 +676,9 @@ if (isset($_GET["edit"])) {
 
         <div>
             <?php
-            // Max tokens first
             $tipMaxTokens = 'Maximum tokens the model can generate for a response. Higher = longer answers; may increase cost/latency. [>= 0]';
             echo "<label for='max_tokens' style='margin-top:10px; display:block;'><span class='tip-label' data-tip='" . htmlspecialchars($tipMaxTokens, ENT_QUOTES) . "'>Max Tokens</span></label>";
             echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
-
-            // Numeric controls with ranges based on conf schema/common defaults
             $ranges = [
                 'temperature' => ['min'=>0,'max'=>2,'step'=>0.01],
                 'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
@@ -680,7 +689,16 @@ if (isset($_GET["edit"])) {
                 'min_p' => ['min'=>0,'max'=>1,'step'=>0.01],
                 'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
             ];
-
+            $displayDefaults = [
+                'temperature' => 1.05,
+                'presence_penalty' => 0,
+                'frequency_penalty' => 0,
+                'repetition_penalty' => 1,
+                'top_p' => 0.7,
+                'top_k' => 0,
+                'min_p' => 0,
+                'top_a' => 0,
+            ];
             $tips = [
                 'temperature' => 'Controls randomness; higher = more creative, lower = more focused. [0-2]',
                 'presence_penalty' => 'Reduces repetition by discouraging repeated topics. [(-2)-2]',
@@ -691,13 +709,14 @@ if (isset($_GET["edit"])) {
                 'min_p' => 'Ignore words with very low probability. [0-1]',
                 'top_a' => 'Adjusts word probabilities for better balance. [0-1]'
             ];
-
             echo "<div class='kv-grid'>";
             foreach ($ranges as $field => $conf) {
                 $label = ucfirst(str_replace('_',' ', $field));
                 $rid = "rng_{$field}";
                 $nid = "num_{$field}";
-                $val = htmlspecialchars($editItem[$field] ?? "");
+                $raw = $editItem[$field] ?? '';
+                $use = ($raw === '' || $raw === null) ? ($displayDefaults[$field] ?? '') : $raw;
+                $val = htmlspecialchars($use);
                 $min = $conf['min'];
                 $max = $conf['max'];
                 $step = $conf['step'];
