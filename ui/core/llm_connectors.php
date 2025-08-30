@@ -91,6 +91,12 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     .orm-muted { color:#97a6ba; }
     .orm-err { color:#ff6b6b; padding:8px 10px; }
     </style>
+    <script>
+    // Define consolidation() if not present (embedded partial doesn't include metadata editor)
+    if (typeof window.consolidation !== 'function') {
+        window.consolidation = function(){ return true; };
+    }
+    </script>
     <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
         <?php if ($editItem): ?>
             <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
@@ -334,7 +340,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         function closeDropdown(){ if (!dropdown) return; dropdown.style.display = 'none'; isOpen = false; }
         function formatPrice(n){ if (n === undefined || n === null || n === '' || isNaN(parseFloat(n))) return 'N/A'; const perTok = parseFloat(n); const perK = perTok * 1000.0; return '$' + perK.toFixed(4) + ' / 1K tok'; }
         function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-        function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]) +/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+        function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
         function renderList(models, filterText){
             ensureDropdown();
             const q = (filterText || '').toLowerCase();
@@ -371,7 +377,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         function positionDropdown(){ const rect = providerInput.getBoundingClientRect(); const style = dropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.width = rect.width + 'px'; style.display = 'block'; isOpen = true; }
         function closeDropdown(){ if (!dropdown) return; dropdown.style.display = 'none'; isOpen = false; }
         function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-        function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]) +/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+        function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
         function renderList(items, filterText, relevantSlugs){ ensureDropdown(); const q = (filterText || '').toLowerCase(); const slugAllow = Array.isArray(relevantSlugs) ? new Set(relevantSlugs.filter(Boolean)) : null; const filteredByRelevance = (items || []).filter(p => { if (slugAllow && slugAllow.size>0) return slugAllow.has((p.slug||'')); return true; }); const list = filteredByRelevance.filter(p => { if (!q) return true; const slug = (p.slug || '').toLowerCase(); const name = (p.name || '').toLowerCase(); return slug.includes(q) || name.includes(q); }); let html = ''; html += '<div class="orm-head">OpenRouter Providers</div>'; html += '<div class="orm-note">Click to select. Value set to provider slug.</div>'; if (list.length === 0){ const hasRelevantFilter = (slugAllow && slugAllow.size>0); const note = hasRelevantFilter ? 'No relevant providers for the selected model.' : 'No matches'; html += `<div class="orm-muted" style="padding:8px 10px;">${note}</div>`; } else { list.forEach(p => { const name = p.name ? ` — ${escapeHtml(p.name)}` : ''; html += `<div class=\"orm-item\" data-slug=\"${encodeHtmlAttr(p.slug)}\" title=\"${encodeHtmlAttr(p.name||p.slug)}\"><div>${escapeHtml(p.slug)}${name}</div><div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">${p.privacy_policy_url? 'Privacy: '+escapeHtml(p.privacy_policy_url): ''}${p.terms_of_service_url? (p.privacy_policy_url? ' • ': '')+'TOS: '+escapeHtml(p.terms_of_service_url): ''}</div></div>`; }); }
             dropdown.innerHTML = html;
             dropdown.querySelectorAll('.orm-item').forEach(el => { el.addEventListener('click', () => { const slug = el.getAttribute('data-slug') || ''; providerInput.value = slug; try { providerInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} try { providerInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} closeDropdown(); }); });
