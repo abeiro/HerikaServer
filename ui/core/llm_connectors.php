@@ -548,6 +548,12 @@ if (isset($_GET["edit"])) {
 .collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
 .collapsible-content { padding:10px; }
 </style>
+<?php if (!$editItem): ?>
+    <div class="connector-placeholder" style="border:1px dashed rgba(138,155,182,0.4); background:#0d1117; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
+        <div style="font-weight:600; color:#e9efff; margin-bottom:6px;">No connector selected</div>
+        <div>Select a connector from the list on the left to view and edit its settings.</div>
+    </div>
+<?php endif; ?>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">

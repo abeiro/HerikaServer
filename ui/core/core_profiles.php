@@ -78,6 +78,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .connector-card input[type="password"],
 .connector-card select,
 .connector-card textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+/* Collapsible block for Metadata */
+.collapsible { margin-top: 8px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117; }
+.collapsible-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; cursor:pointer; user-select:none; color:#e9efff; font-weight:600; }
+.collapsible-header::after { content:'\25BE'; font-size:12px; color:#9fb1c9; transition: transform .12s ease; }
+.collapsible[open] .collapsible-header { border-bottom:1px solid rgba(138,155,182,0.35); }
+.collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
+.collapsible-content { padding:10px; }
 </style>
 
 <main>
@@ -288,7 +295,12 @@ $ittById = $byId($ittRows);
         </script>
     </div>
     <div class="llm-right">
-
+        <?php if (!$editItem): ?>
+            <div class="connector-placeholder" style="border:1px dashed rgba(138,155,182,0.4); background:#0d1117; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
+                <div style="font-weight:600; color:#e9efff; margin-bottom:6px;">No profile selected</div>
+                <div>Select a profile from the list on the left to view and edit its settings.</div>
+            </div>
+        <?php endif; ?>
         <div class="form-container wide-centered">
         <form id="core_profile_form" method="post" onsubmit='return consolidation(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
@@ -383,10 +395,19 @@ $ittById = $byId($ittRows);
         </div>
     </div>
 
-    <!-- Metadata visual + JSON editors -->
-    <textarea name="metadata" style="display:none" placeholder="Metadata"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
-    <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
-    <div id="metadata"></div>
+    <!-- Visual Profile Settings (first chunk) -->
+    <div class="connector-card" style="margin-bottom:10px;">
+        <div class="connector-title">Profile Settings (Saved to Metadata)</div>
+        <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
+    </div>
+    <!-- JSON Editor (second chunk) in collapsible -->
+    <details id="metadata_section" class="collapsible">
+        <summary class="collapsible-header">Metadata (Advanced JSON)</summary>
+        <div class="collapsible-content">
+            <textarea name="metadata" style="display:none" placeholder="Metadata"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
+            <div id="metadata"></div>
+        </div>
+    </details>
 
     <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
     <script>
@@ -531,6 +552,18 @@ $ittById = $byId($ittRows);
     }
 
     document.addEventListener('DOMContentLoaded', initInlineEditors);
+    // Collapse metadata by default and trigger resize like connectors
+    (function(){
+        var d = document.getElementById('metadata_section');
+        if (!d) return;
+        try { d.open = false; } catch(e){}
+        d.addEventListener('toggle', function(){
+            if (d.open) {
+                try { window.dispatchEvent(new Event('resize')); } catch(e){}
+                try { setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 50); } catch(e){}
+            }
+        });
+    })();
 
     // Inline editor for LLM connectors
     function buildInlineEditorHTML(conn){
