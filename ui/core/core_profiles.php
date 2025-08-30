@@ -301,20 +301,34 @@ $ittById = $byId($ittRows);
         <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
         
         <div style="height:8px;"></div>
-        <label>Default NPC:</label><br>
-        <label>
-            <input type="radio" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
-            True
-        </label>
-        <label>
-            <input type="radio" name="default_narrator" value="0" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 0 ? "checked" : "" ?>>
-            False
-        </label>
+        <label>Default NPC</label><br>
+        <input type="hidden" name="default_npc" value="0">
+        <label><input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+
+        <div style="height:6px;"></div>
+        <label>Default Narrator</label><br>
+        <input type="hidden" name="default_narrator" value="0">
+        <label><input type="checkbox" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
 
         <div style="height:8px;"></div>
         <label for="prompt">Profile Prompt</label>
         <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
     </div>
+
+    <script>
+    (function(){
+        const names = ['default_npc','default_narrator'];
+        names.forEach(n=>{
+            const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
+            if (!cb) return;
+            const label = cb.closest('label');
+            const span = label ? label.querySelector('.toggle-text') : null;
+            function sync(){ if (span) span.textContent = cb.checked ? 'On' : 'Off'; }
+            sync();
+            cb.addEventListener('change', sync);
+        });
+    })();
+    </script>
 
     <?php /* connector details preloaded above for both panes */ ?>
 
