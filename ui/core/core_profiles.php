@@ -251,6 +251,13 @@ if (isset($_GET["create_blank"])) {
 
 // Fetch Data
 $data = $profiles->readAll();
+$npcCountRows = $GLOBALS["db"]->fetchAll("SELECT profile_id, COUNT(*) AS c FROM core_npc_master GROUP BY profile_id");
+$profileIdToNpcCount = [];
+foreach ($npcCountRows as $r) {
+    $pid = (string)($r['profile_id'] ?? '');
+    $cnt = (int)($r['c'] ?? 0);
+    if ($pid !== '') $profileIdToNpcCount[$pid] = $cnt;
+}
 $editItem = null;
 
 if (isset($_GET["edit"])) {
@@ -284,6 +291,7 @@ $ittById = $byId($ittRows);
             const RAW = <?= json_encode($data ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ACTIVE_ID = <?= json_encode($_GET['edit'] ?? '') ?>;
             const list = document.getElementById('profiles_list');
+            const NPC_COUNT = <?= json_encode($profileIdToNpcCount ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const LLM = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const TTS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ITT = <?= json_encode($ittById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
@@ -303,6 +311,8 @@ $ittById = $byId($ittRows);
                     const itt = escapeHtml(labelOf(ITT, r.itt_connector_id));
                     const diary = escapeHtml(labelOf(LLM, r.diary_connector_id));
                     const flags = [];
+                    const npcCount = Number((NPC_COUNT||{})[String(r.id)]||0);
+                    if (npcCount > 0) flags.push('<span class="pf-flag">'+npcCount+' NPCs</span>');
                     if (String(r.default_npc)==='1') flags.push('<span class="pf-flag">NPC</span>');
                     if (String(r.default_narrator)==='1') flags.push('<span class="pf-flag">Narrator</span>');
                     html += `
