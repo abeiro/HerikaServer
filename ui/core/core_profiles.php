@@ -78,6 +78,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .connector-card input[type="password"],
 .connector-card select,
 .connector-card textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+/* Toast notification */
+.toast-notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; z-index: 10000; opacity: 0; transform: translateX(400px); transition: all 0.3s ease; max-width: 400px; }
+.toast-notification.show { opacity: 1; transform: translateX(0); }
+.toast-notification:not(.error) { background: linear-gradient(135deg, #6dd19c, #5bb377); border: 1px solid rgba(109, 209, 156, 0.3); }
+.toast-notification.error { background: linear-gradient(135deg, #ff6b6b, #e55a5a); border: 1px solid rgba(255, 107, 107, 0.3); }
 /* Collapsible block for Metadata */
 .collapsible { margin-top: 8px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117; }
 .collapsible-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; cursor:pointer; user-select:none; color:#e9efff; font-weight:600; }
@@ -151,6 +156,8 @@ if (isset($_GET["delete"])) {
 
 // Inline update handler for LLM connectors (AJAX)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connector"])) {
+    // Ensure no buffered HTML leaks into JSON response
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
     try {
         $llm = new LLMConnector();
@@ -158,7 +165,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
 
         $allowed = [
-            'label','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema'
+            'label','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id'
         ];
         $data = [];
         foreach ($allowed as $k) {
@@ -170,6 +177,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
                 $data[$k] = ($v === '' ? null : intval($v));
             } else if (in_array($k, ['temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','min_p','top_a'], true)) {
                 $data[$k] = ($v === '' ? null : floatval($v));
+            } else if ($k === 'api_badge_id') {
+                $data[$k] = ($v === '' ? null : intval($v));
             } else {
                 $data[$k] = ($v === '' ? null : $v);
             }
@@ -552,6 +561,75 @@ $ittById = $byId($ittRows);
     }
 
     document.addEventListener('DOMContentLoaded', initInlineEditors);
+    
+    // Handle postMessage from embedded LLM connector iframes
+    window.addEventListener('message', async function(event) {
+        if (event.data && event.data.type === 'llm_connector_save') {
+            try {
+                const formData = new FormData();
+                for (const [key, value] of Object.entries(event.data.data)) {
+                    formData.append(key, value);
+                }
+                
+                const response = await fetch('core_profiles.php', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+                
+                let result = {};
+                try {
+                    result = await response.json();
+                } catch (e) {
+                    result = { ok: false, error: 'Invalid response' };
+                }
+                
+                // Send result back to iframe
+                event.source.postMessage({
+                    type: 'llm_connector_save_result',
+                    success: result.ok === true,
+                    error: result.error || null
+                }, '*');
+                
+                // Show toast notification in parent
+                if (result.ok === true) {
+                    showToast('LLM connector saved successfully');
+                    // Reload the originating iframe to reflect saved values
+                    try {
+                        const frames = document.querySelectorAll('iframe');
+                        frames.forEach(f => { if (f && f.contentWindow === event.source) { f.src = f.src; } });
+                    } catch(_e){}
+                } else {
+                    showToast('Save failed: ' + (result.error || 'Unknown error'), true);
+                }
+                
+            } catch (error) {
+                // Send error back to iframe
+                event.source.postMessage({
+                    type: 'llm_connector_save_result',
+                    success: false,
+                    error: error.message
+                }, '*');
+                
+                showToast('Save failed: ' + error.message, true);
+            }
+        }
+    });
+    
+    // Toast notification function
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        
+        const messageEl = toast.querySelector('.message');
+        if (messageEl) messageEl.textContent = message;
+        
+        toast.className = 'toast-notification show' + (isError ? ' error' : '');
+        setTimeout(() => {
+            toast.className = 'toast-notification';
+        }, 3000);
+    }
+    
     // Collapse metadata by default and trigger resize like connectors
     (function(){
         var d = document.getElementById('metadata_section');

@@ -99,7 +99,12 @@ class CoreProfile {
         }
     
         $table = $fkMap[$field];
-        $query = "SELECT id, label FROM {$table} ORDER BY id ASC";
+        // For LLM-backed fields, prefer connector label; fallback to model if label is empty
+        if ($table === 'core_llm_connector') {
+            $query = "SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM {$table} ORDER BY id ASC";
+        } else {
+            $query = "SELECT id, label FROM {$table} ORDER BY id ASC";
+        }
         return $GLOBALS["db"]->fetchAll($query);
     }
 

@@ -96,8 +96,82 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     if (typeof window.consolidation !== 'function') {
         window.consolidation = function(){ return true; };
     }
+    
+    // Check if we're in an iframe (embedded in core profiles)
+    const isInIframe = (()=>{ try { return window.parent && window.parent !== window; } catch(_){ return true; } })();
+    // Expose for inline handler check
+    window.isInIframe = isInIframe;
+    
+    // If in iframe, override form submission to use postMessage
+    if (isInIframe) {
+        window.handleEmbeddedSave = async function() {
+            const form = document.querySelector('form[method="post"]');
+            if (!form) return;
+            
+            // Disable save button during request
+            const saveBtn = form.querySelector('button[name="save"]');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+            }
+            
+            const formData = new FormData(form);
+            const data = {};
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            // Add inline_update_connector flag for parent page handler
+            data.inline_update_connector = '1';
+            
+            // Try direct POST to parent endpoint to avoid postMessage failures
+            try {
+                const fd = new FormData();
+                Object.entries(data).forEach(([k,v])=>fd.append(k, v));
+                const res = await fetch('core_profiles.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+                let json = {};
+                try { json = await res.json(); } catch(_){ json = { ok:false, error:'Invalid response' }; }
+                // Re-enable button and show local toast
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+                (function(){ const toast = document.getElementById('toast'); if (!toast) return; const msg = toast.querySelector('.message'); if (msg) msg.textContent = json.ok ? 'Saved successfully' : ('Save failed: ' + (json.error||'Unknown error')); toast.style.display = 'block'; setTimeout(()=>{ toast.style.display = 'none'; }, 2000); })();
+                if (json.ok) { try { window.location.reload(); } catch(_e){} }
+                // Notify parent as well
+                if (window.parent && window.parent.postMessage) {
+                    window.parent.postMessage({ type:'llm_connector_save_result', success: json.ok===true, error: json.error||null }, '*');
+                }
+            } catch (e) {
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+                (function(){ const toast = document.getElementById('toast'); if (!toast) return; const msg = toast.querySelector('.message'); if (msg) msg.textContent = 'Save failed: ' + e.message; toast.style.display = 'block'; setTimeout(()=>{ toast.style.display = 'none'; }, 2000); })();
+                if (window.parent && window.parent.postMessage) {
+                    window.parent.postMessage({ type:'llm_connector_save_result', success:false, error: e.message }, '*');
+                }
+            }
+        };
+        
+        // Listen for save results from parent
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'llm_connector_save_result') {
+                const saveBtn = document.querySelector('button[name="save"]');
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
+                
+                // Show local toast if available
+                const toast = document.getElementById('toast');
+                if (toast && toast.querySelector('.message')) {
+                    const message = event.data.success ? 'Saved successfully' : ('Save failed: ' + (event.data.error || 'Unknown error'));
+                    toast.querySelector('.message').textContent = message;
+                    toast.style.display = 'block';
+                    setTimeout(() => {
+                        toast.style.display = 'none';
+                    }, 2500);
+                }
+            }
+        });
+    }
     </script>
-    <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
+    <form method="post" onsubmit='if (window.isInIframe) { window.handleEmbeddedSave(); return false; } return consolidation();' style='<?= $editItem!=null?"":"display:none"?>'>
         <?php if ($editItem): ?>
             <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
         <?php endif; ?>
