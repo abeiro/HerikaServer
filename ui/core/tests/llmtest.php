@@ -82,12 +82,12 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                     echo '<div class="status"><span class="error">Connector has no driver set.</span></div></div>';
                 } else {
                     echo '<div class="status"><span class="label">Driver:</span> <span class="ok">'.htmlspecialchars($driver).'</span></div>';
-                    // Build a small test context
+                    // Build test context to match ui/tests.php
                     $head = [
-                        ['role' => 'system', 'content' => strtr($GLOBALS["PROMPT_HEAD"].($GLOBALS["HERIKA_PERS"] ?? ''), ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"] ?? 'Dragonborn'])]
+                        ['role' => 'system', 'content' => strtr(($GLOBALS["PROMPT_HEAD"] ?? '') . ($GLOBALS["HERIKA_PERS"] ?? ''), ["#PLAYER_NAME#" => ($GLOBALS["PLAYER_NAME"] ?? 'Dragonborn')])]
                     ];
                     $prompt = [
-                        ['role' => 'user', 'content' => "Hey, ".($GLOBALS['HERIKA_NAME'] ?? 'Herika').", say hello to the player!"]
+                        ['role' => 'user', 'content' => "Hey, ".($GLOBALS['HERIKA_NAME'] ?? 'Herika').", attack that monster!!"]
                     ];
                     $contextData = array_merge($head, $prompt);
 
@@ -132,6 +132,22 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                     echo '<pre><b>Response time:</b> ' . number_format($endTimeTrans, 3) . ' secs. ';
                     echo '<span style="color: '.$color.'; font-weight:bold; font-size:1.1em;">'.$perf.'</span></pre>';
                     echo '</div>';
+
+                    // Troubleshooting block if response is empty
+                    if (!isset($buffer) || trim((string)$buffer) === '') {
+                        echo '<div class="panel">';
+                        echo '<div class="status"><span class="label" style="color: #ffc107;">TROUBLESHOOTING FIXES</span></div>';
+                        echo '<ul style="margin-top: 10px; list-style-type: none; padding-left: 0; color:#cfd8e3;">';
+                        echo '<li style="margin-bottom: 10px;"><strong>401 = Unauthorized</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Check your API key.</li><li>Ensure you have enough credits on your account.</li></ul></li>';
+                        echo '<li style="margin-bottom: 10px;"><strong>402 = Payment Required</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Make sure your account has credits.</li></ul></li>';
+                        echo '<li style="margin-bottom: 10px;"><strong>403 = Forbidden</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Your prompt may be flagged for moderation.</li></ul></li>';
+                        echo '<li style="margin-bottom: 10px;"><strong>404 = Not Found</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Check if your connector URL is correct.</li></ul></li>';
+                        echo '<li style="margin-bottom: 10px;"><strong>500 = Internal Server Error</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>The server is experiencing issues.</li></ul></li>';
+                        echo '<li style="margin-bottom: 10px;"><strong>LLM Response is Empty</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Ensure your account has credits.</li></ul></li>';
+                        echo '<li style="margin-bottom: 10px;"><strong>Response fails in-game</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Check server logs for token limits.</li></ul></li>';
+                        echo '</ul>';
+                        echo '</div>';
+                    }
 
                     // Request sent to LLM (from connector DEBUG_DATA)
                     echo '<div class="panel">';
