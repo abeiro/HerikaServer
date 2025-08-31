@@ -178,8 +178,6 @@ if (isset($_GET["edit"])) {
 
 <?php if ($editItem): ?>
     <h2>Edit NPC (ID: <?= htmlspecialchars($editItem["id"]) ?>)</h2>
-<?php else: ?>
-    <h2 onclick='document.forms[0].style.display="block"'>Create New NPC</h2>
 <?php endif; ?>
 
 <div class="form-container">
@@ -434,6 +432,8 @@ if (isset($_GET["edit"])) {
 .pagination a:hover { background:#1f2a40; }
 .pagination .active { background:#ffb862; color:#111; border-color:#ffb862; font-weight:700; }
 .pagination .disabled { opacity:0.5; pointer-events:none; }
+.pagination button { padding:6px 10px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; cursor:pointer; }
+.pagination button:hover { background:#1f2a40; }
 </style>
 <div class="pagination">
   <?php $qbase = strtok($_SERVER['REQUEST_URI'], '?'); $make = function($p) use ($qbase){ return htmlspecialchars($qbase.'?page='.$p); }; ?>
@@ -446,6 +446,7 @@ if (isset($_GET["edit"])) {
   <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make($totalPages) ?>">Last</a>
   <span style="border:none; background:transparent; color:#9fb1c9;">Page <?= $page ?> / <?= $totalPages ?></span>
   <span style="border:none; background:transparent; color:#9fb1c9;">Total <?= $totalRows ?></span>
+  <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
 </div>
 <?php endif; ?>
 <div class="npc-grid">
@@ -509,6 +510,12 @@ if (isset($_GET["edit"])) {
   document.querySelectorAll('[data-edit-id]').forEach(btn=>{
     btn.addEventListener('click', function(ev){ ev.preventDefault(); const id=this.getAttribute('data-edit-id'); if (!id) return; openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
   });
+  const createBtn = document.getElementById('npc_create_btn');
+  if (createBtn){
+    createBtn.addEventListener('click', function(){
+      openModal('npc_master.php?partial=1');
+    });
+  }
   // Toggle buttons
   document.querySelectorAll('[data-favorite-id]').forEach(btn=>{
     btn.addEventListener('click', async function(e){
