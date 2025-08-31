@@ -104,6 +104,52 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
     exit;
 }
 
+// Toggle favorite (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_favorite"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
+        $hasValue = array_key_exists('value', $_POST);
+        if ($hasValue) {
+            $v = ($_POST['value']==='1'||$_POST['value']===1||$_POST['value']===true)?1:0;
+            $sql = "UPDATE core_npc_master SET npc_favorite = {$v} WHERE id = {$id} RETURNING npc_favorite";
+        } else {
+            $sql = "UPDATE core_npc_master SET npc_favorite = 1 - COALESCE(npc_favorite,0) WHERE id = {$id} RETURNING npc_favorite";
+        }
+        $row = $GLOBALS['db']->fetchOne($sql);
+        $val = is_array($row) ? intval($row['npc_favorite'] ?? 0) : 0;
+        echo json_encode(["ok"=>true, "favorite"=>$val]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
+// Toggle lock (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_lock"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
+        $hasValue = array_key_exists('value', $_POST);
+        if ($hasValue) {
+            $v = ($_POST['value']==='1'||$_POST['value']===1||$_POST['value']===true)?1:0;
+            $sql = "UPDATE core_npc_master SET lock_profile = {$v} WHERE id = {$id} RETURNING lock_profile";
+        } else {
+            $sql = "UPDATE core_npc_master SET lock_profile = 1 - COALESCE(lock_profile,0) WHERE id = {$id} RETURNING lock_profile";
+        }
+        $row = $GLOBALS['db']->fetchOne($sql);
+        $val = is_array($row) ? intval($row['lock_profile'] ?? 0) : 0;
+        echo json_encode(["ok"=>true, "locked"=>$val]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
 // Handle Delete
 if (isset($_GET["delete"])) {
     $npc->delete($_GET["delete"]);
@@ -300,7 +346,7 @@ if (isset($_GET["edit"])) {
             <small class="hint">Free-form labels to organize and filter NPCs.</small>
         </div>
 
-        <div class="form-item span-2">
+        <div class="form-item span-2 metadata-block">
             <label for="metadata">Metadata (JSON)</label>
             <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
             <small class="hint">Advanced: arbitrary key/value metadata. Use the JSON editor below.</small>
@@ -367,6 +413,8 @@ if (isset($_GET["edit"])) {
 .npc-actions .btn:hover { background:#1f2a40; }
 .npc-actions .btn-danger { background:#311; border-color:#633; }
 .npc-actions .btn-danger:hover { background:#511; }
+.npc-actions .btn-toggle { background:#21304a; }
+.npc-actions .btn-toggle.active { background:#ffb862; color:#111; border-color:#ffb862; font-weight:700; }
 </style>
 <style>
 /* Modal styling aligned with Oghma edit modal */
@@ -414,6 +462,8 @@ if (isset($_GET["edit"])) {
         </div>
         <div class="npc-actions">
             <a class="btn" href="#" data-edit-id="<?= $row["id"] ?>">Edit</a>
+            <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
+            <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 Locked" : "🔓"; ?></a>
             <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
             <a class="btn" href="?tag=<?= $row["id"] ?>">Tag</a>
         </div>
@@ -458,6 +508,37 @@ if (isset($_GET["edit"])) {
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
   document.querySelectorAll('[data-edit-id]').forEach(btn=>{
     btn.addEventListener('click', function(ev){ ev.preventDefault(); const id=this.getAttribute('data-edit-id'); if (!id) return; openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
+  });
+  // Toggle buttons
+  document.querySelectorAll('[data-favorite-id]').forEach(btn=>{
+    btn.addEventListener('click', async function(e){
+      e.preventDefault();
+      const id = this.getAttribute('data-favorite-id');
+      const fd = new FormData(); fd.append('toggle_favorite','1'); fd.append('id', id);
+      const res = await fetch('npc_master.php', { method:'POST', body: fd });
+      let json={}; try{ json=await res.json(); }catch(_e){}
+      if (json && json.ok){
+        const active = Number(json.favorite||0)===1;
+        this.classList.toggle('active', active);
+        this.textContent = active ? '★ Favorited' : '☆ Favorite';
+        try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent= active?'Marked favorite':'Unfavorited'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
+      }
+    });
+  });
+  document.querySelectorAll('[data-lock-id]').forEach(btn=>{
+    btn.addEventListener('click', async function(e){
+      e.preventDefault();
+      const id = this.getAttribute('data-lock-id');
+      const fd = new FormData(); fd.append('toggle_lock','1'); fd.append('id', id);
+      const res = await fetch('npc_master.php', { method:'POST', body: fd });
+      let json={}; try{ json=await res.json(); }catch(_e){}
+      if (json && json.ok){
+        const active = Number(json.locked||0)===1;
+        this.classList.toggle('active', active);
+        this.textContent = active ? '🔒 Locked' : '🔓 Unlock';
+        try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent= active?'Locked profile':'Unlocked profile'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
+      }
+    });
   });
   // Receive save events from iframe and update the card inline
   window.addEventListener('message', function(e){
@@ -508,7 +589,10 @@ if (isset($_GET["edit"])) {
 
 <?php
  // Provides a JSON editor for metadata field and form consolidation function (only needed if metadata field is present)
- include(__DIR__."/tmpl/metadata_json_editor.php");
+ // Hide metadata editor in modal partial view
+ if (!(isset($_GET['partial']) && $_GET['partial']=='1')) {
+     include(__DIR__."/tmpl/metadata_json_editor.php");
+ }
 // Provides Datatables
  include(__DIR__."/tmpl/data_tables.php");
 ?>
