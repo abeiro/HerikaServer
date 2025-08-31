@@ -640,6 +640,12 @@ if (isset($_GET["edit"])) {
         <div>Select a connector from the list on the left to view and edit its settings.</div>
     </div>
 <?php endif; ?>
+<script>
+// Ensure consolidation() exists even without metadata editor
+if (typeof window.consolidation !== 'function') {
+    window.consolidation = function(){ return true; };
+}
+</script>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
@@ -806,30 +812,6 @@ if (isset($_GET["edit"])) {
             ?>
         </div>
     </div>
-
-    
-    
-
-    <details id="metadata_section" class="collapsible">
-        <summary class="collapsible-header">Metadata</summary>
-        <div class="collapsible-content">
-            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
-            <div id="metadata"></div>
-        </div>
-    </details>
-    <script>
-    (function(){
-        var d = document.getElementById('metadata_section');
-        if (!d) return;
-        try { d.open = false; } catch(e){}
-        d.addEventListener('toggle', function(){
-            if (d.open) {
-                try { window.dispatchEvent(new Event('resize')); } catch(e){}
-                try { setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 50); } catch(e){}
-            }
-        });
-    })();
-    </script>
 
     
 </form>
