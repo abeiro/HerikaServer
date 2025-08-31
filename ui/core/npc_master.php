@@ -161,16 +161,80 @@ if (isset($_GET["delete"])) {
 $perPage = 9;
 $page = isset($_GET["page"]) ? intval($_GET["page"]) : 1;
 if ($page < 1) $page = 1;
-$rowCountRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master");
+
+// Filters and sorting
+$q = trim($_GET['q'] ?? '');
+$alpha = strtolower($_GET['alpha'] ?? 'asc');
+if (!in_array($alpha, ['asc','desc'], true)) { $alpha = 'asc'; }
+
+$where = "1=1";
+if ($q !== ''){
+    $qEsc = "%".$GLOBALS['db']->escape($q)."%";
+    // Match by name primarily; include a few related fields
+    $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."')";
+}
+
+// Default: favorites first, then alphabetical by name
+$order = "order by coalesce(npc_favorite,0) desc, lower(npc_name) ".$alpha.", id asc";
+
+// Count with filters
+$rowCountRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master where {$where}");
 $totalRows = intval($rowCountRow['c'] ?? 0);
 $totalPages = max(1, (int)ceil($totalRows / max(1, $perPage)));
 if ($page > $totalPages) $page = $totalPages;
 $offset = ($page - 1) * $perPage;
-$data = $npc->getAll("1=1 order by coalesce(gamets_last_updated,0) desc limit {$perPage} offset {$offset}");
+$data = $npc->getAll("{$where} {$order} limit {$perPage} offset {$offset}");
 $editItem = null;
 
 if (isset($_GET["edit"])) {
     $editItem = $npc->getById($_GET["edit"]);
+}
+
+// Partial list renderer for AJAX refresh of grid and pagination
+if (isset($_GET['list']) && $_GET['list'] === '1') {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: text/html; charset=utf-8');
+    ?>
+    <div class="pagination">
+      <div class="filter-inline">
+        <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
+      </div>
+      <?php $qbase = strtok($_SERVER['REQUEST_URI'], '?'); $make = function($p) use ($qbase){ return htmlspecialchars($qbase.'?page='.$p); }; ?>
+      <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(1) ?>">First</a>
+      <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(max(1,$page-1)) ?>">Prev</a>
+      <?php for ($p=max(1,$page-2); $p<=min($totalPages,$page+2); $p++): ?>
+        <?php if ($p === $page): ?><span class="active"><?= $p ?></span><?php else: ?><a href="<?= $make($p) ?>"><?= $p ?></a><?php endif; ?>
+      <?php endfor; ?>
+      <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make(min($totalPages,$page+1)) ?>">Next</a>
+      <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make($totalPages) ?>">Last</a>
+      <span style="border:none; background:transparent; color:#9fb1c9;">Page <?= $page ?> / <?= $totalPages ?></span>
+      <span style="border:none; background:transparent; color:#9fb1c9;">Total <?= $totalRows ?></span>
+      <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
+    </div>
+    <div class="npc-grid">
+    <?php foreach ($data as $row): ?>
+        <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
+            <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
+            <div class="npc-divider"></div>
+            <div class="npc-fields">
+                <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"><?= htmlspecialchars($row["gender"] ?? "") ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
+                <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
+                <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"><?= htmlspecialchars($row["oghma_knowledge_tags"] ?? "") ?></span></div>
+            </div>
+            <div class="npc-actions">
+                <a class="btn" href="#" data-edit-id="<?= $row["id"] ?>">Edit</a>
+                <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 Locked" : "🔓"; ?></a>
+                <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
+                <a class="btn" href="?tag=<?= $row["id"] ?>">Tag</a>
+            </div>
+        </div>
+    <?php endforeach; ?>
+    </div>
+    <?php
+    exit;
 }
 ?>
 
@@ -434,8 +498,13 @@ if (isset($_GET["edit"])) {
 .pagination .disabled { opacity:0.5; pointer-events:none; }
 .pagination button { padding:6px 10px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; cursor:pointer; }
 .pagination button:hover { background:#1f2a40; }
+.filter-inline { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.filter-inline input[type="text"] { padding:4px 8px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; height:28px; }
 </style>
 <div class="pagination">
+  <div class="filter-inline">
+    <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
+  </div>
   <?php $qbase = strtok($_SERVER['REQUEST_URI'], '?'); $make = function($p) use ($qbase){ return htmlspecialchars($qbase.'?page='.$p); }; ?>
   <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(1) ?>">First</a>
   <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(max(1,$page-1)) ?>">Prev</a>
@@ -516,6 +585,85 @@ if (isset($_GET["edit"])) {
       openModal('npc_master.php?partial=1');
     });
   }
+  // Live search and alpha sort
+  const searchInput = document.getElementById('npc_search');
+  let listAbort = null;
+  async function refreshList(page){
+    const params = new URLSearchParams(window.location.search);
+    const si = document.getElementById('npc_search');
+    const wasFocused = document.activeElement && document.activeElement.id === 'npc_search';
+    const caretStart = wasFocused && si && typeof si.selectionStart === 'number' ? si.selectionStart : null;
+    const caretEnd = wasFocused && si && typeof si.selectionEnd === 'number' ? si.selectionEnd : null;
+    if (si) params.set('q', si.value || '');
+    params.set('alpha', 'asc');
+    if (page) params.set('page', String(page));
+    params.set('list','1');
+    if (listAbort) { try { listAbort.abort(); } catch(_){} }
+    listAbort = new AbortController();
+    const res = await fetch('npc_master.php?'+params.toString(), { signal: listAbort.signal });
+    const html = await res.text();
+    const temp = document.createElement('div'); temp.innerHTML = html;
+    const newPag = temp.querySelector('.pagination');
+    const newGrid = temp.querySelector('.npc-grid');
+    if (newPag && newGrid){
+      const oldPag = document.querySelector('.pagination');
+      const oldGrid = document.querySelector('.npc-grid');
+      if (oldPag && oldPag.parentElement) oldPag.parentElement.replaceChild(newPag, oldPag);
+      if (oldGrid && oldGrid.parentElement) oldGrid.parentElement.replaceChild(newGrid, oldGrid);
+      // rebind events on new elements
+      document.querySelectorAll('[data-edit-id]').forEach(btn=>{
+        btn.addEventListener('click', function(ev){ ev.preventDefault(); const id=this.getAttribute('data-edit-id'); if (!id) return; openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
+      });
+      document.querySelectorAll('[data-favorite-id]').forEach(btn=>{
+        btn.addEventListener('click', async function(e){
+          e.preventDefault(); const id = this.getAttribute('data-favorite-id');
+          const fd = new FormData(); fd.append('toggle_favorite','1'); fd.append('id', id);
+          const res = await fetch('npc_master.php', { method:'POST', body: fd }); let json={}; try{ json=await res.json(); }catch(_e){}
+          if (json && json.ok){ const active = Number(json.favorite||0)===1; this.classList.toggle('active', active); this.textContent = active ? '★' : '☆'; }
+        });
+      });
+      document.querySelectorAll('[data-lock-id]').forEach(btn=>{
+        btn.addEventListener('click', async function(e){
+          e.preventDefault(); const id = this.getAttribute('data-lock-id');
+          const fd = new FormData(); fd.append('toggle_lock','1'); fd.append('id', id);
+          const res = await fetch('npc_master.php', { method:'POST', body: fd }); let json={}; try{ json=await res.json(); }catch(_e){}
+          if (json && json.ok){ const active = Number(json.locked||0)===1; this.classList.toggle('active', active); this.textContent = active ? '🔒 Locked' : '🔓'; }
+        });
+      });
+      const newCreate = document.getElementById('npc_create_btn');
+      if (newCreate){ newCreate.addEventListener('click', function(){ openModal('npc_master.php?partial=1'); }); }
+      // Hook pagination links to AJAX
+      document.querySelectorAll('.pagination a[href]').forEach(a=>{
+        a.addEventListener('click', function(e){
+          e.preventDefault();
+          const m = this.href.match(/page=(\d+)/); const p = m?parseInt(m[1],10):1; refreshList(p);
+        });
+      });
+      const newSearch = document.getElementById('npc_search');
+      if (newSearch){
+        // Rebind with debounce and restore focus/caret
+        newSearch.addEventListener('input', function(){ refreshListDebounced(1); });
+        if (wasFocused){
+          try {
+            newSearch.focus();
+            if (caretStart!=null && caretEnd!=null) newSearch.setSelectionRange(caretStart, caretEnd);
+          } catch(_e){}
+        }
+      }
+    }
+  }
+  // Simple debounce for input
+  let debTimer = null;
+  function refreshListDebounced(page){
+    if (debTimer) clearTimeout(debTimer);
+    debTimer = setTimeout(()=>refreshList(page), 180);
+  }
+  if (searchInput){ searchInput.addEventListener('input', function(){ refreshListDebounced(1); }); }
+  // Removed alpha toggle; default remains ascending (favorites first)
+  // Hook existing pagination for AJAX
+  document.querySelectorAll('.pagination a[href]').forEach(a=>{
+    a.addEventListener('click', function(e){ e.preventDefault(); const m = this.href.match(/page=(\d+)/); const p = m?parseInt(m[1],10):1; refreshList(p); });
+  });
   // Toggle buttons
   document.querySelectorAll('[data-favorite-id]').forEach(btn=>{
     btn.addEventListener('click', async function(e){
