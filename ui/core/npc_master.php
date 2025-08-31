@@ -138,99 +138,185 @@ if (isset($_GET["edit"])) {
 
 <div class="form-container">
 <?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ob_end_clean(); ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>html,body{background:#0e1624;} main{background:#0e1624; padding:12px;} .form-container{background:#0e1624; border:1px solid rgba(138,155,182,0.35); border-radius:8px;}</style>
 <form method="post" onsubmit='return false' style='display:block'>
 <?php } else { ?>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
 <?php } ?>
+    <style>
+    .form-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 16px; }
+    @media (max-width: 900px){ .form-grid { grid-template-columns: 1fr; } }
+    .form-item { display:flex; flex-direction:column; gap:6px; }
+    .form-item label { font-weight:700; color:#e9efff; }
+    .form-item .hint { color:#9fb1c9; font-size:12px; line-height:1.35; }
+    .form-item textarea { min-height:96px; }
+    .form-item input[type="text"], .form-item textarea, .form-item select { background:#0e1624; color:#e9efff; border:1px solid rgba(138,155,182,0.35); border-radius:6px; padding:8px 10px; }
+    .form-item input[type="checkbox"] { transform: scale(1.05); }
+    .span-2 { grid-column: 1 / -1; }
+    .checkbox-inline { display:flex; align-items:center; gap:8px; }
+    </style>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
     <?php endif; ?>
 
-    <label for="npc_name">NPC Name</label>
-    <input type="text" id="npc_name" name="npc_name" value="<?= htmlspecialchars($editItem["npc_name"] ?? "") ?>">
+    <div class="form-grid">
+        <div class="form-item span-2">
+            <label for="npc_name">NPC Name</label>
+            <input type="text" id="npc_name" name="npc_name" placeholder="e.g. Aela the Huntress" value="<?= htmlspecialchars($editItem["npc_name"] ?? "") ?>">
+            <small class="hint">Display name shown in UI and used to build prompts. Changing it will also update the MD5 key.</small>
+        </div>
 
-    <label for="npc_favorite">
-        <input type="checkbox" id="npc_favorite" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
-        Favorite
-    </label><br>
+        <div class="form-item">
+            <label for="npc_favorite">Favorite</label>
+            <div class="checkbox-inline">
+                <input type="checkbox" id="npc_favorite" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
+                <span class="hint">Pin this NPC for quick access.</span>
+            </div>
+        </div>
 
-    <label for="lock_profile">
-        <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
-        Lock Profile
-    </label><br>
+        <div class="form-item">
+            <label for="lock_profile">Lock Profile</label>
+            <div class="checkbox-inline">
+                <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
+                <span class="hint">Prevents dynamic systems from modifying this NPC's profile.</span>
+            </div>
+        </div>
 
-    <label for="prompt_head">Prompt Head</label>
-    <textarea id="prompt_head" name="prompt_head"><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
+        <div class="form-item span-2">
+            <label for="prompt_head">Prompt Head</label>
+            <textarea id="prompt_head" name="prompt_head" placeholder="High-level system instructions injected before the core."><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
+            <small class="hint">System preamble inserted before other sections. Keep concise and stable.</small>
+        </div>
 
-    <label for="core">Core </label>
-    <textarea id="core" name="core"><?= htmlspecialchars($editItem["core"] ?? "") ?></textarea>
+        <div class="form-item span-2">
+            <label for="core">Core</label>
+            <textarea id="core" name="core" placeholder="Unchanging rules, boundaries, and core identity."><?= htmlspecialchars($editItem["core"] ?? "") ?></textarea>
+            <small class="hint">Canonical constraints and non-negotiable behavior. Keep evergreen and tightly scoped.</small>
+        </div>
 
-    <label for="npc_static_bio">Static Bio</label>
-    <textarea id="npc_static_bio" name="npc_static_bio"><?= htmlspecialchars($editItem["npc_static_bio"] ?? "") ?></textarea>
+        <div class="form-item span-2">
+            <label for="npc_static_bio">Static Bio</label>
+            <textarea id="npc_static_bio" name="npc_static_bio" placeholder="Fixed background, history, and facts."><?= htmlspecialchars($editItem["npc_static_bio"] ?? "") ?></textarea>
+            <small class="hint">Persistent biography that never changes during play. Good for canon facts.</small>
+        </div>
 
-    <label for="oghma_knowledge_tags">OGHMA Knowledge Tags</label>
-    <textarea id="oghma_knowledge_tags" name="oghma_knowledge_tags"><?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?></textarea>
+        <div class="form-item span-2">
+            <label for="oghma_knowledge_tags">OGHMA Knowledge Tags</label>
+            <textarea id="oghma_knowledge_tags" name="oghma_knowledge_tags" placeholder="Comma-separated keywords to fetch Oghma articles."><?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?></textarea>
+            <small class="hint">Keywords used by Oghma Infinium for topic retrieval. Prefer lowercase with underscores.</small>
+        </div>
 
-    <label for="emote_moods">Emote Moods</label>
-    <textarea id="emote_moods" name="emote_moods"><?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
+        <div class="form-item span-2">
+            <label for="emote_moods">Emote Moods</label>
+            <textarea id="emote_moods" name="emote_moods" placeholder="Allowed mood/emote set (comma-separated).">
+<?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
+            <small class="hint">Whitelist of mood/emote cues the NPC may use (e.g., calm, angry, playful).</small>
+        </div>
 
-    <label for="personality">Personality</label>
-    <textarea id="personality" name="personality"><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
+        <div class="form-item span-2">
+            <label for="personality">Personality</label>
+            <textarea id="personality" name="personality" placeholder="Personality traits and speaking characteristics."><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
+            <small class="hint">Concise traits that guide tone and behavior. Avoid contradictions with Core.</small>
+        </div>
 
-    <label for="relationships">Relationships</label>
-    <textarea id="relationships" name="relationships"><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
+        <div class="form-item span-2">
+            <label for="relationships">Relationships</label>
+            <textarea id="relationships" name="relationships" placeholder="Key allies, rivals, factions, and opinions."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
+            <small class="hint">Named entities the NPC knows and how they feel about them.</small>
+        </div>
 
-    <label for="occupation">Occupation</label>
-    <textarea id="occupation" name="occupation"><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
+        <div class="form-item">
+            <label for="occupation">Occupation</label>
+            <textarea id="occupation" name="occupation" placeholder="Role, job, affiliations."><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
+            <small class="hint">Primary role or job. Include relevant guilds or factions.</small>
+        </div>
 
-    <label for="skills">Skills</label>
-    <textarea id="skills" name="skills"><?= htmlspecialchars($editItem["skills"] ?? "") ?></textarea>
+        <div class="form-item">
+            <label for="skills">Skills</label>
+            <textarea id="skills" name="skills" placeholder="Strengths, abilities, and specialties."><?= htmlspecialchars($editItem["skills"] ?? "") ?></textarea>
+            <small class="hint">Highlight notable competencies that affect dialogue choices.</small>
+        </div>
 
-    <label for="speechstyle">Speech Style</label>
-    <textarea id="speechstyle" name="speechstyle"><?= htmlspecialchars($editItem["speechstyle"] ?? "") ?></textarea>
+        <div class="form-item">
+            <label for="speechstyle">Speech Style</label>
+            <textarea id="speechstyle" name="speechstyle" placeholder="Dialect, cadence, verbal tics."><?= htmlspecialchars($editItem["speechstyle"] ?? "") ?></textarea>
+            <small class="hint">How they speak: formal, curt, poetic, archaic, etc.</small>
+        </div>
 
-    <label for="goals">Goals</label>
-    <textarea id="goals" name="goals"><?= htmlspecialchars($editItem["goals"] ?? "") ?></textarea>
+        <div class="form-item">
+            <label for="goals">Goals</label>
+            <textarea id="goals" name="goals" placeholder="Short and long-term objectives."><?= htmlspecialchars($editItem["goals"] ?? "") ?></textarea>
+            <small class="hint">Motivations that drive decisions and quest hooks.</small>
+        </div>
 
-    <label for="voiceid">Voice ID</label>
-    <input type="text" id="voiceid" name="voiceid" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
+        <div class="form-item">
+            <label for="voiceid">Voice ID</label>
+            <input type="text" id="voiceid" name="voiceid" placeholder="Matches TTS voice identifier" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
+            <small class="hint">Identifier for the TTS backend (e.g., ElevenLabs, XTTS, etc.).</small>
+        </div>
 
-    <label for="gender">Gender</label>
-    <input type="text" id="gender" name="gender" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
+        <div class="form-item">
+            <label for="gender">Gender</label>
+            <input type="text" id="gender" name="gender" placeholder="e.g. female, male, nonbinary" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
+            <small class="hint">Used for pronouns and voice selection guidance.</small>
+        </div>
 
-    <label for="base">Base</label>
-    <input type="text" id="base" name="base" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
+        <div class="form-item">
+            <label for="base">Base</label>
+            <input type="text" id="base" name="base" placeholder="Base actor/form ID if applicable" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
+            <small class="hint">Optional: base form identifier or template this NPC derives from.</small>
+        </div>
 
-    <label for="race">Race</label>
-    <input type="text" id="race" name="race" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
+        <div class="form-item">
+            <label for="race">Race</label>
+            <input type="text" id="race" name="race" placeholder="e.g. nord, dunmer, argonian" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
+            <small class="hint">Lore-accurate race label used in prompts.</small>
+        </div>
 
+        <div class="form-item">
+            <label for="refid">Ref ID</label>
+            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000...)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
+            <small class="hint">Skyrim reference ID for in-game linkage (optional).</small>
+        </div>
 
-    <label for="refid">Ref ID</label>
-    <input type="text" id="refid" name="refid" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
+        <div class="form-item">
+            <label for="profile_id">Profile</label>
+            <?= renderSelect($npc, "profile_id", "Profile", $editItem["profile_id"] ?? "") ?>
+            <small class="hint">Select which CHIM profile this NPC uses for AI behavior.</small>
+        </div>
 
-    <label for="profile_id">Profile ID</label>
-    <?= renderSelect($npc, "profile_id", "Profile", $editItem["profile_id"] ?? "") ?>
+        <div class="form-item">
+            <label for="dynamic_profile">Dynamic Profile</label>
+            <div class="checkbox-inline">
+                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
+                <span class="hint">Allow systems to evolve the profile based on gameplay events.</span>
+            </div>
+        </div>
 
-    <label for="dynamic_profile">
-        <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
-        Dynamic Profile
-    </label>
+        <div class="form-item span-2">
+            <label for="tags">Tags</label>
+            <input type="text" id="tags" name="tags" placeholder="Comma-separated labels for search and grouping" value="<?= htmlspecialchars($editItem["tags"] ?? "") ?>">
+            <small class="hint">Free-form labels to organize and filter NPCs.</small>
+        </div>
 
-    <label for="tags">Tags</label>
-    <input type="text" id="tags" name="tags" value="<?= htmlspecialchars($editItem["tags"] ?? "") ?>">
+        <div class="form-item span-2">
+            <label for="metadata">Metadata (JSON)</label>
+            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
+            <small class="hint">Advanced: arbitrary key/value metadata. Use the JSON editor below.</small>
+            <div id="metadata"></div>
+        </div>
 
-
-    <br/>
-    <label for="metadata">Metadata (JSON)</label>
-    <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea><br>
-    <div id="metadata"></div>
-
-    <label for="extended_data">Extended data (JSON)</label>
-    <textarea name="extended_data" style="display:none"><?= htmlspecialchars($editItem["extended_data"] ?? "") ?></textarea><br>
-    <div id="extended_data"></div>
+        <div class="form-item span-2">
+            <label for="extended_data">Extended Data (JSON)</label>
+            <textarea name="extended_data" style="display:none"><?= htmlspecialchars($editItem["extended_data"] ?? "") ?></textarea>
+            <small class="hint">Advanced: large or structured data blocks consumed by integrations.</small>
+            <div id="extended_data"></div>
+        </div>
+    </div>
 
     <?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ?>
-        <button type="button" id="npc_modal_save" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
+        <button type="button" id="npc_modal_save" class="btn-save" style="display:none"><?= $editItem ? "Update" : "Create" ?></button>
         <script>
         (function(){
             const save = document.getElementById('npc_modal_save');
@@ -258,6 +344,10 @@ if (isset($_GET["edit"])) {
         <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
     <?php } ?>
 </form>
+<?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ?>
+    <?php include(__DIR__."/tmpl/metadata_json_editor.php"); ?>
+    </div>
+    <?php exit; } ?>
 </div>
 
 <h2>All NPCs</h2>
@@ -277,6 +367,17 @@ if (isset($_GET["edit"])) {
 .npc-actions .btn:hover { background:#1f2a40; }
 .npc-actions .btn-danger { background:#311; border-color:#633; }
 .npc-actions .btn-danger:hover { background:#511; }
+</style>
+<style>
+/* Modal styling aligned with Oghma edit modal */
+.modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10000; align-items:center; justify-content:center; overflow-y:auto; padding:20px 0; }
+.modal-container { position:relative; top:auto; left:auto; transform:none; margin: 120px auto 40px auto; max-width:1000px; width:90%; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(138,155,182,0.2); background:#0e1624; position:sticky; top:0; z-index:2; }
+.modal-title { margin:0; font-weight:700; color:#e9efff; }
+.modal-body { max-height:calc(85vh - 100px); overflow-y:auto; background:#0e1624; }
+.modal-close { background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; }
+.modal-actions { display:flex; gap:8px; align-items:center; }
+.modal-save { background:#ffb862; color:#111; border:1px solid #ffb862; border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
 </style>
 <?php if ($totalPages > 1): ?>
 <style>
@@ -320,12 +421,19 @@ if (isset($_GET["edit"])) {
 <?php endforeach; ?>
 </div>
 
-<div id="npc_modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10000; align-items:center; justify-content:center;">
-  <div style="width:90%; max-width:1000px; max-height:85vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; position:relative; overflow:auto;">
-    <button id="npc_modal_close" style="position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;">Close</button>
-    <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:85vh; border:0; background:#0e1624;"></iframe>
+<div id="npc_modal" class="modal-backdrop">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2 class="modal-title">Edit NPC</h2>
+      <div class="modal-actions">
+        <button id="npc_modal_save_header" class="modal-save">Save</button>
+        <button id="npc_modal_close" class="modal-close">Close</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:75vh; border:0; background:#0e1624;"></iframe>
+    </div>
   </div>
-  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 </div>
 
  
@@ -334,8 +442,17 @@ if (isset($_GET["edit"])) {
 (function(){
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
-  function openModal(url){ iframe.src = url; modal.style.display = 'flex'; }
-  function closeModal(){ modal.style.display = 'none'; try { iframe.src='about:blank'; } catch(_){} }
+  function openModal(url){ iframe.src = url; modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  function closeModal(){ modal.style.display = 'none'; document.body.style.overflow = 'auto'; try { iframe.src='about:blank'; } catch(_){} }
+  const headerSave = document.getElementById('npc_modal_save_header');
+  if (headerSave){
+    headerSave.addEventListener('click', function(){
+      try {
+        const btn = iframe && iframe.contentDocument ? iframe.contentDocument.getElementById('npc_modal_save') : null;
+        if (btn){ btn.click(); }
+      } catch(_e){}
+    });
+  }
   document.addEventListener('click', function(e){ if (e.target && e.target.id==='npc_modal_close') closeModal(); });
   modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
