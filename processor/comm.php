@@ -603,7 +603,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
         
         // Check if DYNAMIC_PROFILE is enabled for this NPC
-        $isDynamicEnabled = $npcData["dynamic_profile"];
+        $isDynamicEnabled = $npcData["dynamic_profile"] ?? $GLOBALS["DYNAMIC_PROFILE"] ?? false;
 
         if ($isDynamicEnabled) {
             $enabledNPCs[] = $npcName;
