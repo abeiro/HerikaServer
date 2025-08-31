@@ -83,6 +83,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .toast-notification.show { opacity: 1; transform: translateX(0); }
 .toast-notification:not(.error) { background: linear-gradient(135deg, #6dd19c, #5bb377); border: 1px solid rgba(109, 209, 156, 0.3); }
 .toast-notification.error { background: linear-gradient(135deg, #ff6b6b, #e55a5a); border: 1px solid rgba(255, 107, 107, 0.3); }
+/* Compact select row with Set button */
+.select-row { display:flex; gap:8px; align-items:center; }
+.select-row select { max-width: 420px; }
+.btn-apply { white-space: nowrap; padding: 6px 10px; }
 /* Collapsible block for Metadata */
 .collapsible { margin-top: 8px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117; }
 .collapsible-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; cursor:pointer; user-select:none; color:#e9efff; font-weight:600; }
@@ -186,6 +190,35 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         $ok = $llm->update($id, $data);
         if ($ok === false) {
             echo json_encode(["ok"=>false, "error"=>($llm->getLastError() ?: 'Update failed')]);
+        } else {
+            echo json_encode(["ok"=>true]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
+// Inline update handler for Core Profile fields (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_profile"])) {
+    // Ensure no buffered HTML leaks into JSON response
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
+        $field = (string)($_POST['field'] ?? '');
+        $allowed = [
+            'llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id',
+            'diary_connector_id','tts_connector_id','itt_connector_id'
+        ];
+        if (!in_array($field, $allowed, true)) { echo json_encode(["ok"=>false, "error"=>"Invalid field"]); exit; }
+        $raw = $_POST['value'] ?? '';
+        $val = ($raw === '' ? null : intval($raw));
+        $data = [ $field => $val ];
+        $ok = $profiles->update($id, $data);
+        if ($ok === false) {
+            echo json_encode(["ok"=>false, "error"=>($profiles->getLastError() ?: 'Update failed')]);
         } else {
             echo json_encode(["ok"=>true]);
         }
@@ -368,31 +401,46 @@ $ittById = $byId($ittRows);
             <button type="button" class="pf-tab" data-pane="pane_itt">ITT</button>
         </div>
         <div class="pf-pane active" id="pane_llm1">
-            <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="llm_primary_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_primary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm2">
-            <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="llm_secondary_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_secondary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm3">
-            <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="llm_tertiary_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_tertiary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm4">
-            <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="llm_quaternary_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_quaternary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_diary">
-            <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="diary_connector_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
@@ -427,6 +475,7 @@ $ittById = $byId($ittRows);
     const LLM_DETAILS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
     const TTS_DETAILS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
     const ITT_DETAILS = <?= json_encode($ittById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+    const CURRENT_PROFILE_ID = <?= json_encode($editItem["id"] ?? '') ?>;
 
     function renderKVList(obj, keys, labels){
         if (!obj) return '<em style="color:#888">No connector selected.</em>';
@@ -548,6 +597,60 @@ $ittById = $byId($ittRows);
                 else if (id==='llm_secondary_id') refreshEmbeddedEditor(id,'frame_llm_secondary_id');
                 else if (id==='llm_tertiary_id') refreshEmbeddedEditor(id,'frame_llm_tertiary_id');
                 else if (id==='llm_quaternary_id') refreshEmbeddedEditor(id,'frame_llm_quaternary_id');
+            });
+        });
+
+        function updateLeftList(connectorField, connId){
+            const li = document.querySelector('.llm-left .conn-li[data-id="'+String(CURRENT_PROFILE_ID)+'"]');
+            if (!li) return;
+            let label = '';
+            if (connectorField==='tts_connector_id') label = (TTS_DETAILS[connId] && (TTS_DETAILS[connId].label||'')) || '';
+            else if (connectorField==='itt_connector_id') label = (ITT_DETAILS[connId] && (ITT_DETAILS[connId].label||'')) || '';
+            else label = (LLM_DETAILS[connId] && (LLM_DETAILS[connId].label||'')) || '';
+            let key = '';
+            if (connectorField==='llm_primary_id') key = 'LLM1';
+            else if (connectorField==='llm_secondary_id') key = 'LLM2';
+            else if (connectorField==='llm_tertiary_id') key = 'LLM3';
+            else if (connectorField==='llm_quaternary_id') key = 'LLM4';
+            else if (connectorField==='tts_connector_id') key = 'TTS';
+            else if (connectorField==='itt_connector_id') key = 'ITT';
+            else if (connectorField==='diary_connector_id') key = 'Diary';
+            if (!key) return;
+            const lines = li.querySelectorAll('.pf-line');
+            lines.forEach(line=>{
+                const k = line.querySelector('.pf-key');
+                const v = line.querySelector('.pf-val');
+                if (k && v && (k.textContent||'').trim()===key){ v.textContent = label || '—'; }
+            });
+        }
+
+        document.querySelectorAll('.btn-apply[data-apply-select]').forEach(btn => {
+            btn.addEventListener('click', ()=>{
+                const selId = btn.getAttribute('data-apply-select');
+                const sel = document.getElementById(selId);
+                if (!sel) return;
+                const value = sel.value || '';
+                const formData = new FormData();
+                formData.append('inline_update_profile','1');
+                formData.append('id', <?= json_encode($editItem["id"] ?? 0) ?>);
+                formData.append('field', selId);
+                formData.append('value', value);
+                fetch('core_profiles.php', { method:'POST', body: formData })
+                    .then(r=>r.json()).then(json=>{
+                        if (json && json.ok) {
+                            showToast('Profile updated');
+                            updateLeftList(selId, String(value));
+                            if (selId==='llm_primary_id') refreshEmbeddedEditor(selId,'frame_llm_primary_id');
+                            else if (selId==='llm_secondary_id') refreshEmbeddedEditor(selId,'frame_llm_secondary_id');
+                            else if (selId==='llm_tertiary_id') refreshEmbeddedEditor(selId,'frame_llm_tertiary_id');
+                            else if (selId==='llm_quaternary_id') refreshEmbeddedEditor(selId,'frame_llm_quaternary_id');
+                            else if (selId==='diary_connector_id') refreshEmbeddedEditor(selId,'frame_diary_connector_id');
+                        } else {
+                            showToast('Update failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
+                        }
+                    }).catch(e=>{
+                        showToast('Update failed: ' + e.message, true);
+                    });
             });
         });
 
