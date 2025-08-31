@@ -212,10 +212,8 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
 
 <div class="form-container wide-centered">
     <form method="post">
-        <input type="hidden" name="save_all" value="1">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
             <h2 style="margin:0;">Manage Keys</h2>
-            <button type="submit" class="btn-save">Save All</button>
         </div>
 
         <h3>Preset Keys</h3>
@@ -235,8 +233,11 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
                     </div>
                     <input type="hidden" name="presets[<?= htmlspecialchars($slug) ?>][id]" value="<?= htmlspecialchars($row['id']) ?>">
                     <div class="provider-body">
-                        <input type="password" name="presets[<?= htmlspecialchars($slug) ?>][api_key]" value="<?= htmlspecialchars($row['api_key']) ?>" placeholder="Paste API key">
+                        <input type="password" name="presets[<?= htmlspecialchars($slug) ?>][api_key]" value="<?= htmlspecialchars($row['api_key']) ?>" placeholder="Paste API key" data-autosave="preset" data-provider="<?= htmlspecialchars($slug) ?>" data-id="<?= htmlspecialchars($row['id']) ?>">
                         <button type="button" class="button" onclick="toggleVisibility(this)">Show</button>
+                        <?php if (in_array($slug, ['openrouter','openai'])): ?>
+                            <button type="button" class="btn-save" data-test-provider="<?= htmlspecialchars($slug) ?>" data-badge-id="<?= htmlspecialchars($row['id']) ?>">Test</button>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -255,10 +256,10 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
                     </div>
                     <input type="hidden" name="custom[id][]" value="<?= htmlspecialchars($row['id']) ?>">
                     <label>Label</label>
-                    <input type="text" name="custom[label][]" value="<?= htmlspecialchars($row['label']) ?>" placeholder="Provider label (e.g., MyService)">
+                    <input type="text" name="custom[label][]" value="<?= htmlspecialchars($row['label']) ?>" placeholder="Provider label (e.g., MyService)" data-autosave="custom" data-field="label" data-id="<?= htmlspecialchars($row['id']) ?>">
                     <label>API Key</label>
                     <div class="provider-body">
-                        <input type="password" name="custom[api_key][]" value="<?= htmlspecialchars($row['api_key']) ?>" placeholder="Paste API key">
+                        <input type="password" name="custom[api_key][]" value="<?= htmlspecialchars($row['api_key']) ?>" placeholder="Paste API key" data-autosave="custom" data-field="api_key" data-id="<?= htmlspecialchars($row['id']) ?>">
                         <button type="button" class="button" onclick="toggleVisibility(this)">Show</button>
                     </div>
                 </div>
@@ -266,9 +267,7 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
         </div>
         <button type="button" class="action-button add-new" onclick="addCustomKey()">Add Custom Key</button>
 
-        <div style="margin-top:15px;">
-            <button type="submit" class="btn-save">Save All</button>
-        </div>
+        
     </form>
 </div>
 
@@ -306,6 +305,99 @@ function addCustomKey(){
     `;
     container.appendChild(wrapper);
 }
+</script>
+
+<script>
+// Autosave for presets and custom keys
+(function(){
+    async function postUpdate(payload){
+        try { await fetch('api_badge.php', { method:'POST', body: payload }); } catch(_e){}
+    }
+    document.addEventListener('input', function(e){
+        const t = e.target;
+        if (!t || !t.getAttribute) return;
+        const mode = t.getAttribute('data-autosave');
+        if (!mode) return;
+        const formData = new FormData();
+        if (mode === 'preset'){
+            // We need an id to update the preset row
+            const id = t.getAttribute('data-id') || '';
+            if (!id) return;
+            formData.append('update','1');
+            formData.append('id', id);
+            formData.append('label', t.getAttribute('data-provider') || '');
+            formData.append('api_key', t.value || '');
+        } else if (mode === 'custom'){
+            const id = t.getAttribute('data-id') || '';
+            const field = t.getAttribute('data-field') || '';
+            if (!field) return;
+            if (id){
+                formData.append('update','1');
+                formData.append('id', id);
+                formData.append(field, t.value || '');
+            } else {
+                // Create new custom row when user types and no id yet
+                formData.append('create','1');
+                // Prevent preset label usage for customs
+                formData.append('label', field==='label' ? (t.value||'') : 'Custom Key');
+                if (field==='api_key') formData.append('api_key', t.value || '');
+            }
+        }
+        postUpdate(formData);
+    }, { passive:true });
+})();
+
+// Modal for testing API keys
+(function(){
+    const MODAL_ID = 'apikeytest_modal';
+    const modal = document.createElement('div');
+    modal.id = MODAL_ID;
+    modal.style.cssText = 'position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
+    modal.innerHTML = `
+        <div style="width:90%; max-width:900px; height:70vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
+            <button id="apikeytest_close" style="position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;">Close</button>
+            <div id="apikeytest_loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;">
+                <div style="width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <iframe id="apikeytest_iframe" name="apikeytest_iframe" src="about:blank" style="width:100%; height:100%; border:0; background:#0e1624; position:relative; z-index:1;"></iframe>
+        </div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+    document.body.appendChild(modal);
+    function openModal(url){ const iframe = document.getElementById('apikeytest_iframe'); const loader = document.getElementById('apikeytest_loading'); if (loader) loader.style.display = 'flex'; iframe.onload = function(){ if (loader) loader.style.display = 'none'; }; iframe.src = url; modal.style.display = 'flex'; }
+    function closeModal(){ modal.style.display = 'none'; try { document.getElementById('apikeytest_iframe').src='about:blank'; } catch(_){} }
+    document.addEventListener('click', function(e){ if (e.target && e.target.id==='apikeytest_close') closeModal(); });
+    modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
+    document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+
+    function ensurePostForm(){
+        let form = document.getElementById('apikeytest_form');
+        if (form) return form;
+        form = document.createElement('form');
+        form.id = 'apikeytest_form';
+        form.method = 'POST';
+        form.target = 'apikeytest_iframe';
+        form.action = 'tests/apikey_test.php';
+        form.style.display = 'none';
+        const inProv = document.createElement('input'); inProv.type='hidden'; inProv.name='provider'; form.appendChild(inProv);
+        const inKey = document.createElement('input'); inKey.type='hidden'; inKey.name='api_key'; form.appendChild(inKey);
+        document.body.appendChild(form);
+        return form;
+    }
+    document.querySelectorAll('button[data-test-provider]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const provider = btn.getAttribute('data-test-provider');
+            const row = btn.closest('.provider-card');
+            const input = row ? row.querySelector('input[name^="presets"][name$="[api_key]"]') : null;
+            const apiKey = input ? input.value.trim() : '';
+            if (!apiKey){ alert('Please enter an API key first.'); return; }
+            openModal('about:blank');
+            const form = ensurePostForm();
+            form.querySelector('input[name="provider"]').value = provider;
+            form.querySelector('input[name="api_key"]').value = apiKey;
+            try { form.submit(); } catch(_e){}
+        });
+    });
+})();
 </script>
 
 </main>
