@@ -202,6 +202,20 @@ if (isset($_GET["clone"])) {
     exit;
 }
 
+// Create a blank profile and open it for editing
+if (isset($_GET["create_blank"])) {
+    try {
+        $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label) VALUES ('New Profile') RETURNING id");
+        $newId = is_array($row) ? ($row['id'] ?? '') : '';
+        $redir = 'core_profiles.php' . ($newId !== '' ? ('?edit=' . urlencode($newId)) : '');
+        header("Location: $redir");
+        exit;
+    } catch (Throwable $e) {
+        header("Location: core_profiles.php");
+        exit;
+    }
+}
+
 // Fetch Data
 $data = $profiles->readAll();
 $editItem = null;
@@ -228,9 +242,8 @@ $ittById = $byId($ittRows);
 <div class="llm-layout">
     <div class="llm-left">
         <h1 class="llm-title">Core Profiles</h1>
-        <div class="list-filters">
-            <input id="pflist_q" type="text" placeholder="Search profiles...">
-            <span id="pflist_count" class="badge"></span>
+        <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
+            <a class="btn-save" href="?create_blank=1">New Profile</a>
         </div>
         <div id="profiles_list" class="conn-list"></div>
         <script>
@@ -238,23 +251,14 @@ $ittById = $byId($ittRows);
             const RAW = <?= json_encode($data ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ACTIVE_ID = <?= json_encode($_GET['edit'] ?? '') ?>;
             const list = document.getElementById('profiles_list');
-            const q = document.getElementById('pflist_q');
-            const count = document.getElementById('pflist_count');
             const LLM = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const TTS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ITT = <?= json_encode($ittById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
             function labelOf(map, id){ if (!id) return ''; const k=String(id); const row=map[k]; return row && (row.label||row.model||row.driver) ? (row.label||'') : ''; }
-            function pass(row){
-                const qq=(q.value||'').toLowerCase();
-                if (!qq) return true;
-                const hay=[row.label,row.llm_primary_id,row.llm_secondary_id,row.llm_tertiary_id,row.llm_quaternary_id,row.tts_connector_id,row.itt_connector_id,row.diary_connector_id]
-                    .map(v=>String(v||'').toLowerCase()).join('\n');
-                return hay.includes(qq);
-            }
+            function pass(_row){ return true; }
             function render(){
                 const rows=(RAW||[]).filter(pass);
-                count.textContent = rows.length+" shown";
                 let html='';
                 rows.forEach(r=>{
                     const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';
@@ -298,7 +302,6 @@ $ittById = $byId($ittRows);
                     });
                 });
             }
-            q.addEventListener('input', render);
             render();
         })();
         </script>
