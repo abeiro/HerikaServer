@@ -166,12 +166,19 @@ if ($page < 1) $page = 1;
 $q = trim($_GET['q'] ?? '');
 $alpha = strtolower($_GET['alpha'] ?? 'asc');
 if (!in_array($alpha, ['asc','desc'], true)) { $alpha = 'asc'; }
+$profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']) : '';
+
+// Preload profiles for filter dropdown
+$profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_profiles ORDER BY label ASC");
 
 $where = "1=1";
 if ($q !== ''){
     $qEsc = "%".$GLOBALS['db']->escape($q)."%";
     // Match by name primarily; include a few related fields
     $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."')";
+}
+if ($profileIdFilter !== ''){
+    $where .= " and profile_id = ".intval($profileIdFilter);
 }
 
 // Default: favorites first, then alphabetical by name
@@ -198,6 +205,12 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     <div class="pagination">
       <div class="filter-inline">
         <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
+        <select id="npc_profile_filter" title="Filter by profile">
+          <option value="">All Profiles</option>
+          <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); ?>
+            <option value="<?= htmlspecialchars($pid) ?>" <?= ($profileIdFilter!=='' && (string)$profileIdFilter===$pid)?'selected':'' ?>><?= htmlspecialchars($lbl) ?></option>
+          <?php endforeach; ?>
+        </select>
       </div>
       <?php $qbase = strtok($_SERVER['REQUEST_URI'], '?'); $make = function($p) use ($qbase){ return htmlspecialchars($qbase.'?page='.$p); }; ?>
       <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(1) ?>">First</a>
@@ -500,10 +513,17 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 .pagination button:hover { background:#1f2a40; }
 .filter-inline { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .filter-inline input[type="text"] { padding:4px 8px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; height:28px; }
+.filter-inline select { padding:4px 8px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; height:28px; }
 </style>
 <div class="pagination">
   <div class="filter-inline">
     <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
+    <select id="npc_profile_filter" title="Filter by profile">
+      <option value="">All Profiles</option>
+      <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); ?>
+        <option value="<?= htmlspecialchars($pid) ?>" <?= ($profileIdFilter!=='' && (string)$profileIdFilter===$pid)?'selected':'' ?>><?= htmlspecialchars($lbl) ?></option>
+      <?php endforeach; ?>
+    </select>
   </div>
   <?php $qbase = strtok($_SERVER['REQUEST_URI'], '?'); $make = function($p) use ($qbase){ return htmlspecialchars($qbase.'?page='.$p); }; ?>
   <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(1) ?>">First</a>
@@ -595,6 +615,8 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     const caretStart = wasFocused && si && typeof si.selectionStart === 'number' ? si.selectionStart : null;
     const caretEnd = wasFocused && si && typeof si.selectionEnd === 'number' ? si.selectionEnd : null;
     if (si) params.set('q', si.value || '');
+    const pf = document.getElementById('npc_profile_filter');
+    if (pf) params.set('profile_id', pf.value || '');
     params.set('alpha', 'asc');
     if (page) params.set('page', String(page));
     params.set('list','1');
@@ -650,6 +672,8 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
           } catch(_e){}
         }
       }
+      const newProfileSel = document.getElementById('npc_profile_filter');
+      if (newProfileSel){ newProfileSel.addEventListener('change', function(){ refreshList(1); }); }
     }
   }
   // Simple debounce for input
@@ -659,6 +683,8 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     debTimer = setTimeout(()=>refreshList(page), 180);
   }
   if (searchInput){ searchInput.addEventListener('input', function(){ refreshListDebounced(1); }); }
+  const profileSel = document.getElementById('npc_profile_filter');
+  if (profileSel){ profileSel.addEventListener('change', function(){ refreshList(1); }); }
   // Removed alpha toggle; default remains ascending (favorites first)
   // Hook existing pagination for AJAX
   document.querySelectorAll('.pagination a[href]').forEach(a=>{
