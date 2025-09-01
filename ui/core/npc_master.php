@@ -237,7 +237,6 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                 <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"><?= htmlspecialchars($row["oghma_knowledge_tags"] ?? "") ?></span></div>
             </div>
             <div class="npc-actions">
-                <a class="btn" href="#" data-edit-id="<?= $row["id"] ?>">Edit</a>
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 Locked" : "🔓"; ?></a>
                 <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
@@ -476,7 +475,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 .npc-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:14px; }
 @media (max-width: 1100px){ .npc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px){ .npc-grid { grid-template-columns: 1fr; } }
-.npc-card { background:linear-gradient(180deg, #101826 0%, #0d1117 100%); border:1px solid rgba(138,155,182,0.35); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: transform .12s ease, box-shadow .12s ease; }
+.npc-card { background:linear-gradient(180deg, #101826 0%, #0d1117 100%); border:1px solid rgba(138,155,182,0.35); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
 .npc-card:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
 .npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; }
 .npc-divider { height:1px; background: linear-gradient(90deg, rgba(138,155,182,0), rgba(138,155,182,0.5), rgba(138,155,182,0)); margin:2px 0 6px; }
@@ -551,7 +550,6 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"><?= htmlspecialchars($row["oghma_knowledge_tags"] ?? "") ?></span></div>
         </div>
         <div class="npc-actions">
-            <a class="btn" href="#" data-edit-id="<?= $row["id"] ?>">Edit</a>
             <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
             <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 Locked" : "🔓"; ?></a>
             <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
@@ -596,8 +594,13 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
   document.addEventListener('click', function(e){ if (e.target && e.target.id==='npc_modal_close') closeModal(); });
   modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
-  document.querySelectorAll('[data-edit-id]').forEach(btn=>{
-    btn.addEventListener('click', function(ev){ ev.preventDefault(); const id=this.getAttribute('data-edit-id'); if (!id) return; openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
+  document.querySelectorAll('.npc-card').forEach(card=>{
+    card.addEventListener('click', function(ev){
+      if (ev.target.closest('.npc-actions')) return;
+      const id=this.getAttribute('data-id'); if (!id) return;
+      ev.preventDefault();
+      openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1');
+    });
   });
   const createBtn = document.getElementById('npc_create_btn');
   if (createBtn){
@@ -633,8 +636,13 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       if (oldPag && oldPag.parentElement) oldPag.parentElement.replaceChild(newPag, oldPag);
       if (oldGrid && oldGrid.parentElement) oldGrid.parentElement.replaceChild(newGrid, oldGrid);
       // rebind events on new elements
-      document.querySelectorAll('[data-edit-id]').forEach(btn=>{
-        btn.addEventListener('click', function(ev){ ev.preventDefault(); const id=this.getAttribute('data-edit-id'); if (!id) return; openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
+      document.querySelectorAll('.npc-card').forEach(card=>{
+        card.addEventListener('click', function(ev){
+          if (ev.target.closest('.npc-actions')) return;
+          const id=this.getAttribute('data-id'); if (!id) return;
+          ev.preventDefault();
+          openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1');
+        });
       });
       document.querySelectorAll('[data-favorite-id]').forEach(btn=>{
         btn.addEventListener('click', async function(e){
@@ -741,14 +749,12 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"></span>, <span class="npc-muted">Race:</span> <span class="npc-race"></span>, <span class="npc-muted">Voice:</span> <span class="npc-voiceid"></span>, <span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
             <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"></span></div>
             <div class="npc-actions">
-                <a class="btn" href="#" data-edit-id="${id}">Edit</a>
                 <a class="btn btn-danger" href="?delete=${id}" onclick="return confirm('Delete this NPC?');">Delete</a>
                 <a class="btn" href="?tag=${id}">Tag</a>
             </div>`;
           grid.prepend(div);
           // Wire edit button
-          const btn = div.querySelector('[data-edit-id]');
-          if (btn) btn.addEventListener('click', function(ev){ ev.preventDefault(); openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
+          div.addEventListener('click', function(ev){ if (ev.target.closest('.npc-actions')) return; ev.preventDefault(); openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
           card = div;
         }
       }
