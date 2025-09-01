@@ -94,6 +94,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .collapsible[open] .collapsible-header { border-bottom:1px solid rgba(138,155,182,0.35); }
 .collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
 .collapsible-content { padding:10px; }
+.section-title { font-weight:800; color:#e9efff; border-bottom:1px solid rgba(138,155,182,0.35); padding-bottom:4px; margin:10px 0 6px; }
 </style>
 
 <main>
