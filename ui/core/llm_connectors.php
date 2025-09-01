@@ -597,7 +597,6 @@ if (isset($_GET["edit"])) {
 
 <div class="llm-layout">
     <div class="llm-left">
-        <h1 class="llm-title">LLM Connectors</h1>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
             <a class="btn-save" href="?create_blank=1">New Connector</a>
         </div>

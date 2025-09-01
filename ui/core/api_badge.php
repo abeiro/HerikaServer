@@ -175,17 +175,7 @@ if (isset($_GET["edit"])) {
 }
 ?>
 
-<style>
-    /* Blur API keys until hover */
-    td .api-key-blur {
-        filter: blur(6px);
-        transition: filter 0.2s ease;
-        display: inline-block;
-    }
-    td:hover .api-key-blur { filter: none; }
-</style>
 
-<h1>API Keys</h1>
 
 <?php
 // Build lookup by lower(label)
@@ -204,16 +194,11 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
 });
 ?>
 
-<?php if ($editItem): ?>
-    <h2>Edit Key (ID: <?= htmlspecialchars($editItem["id"]) ?>)</h2>
-<?php else: ?>
-    <h2 onclick='document.forms[0].style.display="block"'>Add Custom Key</h2>
-<?php endif; ?>
+
 
 <div class="form-container wide-centered">
     <form method="post">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
-            <h2 style="margin:0;">Manage Keys</h2>
         </div>
 
         <h3>Preset Keys</h3>

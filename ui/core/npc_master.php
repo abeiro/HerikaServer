@@ -37,9 +37,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 
 <main>
-    <div id="toast" class="toast-notification">
-        <span class="message"></span>
-    </div>
 
 <?php
 $GLOBALS["db"] = new sql();
@@ -250,13 +247,10 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 }
 ?>
 
-<h1>NPC Master</h1>
-
 <?php if ($editItem): ?>
     <h2>Edit NPC (ID: <?= htmlspecialchars($editItem["id"]) ?>)</h2>
 <?php endif; ?>
 
-<div class="form-container">
 <?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ob_end_clean(); ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>html,body{background:#0e1624;} main{background:#0e1624; padding:12px;} .form-container{background:#0e1624; border:1px solid rgba(138,155,182,0.35); border-radius:8px;}</style>
@@ -470,7 +464,6 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     <?php exit; } ?>
 </div>
 
-<h2>All NPCs</h2>
 <style>
 .npc-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:14px; }
 @media (max-width: 1100px){ .npc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -783,6 +776,10 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 // Provides Datatables
  include(__DIR__."/tmpl/data_tables.php");
 ?>
+
+    <div id="toast" class="toast-notification">
+        <span class="message"></span>
+    </div>
 
 </main>
 
