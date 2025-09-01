@@ -117,6 +117,10 @@ $llmQuaternaryOptions = getSelectOptions($profiles, "llm_quaternary_id");
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
+    if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+        header('Content-Type: application/json');
+    }
     // Server-side merge of visual metadata with JSON editor content
     if (isset($_POST['meta_vis'])) {
         $base = [];
@@ -128,13 +132,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
         foreach ((array)$_POST['meta_vis'] as $k=>$v) $base[$k] = $v;
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
-    $profiles->create($_POST);
-    header("Location: core_profiles.php");
-    exit;
+    $newId = $profiles->create($_POST);
+    if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        echo json_encode(['ok'=>true,'id'=>$newId]);
+        exit;
+    } else {
+        header("Location: core_profiles.php");
+        exit;
+    }
 }
 
 // Handle Update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
+    if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+        header('Content-Type: application/json');
+    }
     // Server-side merge of visual metadata with JSON editor content
     if (isset($_POST['meta_vis'])) {
         $base = [];
@@ -147,8 +160,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
     $profiles->update($_POST["id"], $_POST);
-    header("Location: core_profiles.php");
-    exit;
+    if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        echo json_encode(['ok'=>true,'id'=>$_POST['id'] ?? null]);
+        exit;
+    } else {
+        header("Location: core_profiles.php");
+        exit;
+    }
 }
 
 // Handle Delete
@@ -357,10 +375,14 @@ $ittById = $byId($ittRows);
             </div>
         <?php endif; ?>
         <div class="form-container wide-centered">
-        <form id="core_profile_form" method="post" onsubmit='return consolidation(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
+        <form id="core_profile_form" method="post" onsubmit='return saveProfileAjax(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
+
+    <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+        <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save">Save</button>
+    </div>
 
     <div class="connector-card" style="margin-bottom:12px;">
         <div class="connector-title">Profile Settings</div>
@@ -479,8 +501,59 @@ $ittById = $byId($ittRows);
         </div>
     </details>
 
-    <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
+    
     <script>
+    // Sticky save bar styles
+    (function(){
+        const css = `
+            .save-bar{position:sticky; bottom:0; z-index:999;}
+            .save-bar-inner{display:flex; justify-content:flex-end; gap:8px; padding:8px; background:rgba(13,17,23,0.9); border-top:1px solid rgba(138,155,182,0.35); backdrop-filter: blur(3px);}
+        `;
+        const styleTag = document.createElement('style');
+        styleTag.textContent = css;
+        document.head.appendChild(styleTag);
+    })();
+
+    // Save handler that keeps the user on the same profile and shows a toast
+    async function saveProfileAjax(ev, formId){
+        try {
+            if (typeof consolidation === 'function') {
+                const ok = consolidation(ev, formId);
+                if (ok === false) return false;
+            }
+        } catch(_e){}
+        ev.preventDefault();
+        const form = document.getElementById(formId) || ev.target;
+        if (!form) return false;
+
+        const fd = new FormData(form);
+        const hasId = !!(form.querySelector('input[name="id"]') && form.querySelector('input[name="id"]').value);
+        if (hasId) {
+            if (!fd.has('update')) fd.append('update','1');
+        } else {
+            if (!fd.has('create')) fd.append('create','1');
+        }
+        try {
+            const res = await fetch('core_profiles.php', { method:'POST', headers:{ 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+            let json = {};
+            try { json = await res.json(); } catch(_){ json = { ok:false, error:'Invalid response' }; }
+            if (json && json.ok){
+                if (json.id) {
+                    // In case of create, set id and update URL
+                    let idEl = form.querySelector('input[name="id"]');
+                    if (!idEl){ idEl = document.createElement('input'); idEl.type='hidden'; idEl.name='id'; form.appendChild(idEl); }
+                    idEl.value = String(json.id);
+                    try { history.replaceState({}, '', 'core_profiles.php?edit='+encodeURIComponent(String(json.id))); } catch(_){ }
+                }
+                if (typeof showToast === 'function') showToast('Profile saved');
+            } else {
+                if (typeof showToast === 'function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
+            }
+        } catch (e) {
+            if (typeof showToast === 'function') showToast('Save failed: ' + e.message, true);
+        }
+        return false;
+    }
     // Connector details passed from PHP
     const LLM_DETAILS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
     const TTS_DETAILS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;

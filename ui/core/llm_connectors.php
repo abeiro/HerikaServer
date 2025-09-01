@@ -205,7 +205,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
                 <label for='model'>Model</label><br>
                 <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
-                <div id="orm_model_info" class="orm-info-box" style="display:none"></div>
 
                 <div id="provider_row">
                     <label for='provider'>Provider</label><br>
@@ -470,8 +469,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             function renderInfo(m){ const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctx = formatContext(ctxOf(m)); return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div><div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): input ${prompt} • output ${completion}${ctx? ` • context ${ctx}`: ''}</div>`; }
             async function update(){
                 const val = (modelInput.value||'').trim();
-                const url = (document.querySelector('input[name="url"]').value||'');
-                const driver = (document.querySelector('input[name="driver"]').value||'');
+                const url = (document.querySelector('input[name=\"url\"]').value||'');
+                const driver = (document.querySelector('input[name=\"driver\"]').value||'');
                 const isOR = url.includes('openrouter.ai') || /openrouter/.test(driver);
                 if (!val || !isOR){ infoEl.style.display='none'; infoEl.innerHTML=''; return; }
                 try {
@@ -483,7 +482,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             }
             modelInput.addEventListener('change', update);
             modelInput.addEventListener('input', update);
-            window.addEventListener('load', update);
+            // removed on-load trigger
             document.querySelector('input[name="url"]').addEventListener('change', update);
             document.querySelector('input[name="driver"]').addEventListener('change', update);
         })();
@@ -739,7 +738,6 @@ if (typeof window.consolidation !== 'function') {
 
             <label for='model'>Model</label><br>
             <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
-            <div id="orm_model_info" class="orm-info-box" style="display:none"></div>
 
             <div id="provider_row">
                 <label for='provider'>Provider</label><br>
@@ -1133,6 +1131,47 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     // Close dropdown when service likely changed (url/driver edits)
     document.querySelector('input[name="url"]').addEventListener('change', () => closeDropdown());
     document.querySelector('input[name="driver"]').addEventListener('change', () => closeDropdown());
+
+    // Info box under Model input (full editor)
+    (function(){
+        const infoId = 'orm_model_info';
+        let infoEl = document.getElementById(infoId);
+        if (!infoEl){
+            infoEl = document.createElement('div');
+            infoEl.id = infoId;
+            infoEl.className = 'orm-info-box';
+            infoEl.style.display = 'none';
+            const anchor = modelInput;
+            if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(infoEl, anchor.nextSibling);
+        }
+        function ctxOf(m){ return (m.top_provider && m.top_provider.context_length) || m.context_length || ''; }
+        function formatContext(val){ const n = Number(val); return isFinite(n) ? n.toLocaleString('en-US') : (val||''); }
+        function renderInfo(m){
+            const prompt = formatPrice(m.pricing && m.pricing.prompt);
+            const completion = formatPrice(m.pricing && m.pricing.completion);
+            const ctx = formatContext(ctxOf(m));
+            return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div>`+
+                   `<div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): input ${prompt} • output ${completion}${ctx? ` • context ${ctx}`: ''}</div>`;
+        }
+        async function update(){
+            const val = (modelInput.value||'').trim();
+            const url = (document.querySelector('input[name=\"url\"]').value||'');
+            const driver = (document.querySelector('input[name=\"driver\"]').value||'');
+            const isOR = url.includes('openrouter.ai') || /openrouter/.test(driver);
+            if (!val || !isOR){ infoEl.style.display='none'; infoEl.innerHTML=''; return; }
+            try {
+                if (!cache){ await loadModels(); }
+                const m = (cache||[]).find(x => String(x.id||'') === val);
+                if (m){ infoEl.innerHTML = renderInfo(m); infoEl.style.display='block'; }
+                else { infoEl.innerHTML = `<div class=\"orm-muted\" style=\"font-size:12px;\">No model info available</div>`; infoEl.style.display='block'; }
+            } catch(_e){ infoEl.style.display='none'; }
+        }
+        modelInput.addEventListener('change', update);
+        modelInput.addEventListener('input', update);
+        // removed on-load trigger
+        document.querySelector('input[name="url"]').addEventListener('change', update);
+        document.querySelector('input[name="driver"]').addEventListener('change', update);
+    })();
 })();
 
 // API key notice logic
