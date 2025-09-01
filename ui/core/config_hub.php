@@ -17,7 +17,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
-$TITLE = "⚙️ CHIM - Config Hub";
+$TITLE = "CHIM - Configuration";
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
@@ -35,6 +35,7 @@ main { padding-top: 160px; }
 .embed-wrap { height: calc(100vh - 220px); min-height: 520px; border:1px solid #444; border-radius:8px; overflow:hidden; background:#0e1624; }
 .embed { width:100%; height:100%; border:0; background:#0e1624; }
 @media (max-height: 800px){ .embed-wrap { min-height: 420px; } }
+.tab-divider { padding: 10px 8px; color:#9fb1c9; font-weight:700; user-select:none; pointer-events:none; }
 </style>
 
 <main>
@@ -42,7 +43,7 @@ main { padding-top: 160px; }
         <span class="message"></span>
     </div>
 
-    <h1>Configuration Hub</h1>
+    <h1>Configuration</h1>
     <div class="tab-buttons">
         <button class="tab-button active" data-tab="npc">CHIM'd NPCs</button>
         <button class="tab-button" data-tab="profiles">Profile Builder</button>
@@ -52,7 +53,6 @@ main { padding-top: 160px; }
         <button class="tab-button" data-tab="npcbio">NPC Biography</button>
         <button class="tab-button" data-tab="actions">Action Editor</button>
         <button class="tab-button" data-tab="xtts">XTTS Management</button>
-
     </div>
 
     <div id="npc" class="tab-content active">
