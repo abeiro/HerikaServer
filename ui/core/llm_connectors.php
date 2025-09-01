@@ -90,6 +90,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     .orm-note { padding:6px 10px; font-size:12px; color:#97a6ba; border-bottom:1px dashed rgba(138,155,182,0.25); background:#0c0f14; }
     .orm-muted { color:#97a6ba; }
     .orm-err { color:#ff6b6b; padding:8px 10px; }
+    .orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; }
     </style>
     <script>
     // Define consolidation() if not present (embedded partial doesn't include metadata editor)
@@ -205,6 +206,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
                 <label for='model'>Model</label><br>
                 <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
+                <div id="orm_model_info" class="orm-info-box" style="display:none"></div>
 
                 <div id="provider_row">
                     <label for='provider'>Provider</label><br>
@@ -424,18 +426,19 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         function ensureDropdown(){ if (dropdown) return dropdown; dropdown = document.createElement('div'); dropdown.className = 'orm-dropdown'; document.body.appendChild(dropdown); dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); return dropdown; }
         function positionDropdown(){ const rect = modelInput.getBoundingClientRect(); const style = dropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.width = rect.width + 'px'; style.display = 'block'; isOpen = true; }
         function closeDropdown(){ if (!dropdown) return; dropdown.style.display = 'none'; isOpen = false; }
-        function formatPrice(n){ if (n === undefined || n === null || n === '' || isNaN(parseFloat(n))) return 'N/A'; const perTok = parseFloat(n); const perK = perTok * 1000.0; return '$' + perK.toFixed(4) + ' / 1K tok'; }
+        function formatPrice(n){ if (n === undefined || n === null || n === '' || isNaN(parseFloat(n))) return 'N/A'; const perTok = parseFloat(n); const perM = perTok * 1000000.0; return '$' + perM.toFixed(4) + ' / 1M tokens'; }
         function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
         function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+        function formatContext(val){ const num = Number(val); return isFinite(num) ? num.toLocaleString('en-US') : (val||''); }
         function renderList(models, filterText){
             ensureDropdown();
             const q = (filterText || '').toLowerCase();
             const list = (models || []).filter(m => { if (!q) return true; const id = (m.id || '').toLowerCase(); const name = (m.name || '').toLowerCase(); return id.includes(q) || name.includes(q); });
             let html = '';
             html += '<div class="orm-head">OpenRouter Models</div>';
-            html += '<div class="orm-note">Click to select. Pricing shown per 1K tokens (prompt/completion).</div>';
+            html += '<div class="orm-note">Click to select. Pricing shown per 1M tokens.</div>';
             if (list.length === 0){ html += '<div class="orm-muted" style="padding:8px 10px;">No matches</div>'; }
-            else { list.forEach(m => { const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctx = (m.top_provider && m.top_provider.context_length) || m.context_length || ''; const name = m.name ? ' — ' + escapeHtml(m.name) : ''; const line = `${escapeHtml(m.id)}${name}`; const sub = `Pricing: ${prompt} • ${completion}` + (ctx? ` • ctx ${ctx}` : ''); html += `<div class="orm-item" data-id="${encodeHtmlAttr(m.id)}" title="${encodeHtmlAttr(m.description||m.name||m.id)}"><div>${line}</div><div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">${sub}</div></div>`; }); }
+            else { list.forEach(m => { const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctxRaw = (m.top_provider && m.top_provider.context_length) || m.context_length || ''; const ctx = formatContext(ctxRaw); const name = m.name ? ' — ' + escapeHtml(m.name) : ''; const line = `${escapeHtml(m.id)}${name}`; const sub = `Pricing (per 1M tokens): input ${prompt} • output ${completion}` + (ctx? ` • context ${ctx}` : ''); html += `<div class=\"orm-item\" data-id=\"${encodeHtmlAttr(m.id)}\" title=\"${encodeHtmlAttr(m.description||m.name||m.id)}\"><div>${line}</div><div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">${sub}</div></div>`; }); }
             dropdown.innerHTML = html;
             dropdown.querySelectorAll('.orm-item').forEach(el => { el.addEventListener('click', () => { const id = el.getAttribute('data-id') || ''; modelInput.value = id; try { modelInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} try { modelInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} closeDropdown(); }); });
             positionDropdown();
@@ -452,6 +455,40 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeDropdown(); });
         document.querySelector('input[name="url"]').addEventListener('change', () => closeDropdown());
         document.querySelector('input[name="driver"]').addEventListener('change', () => closeDropdown());
+
+        // Info box under Model input (embedded editor)
+        (function(){
+            const infoId = 'orm_model_info';
+            let infoEl = document.getElementById(infoId);
+            if (!infoEl){
+                infoEl = document.createElement('div');
+                infoEl.id = infoId;
+                infoEl.className = 'orm-info-box';
+                infoEl.style.display = 'none';
+                const anchor = modelInput;
+                if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(infoEl, anchor.nextSibling);
+            }
+            function ctxOf(m){ return (m.top_provider && m.top_provider.context_length) || m.context_length || ''; }
+            function renderInfo(m){ const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctx = formatContext(ctxOf(m)); return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div><div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): input ${prompt} • output ${completion}${ctx? ` • context ${ctx}`: ''}</div>`; }
+            async function update(){
+                const val = (modelInput.value||'').trim();
+                const url = (document.querySelector('input[name="url"]').value||'');
+                const driver = (document.querySelector('input[name="driver"]').value||'');
+                const isOR = url.includes('openrouter.ai') || /openrouter/.test(driver);
+                if (!val || !isOR){ infoEl.style.display='none'; infoEl.innerHTML=''; return; }
+                try {
+                    if (!cache){ await loadModels(); }
+                    const m = (cache||[]).find(x => String(x.id||'') === val);
+                    if (m){ infoEl.innerHTML = renderInfo(m); infoEl.style.display='block'; }
+                    else { infoEl.innerHTML = `<div class=\"orm-muted\" style=\"font-size:12px;\">No model info available</div>`; infoEl.style.display='block'; }
+                } catch(_e){ infoEl.style.display='none'; }
+            }
+            modelInput.addEventListener('change', update);
+            modelInput.addEventListener('input', update);
+            window.addEventListener('load', update);
+            document.querySelector('input[name="url"]').addEventListener('change', update);
+            document.querySelector('input[name="driver"]').addEventListener('change', update);
+        })();
     })();
     // Providers dropdown
     (function(){
@@ -619,6 +656,7 @@ if (isset($_GET["edit"])) {
 .orm-note { padding:6px 10px; font-size:12px; color:#97a6ba; border-bottom:1px dashed rgba(138,155,182,0.25); background:#0c0f14; }
 .orm-muted { color:#97a6ba; }
 .orm-err { color:#ff6b6b; padding:8px 10px; }
+.orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; }
 /* Split layout: list left, editor right */
 .llm-layout { display:grid; grid-template-columns: minmax(240px, 340px) 1fr; gap:16px; align-items:start; }
 /* Keep two-column layout even on narrower screens so half-screen works */
@@ -693,6 +731,7 @@ if (typeof window.consolidation !== 'function') {
 
             <label for='model'>Model</label><br>
             <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
+            <div id="orm_model_info" class="orm-info-box" style="display:none"></div>
 
             <div id="provider_row">
                 <label for='provider'>Provider</label><br>
@@ -866,69 +905,13 @@ if (typeof window.consolidation !== 'function') {
     const apiBadgeSelect = document.getElementById('api_badge_id');
     const icons = document.querySelectorAll('.service-icon');
     const apiKeyRow = document.getElementById('api_key_row');
-
-    function setActive(service){
-        icons.forEach(ic=>{
-            if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active');
-        });
-    }
-
-    const driverDefaults = {
-        openrouter: 'openrouterjson',
-        openai: 'openaijson',
-        google: 'google_openaijson',
-        kobold: 'koboldcppjson',
-        custom: ''
-    };
-
-    const apiBadgeLabelMatch = {
-        openrouter: ['openrouter'],
-        openai: ['openai'],
-        google: ['google']
-        // kobold intentionally omitted (no API key)
-    };
-
-    function syncApiBadge(service){
-        if (!apiBadgeSelect) return;
-        if (service === 'kobold') { apiBadgeSelect.value = ''; return; }
-        const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase());
-        if (targets.length === 0) return;
-        let selectedVal = '';
-        for (let i = 0; i < apiBadgeSelect.options.length; i++) {
-            const opt = apiBadgeSelect.options[i];
-            const label = (opt.textContent || opt.innerText || '').toLowerCase();
-            if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; }
-        }
-        if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = '';
-    }
-
-    function applyService(service){
-        if (defaults[service]) urlInput.value = defaults[service];
-        providerRow.style.display = (service === 'openrouter') ? '' : 'none';
-        if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service];
-        syncApiBadge(service);
-        setActive(service);
-        if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : '';
-        if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none';
-    }
-
-    // Initialize from current URL heuristic
-    (function init(){
-        let service = 'openrouter';
-        const val = (urlInput && urlInput.value) ? urlInput.value : '';
-        if (val.includes('openai.com')) service = 'openai';
-        else if (val.includes('generativelanguage.googleapis.com')) service = 'google';
-        else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold';
-        else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai';
-        else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google';
-        else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold';
-        else service = 'custom';
-        applyService(service);
-    })();
-
-    icons.forEach(ic=>{
-        ic.addEventListener('click', ()=> applyService(ic.dataset.service));
-    });
+    function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
+    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
+    const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
+    function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
+    function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; }
+    (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
+    icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
 })();
 
 function llmClamp(rangeId, numberId, min, max){
@@ -1038,8 +1021,8 @@ function llmClamp(rangeId, numberId, min, max){
     function formatPrice(n){
         if (n === undefined || n === null || n === '' || isNaN(parseFloat(n))) return 'N/A';
         const perTok = parseFloat(n);
-        const perK = perTok * 1000.0;
-        return '$' + perK.toFixed(4) + ' / 1K tok';
+        const perM = perTok * 1000000.0;
+        return '$' + perM.toFixed(4) + ' / 1M tokens';
     }
 
     function renderList(models, filterText){
@@ -1054,7 +1037,7 @@ function llmClamp(rangeId, numberId, min, max){
 
         let html = '';
         html += '<div class="orm-head">OpenRouter Models</div>';
-        html += '<div class="orm-note">Click to select. Pricing shown per 1K tokens (prompt/completion).</div>';
+        html += '<div class="orm-note">Click to select. Pricing shown per 1M tokens.</div>';
 
         if (list.length === 0){
             html += '<div class="orm-muted" style="padding:8px 10px;">No matches</div>';
@@ -1062,10 +1045,11 @@ function llmClamp(rangeId, numberId, min, max){
             list.forEach(m => {
                 const prompt = formatPrice(m.pricing && m.pricing.prompt);
                 const completion = formatPrice(m.pricing && m.pricing.completion);
-                const ctx = (m.top_provider && m.top_provider.context_length) || m.context_length || '';
+                const ctxRaw = (m.top_provider && m.top_provider.context_length) || m.context_length || '';
+                const ctx = (function(v){ const n = Number(v); return isFinite(n) ? n.toLocaleString('en-US') : (v||''); })(ctxRaw);
                 const name = m.name ? ' — ' + escapeHtml(m.name) : '';
                 const line = `${escapeHtml(m.id)}${name}`;
-                const sub = `Pricing: ${prompt} • ${completion}` + (ctx? ` • ctx ${ctx}` : '');
+                const sub = `Pricing (per 1M tokens): input ${prompt} • output ${completion}` + (ctx? ` • context ${ctx}` : '');
                 html += `<div class="orm-item" data-id="${encodeHtmlAttr(m.id)}" title="${encodeHtmlAttr(m.description||m.name||m.id)}">`+
                         `<div>${line}</div>`+
                         `<div class="orm-muted" style="font-size:12px; margin-top:2px;">${sub}</div>`+
