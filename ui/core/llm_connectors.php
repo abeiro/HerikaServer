@@ -520,8 +520,19 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeDropdown(); });
         document.querySelector('input[name="url"]').addEventListener('change', () => closeDropdown());
         document.querySelector('input[name="driver"]').addEventListener('change', () => closeDropdown());
-        modelInput.addEventListener('change', () => { maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
-        modelInput.addEventListener('input', () => { maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
+
+        // Hook model changes
+        function clearProviderIfOpenRouter(){
+            const url = (document.querySelector('input[name="url"]').value||'');
+            const driver = (document.querySelector('input[name="driver"]').value||'');
+            if (url.includes('openrouter.ai') || /openrouter/.test(driver)){
+                providerInput.value = '';
+                try { providerInput.dispatchEvent(new Event('input', { bubbles:true })); } catch(_){ }
+                try { providerInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_){ }
+            }
+        }
+        modelInput.addEventListener('change', () => { clearProviderIfOpenRouter(); maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
+        modelInput.addEventListener('input', () => { clearProviderIfOpenRouter(); maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
     })();
     </script>
     <?php
@@ -1340,8 +1351,17 @@ function llmClamp(rangeId, numberId, min, max){
     document.querySelector('input[name="driver"]').addEventListener('change', () => closeDropdown());
 
     // Hook model changes
-    modelInput.addEventListener('change', () => { maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
-    modelInput.addEventListener('input', () => { maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
+    function clearProviderIfOpenRouter(){
+        const url = (document.querySelector('input[name="url"]').value||'');
+        const driver = (document.querySelector('input[name="driver"]').value||'');
+        if (url.includes('openrouter.ai') || /openrouter/.test(driver)){
+            providerInput.value = '';
+            try { providerInput.dispatchEvent(new Event('input', { bubbles:true })); } catch(_){ }
+            try { providerInput.dispatchEvent(new Event('change', { bubbles:true })); } catch(_){ }
+        }
+    }
+    modelInput.addEventListener('change', () => { clearProviderIfOpenRouter(); maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
+    modelInput.addEventListener('input', () => { clearProviderIfOpenRouter(); maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
 })();
 </script>
 
