@@ -276,11 +276,8 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
     global $db;
     
     // Ensure required dependencies are loaded
-    if (!function_exists('DataSpeechJournal')) {
+    if (!function_exists('DataSpeechJournal') || !function_exists('buildDynamicProfileDisplay')) {
         require_once(__DIR__ . "/../lib/data_functions.php");
-    }
-    if (!function_exists('buildDynamicProfileDisplay')) {
-        require_once(__DIR__ . "/../lib/model_dynmodel.php");
     }
     
     // Skip The Narrator
@@ -290,87 +287,45 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
     }
     
     // Check if profile exists for this NPC
-    $profilePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf_" . md5($npcName) . ".php";
-    if (!file_exists($profilePath)) {
+    $npcMaster=new NpcMaster();
+    $npcData=$npcMaster->getByName($npcName);
+    if (!$npcData) {
         Logger::debug("processSingleDynamicProfile: No profile found for $npcName");
         return false;
     }
-    
-    // Load the NPC's profile to check if DYNAMIC_PROFILE is enabled
-    $originalGlobals = $GLOBALS;
-    
+
     try {
-        // Include the NPC's profile
-        include($profilePath);
-        
-        // After loading character profile, ensure we use global dynamic prompts from main conf.php
-        // Character profiles should not override these global prompt settings
-        // BUT preserve character-specific DYNAMIC_PROFILE setting
-        $characterDynamicProfile = isset($DYNAMIC_PROFILE) ? $DYNAMIC_PROFILE : false;
-        $characterDynamicProfileFields = isset($DYNAMIC_PROFILE_FIELDS) ? $DYNAMIC_PROFILE_FIELDS : [];
-        
-        $mainConfPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-        if (file_exists($mainConfPath)) {
-            // Save current state before loading main config
-            $tempGlobals = $GLOBALS;
-            include($mainConfPath); // This will load the global prompts
-            
-            // Extract only the DYNAMIC_PROMPT_* variables from main config
-            $globalPrompts = [
-                'DYNAMIC_PROMPT_PERSONALITY' => $DYNAMIC_PROMPT_PERSONALITY ?? '',
-                'DYNAMIC_PROMPT_RELATIONSHIPS' => $DYNAMIC_PROMPT_RELATIONSHIPS ?? '',
-                'DYNAMIC_PROMPT_OCCUPATION' => $DYNAMIC_PROMPT_OCCUPATION ?? '',
-                'DYNAMIC_PROMPT_SKILLS' => $DYNAMIC_PROMPT_SKILLS ?? '',
-                'DYNAMIC_PROMPT_SPEECHSTYLE' => $DYNAMIC_PROMPT_SPEECHSTYLE ?? '',
-                'DYNAMIC_PROMPT_GOALS' => $DYNAMIC_PROMPT_GOALS ?? ''
-            ];
-            
-            // Restore character-specific globals but override with global prompts
-            foreach ($tempGlobals as $globalKey => $globalValue) {
-                $GLOBALS[$globalKey] = $globalValue;
-            }
-            foreach ($globalPrompts as $key => $value) {
-                if (!empty($value)) {
-                    $GLOBALS[$key] = $value;
-                }
-            }
-            
-            // Restore character-specific DYNAMIC_PROFILE settings
-            $DYNAMIC_PROFILE = $characterDynamicProfile;
-            $GLOBALS['DYNAMIC_PROFILE'] = $characterDynamicProfile;
-            if (!empty($characterDynamicProfileFields)) {
-                $DYNAMIC_PROFILE_FIELDS = $characterDynamicProfileFields;
-                $GLOBALS['DYNAMIC_PROFILE_FIELDS'] = $characterDynamicProfileFields;
-            }
-        }
-        
+        $characterDynamicProfile = $npcData["dynamic_profile"] ?? $GLOBALS["DYNAMIC_PROFILE"] ?? false;
+
+        // when dynamic profile fields are added to db profiles swap these lines for original default logic
+        // $characterDynamicProfileFields = $npcData["dynamic_profile_fields"] ?? $GLOBALS["DYNAMIC_PROFILE_FIELDS"] ?? ["personality", "relationships"];
+        $characterDynamicProfileFields = $npcData["dynamic_profile_fields"] ??
+            $GLOBALS["DYN_FIELDS_OVERRIDE"][$npcName] ??
+            $GLOBALS["DYN_FIELDS_OVERRIDE_DEFAULTS"] ??
+            $GLOBALS["DYNAMIC_PROFILE_FIELDS"] ?? // use default conf.php settings
+            ["personality", "relationships", "occupation", "skills", "speechstyle", "goals"];
+
         // Check if DYNAMIC_PROFILE is enabled for this NPC
-        if (!isset($DYNAMIC_PROFILE) || !$DYNAMIC_PROFILE) {
+        if (!$characterDynamicProfile) {
             Logger::debug("processSingleDynamicProfile: DYNAMIC_PROFILE disabled for $npcName");
             return false;
         }
         
-        // Check if diary connector is configured
-        if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
-            Logger::debug("processSingleDynamicProfile: No diary connector configured for $npcName");
+        // Check if update connector is configured
+        $connector = new LLMConnector();
+        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
+        if ($currentConnectorData) {
+            Logger::debug("processSingleDynamicProfile: No core connector configured while updating profile for $npcName");
             return false;
         }
         
         // Get dynamic profile fields to update
-        $fieldsToUpdate = isset($DYNAMIC_PROFILE_FIELDS) && is_array($DYNAMIC_PROFILE_FIELDS) 
-            ? $DYNAMIC_PROFILE_FIELDS 
-            : ["personality", "relationships"]; // Default fields
+        $fieldsToUpdate = $characterDynamicProfileFields;
         
         if (empty($fieldsToUpdate)) {
             Logger::debug("processSingleDynamicProfile: No fields selected for dynamic updates for $npcName");
             return false;
         }
-        
-        // Set context for this NPC
-        $GLOBALS["HERIKA_NAME"] = $npcName;
-        
-        // Process each selected field
-        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php");
         
         $historyData = getDynamicProfileHistoryData($npcName);
         $updatedFields = [];
@@ -402,11 +357,6 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
     } catch (Exception $e) {
         Logger::error("processSingleDynamicProfile: Error processing $npcName: " . $e->getMessage());
         return false;
-    } finally {
-        // Restore original globals
-        foreach ($originalGlobals as $key => $value) {
-            $GLOBALS[$key] = $value;
-        }
     }
     
     return false;
@@ -582,29 +532,35 @@ function getDynamicProfileHistoryData($npcName) {
 
 
 function updateDynamicProfileField($npcName, $field, $historyData) {
-    // Map field names to their corresponding HERIKA variables and prompts
+    // Map field names to their corresponding HERIKA prompts
     $fieldMapping = [
-        'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
-        'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
-        'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
-        'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
-        'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
-        'goals' => ['var' => 'HERIKA_GOALS', 'prompt' => 'DYNAMIC_PROMPT_GOALS']
+        'personality' => 'DYNAMIC_PROMPT_PERSONALITY',
+        'relationships' => 'DYNAMIC_PROMPT_RELATIONSHIPS',
+        'occupation' => 'DYNAMIC_PROMPT_OCCUPATION',
+        'skills' => 'DYNAMIC_PROMPT_SKILLS',
+        'speechstyle' =>'DYNAMIC_PROMPT_SPEECHSTYLE',
+        'goals' => 'DYNAMIC_PROMPT_GOALS'
     ];
     
     if (!isset($fieldMapping[$field])) {
         Logger::warning("updateDynamicProfileField: Unknown field '$field' for $npcName");
         return false;
     }
+
+    $npcMaster=new NpcMaster();
+    $npcData=$npcMaster->getByName($npcName);
+    if (!$npcData) {
+        Logger::debug("updateDynamicProfileField: No profile found for $npcName");
+        return false;
+    }
     
-    $varName = $fieldMapping[$field]['var'];
-    $promptName = $fieldMapping[$field]['prompt'];
-    
+    $promptName = $fieldMapping[$field];
+
     // Get current field value
-    $currentValue = isset($GLOBALS[$varName]) ? $GLOBALS[$varName] : '';
+    $currentValue = $npcData[$field] ?? '';
     
     // Get field-specific prompt
-    $updatePrompt = isset($GLOBALS[$promptName]) ? $GLOBALS[$promptName] : '';
+    $updatePrompt = $GLOBALS[$promptName] ?? '';
     if (empty($updatePrompt)) {
         Logger::warning("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
         return false;
@@ -614,22 +570,22 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         // Collect other profile fields for context (excluding the current field)
         $profileContext = [];
         $profileFields = [
-            'HERIKA_PERS' => 'Basic Summary',
-            'HERIKA_BACKGROUND' => 'Background',
-            'HERIKA_PERSONALITY' => 'Personality Traits',
-            'HERIKA_APPEARANCE' => 'Physical Appearance',
-            'HERIKA_RELATIONSHIPS' => 'Relationships',
-            'HERIKA_OCCUPATION' => 'Occupation & Role',
-            'HERIKA_SKILLS' => 'Skills & Abilities',
-            'HERIKA_SPEECHSTYLE' => 'Speech Style',
-            'HERIKA_GOALS' => 'Goals & Aspirations'
+//            'core' => 'Core', //depends what users put if its instructional or biographical
+            'npc_static_bio' => 'Basic Summary',
+            'personality' => 'Personality Traits',
+//            'appearance' => 'Physical Appearance', //not migrated?
+            'relationships' => 'Relationships',
+            'occupation' => 'Occupation & Role',
+            'skills' => 'Skills & Abilities',
+            'speechstyle' => 'Speech Style',
+            'goals' => 'Goals & Aspirations'
         ];
 
         // Remove the current field from context
-        unset($profileFields[$varName]);
+        unset($profileFields[$field]);
 
         foreach ($profileFields as $fieldName => $fieldLabel) {
-            if (isset($GLOBALS[$fieldName]) && !empty(trim($GLOBALS[$fieldName]))) {
+            if (!empty(trim($npcData[$fieldName]))) {
                 $profileContext[] = "**{$fieldLabel}**: " . trim($GLOBALS[$fieldName]);
             }
         }
@@ -640,7 +596,8 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         $head = [
             ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the " . ucfirst($field) . " for the character named '$npcName'. Focus mostly on information about $npcName and mostly ignore details about other characters mentioned in the dialogue."]
         ];
-        
+
+        $GLOBALS["HERIKA_NAME"] = $npcName; //note none of these prompts will contain #HERIKA_NAME, as the dialogue flow doesnt do this replacement (which may be a bug)
         $prompt = [
             ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . ReplacePlayerNamePlaceholder($profileContextString)],
             ["role" => "user", "content" => "Character name: " . $npcName . "\nCurrent " . ucfirst($field) . ":\n" . ReplacePlayerNamePlaceholder($currentValue)],
@@ -648,8 +605,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         ];
         
         $contextData = array_merge($head, $prompt);
-        
-        $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
         
         $connector=new LLMConnector();
         $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
@@ -823,11 +778,8 @@ function triggerImmediateProfileProcessing() {
     global $db;
     
     // Ensure required dependencies are loaded
-    if (!function_exists('DataSpeechJournal')) {
+    if (!function_exists('DataSpeechJournal') || !function_exists('buildDynamicProfileDisplay')) {
         require_once(__DIR__ . "/../lib/data_functions.php");
-    }
-    if (!function_exists('buildDynamicProfileDisplay')) {
-        require_once(__DIR__ . "/../lib/model_dynmodel.php");
     }
     
     // Check if there are any queue entries to process

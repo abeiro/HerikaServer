@@ -16,8 +16,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 // Add meta tag for API endpoint
 echo '<meta name="api-endpoint" content="' . htmlspecialchars($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '">';
 
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
+
 $debugPaneLink = false;
+if (!$isEmbed) {
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+}
 
 // Enable error reporting (for development purposes)
 ini_set('display_errors', 1);
@@ -625,6 +629,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 </style>
+
+<?php if ($isEmbed): ?>
+<style>
+    /* Embedded in hub: remove extra top padding since navbar is hidden */
+    main { padding-top: 20px; }
+</style>
+<?php endif; ?>
 
 <main>
     <div id="loading-overlay">

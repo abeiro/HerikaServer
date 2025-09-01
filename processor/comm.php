@@ -596,28 +596,15 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
         
         // Check if profile exists for this NPC
-        $profilePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf_" . md5($npcName) . ".php";
-        if (!file_exists($profilePath)) {
+        $npcMaster=new NpcMaster();
+        $npcData=$npcMaster->getByName($npcName);
+        if (!$npcData) {
             continue;
         }
         
-        // Load the NPC's profile to check if DYNAMIC_PROFILE is enabled
-        // Save current DYNAMIC_PROFILE state to avoid contamination
-        $originalDynamicProfile = isset($DYNAMIC_PROFILE) ? $DYNAMIC_PROFILE : null;
-        
-        // Include the profile - this will set variables in current scope
-        include($profilePath);
-        
         // Check if DYNAMIC_PROFILE is enabled for this NPC
-        $isDynamicEnabled = (isset($DYNAMIC_PROFILE) && $DYNAMIC_PROFILE);
-        
-        // Restore original state if it existed
-        if ($originalDynamicProfile !== null) {
-            $DYNAMIC_PROFILE = $originalDynamicProfile;
-        } else {
-            unset($DYNAMIC_PROFILE);
-        }
-        
+        $isDynamicEnabled = $npcData["dynamic_profile"] ?? $GLOBALS["DYNAMIC_PROFILE"] ?? false;
+
         if ($isDynamicEnabled) {
             $enabledNPCs[] = $npcName;
         }

@@ -78,6 +78,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .connector-card input[type="password"],
 .connector-card select,
 .connector-card textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+/* Toast notification */
+.toast-notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; z-index: 10000; opacity: 0; transform: translateX(400px); transition: all 0.3s ease; max-width: 400px; }
+.toast-notification.show { opacity: 1; transform: translateX(0); }
+.toast-notification:not(.error) { background: linear-gradient(135deg, #6dd19c, #5bb377); border: 1px solid rgba(109, 209, 156, 0.3); }
+.toast-notification.error { background: linear-gradient(135deg, #ff6b6b, #e55a5a); border: 1px solid rgba(255, 107, 107, 0.3); }
+/* Compact select row with Set button */
+.select-row { display:flex; gap:8px; align-items:center; }
+.select-row select { max-width: 420px; }
+.btn-apply { white-space: nowrap; padding: 6px 10px; }
 /* Collapsible block for Metadata */
 .collapsible { margin-top: 8px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117; }
 .collapsible-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; cursor:pointer; user-select:none; color:#e9efff; font-weight:600; }
@@ -85,6 +94,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 .collapsible[open] .collapsible-header { border-bottom:1px solid rgba(138,155,182,0.35); }
 .collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
 .collapsible-content { padding:10px; }
+.section-title { font-weight:800; color:#e9efff; border-bottom:1px solid rgba(138,155,182,0.35); padding-bottom:4px; margin:10px 0 6px; }
 </style>
 
 <main>
@@ -108,6 +118,10 @@ $llmQuaternaryOptions = getSelectOptions($profiles, "llm_quaternary_id");
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
+    if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+        header('Content-Type: application/json');
+    }
     // Server-side merge of visual metadata with JSON editor content
     if (isset($_POST['meta_vis'])) {
         $base = [];
@@ -119,13 +133,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
         foreach ((array)$_POST['meta_vis'] as $k=>$v) $base[$k] = $v;
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
-    $profiles->create($_POST);
-    header("Location: core_profiles.php");
-    exit;
+    $newId = $profiles->create($_POST);
+    if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        echo json_encode(['ok'=>true,'id'=>$newId]);
+        exit;
+    } else {
+        header("Location: core_profiles.php");
+        exit;
+    }
 }
 
 // Handle Update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
+    if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+        header('Content-Type: application/json');
+    }
     // Server-side merge of visual metadata with JSON editor content
     if (isset($_POST['meta_vis'])) {
         $base = [];
@@ -138,8 +161,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
     $profiles->update($_POST["id"], $_POST);
-    header("Location: core_profiles.php");
-    exit;
+    if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        echo json_encode(['ok'=>true,'id'=>$_POST['id'] ?? null]);
+        exit;
+    } else {
+        header("Location: core_profiles.php");
+        exit;
+    }
 }
 
 // Handle Delete
@@ -151,6 +179,8 @@ if (isset($_GET["delete"])) {
 
 // Inline update handler for LLM connectors (AJAX)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connector"])) {
+    // Ensure no buffered HTML leaks into JSON response
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
     try {
         $llm = new LLMConnector();
@@ -158,7 +188,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
 
         $allowed = [
-            'label','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema'
+            'label','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id'
         ];
         $data = [];
         foreach ($allowed as $k) {
@@ -170,6 +200,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
                 $data[$k] = ($v === '' ? null : intval($v));
             } else if (in_array($k, ['temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','min_p','top_a'], true)) {
                 $data[$k] = ($v === '' ? null : floatval($v));
+            } else if ($k === 'api_badge_id') {
+                $data[$k] = ($v === '' ? null : intval($v));
             } else {
                 $data[$k] = ($v === '' ? null : $v);
             }
@@ -186,6 +218,35 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
     exit;
 }
 
+// Inline update handler for Core Profile fields (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_profile"])) {
+    // Ensure no buffered HTML leaks into JSON response
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
+        $field = (string)($_POST['field'] ?? '');
+        $allowed = [
+            'llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id',
+            'diary_connector_id','tts_connector_id','itt_connector_id'
+        ];
+        if (!in_array($field, $allowed, true)) { echo json_encode(["ok"=>false, "error"=>"Invalid field"]); exit; }
+        $raw = $_POST['value'] ?? '';
+        $val = ($raw === '' ? null : intval($raw));
+        $data = [ $field => $val ];
+        $ok = $profiles->update($id, $data);
+        if ($ok === false) {
+            echo json_encode(["ok"=>false, "error"=>($profiles->getLastError() ?: 'Update failed')]);
+        } else {
+            echo json_encode(["ok"=>true]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
 // Add a new action for cloning a connector
 if (isset($_GET["clone"])) {
     $profiles->clone($_GET["clone"]);
@@ -193,8 +254,29 @@ if (isset($_GET["clone"])) {
     exit;
 }
 
+// Create a blank profile and open it for editing
+if (isset($_GET["create_blank"])) {
+    try {
+        $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label) VALUES ('New Profile') RETURNING id");
+        $newId = is_array($row) ? ($row['id'] ?? '') : '';
+        $redir = 'core_profiles.php' . ($newId !== '' ? ('?edit=' . urlencode($newId)) : '');
+        header("Location: $redir");
+        exit;
+    } catch (Throwable $e) {
+        header("Location: core_profiles.php");
+        exit;
+    }
+}
+
 // Fetch Data
 $data = $profiles->readAll();
+$npcCountRows = $GLOBALS["db"]->fetchAll("SELECT profile_id, COUNT(*) AS c FROM core_npc_master GROUP BY profile_id");
+$profileIdToNpcCount = [];
+foreach ($npcCountRows as $r) {
+    $pid = (string)($r['profile_id'] ?? '');
+    $cnt = (int)($r['c'] ?? 0);
+    if ($pid !== '') $profileIdToNpcCount[$pid] = $cnt;
+}
 $editItem = null;
 
 if (isset($_GET["edit"])) {
@@ -218,10 +300,8 @@ $ittById = $byId($ittRows);
 
 <div class="llm-layout">
     <div class="llm-left">
-        <h1 class="llm-title">Core Profiles</h1>
-        <div class="list-filters">
-            <input id="pflist_q" type="text" placeholder="Search profiles...">
-            <span id="pflist_count" class="badge"></span>
+        <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
+            <a class="btn-save" href="?create_blank=1">New Profile</a>
         </div>
         <div id="profiles_list" class="conn-list"></div>
         <script>
@@ -229,23 +309,15 @@ $ittById = $byId($ittRows);
             const RAW = <?= json_encode($data ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ACTIVE_ID = <?= json_encode($_GET['edit'] ?? '') ?>;
             const list = document.getElementById('profiles_list');
-            const q = document.getElementById('pflist_q');
-            const count = document.getElementById('pflist_count');
+            const NPC_COUNT = <?= json_encode($profileIdToNpcCount ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const LLM = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const TTS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ITT = <?= json_encode($ittById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
             function labelOf(map, id){ if (!id) return ''; const k=String(id); const row=map[k]; return row && (row.label||row.model||row.driver) ? (row.label||'') : ''; }
-            function pass(row){
-                const qq=(q.value||'').toLowerCase();
-                if (!qq) return true;
-                const hay=[row.label,row.llm_primary_id,row.llm_secondary_id,row.llm_tertiary_id,row.llm_quaternary_id,row.tts_connector_id,row.itt_connector_id,row.diary_connector_id]
-                    .map(v=>String(v||'').toLowerCase()).join('\n');
-                return hay.includes(qq);
-            }
+            function pass(_row){ return true; }
             function render(){
                 const rows=(RAW||[]).filter(pass);
-                count.textContent = rows.length+" shown";
                 let html='';
                 rows.forEach(r=>{
                     const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';
@@ -257,6 +329,8 @@ $ittById = $byId($ittRows);
                     const itt = escapeHtml(labelOf(ITT, r.itt_connector_id));
                     const diary = escapeHtml(labelOf(LLM, r.diary_connector_id));
                     const flags = [];
+                    const npcCount = Number((NPC_COUNT||{})[String(r.id)]||0);
+                    if (npcCount > 0) flags.push('<span class="pf-flag">'+npcCount+' NPCs</span>');
                     if (String(r.default_npc)==='1') flags.push('<span class="pf-flag">NPC</span>');
                     if (String(r.default_narrator)==='1') flags.push('<span class="pf-flag">Narrator</span>');
                     html += `
@@ -289,23 +363,26 @@ $ittById = $byId($ittRows);
                     });
                 });
             }
-            q.addEventListener('input', render);
             render();
         })();
         </script>
     </div>
     <div class="llm-right">
+        <div class="form-container wide-centered">
         <?php if (!$editItem): ?>
             <div class="connector-placeholder" style="border:1px dashed rgba(138,155,182,0.4); background:#0d1117; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
                 <div style="font-weight:600; color:#e9efff; margin-bottom:6px;">No profile selected</div>
                 <div>Select a profile from the list on the left to view and edit its settings.</div>
             </div>
         <?php endif; ?>
-        <div class="form-container wide-centered">
-        <form id="core_profile_form" method="post" onsubmit='return consolidation(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
+        <form id="core_profile_form" method="post" onsubmit='return saveProfileAjax(event, "core_profile_form")' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
+
+    <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+        <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save">Save</button>
+    </div>
 
     <div class="connector-card" style="margin-bottom:12px;">
         <div class="connector-title">Profile Settings</div>
@@ -356,31 +433,46 @@ $ittById = $byId($ittRows);
             <button type="button" class="pf-tab" data-pane="pane_itt">ITT</button>
         </div>
         <div class="pf-pane active" id="pane_llm1">
-            <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="llm_primary_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_primary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm2">
-            <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="llm_secondary_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_secondary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm3">
-            <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="llm_tertiary_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_tertiary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm4">
-            <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="llm_quaternary_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_quaternary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_diary">
-            <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
+            <div class="select-row">
+                <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
+                <button type="button" class="btn-apply" data-apply-select="diary_connector_id">Set</button>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
             </div>
@@ -409,12 +501,64 @@ $ittById = $byId($ittRows);
         </div>
     </details>
 
-    <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save"><?= $editItem ? "Update" : "Create" ?></button>
+    
     <script>
+    // Sticky save bar styles
+    (function(){
+        const css = `
+            .save-bar{position:sticky; bottom:0; z-index:999;}
+            .save-bar-inner{display:flex; justify-content:flex-end; gap:8px; padding:8px; background:rgba(13,17,23,0.9); border-top:1px solid rgba(138,155,182,0.35); backdrop-filter: blur(3px);}
+        `;
+        const styleTag = document.createElement('style');
+        styleTag.textContent = css;
+        document.head.appendChild(styleTag);
+    })();
+
+    // Save handler that keeps the user on the same profile and shows a toast
+    async function saveProfileAjax(ev, formId){
+        try {
+            if (typeof consolidation === 'function') {
+                const ok = consolidation(ev, formId);
+                if (ok === false) return false;
+            }
+        } catch(_e){}
+        ev.preventDefault();
+        const form = document.getElementById(formId) || ev.target;
+        if (!form) return false;
+
+        const fd = new FormData(form);
+        const hasId = !!(form.querySelector('input[name="id"]') && form.querySelector('input[name="id"]').value);
+        if (hasId) {
+            if (!fd.has('update')) fd.append('update','1');
+        } else {
+            if (!fd.has('create')) fd.append('create','1');
+        }
+        try {
+            const res = await fetch('core_profiles.php', { method:'POST', headers:{ 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+            let json = {};
+            try { json = await res.json(); } catch(_){ json = { ok:false, error:'Invalid response' }; }
+            if (json && json.ok){
+                if (json.id) {
+                    // In case of create, set id and update URL
+                    let idEl = form.querySelector('input[name="id"]');
+                    if (!idEl){ idEl = document.createElement('input'); idEl.type='hidden'; idEl.name='id'; form.appendChild(idEl); }
+                    idEl.value = String(json.id);
+                    try { history.replaceState({}, '', 'core_profiles.php?edit='+encodeURIComponent(String(json.id))); } catch(_){ }
+                }
+                if (typeof showToast === 'function') showToast('Profile saved');
+            } else {
+                if (typeof showToast === 'function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
+            }
+        } catch (e) {
+            if (typeof showToast === 'function') showToast('Save failed: ' + e.message, true);
+        }
+        return false;
+    }
     // Connector details passed from PHP
     const LLM_DETAILS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
     const TTS_DETAILS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
     const ITT_DETAILS = <?= json_encode($ittById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+    const CURRENT_PROFILE_ID = <?= json_encode($editItem["id"] ?? '') ?>;
 
     function renderKVList(obj, keys, labels){
         if (!obj) return '<em style="color:#888">No connector selected.</em>';
@@ -539,6 +683,60 @@ $ittById = $byId($ittRows);
             });
         });
 
+        function updateLeftList(connectorField, connId){
+            const li = document.querySelector('.llm-left .conn-li[data-id="'+String(CURRENT_PROFILE_ID)+'"]');
+            if (!li) return;
+            let label = '';
+            if (connectorField==='tts_connector_id') label = (TTS_DETAILS[connId] && (TTS_DETAILS[connId].label||'')) || '';
+            else if (connectorField==='itt_connector_id') label = (ITT_DETAILS[connId] && (ITT_DETAILS[connId].label||'')) || '';
+            else label = (LLM_DETAILS[connId] && (LLM_DETAILS[connId].label||'')) || '';
+            let key = '';
+            if (connectorField==='llm_primary_id') key = 'LLM1';
+            else if (connectorField==='llm_secondary_id') key = 'LLM2';
+            else if (connectorField==='llm_tertiary_id') key = 'LLM3';
+            else if (connectorField==='llm_quaternary_id') key = 'LLM4';
+            else if (connectorField==='tts_connector_id') key = 'TTS';
+            else if (connectorField==='itt_connector_id') key = 'ITT';
+            else if (connectorField==='diary_connector_id') key = 'Diary';
+            if (!key) return;
+            const lines = li.querySelectorAll('.pf-line');
+            lines.forEach(line=>{
+                const k = line.querySelector('.pf-key');
+                const v = line.querySelector('.pf-val');
+                if (k && v && (k.textContent||'').trim()===key){ v.textContent = label || '—'; }
+            });
+        }
+
+        document.querySelectorAll('.btn-apply[data-apply-select]').forEach(btn => {
+            btn.addEventListener('click', ()=>{
+                const selId = btn.getAttribute('data-apply-select');
+                const sel = document.getElementById(selId);
+                if (!sel) return;
+                const value = sel.value || '';
+                const formData = new FormData();
+                formData.append('inline_update_profile','1');
+                formData.append('id', <?= json_encode($editItem["id"] ?? 0) ?>);
+                formData.append('field', selId);
+                formData.append('value', value);
+                fetch('core_profiles.php', { method:'POST', body: formData })
+                    .then(r=>r.json()).then(json=>{
+                        if (json && json.ok) {
+                            showToast('Profile updated');
+                            updateLeftList(selId, String(value));
+                            if (selId==='llm_primary_id') refreshEmbeddedEditor(selId,'frame_llm_primary_id');
+                            else if (selId==='llm_secondary_id') refreshEmbeddedEditor(selId,'frame_llm_secondary_id');
+                            else if (selId==='llm_tertiary_id') refreshEmbeddedEditor(selId,'frame_llm_tertiary_id');
+                            else if (selId==='llm_quaternary_id') refreshEmbeddedEditor(selId,'frame_llm_quaternary_id');
+                            else if (selId==='diary_connector_id') refreshEmbeddedEditor(selId,'frame_diary_connector_id');
+                        } else {
+                            showToast('Update failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
+                        }
+                    }).catch(e=>{
+                        showToast('Update failed: ' + e.message, true);
+                    });
+            });
+        });
+
         // Tabs wiring
         const tabs = document.querySelectorAll('.pf-tab');
         tabs.forEach(tb=>tb.addEventListener('click', ()=>{
@@ -552,6 +750,75 @@ $ittById = $byId($ittRows);
     }
 
     document.addEventListener('DOMContentLoaded', initInlineEditors);
+    
+    // Handle postMessage from embedded LLM connector iframes
+    window.addEventListener('message', async function(event) {
+        if (event.data && event.data.type === 'llm_connector_save') {
+            try {
+                const formData = new FormData();
+                for (const [key, value] of Object.entries(event.data.data)) {
+                    formData.append(key, value);
+                }
+                
+                const response = await fetch('core_profiles.php', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+                
+                let result = {};
+                try {
+                    result = await response.json();
+                } catch (e) {
+                    result = { ok: false, error: 'Invalid response' };
+                }
+                
+                // Send result back to iframe
+                event.source.postMessage({
+                    type: 'llm_connector_save_result',
+                    success: result.ok === true,
+                    error: result.error || null
+                }, '*');
+                
+                // Show toast notification in parent
+                if (result.ok === true) {
+                    showToast('LLM connector saved successfully');
+                    // Reload the originating iframe to reflect saved values
+                    try {
+                        const frames = document.querySelectorAll('iframe');
+                        frames.forEach(f => { if (f && f.contentWindow === event.source) { f.src = f.src; } });
+                    } catch(_e){}
+                } else {
+                    showToast('Save failed: ' + (result.error || 'Unknown error'), true);
+                }
+                
+            } catch (error) {
+                // Send error back to iframe
+                event.source.postMessage({
+                    type: 'llm_connector_save_result',
+                    success: false,
+                    error: error.message
+                }, '*');
+                
+                showToast('Save failed: ' + error.message, true);
+            }
+        }
+    });
+    
+    // Toast notification function
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        
+        const messageEl = toast.querySelector('.message');
+        if (messageEl) messageEl.textContent = message;
+        
+        toast.className = 'toast-notification show' + (isError ? ' error' : '');
+        setTimeout(() => {
+            toast.className = 'toast-notification';
+        }, 3000);
+    }
+    
     // Collapse metadata by default and trigger resize like connectors
     (function(){
         var d = document.getElementById('metadata_section');

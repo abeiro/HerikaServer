@@ -7,13 +7,124 @@ if (file_exists($schemaPath)) {
     $confSchema = json_decode(file_get_contents($schemaPath), true);
 }
 
+// Local overrides for visual metadata schema (decouple UI copy from conf_schema)
+// These entries will be used instead of conf_schema when rendering visual controls
+$localSchemaOverrides = [
+    'RECHAT_H' => [
+        'type' => 'integer',
+        'description' => "Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation. 1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc",
+    ],
+    'RECHAT_P' => [
+        'type' => 'integer',
+        'description' => 'Rechat Probability. Chance that an AI NPC will continue an ongoing conversation. 0 = Never | 50 = 50% | 100 = Always',
+    ],
+    'CORE_LANG' => [
+        'type' => 'select',
+        'description' => 'Custom Language. The lang folder is in the CHIM Server. Leave it blank for English.',
+    ],
+    'MINIME_T5' => [
+        'type' => 'boolean',
+        'description' => "Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. Must be configured in default profile and only works in English!",
+    ],
+    'AUTO_DIARY' => [
+        'type' => 'boolean',
+        'description' => 'Automatically create diary entries for all current followers when sleeping. Wait events are controlled by AUTO_DIARY_WAIT setting.',
+    ],
+    'BORED_EVENT' => [
+        'type' => 'integer',
+        'description' => 'Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.0 = Never | 50 = 50% | 100 = Always',
+    ],
+    'DIARY_PROMPT' => [
+        'type' => 'longstring',
+        'description' => 'Default profile only! Instructions for generating diary entries. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the DIARY connector you are using.',
+    ],
+    'OGHMA_AMOUNT' => [
+        'type' => 'select',
+        'values' => ['1','2','3'],
+        'description' => 'Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.',
+    ],
+    'LANG_LLM_XTTS' => [
+        'type' => 'boolean',
+        'description' => 'XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language.',
+    ],
+    'QUEST_COMMENT' => [
+        'type' => 'boolean',
+        'description' => 'Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!',
+    ],
+    'DIARY_COOLDOWN' => [
+        'type' => 'integer',
+        'description' => 'Cooldown period in seconds between diary entries to prevent spam. Each NPC has their own independent cooldown timer.',
+    ],
+    'OGHMA_INFINIUM' => [
+        'type' => 'boolean',
+        'description' => "Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics.",
+    ],
+    'AUTO_DIARY_WAIT' => [
+        'type' => 'boolean',
+        'description' => 'When AUTO_DIARY is enabled, this controls whether diary entries are created during wait events. If false, auto diary will only trigger on sleep events.',
+    ],
+    'CONTEXT_HISTORY' => [
+        'type' => 'integer',
+        'description' => 'Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.Higher Context = more tokens used and slower response time.We recommend you do not go over 100',
+    ],
+    'MAX_WORDS_LIMIT' => [
+        'type' => 'integer',
+        'description' => "Enforce a word limit for AI's responses. Leave as 0 to have no limit.",
+    ],
+    'HERIKA_ANIMATIONS' => [
+        'type' => 'boolean',
+        'description' => 'Will issue animations for the NPC to play',
+    ],
+    'QUEST_COMMENT_CHANCE' => [
+        'type' => 'select',
+        'values' => ['10%','25%','50%','75%','100%'],
+        'description' => 'Chance that an AI Quest Comment will happen every time a quest updates.',
+    ],
+    'RECHAT_ALLOW_ACTIONS' => [
+        'type' => 'boolean',
+        'description' => 'Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos...',
+    ],
+    'CONTEXT_HISTORY_DIARY' => [
+        'type' => 'integer',
+        'description' => 'Amount of context history (dialogue and events) that will be sent to LLM specifically for diary entries. If set to 0, will use the regular CONTEXT_HISTORY value instead.',
+    ],
+    'BORED_EVENT_SERVERSIDE' => [
+        'type' => 'boolean',
+        'description' => 'Smart Bored Events. Will use the director to generate dynamic bored event topics. It is slower but topics will improve the quality of bored event topics.',
+    ],
+    'ENFORCE_ACTIONS_PROMPT' => [
+        'type' => 'boolean',
+        'description' => 'Eencourage AI NPCs to use actions more often.',
+    ],
+    'REMOVE_ASTERISKS_FROM_OUTPUT' => [
+        'type' => 'boolean',
+        'description' => 'Remove text between ** when the AI responds, such as *couch*, *smiles*, "claps, etc',
+    ],
+    'CONTEXT_HISTORY_DYNAMIC_PROFILE' => [
+        'type' => 'integer',
+        'description' => 'Amount of context history (dialogue and events) that will be sent to LLM specifically for dynamic profile updates. If set to 0, will use the regular CONTEXT_HISTORY value instead.',
+    ],
+];
+
 // Visual keys to expose (can be expanded easily)
 $visualKeys = [
-  "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","AUTO_DIARY","BORED_EVENT","CURRENT_TASK",
-  "DIARY_PROMPT","OGHMA_AMOUNT","ALIVE_MESSAGE","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN",
-  "OGHMA_INFINIUM","TIME_AWARENESS","AUTO_DIARY_WAIT","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
+  "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","AUTO_DIARY","BORED_EVENT",
+  "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN",
+  "OGHMA_INFINIUM","AUTO_DIARY_WAIT","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
   "REMOVE_ASTERISKS_FROM_OUTPUT","CONTEXT_HISTORY_DYNAMIC_PROFILE"
+];
+
+// Organize visual keys into categories for display
+$visualGroups = [
+  'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","MAX_WORDS_LIMIT"],
+  'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
+  'Diary' => ["AUTO_DIARY","DIARY_PROMPT","DIARY_COOLDOWN","AUTO_DIARY_WAIT"],
+  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
+  'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
+  'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
+  'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE","HERIKA_ANIMATIONS"],
+  'Language/Voice' => ["LANG_LLM_XTTS"],
 ];
 
 $metadataCurrent = [];
@@ -102,16 +213,34 @@ function renderMetaInput($key, $schema, $value) {
 
 <?php if ($showVisual): ?>
     <div class="content-section" style="margin-bottom:10px;">
-        <h3 style="margin-top:0;">Profile Settings</h3>
-        <p style="margin-bottom:10px; color:#bbb">These common options are saved into Metadata automatically. Use the JSON editor below for advanced/custom edits.</p>
-        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
-            <?php
-            foreach ($visualKeys as $k) {
-                $schemaEntry = $confSchema[$k] ?? [];
+        <?php
+        // Track which keys were rendered via groups
+        $rendered = [];
+        foreach ($visualGroups as $title => $keys) {
+            // Filter to only keys present in visualKeys (safety)
+            $keysInVisual = array_values(array_intersect($keys, $visualKeys));
+            if (count($keysInVisual) === 0) continue;
+            echo '<div style="margin:10px 0 6px; font-weight:800; color:#e9efff; border-bottom:1px solid rgba(138,155,182,0.35); padding-bottom:4px;">'.htmlspecialchars($title).'</div>';
+            echo '<div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">';
+            foreach ($keysInVisual as $k) {
+                $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
+                echo renderMetaInput($k, $schemaEntry, $metadataCurrent[$k] ?? '');
+                $rendered[$k] = true;
+            }
+            echo '</div>';
+        }
+        // Render any remaining visual keys not in groups under "Other"
+        $remaining = array_values(array_diff($visualKeys, array_keys($rendered)));
+        if (count($remaining) > 0) {
+            echo '<div style="margin:10px 0 6px; font-weight:800; color:#e9efff; border-bottom:1px solid rgba(138,155,182,0.35); padding-bottom:4px;">Other</div>';
+            echo '<div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">';
+            foreach ($remaining as $k) {
+                $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
                 echo renderMetaInput($k, $schemaEntry, $metadataCurrent[$k] ?? '');
             }
-            ?>
-        </div>
+            echo '</div>';
+        }
+        ?>
     </div>
     <script>
     (function(){

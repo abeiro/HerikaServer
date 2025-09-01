@@ -3738,9 +3738,9 @@ function write_php_assignments(array $assignments, string $filePath): bool {
     return file_put_contents($filePath, $output, LOCK_EX);
 }
 
-function getInGameSkillDataFor($npcnName) {
+function getInGameSkillDataFor($npcName) {
 
-    $npcEscapedName=$GLOBALS["db"]->escape($npcnName);
+    $npcEscapedName=$GLOBALS["db"]->escape($npcName);
     $query="
 WITH npc_spells AS (
   SELECT
