@@ -197,7 +197,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.jpg" alt="Kobold" class="service-icon" data-service="kobold" />
-                        <img src="<?= $webRoot; ?>/ui/images/core/icons/custom.jpg" alt="Custom" class="service-icon" data-service="custom" />
                     </div>
                 </div>
 
@@ -345,8 +344,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             openrouter: 'https://openrouter.ai/api/v1/chat/completions',
             openai: 'https://api.openai.com/v1/chat/completions',
             google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-            kobold: 'http://127.0.0.1:5001',
-            custom: ''
+            kobold: 'http://127.0.0.1:5001'
         };
         const providerRow = document.getElementById('provider_row');
         const urlInput = document.querySelector('input[name="url"]');
@@ -356,11 +354,11 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const icons = document.querySelectorAll('.service-icon');
         const apiKeyRow = document.getElementById('api_key_row');
         function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
+        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson' };
         const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
         function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-        function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; }
-        (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
+        function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = 'none'; }
+        (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'openrouter'; applyService(service); })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
     })();
     function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
@@ -733,7 +731,6 @@ if (typeof window.consolidation !== 'function') {
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.jpg" alt="Kobold" class="service-icon" data-service="kobold" />
-                    <img src="<?= $webRoot; ?>/ui/images/core/icons/custom.jpg" alt="Custom" class="service-icon" data-service="custom" />
                 </div>
             </div>
 
@@ -905,8 +902,7 @@ if (typeof window.consolidation !== 'function') {
         openrouter: 'https://openrouter.ai/api/v1/chat/completions',
         openai: 'https://api.openai.com/v1/chat/completions',
         google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-        kobold: 'http://127.0.0.1:5001',
-        custom: ''
+        kobold: 'http://127.0.0.1:5001'
     };
     // No dropdown; selection by icons only
     const providerRow = document.getElementById('provider_row');
@@ -917,25 +913,15 @@ if (typeof window.consolidation !== 'function') {
     const icons = document.querySelectorAll('.service-icon');
     const apiKeyRow = document.getElementById('api_key_row');
     function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
+    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson' };
     const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
     function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-    function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; }
-    (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
+    function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = 'none'; }
+    (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'openrouter'; applyService(service); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
 })();
 
-function llmClamp(rangeId, numberId, min, max){
-    const r = document.getElementById(rangeId)
-    const n = document.getElementById(numberId)
-    if (!r || !n) return
-    let v = parseFloat(n.value)
-    if (isNaN(v)) v = min
-    if (v < min) v = min
-    if (v > max) v = max
-    n.value = v
-    r.value = v
-}
+function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
 </script>
 
 <script>
