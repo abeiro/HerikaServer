@@ -45,14 +45,14 @@ main { padding-top: 160px; }
 
     <h1>Configuration</h1>
     <div class="tab-buttons">
-        <button class="tab-button active" data-tab="npc">CHIM'd NPCs</button>
-        <button class="tab-button" data-tab="profiles">Profile Builder</button>
-        <button class="tab-button" data-tab="llm">LLM Connectors</button>
-        <button class="tab-button" data-tab="keys">API Keys</button>
-        <button class="tab-button" data-tab="oghma">Oghma Infium</button>
-        <button class="tab-button" data-tab="npcbio">NPC Biography</button>
-        <button class="tab-button" data-tab="actions">Action Editor</button>
-        <button class="tab-button" data-tab="xtts">XTTS Management</button>
+        <button class="tab-button active" data-tab="npc">🌟CHIM'd NPCs</button>
+        <button class="tab-button" data-tab="profiles">🏗️Profile Builder</button>
+        <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
+        <button class="tab-button" data-tab="keys">🔑API Keys</button>
+        <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
+        <button class="tab-button" data-tab="npcbio">📚NPC Biography</button>
+        <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
+        <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
     </div>
 
     <div id="npc" class="tab-content active">
