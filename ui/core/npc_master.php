@@ -167,12 +167,17 @@ $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_profiles ORDER BY label ASC");
+$profilesById = [];
+foreach (($profileRows ?? []) as $pr) {
+    $pid = (string)($pr['id'] ?? '');
+    if ($pid !== '') $profilesById[$pid] = $pr['label'] ?? ('Profile #'.$pid);
+}
 
 $where = "1=1";
 if ($q !== ''){
     $qEsc = "%".$GLOBALS['db']->escape($q)."%";
     // Match by name primarily; include a few related fields
-    $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."')";
+    $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."' or coalesce(tags,'') ilike '".$qEsc."')";
 }
 if ($profileIdFilter !== ''){
     $where .= " and profile_id = ".intval($profileIdFilter);
@@ -223,6 +228,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
+        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
             <div class="npc-divider"></div>
@@ -231,13 +237,16 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                 <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
                 <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
                 <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
-                <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"><?= htmlspecialchars($row["oghma_knowledge_tags"] ?? "") ?></span></div>
+                <?php $oghmaVal = trim((string)($row["oghma_knowledge_tags"] ?? "")); $oghmaDisp = ($oghmaVal === "") ? "none" : $oghmaVal; ?>
+                <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
+                <?php $tagsVal = trim((string)($row["tags"] ?? "")); $tagsDisp = ($tagsVal === "") ? "none" : $tagsVal; ?>
+                <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
             </div>
             <div class="npc-actions">
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 Locked" : "🔓"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 " : "🔓"; ?></a>
                 <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
-                <a class="btn" href="?tag=<?= $row["id"] ?>">Tag</a>
             </div>
         </div>
     <?php endforeach; ?>
@@ -465,7 +474,8 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 </div>
 
 <style>
-.npc-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:14px; }
+.npc-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:14px; }
+@media (max-width: 1400px){ .npc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1100px){ .npc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px){ .npc-grid { grid-template-columns: 1fr; } }
 .npc-card { background:linear-gradient(180deg, #101826 0%, #0d1117 100%); border:1px solid rgba(138,155,182,0.35); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
@@ -532,6 +542,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 <?php endif; ?>
 <div class="npc-grid">
 <?php foreach ($data as $row): ?>
+    <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
         <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
         <div class="npc-divider"></div>
@@ -540,13 +551,14 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
             <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
             <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
-            <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"><?= htmlspecialchars($row["oghma_knowledge_tags"] ?? "") ?></span></div>
+            <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
+            <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
+            <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
         </div>
         <div class="npc-actions">
             <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
-            <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 Locked" : "🔓"; ?></a>
+            <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 " : "🔓"; ?></a>
             <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
-            <a class="btn" href="?tag=<?= $row["id"] ?>">Tag</a>
         </div>
     </div>
 <?php endforeach; ?>
@@ -571,6 +583,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 
 <script>
 (function(){
+  const PROFILES_BY_ID = <?= json_encode($profilesById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
   function openModal(url){ iframe.src = url; modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
@@ -702,7 +715,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       if (json && json.ok){
         const active = Number(json.favorite||0)===1;
         this.classList.toggle('active', active);
-        this.textContent = active ? '★ Favorited' : '☆ Favorite';
+        this.textContent = active ? '★' : '☆';
         try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent= active?'Marked favorite':'Unfavorited'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
       }
     });
@@ -717,7 +730,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       if (json && json.ok){
         const active = Number(json.locked||0)===1;
         this.classList.toggle('active', active);
-        this.textContent = active ? '🔒 Locked' : '🔓 Unlock';
+        this.textContent = active ? '🔒' : '🔓';
         try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent= active?'Locked profile':'Unlocked profile'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
       }
     });
@@ -739,11 +752,15 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
           div.setAttribute('data-id', id);
           div.innerHTML = `
             <div class="npc-title"><span class="npc-name"></span></div>
-            <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"></span>, <span class="npc-muted">Race:</span> <span class="npc-race"></span>, <span class="npc-muted">Voice:</span> <span class="npc-voiceid"></span>, <span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
-            <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"></span></div>
+            <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"></span></div>
+            <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"></span></div>
+            <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"></span></div>
+            <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
+            <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"></span></div>
+            <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"></span></div>
+            <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"></span></div>
             <div class="npc-actions">
                 <a class="btn btn-danger" href="?delete=${id}" onclick="return confirm('Delete this NPC?');">Delete</a>
-                <a class="btn" href="?tag=${id}">Tag</a>
             </div>`;
           grid.prepend(div);
           // Wire edit button
@@ -758,7 +775,10 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         setText('.npc-race', data.race);
         setText('.npc-voiceid', data.voiceid);
         setText('.npc-refid', data.refid);
-        setText('.npc-oghma', data.oghma_knowledge_tags);
+        setText('.npc-oghma', (data.oghma_knowledge_tags==null || String(data.oghma_knowledge_tags).trim()==='') ? 'none' : data.oghma_knowledge_tags);
+        setText('.npc-tags', (data.tags==null || String(data.tags).trim()==='') ? 'none' : data.tags);
+        const profId = String(data.profile_id||'');
+        setText('.npc-profile', PROFILES_BY_ID[profId] || '');
       }
       closeModal();
       try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='NPC saved'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2000); } } catch(_e){}
