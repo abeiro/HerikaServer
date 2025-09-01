@@ -291,6 +291,14 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         </div>
 
         <div class="form-item">
+            <label for="lock_profile">Lock Profile</label>
+            <div class="checkbox-inline">
+                <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
+                <span class="hint">Prevents dynamic systems from modifying this NPC's profile.</span>
+            </div>
+        </div>
+
+        <div class="form-item">
             <label for="npc_favorite">Favorite</label>
             <div class="checkbox-inline">
                 <input type="checkbox" id="npc_favorite" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
@@ -299,11 +307,49 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         </div>
 
         <div class="form-item">
-            <label for="lock_profile">Lock Profile</label>
+            <label for="gender">Gender</label>
+            <input type="text" id="gender" name="gender" placeholder="e.g. female, male, nonbinary" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
+            <small class="hint">Used for pronouns and voice selection guidance.</small>
+        </div>
+
+        <div class="form-item">
+            <label for="race">Race</label>
+            <input type="text" id="race" name="race" placeholder="e.g. nord, dunmer, argonian" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
+            <small class="hint">Lore-accurate race label used in prompts.</small>
+        </div>
+
+        <div class="form-item">
+            <label for="base">Base</label>
+            <input type="text" id="base" name="base" placeholder="Base actor/form ID if applicable" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
+            <small class="hint">Optional: base form identifier or template this NPC derives from.</small>
+        </div>
+
+        <div class="form-item">
+            <label for="refid">Ref ID</label>
+            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000...)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
+            <small class="hint">Skyrim reference ID for in-game linkage (optional).</small>
+        </div>
+
+        
+
+        <div class="form-item">
+            <label for="dynamic_profile">Dynamic Profile</label>
             <div class="checkbox-inline">
-                <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
-                <span class="hint">Prevents dynamic systems from modifying this NPC's profile.</span>
+                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
+                <span class="hint">Allow systems to evolve the profile based on gameplay events.</span>
             </div>
+        </div>
+
+        <div class="form-item">
+            <label for="voiceid">Voice ID</label>
+            <input type="text" id="voiceid" name="voiceid" placeholder="Matches TTS voice identifier" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
+            <small class="hint">Identifier for the TTS backend (e.g., ElevenLabs, XTTS, etc.).</small>
+        </div>
+
+        <div class="form-item span-2">
+            <label for="tags">Tags</label>
+            <input type="text" id="tags" name="tags" placeholder="Comma-separated labels for search and grouping" value="<?= htmlspecialchars($editItem["tags"] ?? "") ?>">
+            <small class="hint">Free-form labels to organize and filter NPCs.</small>
         </div>
 
         <div class="form-item span-2">
@@ -324,26 +370,13 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <small class="hint">Persistent biography that never changes during play. Good for canon facts.</small>
         </div>
 
-        <div class="form-item span-2">
-            <label for="oghma_knowledge_tags">OGHMA Knowledge Tags</label>
-            <textarea id="oghma_knowledge_tags" name="oghma_knowledge_tags" placeholder="Comma-separated keywords to fetch Oghma articles."><?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?></textarea>
-            <small class="hint">Keywords used by Oghma Infinium for topic retrieval. Prefer lowercase with underscores.</small>
-        </div>
-
-        <div class="form-item span-2">
-            <label for="emote_moods">Emote Moods</label>
-            <textarea id="emote_moods" name="emote_moods" placeholder="Allowed mood/emote set (comma-separated).">
-<?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
-            <small class="hint">Whitelist of mood/emote cues the NPC may use (e.g., calm, angry, playful).</small>
-        </div>
-
-        <div class="form-item span-2">
+        <div class="form-item">
             <label for="personality">Personality</label>
             <textarea id="personality" name="personality" placeholder="Personality traits and speaking characteristics."><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
             <small class="hint">Concise traits that guide tone and behavior. Avoid contradictions with Core.</small>
         </div>
 
-        <div class="form-item span-2">
+        <div class="form-item">
             <label for="relationships">Relationships</label>
             <textarea id="relationships" name="relationships" placeholder="Key allies, rivals, factions, and opinions."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
             <small class="hint">Named entities the NPC knows and how they feel about them.</small>
@@ -373,62 +406,15 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <small class="hint">Motivations that drive decisions and quest hooks.</small>
         </div>
 
-        <div class="form-item">
-            <label for="voiceid">Voice ID</label>
-            <input type="text" id="voiceid" name="voiceid" placeholder="Matches TTS voice identifier" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
-            <small class="hint">Identifier for the TTS backend (e.g., ElevenLabs, XTTS, etc.).</small>
-        </div>
-
-        <div class="form-item">
-            <label for="gender">Gender</label>
-            <input type="text" id="gender" name="gender" placeholder="e.g. female, male, nonbinary" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
-            <small class="hint">Used for pronouns and voice selection guidance.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="base">Base</label>
-            <input type="text" id="base" name="base" placeholder="Base actor/form ID if applicable" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
-            <small class="hint">Optional: base form identifier or template this NPC derives from.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="race">Race</label>
-            <input type="text" id="race" name="race" placeholder="e.g. nord, dunmer, argonian" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
-            <small class="hint">Lore-accurate race label used in prompts.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="refid">Ref ID</label>
-            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000...)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
-            <small class="hint">Skyrim reference ID for in-game linkage (optional).</small>
-        </div>
-
-        <div class="form-item">
-            <label for="profile_id">Profile</label>
-            <?= renderSelect($npc, "profile_id", "Profile", $editItem["profile_id"] ?? "") ?>
-            <small class="hint">Select which CHIM profile this NPC uses for AI behavior.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="dynamic_profile">Dynamic Profile</label>
-            <div class="checkbox-inline">
-                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
-                <span class="hint">Allow systems to evolve the profile based on gameplay events.</span>
-            </div>
-        </div>
-
         <div class="form-item span-2">
-            <label for="tags">Tags</label>
-            <input type="text" id="tags" name="tags" placeholder="Comma-separated labels for search and grouping" value="<?= htmlspecialchars($editItem["tags"] ?? "") ?>">
-            <small class="hint">Free-form labels to organize and filter NPCs.</small>
+            <label for="emote_moods">Emote Moods</label>
+            <textarea id="emote_moods" name="emote_moods" placeholder="Allowed mood/emote set (comma-separated).">
+            <?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
+            <small class="hint">Whitelist of mood/emote cues the NPC may use (e.g., calm, angry, playful).</small>
         </div>
 
-        <div class="form-item span-2 metadata-block">
-            <label for="metadata">Metadata (JSON)</label>
-            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
-            <small class="hint">Advanced: arbitrary key/value metadata. Use the JSON editor below.</small>
-            <div id="metadata"></div>
-        </div>
+
+        
 
         <div class="form-item span-2">
             <label for="extended_data">Extended Data (JSON)</label>
@@ -600,6 +586,17 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
   document.addEventListener('click', function(e){ if (e.target && e.target.id==='npc_modal_close') closeModal(); });
   modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+  // Prevent browser history back/forward inside modal (mouse buttons/backspace)
+  (function(){
+    function blockNav(ev){ ev.preventDefault(); ev.stopPropagation(); return false; }
+    window.addEventListener('popstate', blockNav, true);
+    window.addEventListener('hashchange', blockNav, true);
+    window.addEventListener('mousedown', function(e){ if (e.button===3 || e.button===4) { blockNav(e); } }, true);
+    window.addEventListener('mouseup', function(e){ if (e.button===3 || e.button===4) { blockNav(e); } }, true);
+    window.addEventListener('contextmenu', function(e){ /* noop */ }, true);
+    // push a dummy state so back goes to same place
+    try { history.pushState({modal:true}, document.title, location.href); } catch(_e){}
+  })();
   document.querySelectorAll('.npc-card').forEach(card=>{
     card.addEventListener('click', function(ev){
       if (ev.target.closest('.npc-actions')) return;
