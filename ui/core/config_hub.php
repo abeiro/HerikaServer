@@ -44,10 +44,15 @@ main { padding-top: 160px; }
 
     <h1>Configuration Hub</h1>
     <div class="tab-buttons">
-        <button class="tab-button active" data-tab="npc">NPC Master</button>
-        <button class="tab-button" data-tab="profiles">Core Profiles</button>
+        <button class="tab-button active" data-tab="npc">CHIM'd NPCs</button>
+        <button class="tab-button" data-tab="profiles">Profile Builder</button>
         <button class="tab-button" data-tab="llm">LLM Connectors</button>
         <button class="tab-button" data-tab="keys">API Keys</button>
+        <button class="tab-button" data-tab="oghma">Oghma Infium</button>
+        <button class="tab-button" data-tab="npcbio">NPC Biography</button>
+        <button class="tab-button" data-tab="actions">Action Editor</button>
+        <button class="tab-button" data-tab="xtts">XTTS Management</button>
+
     </div>
 
     <div id="npc" class="tab-content active">
@@ -63,6 +68,26 @@ main { padding-top: 160px; }
     <div id="llm" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/llm_connectors.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="oghma" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/oghma_upload.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="npcbio" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/npc_upload.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="actions" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/function_editor.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="xtts" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/xtts_clone.php?embed=1"></iframe>
         </div>
     </div>
     <div id="keys" class="tab-content">

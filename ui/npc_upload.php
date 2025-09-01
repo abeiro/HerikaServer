@@ -12,9 +12,12 @@ $TITLE = "📝CHIM - NPC Biography";
 ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
+if (!$isEmbed) {
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+}
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -938,6 +941,13 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         }
     }
 </style>
+
+<?php if ($isEmbed): ?>
+<style>
+    /* Embedded in hub: remove extra top padding since navbar is hidden */
+    main { padding-top: 20px; }
+</style>
+<?php endif; ?>
 
 <main>
     <div id="toast" class="toast-notification">

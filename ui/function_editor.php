@@ -12,9 +12,12 @@ $TITLE = "⚙️ CHIM - AI Action Editor";
 ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
+if (!$isEmbed) {
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+}
 
 if (file_exists(__DIR__."/../functions/user_pref.json")) {
     $currentOnes=json_decode(file_get_contents(__DIR__."/../functions/user_pref.json"),true);
@@ -303,6 +306,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 </style>
+
+<?php if ($isEmbed): ?>
+<style>
+    /* Embedded in hub: remove extra top padding since navbar is hidden */
+    main { padding-top: 20px; }
+</style>
+<?php endif; ?>
 
 <main>
     <div id="toast" class="toast-notification">
