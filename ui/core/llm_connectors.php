@@ -190,7 +190,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 <label for='label'>Name</label><br>
                 <input type="text" name="label" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>"><br>
 
-                <label>Service</label>
+                <label id="service_label">Service</label>
                 <div class="service-picker">
                     <div class="service-icons">
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
@@ -345,6 +345,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
             kobold: 'http://127.0.0.1:5001'
         };
+        // No dropdown; selection by icons only
         const providerRow = document.getElementById('provider_row');
         const urlInput = document.querySelector('input[name="url"]');
         const driverInput = document.querySelector('input[name="driver"]');
@@ -352,13 +353,18 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const apiBadgeSelect = document.getElementById('api_badge_id');
         const icons = document.querySelectorAll('.service-icon');
         const apiKeyRow = document.getElementById('api_key_row');
+        const serviceLabelEl = document.getElementById('service_label');
+        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', kobold: 'Kobold' };
         function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson' };
+        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
         const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
         function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-        function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = 'none'; }
-        (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'openrouter'; applyService(service); })();
+        function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
+        function detectService(){ const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('kobold')||u.includes('127.0.0.1')||u.includes('localhost')) return 'kobold'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
+        (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
+        if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
+        if (urlInput){ urlInput.addEventListener('change', ()=> applyService(detectService())); }
     })();
     function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
     // LLM Test Modal
@@ -723,7 +729,7 @@ if (typeof window.consolidation !== 'function') {
             <label for='label'>Name</label><br>
             <input type="text" name="label" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>"><br>
 
-            <label>Service</label>
+            <label id="service_label">Service</label>
             <div class="service-picker">
                 <div class="service-icons">
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
@@ -910,19 +916,20 @@ if (typeof window.consolidation !== 'function') {
     const apiBadgeSelect = document.getElementById('api_badge_id');
     const icons = document.querySelectorAll('.service-icon');
     const apiKeyRow = document.getElementById('api_key_row');
+    const serviceLabelEl = document.getElementById('service_label');
+    const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', kobold: 'Kobold' };
     function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson' };
+    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
     const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
     function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-    function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = 'none'; }
-    (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'openrouter'; applyService(service); })();
+    function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
+    function detectService(){ const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('kobold')||u.includes('127.0.0.1')||u.includes('localhost')) return 'kobold'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
+    (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
+    if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
+    if (urlInput){ urlInput.addEventListener('change', ()=> applyService(detectService())); }
 })();
-
 function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
-</script>
-
-<script>
 // LLM Test Modal
 (function(){
     const MODAL_ID = 'llmtest_modal';
@@ -939,187 +946,72 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         </div>
         <style>@keyframes llmspin{to{transform:rotate(360deg)}}</style>`;
     document.body.appendChild(modal);
-
-    function openModal(url){
-        const iframe = document.getElementById('llmtest_iframe');
-        const loader = document.getElementById('llmtest_loading');
-        if (loader) loader.style.display = 'flex';
-        // attach onload to hide loader
-        iframe.onload = function(){ if (loader) loader.style.display = 'none'; };
-        iframe.src = url;
-        modal.style.display = 'flex';
-    }
+    function openModal(url){ const iframe = document.getElementById('llmtest_iframe'); const loader = document.getElementById('llmtest_loading'); if (loader) loader.style.display = 'flex'; iframe.onload = function(){ if (loader) loader.style.display = 'none'; }; iframe.src = url; modal.style.display = 'flex'; }
     function closeModal(){ modal.style.display = 'none'; try { document.getElementById('llmtest_iframe').src='about:blank'; } catch(_){} }
     document.addEventListener('click', function(e){ if (e.target && e.target.id==='llmtest_close') closeModal(); });
     modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
     document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
-
     const testBtn = document.getElementById('btn_test_connector');
     if (testBtn){
         testBtn.addEventListener('click', async function(){
             const form = document.querySelector('form[method="post"]');
             if (!form) return;
-            // Save current edits first to ensure test uses latest config
             try {
                 const fd = new FormData(form);
-                // Ensure update action is present
                 if (!fd.has('update') && !fd.has('create')) fd.append('update','1');
-                // show modal early with loader while saving
                 const idInputEarly = form.querySelector('input[name="id"]');
                 const cidEarly = idInputEarly ? idInputEarly.value : '';
                 openModal('about:blank');
                 await fetch('llm_connectors.php', { method:'POST', body: fd });
-            } catch (e) { /* ignore */ }
-            // Open test page for this connector id (DB-backed)
+            } catch (e) {}
             const idInput = form.querySelector('input[name="id"]');
             const cid = idInput ? idInput.value : '';
             openModal('<?= $webRoot; ?>/ui/core/tests/llmtest.php' + (cid ? ('?connector_id='+encodeURIComponent(cid)) : ''));
         });
     }
 })();
-
-// OpenRouter models dropdown for Model textbox
+// API key notice
+(function(){
+    const sel = document.getElementById('api_badge_id');
+    const note = document.getElementById('api_key_notice');
+    if (!sel || !note) return;
+    function update(){
+        const opt = sel.options[sel.selectedIndex];
+        const empty = opt ? opt.getAttribute('data-empty') === '1' : true;
+        if (!opt || sel.value === ''){ note.className = 'api-key-notice warn'; note.textContent = 'No API key selected. Some services require a key.'; return; }
+        if (empty){ note.className = 'api-key-notice warn'; } else { note.className = 'api-key-notice ok'; }
+    }
+    sel.addEventListener('change', update);
+    update();
+})();
+// OpenRouter model dropdown
 (function(){
     const modelInput = document.querySelector('input[name="model"]');
     if (!modelInput) return;
-
-    let cache = null; // cached models
-    let dropdown = null;
-    let isOpen = false;
-
-    function ensureDropdown(){
-        if (dropdown) return dropdown;
-        dropdown = document.createElement('div');
-        dropdown.className = 'orm-dropdown';
-        document.body.appendChild(dropdown);
-        // Prevent blur-close when clicking inside
-        dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); });
-        return dropdown;
-    }
-
-    function positionDropdown(){
-        const rect = modelInput.getBoundingClientRect();
-        const style = dropdown.style;
-        style.left = (rect.left + window.scrollX) + 'px';
-        style.top = (rect.bottom + window.scrollY + 4) + 'px';
-        style.width = rect.width + 'px';
-        style.display = 'block';
-        isOpen = true;
-    }
-
-    function closeDropdown(){
-        if (!dropdown) return;
-        dropdown.style.display = 'none';
-        isOpen = false;
-    }
-
-    function formatPrice(n){
-        if (n === undefined || n === null || n === '' || isNaN(parseFloat(n))) return 'N/A';
-        const perTok = parseFloat(n);
-        const perM = perTok * 1000000.0;
-        return '$' + perM.toFixed(4) + ' / 1M tokens';
-    }
-
+    let cache = null, dropdown = null, isOpen = false;
+    function ensureDropdown(){ if (dropdown) return dropdown; dropdown = document.createElement('div'); dropdown.className = 'orm-dropdown'; document.body.appendChild(dropdown); dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); return dropdown; }
+    function positionDropdown(){ const rect = modelInput.getBoundingClientRect(); const style = dropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.width = rect.width + 'px'; style.display = 'block'; isOpen = true; }
+    function closeDropdown(){ if (!dropdown) return; dropdown.style.display = 'none'; isOpen = false; }
+    function formatPrice(n){ if (n === undefined || n === null || n === '' || isNaN(parseFloat(n))) return 'N/A'; const perTok = parseFloat(n); const perM = perTok * 1000000.0; return '$' + perM.toFixed(4) + ' / 1M tokens'; }
+    function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function formatContext(val){ const num = Number(val); return isFinite(num) ? num.toLocaleString('en-US') : (val||''); }
     function renderList(models, filterText){
         ensureDropdown();
         const q = (filterText || '').toLowerCase();
-        const list = (models || []).filter(m => {
-            if (!q) return true;
-            const id = (m.id || '').toLowerCase();
-            const name = (m.name || '').toLowerCase();
-            return id.includes(q) || name.includes(q);
-        });
-
+        const list = (models || []).filter(m => { if (!q) return true; const id = (m.id || '').toLowerCase(); const name = (m.name || '').toLowerCase(); return id.includes(q) || name.includes(q); });
         let html = '';
         html += '<div class="orm-head">OpenRouter Models</div>';
         html += '<div class="orm-note">Click to select. Pricing shown per 1M tokens.</div>';
-
-        if (list.length === 0){
-            html += '<div class="orm-muted" style="padding:8px 10px;">No matches</div>';
-        } else {
-            list.forEach(m => {
-                const prompt = formatPrice(m.pricing && m.pricing.prompt);
-                const completion = formatPrice(m.pricing && m.pricing.completion);
-                const ctxRaw = (m.top_provider && m.top_provider.context_length) || m.context_length || '';
-                const ctx = (function(v){ const n = Number(v); return isFinite(n) ? n.toLocaleString('en-US') : (v||''); })(ctxRaw);
-                const name = m.name ? ' — ' + escapeHtml(m.name) : '';
-                const line = `${escapeHtml(m.id)}${name}`;
-                const sub = `Pricing (per 1M tokens): input ${prompt} • output ${completion}` + (ctx? ` • context ${ctx}` : '');
-                html += `<div class="orm-item" data-id="${encodeHtmlAttr(m.id)}" title="${encodeHtmlAttr(m.description||m.name||m.id)}">`+
-                        `<div>${line}</div>`+
-                        `<div class="orm-muted" style="font-size:12px; margin-top:2px;">${sub}</div>`+
-                    `</div>`;
-            });
-        }
-
+        if (list.length === 0){ html += '<div class="orm-muted" style="padding:8px 10px;">No matches</div>'; }
+        else { list.forEach(m => { const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctxRaw = (m.top_provider && m.top_provider.context_length) || m.context_length || ''; const ctx = formatContext(ctxRaw); const name = m.name ? ' — ' + escapeHtml(m.name) : ''; const line = `${escapeHtml(m.id)}${name}`; const sub = `Pricing (per 1M tokens): input ${prompt} • output ${completion}` + (ctx? ` • context ${ctx}` : ''); html += `<div class=\"orm-item\" data-id=\"${encodeHtmlAttr(m.id)}\" title=\"${encodeHtmlAttr(m.description||m.name||m.id)}\"><div>${line}</div><div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">${sub}</div></div>`; }); }
         dropdown.innerHTML = html;
-        // Attach click handlers
-        dropdown.querySelectorAll('.orm-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const id = el.getAttribute('data-id') || '';
-                modelInput.value = id;
-                // notify listeners (e.g., provider auto-fill)
-                try { modelInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-                try { modelInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
-                closeDropdown();
-            });
-        });
-
+        dropdown.querySelectorAll('.orm-item').forEach(el => { el.addEventListener('click', () => { const id = el.getAttribute('data-id') || ''; modelInput.value = id; try { modelInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} try { modelInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} closeDropdown(); }); });
         positionDropdown();
     }
-
-    function escapeHtml(s){
-        return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-    }
-    function encodeHtmlAttr(s){
-        return (s==null? '': String(s)).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    }
-
-    async function loadModels(){
-        if (cache) return cache;
-        ensureDropdown();
-        dropdown.innerHTML = '<div class="orm-head">OpenRouter Models</div><div class="orm-note">Loading…</div>';
-        positionDropdown();
-        try {
-            const res = await fetch('https://openrouter.ai/api/v1/models');
-            if (!res.ok) throw new Error('HTTP '+res.status);
-            const json = await res.json();
-            const data = Array.isArray(json && json.data) ? json.data : [];
-            // Normalize important fields
-            cache = data.map(m => ({
-                id: m.id || m.canonical_slug || '',
-                name: m.name || '',
-                pricing: m.pricing || {},
-                top_provider: m.top_provider || {},
-                context_length: m.context_length || undefined,
-                description: m.description || ''
-            }));
-            // Sort by name then id
-            cache.sort((a,b)=> (a.name||'').localeCompare(b.name||'') || (a.id||'').localeCompare(b.id||''));
-            return cache;
-        } catch (e) {
-            dropdown.innerHTML = '<div class="orm-head">OpenRouter Models</div><div class="orm-err">Failed to load models. Check network/CORS.</div>';
-            positionDropdown();
-            throw e;
-        }
-    }
-
-    function isOpenRouter(){
-        const url = (document.querySelector('input[name="url"]').value||'');
-        const driver = (document.querySelector('input[name="driver"]').value||'');
-        return url.includes('openrouter.ai') || /openrouter/.test(driver);
-    }
-    async function maybeOpenDropdown(){
-        if (!isOpenRouter()) return;
-        try {
-            const models = await loadModels();
-            renderList(models, modelInput.value);
-        } catch (_e) {
-            // already rendered error in dropdown
-        }
-    }
-
-    // Events
+    async function loadModels(){ if (cache) return cache; ensureDropdown(); dropdown.innerHTML = '<div class="orm-head">OpenRouter Models</div><div class="orm-note">Loading…</div>'; positionDropdown(); try { const res = await fetch('https://openrouter.ai/api/v1/models'); if (!res.ok) throw new Error('HTTP '+res.status); const json = await res.json(); const data = Array.isArray(json && json.data) ? json.data : []; cache = data.map(m => ({ id: m.id || m.canonical_slug || '', name: m.name || '', pricing: m.pricing || {}, top_provider: m.top_provider || {}, context_length: m.context_length || undefined, description: m.description || '' })); cache.sort((a,b)=> (a.name||'').localeCompare(b.name||'') || (a.id||'').localeCompare(b.id||'')); return cache; } catch (e) { dropdown.innerHTML = '<div class="orm-head">OpenRouter Models</div><div class="orm-err">Failed to load models. Check network/CORS.</div>'; positionDropdown(); throw e; } }
+    function isOpenRouter(){ const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); return url.includes('openrouter.ai') || /openrouter/.test(driver); }
+    async function maybeOpenDropdown(){ if (!isOpenRouter()) return; try { const models = await loadModels(); renderList(models, modelInput.value); } catch (_e) {} }
     modelInput.addEventListener('focus', () => { if (isOpenRouter()) maybeOpenDropdown(); });
     modelInput.addEventListener('click', () => { if (isOpenRouter()) maybeOpenDropdown(); });
     modelInput.addEventListener('input', () => { if (isOpen && cache) renderList(cache, modelInput.value); });
@@ -1127,12 +1019,10 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     window.addEventListener('resize', () => { if (isOpen) positionDropdown(); });
     window.addEventListener('scroll', () => { if (isOpen) positionDropdown(); }, true);
     document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeDropdown(); });
-
-    // Close dropdown when service likely changed (url/driver edits)
     document.querySelector('input[name="url"]').addEventListener('change', () => closeDropdown());
     document.querySelector('input[name="driver"]').addEventListener('change', () => closeDropdown());
 
-    // Info box under Model input (full editor)
+    // Info box under Model input (embedded editor)
     (function(){
         const infoId = 'orm_model_info';
         let infoEl = document.getElementById(infoId);
@@ -1145,14 +1035,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
             if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(infoEl, anchor.nextSibling);
         }
         function ctxOf(m){ return (m.top_provider && m.top_provider.context_length) || m.context_length || ''; }
-        function formatContext(val){ const n = Number(val); return isFinite(n) ? n.toLocaleString('en-US') : (val||''); }
-        function renderInfo(m){
-            const prompt = formatPrice(m.pricing && m.pricing.prompt);
-            const completion = formatPrice(m.pricing && m.pricing.completion);
-            const ctx = formatContext(ctxOf(m));
-            return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div>`+
-                   `<div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): input ${prompt} • output ${completion}${ctx? ` • context ${ctx}`: ''}</div>`;
-        }
+        function renderInfo(m){ const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctx = formatContext(ctxOf(m)); return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div><div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): input ${prompt} • output ${completion}${ctx? ` • context ${ctx}`: ''}</div>`; }
         async function update(){
             const val = (modelInput.value||'').trim();
             const url = (document.querySelector('input[name=\"url\"]').value||'');
@@ -1173,198 +1056,27 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         document.querySelector('input[name="driver"]').addEventListener('change', update);
     })();
 })();
-
-// API key notice logic
-(function(){
-    const sel = document.getElementById('api_badge_id');
-    const note = document.getElementById('api_key_notice');
-    if (!sel || !note) return;
-    function showToast(msg){
-        try {
-            const toast = document.getElementById('toast');
-            if (toast){ toast.querySelector('.message').textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2500); }
-        } catch (_e){}
-    }
-    function update(){
-        const opt = sel.options[sel.selectedIndex];
-        const empty = opt ? opt.getAttribute('data-empty') === '1' : true;
-        if (!opt || sel.value === ''){
-            note.className = 'api-key-notice warn';
-            note.textContent = 'No API key selected. Some services require a key.';
-            return;
-        }
-        if (empty){
-            note.className = 'api-key-notice warn';
-        } else {
-            note.className = 'api-key-notice ok';
-        }
-    }
-    sel.addEventListener('change', update);
-    update();
-})();
-</script>
-
-<script>
-// OpenRouter providers dropdown for Provider textbox + auto-fill from model
+// Providers dropdown
 (function(){
     const providerInput = document.querySelector('input[name="provider"]');
     const modelInput = document.querySelector('input[name="model"]');
     if (!providerInput || !modelInput) return;
-
-    let providersCache = null;
-    let dropdown = null;
-    let isOpen = false;
-
-    function ensureDropdown(){
-        if (dropdown) return dropdown;
-        dropdown = document.createElement('div');
-        dropdown.className = 'orm-dropdown';
-        document.body.appendChild(dropdown);
-        dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); });
-        return dropdown;
-    }
-
-    function positionDropdown(){
-        const rect = providerInput.getBoundingClientRect();
-        const style = dropdown.style;
-        style.left = (rect.left + window.scrollX) + 'px';
-        style.top = (rect.bottom + window.scrollY + 4) + 'px';
-        style.width = rect.width + 'px';
-        style.display = 'block';
-        isOpen = true;
-    }
-
-    function closeDropdown(){
-        if (!dropdown) return;
-        dropdown.style.display = 'none';
-        isOpen = false;
-    }
-
-    function escapeHtml(s){
-        return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-    }
-    function encodeHtmlAttr(s){
-        return (s==null? '': String(s)).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    }
-
-    function renderList(items, filterText, relevantSlugs){
-        ensureDropdown();
-        const q = (filterText || '').toLowerCase();
-        const slugAllow = Array.isArray(relevantSlugs) ? new Set(relevantSlugs.filter(Boolean)) : null;
-        const filteredByRelevance = (items || []).filter(p => {
-            if (slugAllow && slugAllow.size>0) return slugAllow.has((p.slug||''));
-            return true;
-        });
-        const list = filteredByRelevance.filter(p => {
-            if (!q) return true;
-            const slug = (p.slug || '').toLowerCase();
-            const name = (p.name || '').toLowerCase();
-            return slug.includes(q) || name.includes(q);
-        });
-
-        let html = '';
-        html += '<div class="orm-head">OpenRouter Providers</div>';
-        html += '<div class="orm-note">Click to select. Value set to provider slug.</div>';
-
-        if (list.length === 0){
-            const hasRelevantFilter = (slugAllow && slugAllow.size>0);
-            const note = hasRelevantFilter ? 'No relevant providers for the selected model.' : 'No matches';
-            html += `<div class="orm-muted" style="padding:8px 10px;">${note}</div>`;
-        } else {
-            list.forEach(p => {
-                const name = p.name ? ` — ${escapeHtml(p.name)}` : '';
-                html += `<div class=\"orm-item\" data-slug=\"${encodeHtmlAttr(p.slug)}\" title=\"${encodeHtmlAttr(p.name||p.slug)}\">`+
-                        `<div>${escapeHtml(p.slug)}${name}</div>`+
-                        `<div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">`+
-                        `${p.privacy_policy_url? 'Privacy: '+escapeHtml(p.privacy_policy_url): ''}`+
-                        `${p.terms_of_service_url? (p.privacy_policy_url? ' • ': '')+'TOS: '+escapeHtml(p.terms_of_service_url): ''}`+
-                        `</div>`+
-                    `</div>`;
-            });
-        }
-
+    let providersCache = null, dropdown = null, isOpen = false;
+    function ensureDropdown(){ if (dropdown) return dropdown; dropdown = document.createElement('div'); dropdown.className = 'orm-dropdown'; document.body.appendChild(dropdown); dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); return dropdown; }
+    function positionDropdown(){ const rect = providerInput.getBoundingClientRect(); const style = dropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.width = rect.width + 'px'; style.display = 'block'; isOpen = true; }
+    function closeDropdown(){ if (!dropdown) return; dropdown.style.display = 'none'; isOpen = false; }
+    function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function renderList(items, filterText, relevantSlugs){ ensureDropdown(); const q = (filterText || '').toLowerCase(); const slugAllow = Array.isArray(relevantSlugs) ? new Set(relevantSlugs.filter(Boolean)) : null; const filteredByRelevance = (items || []).filter(p => { if (slugAllow && slugAllow.size>0) return slugAllow.has((p.slug||'')); return true; }); const list = filteredByRelevance.filter(p => { if (!q) return true; const slug = (p.slug || '').toLowerCase(); const name = (p.name || '').toLowerCase(); return slug.includes(q) || name.includes(q); }); let html = ''; html += '<div class="orm-head">OpenRouter Providers</div>'; html += '<div class="orm-note">Click to select. Value set to provider slug.</div>'; if (list.length === 0){ const hasRelevantFilter = (slugAllow && slugAllow.size>0); const note = hasRelevantFilter ? 'No relevant providers for the selected model.' : 'No matches'; html += `<div class="orm-muted" style="padding:8px 10px;">${note}</div>`; } else { list.forEach(p => { const name = p.name ? ` — ${escapeHtml(p.name)}` : ''; html += `<div class=\"orm-item\" data-slug=\"${encodeHtmlAttr(p.slug)}\" title=\"${encodeHtmlAttr(p.name||p.slug)}\"><div>${escapeHtml(p.slug)}${name}</div><div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">${p.privacy_policy_url? 'Privacy: '+escapeHtml(p.privacy_policy_url): ''}${p.terms_of_service_url? (p.privacy_policy_url? ' • ': '')+'TOS: '+escapeHtml(p.terms_of_service_url): ''}</div></div>`; }); }
         dropdown.innerHTML = html;
-        dropdown.querySelectorAll('.orm-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const slug = el.getAttribute('data-slug') || '';
-                providerInput.value = slug;
-                try { providerInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-                try { providerInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
-                closeDropdown();
-            });
-        });
-
-        positionDropdown();
-    }
-
-    async function loadProviders(){
-        if (providersCache) return providersCache;
-        ensureDropdown();
-        dropdown.innerHTML = '<div class="orm-head">OpenRouter Providers</div><div class="orm-note">Loading…</div>';
-        positionDropdown();
-        try {
-            const res = await fetch('https://openrouter.ai/api/v1/providers');
-            if (!res.ok) throw new Error('HTTP '+res.status);
-            const json = await res.json();
-            const data = Array.isArray(json && json.data) ? json.data : [];
-            providersCache = data.map(p => ({
-                name: p.name || '',
-                slug: p.slug || '',
-                privacy_policy_url: p.privacy_policy_url || '',
-                terms_of_service_url: p.terms_of_service_url || '',
-                status_page_url: p.status_page_url || ''
-            })).filter(p => p.slug);
-            providersCache.sort((a,b)=> (a.slug||'').localeCompare(b.slug||''));
-            return providersCache;
-        } catch (e) {
-            dropdown.innerHTML = '<div class="orm-head">OpenRouter Providers</div><div class="orm-err">Failed to load providers. Check network/CORS.</div>';
-            positionDropdown();
-            throw e;
-        }
-    }
-
-    function getRelevantProviderSlugs(){
-        const val = (modelInput.value || '').trim();
-        const ix = val.indexOf('/');
-        if (ix > 0){
-            const slug = val.slice(0, ix).trim();
-            if (slug) return [slug];
-        }
-        return [];
-    }
-
-    function isOpenRouter(){
-        const url = (document.querySelector('input[name="url"]').value||'');
-        const driver = (document.querySelector('input[name="driver"]').value||'');
-        return url.includes('openrouter.ai') || /openrouter/.test(driver);
-    }
-    async function maybeOpenDropdown(){
-        if (!isOpenRouter()) return;
-        try {
-            const items = await loadProviders();
-            renderList(items, providerInput.value, getRelevantProviderSlugs());
-        } catch (_e) {}
-    }
-
-    function extractProviderSlugFromModel(val){
-        if (!val) return '';
-        const s = String(val);
-        const ix = s.indexOf('/');
-        if (ix <= 0) return '';
-        return s.slice(0, ix).trim();
-    }
-
-    // Auto-fill provider when model looks like "provider/model"
-    function maybeAutofillProvider(){
-        if (serviceSelect.value !== 'openrouter') return;
-        const slug = extractProviderSlugFromModel(modelInput.value);
-        if (!slug) return;
-        providerInput.value = slug;
-        try { providerInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        try { providerInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
-    }
-
-    // Events
+        dropdown.querySelectorAll('.orm-item').forEach(el => { el.addEventListener('click', () => { const slug = el.getAttribute('data-slug') || ''; providerInput.value = slug; try { providerInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} try { providerInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} closeDropdown(); }); });
+        positionDropdown(); }
+    async function loadProviders(){ if (providersCache) return providersCache; ensureDropdown(); dropdown.innerHTML = '<div class="orm-head">OpenRouter Providers</div><div class="orm-note">Loading…</div>'; positionDropdown(); try { const res = await fetch('https://openrouter.ai/api/v1/providers'); if (!res.ok) throw new Error('HTTP '+res.status); const json = await res.json(); const data = Array.isArray(json && json.data) ? json.data : []; providersCache = data.map(p => ({ name: p.name || '', slug: p.slug || '', privacy_policy_url: p.privacy_policy_url || '', terms_of_service_url: p.terms_of_service_url || '', status_page_url: p.status_page_url || '' })).filter(p => p.slug); providersCache.sort((a,b)=> (a.slug||'').localeCompare(b.slug||'')); return providersCache; } catch (e) { dropdown.innerHTML = '<div class="orm-head">OpenRouter Providers</div><div class="orm-err">Failed to load providers. Check network/CORS.</div>'; positionDropdown(); throw e; } }
+    function getRelevantProviderSlugs(){ const val = (modelInput.value || '').trim(); const ix = val.indexOf('/'); if (ix > 0){ const slug = val.slice(0, ix).trim(); if (slug) return [slug]; } return []; }
+    function isOpenRouter(){ const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); return url.includes('openrouter.ai') || /openrouter/.test(driver); }
+    async function maybeOpenDropdown(){ if (!isOpenRouter()) return; try { const items = await loadProviders(); renderList(items, providerInput.value, getRelevantProviderSlugs()); } catch (_e) {} }
+    function extractProviderSlugFromModel(val){ if (!val) return ''; const s = String(val); const ix = s.indexOf('/'); if (ix <= 0) return ''; return s.slice(0, ix).trim(); }
+    function maybeAutofillProvider(){ const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); if (!(url.includes('openrouter.ai') || /openrouter/.test(driver))) return; const slug = extractProviderSlugFromModel(modelInput.value); if (!slug) return; providerInput.value = slug; try { providerInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} try { providerInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
     providerInput.addEventListener('focus', () => { if (isOpenRouter()) maybeOpenDropdown(); });
     providerInput.addEventListener('click', () => { if (isOpenRouter()) maybeOpenDropdown(); });
     providerInput.addEventListener('input', () => { if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
