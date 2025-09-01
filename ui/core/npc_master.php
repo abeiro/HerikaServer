@@ -54,6 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
 
 // Handle Update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
+    $_POST["md5"]=md5($_POST["npc_name"]);
     $npc->update($_POST["id"], $_POST);
     header("Location: npc_master.php");
     exit;
