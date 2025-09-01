@@ -225,13 +225,20 @@ echo '<style>
 $currentPageName = basename($_SERVER['PHP_SELF'] ?? '');
 $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_wizard.php']);
 
+// Server version and dev-build detection
+// Note: Keep raw version string here; if it contains 'dev', we'll switch logo and hide the text suffix
+$serverVersionRaw = '1.3.5.3b dev';
+$isDevBuild = (stripos($serverVersionRaw, 'dev') !== false);
+$serverVersionDisplay = trim(str_ireplace('dev', '', $serverVersionRaw));
+$serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
+
 ?>
 <div class="chim-navbar-wrapper">
     <nav class="navbar navbar-expand-lg chim-navbar">
         <div class="container-fluid mx-1">
             <!-- Server Version Info - Far Left -->
             <div class="server-version-info">
-                Server: 1.3.5.3b dev<br>
+                Server: <?php echo htmlspecialchars($serverVersionDisplay, ENT_QUOTES, 'UTF-8'); ?><br>
                 Plugin: <?php echo $pluginVersionDisplay; ?>
             </div>
             
@@ -336,7 +343,7 @@ $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_
                 <div class="navbar-center">
                     <a class="navbar-brand Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
                         <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
-                        <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+                        <img src="<?php echo $webRoot; ?>/ui/images/<?php echo htmlspecialchars($serverLogoFile, ENT_QUOTES, 'UTF-8'); ?>" alt="CHIM Server" style="vertical-align:bottom;"/> 
                     </a>
                 </div>
 
