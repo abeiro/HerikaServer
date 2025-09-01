@@ -397,7 +397,7 @@ function getTimeColor($time) {
             $offset = ($page - 1) * $limit;
             
             $results = $db->fetchAll(
-                "SELECT type, data, gamets, localts, ts, ROWID
+                "SELECT type, data, people, gamets, localts, ts, ROWID
                  FROM eventlog a
                  WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import')
                  ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
@@ -406,7 +406,7 @@ function getTimeColor($time) {
             
             $columnHeaders = [
                 'type' => 'Event',
-                'data' => 'Data',
+                'data' => 'Events',
                 'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>',
                 'localts' => 'Time (UTC)',
                 'ts' => 'TS',
@@ -434,6 +434,30 @@ function getTimeColor($time) {
                     // Map ROWID to lowercase rowid for delete functionality
                     if ($key === 'ROWID') {
                         $mappedRow['rowid'] = $value;
+                    } else if ($key === 'data') {
+                        // Assign Events value
+                        $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                        // Derive People Present from JSON in original data if available
+                        $peoplePresent = trim((string)($row['people'] ?? ''));
+                        $raw = $row['data'] ?? '';
+                        if ($peoplePresent === '' && is_string($raw) && $raw !== '') {
+                            $j = json_decode($raw, true);
+                            if (is_array($j)) {
+                                if (!empty($j['people'])) {
+                                    if (is_array($j['people'])) { $peoplePresent = implode(', ', array_map('strval', $j['people'])); }
+                                    else { $peoplePresent = (string)$j['people']; }
+                                } else if (!empty($j['companions'])) {
+                                    if (is_array($j['companions'])) { $peoplePresent = implode(', ', array_map('strval', $j['companions'])); }
+                                    else { $peoplePresent = (string)$j['companions']; }
+                                } else if (!empty($j['speaker'])) {
+                                    $peoplePresent = (string)$j['speaker'];
+                                }
+                            }
+                        }
+                        $mappedRow['People Present'] = htmlspecialchars($peoplePresent);
+                    } else if ($key === 'people') {
+                        // Skip rendering raw people column; we show only 'People Present'
+                        continue;
                     } else {
                         $mappedRow[$columnHeaders[$key] ?? $key] = $value;
                     }
