@@ -380,12 +380,10 @@ $ittById = $byId($ittRows);
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
 
-    <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-        <button type="submit" name="<?= $editItem ? "update" : "create" ?>" class="btn-save">Save</button>
-    </div>
+    
 
     <div class="connector-card" style="margin-bottom:12px;">
-        <div class="connector-title">Profile Settings</div>
+        <div class="connector-title">Profile</div>
         <label for='label'>Name</label><br>
         <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
         
@@ -402,10 +400,14 @@ $ittById = $byId($ittRows);
         <div style="height:8px;"></div>
         <label for="prompt">Profile Prompt</label>
         <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
+
+        <div style="margin-top:8px; display:flex; gap:8px;">
+            <button type="button" id="btn_save_profile_settings" class="btn-save">Save Profile Settings</button>
+        </div>
     </div>
 
     <script>
-    (function(){
+    document.addEventListener('DOMContentLoaded', function(){
         const names = ['default_npc','default_narrator'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
@@ -416,7 +418,11 @@ $ittById = $byId($ittRows);
             sync();
             cb.addEventListener('change', sync);
         });
-    })();
+        const basicBtn = document.getElementById('btn_save_profile_settings');
+        if (basicBtn){ basicBtn.addEventListener('click', function(){ try{ saveProfileBasics(); }catch(_e){} }); }
+        const metaBtn = document.getElementById('btn_save_meta_settings');
+        if (metaBtn){ metaBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
+    });
     </script>
 
     <?php /* connector details preloaded above for both panes */ ?>
@@ -489,8 +495,11 @@ $ittById = $byId($ittRows);
 
     <!-- Visual Profile Settings (first chunk) -->
     <div class="connector-card" style="margin-bottom:10px;">
-        <div class="connector-title">Profile Settings (Saved to Metadata)</div>
+        <div class="connector-title">Profile Settings</div>
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
+        <div style="margin-top:8px; display:flex; gap:8px;">
+            <button type="button" id="btn_save_meta_settings" class="btn-save">Save Profile Settings</button>
+        </div>
     </div>
     <!-- JSON Editor (second chunk) in collapsible -->
     <details id="metadata_section" class="collapsible">
@@ -522,9 +531,17 @@ $ittById = $byId($ittRows);
                 if (ok === false) return false;
             }
         } catch(_e){}
-        ev.preventDefault();
+        if (ev && typeof ev.preventDefault==='function') ev.preventDefault();
         const form = document.getElementById(formId) || ev.target;
         if (!form) return false;
+
+        // First, attempt to persist any inline connector editors and embedded LLM editors
+        try {
+            await saveAllConnectorEditors();
+        } catch (e) {
+            // Surface connector save failure but continue to save profile data as well
+            try { if (typeof showToast === 'function') showToast('Connector save failed: ' + e.message, true); } catch(_){ }
+        }
 
         const fd = new FormData(form);
         const hasId = !!(form.querySelector('input[name="id"]') && form.querySelector('input[name="id"]').value);
@@ -553,6 +570,91 @@ $ittById = $byId($ittRows);
             if (typeof showToast === 'function') showToast('Save failed: ' + e.message, true);
         }
         return false;
+    }
+
+    // Save only profile basics (label, default flags, prompt)
+    async function saveProfileBasics(){
+        try {
+            const form = document.getElementById('core_profile_form');
+            if (!form) return;
+            const idEl = form.querySelector('input[name="id"]');
+            const pid = idEl ? (idEl.value||'') : '';
+            if (!pid){ if (typeof showToast==='function') showToast('Save failed: create the profile first', true); return; }
+            const label = (form.querySelector('input[name="label"]').value||'');
+            const defNpc = !!(form.querySelector('input[type="checkbox"][name="default_npc"]').checked) ? '1' : '0';
+            const defNarr = !!(form.querySelector('input[type="checkbox"][name="default_narrator"]').checked) ? '1' : '0';
+            const prompt = (form.querySelector('textarea[name="prompt"]').value||'');
+            const fd = new FormData();
+            fd.append('update','1');
+            fd.append('id', pid);
+            fd.append('label', label);
+            fd.append('default_npc', defNpc);
+            fd.append('default_narrator', defNarr);
+            fd.append('prompt', prompt);
+            const res = await fetch('core_profiles.php', { method:'POST', headers:{ 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+            let json={}; try { json = await res.json(); } catch(_){ json = { ok:false, error:'Invalid response' }; }
+            if (json && json.ok){
+                if (typeof showToast==='function') showToast('Profile settings saved');
+                try { updateLeftListBasics(label, defNpc==='1', defNarr==='1'); } catch(_e){}
+            } else {
+                if (typeof showToast==='function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
+            }
+        } catch(e){ if (typeof showToast==='function') showToast('Save failed: ' + e.message, true); }
+    }
+
+    function updateLeftListBasics(newLabel, isDefaultNpc, isDefaultNarrator){
+        const li = document.querySelector('.llm-left .conn-li[data-id="'+String(CURRENT_PROFILE_ID)+'"]');
+        if (!li) return;
+        const title = li.querySelector('.title');
+        if (title) title.textContent = newLabel || title.textContent;
+        const badges = li.querySelector('.pf-badges');
+        if (badges){
+            // Preserve existing NPC count badge if present
+            const countBadge = Array.from(badges.children).find(el => /NPCs$/.test(el.textContent||''));
+            badges.innerHTML='';
+            if (countBadge) badges.appendChild(countBadge);
+            if (isDefaultNpc){ const b=document.createElement('span'); b.className='pf-flag'; b.textContent='NPC'; badges.appendChild(b); }
+            if (isDefaultNarrator){ const b=document.createElement('span'); b.className='pf-flag'; b.textContent='Narrator'; badges.appendChild(b); }
+        }
+    }
+
+    // Persist inline TTS/ITT editors and embedded LLM editors before saving profile
+    async function saveAllConnectorEditors(){
+        const tasks = [];
+        function enqueueInline(containerId, selectId){
+            const container = document.getElementById(containerId);
+            const sel = document.getElementById(selectId);
+            if (!container || !sel) return;
+            const id = sel.value || '';
+            if (!id) return;
+            const fd = new FormData();
+            fd.append('inline_update_connector','1');
+            fd.append('id', id);
+            container.querySelectorAll('input,select,textarea').forEach(inp=>{
+                const n = inp.name; if (!n) return;
+                if (inp.type === 'checkbox') fd.append(n, inp.checked ? '1':'0'); else fd.append(n, inp.value);
+            });
+            tasks.push(
+                fetch('core_profiles.php', { method:'POST', body: fd })
+                    .then(r=>r.json())
+                    .then(j=>{ if (!j || j.ok!==true) throw new Error((j && j.error) || 'Inline save failed'); })
+            );
+        }
+        enqueueInline('preview_tts_connector_id','tts_connector_id');
+        enqueueInline('preview_itt_connector_id','itt_connector_id');
+        // Attempt to trigger embedded LLM editor saves (if available)
+        const frameIds = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id'];
+        frameIds.forEach(fid => {
+            const f = document.getElementById(fid);
+            try {
+                if (f && f.contentWindow && typeof f.contentWindow.handleEmbeddedSave === 'function'){
+                    const p = f.contentWindow.handleEmbeddedSave();
+                    // If the child returned a promise, await it
+                    if (p && typeof p.then === 'function') tasks.push(p);
+                }
+            } catch(_){ }
+        });
+        if (tasks.length>0){ await Promise.allSettled(tasks); }
     }
     // Connector details passed from PHP
     const LLM_DETAILS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
