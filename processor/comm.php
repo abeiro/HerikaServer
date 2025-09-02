@@ -1308,8 +1308,7 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
             ? $GLOBALS['DYNAMIC_PROFILE_FIELDS']
             : ['personality', 'relationships'];
 
-        // connector + history
-        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS['CONNECTORS_DIARY']}.php");
+        // history
         $historyData = getDynamicProfileHistoryData($npcName);
 
         // update fields
@@ -1729,7 +1728,8 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         ];
         
         $contextData = array_merge($head, $prompt);
-        
+
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS['CONNECTORS_DIARY']}.php");
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
         
         // Get max tokens for this connector
