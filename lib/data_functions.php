@@ -714,7 +714,13 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             if ($focusOnChat) {
                 if (strpos($rowData," uses ")!==false) 
                     continue;
-                if (strpos($rowData," uses ")!==false) 
+                if (strpos($rowData," casts ")!==false) 
+                    continue;
+                if (strpos($rowData," engages combat ")!==false) 
+                    continue;
+                if (strpos($rowData," has defeated ")!==false) 
+                    continue;
+                if (strpos($rowData," activates ")!==false) 
                     continue;
             }
                 
@@ -1071,12 +1077,19 @@ function replaceRoles($lastDialogFull,$actor,$lastNelements) {
 function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 {
 
+    $localStartTime=microtime(true);
+
     $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
+    //error_log("[buildHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+
+
     $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
 
-    
+    //error_log("[compactHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
+    //error_log("[replaceRoles] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
     // Cases of self rechat
     if ((sizeof($ctx3)>3)&&(($GLOBALS["gameRequest"][3] ?? "")=="rechat")) {
@@ -1114,6 +1127,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
         }
     }
+
+    //error_log("[DataLastDataExpandedFor end] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
     return $ctx3;
 
@@ -2169,7 +2184,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
 
 function DataSearchMemoryByVector($rawstring,$npcfilter) {
     
-  
+        $localStartTime=microtime(true);
         Logger::info("Using DataSearchMemoryByVector");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
         $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
@@ -2209,7 +2224,10 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
 
         // Create context and send the request
         $context  = stream_context_create($options);
+        
+        error_log("[DataSearchMemoryByVector start] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
         $response = file_get_contents($url, false, $context);
+        error_log("[DataSearchMemoryByVector end] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
         // Output the response
         if ($response === false) {

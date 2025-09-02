@@ -1372,6 +1372,9 @@ function getGametsLimitFor($actor) {
 function offerMemory($gameRequest, $DIALOGUE_TARGET)
 {
     global $db;
+    
+    $startTime=microtime(true);
+
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && !$GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] ) {
         Logger::debug("MEMORY_EMBEDDING disabled");
         return "";

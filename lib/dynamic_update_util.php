@@ -314,7 +314,7 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         // Check if update connector is configured
         $connector = new LLMConnector();
         $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
-        if ($currentConnectorData) {
+        if (!$currentConnectorData) {
             Logger::debug("processSingleDynamicProfile: No core connector configured while updating profile for $npcName");
             return false;
         }
@@ -662,10 +662,12 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
     $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
     $configFile = $path . "conf" . DIRECTORY_SEPARATOR . "conf_$newConfFile.php";
     
+    /*
     if (!file_exists($configFile)) {
         Logger::error("saveDynamicProfileUpdates: Config file not found for $npcName");
         return false;
     }
+    */
     
     try {
 
