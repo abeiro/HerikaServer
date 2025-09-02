@@ -11,7 +11,7 @@
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
 // Database Prompt (Dialogue)
-$TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." . 
+$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." . 
 " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
 " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
 " {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
@@ -24,7 +24,7 @@ $TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a ca
 // (a funcrec event comes, which just write  something into context. )
 // Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
 //
-$TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
+$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
 " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
 " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
 " {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
