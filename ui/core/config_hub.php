@@ -50,7 +50,7 @@ main { padding-top: 160px; }
         <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
         <button class="tab-button" data-tab="keys">🔑API Keys</button>
         <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
-        <button class="tab-button" data-tab="npcbio">📚NPC Biography</button>
+        <button class="tab-button" data-tab="npcbio">📚NPC Biographies</button>
         <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
         <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
     </div>

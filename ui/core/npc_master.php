@@ -169,12 +169,17 @@ $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_profiles ORDER BY label ASC");
+$profilesById = [];
+foreach (($profileRows ?? []) as $pr) {
+    $pid = (string)($pr['id'] ?? '');
+    if ($pid !== '') $profilesById[$pid] = $pr['label'] ?? ('Profile #'.$pid);
+}
 
 $where = "1=1";
 if ($q !== ''){
     $qEsc = "%".$GLOBALS['db']->escape($q)."%";
     // Match by name primarily; include a few related fields
-    $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."')";
+    $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."' or coalesce(tags,'') ilike '".$qEsc."')";
 }
 if ($profileIdFilter !== ''){
     $where .= " and profile_id = ".intval($profileIdFilter);
@@ -225,6 +230,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
+        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
             <div class="npc-divider"></div>
@@ -233,13 +239,16 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                 <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
                 <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
                 <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
-                <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"><?= htmlspecialchars($row["oghma_knowledge_tags"] ?? "") ?></span></div>
+                <?php $oghmaVal = trim((string)($row["oghma_knowledge_tags"] ?? "")); $oghmaDisp = ($oghmaVal === "") ? "none" : $oghmaVal; ?>
+                <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
+                <?php $tagsVal = trim((string)($row["tags"] ?? "")); $tagsDisp = ($tagsVal === "") ? "none" : $tagsVal; ?>
+                <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
             </div>
             <div class="npc-actions">
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 Locked" : "🔓"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 " : "🔓"; ?></a>
                 <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
-                <a class="btn" href="?tag=<?= $row["id"] ?>">Tag</a>
             </div>
         </div>
     <?php endforeach; ?>
@@ -284,6 +293,14 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         </div>
 
         <div class="form-item">
+            <label for="lock_profile">Lock Profile</label>
+            <div class="checkbox-inline">
+                <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
+                <span class="hint">Prevents dynamic systems from modifying this NPC's profile.</span>
+            </div>
+        </div>
+
+        <div class="form-item">
             <label for="npc_favorite">Favorite</label>
             <div class="checkbox-inline">
                 <input type="checkbox" id="npc_favorite" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
@@ -292,11 +309,49 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         </div>
 
         <div class="form-item">
-            <label for="lock_profile">Lock Profile</label>
+            <label for="gender">Gender</label>
+            <input type="text" id="gender" name="gender" placeholder="e.g. female, male, nonbinary" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
+            <small class="hint">Used for pronouns and voice selection guidance.</small>
+        </div>
+
+        <div class="form-item">
+            <label for="race">Race</label>
+            <input type="text" id="race" name="race" placeholder="e.g. nord, dunmer, argonian" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
+            <small class="hint">Lore-accurate race label used in prompts.</small>
+        </div>
+
+        <div class="form-item">
+            <label for="base">Base</label>
+            <input type="text" id="base" name="base" placeholder="Base actor/form ID if applicable" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
+            <small class="hint">Optional: base form identifier or template this NPC derives from.</small>
+        </div>
+
+        <div class="form-item">
+            <label for="refid">Ref ID</label>
+            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000...)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
+            <small class="hint">Skyrim reference ID for in-game linkage (optional).</small>
+        </div>
+
+        
+
+        <div class="form-item">
+            <label for="dynamic_profile">Dynamic Profile</label>
             <div class="checkbox-inline">
-                <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
-                <span class="hint">Prevents dynamic systems from modifying this NPC's profile.</span>
+                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
+                <span class="hint">Allow systems to evolve the profile based on gameplay events.</span>
             </div>
+        </div>
+
+        <div class="form-item">
+            <label for="voiceid">Voice ID</label>
+            <input type="text" id="voiceid" name="voiceid" placeholder="Matches TTS voice identifier" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
+            <small class="hint">Identifier for the TTS backend (e.g., ElevenLabs, XTTS, etc.).</small>
+        </div>
+
+        <div class="form-item span-2">
+            <label for="tags">Tags</label>
+            <input type="text" id="tags" name="tags" placeholder="Comma-separated labels for search and grouping" value="<?= htmlspecialchars($editItem["tags"] ?? "") ?>">
+            <small class="hint">Free-form labels to organize and filter NPCs.</small>
         </div>
 
         <div class="form-item span-2">
@@ -317,26 +372,13 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <small class="hint">Persistent biography that never changes during play. Good for canon facts.</small>
         </div>
 
-        <div class="form-item span-2">
-            <label for="oghma_knowledge_tags">OGHMA Knowledge Tags</label>
-            <textarea id="oghma_knowledge_tags" name="oghma_knowledge_tags" placeholder="Comma-separated keywords to fetch Oghma articles."><?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?></textarea>
-            <small class="hint">Keywords used by Oghma Infinium for topic retrieval. Prefer lowercase with underscores.</small>
-        </div>
-
-        <div class="form-item span-2">
-            <label for="emote_moods">Emote Moods</label>
-            <textarea id="emote_moods" name="emote_moods" placeholder="Allowed mood/emote set (comma-separated).">
-<?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
-            <small class="hint">Whitelist of mood/emote cues the NPC may use (e.g., calm, angry, playful).</small>
-        </div>
-
-        <div class="form-item span-2">
+        <div class="form-item">
             <label for="personality">Personality</label>
             <textarea id="personality" name="personality" placeholder="Personality traits and speaking characteristics."><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
             <small class="hint">Concise traits that guide tone and behavior. Avoid contradictions with Core.</small>
         </div>
 
-        <div class="form-item span-2">
+        <div class="form-item">
             <label for="relationships">Relationships</label>
             <textarea id="relationships" name="relationships" placeholder="Key allies, rivals, factions, and opinions."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
             <small class="hint">Named entities the NPC knows and how they feel about them.</small>
@@ -366,62 +408,15 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <small class="hint">Motivations that drive decisions and quest hooks.</small>
         </div>
 
-        <div class="form-item">
-            <label for="voiceid">Voice ID</label>
-            <input type="text" id="voiceid" name="voiceid" placeholder="Matches TTS voice identifier" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
-            <small class="hint">Identifier for the TTS backend (e.g., ElevenLabs, XTTS, etc.).</small>
-        </div>
-
-        <div class="form-item">
-            <label for="gender">Gender</label>
-            <input type="text" id="gender" name="gender" placeholder="e.g. female, male, nonbinary" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
-            <small class="hint">Used for pronouns and voice selection guidance.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="base">Base</label>
-            <input type="text" id="base" name="base" placeholder="Base actor/form ID if applicable" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
-            <small class="hint">Optional: base form identifier or template this NPC derives from.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="race">Race</label>
-            <input type="text" id="race" name="race" placeholder="e.g. nord, dunmer, argonian" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
-            <small class="hint">Lore-accurate race label used in prompts.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="refid">Ref ID</label>
-            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000...)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
-            <small class="hint">Skyrim reference ID for in-game linkage (optional).</small>
-        </div>
-
-        <div class="form-item">
-            <label for="profile_id">Profile</label>
-            <?= renderSelect($npc, "profile_id", "Profile", $editItem["profile_id"] ?? "") ?>
-            <small class="hint">Select which CHIM profile this NPC uses for AI behavior.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="dynamic_profile">Dynamic Profile</label>
-            <div class="checkbox-inline">
-                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
-                <span class="hint">Allow systems to evolve the profile based on gameplay events.</span>
-            </div>
-        </div>
-
         <div class="form-item span-2">
-            <label for="tags">Tags</label>
-            <input type="text" id="tags" name="tags" placeholder="Comma-separated labels for search and grouping" value="<?= htmlspecialchars($editItem["tags"] ?? "") ?>">
-            <small class="hint">Free-form labels to organize and filter NPCs.</small>
+            <label for="emote_moods">Emote Moods</label>
+            <textarea id="emote_moods" name="emote_moods" placeholder="Allowed mood/emote set (comma-separated).">
+            <?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
+            <small class="hint">Whitelist of mood/emote cues the NPC may use (e.g., calm, angry, playful).</small>
         </div>
 
-        <div class="form-item span-2 metadata-block">
-            <label for="metadata">Metadata (JSON)</label>
-            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
-            <small class="hint">Advanced: arbitrary key/value metadata. Use the JSON editor below.</small>
-            <div id="metadata"></div>
-        </div>
+
+        
 
         <div class="form-item span-2">
             <label for="extended_data">Extended Data (JSON)</label>
@@ -467,7 +462,8 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 </div>
 
 <style>
-.npc-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:14px; }
+.npc-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:14px; }
+@media (max-width: 1400px){ .npc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1100px){ .npc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px){ .npc-grid { grid-template-columns: 1fr; } }
 .npc-card { background:linear-gradient(180deg, #101826 0%, #0d1117 100%); border:1px solid rgba(138,155,182,0.35); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
@@ -534,6 +530,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 <?php endif; ?>
 <div class="npc-grid">
 <?php foreach ($data as $row): ?>
+    <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
         <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
         <div class="npc-divider"></div>
@@ -542,13 +539,14 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
             <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
             <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
-            <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"><?= htmlspecialchars($row["oghma_knowledge_tags"] ?? "") ?></span></div>
+            <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
+            <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
+            <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
         </div>
         <div class="npc-actions">
             <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
-            <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 Locked" : "🔓"; ?></a>
+            <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 " : "🔓"; ?></a>
             <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
-            <a class="btn" href="?tag=<?= $row["id"] ?>">Tag</a>
         </div>
     </div>
 <?php endforeach; ?>
@@ -573,6 +571,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 
 <script>
 (function(){
+  const PROFILES_BY_ID = <?= json_encode($profilesById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
   function openModal(url){ iframe.src = url; modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
@@ -589,6 +588,17 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
   document.addEventListener('click', function(e){ if (e.target && e.target.id==='npc_modal_close') closeModal(); });
   modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+  // Prevent browser history back/forward inside modal (mouse buttons/backspace)
+  (function(){
+    function blockNav(ev){ ev.preventDefault(); ev.stopPropagation(); return false; }
+    window.addEventListener('popstate', blockNav, true);
+    window.addEventListener('hashchange', blockNav, true);
+    window.addEventListener('mousedown', function(e){ if (e.button===3 || e.button===4) { blockNav(e); } }, true);
+    window.addEventListener('mouseup', function(e){ if (e.button===3 || e.button===4) { blockNav(e); } }, true);
+    window.addEventListener('contextmenu', function(e){ /* noop */ }, true);
+    // push a dummy state so back goes to same place
+    try { history.pushState({modal:true}, document.title, location.href); } catch(_e){}
+  })();
   document.querySelectorAll('.npc-card').forEach(card=>{
     card.addEventListener('click', function(ev){
       if (ev.target.closest('.npc-actions')) return;
@@ -704,7 +714,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       if (json && json.ok){
         const active = Number(json.favorite||0)===1;
         this.classList.toggle('active', active);
-        this.textContent = active ? '★ Favorited' : '☆ Favorite';
+        this.textContent = active ? '★' : '☆';
         try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent= active?'Marked favorite':'Unfavorited'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
       }
     });
@@ -719,7 +729,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       if (json && json.ok){
         const active = Number(json.locked||0)===1;
         this.classList.toggle('active', active);
-        this.textContent = active ? '🔒 Locked' : '🔓 Unlock';
+        this.textContent = active ? '🔒' : '🔓';
         try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent= active?'Locked profile':'Unlocked profile'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
       }
     });
@@ -741,11 +751,15 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
           div.setAttribute('data-id', id);
           div.innerHTML = `
             <div class="npc-title"><span class="npc-name"></span></div>
-            <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"></span>, <span class="npc-muted">Race:</span> <span class="npc-race"></span>, <span class="npc-muted">Voice:</span> <span class="npc-voiceid"></span>, <span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
-            <div class="npc-line"><span class="npc-muted">OGHMA:</span> <span class="npc-oghma"></span></div>
+            <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"></span></div>
+            <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"></span></div>
+            <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"></span></div>
+            <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
+            <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"></span></div>
+            <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"></span></div>
+            <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"></span></div>
             <div class="npc-actions">
                 <a class="btn btn-danger" href="?delete=${id}" onclick="return confirm('Delete this NPC?');">Delete</a>
-                <a class="btn" href="?tag=${id}">Tag</a>
             </div>`;
           grid.prepend(div);
           // Wire edit button
@@ -760,7 +774,10 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         setText('.npc-race', data.race);
         setText('.npc-voiceid', data.voiceid);
         setText('.npc-refid', data.refid);
-        setText('.npc-oghma', data.oghma_knowledge_tags);
+        setText('.npc-oghma', (data.oghma_knowledge_tags==null || String(data.oghma_knowledge_tags).trim()==='') ? 'none' : data.oghma_knowledge_tags);
+        setText('.npc-tags', (data.tags==null || String(data.tags).trim()==='') ? 'none' : data.tags);
+        const profId = String(data.profile_id||'');
+        setText('.npc-profile', PROFILES_BY_ID[profId] || '');
       }
       closeModal();
       try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='NPC saved'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2000); } } catch(_e){}
