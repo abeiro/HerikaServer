@@ -1271,13 +1271,24 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
 
     // snapshot current globals
     $originalGlobals = $GLOBALS;
-
     try {
-        // load defaults, then override with character profile
-        $defaults = $extractConf($mainConf);
+        // load defaults, then override with character profile (except prompt keys)
+        $defaults  = $extractConf($mainConf);
         $overrides = $extractConf($profilePath);
+
+        // never allow profile to override these global prompt keys
+        $promptKeys = [
+            'DYNAMIC_PROMPT_PERSONALITY',
+            'DYNAMIC_PROMPT_RELATIONSHIPS',
+            'DYNAMIC_PROMPT_OCCUPATION',
+            'DYNAMIC_PROMPT_SKILLS',
+            'DYNAMIC_PROMPT_SPEECHSTYLE',
+            'DYNAMIC_PROMPT_GOALS',
+        ];
+
         $merged = $defaults;
         foreach ($overrides as $k => $v) {
+            if (in_array($k, $promptKeys, true)) continue; // keep defaults for global prompts
             // only override keys explicitly set in profile
             $merged[$k] = $v;
         }
@@ -1286,9 +1297,6 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         foreach ($merged as $k => $v) {
             $GLOBALS[$k] = $v;
         }
-
-        // per-NPC context
-        $GLOBALS['HERIKA_NAME'] = $npcName;
 
         // feature gate
         if (empty($GLOBALS['DYNAMIC_PROFILE'])) {
