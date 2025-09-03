@@ -1088,7 +1088,7 @@ class openrouterjson
             'model' => $this->_model,
             'messages' => $contextData,
             'stream' => false, 
-            'usage'=> true,
+            'usage'=> ["include"=>true],
             'max_tokens' => $MAX_TOKENS,
             'temperature' => $temperature, 
             'top_k' => $top_k,
@@ -1224,7 +1224,28 @@ class openrouterjson
         
         file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
-        $json_response=file_get_contents($this->_url, false, $context);
+        try {
+            $json_response = file_get_contents($this->_url, false, $context);
+            if ($json_response === false) {
+               $error = error_get_last();
+              error_log("Error fetching response from URL: " . $this->_url . ". Error: " . $error['message']);
+            }
+        } catch (Exception $e) {
+            error_log("Exception occurred while fetching response from URL: " . $this->_url . ". Exception: " . $e->getMessage());
+            $json_response = false;
+        }
+
+        if ($GLOBALS["db"]) {
+            $GLOBALS["db"]->insert(
+            'audit_request',
+                array(
+                    'request' => json_encode($data),
+                    'result' => $error["message"],
+                    'connector'=>$this->name,
+                    'url'=>$this->_url
+                ));
+        }
+        
         file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
 
         if ($json_response) {

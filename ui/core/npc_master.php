@@ -51,6 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
 
 // Handle Update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
+    $_POST["md5"]=md5($_POST["npc_name"]);
     $npc->update($_POST["id"], $_POST);
     header("Location: npc_master.php");
     exit;
@@ -88,6 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             if (!$newId) { echo json_encode(["ok"=>false, "error"=>"Insert failed"]); exit; }
             echo json_encode(["ok"=>true, "id"=>$newId]);
         } else {
+            $_POST["md5"]=md5($_POST["npc_name"]);
             $ok = $npc->update($id, $_POST);
             if ($ok === false) {
                 echo json_encode(["ok"=>false, "error"=>($npc->getLastError() ?? 'Update failed')]);
