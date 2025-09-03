@@ -1229,114 +1229,106 @@ function processAutoDiary($gameRequest, $eventType) {
 // Function to process a single NPC's dynamic profile
 function processSingleDynamicProfile($npcName, $gameRequest) {
     global $db;
-    
-    // Ensure required dependencies are loaded
-    if (!function_exists('DataSpeechJournal')) {
+
+    // deps
+    if (!function_exists('DataSpeechJournal') || !function_exists('buildDynamicProfileDisplay')) {
         require_once(__DIR__ . "/../lib/data_functions.php");
     }
-    if (!function_exists('buildDynamicProfileDisplay')) {
-        require_once(__DIR__ . "/../lib/model_dynmodel.php");
-    }
-    
-    // Skip The Narrator
+
+    // skip narrator
     if ($npcName === "The Narrator") {
         Logger::debug("processSingleDynamicProfile: Skipping The Narrator");
         return false;
     }
-    
-    // Check if profile exists for this NPC
-    $profilePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf_" . md5($npcName) . ".php";
+
+    // paths
+    $confDir     = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR;
+    $profilePath = $confDir . "conf_" . md5($npcName) . ".php";
+    $mainConf    = $confDir . "conf.php";
+
     if (!file_exists($profilePath)) {
         Logger::debug("processSingleDynamicProfile: No profile found for $npcName");
         return false;
     }
-    
-    // Load the NPC's profile to check if DYNAMIC_PROFILE is enabled
-    $originalGlobals = $GLOBALS;
-    
-    try {
-        // Include the NPC's profile
-        include($profilePath);
-        
-        // After loading character profile, ensure we use global dynamic prompts from main conf.php
-        // Character profiles should not override these global prompt settings
-        // BUT preserve character-specific DYNAMIC_PROFILE setting
-        $characterDynamicProfile = isset($DYNAMIC_PROFILE) ? $DYNAMIC_PROFILE : false;
-        $characterDynamicProfileFields = isset($DYNAMIC_PROFILE_FIELDS) ? $DYNAMIC_PROFILE_FIELDS : [];
-        
-        $mainConfPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-        if (file_exists($mainConfPath)) {
-            // Save current state before loading main config
-            $tempGlobals = $GLOBALS;
-            include($mainConfPath); // This will load the global prompts
-            
-            // Extract only the DYNAMIC_PROMPT_* variables from main config
-            $globalPrompts = [
-                'DYNAMIC_PROMPT_PERSONALITY' => $DYNAMIC_PROMPT_PERSONALITY ?? '',
-                'DYNAMIC_PROMPT_RELATIONSHIPS' => $DYNAMIC_PROMPT_RELATIONSHIPS ?? '',
-                'DYNAMIC_PROMPT_OCCUPATION' => $DYNAMIC_PROMPT_OCCUPATION ?? '',
-                'DYNAMIC_PROMPT_SKILLS' => $DYNAMIC_PROMPT_SKILLS ?? '',
-                'DYNAMIC_PROMPT_SPEECHSTYLE' => $DYNAMIC_PROMPT_SPEECHSTYLE ?? '',
-                'DYNAMIC_PROMPT_GOALS' => $DYNAMIC_PROMPT_GOALS ?? ''
-            ];
-            
-            // Restore character-specific globals but override with global prompts
-            foreach ($tempGlobals as $globalKey => $globalValue) {
-                $GLOBALS[$globalKey] = $globalValue;
-            }
-            foreach ($globalPrompts as $key => $value) {
-                if (!empty($value)) {
-                    $GLOBALS[$key] = $value;
+
+    // helper: include a conf in isolation and return UPPERCASE vars as array
+    $extractConf = static function (string $file): array {
+        if (!file_exists($file)) return [];
+        return (static function ($f) {
+            include $f;
+            $vars = get_defined_vars();
+            unset($vars['f']); // local param
+            $cfg = [];
+            foreach ($vars as $k => $v) {
+                if ($k === 'GLOBALS') continue;
+                if (preg_match('/^[A-Z][A-Z0-9_]*$/', $k)) {
+                    $cfg[$k] = $v;
                 }
             }
-            
-            // Restore character-specific DYNAMIC_PROFILE settings
-            $DYNAMIC_PROFILE = $characterDynamicProfile;
-            $GLOBALS['DYNAMIC_PROFILE'] = $characterDynamicProfile;
-            if (!empty($characterDynamicProfileFields)) {
-                $DYNAMIC_PROFILE_FIELDS = $characterDynamicProfileFields;
-                $GLOBALS['DYNAMIC_PROFILE_FIELDS'] = $characterDynamicProfileFields;
-            }
+            return $cfg;
+        })($file);
+    };
+
+    // snapshot current globals
+    $originalGlobals = $GLOBALS;
+    try {
+        // load defaults, then override with character profile (except prompt keys)
+        $defaults  = $extractConf($mainConf);
+        $overrides = $extractConf($profilePath);
+
+        // never allow profile to override these global prompt keys
+        $promptKeys = [
+            'DYNAMIC_PROMPT_PERSONALITY',
+            'DYNAMIC_PROMPT_RELATIONSHIPS',
+            'DYNAMIC_PROMPT_OCCUPATION',
+            'DYNAMIC_PROMPT_SKILLS',
+            'DYNAMIC_PROMPT_SPEECHSTYLE',
+            'DYNAMIC_PROMPT_GOALS',
+        ];
+
+        $merged = $defaults;
+        foreach ($overrides as $k => $v) {
+            if (in_array($k, $promptKeys, true)) continue; // keep defaults for global prompts
+            // only override keys explicitly set in profile
+            $merged[$k] = $v;
         }
-        
-        // Check if DYNAMIC_PROFILE is enabled for this NPC
-        if (!isset($DYNAMIC_PROFILE) || !$DYNAMIC_PROFILE) {
+
+        // apply merged config to $GLOBALS
+        foreach ($merged as $k => $v) {
+            $GLOBALS[$k] = $v;
+        }
+
+        // feature gate
+        if (empty($GLOBALS['DYNAMIC_PROFILE'])) {
             Logger::debug("processSingleDynamicProfile: DYNAMIC_PROFILE disabled for $npcName");
             return false;
         }
-        
-        // Check if diary connector is configured
-        if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+
+        // diary connector
+        if (empty($GLOBALS['CONNECTORS_DIARY']) ||
+            !file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS['CONNECTORS_DIARY']}.php")) {
             Logger::debug("processSingleDynamicProfile: No diary connector configured for $npcName");
             return false;
         }
-        
-        // Get dynamic profile fields to update
-        $fieldsToUpdate = isset($DYNAMIC_PROFILE_FIELDS) && is_array($DYNAMIC_PROFILE_FIELDS) 
-            ? $DYNAMIC_PROFILE_FIELDS 
-            : ["personality", "relationships"]; // Default fields
-        
-        if (empty($fieldsToUpdate)) {
-            Logger::debug("processSingleDynamicProfile: No fields selected for dynamic updates for $npcName");
-            return false;
-        }
-        
-        // Set context for this NPC
-        $GLOBALS["HERIKA_NAME"] = $npcName;
-        
-        // Process each selected field
-        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php");
-        
+
+        // fields to update (profile overrides defaults if set)
+        $fieldsToUpdate = (!empty($GLOBALS['DYNAMIC_PROFILE_FIELDS']) && is_array($GLOBALS['DYNAMIC_PROFILE_FIELDS']))
+            ? $GLOBALS['DYNAMIC_PROFILE_FIELDS']
+            : ['personality', 'relationships'];
+
+        // history
         $historyData = getDynamicProfileHistoryData($npcName);
+
+        // update fields
         $updatedFields = [];
         $successCount = 0;
-        
+
         foreach ($fieldsToUpdate as $field) {
             $result = updateDynamicProfileField($npcName, $field, $historyData);
 
-            if ($field=="skills") {
-                $skillsData=getInGameSkillDataFor($npcName);
-                $result.="\n$skillsData";
+            if ($field === 'skills') {
+                $skillsData = getInGameSkillDataFor($npcName);
+                $result .= "\n$skillsData";
             }
 
             if ($result !== false) {
@@ -1344,26 +1336,32 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
                 $successCount++;
             }
         }
-        
+
         if ($successCount > 0) {
-            // Save the updated profile
-            $success = saveDynamicProfileUpdates($npcName, $updatedFields, $db);
-            if ($success) {
-                Logger::info("processSingleDynamicProfile: Successfully updated $successCount fields for $npcName: " . implode(', ', array_keys($updatedFields)));
+            $ok = saveDynamicProfileUpdates($npcName, $updatedFields, $db);
+            if ($ok) {
+                Logger::info(
+                    "processSingleDynamicProfile: Successfully updated $successCount fields for $npcName: " .
+                    implode(', ', array_keys($updatedFields))
+                );
                 return true;
             }
         }
-        
     } catch (Exception $e) {
         Logger::error("processSingleDynamicProfile: Error processing $npcName: " . $e->getMessage());
         return false;
     } finally {
-        // Restore original globals
-        foreach ($originalGlobals as $key => $value) {
-            $GLOBALS[$key] = $value;
+        // hard-restore globals
+        foreach (array_keys($GLOBALS) as $k) {
+            if (!array_key_exists($k, $originalGlobals)) {
+                unset($GLOBALS[$k]);
+            }
+        }
+        foreach ($originalGlobals as $k => $v) {
+            $GLOBALS[$k] = $v;
         }
     }
-    
+
     return false;
 }
 
@@ -1738,7 +1736,8 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         ];
         
         $contextData = array_merge($head, $prompt);
-        
+
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS['CONNECTORS_DIARY']}.php");
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
         
         // Get max tokens for this connector
