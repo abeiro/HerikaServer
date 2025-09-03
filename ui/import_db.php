@@ -24,8 +24,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <?php
 
+$isEmbed = true; // Always embedded inside config hub; do not show navbar
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 if (isset($_SESSION["PROFILE"])) {
     require_once($_SESSION["PROFILE"]);
@@ -36,6 +36,7 @@ preg_match($pattern, basename($_SESSION["PROFILE"]), $matches);
 $hash = isset($matches[1]) ? $matches[1] : 'default';    
 
 $db=new sql();
+$GLOBALS["db"] = $db;
 $res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");
 $last_gamets=$res[0]["last_gamets"]+1;
 
@@ -72,6 +73,81 @@ function formatFileSize($bytes) {
 
 // Include automatic backup management
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "automatic_backup.php");
+
+// Handle Automatic Backup settings (enable/disable and retention) BEFORE rendering (PRG pattern)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_auto_backup_settings') {
+    try {
+        $enabled = isset($_POST['auto_enabled']) ? 'true' : 'false';
+        $maxKeep = max(1, min(10, intval($_POST['auto_max'] ?? 5)));
+        // Persist into chim_meta.settings
+        $db->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+        $db->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+        $db->upsertRowOnConflict('chim_meta.settings', ['key'=>'AUTOMATIC_DATABASE_BACKUPS','value'=>$enabled], 'key');
+        $db->upsertRowOnConflict('chim_meta.settings', ['key'=>'AUTOMATIC_BACKUP_MAX_COUNT','value'=>(string)$maxKeep], 'key');
+    } catch (Throwable $e) {
+        // swallow and continue to redirect, errors will be visible in logs
+    }
+    // Redirect back to the same page (preserve query string like ?embed=1)
+    // Preserve ?embed=1 so navbar stays hidden in config hub
+    $qs = $_SERVER['QUERY_STRING'] ?? '';
+    $redirectUrl = ($_SERVER['PHP_SELF'] ?? 'import_db.php') . ($qs ? ('?' . $qs) : '');
+    header('Location: ' . $redirectUrl);
+    exit;
+}
+
+// Load live auto-backup settings once for consistent rendering
+$autoEnabled = false;
+$currentMax = 5;
+try {
+    $dbMeta = new sql();
+    $dbMeta->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+    $dbMeta->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+    $rowEn = $dbMeta->fetchOne("SELECT value FROM chim_meta.settings WHERE key='AUTOMATIC_DATABASE_BACKUPS'");
+    if (is_array($rowEn) && isset($rowEn['value'])) {
+        $val = strtolower(trim((string)$rowEn['value']));
+        $autoEnabled = in_array($val, ['true','1','yes','on'], true);
+    }
+    $rowMax = $dbMeta->fetchOne("SELECT value FROM chim_meta.settings WHERE key='AUTOMATIC_BACKUP_MAX_COUNT'");
+    if (is_array($rowMax) && isset($rowMax['value'])) {
+        $v = intval(trim((string)$rowMax['value']));
+        if ($v >= 1 && $v <= 10) { $currentMax = $v; }
+    }
+} catch (Throwable $e) {}
+
+// Handle tile actions with PRG
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_auto_enabled') {
+    try {
+        $dbMeta2 = new sql();
+        $dbMeta2->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+        $dbMeta2->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+        // Read current value and invert
+        $rowEn2 = $dbMeta2->fetchOne("SELECT value FROM chim_meta.settings WHERE key='AUTOMATIC_DATABASE_BACKUPS'");
+        $cur = 'false';
+        if (is_array($rowEn2) && isset($rowEn2['value'])) {
+            $val2 = strtolower(trim((string)$rowEn2['value']));
+            $cur = (in_array($val2, ['true','1','yes','on'], true)) ? 'true' : 'false';
+        }
+        $new = ($cur === 'true') ? 'false' : 'true';
+        $dbMeta2->upsertRowOnConflict('chim_meta.settings', ['key'=>'AUTOMATIC_DATABASE_BACKUPS','value'=>$new], 'key');
+    } catch (Throwable $e) {}
+    $qs = $_SERVER['QUERY_STRING'] ?? '';
+    $redirectUrl = ($_SERVER['PHP_SELF'] ?? 'import_db.php') . ($qs ? ('?' . $qs) : '');
+    header('Location: ' . $redirectUrl);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_auto_max') {
+    try {
+        $maxKeep = max(1, min(10, intval($_POST['auto_max'] ?? 5)));
+        $dbMeta3 = new sql();
+        $dbMeta3->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+        $dbMeta3->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+        $dbMeta3->upsertRowOnConflict('chim_meta.settings', ['key'=>'AUTOMATIC_BACKUP_MAX_COUNT','value'=>(string)$maxKeep], 'key');
+    } catch (Throwable $e) {}
+    $redirectUrl = $_SERVER['REQUEST_URI'] ?? ($_SERVER['PHP_SELF'] ?? 'import_db.php');
+    header('Location: ' . $redirectUrl);
+    exit;
+}
 
 // Handle download automatic backup
 if (isset($_GET['action']) && $_GET['action'] === 'download_auto' && isset($_GET['filename'])) {
@@ -158,7 +234,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'restore_auto' && isset($_GET[
             if (!$conn) {
                 $message .= "<p><strong>Error:</strong> Failed to connect to database: " . pg_last_error() . "</p>";
             } else {
-                // Drop and recreate database schema and extensions
+                // Drop and recreate database schemas and extensions
                 $Q = array();
                 $Q[] = "DROP SCHEMA IF EXISTS $schema CASCADE";
                 $Q[] = "DROP EXTENSION IF EXISTS vector CASCADE";
@@ -193,15 +269,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'restore_auto' && isset($_GET[
                         $message .= "<p>Failed to restore from automatic backup.</p>";
                         $message .= '<pre>' . htmlspecialchars(implode("\n", $output)) . '</pre>';
                     } else {
-                        $message .= "<p><strong>✅ Database restored successfully from automatic backup!</strong></p>";
-                        $message .= "<p>Restored from: <strong>$filename</strong></p>";
-                        $message .= '<pre>' . htmlspecialchars(implode("\n", $output)) . '</pre>';
-
-                        // Provide a clickable link and popup message
-                        $redirectUrl = '/HerikaServer/ui/home.php';
-                        $message .= "<script type='text/javascript'>
-                                        alert('Database restored successfully from automatic backup.');
-                                     </script>";
+                        // In embedded mode: show success message and redirect parent (config hub) after short delay
+                        echo "<script type='text/javascript'>\n".
+                             "  try {\n".
+                             "    const msg = 'Database restored successfully from automatic backup.';\n".
+                             "    if (window.top && window.top !== window) {\n".
+                             "      window.top.postMessage({type:'toast', message: msg}, '*');\n".
+                             "      setTimeout(function(){ window.top.location.href = '".$webRoot."/ui/home.php'; }, 1200);\n".
+                             "    } else {\n".
+                             "      alert(msg);\n".
+                             "      setTimeout(function(){ window.location.href = '".$webRoot."/ui/home.php'; }, 1200);\n".
+                             "    }\n".
+                             "  } catch(e) { window.location.href = '".$webRoot."/ui/home.php'; }\n".
+                             "</script>";
+                        exit;
                     }
                 }
                 pg_close($conn);
@@ -312,12 +393,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$conn) {
                     $message .= "<p>Failed to connect to database: " . pg_last_error() . "</p>";
                 } else {
-                    // Drop and recreate database schema and extensions
+                    // Drop and recreate database schemas and extensions
                     $Q = array();
                     $Q[] = "DROP SCHEMA IF EXISTS $schema CASCADE";
+                    $Q[] = "DROP SCHEMA IF EXISTS chim_meta CASCADE";
                     $Q[] = "DROP EXTENSION IF EXISTS vector CASCADE";
                     $Q[] = "DROP EXTENSION IF EXISTS pg_trgm CASCADE";
                     $Q[] = "CREATE SCHEMA $schema";
+                    $Q[] = "CREATE SCHEMA chim_meta";
                     $Q[] = "CREATE EXTENSION vector";
                     $Q[] = "CREATE EXTENSION IF NOT EXISTS pg_trgm";
 
@@ -553,6 +636,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
+<?php if ($isEmbed): ?>
+<style> main { padding-top: 20px; } </style>
+<?php endif; ?>
 <div class="indent5">
     <h1>Database Manager</h1>
     
@@ -629,27 +715,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($automaticBackups as $backup) {
         $totalBackupsSize += $backup['size'];
     }
+    // Load current retention from chim_meta.settings (fallback 5)
+    $currentMax = 5;
+    $autoEnabled = false;
+    try {
+        $dbTmp = new sql();
+        $dbTmp->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+        $dbTmp->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+        $rowEn = $dbTmp->fetchOne("SELECT value FROM chim_meta.settings WHERE key='AUTOMATIC_DATABASE_BACKUPS'");
+        if (is_array($rowEn) && isset($rowEn['value'])) {
+            $val = strtolower(trim((string)$rowEn['value']));
+            $autoEnabled = in_array($val, ['true','1','yes','on'], true);
+        }
+        $rowMax = $dbTmp->fetchOne("SELECT value FROM chim_meta.settings WHERE key='AUTOMATIC_BACKUP_MAX_COUNT'");
+        if (is_array($rowMax) && isset($rowMax['value'])) { $v=intval($rowMax['value']); if ($v>0) $currentMax=$v; }
+    } catch (Throwable $e) {}
     ?>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
         
         <!-- Left Column: Automatic Backups -->
         <div class="message" style="background-color: #3a2d48; border: 1px solid #4a4a4a;">
             <h3>🤖 Automatic Backup System</h3>
-            <p>System-generated backups created automatically every time the server starts up. Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached.</p>
+            <p>System-generated backups created automatically every time the server starts up. Keeps a maximum of <?php echo (int)$currentMax; ?> backups, automatically deleting the oldest when the limit is reached.</p>
             
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0;">
                 <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
                     <h5 style="margin: 0 0 5px 0; color: #f8f9fa; font-size: 14px;">Status</h5>
-                    <p style="margin: 0; font-size: 16px; font-weight: bold;">
-                        <?php echo $autoBackup->isEnabled() ? '<span style="color: #176529;">✅ On</span>' : '<span style="color: #dc3545;">❌ Off</span>'; ?>
-                    </p>
+                    <form method="post" style="margin:0;">
+                        <input type="hidden" name="action" value="toggle_auto_enabled">
+                        <input type="hidden" name="embed" value="1">
+                        <button type="submit" class="button" style="background-color: <?php echo ($autoEnabled ? '#176529' : '#6c757d'); ?>; color: #fff; padding: 6px 12px; font-size: 14px;">
+                            <?php echo ($autoEnabled ? '✅ On' : '❌ Off'); ?>
+                        </button>
+                    </form>
                 </div>
                 
                 <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
                     <h5 style="margin: 0 0 5px 0; color: #f8f9fa; font-size: 14px;">Available</h5>
-                    <p style="margin: 0; font-size: 16px; font-weight: bold; color: #f8f9fa;">
-                        <?php echo count($automaticBackups); ?> / 5
-                    </p>
+                    <form method="post" style="margin:0; display:flex; gap:6px; justify-content:center; align-items:center;">
+                        <input type="hidden" name="action" value="update_auto_max">
+                        <input type="hidden" name="embed" value="1">
+                        <span style="font-size: 16px; font-weight: bold; color: #f8f9fa;"><?php echo count($automaticBackups); ?> / </span>
+                        <select name="auto_max" onchange="this.form.submit()" style="background-color:#4a4a4a; color:#f8f9fa; border:1px solid #555555; border-radius:4px; padding:4px;">
+                            <?php for ($i=1; $i<=10; $i++): ?>
+                                <option value="<?php echo $i; ?>" <?php echo ((int)$currentMax === $i ? 'selected' : ''); ?>><?php echo $i; ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </form>
                 </div>
                 
                 <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
@@ -660,13 +772,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
             
-            <?php if (!$autoBackup->isEnabled()): ?>
-                <div style="background-color: rgba(166, 53, 63, 0.1); border: 1px solid rgba(166, 53, 63, 0.9); border-radius: 8px; padding: 15px; margin: 15px 0;">
-                    <h4 style="color: #dc3545; margin: 0 0 10px 0;">⚠️ Automatic Backups Disabled</h4>
-                    <p style="margin: 0; color: #f8f9fa;">To enable automatic backups, go to the <strong>Configuration Wizard</strong> and set <code>AUTOMATIC_DATABASE_BACKUPS</code> to <strong>true</strong>.</p>
-                </div>
-            <?php endif; ?>
             
+
             <h4 style="margin: 15px 0 10px 0;">📂 Backup Management</h4>
             
             <?php if (!empty($automaticBackups)): ?>
@@ -689,12 +796,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         title="Download backup file">
                                     📥
                                 </button>
-                                <button onclick="if (confirm('⚠️ RESTORE DATABASE\\n\\nRestore from: <?php echo htmlspecialchars($backup['filename']); ?>\\n\\nThis will COMPLETELY REPLACE your current database with this backup.\\n\\n❌ All current data will be lost!\\n✅ Database will be restored to backup state\\n\\nAre you absolutely sure you want to continue?')) { window.location.href='?action=restore_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
+                                <button onclick="if (confirm('⚠️ RESTORE DATABASE\n\nRestore from: <?php echo htmlspecialchars($backup['filename']); ?>\n\nThis will COMPLETELY REPLACE your current database with this backup.\n\n❌ All current data will be lost!\n✅ Database will be restored to backup state\n\nAre you absolutely sure you want to continue?')) { window.location.href='?action=restore_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
                                         class="button" style="background-color: rgb(1 53 166 / 90%); color: white; padding: 4px 8px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; flex: 1; min-width: 70px;" 
                                         title="Restore database from this backup">
                                     🔄
                                 </button>
-                                <button onclick="if (confirm('⚠️ DELETE BACKUP\\n\\nDelete: <?php echo htmlspecialchars($backup['filename']); ?>\\n\\nThis action cannot be undone!\\n\\nAre you sure you want to permanently delete this backup?')) { window.location.href='?action=delete_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
+                                <button onclick="if (confirm('⚠️ DELETE BACKUP\n\nDelete: <?php echo htmlspecialchars($backup['filename']); ?>\n\nThis action cannot be undone!\n\nAre you sure you want to permanently delete this backup?')) { window.location.href='?action=delete_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
                                         class="button" style="background-color: rgba(166, 53, 63, 0.9); color: white; padding: 4px 8px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; flex: 1; min-width: 70px;" 
                                         title="Delete this backup file">
                                     🗑️
@@ -707,7 +814,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div style="text-align: center; padding: 30px 20px; color: #888; font-style: italic; background-color: #2c2c2c; border-radius: 8px; border: 1px dashed #4a4a4a;">
                     <div style="font-size: 24px; margin-bottom: 10px;">📂</div>
                     <p style="margin: 0;">No automatic backups available yet.</p>
-                    <?php if ($autoBackup->isEnabled()): ?>
+                    <?php if ($autoEnabled): ?>
                         <small style="color: #ffffff; display: block; margin-top: 8px;">Backups will be created on server restart.</small>
                     <?php endif; ?>
                 </div>

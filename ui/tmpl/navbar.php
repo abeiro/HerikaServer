@@ -380,11 +380,11 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Database Controls</h6></li>
-                    <li>
+                   <!--  <li>
                     <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Complete database management - backup, restore, maintenance, and pgAdmin access.">
                         Database Manager
                     </a>
-                    </li>
+                    </li> -->
                                          <li><hr class="dropdown-divider"></li>
                      <li><h6 class="dropdown-header">Debugging</h6></li>
                      <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>

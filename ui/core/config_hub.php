@@ -54,6 +54,7 @@ main { padding-top: 160px; }
         <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
         <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
         <button class="tab-button" data-tab="playthrough">🎮Playthrough Manager</button>
+        <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
     </div>
 
     <div id="npc" class="tab-content active">
@@ -94,6 +95,11 @@ main { padding-top: 160px; }
     <div id="playthrough" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/playthrough_manager.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="dbmgr" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/import_db.php?embed=1"></iframe>
         </div>
     </div>
     <div id="keys" class="tab-content">
