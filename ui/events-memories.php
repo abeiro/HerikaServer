@@ -531,6 +531,76 @@ function getTimeColor($time) {
         <!-- Response Log Tab -->
         <div id="responselog-tab" class="tab-content <?php echo $activeTab === 'responselog' ? 'active' : ''; ?>">
             <?php
+            // Helper to extract Oghma topic and level from the stored JSON in prompt
+            if (!function_exists('extractOghmaTopicAndLevel')) {
+                function extractOghmaTopicAndLevel($rawPromptValue) {
+                    $result = [null, 'none'];
+                    if (!is_string($rawPromptValue) || $rawPromptValue === '') {
+                        return $result;
+                    }
+
+                    // Remove HTML breaks added by nl2br and any HTML tags
+                    $clean = str_replace(["<br />", "<br>", "<br/>"], "\n", $rawPromptValue);
+                    $clean = html_entity_decode(strip_tags($clean), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+                    // Try to decode JSON payload recorded in prompt
+                    $decoded = json_decode($clean, true);
+
+                    $text = '';
+                    if (is_array($decoded)) {
+                        // Prefer messages inside ['full']['messages'] when available
+                        if (isset($decoded['full']) && is_array($decoded['full']) && isset($decoded['full']['messages']) && is_array($decoded['full']['messages'])) {
+                            foreach ($decoded['full']['messages'] as $msg) {
+                                if (isset($msg['content']) && is_string($msg['content'])) {
+                                    $text .= $msg['content'] . "\n";
+                                }
+                            }
+                        } elseif (isset($decoded['messages']) && is_array($decoded['messages'])) {
+                            foreach ($decoded['messages'] as $msg) {
+                                if (isset($msg['content']) && is_string($msg['content'])) {
+                                    $text .= $msg['content'] . "\n";
+                                }
+                            }
+                        } else {
+                            // Fallback: stringify decoded structure
+                            $text = json_encode($decoded);
+                        }
+                    } else {
+                        // Not JSON, use cleaned text
+                        $text = $clean;
+                    }
+
+                    // Normalize newlines
+                    $text = str_replace(["\r\n", "\r"], "\n", $text);
+
+                    // 1) Advanced knowledge topic
+                    if (preg_match('/#Lore Information\s*\((?=[^)]*advanced knowledge)[^)]*\):\s*([^"\<\r\n]+)/i', $text, $m)) {
+                        $topic = trim(strip_tags($m[1]));
+                        if ($topic !== '') {
+                            return [$topic, 'advanced'];
+                        }
+                    }
+
+                    // 2) Basic knowledge topic (handles phrasing like "You only have basic knowledge")
+                    if (preg_match('/#Lore Information\s*\((?=[^)]*basic knowledge)[^)]*\):\s*([^"\<\r\n]+)/i', $text, $m)) {
+                        $topic = trim(strip_tags($m[1]));
+                        if ($topic !== '') {
+                            return [$topic, 'basic'];
+                        }
+                    }
+
+                    // 3) Explicit none case: do not know anything about <topic>
+                    if (preg_match('/#Lore Information[^\n]*\nYou do not know ANYTHING about\s+([^"\<\r\n]+)/i', $text, $m)) {
+                        $topic = trim(strip_tags($m[1]));
+                        if ($topic !== '') {
+                            return [$topic, 'none'];
+                        }
+                    }
+
+                    return $result;
+                }
+            }
+
             $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50;
             $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
             $offset = ($page - 1) * $limit;
@@ -557,6 +627,13 @@ function getTimeColor($time) {
                         $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">🧾</button>';
                     } else if ($key === 'response') {
                         $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value ?? '')) . '</div>';
+                        // Insert Oghma Topic column immediately after AI Response
+                        list($oghmaTopic, $oghmaLevel) = extractOghmaTopicAndLevel($row['prompt'] ?? '');
+                        if ($oghmaTopic) {
+                            $mappedRow['Oghma Topic'] = htmlspecialchars($oghmaTopic) . ' (' . htmlspecialchars($oghmaLevel) . ')';
+                        } else {
+                            $mappedRow['Oghma Topic'] = 'None';
+                        }
                     } else if ($key === 'localts' && !empty($value)) {
                         $dt = new DateTime("@$value");
                         $dt->setTimezone(new DateTimeZone('UTC'));
