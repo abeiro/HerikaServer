@@ -109,6 +109,35 @@ class LLMConnector {
 
         if ($currentConnectorData["driver"] == "openaijson") {
 
+            $apiBadge=new ApiBadge();
+            $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
+            error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]}");
+            $GLOBALS["CONNECTOR"]["openaijson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
+            $GLOBALS["CONNECTOR"]["openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
+            
+            $GLOBALS["CONNECTOR"]["openaijson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
+            $GLOBALS["CONNECTOR"]["openaijson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '250';
+            $GLOBALS["CONNECTOR"]["openaijson"]["temperature"] = $currentConnectorData["temperature"] ?? 1.05;
+            $GLOBALS["CONNECTOR"]["openaijson"]["presence_penalty"] = $currentConnectorData["presence_penalty"] ?? 0;
+            $GLOBALS["CONNECTOR"]["openaijson"]["frequency_penalty"] = $currentConnectorData["frequency_penalty"] ?? 0;
+            $GLOBALS["CONNECTOR"]["openaijson"]["repetition_penalty"] = $currentConnectorData["repetition_penalty"] ?? 1;
+            $GLOBALS["CONNECTOR"]["openaijson"]["top_p"] = $currentConnectorData["top_p"] ?? 0.7;
+            $GLOBALS["CONNECTOR"]["openaijson"]["top_k"] = $currentConnectorData["top_k"] ?? 0;
+            $GLOBALS["CONNECTOR"]["openaijson"]["min_p"] = $currentConnectorData["min_p"] ?? 0;
+            $GLOBALS["CONNECTOR"]["openaijson"]["top_a"] = $currentConnectorData["top_a"] ?? 0;
+            $GLOBALS["CONNECTOR"]["openaijson"]["ENFORCE_JSON"] = $currentConnectorData["enforce_json"] ?? true;
+            $GLOBALS["CONNECTOR"]["openaijson"]["PREFILL_JSON"] = $currentConnectorData["prefill_json"] ?? false;
+            $GLOBALS["CONNECTOR"]["openaijson"]["API_KEY"] = $apiKeyData["api_key"];
+            $GLOBALS["CONNECTOR"]["openaijson"]["json_schema"] = $currentConnectorData["json_schema"] ?? true;
+
+             // Decode metadata and extended_data if available
+            $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
+            if (is_array($metadata)) {
+                foreach ($metadata as $key => $value) {
+                    $GLOBALS["CONNECTOR"]["openaijson"][$key] = $value;
+                }
+            }
+
         } else if ($currentConnectorData["driver"] == "openrouterjson") {
 
             $apiBadge=new ApiBadge();
@@ -137,6 +166,37 @@ class LLMConnector {
             if (is_array($metadata)) {
                 foreach ($metadata as $key => $value) {
                     $GLOBALS["CONNECTOR"]["openrouterjson"][$key] = $value;
+                }
+            }
+
+        } else if ($currentConnectorData["driver"] == "google_openaijson") {
+
+            $apiBadge=new ApiBadge();
+            $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
+            error_log("[CORE SYSTEM] Using new profile system CONNECTOR google_openaijson {$currentConnectorData["id"]}");
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '250';
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["temperature"] = $currentConnectorData["temperature"] ?? 1.05;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["presence_penalty"] = $currentConnectorData["presence_penalty"] ?? 0;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["frequency_penalty"] = $currentConnectorData["frequency_penalty"] ?? 0;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["repetition_penalty"] = $currentConnectorData["repetition_penalty"] ?? 1;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["top_p"] = $currentConnectorData["top_p"] ?? 0.7;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["top_k"] = $currentConnectorData["top_k"] ?? 0;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["min_p"] = $currentConnectorData["min_p"] ?? 0;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["top_a"] = $currentConnectorData["top_a"] ?? 0;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["ENFORCE_JSON"] = $currentConnectorData["enforce_json"] ?? true;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["PREFILL_JSON"] = $currentConnectorData["prefill_json"] ?? false;
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["API_KEY"] = $apiKeyData["api_key"];
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["json_schema"] = $currentConnectorData["json_schema"] ?? true;
+
+             // Decode metadata and extended_data if available
+            $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
+            if (is_array($metadata)) {
+                foreach ($metadata as $key => $value) {
+                    $GLOBALS["CONNECTOR"]["google_openaijson"][$key] = $value;
                 }
             }
 

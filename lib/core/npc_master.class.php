@@ -338,7 +338,7 @@ class NpcMaster {
         if (isset($currentNpcData['occupation'])) $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'];
         if (isset($currentNpcData['skills'])) $GLOBALS['HERIKA_SKILLS'] = $currentNpcData['skills'];
         if (isset($currentNpcData['speechstyle'])) $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'];
-        if (isset($currentNpcData['emote_moods'])) $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'];
+        if (isset($currentNpcData['emote_moods']) && !empty(trim($currentNpcData['emote_moods']))) $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'];
         if (isset($currentNpcData['goals'])) $GLOBALS['HERIKA_GOALS'] = $currentNpcData['goals'];
         if (isset($currentNpcData['core'])) 
             $GLOBALS['HERIKA_PERS'] = "Roleplay as {$currentNpcData['core']}";

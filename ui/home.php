@@ -794,6 +794,25 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 ");
                 $chimMode = (!isset($chimModeRow['error']) && !empty($chimModeRow) && isset($chimModeRow[0]['value'])) ? $chimModeRow[0]['value'] : 'STANDARD';
 
+                // Fetch Focus on Chat mode
+                $chimContextModeRow = fetch_widget_stats($conn, "
+                    SELECT value 
+                    FROM {$schema}.conf_opts 
+                    WHERE id = 'chim_context_mode' 
+                    LIMIT 1
+                ");
+                $chimContextMode = (!isset($chimContextModeRow['error']) && !empty($chimContextModeRow) && isset($chimContextModeRow[0]['value']) && $chimContextModeRow[0]['value'])==1 ? 'ENABLED' : 'DISABLED';
+
+                // Fetch Current active model
+                $chimModelRow = fetch_widget_stats($conn, "
+                    SELECT value 
+                    FROM {$schema}.conf_opts 
+                    WHERE id = 'chim_profile_model' 
+                    LIMIT 1
+                ");
+                $chimModel = (!isset($chimModelRow['error']) && !empty($chimModelRow) && isset($chimModelRow[0]['value'])) ? $chimModelRow[0]['value'] : '1';
+
+
                 if (!isset($questsCheck['error']) && !empty($questsCheck) && isset($questsCheck[0]['table_exists']) && $questsCheck[0]['table_exists'] === 't') {
                     $questTable = fetch_widget_stats($conn, "
                         SELECT name as quest_name, briefing
@@ -886,6 +905,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <tr>
                                 <td>CHIM Mode</td>
                                 <td>" . htmlspecialchars($chimMode) . "</td>
+                            </tr>
+                            <tr>
+                                <td>CHIM Active Model</td>
+                                <td>" . htmlspecialchars($chimModel) . "</td>
+                            </tr>
+                            <tr>
+                                <td>Focus on Chat</td>
+                                <td>" . htmlspecialchars($chimContextMode) . "</td>
                             </tr>
                         </table>
                     </div>

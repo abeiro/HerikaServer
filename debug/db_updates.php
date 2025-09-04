@@ -18,6 +18,26 @@ $checkVersion = function($tablename) {
         return intval($existsColumn[0]["version"]);
 };
 
+$checkTableExists = function($tablename) {
+    global $db;
+    $query = "
+    
+        SELECT 1 as exists
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+          AND table_name = '$tablename'
+    
+    ";
+
+    $result = $db->fetchAll($query);
+
+    if (sizeof($result) == 0) {
+        return -1;
+    }
+
+    return ($result[0]["exists"] == "1")?1:-1;
+};
+
 $updateVersion = function($tablename,$version) {
     global $db;
     $db->execQuery("INSERT INTO public.database_versioning SELECT '$tablename',$version where not exists (SELECT 1 from public.database_versioning where tablename='$tablename')");
@@ -1311,49 +1331,55 @@ if ($checkVersion("npc_templates")<20250619001) {
     echo '<script>alert("NPC Templates have been updated with extended profile fields!");</script>';
 }
 
-if ($checkVersion("core_api_badge") == -1) {
+if ($checkTableExists("core_api_badge") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
 } else
     Logger::info(__FILE__." core_api_badge exists");
 
 
-if ($checkVersion("core_itt_connector") == -1) {
+if ($checkTableExists("core_itt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
 } else
     Logger::info(__FILE__." core_itt_connector exists");
 
-if ($checkVersion("core_llm_connector") == -1) {
+if ($checkTableExists("core_llm_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
 } else
     Logger::info(__FILE__." core_llm_connector exists");
 
-if ($checkVersion("core_npc_master_history") == -1) {
+if ($checkTableExists("core_npc_master_history") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master_history.sql"));
 } else
     Logger::info(__FILE__." core_npc_master_history exists");
 
-if ($checkVersion("core_stt_connector") == -1) {
+if ($checkTableExists("core_stt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
 } else
     Logger::info(__FILE__." core_stt_connector exists");
 
 
-if ($checkVersion("core_tts_connector") == -1) {
+if ($checkTableExists("core_tts_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
 } else
     Logger::info(__FILE__." core_tts_connector exists");
 
-if ($checkVersion("core_profiles") == -1) {
+if ($checkTableExists("core_profiles") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
 } else
     Logger::info(__FILE__." core_profiles exists");
 
-if ($checkVersion("core_npc_master") == -1) {
+if ($checkTableExists("core_npc_master") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
 } else
     Logger::info(__FILE__." core_npc_master exists");
 
-        
+
+if ($checkTableExists(("core_profiles")>0) && $checkVersion("core_profiles") < 20250904001) {
+    
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles_2.sql"));
+    $updateVersion("core_profiles",20250904001);
+} else
+    Logger::info(__FILE__." core_profiles 2 exists");
 
 
 

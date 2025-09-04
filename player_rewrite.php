@@ -67,6 +67,11 @@ $GLOBALS["gameRequest"][2]=$res[0]["gamets"]+1;
 
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
+if (!$_GET["speech"]) {
+    if ($argv[1]) {
+        $_GET["speech"]=$argv[1];
+    }
+}
 
 if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
     error_log("Choose a LLM model and connector. Used connector: '{$GLOBALS["CORE_CONNECTOR_DIRECTOR"]}'",S_LOG_CRITICAL);
