@@ -3428,12 +3428,14 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
 
 
         if (empty($GLOBALS["CORE_LANG"])) {
+            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
             // Query for new HERIKA fields
             $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates where npc_name='$codename'");
         } else {
+            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             if (!isset($npcTemlate[0])) {
@@ -3476,7 +3478,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         if (isset($npcTemlate[0]) && is_array($npcTemlate[0])) {
 
            
-
+            //TODO review these mappings (dont match NpcMaster)
             $npcMaster->create([
 
                 "npc_name"=>$npcname,
@@ -3485,6 +3487,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                 'core' => $npcname.".".$npcNewFields[0]["npc_appearance"] ?? '',
                 'relationships' => $npcNewFields[0]["npc_relationships"] ?? '',
                 'occupation' => $npcNewFields[0]["npc_occupation"] ?? '',
+                'appearance' => $npcNewFields[0]["npc_appearance"] ?? '',
                 'skills' => $npcNewFields[0]["npc_skills"] ?? '',
                 'speechstyle' => $npcNewFields[0]["npc_speechstyle"] ?? '',
                 'goals' => $npcNewFields[0]["npc_goals"] ?? '',
@@ -3495,8 +3498,8 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
 
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
-           
 
+            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
             // Query for new HERIKA fields for bracket match
             $npcNewFields2 = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
 
@@ -3505,7 +3508,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                     $core_data=".".$npcNewFields2[0]["npc_appearance"];
                 else
                     $core_data="";
-
+                //TODO review these mappings (dont match NpcMaster)
                 $npcMaster->create([
                     "npc_name"=>$npcname,
                     'npc_static_bio' => $npcNewFields2[0]["npc_background"] ?? '',
@@ -3513,6 +3516,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                     'core' => $npcname.$core_data,
                     'relationships' => $npcNewFields2[0]["npc_relationships"] ?? '',
                     'occupation' => $npcNewFields2[0]["npc_occupation"] ?? '',
+                    'appearance' => $npcNewFields2[0]["npc_appearance"] ?? '',
                     'skills' => $npcNewFields2[0]["npc_skills"] ?? '',
                     'speechstyle' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
                     'goals' => $npcNewFields2[0]["npc_goals"] ?? '',
