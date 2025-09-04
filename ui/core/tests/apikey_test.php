@@ -10,14 +10,27 @@ $apiKey = $_POST['api_key'] ?? '';
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES); }
 function clip($s, $len=220){ $s = (string)$s; return (strlen($s) > $len) ? (substr($s,0,$len).'…') : $s; }
 
-echo "<div style='font-family: system-ui, sans-serif; color:#e9efff; padding:14px;'>";
-echo "<div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>";
-echo "<div style='font-weight:600; font-size:18px;'>API Key Test</div>";
-echo "<div style='opacity:0.85; font-size:13px;'>".h(strtoupper($provider))."</div>";
+echo "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>";
+echo "<title>API Key Test</title>";
+echo "<style>
+  body{background:#2a2a2a; color:#e9efff; margin:0; padding:12px; font-family: system-ui, sans-serif;}
+  .wrap{max-width:900px; margin:0 auto;}
+  .panel{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:12px; margin:10px 0;}
+  .muted{color:#9fb1c9;}
+  .ok{color:#6dd19c;}
+  .warn{color:#ffb862;}
+  .err{color:#ff6b6b;}
+</style></head><body><div class='wrap'>";
+
+echo "<div class='panel'>";
+echo "<div style='display:flex; align-items:center; gap:10px; margin-bottom:6px;'>";
+echo "<div style='font-weight:600; font-size:18px; color: rgb(242, 124, 17);'>API Key Test</div>";
+echo "<div class='muted' style='opacity:0.85; font-size:13px;'>".h(strtoupper($provider))."</div>";
 echo "</div>";
 
 if ($apiKey === ''){
-    echo "<div style='color:#ffb862'>No API key provided.</div>";
+    echo "<div class='warn'>No API key provided.</div>";
+    echo "</div></div></body></html>";
     exit;
 }
 
@@ -89,32 +102,32 @@ try {
     }
 
     if ($ok) {
-        echo "<div style='display:flex; align-items:center; gap:8px; color:#6dd19c; font-weight:600;'>";
+        echo "<div style='display:flex; align-items:center; gap:8px;' class='ok' style='font-weight:600;'>";
         echo "<span style='font-size:18px;'>✔</span><span>Key is valid</span>";
         echo "</div>";
-        echo "<div style='margin-top:6px; font-size:12px; color:#9fb1c9;'>HTTP ".h($code)." • Provider reachable</div>";
+        echo "<div class='muted' style='margin-top:6px; font-size:12px;'>HTTP ".h($code)." • Provider reachable</div>";
     } else if ($isQuota) {
-        echo "<div style='display:flex; align-items:center; gap:8px; color:#ffb862; font-weight:600;'>";
+        echo "<div style='display:flex; align-items:center; gap:8px;' class='warn' style='font-weight:600;'>";
         echo "<span style='font-size:18px;'>⚠</span><span>Key valid, but no credits/quota</span>";
         echo "</div>";
-        echo "<div style='margin-top:6px; font-size:12px; color:#ffb862;'>HTTP ".h($code)."</div>";
-        if ($errMsg !== '') echo "<div style='margin-top:10px; font-size:13px; color:#c9d1e1;'>".h($errMsg)."</div>";
+        echo "<div class='warn' style='margin-top:6px; font-size:12px;'>HTTP ".h($code)."</div>";
+        if ($errMsg !== '') echo "<div class='muted' style='margin-top:10px; font-size:13px;'>".h($errMsg)."</div>";
     } else {
         if ($errMsg === '') $errMsg = clip($resp);
-        echo "<div style='display:flex; align-items:center; gap:8px; color:#ff6b6b; font-weight:600;'>";
+        echo "<div style='display:flex; align-items:center; gap:8px;' class='err' style='font-weight:600;'>";
         echo "<span style='font-size:18px;'>✖</span><span>Key failed</span>";
         echo "</div>";
-        echo "<div style='margin-top:6px; font-size:12px; color:#ffb862;'>HTTP ".h($code)."</div>";
-        if ($errMsg !== '') echo "<div style='margin-top:10px; font-size:13px; color:#c9d1e1;'>".h($errMsg)."</div>";
+        echo "<div class='warn' style='margin-top:6px; font-size:12px;'>HTTP ".h($code)."</div>";
+        if ($errMsg !== '') echo "<div class='muted' style='margin-top:10px; font-size:13px;'>".h($errMsg)."</div>";
     }
 } catch (Throwable $e){
-    echo "<div style='display:flex; align-items:center; gap:8px; color:#ff6b6b; font-weight:600;'>";
+    echo "<div style='display:flex; align-items:center; gap:8px;' class='err' style='font-weight:600;'>";
     echo "<span style='font-size:18px;'>✖</span><span>Test error</span>";
     echo "</div>";
-    echo "<div style='margin-top:6px; font-size:13px; color:#c9d1e1;'>".h($e->getMessage())."</div>";
+    echo "<div class='muted' style='margin-top:6px; font-size:13px;'>".h($e->getMessage())."</div>";
 }
 
-echo "</div>";
+echo "</div></div></body></html>";
 ?>
 
 

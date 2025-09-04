@@ -394,12 +394,12 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         modal.id = MODAL_ID;
         modal.style.cssText = 'position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
         modal.innerHTML = `
-            <div style="width:90%; max-width:1200px; height:80vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
-                <button id=\"llmtest_close\" style=\"position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;\">Close</button>
+            <div style="width:90%; max-width:1200px; height:80vh; background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
+                <button id=\"llmtest_close\" style=\"position:absolute; top:8px; right:10px; background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;\">Close</button>
                 <div id=\"llmtest_loading\" style=\"position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;\">
                     <div style=\"width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: llmspin 1s linear infinite;\"></div>
                 </div>
-                <iframe id=\"llmtest_iframe\" src=\"about:blank\" style=\"width:100%; height:100%; border:0; background:#0e1624; position:relative; z-index:1;\"></iframe>
+                <iframe id=\"llmtest_iframe\" src=\"about:blank\" style=\"width:100%; height:100%; border:0; background:transparent; position:relative; z-index:1;\"></iframe>
             </div>
             <style>@keyframes llmspin{to{transform:rotate(360deg)}}</style>`;
         document.body.appendChild(modal);
@@ -703,24 +703,24 @@ if (isset($_GET["edit"])) {
 .list-filters input[type="text"]{ width: 100%; max-width: 260px; }
 .list-filters select { max-width: 200px; }
 .conn-list { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; overflow:auto; }
-.conn-li { border:1px solid rgba(138,155,182,0.35); background:#0d1117; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
-.conn-li:hover { background:#121826; transform: translateY(-1px); }
+.conn-li { border:1px solid #4a4a4a; background:#2a2a2a; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
+.conn-li:hover { background:#3a3a3a; transform: translateY(-1px); }
 .conn-li.active { outline:2px solid rgb(242,124,17); }
 .conn-li .head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
 .conn-li .title { font-weight:600; color:#e9efff; }
-.conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid rgba(138,155,182,0.4); border-radius:999px; color:#9fb1c9; }
+.conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid #4a4a4a; border-radius:999px; color:#9fb1c9; }
 .conn-li .sub { font-size:12px; color:#9fb1c9; margin-top:3px; overflow-wrap:anywhere; }
 .conn-li .actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
 /* Collapsible block for Metadata */
-.collapsible { margin-top: 8px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117; }
+.collapsible { margin-top: 8px; border:1px solid #4a4a4a; border-radius:10px; background:#2a2a2a; }
 .collapsible-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; cursor:pointer; user-select:none; color:#e9efff; font-weight:600; }
 .collapsible-header::after { content:'\25BE'; font-size:12px; color:#9fb1c9; transition: transform .12s ease; }
-.collapsible[open] .collapsible-header { border-bottom:1px solid rgba(138,155,182,0.35); }
+.collapsible[open] .collapsible-header { border-bottom:1px solid #4a4a4a; }
 .collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
 .collapsible-content { padding:10px; }
 </style>
 <?php if (!$editItem): ?>
-    <div class="connector-placeholder" style="border:1px dashed rgba(138,155,182,0.4); background:#0d1117; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
+    <div class="connector-placeholder" style="border:1px dashed #4a4a4a; background:#2a2a2a; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
         <div style="font-weight:600; color:#e9efff; margin-bottom:6px;">No connector selected</div>
         <div>Select a connector from the list on the left to view and edit its settings.</div>
     </div>

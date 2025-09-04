@@ -32,8 +32,8 @@ main { padding-top: 160px; }
 .tab-button.active { background:#1a1a1a; border-bottom:2px solid rgb(242,124,17); margin-bottom:-2px; }
 .tab-content { display:none; }
 .tab-content.active { display:block; }
-.embed-wrap { height: calc(100vh - 220px); min-height: 520px; border:1px solid #444; border-radius:8px; overflow:hidden; background:#0e1624; }
-.embed { width:100%; height:100%; border:0; background:#0e1624; }
+.embed-wrap { height: calc(100vh - 220px); min-height: 520px; border:1px solid #4a4a4a; border-radius:8px; overflow:hidden; background:#2a2a2a; }
+.embed { width:100%; height:100%; border:0; background:transparent; }
 @media (max-height: 800px){ .embed-wrap { min-height: 420px; } }
 .tab-divider { padding: 10px 8px; color:#9fb1c9; font-weight:700; user-select:none; pointer-events:none; }
 </style>

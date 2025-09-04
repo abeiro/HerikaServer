@@ -69,16 +69,16 @@ h1.api-title {
 .list-filters select { max-width: 200px; }
 .conn-list { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; overflow:auto; }
 .llm-left .llm-title { font-family: 'MagicCards', serif; word-spacing: 6px; }
-.conn-li { border:1px solid rgba(138,155,182,0.35); background:#0d1117; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
-.conn-li:hover { background:#121826; transform: translateY(-1px); }
+.conn-li { border:1px solid #4a4a4a; background:#2a2a2a; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
+.conn-li:hover { background:#3a3a3a; transform: translateY(-1px); }
 .conn-li.active { outline:2px solid rgb(242,124,17); }
 .conn-li .head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
 .conn-li .title { font-weight:600; color:#e9efff; }
-.conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid rgba(138,155,182,0.4); border-radius:999px; color:#9fb1c9; }
+.conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid #4a4a4a; border-radius:999px; color:#9fb1c9; }
 .conn-li .sub { font-size:12px; color:#9fb1c9; margin-top:3px; overflow-wrap:anywhere; }
 .conn-li .actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
 .pf-badges { display:flex; gap:6px; align-items:center; }
-.pf-flag { font-size:11px; padding:2px 6px; border:1px solid rgba(138,155,182,0.4); border-radius:999px; color:#9fb1c9; }
+.pf-flag { font-size:11px; padding:2px 6px; border:1px solid #4a4a4a; border-radius:999px; color:#9fb1c9; }
 .pf-tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0 10px; border-bottom: 2px solid #3a3a3a; }
 .pf-tab { background:#2a2a2a; border:none; padding:8px 12px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all .2s ease; font-size:0.95em; }
 .pf-tab:hover { background:#3a3a3a; }
@@ -106,13 +106,13 @@ h1.api-title {
 .select-row select { max-width: 420px; }
 .btn-apply { white-space: nowrap; padding: 6px 10px; }
 /* Collapsible block for Metadata */
-.collapsible { margin-top: 8px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117; }
+.collapsible { margin-top: 8px; border:1px solid #4a4a4a; border-radius:10px; background:#2a2a2a; }
 .collapsible-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; cursor:pointer; user-select:none; color:#e9efff; font-weight:600; }
 .collapsible-header::after { content:'\25BE'; font-size:12px; color:#9fb1c9; transition: transform .12s ease; }
-.collapsible[open] .collapsible-header { border-bottom:1px solid rgba(138,155,182,0.35); }
+.collapsible[open] .collapsible-header { border-bottom:1px solid #4a4a4a; }
 .collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
 .collapsible-content { padding:10px; }
-.section-title { font-weight:800; color:#e9efff; border-bottom:1px solid rgba(138,155,182,0.35); padding-bottom:4px; margin:10px 0 6px; }
+.section-title { font-weight:800; color:#e9efff; border-bottom:1px solid #4a4a4a; padding-bottom:4px; margin:10px 0 6px; }
 </style>
 
 <main>
@@ -391,7 +391,7 @@ $ittById = $byId($ittRows);
     <div class="llm-right">
         <div class="form-container wide-centered">
         <?php if (!$editItem): ?>
-            <div class="connector-placeholder" style="border:1px dashed rgba(138,155,182,0.4); background:#0d1117; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
+            <div class="connector-placeholder" style="border:1px dashed #4a4a4a; background:#2a2a2a; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
                 <div style="font-weight:600; color:#e9efff; margin-bottom:6px;">No profile selected</div>
                 <div>Select a profile from the list on the left to view and edit its settings.</div>
             </div>
@@ -465,7 +465,7 @@ $ittById = $byId($ittRows);
                 <button type="button" class="btn-apply" data-apply-select="llm_primary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
-                <iframe id="frame_llm_primary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+                <iframe id="frame_llm_primary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm2">
@@ -474,7 +474,7 @@ $ittById = $byId($ittRows);
                 <button type="button" class="btn-apply" data-apply-select="llm_secondary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
-                <iframe id="frame_llm_secondary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+                <iframe id="frame_llm_secondary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm3">
@@ -483,7 +483,7 @@ $ittById = $byId($ittRows);
                 <button type="button" class="btn-apply" data-apply-select="llm_tertiary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
-                <iframe id="frame_llm_tertiary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+                <iframe id="frame_llm_tertiary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_llm4">
@@ -492,7 +492,7 @@ $ittById = $byId($ittRows);
                 <button type="button" class="btn-apply" data-apply-select="llm_quaternary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
-                <iframe id="frame_llm_quaternary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+                <iframe id="frame_llm_quaternary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_diary">
@@ -501,7 +501,7 @@ $ittById = $byId($ittRows);
                 <button type="button" class="btn-apply" data-apply-select="diary_connector_id">Set</button>
             </div>
             <div style="margin-top:8px;">
-                <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid rgba(138,155,182,0.35); border-radius:10px; background:#0d1117;"></iframe>
+                <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
         </div>
         <div class="pf-pane" id="pane_tts">

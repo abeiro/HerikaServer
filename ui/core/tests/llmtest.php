@@ -21,14 +21,14 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LLM Connector Test</title>
     <style>
-        body { background:#0e1624; color:#e8eef9; font-family: Arial, Helvetica, sans-serif; margin:0; padding:18px; }
+        body { background:#2a2a2a; color:#e8eef9; font-family: Arial, Helvetica, sans-serif; margin:0; padding:18px; }
         .test-wrap { max-width: 1100px; margin: 0 auto; }
-        .panel { background:#1a2233; border-radius:10px; padding:14px 16px; margin: 12px 0; border:1px solid rgba(138,155,182,0.35); box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
+        .panel { background:#2a2a2a; border-radius:10px; padding:14px 16px; margin: 12px 0; border:1px solid #4a4a4a; box-shadow: none; }
         .status .label { font-weight:bold; color:#fff; }
         .ok { color:#6fdc8c; }
         .error { color:#ff6b6b; }
-        pre { white-space: pre-wrap; color:#cfd8e3; background:#0f1726; padding:10px; border-radius:8px; border:1px solid rgba(138,155,182,0.25); }
-        h1 { margin: 0 0 10px; font-size: 20px; color:#ffb862; }
+        pre { white-space: pre-wrap; color:#cfd8e3; background:#2f2f2f; padding:10px; border-radius:8px; border:1px solid #4a4a4a; }
+        h1 { margin: 0 0 10px; font-size: 20px; color: rgb(242, 124, 17); }
     </style>
 </head>
 <body>
