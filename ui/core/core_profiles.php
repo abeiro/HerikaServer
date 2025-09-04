@@ -36,21 +36,39 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
+/* Match Oghma/Connectors spacing and title styling */
+@font-face {
+    font-family: 'MagicCards';
+    src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+main { padding-top: 40px; padding-bottom: 40px; }
+h1.api-title {
+    margin: 0 0 20px 0;
+    font-family: 'MagicCards', serif;
+    word-spacing: 8px;
+    font-size: 2.2em;
+    color: rgb(242, 124, 17);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    text-align: center;
+}
 .wide-centered { max-width: 1300px; margin: 0 auto; }
 .two-col-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .connector-card { background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 8px; padding: 12px; }
 .connector-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.1em; }
 @media (max-width: 1000px) { .two-col-grid { grid-template-columns: 1fr; } }
 /* Split layout like LLM Connectors */
-.llm-layout { display:grid; grid-template-columns: minmax(260px, 420px) 1fr; gap:16px; align-items:start; }
+.llm-layout { display:grid; grid-template-columns: minmax(240px, 340px) 1fr; gap:16px; align-items:stretch; }
 @media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
 @media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
-.llm-left { position: sticky; top: 72px; align-self:start; max-height: calc(100vh - 110px); overflow:auto; padding-right:4px; }
+.llm-left { display:flex; flex-direction:column; height:800px; overflow:hidden; padding:8px; padding-right:8px; border:1px solid #4a4a4a; border-radius:8px; background:#2a2a2a; }
 .llm-right { min-width: 0; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
 .list-filters input[type="text"]{ width: 100%; max-width: 260px; }
 .list-filters select { max-width: 200px; }
-.conn-list { display:flex; flex-direction:column; gap:8px; }
+.conn-list { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; overflow:auto; }
+.llm-left .llm-title { font-family: 'MagicCards', serif; word-spacing: 6px; }
 .conn-li { border:1px solid rgba(138,155,182,0.35); background:#0d1117; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
 .conn-li:hover { background:#121826; transform: translateY(-1px); }
 .conn-li.active { outline:2px solid rgb(242,124,17); }
@@ -101,6 +119,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     <div id="toast" class="toast-notification">
         <span class="message"></span>
     </div>
+
+    <h1 class="api-title">Core Profiles</h1>
 
 <?php
 $GLOBALS["db"]=new sql();
@@ -300,6 +320,7 @@ $ittById = $byId($ittRows);
 
 <div class="llm-layout">
     <div class="llm-left">
+        <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Profiles</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
             <a class="btn-save" href="?create_blank=1">New Profile</a>
         </div>
@@ -383,7 +404,7 @@ $ittById = $byId($ittRows);
     
 
     <div class="connector-card" style="margin-bottom:12px;">
-        <div class="connector-title">Profile</div>
+        <div class="connector-title">Profile Core</div>
         <label for='label'>Name</label><br>
         <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
         
@@ -428,7 +449,7 @@ $ittById = $byId($ittRows);
     <?php /* connector details preloaded above for both panes */ ?>
 
     <div class="connector-card">
-        <div class="connector-title">Connectors</div>
+        <div class="connector-title">Connector Selection</div>
         <div class="pf-tabs" id="pf_tabs">
             <button type="button" class="pf-tab active" data-pane="pane_llm1">LLM 1</button>
             <button type="button" class="pf-tab" data-pane="pane_llm2">LLM 2</button>
@@ -495,7 +516,7 @@ $ittById = $byId($ittRows);
 
     <!-- Visual Profile Settings (first chunk) -->
     <div class="connector-card" style="margin-bottom:10px;">
-        <div class="connector-title">Profile Settings</div>
+        <div class="connector-title">Profile  Settings</div>
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_meta_settings" class="btn-save">Save Profile Settings</button>
