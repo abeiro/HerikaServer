@@ -35,8 +35,21 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+/* Core styling alignment */
+@font-face {
+    font-family: 'MagicCards';
+    src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+main { padding-top: 40px; padding-bottom: 40px; }
+h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.2em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); text-align: center; }
+</style>
 
 <main>
+
+<h1 class="api-title">NPC Master</h1>
 
 <?php
 $GLOBALS["db"] = new sql();
@@ -264,7 +277,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 
 <?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ob_end_clean(); ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<style>html,body{background:#0e1624;} main{background:#0e1624; padding:12px;} .form-container{background:#0e1624; border:1px solid rgba(138,155,182,0.35); border-radius:8px;}</style>
+<style>html,body{background:#2a2a2a;} main{background:#2a2a2a; padding:12px;} .form-container{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px;}</style>
 <form method="post" onsubmit='return false' style='display:block'>
 <?php } else { ?>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
@@ -276,7 +289,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     .form-item label { font-weight:700; color:#e9efff; }
     .form-item .hint { color:#9fb1c9; font-size:12px; line-height:1.35; }
     .form-item textarea { min-height:96px; }
-    .form-item input[type="text"], .form-item textarea, .form-item select { background:#0e1624; color:#e9efff; border:1px solid rgba(138,155,182,0.35); border-radius:6px; padding:8px 10px; }
+    .form-item input[type="text"], .form-item textarea, .form-item select { background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 10px; }
     .form-item input[type="checkbox"] { transform: scale(1.05); }
     .span-2 { grid-column: 1 / -1; }
     .checkbox-inline { display:flex; align-items:center; gap:8px; }
@@ -466,44 +479,44 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 @media (max-width: 1400px){ .npc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1100px){ .npc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px){ .npc-grid { grid-template-columns: 1fr; } }
-.npc-card { background:linear-gradient(180deg, #101826 0%, #0d1117 100%); border:1px solid rgba(138,155,182,0.35); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: transform .12s ease, box-shadow .12s ease; cursor:pointer; }
-.npc-card:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
+.npc-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow:none; transition: transform .12s ease, background .12s ease; cursor:pointer; }
+.npc-card:hover { transform: translateY(-1px); background:#333333; }
 .npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; }
-.npc-divider { height:1px; background: linear-gradient(90deg, rgba(138,155,182,0), rgba(138,155,182,0.5), rgba(138,155,182,0)); margin:2px 0 6px; }
+.npc-divider { height:1px; background:#4a4a4a; margin:2px 0 6px; }
 .npc-fields { display:flex; flex-direction:column; gap:8px; }
-.npc-line { color:#cfd9ea; font-size:13px; line-height:1.35; }
+.npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; }
 .npc-muted { color:#9fb1c9; }
 .npc-actions { display:flex; gap:8px; margin-top:6px; justify-content:center; }
-.npc-actions .btn { padding:6px 10px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; text-decoration:none; cursor:pointer; }
-.npc-actions .btn:hover { background:#1f2a40; }
-.npc-actions .btn-danger { background:#311; border-color:#633; }
-.npc-actions .btn-danger:hover { background:#511; }
-.npc-actions .btn-toggle { background:#21304a; }
-.npc-actions .btn-toggle.active { background:#ffb862; color:#111; border-color:#ffb862; font-weight:700; }
+.npc-actions .btn { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; text-decoration:none; cursor:pointer; }
+.npc-actions .btn:hover { background:#3a3a3a; }
+.npc-actions .btn-danger { background:#5a2a2a; border-color:#7a3a3a; }
+.npc-actions .btn-danger:hover { background:#6a2a2a; }
+.npc-actions .btn-toggle { background:#2f3b4f; }
+.npc-actions .btn-toggle.active { background: rgb(242, 124, 17); color:#111; border-color: rgb(242, 124, 17); font-weight:700; }
 </style>
 <style>
 /* Modal styling aligned with Oghma edit modal */
 .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10000; align-items:center; justify-content:center; overflow-y:auto; padding:20px 0; }
-.modal-container { position:relative; top:auto; left:auto; transform:none; margin: 120px auto 40px auto; max-width:1000px; width:90%; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; }
-.modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(138,155,182,0.2); background:#0e1624; position:sticky; top:0; z-index:2; }
-.modal-title { margin:0; font-weight:700; color:#e9efff; }
-.modal-body { max-height:calc(85vh - 100px); overflow-y:auto; background:#0e1624; }
-.modal-close { background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; }
+.modal-container { position:relative; top:auto; left:auto; transform:none; margin: 120px auto 40px auto; max-width:1000px; width:90%; background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
+.modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; }
+.modal-body { max-height:calc(85vh - 100px); overflow-y:auto; background:#2a2a2a; }
+.modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; }
 .modal-actions { display:flex; gap:8px; align-items:center; }
-.modal-save { background:#ffb862; color:#111; border:1px solid #ffb862; border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
+.modal-save { background: rgb(242, 124, 17); color:#111; border:1px solid rgb(242, 124, 17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
 </style>
 <?php if ($totalPages > 1): ?>
 <style>
 .pagination { display:flex; gap:6px; align-items:center; justify-content:center; margin:10px 0 12px; flex-wrap:wrap; }
-.pagination a, .pagination span { padding:6px 10px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; text-decoration:none; }
-.pagination a:hover { background:#1f2a40; }
-.pagination .active { background:#ffb862; color:#111; border-color:#ffb862; font-weight:700; }
+.pagination a, .pagination span { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; text-decoration:none; }
+.pagination a:hover { background:#3a3a3a; }
+.pagination .active { background: rgb(242, 124, 17); color:#111; border-color: rgb(242, 124, 17); font-weight:700; }
 .pagination .disabled { opacity:0.5; pointer-events:none; }
-.pagination button { padding:6px 10px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; cursor:pointer; }
-.pagination button:hover { background:#1f2a40; }
+.pagination button { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; }
+.pagination button:hover { background:#3a3a3a; }
 .filter-inline { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.filter-inline input[type="text"] { padding:4px 8px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; height:28px; }
-.filter-inline select { padding:4px 8px; border-radius:6px; border:1px solid rgba(138,155,182,0.35); background:#1a2233; color:#e9efff; height:28px; }
+.filter-inline input[type="text"] { padding:4px 8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; height:28px; }
+.filter-inline select { padding:4px 8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; height:28px; }
 </style>
 <div class="pagination">
   <div class="filter-inline">
@@ -562,7 +575,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       </div>
     </div>
     <div class="modal-body">
-      <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:75vh; border:0; background:#0e1624;"></iframe>
+      <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:75vh; border:0; background:transparent;"></iframe>
     </div>
   </div>
 </div>
