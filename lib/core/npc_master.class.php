@@ -35,6 +35,7 @@ class NpcMaster {
             "personality",
             "relationships",
             "occupation",
+            "appearance",
             "skills",
             "speechstyle",
             "goals",
@@ -104,6 +105,7 @@ class NpcMaster {
             "personality",
             "relationships",
             "occupation",
+            "appearance",
             "skills",
             "speechstyle",
             "goals",
@@ -287,6 +289,7 @@ class NpcMaster {
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'])) $currentNpcData['relationships'] = $OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'];
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'])) $currentNpcData['occupation'] = $OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_APPEARANCE'])) $currentNpcData['appearance'] = $OLD_GLOBALS_ARRAY['HERIKA_APPEARANCE'];
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_SKILLS'])) $currentNpcData['skills'] = $OLD_GLOBALS_ARRAY['HERIKA_SKILLS'];
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'])) $currentNpcData['speechstyle'] = $OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'];
         if (isset($OLD_GLOBALS_ARRAY['EMOTEMOODS'])) $currentNpcData['emote_moods'] = $OLD_GLOBALS_ARRAY['EMOTEMOODS'];
@@ -336,6 +339,7 @@ class NpcMaster {
         if (isset($currentNpcData['personality'])) $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'];
         if (isset($currentNpcData['relationships'])) $GLOBALS['HERIKA_RELATIONSHIPS'] = $currentNpcData['relationships'];
         if (isset($currentNpcData['occupation'])) $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'];
+        if (isset($currentNpcData['appearance'])) $GLOBALS['HERIKA_APPEARANCE'] = $currentNpcData['appearance'];
         if (isset($currentNpcData['skills'])) $GLOBALS['HERIKA_SKILLS'] = $currentNpcData['skills'];
         if (isset($currentNpcData['speechstyle'])) $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'];
         if (isset($currentNpcData['emote_moods'])) $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'];
