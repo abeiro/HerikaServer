@@ -105,10 +105,15 @@ $db = new sql();
 if (sizeof($_GET)==0) {
     require_once(__DIR__."/../debug/db_updates.php");
     require_once(__DIR__."/../debug/npc_removal.php");
+    require_once(__DIR__."/../lib/log_trim.php");
     
     // Initialize automatic backup system now that database is ready
     if (function_exists('deferredAutomaticBackupInit')) {
         deferredAutomaticBackupInit();
+    }
+    // Initialize log trimming once DB is ready
+    if (function_exists('deferredLogTrimInit')) {
+        deferredLogTrimInit();
     }
 }
 /* END of check database for updates */
