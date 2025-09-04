@@ -31,6 +31,26 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+/* Match Oghma page spacing and title styling */
+@font-face {
+    font-family: 'MagicCards';
+    src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+main { padding-top: 40px; padding-bottom: 40px; }
+h1.api-title {
+    margin: 0 0 20px 0;
+    font-family: 'MagicCards', serif;
+    word-spacing: 8px;
+    font-size: 2.2em;
+    color: rgb(242, 124, 17);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    text-align: center;
+}
+.llm-left .llm-title { font-family: 'MagicCards', serif; word-spacing: 6px; }
+</style>
 
 <main>
     <div id="toast" class="toast-notification">
@@ -593,10 +613,11 @@ if (isset($_GET["edit"])) {
 }
 ?>
 
-<?php /* Title moved into left panel; edit header removed */ ?>
+<h1 class="api-title">LLM Connectors</h1>
 
 <div class="llm-layout">
     <div class="llm-left">
+        <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Connectors</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
             <a class="btn-save" href="?create_blank=1">New Connector</a>
         </div>
@@ -671,17 +692,17 @@ if (isset($_GET["edit"])) {
 .orm-err { color:#ff6b6b; padding:8px 10px; }
 .orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; }
 /* Split layout: list left, editor right */
-.llm-layout { display:grid; grid-template-columns: minmax(240px, 340px) 1fr; gap:16px; align-items:start; }
+.llm-layout { display:grid; grid-template-columns: minmax(240px, 340px) 1fr; gap:16px; align-items:stretch; }
 /* Keep two-column layout even on narrower screens so half-screen works */
 @media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
 @media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
-.llm-left { position: sticky; top: 16px; align-self:start; max-height: calc(100vh - 110px); overflow:auto; padding-right:4px; }
+.llm-left { display:flex; flex-direction:column; height:800px; overflow:hidden; padding:8px; padding-right:8px; border:1px solid #4a4a4a; border-radius:8px; background:#2a2a2a; }
 .llm-left .llm-title { margin: 6px 0 10px 4px; font-size: 20px; color: #e9efff; }
 .llm-right { min-width: 0; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
 .list-filters input[type="text"]{ width: 100%; max-width: 260px; }
 .list-filters select { max-width: 200px; }
-.conn-list { display:flex; flex-direction:column; gap:8px; }
+.conn-list { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; overflow:auto; }
 .conn-li { border:1px solid rgba(138,155,182,0.35); background:#0d1117; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
 .conn-li:hover { background:#121826; transform: translateY(-1px); }
 .conn-li.active { outline:2px solid rgb(242,124,17); }
