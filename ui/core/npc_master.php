@@ -93,6 +93,29 @@ if (!function_exists('race_icon_web_path')) {
     }
 }
 
+// Helper: map gender text to an icon character
+if (!function_exists('gender_icon_char')) {
+    function gender_icon_char($gender){
+        $g = strtolower(trim((string)$gender));
+        if ($g === '') return '';
+        if ($g === 'female' || $g === 'f' || $g === 'woman' || $g === 'girl') return '♀';
+        if ($g === 'male' || $g === 'm' || $g === 'man' || $g === 'boy') return '♂';
+        if ($g === 'nonbinary' || $g === 'non-binary' || $g === 'nb' || $g === 'enby' || $g === 'other' || $g === 'agender' || $g === 'genderfluid') return '⚧';
+        return '';
+    }
+}
+
+// Helper: map gender text to a CSS class suffix for coloring
+if (!function_exists('gender_icon_class')) {
+    function gender_icon_class($gender){
+        $g = strtolower(trim((string)$gender));
+        if ($g === 'female' || $g === 'f' || $g === 'woman' || $g === 'girl') return 'gender-female';
+        if ($g === 'male' || $g === 'm' || $g === 'man' || $g === 'boy') return 'gender-male';
+        if ($g === 'nonbinary' || $g === 'non-binary' || $g === 'nb' || $g === 'enby' || $g === 'other' || $g === 'agender' || $g === 'genderfluid') return 'gender-nb';
+        return '';
+    }
+}
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     $npc->create($_POST);
@@ -283,7 +306,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     <?php foreach ($data as $row): ?>
         <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot); ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
-            <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
+            <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
             <div class="npc-divider"></div>
             <div class="npc-row">
                 <div class="npc-fields">
@@ -537,6 +560,10 @@ if (isset($_GET['race_icon'])) {
 .npc-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow:none; transition: transform .12s ease, background .12s ease; cursor:pointer; }
 .npc-card:hover { transform: translateY(-1px); background:#333333; }
 .npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; }
+.npc-gender-icon { margin-left:6px; opacity:0.9; }
+.npc-gender-icon.gender-female { color:#ff72d2; }
+.npc-gender-icon.gender-male { color:#72a0ff; }
+.npc-gender-icon.gender-nb { color:#ffd166; }
 .npc-divider { height:1px; background:#4a4a4a; margin:2px 0 6px; }
 .npc-fields { display:flex; flex-direction:column; gap:8px; }
 .npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; }
@@ -606,7 +633,7 @@ if (isset($_GET['race_icon'])) {
 <?php foreach ($data as $row): ?>
     <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot); ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
-        <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
+        <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
         <div class="npc-divider"></div>
         <div class="npc-row">
             <div class="npc-fields">
@@ -816,7 +843,7 @@ if (isset($_GET['race_icon'])) {
     });
   });
   // Receive save events from iframe and update the card inline
-  window.addEventListener('message', function(e){
+  window.addEventListener('message', async function(e){
     const d = e.data || {};
     if (d.type === 'npc_saved'){
       const id = String(d.id||'');
