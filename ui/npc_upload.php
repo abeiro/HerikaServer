@@ -71,7 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
     $npc_speechstyle   = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
     $npc_goals         = (!empty($_POST['npc_goals']))         ? trim($_POST['npc_goals'])         : null;
 
-    // TODO review these fields, they dont match npc master
     if (!empty($npc_name) && !empty($npc_pers)) {
         $query = "
             INSERT INTO {$schema}.npc_templates_custom
@@ -96,7 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 npc_goals = EXCLUDED.npc_goals
         ";
 
-        // TODO review these fields, they dont match npc master
         $params = [
             $npc_name,
             $npc_dynamic,

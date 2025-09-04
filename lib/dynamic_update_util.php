@@ -570,7 +570,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         // Collect other profile fields for context (excluding the current field)
         $profileContext = [];
         $profileFields = [
-//            'core' => 'Core', //depends what users put if its instructional or biographical
+            'core' => 'Core Identity',
             'npc_static_bio' => 'Basic Summary',
             'personality' => 'Personality Traits',
             'appearance' => 'Physical Appearance',
