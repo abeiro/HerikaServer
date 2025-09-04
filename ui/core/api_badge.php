@@ -31,36 +31,102 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-.wide-centered { max-width: 1200px; margin: 0 auto; }
-/* Provider cards */
-.provider-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; margin-bottom: 20px; }
-.provider-card { background:#0d1117; border:1px solid rgba(138,155,182,0.35); border-radius:10px; padding:12px; }
-.provider-card .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
-.provider-card .provider-title { display:flex; align-items:center; gap:10px; font-weight:600; color:#e9efff; }
-.provider-card .provider-icon { width:28px; height:28px; border-radius:6px; background:#121826; display:flex; align-items:center; justify-content:center; font-size:16px; }
-.provider-card .provider-links { display:flex; gap:10px; }
-.provider-card .provider-links a { font-size:12px; color:#9fb1c9; text-decoration:underline; }
-.provider-card .provider-body { display:flex; gap:8px; align-items:center; }
-.provider-card input[type="password"],
-.provider-card input[type="text"] { flex:1; }
-.provider-note { font-size:12px; color:#97a6ba; margin-top:6px; }
-/* Custom keys grid */
-#custom-keys { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
-.custom-card { background:#0f1320; border:1px solid rgba(138,155,182,0.25); border-radius:10px; padding:12px; }
-.custom-card.has-key { background:#122017; border-color:#2d6a4f; box-shadow: 0 0 0 1px rgba(45,106,79,0.35) inset; }
-.custom-card .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
-.custom-card .provider-title { display:flex; align-items:center; gap:10px; font-weight:600; color:#e9efff; }
-.custom-card .provider-icon { width:28px; height:28px; border-radius:6px; background:#121826; display:flex; align-items:center; justify-content:center; font-size:16px; }
-.custom-card .provider-body { display:flex; gap:8px; align-items:center; }
-.custom-card input[type="password"],
-.custom-card input[type="text"] { flex:1; }
-@media (max-width: 900px) {
-    .provider-grid { grid-template-columns: 1fr; }
-    #custom-keys { grid-template-columns: 1fr; }
-}
+    /* Match oghma_upload page layout and colors */
+    main {
+        padding-top: 40px;
+        padding-bottom: 40px;
+        padding-left: 10%;
+        padding-right: 10%;
+        width: 100%;
+        margin: 0;
+    }
+
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px;
+        background: #031633;
+        z-index: 100;
+    }
+
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+
+    /* Title styling to match Oghma */
+    h1.api-title {
+        margin: 0 0 20px 0;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        text-align: center;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+    .content-section {
+        background: #2a2a2a;
+        padding: 25px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+    .content-section h2, .content-section h3 {
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        margin-bottom: 15px;
+        font-size: 1.4em;
+    }
+    .full-width-section { grid-column: 1 / -1; }
+    @media (max-width: 900px) {
+        main { padding-left: 5%; padding-right: 5%; }
+        .content-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards and grids styled like oghma sections */
+    .provider-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
+    .provider-card {
+        background:#2a2a2a;
+        border:1px solid #4a4a4a;
+        border-radius:8px;
+        padding:12px;
+    }
+    .provider-card .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .provider-card .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
+    .provider-card .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .provider-card .provider-links { display:flex; gap:10px; }
+    .provider-card .provider-links a { font-size:12px; color: rgb(242,124,17); text-decoration: underline; }
+    .provider-card .provider-body { display:flex; gap:8px; align-items:center; }
+    .provider-card input[type="password"], .provider-card input[type="text"] { flex:1; background-color:#333; color:#fff; border:1px solid #444; }
+
+    #custom-keys { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
+    .custom-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
+    .custom-card.has-key { box-shadow: 0 0 0 1px rgba(45,106,79,0.35) inset; border-color:#2d6a4f; }
+    .custom-card .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .custom-card .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
+    .custom-card .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .custom-card .provider-body { display:flex; gap:8px; align-items:center; }
+    .custom-card input[type="password"], .custom-card input[type="text"] { flex:1; background-color:#333; color:#fff; border:1px solid #444; }
+
+    @media (max-width: 900px) {
+        .provider-grid { grid-template-columns: 1fr; }
+        #custom-keys { grid-template-columns: 1fr; }
+    }
 </style>
 
 <main>
+    <h1 class="api-title">API Keys</h1>
     <div id="toast" class="toast-notification">
         <span class="message"></span>
     </div>
@@ -196,12 +262,9 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
 
 
 
-<div class="form-container wide-centered">
-    <form method="post">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
-        </div>
-
-        <h3>Preset Keys</h3>
+<div class="content-grid">
+    <div class="content-section full-width-section">
+        <h2>Preset Keys</h2>
         <div class="provider-grid">
             <?php foreach ($presetRows as $slug => $row): ?>
                 <div class="provider-card">
@@ -227,9 +290,11 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
                 </div>
             <?php endforeach; ?>
         </div>
+    </div>
 
-        <h3>Custom Keys</h3>
-        <div id="custom-keys" class="content-section wide-centered" style="margin-bottom:10px;">
+    <div class="content-section full-width-section">
+        <h2>Custom Keys</h2>
+        <div id="custom-keys" style="margin-bottom:10px;">
             <?php foreach ($customRows as $row): ?>
                 <?php $hasKey = trim($row['api_key'] ?? '') !== ''; ?>
                 <div class="custom-card <?= $hasKey ? 'has-key' : '' ?>">
@@ -251,9 +316,7 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
             <?php endforeach; ?>
         </div>
         <button type="button" class="action-button add-new" onclick="addCustomKey()">Add Custom Key</button>
-
-        
-    </form>
+    </div>
 </div>
 
 <script>
