@@ -55,6 +55,44 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 $GLOBALS["db"] = new sql();
 $npc = new NpcMaster();
 
+// Helper: resolve race icon web path if file exists
+if (!function_exists('race_icon_web_path')) {
+    function race_icon_web_path($race, $webRoot){
+        $in = strtolower((string)$race);
+        $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);
+        $slug = implode('', $words);
+        if ($slug === '') return '';
+        $aliases = [
+            'highelf'=>'altmer', 'altmer'=>'altmer',
+            'woodelf'=>'bosmer', 'bosmer'=>'bosmer',
+            'darkelf'=>'dunmer', 'dunmer'=>'dunmer',
+            'orsimer'=>'orc', 'orc'=>'orc',
+            'argonian'=>'argonian', 'khajiit'=>'khajiit',
+            'breton'=>'breton', 'imperial'=>'imperial',
+            'nord'=>'nord', 'redguard'=>'redguard',
+            'oldpeople'=>'nord', 'oldpeoplerace'=>'nord',
+        ];
+        $base = $aliases[$slug] ?? $slug;
+        $variants = [];
+        $variants[] = $base;
+        if (!empty($words)){
+            $variants[] = implode('', $words);
+            $variants[] = implode('-', $words);
+            $variants[] = implode('_', $words);
+        }
+        $variants = array_values(array_unique(array_filter($variants, function($v){ return $v !== ''; })));
+        $fsDir = __DIR__ . '/../images/races/';
+        $exts = ['png','jpg','jpeg','webp','gif','svg'];
+        foreach ($variants as $name){
+            foreach ($exts as $ext){
+                $fs = $fsDir . $name . '.' . $ext;
+                if (file_exists($fs)) return $webRoot . '/ui/images/races/' . $name . '.' . $ext;
+            }
+        }
+        return '';
+    }
+}
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     $npc->create($_POST);
@@ -243,20 +281,27 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
-        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; ?>
+        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot); ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
             <div class="npc-divider"></div>
-            <div class="npc-fields">
-                <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"><?= htmlspecialchars($row["gender"] ?? "") ?></span></div>
-                <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
-                <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
-                <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
-                <?php $oghmaVal = trim((string)($row["oghma_knowledge_tags"] ?? "")); $oghmaDisp = ($oghmaVal === "") ? "none" : $oghmaVal; ?>
-                <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
-                <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
-                <?php $tagsVal = trim((string)($row["tags"] ?? "")); $tagsDisp = ($tagsVal === "") ? "none" : $tagsVal; ?>
-                <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
+            <div class="npc-row">
+                <div class="npc-fields">
+                    <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"><?= htmlspecialchars($row["gender"] ?? "") ?></span></div>
+                    <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
+                    <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
+                    <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
+                    <?php $oghmaVal = trim((string)($row["oghma_knowledge_tags"] ?? "")); $oghmaDisp = ($oghmaVal === "") ? "none" : $oghmaVal; ?>
+                    <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
+                    <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
+                    <?php $tagsVal = trim((string)($row["tags"] ?? "")); $tagsDisp = ($tagsVal === "") ? "none" : $tagsVal; ?>
+                    <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
+                </div>
+                <div class="npc-right">
+                    <?php if ($raceIcon !== ''): ?>
+                        <img class="npc-race-art" src="<?= htmlspecialchars($raceIcon) ?>" alt="Race icon" />
+                    <?php endif; ?>
+                </div>
             </div>
             <div class="npc-actions">
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
@@ -267,6 +312,16 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     <?php endforeach; ?>
     </div>
     <?php
+    exit;
+}
+
+// Lightweight endpoint: resolve race icon URL for a given race label
+if (isset($_GET['race_icon'])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    $race = (string)($_GET['race'] ?? '');
+    $url = race_icon_web_path($race, $webRoot);
+    echo json_encode(['url' => $url]);
     exit;
 }
 ?>
@@ -493,6 +548,12 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 .npc-actions .btn-danger:hover { background:#6a2a2a; }
 .npc-actions .btn-toggle { background:#2f3b4f; }
 .npc-actions .btn-toggle.active { background: rgb(242, 124, 17); color:#111; border-color: rgb(242, 124, 17); font-weight:700; }
+.npc-row { display:flex; gap:10px; align-items:flex-start; }
+.npc-right { margin-left:auto; flex:0 0 auto; }
+.npc-race-art { width:200px; height:200px; max-width:200px; max-height:200px; object-fit:contain; display:block; }
+@media (max-width: 1100px){ .npc-race-art { width:160px; height:160px; } }
+@media (max-width: 900px){ .npc-race-art { width:140px; height:140px; } }
+@media (max-width: 720px){ .npc-right { display:none; } }
 </style>
 <style>
 /* Modal styling aligned with Oghma edit modal */
@@ -543,18 +604,25 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
 <?php endif; ?>
 <div class="npc-grid">
 <?php foreach ($data as $row): ?>
-    <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; ?>
+    <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot); ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
         <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span></div>
         <div class="npc-divider"></div>
-        <div class="npc-fields">
-            <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"><?= htmlspecialchars($row["gender"] ?? "") ?></span></div>
-            <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
-            <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
-            <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
-            <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
-            <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
-            <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
+        <div class="npc-row">
+            <div class="npc-fields">
+                <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"><?= htmlspecialchars($row["gender"] ?? "") ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
+                <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
+                <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
+            </div>
+            <div class="npc-right">
+                <?php if ($raceIcon !== ''): ?>
+                    <img class="npc-race-art" src="<?= htmlspecialchars($raceIcon) ?>" alt="Race icon" />
+                <?php endif; ?>
+            </div>
         </div>
         <div class="npc-actions">
             <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
@@ -764,13 +832,19 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
           div.setAttribute('data-id', id);
           div.innerHTML = `
             <div class="npc-title"><span class="npc-name"></span></div>
-            <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"></span></div>
-            <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"></span></div>
-            <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"></span></div>
-            <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
-            <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"></span></div>
-            <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"></span></div>
-            <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"></span></div>
+            <div class="npc-divider"></div>
+            <div class="npc-row">
+              <div class="npc-fields">
+                <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"></span></div>
+                <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"></span></div>
+                <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"></span></div>
+                <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
+                <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"></span></div>
+                <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"></span></div>
+                <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"></span></div>
+              </div>
+              <div class="npc-right"></div>
+            </div>
             <div class="npc-actions">
                 <a class="btn btn-danger" href="?delete=${id}" onclick="return confirm('Delete this NPC?');">Delete</a>
             </div>`;
@@ -791,6 +865,17 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         setText('.npc-tags', (data.tags==null || String(data.tags).trim()==='') ? 'none' : data.tags);
         const profId = String(data.profile_id||'');
         setText('.npc-profile', PROFILES_BY_ID[profId] || '');
+        // Fetch and render race icon into the right container
+        try {
+          const race = (data.race||'');
+          const res = await fetch('npc_master.php?race_icon=1&race='+encodeURIComponent(race));
+          const j = await res.json();
+          const right = card.querySelector('.npc-right');
+          if (right){
+            right.innerHTML = '';
+            if (j && j.url){ right.innerHTML = '<img class="npc-race-art" alt="Race icon" src="'+j.url+'" />'; }
+          }
+        } catch(_e){}
       }
       closeModal();
       try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='NPC saved'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2000); } } catch(_e){}
