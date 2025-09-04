@@ -348,6 +348,11 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                 </div>
 
                 <!-- Right Navigation -->
+
+                <li class="nav-item dropdown mx-2">
+                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a>
+                </li>
+                
                 <ul class="navbar-nav navbar-right">
                 <li class="nav-item dropdown mx-2">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
@@ -424,10 +429,6 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                      <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
                      </li>-->
                 </ul>
-                </li>
-
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a>
                 </li>
 
                 <li class="nav-item dropdown mx-2">
