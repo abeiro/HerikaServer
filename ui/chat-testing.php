@@ -17,6 +17,7 @@ require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "💬 CHIM Chat Testing";
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 ob_start();
 
@@ -26,7 +27,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <?php
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 $db=new sql();
 // loads the last ts and game_ts from database so chat-testing is continuing the conversation from skyrim

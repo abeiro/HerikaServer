@@ -427,15 +427,7 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                 </li>
 
                 <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
-                    <ul class="dropdown-menu">
-                        <li><h6 class="dropdown-header">Immersion Tools</h6></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/diarylog.php">CHIM Diaries</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/adventurelog.php">Adventure Log</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/chat-testing.php">Chat Testing</a></li>
-                        <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
-                        <!--<li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>-->
-                    </ul>
+                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a>
                 </li>
 
                 <li class="nav-item dropdown mx-2">

@@ -26,6 +26,7 @@ $webRoot = rtrim($webRoot, '/');
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "📔CHIM Diaries";
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -455,10 +456,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <!-- Ensure main.css is loaded after any reboot.css -->
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/diary_adventure.css">
+<?php if ($isEmbed): ?>
+<style>
+    /* Embedded in container: reduce top padding since navbar is hidden */
+    main { padding-top: 20px; }
+</style>
+<?php endif; ?>
 <?php
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Determine the month and year to display
 $month = isset($_GET['month']) ? sanitize_int($_GET['month'], date('n')) : date('n');
