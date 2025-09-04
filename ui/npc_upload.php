@@ -59,7 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
     $melotts_voiceid   = (!empty($_POST['melotts_voiceid']))   ? trim($_POST['melotts_voiceid'])   : null;
     $xtts_voiceid      = (!empty($_POST['xtts_voiceid']))      ? trim($_POST['xtts_voiceid'])      : null;
     $xvasynth_voiceid  = (!empty($_POST['xvasynth_voiceid']))  ? trim($_POST['xvasynth_voiceid'])  : null;
-    
+
+    // TODO review these fields, they dont match npc master
     // New extended profile fields
     $npc_background    = (!empty($_POST['npc_background']))    ? trim($_POST['npc_background'])    : null;
     $npc_personality   = (!empty($_POST['npc_personality']))   ? trim($_POST['npc_personality'])   : null;
@@ -70,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
     $npc_speechstyle   = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
     $npc_goals         = (!empty($_POST['npc_goals']))         ? trim($_POST['npc_goals'])         : null;
 
+    // TODO review these fields, they dont match npc master
     if (!empty($npc_name) && !empty($npc_pers)) {
         $query = "
             INSERT INTO {$schema}.npc_templates_custom
@@ -94,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 npc_goals = EXCLUDED.npc_goals
         ";
 
+        // TODO review these fields, they dont match npc master
         $params = [
             $npc_name,
             $npc_dynamic,
