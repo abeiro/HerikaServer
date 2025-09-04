@@ -306,7 +306,14 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     <?php foreach ($data as $row): ?>
         <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot); ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
-            <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
+            <div class="npc-title">
+                <div class="npc-title-left"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
+                <div class="npc-title-actions">
+                    <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
+                    <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
+                    <a class="btn btn-trash" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
+                </div>
+            </div>
             <div class="npc-divider"></div>
             <div class="npc-row">
                 <div class="npc-fields">
@@ -325,11 +332,6 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                         <img class="npc-race-art" src="<?= htmlspecialchars($raceIcon) ?>" alt="Race icon" />
                     <?php endif; ?>
                 </div>
-            </div>
-            <div class="npc-actions">
-                <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 " : "🔓"; ?></a>
-                <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
             </div>
         </div>
     <?php endforeach; ?>
@@ -559,7 +561,9 @@ if (isset($_GET['race_icon'])) {
 @media (max-width: 720px){ .npc-grid { grid-template-columns: 1fr; } }
 .npc-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow:none; transition: transform .12s ease, background .12s ease; cursor:pointer; }
 .npc-card:hover { transform: translateY(-1px); background:#333333; }
-.npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; }
+.npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.npc-title-left { flex:1 1 auto; text-align:left; }
+.npc-title-actions { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
 .npc-gender-icon { margin-left:6px; opacity:0.9; }
 .npc-gender-icon.gender-female { color:#ff72d2; }
 .npc-gender-icon.gender-male { color:#72a0ff; }
@@ -573,8 +577,14 @@ if (isset($_GET['race_icon'])) {
 .npc-actions .btn:hover { background:#3a3a3a; }
 .npc-actions .btn-danger { background:#5a2a2a; border-color:#7a3a3a; }
 .npc-actions .btn-danger:hover { background:#6a2a2a; }
-.npc-actions .btn-toggle { background:#2f3b4f; }
-.npc-actions .btn-toggle.active { background: rgb(242, 124, 17); color:#111; border-color: rgb(242, 124, 17); font-weight:700; }
+.npc-title-actions a { text-decoration:none; border:none; }
+.npc-title-actions a:hover { text-decoration:none; }
+.btn-toggle { background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; }
+.btn-toggle:hover { color: rgb(242, 124, 17); background:transparent; text-decoration:none; }
+.btn-toggle.active { color: rgb(242, 124, 17); font-weight:700; text-decoration:none; }
+.btn-toggle.active[data-favorite-id] { color:#ffd700; }
+.btn-trash { background:transparent; border:none; padding:6px; color:#e9efff; font-size:20px; line-height:1; text-decoration:none; }
+.btn-trash:hover { color:#ff6b6b; }
 .npc-row { display:flex; gap:10px; align-items:flex-start; }
 .npc-right { margin-left:auto; flex:0 0 auto; }
 .npc-race-art { width:200px; height:200px; max-width:200px; max-height:200px; object-fit:contain; display:block; }
@@ -633,7 +643,14 @@ if (isset($_GET['race_icon'])) {
 <?php foreach ($data as $row): ?>
     <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot); ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
-        <div class="npc-title"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
+        <div class="npc-title">
+            <div class="npc-title-left"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
+            <div class="npc-title-actions">
+                <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
+                <a class="btn btn-trash" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
+            </div>
+        </div>
         <div class="npc-divider"></div>
         <div class="npc-row">
             <div class="npc-fields">
@@ -651,11 +668,7 @@ if (isset($_GET['race_icon'])) {
                 <?php endif; ?>
             </div>
         </div>
-        <div class="npc-actions">
-            <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
-            <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>"><?php echo !empty($row["lock_profile"]) ? "🔒 " : "🔓"; ?></a>
-            <a class="btn btn-danger" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');">Delete</a>
-        </div>
+        
     </div>
 <?php endforeach; ?>
 </div>
@@ -709,7 +722,7 @@ if (isset($_GET['race_icon'])) {
   })();
   document.querySelectorAll('.npc-card').forEach(card=>{
     card.addEventListener('click', function(ev){
-      if (ev.target.closest('.npc-actions')) return;
+      if (ev.target.closest('.npc-title-actions')) return;
       const id=this.getAttribute('data-id'); if (!id) return;
       ev.preventDefault();
       openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1');
@@ -751,7 +764,7 @@ if (isset($_GET['race_icon'])) {
       // rebind events on new elements
       document.querySelectorAll('.npc-card').forEach(card=>{
         card.addEventListener('click', function(ev){
-          if (ev.target.closest('.npc-actions')) return;
+          if (ev.target.closest('.npc-title-actions')) return;
           const id=this.getAttribute('data-id'); if (!id) return;
           ev.preventDefault();
           openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1');
@@ -770,7 +783,7 @@ if (isset($_GET['race_icon'])) {
           e.preventDefault(); const id = this.getAttribute('data-lock-id');
           const fd = new FormData(); fd.append('toggle_lock','1'); fd.append('id', id);
           const res = await fetch('npc_master.php', { method:'POST', body: fd }); let json={}; try{ json=await res.json(); }catch(_e){}
-          if (json && json.ok){ const active = Number(json.locked||0)===1; this.classList.toggle('active', active); this.textContent = active ? '🔒 Locked' : '🔓'; }
+          if (json && json.ok){ const active = Number(json.locked||0)===1; this.classList.toggle('active', active); this.textContent = active ? '🔒' : '🔓'; }
         });
       });
       const newCreate = document.getElementById('npc_create_btn');
@@ -858,7 +871,14 @@ if (isset($_GET['race_icon'])) {
           div.id = 'npc_card_'+id;
           div.setAttribute('data-id', id);
           div.innerHTML = `
-            <div class="npc-title"><span class="npc-name"></span></div>
+            <div class="npc-title">
+              <div class="npc-title-left"><span class="npc-name"></span></div>
+              <div class="npc-title-actions">
+                <a class="btn btn-toggle" href="#" data-favorite-id="${id}" title="Toggle favorite">☆</a>
+                <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock">🔓</a>
+                <a class="btn btn-trash" href="?delete=${id}" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
+              </div>
+            </div>
             <div class="npc-divider"></div>
             <div class="npc-row">
               <div class="npc-fields">
