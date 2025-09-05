@@ -1696,8 +1696,8 @@ function PackIntoSummary($onlyMissingDiary=false)
 
     
     foreach ( $db->fetchAll("select * from memory_summary where companions is null ") as $row) {
-        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog where gamets>={$row["gamets_truncated"]}-$pfi");
-        error_log("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog where gamets>={$row["gamets_truncated"]}-$pfi");
+        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog where gamets>{$row["gamets_truncated"]}-$pfi and gamets<={$row["gamets_truncated"]}+$pfi");
+        error_log("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog where gamets>{$row["gamets_truncated"]}-$pfi and gamets<={$row["gamets_truncated"]}+$pfi");
         $npcs=[];
         $npcInMemory=[];
         foreach ($people as $p) {
