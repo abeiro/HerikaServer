@@ -111,7 +111,7 @@ class LLMConnector {
 
             $apiBadge=new ApiBadge();
             $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
-            error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]}");
+            error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["openaijson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
             $GLOBALS["CONNECTOR"]["openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
             
@@ -142,7 +142,7 @@ class LLMConnector {
 
             $apiBadge=new ApiBadge();
             $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
-            error_log("[CORE SYSTEM] Using new profile system CONNECTOR openrouterjson {$currentConnectorData["id"]}");
+            error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["openrouterjson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
@@ -173,7 +173,7 @@ class LLMConnector {
 
             $apiBadge=new ApiBadge();
             $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
-            error_log("[CORE SYSTEM] Using new profile system CONNECTOR google_openaijson {$currentConnectorData["id"]}");
+            error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["google_openaijson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
             $GLOBALS["CONNECTOR"]["google_openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
             $GLOBALS["CONNECTOR"]["google_openaijson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';

@@ -1652,7 +1652,7 @@ function PackIntoSummary($onlyMissingDiary=false)
         where event in ('diary','auto_diary')
         and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary'))");
 
-
+        $maxRow=0;
 
         Logger::info("Missing diary insert done");
 
@@ -1684,10 +1684,11 @@ function PackIntoSummary($onlyMissingDiary=false)
                                     and gamets>$maxRow
                                 ");
 
+                                
         Logger::info("Diary insert done");
     }
 
-    
+    $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
     $people=$db->fetchAll("SELECT distinct split_part(data, '@', 1) as npc from eventlog where type='addnpc'");
     $addednpc=[];
     foreach ($people as $p)
@@ -1695,16 +1696,29 @@ function PackIntoSummary($onlyMissingDiary=false)
 
     
     foreach ( $db->fetchAll("select * from memory_summary where companions is null ") as $row) {
-        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
-
-        preg_match_all("/[A-Za-z' \-\[\]]+/", $people[0]["people"], $matches);
-        // $matches[0] will contain the list of names
-        
-        $names = array_map('trim', $matches[0]);
-        
+        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog where gamets>={$row["gamets_truncated"]}-$pfi");
+        error_log("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog where gamets>={$row["gamets_truncated"]}-$pfi");
+        $npcs=[];
         $npcInMemory=[];
-        foreach($names as $name) {
-            if (in_array($name,$addednpc)) {
+        foreach ($people as $p) {
+            if ($p["people"]) {
+                $rowNpc=explode("|",$p["people"]);
+                foreach ($rowNpc as $npc) {
+                    $npc = preg_replace('/\([^)]*\)/', '', $npc);
+                    if (trim($npc))
+                        if (isset($npcs[trim($npc)]))
+                            $npcs[trim($npc)]++;
+                        else
+                            $npcs[trim($npc)]=1;
+                }
+                
+            }
+        }
+      
+        
+        
+        foreach($npcs as $name=>$n_occurences) {
+            if (in_array($name,$addednpc) && $n_occurences>5) {
                 $npcInMemory[]=$name;
 
             }

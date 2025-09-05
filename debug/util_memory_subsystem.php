@@ -152,6 +152,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
             echo "TEXT2VEC feature is not enabled. Skipping memory synchronization.".PHP_EOL;
         }
         echo "Memory synchronization process finished.".PHP_EOL;
+
     } elseif ($argv[1]=="sync_oghma") {
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
             echo "Creating vectors for memories".PHP_EOL;
@@ -243,14 +244,14 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                     $prompt[] = array('role' => 'system', 
                                       'content' => "This is a playthrough in Skyrim. 
 {$GLOBALS["PLAYER_NAME"]} is the player.
-{$row["companions"]} are nearby NPCs.
-You must write a memory summary by analyzing the chat history.
+{$row["companions"]} are nearby characters.
+You must write a memory summary from narrator's point of view, by analyzing the chat history .
 Pay attention to details that can change character's behavior, feelings, and also tag names and locations.
 Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 ");
                     $prompt[] = array('role' => 'user', 'content' =>"#CHAT HISTORY#\\n{$row["packed_message"]}\\n#END OF CHAT HISTORY#\\n");
                     $prompt[] = array('role' => 'user', 
-                                      'content' => "Read #CHAT HISTORY# and write a memory record using about events and conversations. Use this format:\\n$CLFORMAT");
+                                      'content' => "Read #CHAT HISTORY# and write a memory record about events and conversations. Use this format:\\n$CLFORMAT");
                     
                     $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
                     
