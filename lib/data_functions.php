@@ -889,7 +889,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
 
                 }
                 $lastDialogFullCopy[] = ["role"=>"assistant","content"=>trim($compactedBuffer)];
-                
+
             }
             $bufferHerika=[];
             $compactedBuffer="";
@@ -919,7 +919,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
         $lastDialogFullCopy[] = ["role"=>"assistant","content"=>trim($compactedBuffer)];
         $bufferHerika=[];
     }
-    
+
     // file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_5_.txt",print_r($lastDialogFullCopy,true));
 
     
@@ -2495,7 +2495,7 @@ function call_llm() {
 
         error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
 
-        
+
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
 
         error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
@@ -2518,8 +2518,8 @@ function call_llm() {
         "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
         "target"=>"action target actor|action destination location name",
         "lang"=>"language used, (es|en|fr|...)"]);
-    
-        
+
+
         $minimalContextData = array_slice($contextData, -5);
         $minimalContext=[];
         foreach ($minimalContextData as $ele) {
@@ -2528,7 +2528,7 @@ function call_llm() {
             }
         }
         array_pop($minimalContext);
-        
+
         $contextData2=[
             array('role' => 'system', 'content' => "Create a JSON object with this format: $jsonformat , using a 'Generated dialogue line' as source. "),
             array('role' => 'user', 'content' => "* Available actions:\n".$GLOBALS["COMMAND_PROMPT"]),
@@ -2536,16 +2536,16 @@ function call_llm() {
             array('role' => 'user', 'content' => "* Generated dialogue line: <$buffer>"),
             array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
         ];
-    
+
         $connector=new LLMConnector();
         $currentConnectorData=$connector->getById($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"]); // Asuming primary id
-    
-       
+
+
 
         $connector->setOldGlobals($currentConnectorData);
-    
+
         $connectionHandler = $connector->getConnector($currentConnectorData);
-    
+
         $buffer2=$connectionHandler->fast_request($contextData2,[]);
         unset($GLOBALS["_JSON_BUFFER"]);
         $finalRes=__jpd_decode_lazy($buffer2);
@@ -2561,7 +2561,7 @@ function call_llm() {
         $fakedStream='data: '.json_encode($fakeObject);
         fwrite($connectionHandler->primary_handler,$fakedStream);
         rewind($connectionHandler->primary_handler);
-        
+
         error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}" );
 
     } else {
@@ -2577,7 +2577,7 @@ function call_llm() {
         }
     }
 
-   
+
 
 
 
@@ -3396,76 +3396,46 @@ function profile_exists($npcname) {
     return file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
 }
 
-function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile='') {
+function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '')
+{
     // This should be done at NpcMaster::createProfile
-    global $db; 
+    global $db;
 
-    if ($npcname=="The Narrator")   // Refuse to add Narrator [review this]
+    if ($npcname == "The Narrator")   // Refuse to add Narrator [review this]
         return;
 
-    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-    $newConfFile=md5($npcname);
+    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+    $newConfFile = md5($npcname);
 
     $codename = npcNameToCodename($npcname);
     $baseprofileName = npcNameToCodename($baseprofile);
-    
-    $npcMaster=new NpcMaster();
-    $currentNpcData=$npcMaster->getByName($npcname);
+
+    $npcMaster = new NpcMaster();
+    $currentNpcData = $npcMaster->getByName($npcname);
 
 
     if (!$currentNpcData || $overwrite ) {
-        
         error_log("Creating/overwriting:$overwrite  profile for $npcname");
         //sleep (1);
-        $cn=$db->escape("Voicetype/$codename");
-        $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
-        $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
-        if ($voicetypeString) {
-            $voicetype=explode("\\",$voicetypeString);
-        }
-    
-        $xttsid=$db->fetchAll("SELECT xtts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
-        $melottsid=$db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
-        $xvasnythid=$db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
-
-
         if (empty($GLOBALS["CORE_LANG"])) {
-            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
-            $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
-            $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
-            $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
+            $npcTemlate = $db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
+            $npcdynamic = $db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             // Query for new HERIKA fields
-            $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates where npc_name='$codename'");
+            $npcNewFields = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates where npc_name='$codename'");
         } else {
-            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
-            $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
+            $npcTemlate = $db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             if (!isset($npcTemlate[0])) {
                 Logger::info("No trl found, using standard template");
-                $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
-                $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
-                $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
+                $npcTemlate = $db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
+                $npcdynamic = $db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
                 // Query for new HERIKA fields
-                $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_misc  FROM combined_npc_templates where npc_name='$codename'");
+                $npcNewFields = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_misc  FROM combined_npc_templates where npc_name='$codename'");
             } else {
                 // For translated templates, set empty new fields for now
                 $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
             }
         }
-                
-        $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
-        //use the Nametype conf opts to latch onto the character name while still being able to pull the correct voicetype[3]
-        if ($voicelogic === "voicetype") {
-            $codename = npcNameToCodename($npcname);
-            $cn=$db->escape("Nametype/$codename");
-            $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
-            $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
-            if ($voicetypeString) {
-                $voicetype=explode("\\",$voicetypeString);
-            }
-        }
-
-    
 
         // 3. Extract the bracketed portion and convert it to the "stripped" version
         //    e.g. Bofesar [Whiterun Guard] -> whiterun_guard
@@ -3475,25 +3445,23 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $bracketMatch = strtolower($bracketMatch);
             $bracketMatch = str_replace(' ', '_', $bracketMatch);
         }
-        
+
         // Original logic for pulling from database
         if (isset($npcTemlate[0]) && is_array($npcTemlate[0])) {
 
-           
-            //TODO review these mappings (dont match NpcMaster)
             $npcMaster->create([
 
-                "npc_name"=>$npcname,
-                'npc_static_bio' => $npcNewFields[0]["npc_background"] ?? '',
-                'personality' => ($npcNewFields[0]["npc_personality"] ?? '') .".".($npcdynamic ?? ''),
-                'core' => $npcname.".".$npcNewFields[0]["npc_appearance"] ?? '',
-                'relationships' => $npcNewFields[0]["npc_relationships"] ?? '',
-                'occupation' => $npcNewFields[0]["npc_occupation"] ?? '',
-                'appearance' => $npcNewFields[0]["npc_appearance"] ?? '',
-                'skills' => $npcNewFields[0]["npc_skills"] ?? '',
-                'speechstyle' => $npcNewFields[0]["npc_speechstyle"] ?? '',
-                'goals' => $npcNewFields[0]["npc_goals"] ?? '',
-                'oghma_knowledge_tags'=>$npcNewFields[0]["npc_misc"]
+                    "npc_name" => $npcname,
+                    'npc_static_bio' => $npcNewFields[0]["npc_background"] ?? '',
+                    'personality' => ($npcNewFields[0]["npc_personality"] ?? '') . "." . ($npcdynamic ?? ''),
+                    'core' => trim($npcname . ". " . ($npcNewFields[0]["npc_appearance"] ?? '')),
+                    'relationships' => $npcNewFields[0]["npc_relationships"] ?? '',
+                    'occupation' => $npcNewFields[0]["npc_occupation"] ?? '',
+                    'appearance' => $npcNewFields[0]["npc_appearance"] ?? '',
+                    'skills' => $npcNewFields[0]["npc_skills"] ?? '',
+                    'speechstyle' => $npcNewFields[0]["npc_speechstyle"] ?? '',
+                    'goals' => $npcNewFields[0]["npc_goals"] ?? '',
+                    'oghma_knowledge_tags' => $npcNewFields[0]["npc_misc"]
 
                 ]
             );
@@ -3501,69 +3469,77 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
 
-            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
             // Query for new HERIKA fields for bracket match
-            $npcNewFields2 = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
+            $npcNewFields2 = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates WHERE npc_name='" . $db->escape($bracketMatch) . "'");
 
             if (!empty($npcNewFields2[0])) {
-                if (is_array($npcNewFields2) && $npcNewFields2!=null  && isset($npcNewFields2[0]) && isset($npcNewFields2[0]["npc_appearance"]))
-                    $core_data=".".$npcNewFields2[0]["npc_appearance"];
-                else
-                    $core_data="";
-                //TODO review these mappings (dont match NpcMaster)
                 $npcMaster->create([
-                    "npc_name"=>$npcname,
-                    'npc_static_bio' => $npcNewFields2[0]["npc_background"] ?? '',
-                    'personality' => $npcNewFields2[0]["npc_personality"] ?? '',
-                    'core' => $npcname.$core_data,
-                    'relationships' => $npcNewFields2[0]["npc_relationships"] ?? '',
-                    'occupation' => $npcNewFields2[0]["npc_occupation"] ?? '',
-                    'appearance' => $npcNewFields2[0]["npc_appearance"] ?? '',
-                    'skills' => $npcNewFields2[0]["npc_skills"] ?? '',
-                    'speechstyle' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
-                    'goals' => $npcNewFields2[0]["npc_goals"] ?? '',
-                    'oghma_knowledge_tags'=>$npcNewFields2[0]["npc_misc"]
+                        "npc_name" => $npcname,
+                        'npc_static_bio' => $npcNewFields2[0]["npc_background"] ?? '',
+                        'personality' => $npcNewFields2[0]["npc_personality"] ?? '',
+                        'core' => trim($npcname . ". " . ($npcNewFields2[0]["npc_appearance"] ?? '')),
+                        'relationships' => $npcNewFields2[0]["npc_relationships"] ?? '',
+                        'occupation' => $npcNewFields2[0]["npc_occupation"] ?? '',
+                        'appearance' => $npcNewFields2[0]["npc_appearance"] ?? '',
+                        'skills' => $npcNewFields2[0]["npc_skills"] ?? '',
+                        'speechstyle' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
+                        'goals' => $npcNewFields2[0]["npc_goals"] ?? '',
+                        'oghma_knowledge_tags' => $npcNewFields2[0]["npc_misc"]
                     ]
                 );
-                
-                
-                
-            } 
-
+            }
         } else {
             $npcMaster->create([
-                "npc_name"=>$npcname
+                    "npc_name" => $npcname
                 ]
             );
         }
 
-            
-        $currentData=$npcMaster->GetByName($npcname);
+        // Voice
+        //TODO i dont think these ids are used to set the voice in this code - not sure i follow it [needs review]
+        $xttsid = $db->fetchAll("SELECT xtts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+        $melottsid = $db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+        $xvasynthid = $db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
+
+        $cn = $db->escape("Voicetype/$codename");
+        $vtype = $db->fetchAll("select value from conf_opts where id='$cn'");
+        $voicetypeString = (isOk($vtype)) ? $vtype[0]["value"] : null;
+        if ($voicetypeString) {
+            $voicetype = explode("\\", $voicetypeString);
+        }
+
+        $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
+        //use the Nametype conf opts to latch onto the character name while still being able to pull the correct voicetype[3]
+        if ($voicelogic === "voicetype") {
+            $codename = npcNameToCodename($npcname);
+            $cn = $db->escape("Nametype/$codename");
+            $vtype = $db->fetchAll("select value from conf_opts where id='$cn'");
+            $voicetypeString = (isOk($vtype)) ? $vtype[0]["value"] : null;
+            if ($voicetypeString) {
+                $voicetype = explode("\\", $voicetypeString);
+            }
+        }
 
         // XTTS voiceid override from table. if fails then xtts voicelogic pick
         $voiceid = isset($voicetype) && sizeof($voicetype) >= 4 ? $voicetype[3] : "";
         if (!$voiceid && (
-            (empty($xttsid[0]['xtts_voiceid']) && $voicelogic === "voicetype") ||
-            empty($melottsid[0]['melotts_voiceid']) ||
-            empty($xvasynthid[0]['xvasynth_voiceid']))
+                (empty($xttsid[0]['xtts_voiceid']) && $voicelogic === "voicetype") ||
+                empty($melottsid[0]['melotts_voiceid']) ||
+                empty($xvasynthid[0]['xvasynth_voiceid']))
         ) {
             Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
         }
 
-        $currentData=$npcMaster->GetByName($npcname);
-        $currentData["voiceid"]=$voiceid;
+        $currentData = $npcMaster->GetByName($npcname);
+        $currentData["voiceid"] = $voiceid;
 
         $currentData['metadata'] = json_encode([]);
-        $currentData['extended_data'] = json_encode(["chim_core_migrated"=>2]);
+        $currentData['extended_data'] = json_encode(["chim_core_migrated" => 2]);
         $currentData['profile_id'] = 1; // Default profile
-        $currentData['md5'] = md5($currentData["npc_name"]); 
+        $currentData['md5'] = md5($currentData["npc_name"]);
 
         $npcMaster->updateByArray($currentData);
-
-        
     }
-
-   
 }
 
 function getConfFileFor($npcname) {
@@ -3586,7 +3562,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     
     // List of new HERIKA fields to include
     $herikaFields = [
-        'HERIKA_BACKGROUND' => 'Background',
+        'HERIKA_BACKGROUND' => 'Basic Summary',
         'HERIKA_PERSONALITY' => 'Personality', 
         'HERIKA_APPEARANCE' => 'Appearance',
         'HERIKA_RELATIONSHIPS' => 'Relationships',

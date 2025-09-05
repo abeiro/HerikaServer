@@ -298,17 +298,20 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <?php endfor; ?>
       <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make(min($totalPages,$page+1)) ?>">Next</a>
       <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make($totalPages) ?>">Last</a>
-      <span style="border:none; background:transparent; color:#9fb1c9;">Page <?= $page ?> / <?= $totalPages ?></span>
-      <span style="border:none; background:transparent; color:#9fb1c9;">Total <?= $totalRows ?></span>
+      <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
+      <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
       <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
-        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot); ?>
+        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot); $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? '' : $tagsVal; ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title">
                 <div class="npc-title-left"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
                 <div class="npc-title-actions">
+                    <?php if ($tagsDisp !== ''): ?>
+                    <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
+                    <?php endif; ?>
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                     <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                     <a class="btn btn-trash" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
@@ -324,9 +327,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <?php $oghmaVal = trim((string)($row["oghma_knowledge_tags"] ?? "")); $oghmaDisp = ($oghmaVal === "") ? "none" : $oghmaVal; ?>
                     <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
                     <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
-                    <?php $tagsVal = trim((string)($row["tags"] ?? "")); $tagsDisp = ($tagsVal === "") ? "none" : $tagsVal; ?>
-                    <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
-                </div>
+                    <?php $tagsVal = trim((string)($row["tags"] ?? "")); $tagsDisp = ($tagsVal === "") ? "none" : $tagsVal; ?>                </div>
                 <div class="npc-right">
                     <?php if ($raceIcon !== ''): ?>
                         <img class="npc-race-art" src="<?= htmlspecialchars($raceIcon) ?>" alt="Race icon" />
@@ -357,7 +358,14 @@ if (isset($_GET['race_icon'])) {
 
 <?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ob_end_clean(); ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<style>html,body{background:#2a2a2a;} main{background:#2a2a2a; padding:12px;} .form-container{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px;}</style>
+<style>html,body{background:#2a2a2a;} main{background:#2a2a2a; padding:12px;} .form-container{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px;}
+.modal-inline-actions{display:flex; gap:6px; align-items:center; justify-content:flex-end; margin-bottom:8px;}
+.modal-inline-actions .btn-toggle{background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; cursor:pointer;}
+.modal-inline-actions .btn-toggle:hover{color: rgb(242, 124, 17); text-decoration:none;}
+.modal-inline-actions .btn-toggle.active{color:#ffd700; font-weight:700;}
+.modal-inline-actions .btn-toggle[data-lock]{color:#e9efff;}
+.modal-inline-actions .btn-toggle.active[data-lock]{color: rgb(242, 124, 17);}
+</style>
 <form method="post" onsubmit='return false' style='display:block'>
 <?php } else { ?>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
@@ -366,8 +374,8 @@ if (isset($_GET['race_icon'])) {
     .form-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 16px; }
     @media (max-width: 900px){ .form-grid { grid-template-columns: 1fr; } }
     .form-item { display:flex; flex-direction:column; gap:6px; }
-    .form-item label { font-weight:700; color:#e9efff; }
-    .form-item .hint { color:#9fb1c9; font-size:12px; line-height:1.35; }
+    .form-item label { font-weight:700; color:rgb(242, 124, 17); }
+    .form-item .hint { color:#e9efff; font-size:12px; line-height:1.35; }
     .form-item textarea { min-height:96px; }
     .form-item input[type="text"], .form-item textarea, .form-item select { background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 10px; }
     .form-item input[type="checkbox"] { transform: scale(1.05); }
@@ -378,6 +386,16 @@ if (isset($_GET['race_icon'])) {
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
     <?php endif; ?>
 
+    <?php $isPartial = (isset($_GET['partial']) && $_GET['partial']=='1'); $isFav = !empty($editItem['npc_favorite']); $isLock = !empty($editItem['lock_profile']); ?>
+    <?php if ($isPartial): ?>
+    <div class="modal-inline-actions">
+        <p style="margin:0; color:rgb(242, 124, 17) ;">Tags:</p>
+        <input type="text" id="modal_tags_input" name="tags" value="<?= htmlspecialchars($editItem['tags'] ?? '') ?>" placeholder="tags" style="max-width:240px; font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;" title="Tags help with searching and grouping" />
+        <a id="modal_fav_btn" class="btn btn-toggle<?= $isFav? ' active':'' ?>" href="#" title="Toggle favorite" data-favorite><?= $isFav? '★' : '☆' ?></a>
+        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
+    </div>
+    <?php endif; ?>
+
     <div class="form-grid">
         <div class="form-item span-2">
             <label for="npc_name">NPC Name</label>
@@ -386,6 +404,17 @@ if (isset($_GET['race_icon'])) {
         </div>
 
         <div class="form-item">
+            <label for="profile_id">Profile</label>
+            <select id="profile_id" name="profile_id">
+                <option value="">-- Select Profile --</option>
+                <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); ?>
+                    <option value="<?= htmlspecialchars($pid) ?>" <?= ((string)($editItem['profile_id'] ?? '') === $pid) ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <small class="hint">Select which core profile this NPC uses.</small>
+        </div>
+
+        <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
             <label for="lock_profile">Lock Profile</label>
             <div class="checkbox-inline">
                 <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
@@ -393,7 +422,7 @@ if (isset($_GET['race_icon'])) {
             </div>
         </div>
 
-        <div class="form-item">
+        <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
             <label for="npc_favorite">Favorite</label>
             <div class="checkbox-inline">
                 <input type="checkbox" id="npc_favorite" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
@@ -425,26 +454,16 @@ if (isset($_GET['race_icon'])) {
             <small class="hint">Skyrim reference ID for in-game linkage (optional).</small>
         </div>
 
-        
-
         <div class="form-item">
-            <label for="dynamic_profile">Dynamic Profile</label>
-            <div class="checkbox-inline">
-                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
-                <span class="hint">Allow systems to evolve the profile based on gameplay events.</span>
-            </div>
+            <label for="oghma_knowledge_tags">Oghma Tags</label>
+            <input type="text" id="oghma_knowledge_tags" name="oghma_knowledge_tags" placeholder="Comma-separated knowledge tags" value="<?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?>">
+            <small class="hint">Used by Oghma systems for knowledge lookup and indexing.</small>
         </div>
 
         <div class="form-item">
             <label for="voiceid">Voice ID</label>
             <input type="text" id="voiceid" name="voiceid" placeholder="Matches TTS voice identifier" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
             <small class="hint">Identifier for the TTS backend (e.g., ElevenLabs, XTTS, etc.).</small>
-        </div>
-
-        <div class="form-item span-2">
-            <label for="tags">Tags</label>
-            <input type="text" id="tags" name="tags" placeholder="Comma-separated labels for search and grouping" value="<?= htmlspecialchars($editItem["tags"] ?? "") ?>">
-            <small class="hint">Free-form labels to organize and filter NPCs.</small>
         </div>
 
         <div class="form-item span-2">
@@ -465,17 +484,28 @@ if (isset($_GET['race_icon'])) {
             <small class="hint">Persistent biography that never changes during play. Good for canon facts.</small>
         </div>
 
+        <div class="form-item span-2">
+            <label for="appearance">Appearance</label>
+            <textarea id="appearance" name="appearance" placeholder="Physical appearance."><?= htmlspecialchars($editItem["appearance"] ?? "") ?></textarea>
+            <small class="hint">Physical appearance.</small>
+        </div>
+
+        <div class="form-item">
+            <label for="dynamic_profile">Dynamic Profile</label>
+            <div class="checkbox-inline">
+                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
+                <span class="hint">Allow systems to evolve the profile based on gameplay events.</span>
+            </div>
+        </div>
+
+        <div class="dynamic-profile-section span-2">
         <div class="form-item">
             <label for="personality">Personality</label>
             <textarea id="personality" name="personality" placeholder="Personality traits and speaking characteristics."><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
             <small class="hint">Concise traits that guide tone and behavior. Avoid contradictions with Core.</small>
         </div>
 
-        <div class="form-item">
-            <label for="appearance">Appearance</label>
-            <textarea id="appearance" name="appearance" placeholder="Physical appearance."><?= htmlspecialchars($editItem["appearance"] ?? "") ?></textarea>
-            <small class="hint">Physical appearance.</small>
-        </div>
+        
 
         <div class="form-item">
             <label for="relationships">Relationships</label>
@@ -506,6 +536,7 @@ if (isset($_GET['race_icon'])) {
             <textarea id="goals" name="goals" placeholder="Short and long-term objectives."><?= htmlspecialchars($editItem["goals"] ?? "") ?></textarea>
             <small class="hint">Motivations that drive decisions and quest hooks.</small>
         </div>
+
 
         <div class="form-item span-2">
             <label for="emote_moods">Emote Moods</label>
@@ -541,6 +572,8 @@ if (isset($_GET['race_icon'])) {
                 if (json && json.ok){
                     const payload = {};
                     form.querySelectorAll('input,textarea,select').forEach(el=>{ const n=el.name; if (!n) return; if (el.type==='checkbox'){ payload[n]=el.checked?1:0; } else { payload[n]=el.value; } });
+                    // Ensure header tags input is captured
+                    try { const ti = document.getElementById('modal_tags_input'); if (ti) payload['tags'] = ti.value; } catch(_){ }
                     const newId = json.id || payload.id || <?= json_encode($editItem['id'] ?? '') ?>;
                     payload.id = newId;
                     window.parent.postMessage({ type:'npc_saved', id: newId, data: payload }, '*');
@@ -548,6 +581,35 @@ if (isset($_GET['race_icon'])) {
                     alert('Save failed: '+((json && json.error) ? json.error : res.status));
                 }
             });
+        })();
+        </script>
+        <script>
+        (function(){
+            const favBtn = document.getElementById('modal_fav_btn');
+            const lockBtn = document.getElementById('modal_lock_btn');
+            const idVal = <?= json_encode($editItem['id'] ?? '') ?>;
+            if (favBtn && idVal){
+                favBtn.addEventListener('click', async function(e){
+                    e.preventDefault();
+                    try{
+                        const fd = new FormData(); fd.append('toggle_favorite','1'); fd.append('id', idVal);
+                        const res = await fetch('npc_master.php', { method:'POST', body: fd });
+                        let json={}; try{ json=await res.json(); }catch(_e){}
+                        if (json && json.ok){ const active = Number(json.favorite||0)===1; favBtn.classList.toggle('active', active); favBtn.textContent = active ? '★' : '☆'; }
+                    }catch(_e){}
+                });
+            }
+            if (lockBtn && idVal){
+                lockBtn.addEventListener('click', async function(e){
+                    e.preventDefault();
+                    try{
+                        const fd = new FormData(); fd.append('toggle_lock','1'); fd.append('id', idVal);
+                        const res = await fetch('npc_master.php', { method:'POST', body: fd });
+                        let json={}; try{ json=await res.json(); }catch(_e){}
+                        if (json && json.ok){ const active = Number(json.locked||0)===1; lockBtn.classList.toggle('active', active); lockBtn.textContent = active ? '🔒' : '🔓'; }
+                    }catch(_e){}
+                });
+            }
         })();
         </script>
     <?php } else { ?>
@@ -577,7 +639,7 @@ if (isset($_GET['race_icon'])) {
 .npc-divider { height:1px; background:#4a4a4a; margin:2px 0 6px; }
 .npc-fields { display:flex; flex-direction:column; gap:8px; }
 .npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; }
-.npc-muted { color:#9fb1c9; }
+.npc-muted { color:rgb(242, 124, 17); }
 .npc-actions { display:flex; gap:8px; margin-top:6px; justify-content:center; }
 .npc-actions .btn { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; text-decoration:none; cursor:pointer; }
 .npc-actions .btn:hover { background:#3a3a3a; }
@@ -591,12 +653,18 @@ if (isset($_GET['race_icon'])) {
 .btn-toggle.active[data-favorite-id] { color:#ffd700; }
 .btn-trash { background:transparent; border:none; padding:6px; color:#e9efff; font-size:20px; line-height:1; text-decoration:none; }
 .btn-trash:hover { color:#ff6b6b; }
+.npc-tags-label { font-size:11px; color:#9fb1c9; margin-right:4px; }
+.npc-tags-top { font-size:11px; color:#9fb1c9; border:1px solid #4a4a4a; border-radius:999px; padding:2px 6px; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .npc-row { display:flex; gap:10px; align-items:flex-start; }
 .npc-right { margin-left:auto; flex:0 0 auto; }
 .npc-race-art { width:200px; height:200px; max-width:200px; max-height:200px; object-fit:contain; display:block; }
 @media (max-width: 1100px){ .npc-race-art { width:160px; height:160px; } }
 @media (max-width: 900px){ .npc-race-art { width:140px; height:140px; } }
 @media (max-width: 720px){ .npc-right { display:none; } }
+/* Dynamic profile grouping */
+.dynamic-profile-section { border:1px solid #4a4a4a; border-radius:8px; padding:10px; margin:8px 0; background:#262626; }
+.dynamic-profile-section .section-title { font-weight:700; color:rgb(242, 124, 17); margin-bottom:6px; }
+.dynamic-profile-section > .form-item { margin-bottom:8px; }
 </style>
 <style>
 /* Modal styling aligned with Oghma edit modal */
@@ -640,8 +708,8 @@ if (isset($_GET['race_icon'])) {
   <?php endfor; ?>
   <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make(min($totalPages,$page+1)) ?>">Next</a>
   <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make($totalPages) ?>">Last</a>
-  <span style="border:none; background:transparent; color:#9fb1c9;">Page <?= $page ?> / <?= $totalPages ?></span>
-  <span style="border:none; background:transparent; color:#9fb1c9;">Total <?= $totalRows ?></span>
+  <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
+  <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
   <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
 </div>
 <?php endif; ?>
@@ -652,6 +720,10 @@ if (isset($_GET['race_icon'])) {
         <div class="npc-title">
             <div class="npc-title-left"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
             <div class="npc-title-actions">
+                <?php if ($tagsDisp !== ''): ?>
+                <span class="npc-tags-label">Tags:</span>
+                <span class="npc-tags-top" title="Use Search to filter by these tags: <?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
+                <?php endif; ?>
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
@@ -666,7 +738,6 @@ if (isset($_GET['race_icon'])) {
                 <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
                 <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
                 <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
-                <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"><?= htmlspecialchars($tagsDisp) ?></span></div>
             </div>
             <div class="npc-right">
                 <?php if ($raceIcon !== ''): ?>
@@ -880,6 +951,7 @@ if (isset($_GET['race_icon'])) {
             <div class="npc-title">
               <div class="npc-title-left"><span class="npc-name"></span></div>
               <div class="npc-title-actions">
+                <span class="npc-tags-top" style="display:none"></span>
                 <a class="btn btn-toggle" href="#" data-favorite-id="${id}" title="Toggle favorite">☆</a>
                 <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock">🔓</a>
                 <a class="btn btn-trash" href="?delete=${id}" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
@@ -916,6 +988,15 @@ if (isset($_GET['race_icon'])) {
         setText('.npc-refid', data.refid);
         setText('.npc-oghma', (data.oghma_knowledge_tags==null || String(data.oghma_knowledge_tags).trim()==='') ? 'none' : data.oghma_knowledge_tags);
         setText('.npc-tags', (data.tags==null || String(data.tags).trim()==='') ? 'none' : data.tags);
+        // Update title tags pill
+        try {
+          const top = card.querySelector('.npc-title-actions .npc-tags-top');
+          const tval = (data.tags||'').trim();
+          if (top){
+            if (tval){ top.style.display='inline-block'; top.textContent = tval; top.title = 'Use Search to filter by these tags: ' + tval; }
+            else { top.style.display='none'; top.textContent=''; top.removeAttribute('title'); }
+          }
+        } catch(_){}
         const profId = String(data.profile_id||'');
         setText('.npc-profile', PROFILES_BY_ID[profId] || '');
         // Fetch and render race icon into the right container

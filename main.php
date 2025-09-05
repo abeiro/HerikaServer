@@ -1318,7 +1318,7 @@ if (isset($GLOBALS["PROFILE_PROMPT"])) {
 if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
     
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#Knowlegde\n" . $GLOBALS["OGHMA_HINT"]."\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#Knowledge\n" . $GLOBALS["OGHMA_HINT"]."\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
