@@ -87,7 +87,6 @@ try {
             $xvasynth_voiceid = ($temp !== '') ? $temp : null;
         }
 
-        // TODO review these fields - they dont match npc master
         // Extract extended biography fields
         $npc_background = null;
         if (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
@@ -144,7 +143,6 @@ try {
             continue;
         }
 
-        // TODO review these fields - dont match npc master
         // Insert or update record using upsertRowOnConflict
         try {
             $db->upsertRowOnConflict(
