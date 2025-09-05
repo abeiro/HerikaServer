@@ -887,8 +887,10 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
 
                 }
                 $lastDialogFullCopy[] = ["role"=>"assistant","content"=>trim($compactedBuffer)];
-                $bufferHerika=[];
+                
             }
+            $bufferHerika=[];
+            $compactedBuffer="";
             $lastDialogFullCopy[]=$line;
         } 
 
@@ -915,7 +917,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
         $lastDialogFullCopy[] = ["role"=>"assistant","content"=>trim($compactedBuffer)];
         $bufferHerika=[];
     }
-
+    
     // file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_5_.txt",print_r($lastDialogFullCopy,true));
 
     
@@ -928,7 +930,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
     foreach ($lastDialogFullCopy as $n => $line) {
         $speaker=$line["role"];
         
-        if ($speaker=="npc") { // Tricky npc could be any char
+        if ($speaker=="npc") { // Tricky, npc could be any char
             preg_match('/^([^:]+):/', $line["content"], $matches);
             // Output the extracted name
             $speakerNPC=$matches[1] ?? "";
@@ -1969,6 +1971,7 @@ function FindClosestNPCName($actorName)
 
     $lastLoc = $db->fetchAll("SELECT a.data as people FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc) == 0) {
+        error_log("Note: no FindClosestNPCName data");
         return "";
     }
 
@@ -2477,16 +2480,102 @@ function call_llm() {
         error_log("[CORE SYSTEM] Using new profile system {$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["model"]}");
     }
 
-    $connectionHandler->open($contextData,$overrideParameters);
+    if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
 
-    /* *****
-    Player TTS
+         /* *****
+        Player TTS
 
-    Player TTS. We overwrite some confs an then restore them.
-    */
-    if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
-        require(__DIR__."/../processor/player_tts.php");
+        Player TTS. We overwrite some confs an then restore them.
+        */
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
+            require(__DIR__."/../processor/player_tts.php");
+        }
+
+        error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
+
+        
+        $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
+
+        error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
+
+        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            require_once($GLOBALS["ENGINE_PATH"]."/functions".DIRECTORY_SEPARATOR."json_response.php");
+            $GLOBALS["COMMAND_PROMPT"]="";
+
+            setActions();
+        } else {
+            $GLOBALS["FUNC_LIST"][]="Talk";
+            $GLOBALS["COMMAND_PROMPT"]="";
+
+        }
+
+        $jsonformat= json_encode(["character"=>$GLOBALS["HERIKA_NAME"],
+        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+        "message"=>"lines of dialogue",
+        "mood"=>"One of :".implode("|",explode(",",$GLOBALS["EMOTEMOODS"])),
+        "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
+        "target"=>"action target actor|action destination location name",
+        "lang"=>"language used, (es|en|fr|...)"]);
+    
+        
+        $minimalContextData = array_slice($contextData, -5);
+        $minimalContext=[];
+        foreach ($minimalContextData as $ele) {
+            if (strpos($ele["content"],"#MEMORY")===false) {
+                $minimalContext[]="{$ele["content"]}";
+            }
+        }
+        array_pop($minimalContext);
+        
+        $contextData2=[
+            array('role' => 'system', 'content' => "Create a JSON object with this format: $jsonformat , using a 'Generated dialogue line' as source. "),
+            array('role' => 'user', 'content' => "* Available actions:\n".$GLOBALS["COMMAND_PROMPT"]),
+            array('role' => 'user', 'content' => "* Historic context information:\n".implode("\n",$minimalContext)),
+            array('role' => 'user', 'content' => "* Generated dialogue line: <$buffer>"),
+            array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
+        ];
+    
+        $connector=new LLMConnector();
+        $currentConnectorData=$connector->getById($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"]); // Asuming primary id
+    
+       
+
+        $connector->setOldGlobals($currentConnectorData);
+    
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+    
+        $buffer2=$connectionHandler->fast_request($contextData2,[]);
+        unset($GLOBALS["_JSON_BUFFER"]);
+        $finalRes=__jpd_decode_lazy($buffer2);
+        file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", $buffer2, FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", print_r($finalRes,true), FILE_APPEND);
+        unset($GLOBALS["_JSON_BUFFER"]);
+        $fakeObject["choices"][0]=[
+            "index"=>0,
+            "delta"=>["role"=>"assistant","content"=>json_encode($finalRes)]
+        ];
+
+        $connectionHandler->primary_handler=fopen("php://memory", "r+");// Total hack, we're emulating streaming mode.
+        $fakedStream='data: '.json_encode($fakeObject);
+        fwrite($connectionHandler->primary_handler,$fakedStream);
+        rewind($connectionHandler->primary_handler);
+        
+        error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}" );
+
+    } else {
+
+        $connectionHandler->open($contextData,$overrideParameters);
+            /* *****
+        Player TTS
+
+        Player TTS. We overwrite some confs an then restore them.
+        */
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
+            require(__DIR__."/../processor/player_tts.php");
+        }
     }
+
+   
 
 
 
@@ -3309,7 +3398,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
     // This should be done at NpcMaster::createProfile
     global $db; 
 
-    if ($npcname=="The Narrator")   // Refuse to add Narrator
+    if ($npcname=="The Narrator")   // Refuse to add Narrator [review this]
         return;
 
     $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
@@ -3322,7 +3411,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
     $currentNpcData=$npcMaster->getByName($npcname);
 
 
-    if (!$currentNpcData || $overwrite) {
+    if (!$currentNpcData || $overwrite ) {
         
         error_log("Creating/overwriting:$overwrite  profile for $npcname");
         //sleep (1);
@@ -3339,12 +3428,14 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
 
 
         if (empty($GLOBALS["CORE_LANG"])) {
+            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
             $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
             $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
             // Query for new HERIKA fields
             $npcNewFields=$db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates where npc_name='$codename'");
         } else {
+            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             if (!isset($npcTemlate[0])) {
@@ -3387,7 +3478,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
         if (isset($npcTemlate[0]) && is_array($npcTemlate[0])) {
 
            
-
+            //TODO review these mappings (dont match NpcMaster)
             $npcMaster->create([
 
                 "npc_name"=>$npcname,
@@ -3396,6 +3487,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                 'core' => $npcname.".".$npcNewFields[0]["npc_appearance"] ?? '',
                 'relationships' => $npcNewFields[0]["npc_relationships"] ?? '',
                 'occupation' => $npcNewFields[0]["npc_occupation"] ?? '',
+                'appearance' => $npcNewFields[0]["npc_appearance"] ?? '',
                 'skills' => $npcNewFields[0]["npc_skills"] ?? '',
                 'speechstyle' => $npcNewFields[0]["npc_speechstyle"] ?? '',
                 'goals' => $npcNewFields[0]["npc_goals"] ?? '',
@@ -3406,8 +3498,8 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
 
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
-           
 
+            //TODO review these fields - (dont match with npc master, coalesce doesnt match migration logic)
             // Query for new HERIKA fields for bracket match
             $npcNewFields2 = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
 
@@ -3416,7 +3508,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                     $core_data=".".$npcNewFields2[0]["npc_appearance"];
                 else
                     $core_data="";
-
+                //TODO review these mappings (dont match NpcMaster)
                 $npcMaster->create([
                     "npc_name"=>$npcname,
                     'npc_static_bio' => $npcNewFields2[0]["npc_background"] ?? '',
@@ -3424,6 +3516,7 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
                     'core' => $npcname.$core_data,
                     'relationships' => $npcNewFields2[0]["npc_relationships"] ?? '',
                     'occupation' => $npcNewFields2[0]["npc_occupation"] ?? '',
+                    'appearance' => $npcNewFields2[0]["npc_appearance"] ?? '',
                     'skills' => $npcNewFields2[0]["npc_skills"] ?? '',
                     'speechstyle' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
                     'goals' => $npcNewFields2[0]["npc_goals"] ?? '',

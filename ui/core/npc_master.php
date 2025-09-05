@@ -140,7 +140,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
         if ($id <= 0) {
             // Create new NPC and return ID
             $allowed = [
-                'npc_name','npc_favorite','lock_profile','prompt_head','npc_static_bio','oghma_knowledge_tags','emote_moods','personality','relationships','occupation','skills','speechstyle','goals','voiceid','metadata','extended_data','gender','race','refid','profile_id','dynamic_profile','gamets_last_updated','base','core','tags'
+                'npc_name','npc_favorite','lock_profile','prompt_head','npc_static_bio','oghma_knowledge_tags','emote_moods','personality','relationships','occupation','appearance','skills','speechstyle','goals','voiceid','metadata','extended_data','gender','race','refid','profile_id','dynamic_profile','gamets_last_updated','base','core','tags'
             ];
             $cols = [];
             $vals = [];
@@ -490,6 +490,12 @@ if (isset($_GET['race_icon'])) {
             <label for="personality">Personality</label>
             <textarea id="personality" name="personality" placeholder="Personality traits and speaking characteristics."><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
             <small class="hint">Concise traits that guide tone and behavior. Avoid contradictions with Core.</small>
+        </div>
+
+        <div class="form-item">
+            <label for="appearance">Appearance</label>
+            <textarea id="appearance" name="appearance" placeholder="Physical appearance."><?= htmlspecialchars($editItem["appearance"] ?? "") ?></textarea>
+            <small class="hint">Physical appearance.</small>
         </div>
 
         <div class="form-item">

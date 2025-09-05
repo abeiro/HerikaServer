@@ -121,7 +121,8 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
                 $temp = trim($data[$headerMap['xvasynth_voiceid']]);
                 $xvasynth_voiceid = ($temp !== '') ? $temp : null;
             }
-            
+
+            // TODO review these fields - dont match npc master
             // Extract extended biography fields
             $npc_background = null;
             if (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
@@ -177,7 +178,8 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
                 $errorCount++;
                 continue;
             }
-            
+
+            // TODO review these fields, dont match npc master
             // Insert or update record using upsertRowOnConflict
             try {
                 $db->upsertRowOnConflict(

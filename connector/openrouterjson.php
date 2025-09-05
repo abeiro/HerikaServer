@@ -1037,6 +1037,12 @@ class openrouterjson
         return !$this->primary_handler || feof($this->primary_handler);
     }
 
+    public function setDone()
+    {
+        $this->_forcedClose=true;
+        
+    }
+
     public function fast_request($contextData, $customParms)
     {
         
@@ -1240,7 +1246,7 @@ class openrouterjson
             'audit_request',
                 array(
                     'request' => json_encode($data),
-                    'result' => $error["message"],
+                    'result' => $json_response??$error["message"],
                     'connector'=>$this->name,
                     'url'=>$this->_url
                 ));

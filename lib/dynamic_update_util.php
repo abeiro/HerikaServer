@@ -573,7 +573,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
 //            'core' => 'Core', //depends what users put if its instructional or biographical
             'npc_static_bio' => 'Basic Summary',
             'personality' => 'Personality Traits',
-//            'appearance' => 'Physical Appearance', //not migrated?
+            'appearance' => 'Physical Appearance',
             'relationships' => 'Relationships',
             'occupation' => 'Occupation & Role',
             'skills' => 'Skills & Abilities',

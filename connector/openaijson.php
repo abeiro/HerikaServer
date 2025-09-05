@@ -934,20 +934,10 @@ class openaijson
             'model' => $this->_model,
             'messages' => $contextData,
             'stream' => false, 
-            'max_tokens' => $MAX_TOKENS,
+            'max_completion_tokens' => $MAX_TOKENS,
             'temperature' => $temperature, 
-            'top_k' => $top_k,
-            'top_p' => $top_p, 
-            'min_p' => $min_p,
-            'top_a' => $top_a,
-            'presence_penalty' => $presence_penalty, 
-            'frequency_penalty' => $frequency_penalty, 
-            'repetition_penalty' => $repetition_penalty,
-            'stop'=>[
-                    'USER',
-                ],
-            'transforms'=>[]
         );
+
 
         if (isset($GLOBALS["CONNECTOR"][$this->name]["stop"])&&sizeof($GLOBALS["CONNECTOR"][$this->name]["stop"])>0) {
             $data["stop"]=$GLOBALS["CONNECTOR"][$this->name]["stop"];
@@ -958,17 +948,17 @@ class openaijson
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
+                unset($data["max_completion_tokens"]);
             } elseif ($customParms["MAX_TOKENS"]) {
-                $data["max_tokens"]=$customParms["MAX_TOKENS"];
+                $data["max_completion_tokens"]=$customParms["MAX_TOKENS"];
             }
         }
 
         if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
             if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_tokens"]);
+                unset($data["max_completion_tokens"]);
             } else {
-                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
+                $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
 
             }
         }
@@ -984,11 +974,10 @@ class openaijson
             $data[$parm]=$value;
         }
         
-        $data["transforms"]=[];
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
      
-        $data["max_tokens"]+=0;
+        $data["max_completion_tokens"]+=0;
         
         $headers = array(
             'Content-Type: application/json',
@@ -1008,9 +997,9 @@ class openaijson
 
         $context = stream_context_create($options);
         
-        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
-        $json_response=file_get_contents($url, false, $context);
+        $json_response=file_get_contents($this->_url, false, $context);
         file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
 
         if ($json_response) {
@@ -1029,6 +1018,12 @@ class openaijson
             
 
 
+    }
+
+    public function setDone()
+    {
+        $this->_forcedClose=true;
+        
     }
 
 }

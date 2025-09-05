@@ -482,13 +482,14 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["PLAYER_RESPEECH"]) && $GLOBALS["PLAYER_RESPEECH"]) {
     // Use preg_replace to remove the name and colon before the dialogue
-    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+    $cleaned_player_dialogue = addcslashes(preg_replace('/^[^:]+:/', '', $gameRequest[3]),"'");
     error_log($cleaned_player_dialogue);
     if (strpos($gameRequest[3],"**")===0 || strpos($cleaned_player_dialogue,"**")===0 ) {
         // If player speech starts with **
         error_log("Overwritting user prompt $cleaned_player_dialogue");
 
-        $newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
+        //$newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
+        $newSpeech=`php player_rewrite.php '$cleaned_player_dialogue'`;
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$newSpeech";
 
     }
@@ -510,7 +511,7 @@ if (isset($_GET["profile"])) {
     if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
         // error_log("PROFILE: {$_GET["profile"]}");
         // Migration here to new system
-        error_log("[CHIM CORE] MIGRATING PROFILE");
+        error_log("[CHIM CORE] MIGRATING PROFILE {$_GET["profile"]}}");
 
         $npcMaster=new NpcMaster();
         $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
@@ -543,7 +544,7 @@ if (isset($_GET["profile"])) {
 
         $profile=new CoreProfile();
         $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
-    
+        $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
         $connector=new LLMConnector();
         $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
 
@@ -595,6 +596,8 @@ if (isset($_GET["profile"])) {
             $profile=new CoreProfile();
             $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
         
+            $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
+
             $connector=new LLMConnector();
             $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
 
@@ -631,7 +634,7 @@ if (isset($_GET["profile"])) {
     $GLOBALS["TTSFUNCTION_PLAYER"]=$OVERRIDES["TTSFUNCTION_PLAYER"];
     $GLOBALS["TTSFUNCTION_PLAYER_VOICE"]=$OVERRIDES["TTSFUNCTION_PLAYER_VOICE"];
     $GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"]=$OVERRIDES["TTSFUNCTION_PLAYER_LANGUAGE"];
-
+    
     // $GLOBALS["PROMPT_HEAD"]=$OVERRIDES["PROMPT_HEAD"];
     // error_log("Using profile {$GLOBALS["TTSFUNCTION_PLAYER"]} {$_GET["profile"]} / ".$path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
     

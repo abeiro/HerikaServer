@@ -37,6 +37,7 @@ CREATE TABLE public.core_npc_master_history (
     personality text,
     relationships text,
     occupation text,
+    appearance text,
     skills text,
     speechstyle text,
     goals text,
