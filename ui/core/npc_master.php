@@ -405,6 +405,17 @@ if (isset($_GET['race_icon'])) {
             <small class="hint">Display name shown in UI and used to build prompts. Changing it will also update the MD5 key.</small>
         </div>
 
+        <div class="form-item">
+            <label for="profile_id">Profile</label>
+            <select id="profile_id" name="profile_id">
+                <option value="">-- Select Profile --</option>
+                <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); ?>
+                    <option value="<?= htmlspecialchars($pid) ?>" <?= ((string)($editItem['profile_id'] ?? '') === $pid) ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <small class="hint">Select which core profile this NPC uses.</small>
+        </div>
+
         <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
             <label for="lock_profile">Lock Profile</label>
             <div class="checkbox-inline">
