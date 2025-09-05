@@ -357,7 +357,14 @@ if (isset($_GET['race_icon'])) {
 
 <?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ob_end_clean(); ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<style>html,body{background:#2a2a2a;} main{background:#2a2a2a; padding:12px;} .form-container{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px;}</style>
+<style>html,body{background:#2a2a2a;} main{background:#2a2a2a; padding:12px;} .form-container{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px;}
+.modal-inline-actions{display:flex; gap:6px; align-items:center; justify-content:flex-end; margin-bottom:8px;}
+.modal-inline-actions .btn-toggle{background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; cursor:pointer;}
+.modal-inline-actions .btn-toggle:hover{color: rgb(242, 124, 17); text-decoration:none;}
+.modal-inline-actions .btn-toggle.active{color:#ffd700; font-weight:700;}
+.modal-inline-actions .btn-toggle[data-lock]{color:#e9efff;}
+.modal-inline-actions .btn-toggle.active[data-lock]{color: rgb(242, 124, 17);}
+</style>
 <form method="post" onsubmit='return false' style='display:block'>
 <?php } else { ?>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
@@ -378,6 +385,14 @@ if (isset($_GET['race_icon'])) {
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
     <?php endif; ?>
 
+    <?php $isPartial = (isset($_GET['partial']) && $_GET['partial']=='1'); $isFav = !empty($editItem['npc_favorite']); $isLock = !empty($editItem['lock_profile']); ?>
+    <?php if ($isPartial): ?>
+    <div class="modal-inline-actions">
+        <a id="modal_fav_btn" class="btn btn-toggle<?= $isFav? ' active':'' ?>" href="#" title="Toggle favorite" data-favorite><?= $isFav? '★' : '☆' ?></a>
+        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
+    </div>
+    <?php endif; ?>
+
     <div class="form-grid">
         <div class="form-item span-2">
             <label for="npc_name">NPC Name</label>
@@ -385,7 +400,7 @@ if (isset($_GET['race_icon'])) {
             <small class="hint">Display name shown in UI and used to build prompts. Changing it will also update the MD5 key.</small>
         </div>
 
-        <div class="form-item">
+        <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
             <label for="lock_profile">Lock Profile</label>
             <div class="checkbox-inline">
                 <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
@@ -393,7 +408,7 @@ if (isset($_GET['race_icon'])) {
             </div>
         </div>
 
-        <div class="form-item">
+        <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
             <label for="npc_favorite">Favorite</label>
             <div class="checkbox-inline">
                 <input type="checkbox" id="npc_favorite" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
@@ -548,6 +563,35 @@ if (isset($_GET['race_icon'])) {
                     alert('Save failed: '+((json && json.error) ? json.error : res.status));
                 }
             });
+        })();
+        </script>
+        <script>
+        (function(){
+            const favBtn = document.getElementById('modal_fav_btn');
+            const lockBtn = document.getElementById('modal_lock_btn');
+            const idVal = <?= json_encode($editItem['id'] ?? '') ?>;
+            if (favBtn && idVal){
+                favBtn.addEventListener('click', async function(e){
+                    e.preventDefault();
+                    try{
+                        const fd = new FormData(); fd.append('toggle_favorite','1'); fd.append('id', idVal);
+                        const res = await fetch('npc_master.php', { method:'POST', body: fd });
+                        let json={}; try{ json=await res.json(); }catch(_e){}
+                        if (json && json.ok){ const active = Number(json.favorite||0)===1; favBtn.classList.toggle('active', active); favBtn.textContent = active ? '★' : '☆'; }
+                    }catch(_e){}
+                });
+            }
+            if (lockBtn && idVal){
+                lockBtn.addEventListener('click', async function(e){
+                    e.preventDefault();
+                    try{
+                        const fd = new FormData(); fd.append('toggle_lock','1'); fd.append('id', idVal);
+                        const res = await fetch('npc_master.php', { method:'POST', body: fd });
+                        let json={}; try{ json=await res.json(); }catch(_e){}
+                        if (json && json.ok){ const active = Number(json.locked||0)===1; lockBtn.classList.toggle('active', active); lockBtn.textContent = active ? '🔒' : '🔓'; }
+                    }catch(_e){}
+                });
+            }
         })();
         </script>
     <?php } else { ?>
