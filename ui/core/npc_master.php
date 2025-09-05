@@ -298,8 +298,8 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <?php endfor; ?>
       <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make(min($totalPages,$page+1)) ?>">Next</a>
       <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make($totalPages) ?>">Last</a>
-      <span style="border:none; background:transparent; color:#9fb1c9;">Page <?= $page ?> / <?= $totalPages ?></span>
-      <span style="border:none; background:transparent; color:#9fb1c9;">Total <?= $totalRows ?></span>
+      <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
+      <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
       <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
     </div>
     <div class="npc-grid">
@@ -366,8 +366,8 @@ if (isset($_GET['race_icon'])) {
     .form-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 16px; }
     @media (max-width: 900px){ .form-grid { grid-template-columns: 1fr; } }
     .form-item { display:flex; flex-direction:column; gap:6px; }
-    .form-item label { font-weight:700; color:#e9efff; }
-    .form-item .hint { color:#9fb1c9; font-size:12px; line-height:1.35; }
+    .form-item label { font-weight:700; color:rgb(242, 124, 17); }
+    .form-item .hint { color:#e9efff; font-size:12px; line-height:1.35; }
     .form-item textarea { min-height:96px; }
     .form-item input[type="text"], .form-item textarea, .form-item select { background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 10px; }
     .form-item input[type="checkbox"] { transform: scale(1.05); }
@@ -423,6 +423,12 @@ if (isset($_GET['race_icon'])) {
             <label for="refid">Ref ID</label>
             <input type="text" id="refid" name="refid" placeholder="Game reference ID (000...)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
             <small class="hint">Skyrim reference ID for in-game linkage (optional).</small>
+        </div>
+
+        <div class="form-item">
+            <label for="oghma_knowledge_tags">Oghma Tags</label>
+            <input type="text" id="oghma_knowledge_tags" name="oghma_knowledge_tags" placeholder="Comma-separated knowledge tags" value="<?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?>">
+            <small class="hint">Used by Oghma systems for knowledge lookup and indexing.</small>
         </div>
 
         
@@ -571,7 +577,7 @@ if (isset($_GET['race_icon'])) {
 .npc-divider { height:1px; background:#4a4a4a; margin:2px 0 6px; }
 .npc-fields { display:flex; flex-direction:column; gap:8px; }
 .npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; }
-.npc-muted { color:#9fb1c9; }
+.npc-muted { color:rgb(242, 124, 17); }
 .npc-actions { display:flex; gap:8px; margin-top:6px; justify-content:center; }
 .npc-actions .btn { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; text-decoration:none; cursor:pointer; }
 .npc-actions .btn:hover { background:#3a3a3a; }
@@ -634,8 +640,8 @@ if (isset($_GET['race_icon'])) {
   <?php endfor; ?>
   <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make(min($totalPages,$page+1)) ?>">Next</a>
   <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make($totalPages) ?>">Last</a>
-  <span style="border:none; background:transparent; color:#9fb1c9;">Page <?= $page ?> / <?= $totalPages ?></span>
-  <span style="border:none; background:transparent; color:#9fb1c9;">Total <?= $totalRows ?></span>
+  <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
+  <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
   <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
 </div>
 <?php endif; ?>
