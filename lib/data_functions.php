@@ -182,11 +182,13 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 
                 $actorName = preg_replace("/\s*\(.*?\)\s*/", "", $actor);
                 $codename = npcNameToCodename($actorName);
-                // Here we need the new npc profiles table, to put relevant info of each character in scene
-                $npcknowledge=$GLOBALS["db"]->fetchAll("SELECT COALESCE(NULLIF(trim(npc_dynamic), ''), npc_misc) as npc_dynamic
-                 FROM combined_npc_templates where npc_name='$codename' and 1=2");// Disabled ATM
-                if (isset($npcknowledge[0]))
-                    $actorDetailedListWithProfile[]="$actor:".trim($npcknowledge[0]["npc_dynamic"]." $ittext");
+                $npcMaster=new NpcMaster();
+                $currentNpcData=$npcMaster->getByName($actorName);
+
+                
+                if (isset($currentNpcData["core"]) && !empty($currentNpcData["core"])) {
+                    $actorDetailedListWithProfile[]=trim("{$currentNpcData["core"]} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
+                }
                 else
                     $actorDetailedListWithProfile[]="$ittext";
             }
@@ -2477,7 +2479,7 @@ function call_llm() {
     if (isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         $connector=new LLMConnector();
         $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
-        error_log("[CORE SYSTEM] Using new profile system {$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["model"]}");
+        error_log("[CORE SYSTEM] Using new profile system {$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["driver"]}/{$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["model"]}");
     }
 
     if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
