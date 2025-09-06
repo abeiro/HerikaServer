@@ -883,8 +883,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 if (!mb_check_encoding($dynamicContent, 'UTF-8')) {
                     $dynamicContent = mb_convert_encoding($dynamicContent, 'UTF-8', 'UTF-8'); // Fix encoding
                 }
-                if (strlen($dynamicContent) > 5000) {
-                    $dynamicContent = substr($dynamicContent, 0, 5000) . '... [truncated]'; // Limit length
+                if (strlen($dynamicContent) > 50000) {
+                    $dynamicContent = substr($dynamicContent, 0, 50000) . '... [truncated]'; // Limit length
                 }
                 $dynamicContent = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $dynamicContent); // Escape PHP tags
                 

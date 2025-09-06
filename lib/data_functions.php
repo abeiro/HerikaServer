@@ -3820,8 +3820,8 @@ function write_php_assignments(array $assignments, string $filePath): bool {
                 if (!mb_check_encoding($cleaned, 'UTF-8')) {
                     $cleaned = mb_convert_encoding($cleaned, 'UTF-8', 'UTF-8'); // Fix encoding
                 }
-                if (strlen($cleaned) > 10000) {
-                    $cleaned = substr($cleaned, 0, 10000) . '... [truncated]'; // Limit length
+                if (strlen($cleaned) > 100000) {
+                    $cleaned = substr($cleaned, 0, 100000) . '... [truncated]'; // Limit length
                 }
                 $cleaned = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $cleaned); // Escape PHP tags
                 
@@ -3938,8 +3938,8 @@ function safe_var_export($value, $return = true) {
         $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
         
         // Limit length to prevent extremely long strings
-        if (strlen($value) > 10000) {
-            $value = substr($value, 0, 10000) . '... [truncated]';
+        if (strlen($value) > 100000) {
+            $value = substr($value, 0, 100000) . '... [truncated]';
         }
         
         // Ensure balanced quotes and backslashes don't break escaping
