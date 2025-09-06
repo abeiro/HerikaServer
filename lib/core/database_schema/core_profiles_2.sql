@@ -31,3 +31,5 @@ ADD CONSTRAINT profiles_llm_formatter_id_fkey
 FOREIGN KEY (llm_formatter_id) REFERENCES public.core_llm_connector(id);
 
 
+ALTER TABLE public.core_npc_master
+ADD COLUMN appearance text;

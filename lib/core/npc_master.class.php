@@ -283,7 +283,7 @@ class NpcMaster {
         $currentNpcData['lock_profile'] = isset($OLD_GLOBALS_ARRAY['LOCK_PROFILE']) ? ($OLD_GLOBALS_ARRAY['LOCK_PROFILE'] ? 1 : 0) : 0;
         $currentNpcData['dynamic_profile'] = isset($OLD_GLOBALS_ARRAY['DYNAMIC_PROFILE']) ? ($OLD_GLOBALS_ARRAY['DYNAMIC_PROFILE'] ? 1 : 0) : 0;
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERS'])) $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_PERS'];
-        if (isset($OLD_GLOBALS_ARRAY['PROMPT_HEAD'])) $currentNpcData['npc_static_bio'] = $OLD_GLOBALS_ARRAY['PROMPT_HEAD'];
+        if (isset($OLD_GLOBALS_ARRAY['PROMPT_HEAD'])) $currentNpcData['prompt_head'] = $OLD_GLOBALS_ARRAY['PROMPT_HEAD'];
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'])) $currentNpcData['npc_static_bio'] .= $OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'];
         if (isset($OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'])) $currentNpcData['oghma_knowledge_tags'] = $OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'];
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
@@ -344,10 +344,10 @@ class NpcMaster {
         if (isset($currentNpcData['speechstyle'])) $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'];
         if (isset($currentNpcData['emote_moods']) && !empty(trim($currentNpcData['emote_moods']))) $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'];
         if (isset($currentNpcData['goals'])) $GLOBALS['HERIKA_GOALS'] = $currentNpcData['goals'];
-        if (isset($currentNpcData['core'])) 
+        if (isset($currentNpcData['core']))
             $GLOBALS['HERIKA_PERS'] = "Roleplay as {$currentNpcData['core']}";
         else
-            $GLOBALS['HERIKA_PERS'] = "Roleplay as  {$GLOBALS['HERIKA_NAME']}";
+            $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}";
 
         // Check this
         if (isset($currentNpcData['voiceid']) && $currentNpcData['voiceid']) {

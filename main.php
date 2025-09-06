@@ -587,7 +587,7 @@ if (isset($_GET["profile"])) {
 
         
         } else {
-            error_log("[CHIM CORE] USING CORE PROFILE")    ;
+            error_log("[CHIM CORE] USING CORE PROFILE {$currentNpcData["npc_name"]}")    ;
         
 
             // Profile has been migrated
@@ -656,7 +656,6 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
-$GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 
 
 // End of profile selection
@@ -664,10 +663,43 @@ $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 // This is the correct place, after arse $gameRequest and before starting to do substituions
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
-    // When chatnf_book (make the AI to read a book), will override profile and will select default one
-    Logger::info("Override conf with default");
-    require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
-    $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
+
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByName("The Narrator");
+    error_log("[CHIM CORE] [BOOK OVERRIDE] USING CORE PROFILE {$currentNpcData["npc_name"]}")    ;
+
+    $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+    $profile=new CoreProfile();
+    $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+
+    $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
+
+    $connector=new LLMConnector();
+    $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
+
+    if (isset($currentActiveModelProfile["value"])) {
+        if ($currentActiveModelProfile["value"]==1) 
+            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+        else if ($currentActiveModelProfile["value"]==2) 
+            $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
+        else if ($currentActiveModelProfile["value"]==3) 
+            $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
+        else if ($currentActiveModelProfile["value"]==4) 
+            $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
+        else
+            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+
+    } else
+            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+    
+
+    $connector->setOldGlobals($currentConnectorData);
+    $profile->setOldGlobals($currentProfileData);
+    $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+
 }
 
 foreach ($gameRequest as $i => $ele) {
@@ -1286,7 +1318,7 @@ if (isset($GLOBALS["PROFILE_PROMPT"])) {
 if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
     
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#Knowlegde\n" . $GLOBALS["OGHMA_HINT"]."\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#Knowledge\n" . $GLOBALS["OGHMA_HINT"]."\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -1338,7 +1370,7 @@ if ($gameRequest[0] == "funcret") {
 
 
 }  else {
-    if (in_array($GLOBALS["CURRENT_CONNECTOR"],["koboldcpp","openai","google_openai","openrouter"])) {  // OLD SCHEMA
+    if (in_array($GLOBALS["CURRENT_CONNECTOR"],["koboldcpp","openai","google_openai","openrouter"]) && false ) {  // OLD SCHEMA
         if (!empty($request)) {
             if (sizeof($memoryInjectionCtx)>0) {
                 if (!isset($prompt)) {
@@ -1382,7 +1414,7 @@ if ($gameRequest[0] == "funcret") {
 //error_log("*TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 //returnLines(["Mmm..let me think"]);
 
-// Global switch. Needed id we need to stop processing because sme function requires it. Example, funret conditions.
+// Global switch. Needed id we need to stop processing because sme function requires it. Example, funcret conditions.
 if (isset($GLOBALS["AVOID_LLM_CALL"])&&($GLOBALS["AVOID_LLM_CALL"])) {
     Logger::info("Terminated by AVOID_LLM_CALL");
     terminate();
@@ -1408,7 +1440,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEP
     require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 }
 
-// audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
+audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 
 $outputWasValid = call_llm();
 

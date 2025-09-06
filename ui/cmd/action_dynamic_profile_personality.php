@@ -143,8 +143,8 @@ if ($method === "POST") {
         // Collect other profile fields for context
         $profileContext = [];
         $profileFields = [
-            'HERIKA_PERS' => 'Basic Summary',
-            'HERIKA_BACKGROUND' => 'Background',
+            'HERIKA_PERS' => 'Core Identity',
+            'HERIKA_BACKGROUND' => 'Basic Summary',
             'HERIKA_APPEARANCE' => 'Physical Appearance',
             'HERIKA_RELATIONSHIPS' => 'Relationships',
             'HERIKA_OCCUPATION' => 'Occupation & Role',
