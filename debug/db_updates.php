@@ -1374,10 +1374,10 @@ if ($checkTableExists("core_npc_master") == -1) {
     Logger::info(__FILE__." core_npc_master exists");
 
 
-if ($checkTableExists(("core_profiles")>0) && $checkVersion("core_profiles") < 20250904002) {
+if ($checkTableExists(("core_profiles")>0) && $checkVersion("core_profiles") < 20250904004) {
     
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles_2.sql"));
-    $updateVersion("core_profiles",20250904002);
+    $updateVersion("core_profiles",20250904004);
 } else
     Logger::info(__FILE__." core_profiles 2 exists");
 

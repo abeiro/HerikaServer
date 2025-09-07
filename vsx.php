@@ -11,6 +11,15 @@ require_once $path . "lib" . DIRECTORY_SEPARATOR . "fuz_convert.php"; // API KEY
 require_once $path . "lib" . DIRECTORY_SEPARATOR . "auditing.php";
 require_once $path . "lib" . DIRECTORY_SEPARATOR . "logger.php";
 
+$db = new sql();
+$GLOBALS["ENGINE_PATH"]=$path;
+
+require_once $path . "lib/core/npc_master.class.php";
+require_once $path . "lib/core/api_badge.class.php";
+require_once $path . "lib/core/core_profiles.class.php";
+require_once $path . "lib/core/llm_connector.class.php";
+require_once $path . "lib/core/tts_connector.class.php";
+
 function normalize_endpoint_url($url)
 {
     // Remove trailing slashes
@@ -21,7 +30,6 @@ function normalize_endpoint_url($url)
 $GLOBALS["AUDIT_RUNID_REQUEST"] = "vsx";
 
 // Put info into DB asap
-$db         = new sql();
 $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
 
 // Lock
