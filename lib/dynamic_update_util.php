@@ -731,8 +731,8 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
                 if (!mb_check_encoding($newValue, 'UTF-8')) {
                     $newValue = mb_convert_encoding($newValue, 'UTF-8', 'UTF-8'); // Fix encoding
                 }
-                if (strlen($newValue) > 5000) {
-                    $newValue = substr($newValue, 0, 5000) . '... [truncated]'; // Limit length
+                if (strlen($newValue) > 50000) {
+                    $newValue = substr($newValue, 0, 50000) . '... [truncated]'; // Limit length
                 }
                 $newValue = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $newValue); // Escape PHP tags
                 
