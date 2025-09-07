@@ -12,7 +12,8 @@ ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+// Removed navbar include for a clean modal view
+// include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
@@ -49,7 +50,7 @@ if (php_sapi_name() != "cli") {
         <style>
             /* Override main container styles */
             main {
-                padding-top: 160px; /* Space for navbar */
+                padding-top: 20px; /* No navbar */
                 padding-bottom: 40px; /* Reduced space for footer */
                 padding-left: 10px;
             }

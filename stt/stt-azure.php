@@ -12,7 +12,16 @@ function stt($file)
     global $AZURETTS_CONF;
 
     $region = $GLOBALS["TTS"]["AZURE"]["region"];
-    $apiKey = (isset($GLOBALS["STT"]["AZURE"]["API_KEY"])) ? $GLOBALS["STT"]["AZURE"]["API_KEY"] : "";
+    // Resolve API key: prefer STT conf, fallback to API Badge 'Azure'
+    $apiKey = trim($GLOBALS["STT"]["AZURE"]["API_KEY"] ?? '');
+    if ($apiKey === '') {
+        try {
+            if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) require_once($localPath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+            if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) $GLOBALS["db"] = new sql();
+            $row = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='azure' LIMIT 1");
+            if (is_array($row) && !empty($row['api_key'])) $apiKey = $row['api_key'];
+        } catch (Throwable $_e) {}
+    }
     $lang=($GLOBALS["STT"]["AZURE"]["LANG"]) ? $GLOBALS["STT"]["AZURE"]["LANG"] : "en-US";
     $profanity=($GLOBALS["STT"]["AZURE"]["profanity"]) ? $GLOBALS["STT"]["AZURE"]["profanity"] : "masked";
 

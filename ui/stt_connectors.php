@@ -6,6 +6,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 
 // Determine web root (match other pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -137,6 +138,8 @@ h1.stt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 .btn-primary { background:#204e7a; color:#fff; border:1px solid rgba(138,155,182,0.4); border-radius:8px; padding:8px 14px; cursor:pointer; }
 .btn-primary:hover { background:#285c8f; }
 .help { margin-top:6px; color:#bbb; font-size:12px; grid-column: 1 / -1; }
+.badge-ok { color:#6dd19c; }
+.badge-missing { color:#ffb862; }
 @media (max-width: 900px) { main { padding-left: 5%; padding-right: 5%; } .provider-body { grid-template-columns: 1fr; } }
 </style>
 
@@ -178,7 +181,23 @@ h1.stt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 							</div>
 						</div>
 						<div class="provider-body">
-							<?php foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $ftype = $def['type'] ?? 'string'; $plainName = 'STT ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? ''; ?>
+							<?php
+							// Query API badges once for status display
+							$apiBadges = [];
+							try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) $GLOBALS['db'] = new sql(); $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC"); } catch (Throwable $_e) {}
+							foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $ftype = $def['type'] ?? 'string'; $plainName = 'STT ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? '';
+								// If API_KEY field, show badge status instead of input
+								$lnameProv = strtolower($providerKey);
+								if ($fname === 'API_KEY' && in_array($lnameProv, ['whisper','azure','deepgram'])) {
+									$badgeName = ($lnameProv==='whisper') ? 'OpenAI' : ucfirst($lnameProv);
+									$hasKey = false;
+									foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
+									echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
+									echo '<div>'.($hasKey?'<span class="badge-ok">Configured</span>':'<span class="badge-missing">Missing</span>').' — <a href="'.htmlspecialchars($webRoot).'/ui/core/api_badge.php" target="_blank" rel="noopener">Manage Keys</a></div>';
+									if (!empty($help)) echo '<div class="help">'.$help.'</div>';
+									continue;
+								}
+							?>
 								<label for="f_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
 								<?php if ($ftype === 'boolean'): ?>
 									<input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
@@ -212,6 +231,7 @@ h1.stt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 			</div>
 			<div class="actions">
 				<button type="submit" class="btn-primary" name="save_all" value="1">Save</button>
+				<button type="button" id="btn_test_stt" class="btn-primary" style="margin-left:8px;">Test</button>
 			</div>
 		</div>
 	</form>
@@ -225,5 +245,46 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+
+<script>
+(function(){
+    const MODAL_ID = 'stttest_modal';
+    const modal = document.createElement('div');
+    modal.id = MODAL_ID;
+    modal.style.cssText = 'position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
+    modal.innerHTML = `
+        <div style="width:90%; max-width:1100px; height:80vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
+            <button id=\"stttest_close\" style=\"position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;\">Close</button>
+            <div id=\"stttest_loading\" style=\"position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;\">
+                <div style=\"width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: spin 1s linear infinite;\"></div>
+            </div>
+            <iframe id=\"stttest_iframe\" src=\"about:blank\" style=\"width:100%; height:100%; border:0; background:#0e1624; position:relative; z-index:1;\"></iframe>
+        </div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+    document.body.appendChild(modal);
+    function openModal(url){ const iframe = document.getElementById('stttest_iframe'); const loader = document.getElementById('stttest_loading'); if (loader) loader.style.display = 'flex'; iframe.onload = function(){ if (loader) loader.style.display = 'none'; }; iframe.src = url; modal.style.display = 'flex'; }
+    function closeModal(){ modal.style.display = 'none'; try { document.getElementById('stttest_iframe').src='about:blank'; } catch(_){} }
+    document.addEventListener('click', function(e){ if (e.target && e.target.id==='stttest_close') closeModal(); });
+    modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
+    document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+
+    const testBtn = document.getElementById('btn_test_stt');
+    if (testBtn){
+        testBtn.addEventListener('click', async function(){
+            // Save current form first to ensure STTFUNCTION and settings are applied
+            try {
+                const form = document.querySelector('form[method="post"]');
+                if (form){
+                    const fd = new FormData(form);
+                    if (!fd.has('save_all')) fd.append('save_all','1');
+                    await fetch('stt_connectors.php', { method:'POST', body: fd });
+                }
+            } catch(_e){}
+            const cb = Date.now();
+            openModal('<?php echo $webRoot; ?>/ui/tests/stt-test.php?cb='+cb);
+        });
+    }
+})();
+</script>
 
 

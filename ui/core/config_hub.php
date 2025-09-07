@@ -49,9 +49,9 @@ main { padding-top: 160px; }
         <button class="tab-button" data-tab="profiles">🏗️Profile Builder</button>
         <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
         <button class="tab-button" data-tab="ttscfg">🔊TTS Connectors</button>
-        <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
         <button class="tab-button" data-tab="sttcfg">🎤STT Connectors</button>
         <button class="tab-button" data-tab="ittcfg">🖼️ITT Connectors</button>
+        <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
         <button class="tab-button" data-tab="keys">🔑API Keys</button>
         <button class="tab-button" data-tab="globals">🌐Global Settings</button>
         <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
