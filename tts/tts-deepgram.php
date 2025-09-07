@@ -3,7 +3,16 @@
 
 $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
 
-    $apiKey = $GLOBALS["TTS"]["deepgram"]["API_KEY"];
+    // Resolve API key: prefer API Badge 'Deepgram', fallback to schema
+    $apiKey = '';
+    try {
+        if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
+        if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) $GLOBALS["db"] = new sql();
+        $row = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='deepgram' LIMIT 1");
+        if (is_array($row) && !empty($row['api_key'])) $apiKey = trim($row['api_key']);
+    } catch (Throwable $_e) {}
+    if ($apiKey === '') $apiKey = $GLOBALS["TTS"]["deepgram"]["API_KEY"];
+
     $voiceModel = isset($GLOBALS["TTS"]["deepgram"]["model"]) ? $GLOBALS["TTS"]["deepgram"]["model"] : "aura-2-thalia-en";
     $bitRate = isset($GLOBALS["TTS"]["deepgram"]["bitrate"]) ? $GLOBALS["TTS"]["deepgram"]["bitrate"] : 24000;
     $encoding = "linear16";

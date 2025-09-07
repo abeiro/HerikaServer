@@ -5,7 +5,15 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash) 
 
 	    global $ELEVEN_LABS,$ELEVENLABS_API_KEY;
 
-		$apiKey=$GLOBALS["TTS"]["ELEVEN_LABS"]["API_KEY"];
+		// Resolve API key: prefer API Badge 'ElevenLabs', fallback to schema
+		$apiKey = '';
+		try {
+			if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
+			if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) $GLOBALS["db"] = new sql();
+			$row = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='elevenlabs' LIMIT 1");
+			if (is_array($row) && !empty($row['api_key'])) $apiKey = trim($row['api_key']);
+		} catch (Throwable $_e) {}
+		if ($apiKey === '') $apiKey=$GLOBALS["TTS"]["ELEVEN_LABS"]["API_KEY"];
 
 		// Cache 
 		if (!isset($GLOBALS["AVOID_TTS_CACHE"]))
@@ -13,8 +21,6 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash) 
 				return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
 	
 	    $starTime = microtime(true);
-
-		
 
 		$voice=$GLOBALS["TTS"]["ELEVEN_LABS"]["voice_id"];
 

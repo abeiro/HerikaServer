@@ -7,6 +7,7 @@ require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
 // Load actual configuration first; fallback to sample if missing
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 
 // Determine web root (match other pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -188,7 +189,23 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 							</div>
 						</div>
 						<div class="provider-body">
-							<?php foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $lname = strtolower($fname); if ($lname === 'voiceid' || $lname === 'voicelogic') continue; $ftype = $def['type'] ?? 'string'; $plainName = 'TTS ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? ''; ?>
+							<?php
+							// Load API badges for status (once)
+							$apiBadges = [];
+							try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) $GLOBALS['db'] = new sql(); $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC"); } catch (Throwable $_e) {}
+							foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $lname = strtolower($fname); $lnameNorm = str_replace(['_','-'],'',$lname); if ($lnameNorm === 'voiceid' || $lnameNorm === 'voicelogic') continue; $ftype = $def['type'] ?? 'string'; $plainName = 'TTS ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? '';
+								// API badge status for known providers
+								$provLower = strtolower($providerKey);
+								if ($fname === 'API_KEY' && in_array($provLower, ['azure','eleven_labs','openai','deepgram'])) {
+									$badgeName = ($provLower==='eleven_labs') ? 'ElevenLabs' : ucfirst($provLower);
+									$hasKey = false;
+									foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
+									echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
+									echo '<div>'.($hasKey?'<span style="color:#6dd19c">Configured</span>':'<span style="color:#ffb862">Missing</span>').' — <a href="'.htmlspecialchars($webRoot).'/ui/core/api_badge.php" target="_blank" rel="noopener">Manage Keys</a></div>';
+									if (!empty($help)) echo '<div class="help">'.$help.'</div>';
+									continue;
+								}
+							?>
 								<label for="f_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
 								<?php if ($ftype === 'boolean'): ?>
 									<input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
