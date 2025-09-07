@@ -4,9 +4,9 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
-// Load actual configuration first; fallback to sample if missing
-@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+// Load defaults first, then override with actual configuration (prevents fallback to sample values)
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
+@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 
 // Determine web root (match other pages)
@@ -50,9 +50,9 @@ $ttsMap = [
 	'deepgram' => 'deepgram',
 ];
 
-// Selected provider
+// Selected provider: prefer saved value; only use POST for preview unless saving
 $selectedFunction = tts_current_value('TTSFUNCTION', $currentConf);
-if (isset($_POST['TTSFUNCTION']) && is_string($_POST['TTSFUNCTION'])) {
+if (isset($_POST['TTSFUNCTION']) && is_string($_POST['TTSFUNCTION']) && !isset($_POST['save_all'])) {
 	$selectedFunction = (string)$_POST['TTSFUNCTION'];
 }
 if ($selectedFunction === '' && !empty($ttsOptions)) $selectedFunction = $ttsOptions[0];
@@ -239,6 +239,11 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 			</div>
 			<div class="actions">
 				<button type="submit" class="btn-primary" name="save_all" value="1">Save</button>
+				<?php if ($saveSuccess): ?>
+				<script>
+				setTimeout(function(){ window.location.replace(window.location.pathname + window.location.search); }, 100);
+				</script>
+				<?php endif; ?>
 			</div>
 		</div>
 	</form>
