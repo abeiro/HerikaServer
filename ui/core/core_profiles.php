@@ -456,8 +456,7 @@ $ittById = $byId($ittRows);
             <button type="button" class="pf-tab" data-pane="pane_llm3">LLM 3</button>
             <button type="button" class="pf-tab" data-pane="pane_llm4">LLM 4</button>
             <button type="button" class="pf-tab" data-pane="pane_diary">Diary</button>
-            <button type="button" class="pf-tab" data-pane="pane_tts">TTS</button>
-            <button type="button" class="pf-tab" data-pane="pane_itt">ITT</button>
+            
         </div>
         <div class="pf-pane active" id="pane_llm1">
             <div class="select-row">
@@ -504,14 +503,7 @@ $ittById = $byId($ittRows);
                 <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
         </div>
-        <div class="pf-pane" id="pane_tts">
-            <?= renderSelect($profiles, "tts_connector_id", "TTS Connector", $editItem["tts_connector_id"] ?? "") ?>
-            <div id="preview_tts_connector_id" style="margin-top:8px;"></div>
-        </div>
-        <div class="pf-pane" id="pane_itt">
-            <?= renderSelect($profiles, "itt_connector_id", "ITT Connector", $editItem["itt_connector_id"] ?? "") ?>
-            <div id="preview_itt_connector_id" style="margin-top:8px;"></div>
-        </div>
+        
     </div>
 
     <!-- Visual Profile Settings (first chunk) -->
@@ -661,8 +653,7 @@ $ittById = $byId($ittRows);
                     .then(j=>{ if (!j || j.ok!==true) throw new Error((j && j.error) || 'Inline save failed'); })
             );
         }
-        enqueueInline('preview_tts_connector_id','tts_connector_id');
-        enqueueInline('preview_itt_connector_id','itt_connector_id');
+        // (Inline editors for TTS/ITT removed; now embedded full pages are used)
         // Attempt to trigger embedded LLM editor saves (if available)
         const frameIds = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id'];
         frameIds.forEach(fid => {
@@ -785,20 +776,17 @@ $ittById = $byId($ittRows);
     }
 
     function initInlineEditors(){
-        refreshEditorFor('tts_connector_id','preview_tts_connector_id','tts');
-        refreshEditorFor('itt_connector_id','preview_itt_connector_id','itt');
+        
         refreshEmbeddedEditor('diary_connector_id','frame_diary_connector_id');
         refreshEmbeddedEditor('llm_primary_id','frame_llm_primary_id');
         refreshEmbeddedEditor('llm_secondary_id','frame_llm_secondary_id');
         refreshEmbeddedEditor('llm_tertiary_id','frame_llm_tertiary_id');
         refreshEmbeddedEditor('llm_quaternary_id','frame_llm_quaternary_id');
 
-        ['tts_connector_id','itt_connector_id','diary_connector_id','llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id'].forEach(id=>{
+        ['diary_connector_id','llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id'].forEach(id=>{
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', ()=>{
-                if (id==='tts_connector_id') refreshEditorFor(id,'preview_tts_connector_id','tts');
-                else if (id==='itt_connector_id') refreshEditorFor(id,'preview_itt_connector_id','itt');
-                else if (id==='diary_connector_id') refreshEmbeddedEditor(id,'frame_diary_connector_id');
+                if (id==='diary_connector_id') refreshEmbeddedEditor(id,'frame_diary_connector_id');
                 else if (id==='llm_primary_id') refreshEmbeddedEditor(id,'frame_llm_primary_id');
                 else if (id==='llm_secondary_id') refreshEmbeddedEditor(id,'frame_llm_secondary_id');
                 else if (id==='llm_tertiary_id') refreshEmbeddedEditor(id,'frame_llm_tertiary_id');

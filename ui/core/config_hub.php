@@ -49,6 +49,9 @@ main { padding-top: 160px; }
         <button class="tab-button" data-tab="profiles">🏗️Profile Builder</button>
         <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
         <button class="tab-button" data-tab="ttscfg">🔊TTS Connectors</button>
+        <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
+        <button class="tab-button" data-tab="sttcfg">🎤STT Connectors</button>
+        <button class="tab-button" data-tab="ittcfg">🖼️ITT Connectors</button>
         <button class="tab-button" data-tab="keys">🔑API Keys</button>
         <button class="tab-button" data-tab="globals">🌐Global Settings</button>
         <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
@@ -56,7 +59,7 @@ main { padding-top: 160px; }
         <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
         <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
         <button class="tab-button" data-tab="playthrough">🎮Playthrough Manager</button>
-        <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
+
     </div>
 
     <div id="npc" class="tab-content active">
@@ -107,6 +110,16 @@ main { padding-top: 160px; }
     <div id="ttscfg" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/tts_connectors.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="sttcfg" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/stt_connectors.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="ittcfg" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/itt_connectors.php?embed=1"></iframe>
         </div>
     </div>
     <div id="keys" class="tab-content">

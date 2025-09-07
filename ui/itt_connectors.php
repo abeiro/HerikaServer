@@ -4,7 +4,6 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
-// Load actual configuration first; fallback to sample if missing
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
 
@@ -19,14 +18,16 @@ $webRoot = rtrim($webRoot, '/');
 $schemaPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_schema.json";
 $rawSchema = @json_decode(@file_get_contents($schemaPath), true);
 if (!is_array($rawSchema)) $rawSchema = [];
-$providersAll = is_array($rawSchema['TTS'] ?? null) ? $rawSchema['TTS'] : [];
-$ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram' ];
+$providersAll = is_array($rawSchema['ITT'] ?? null) ? $rawSchema['ITT'] : [];
+$ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_openai','llamacpp' ];
+// Exclude llamacpp per request
+$ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return strtolower($v) !== 'llamacpp'; }));
 
-// Current configuration (flattened values and titles from loader)
+// Current configuration
 $currentConf = conf_loader_load();
 
 // Helpers
-function tts_current_value(string $flatName, array $currentConf) {
+function itt_current_value(string $flatName, array $currentConf) {
 	$plain = strtr($flatName, ["@" => " "]);
 	$parms = $currentConf[$plain] ?? null;
 	if (!$parms) return '';
@@ -34,52 +35,42 @@ function tts_current_value(string $flatName, array $currentConf) {
 }
 
 // Mapping from dropdown value -> provider key in schema
-$ttsMap = [
-	'melotts' => 'MELOTTS',
-	'xtts-fastapi' => 'XTTSFASTAPI',
-	'mimic3' => 'MIMIC3',
-	'xvasynth' => 'XVASYNTH',
-	'azure' => 'AZURE',
-	'11labs' => 'ELEVEN_LABS',
+$ittMap = [
 	'openai' => 'openai',
-	'kokoro' => 'KOKORO',
-	'koboldcpp' => 'koboldcpp',
-	'zonos_gradio' => 'ZONOS_GRADIO',
-	'piper-tts' => 'PIPERTTS',
-	'deepgram' => 'deepgram',
+	'google_openai' => 'google_openai',
 ];
 
 // Selected provider
-$selectedFunction = tts_current_value('TTSFUNCTION', $currentConf);
-if (isset($_POST['TTSFUNCTION']) && is_string($_POST['TTSFUNCTION'])) {
-	$selectedFunction = (string)$_POST['TTSFUNCTION'];
+$selectedFunction = itt_current_value('ITTFUNCTION', $currentConf);
+if (isset($_POST['ITTFUNCTION']) && is_string($_POST['ITTFUNCTION'])) {
+	$selectedFunction = (string)$_POST['ITTFUNCTION'];
 }
-if ($selectedFunction === '' && !empty($ttsOptions)) $selectedFunction = $ttsOptions[0];
-$providerKey = $ttsMap[$selectedFunction] ?? '';
+if ($selectedFunction === '' && !empty($ittOptions)) $selectedFunction = $ittOptions[0];
+$providerKey = $ittMap[$selectedFunction] ?? '';
 $providerSchema = ($providerKey && isset($providersAll[$providerKey]) && is_array($providersAll[$providerKey])) ? $providersAll[$providerKey] : [];
 
-// Save handler: write TTSFUNCTION + shown provider fields to conf.php
+// Save: write ITTFUNCTION + selected provider fields into conf.php
 $saveSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 	$confSchemaFlat = conf_loader_load_schema();
 	$allPairs = [];
-	// Preserve all existing pairs from currentConf
+	// Preserve existing pairs
 	foreach ($currentConf as $pname => $parms) {
-		$fieldName = strtr($pname, [" " => "@"]); // flatten
+		$fieldName = strtr($pname, [" " => "@"]);
 		$type = $parms['type'] ?? ($confSchemaFlat[$pname]['type'] ?? 'string');
 		$val = $parms['currentValue'] ?? '';
 		if ($type === 'boolean') $allPairs[$fieldName] = $val ? 'true' : 'false';
 		else if ($type === 'selectmultiple') $allPairs[$fieldName] = is_array($val) ? $val : [];
 		else $allPairs[$fieldName] = (string)$val;
 	}
-	// Overwrite TTSFUNCTION
-	$allPairs['TTSFUNCTION'] = (string)$selectedFunction;
+	// Overwrite ITTFUNCTION
+	$allPairs['ITTFUNCTION'] = (string)$selectedFunction;
 	// Overwrite selected provider fields
 	if ($providerKey && is_array($providerSchema)) {
 		foreach ($providerSchema as $fname => $def) {
 			if (!is_array($def)) continue;
 			$type = $def['type'] ?? 'string';
-			$key = 'TTS@' . $providerKey . '@' . $fname;
+			$key = 'ITT@' . $providerKey . '@' . $fname;
 			if ($type === 'boolean') {
 				$allPairs[$key] = (isset($_POST[$fname]) && $_POST[$fname] === 'true') ? 'true' : 'false';
 			} else if ($type === 'selectmultiple') {
@@ -90,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 		}
 	}
 
-	// Build conf.php content (match writer style)
+	// Build conf.php content
 	$buffer = "<?php" . PHP_EOL;
 	$oldGroup = '';
 	$oldSubGroup = '';
@@ -115,16 +106,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 	$result = @file_put_contents($target, $buffer);
 	$saveSuccess = $result !== false;
 	if ($saveSuccess) {
-		Logger::info("TTS settings saved to conf.php by UI");
-		// Reload from freshly written conf.php to reflect new values immediately
+		Logger::info("ITT settings saved to conf.php by UI");
 		@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 		$currentConf = conf_loader_load();
 	} else {
-		Logger::error("Failed writing conf.php from TTS Connectors UI");
+		Logger::error("Failed writing conf.php from ITT Connectors UI");
 	}
 }
 
-$TITLE = "🔊 CHIM - TTS Connectors";
+$TITLE = "🖼️ CHIM - ITT Connectors";
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
 ?>
@@ -134,7 +124,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
 main { padding-top: 40px; padding-bottom: 40px; padding-left: 10%; padding-right: 10%; width: 100%; margin: 0; }
 footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031633; z-index: 100; }
 @font-face { font-family: 'MagicCards'; src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype'); }
-h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:8px; font-size:2.2em; color:rgb(242,124,17); text-shadow:2px 2px 4px rgba(0,0,0,0.5); text-align:center; }
+h1.itt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:8px; font-size:2.2em; color:rgb(242,124,17); text-shadow:2px 2px 4px rgba(0,0,0,0.5); text-align:center; }
 .content-section { background:#2a2a2a; padding:25px; border-radius:8px; border:1px solid #4a4a4a; }
 .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
 .provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
@@ -151,7 +141,7 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 </style>
 
 <main>
-	<h1 class="tts-title">TTS Connectors</h1>
+	<h1 class="itt-title">ITT Connectors</h1>
 	<div id="toast" class="toast-notification" style="display:none;"><span class="message"></span></div>
 
 	<?php if ($saveSuccess): ?>
@@ -164,18 +154,18 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 				<div class="provider-card">
 					<div class="provider-head">
 						<div class="provider-title">
-							<div class="provider-icon">🔊</div>
-							<div>TTS Provider</div>
+							<div class="provider-icon">🖼️</div>
+							<div>ITT Provider</div>
 						</div>
 					</div>
 					<div class="provider-body">
-						<label for="TTSFUNCTION">TTS Selection</label>
-						<select name="TTSFUNCTION" id="TTSFUNCTION" onchange="this.form.submit()">
-							<?php foreach ($ttsOptions as $opt): ?>
+						<label for="ITTFUNCTION">ITT Selection</label>
+						<select name="ITTFUNCTION" id="ITTFUNCTION" onchange="this.form.submit()">
+							<?php foreach ($ittOptions as $opt): ?>
 								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
 							<?php endforeach; ?>
 						</select>
-						<div class="help">Saved as <code>TTSFUNCTION</code> in <code>conf.php</code>.</div>
+						<div class="help">Saved as <code>ITTFUNCTION</code> in <code>conf.php</code>.</div>
 					</div>
 				</div>
 
@@ -188,7 +178,7 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 							</div>
 						</div>
 						<div class="provider-body">
-							<?php foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $lname = strtolower($fname); if ($lname === 'voiceid' || $lname === 'voicelogic') continue; $ftype = $def['type'] ?? 'string'; $plainName = 'TTS ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? ''; ?>
+							<?php foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $ftype = $def['type'] ?? 'string'; $plainName = 'ITT ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? ''; ?>
 								<label for="f_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
 								<?php if ($ftype === 'boolean'): ?>
 									<input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
