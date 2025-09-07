@@ -49,6 +49,7 @@ main { padding-top: 160px; }
         <button class="tab-button" data-tab="profiles">🏗️Profile Builder</button>
         <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
         <button class="tab-button" data-tab="keys">🔑API Keys</button>
+        <button class="tab-button" data-tab="globals">🌐Global Settings</button>
         <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
         <button class="tab-button" data-tab="npcbio">📚NPC Biographies</button>
         <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
@@ -105,6 +106,11 @@ main { padding-top: 160px; }
     <div id="keys" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/api_badge.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="globals" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/global_settings.php?embed=1"></iframe>
         </div>
     </div>
 </main>
