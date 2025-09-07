@@ -48,6 +48,7 @@ main { padding-top: 160px; }
         <button class="tab-button active" data-tab="npc">🌟CHIM NPCs</button>
         <button class="tab-button" data-tab="profiles">🏗️Profile Builder</button>
         <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
+        <button class="tab-button" data-tab="ttscfg">🔊TTS Connectors</button>
         <button class="tab-button" data-tab="keys">🔑API Keys</button>
         <button class="tab-button" data-tab="globals">🌐Global Settings</button>
         <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
@@ -101,6 +102,11 @@ main { padding-top: 160px; }
     <div id="dbmgr" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/import_db.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="ttscfg" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/tts_connectors.php?embed=1"></iframe>
         </div>
     </div>
     <div id="keys" class="tab-content">

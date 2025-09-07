@@ -4,10 +4,12 @@ session_start();
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
+// Load schema/helpers without requiring a potentially broken conf.php
+require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
+// Seed defaults from sample so UI has baseline values even if conf.php is broken
+@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
 
 // Determine web root (match other core pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -96,17 +98,17 @@ function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
         if (sizeof($fullNameHierch) == 1) {
             if (isset($confSchema[$plainNameHierch]["description"]))
                 $buffer .= "//" . $confSchema[$plainNameHierch]["description"] . PHP_EOL;
-            $buffer .= "${$fullNameHierch[0]}=$value;" . PHP_EOL;
+            $buffer .= "\${$fullNameHierch[0]}=$value;" . PHP_EOL;
         } else if (sizeof($fullNameHierch) == 2) {
             $inlineComment = '';
             if (isset($confSchema[$plainNameHierch]["description"]))
                 $inlineComment = "//" . $confSchema[$plainNameHierch]["description"];
-            $buffer .= "${$fullNameHierch[0]}[\"$fullNameHierch[1]\"]=$value;\t$inlineComment" . PHP_EOL;
+            $buffer .= "\${$fullNameHierch[0]}[\"$fullNameHierch[1]\"]=$value;\t$inlineComment" . PHP_EOL;
         } else if (sizeof($fullNameHierch) == 3) {
             $inlineComment = '';
             if (isset($confSchema[$plainNameHierch]["description"]))
                 $inlineComment = "//" . $confSchema[$plainNameHierch]["description"];
-            $buffer .= "${$fullNameHierch[0]}[\"$fullNameHierch[1]\"][\"$fullNameHierch[2]\"]=$value;\t$inlineComment" . PHP_EOL;
+            $buffer .= "\${$fullNameHierch[0]}[\"$fullNameHierch[1]\"][\"$fullNameHierch[2]\"]=$value;\t$inlineComment" . PHP_EOL;
         }
     }
 
