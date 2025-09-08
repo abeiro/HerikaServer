@@ -132,7 +132,7 @@ main { padding-top: 160px; }
     </div>
     <div id="serverplugins" class="tab-content">
         <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/index.php?plugins_show=true"></iframe>
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/server_plugins.php?embed=1"></iframe>
         </div>
     </div>
 </main>

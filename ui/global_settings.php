@@ -118,8 +118,6 @@ function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
-    'General' => [
-    ],
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],

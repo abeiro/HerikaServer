@@ -507,7 +507,7 @@ function installPackage($downloadUrlGz, $downloadUrlTar, $targetDir, $tempDir, $
 <body>
     <div class="installer-container">
         <h1>CHIM Plugin Installer</h1>
-        <a href="../ui/index.php?plugins_show=true" class="button btn-primary back-button">&laquo; Back to Plugin Manager</a>
+        <a href="../ui/core/config_hub.php?tab=serverplugins" class="button btn-primary back-button">&laquo; Back to Plugin Manager</a>
 
         <?php
         $versionInfo = checkVersion($TARGET_DIR, $GITHUB_REPO);
