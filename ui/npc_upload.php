@@ -615,7 +615,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
     /* Override main container styles */
     main {
-        padding-top: 160px; /* Space for navbar */
+        padding-top: 80px; /* Space for navbar */
         padding-bottom: 40px; /* Reduced space for footer */
         padding-left: 10%;
         padding-right: 10%;
@@ -700,7 +700,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         top: auto !important;
         left: auto !important;
         transform: none !important;
-        margin: 160px auto 40px auto !important;
+        margin: 80px auto 40px auto !important;
         max-width: 800px !important;
         width: 90% !important;
     }

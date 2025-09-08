@@ -59,7 +59,7 @@ $commandcompact = shell_exec($commandcompact);
 echo '<link rel="stylesheet" type="text/css" href="../css/main.css">';
 echo "<title> CHIM - Compact Memories</title>";
 
-echo '<div style="padding-top: 160px; padding-left: 20px; padding-right: 20px;">';
+echo '<div style="padding-top: 80px; padding-left: 20px; padding-right: 20px;">';
 
 echo "<h1>Compact Memories</h1>";
 echo "<pre class='command-output'>$commandcompact</pre>";

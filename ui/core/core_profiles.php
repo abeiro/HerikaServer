@@ -949,7 +949,7 @@ $ittById = $byId($ittRows);
         const bool = v => (v==1||v===true||v==='1') ? 'checked' : '';
         const val = k => (conn[k]===null||conn[k]===undefined? '' : String(conn[k]));
         return `
-            <div style="display:grid; grid-template-columns: 160px 1fr; gap:6px; align-items:center;">
+            <div style="display:grid; grid-template-columns: 80px 1fr; gap:6px; align-items:center;">
                 <div>Label</div><input name="label" value="${escapeHtml(val('label'))}">
                 <div>URL</div><input name="url" value="${escapeHtml(val('url'))}">
                 <div>Provider</div><input name="provider" value="${escapeHtml(val('provider'))}">

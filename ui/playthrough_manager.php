@@ -386,7 +386,7 @@ $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveL
 ?>
 
 <style>
-    main { padding-top: 160px; padding-bottom: 40px; padding-left: 10%; padding-right: 10%; width: 100%; margin: 0; }
+    main { padding-top: 80px; padding-bottom: 40px; padding-left: 10%; padding-right: 10%; width: 100%; margin: 0; }
     footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031633; z-index: 100; }
     .page-header { text-align: center; margin-bottom: 30px; padding: 20px; background: #2a2a2a; border-radius: 8px; border: 1px solid #4a4a4a; }
     .page-header h1 { margin-bottom: 10px; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.0em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }

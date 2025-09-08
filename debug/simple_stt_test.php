@@ -47,7 +47,7 @@ if (php_sapi_name() != "cli") {
         <style>
             /* Override main container styles */
             main {
-                padding-top: 160px; /* Space for navbar */
+                padding-top: 80px; /* Space for navbar */
                 padding-bottom: 40px; /* Reduced space for footer */
                 padding-left: 10px;
             }

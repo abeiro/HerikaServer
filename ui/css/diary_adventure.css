@@ -338,7 +338,7 @@ main.container {
 /* Modal Styles */
 .modal-container {
     position: fixed !important;
-    top: 160px !important;
+    top: 80px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     background-color: #3a3a3a;

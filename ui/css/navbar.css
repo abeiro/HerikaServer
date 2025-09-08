@@ -434,7 +434,7 @@ body.overlay-active {
 
 /* Add padding to body to prevent content from hiding under fixed navbar */
 body {
-    padding-top: 160px;
+    padding-top: 80px;
 }
 
 /* Responsive Design */

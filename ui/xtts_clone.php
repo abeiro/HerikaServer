@@ -363,7 +363,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Override main container styles */
     main {
-        padding-top: 160px;
+        padding-top: 80px;
         padding-bottom: 40px;
         padding-left: 10%;
         padding-right: 10%;

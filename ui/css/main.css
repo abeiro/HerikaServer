@@ -714,7 +714,7 @@ td[class*="-dark"] {
 
 .modal-container {
     position: fixed;
-    top: 160px; /* Fixed padding from top */
+    top: 80px; /* Fixed padding from top */
     left: 50%;
     transform: translateX(-50%); /* Only center horizontally */
     background-color: #3a3a3a;

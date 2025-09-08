@@ -627,7 +627,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         display: flex;
         gap: 20px;
         height: calc(100vh - 100px);
-        padding: 160px 10px 0 10px; /* Added back top padding */
+        padding: 80px 10px 0 10px; /* Added back top padding */
         width: 95%;
         margin-left: auto;
         margin-right: auto;

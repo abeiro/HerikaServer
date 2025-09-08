@@ -64,7 +64,7 @@ if (!$conn) {
     echo "Failed to connect to the database: " . pg_last_error();
     exit;
 }
-echo '<div style="padding-top: 160px; padding-left: 20px; padding-right: 20px;">';
+echo '<div style="padding-top: 80px; padding-left: 20px; padding-right: 20px;">';
 // Delete all entries from memory_summary
 $query = "DELETE FROM {$schema}.memory_summary;";
 $result = pg_query($conn, $query);

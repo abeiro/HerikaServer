@@ -21,12 +21,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-main { padding-top: 160px; }
-.tab-buttons { display:flex; flex-wrap:wrap; gap:6px; border-bottom:2px solid #3a3a3a; margin:14px 0; }
-.tab-button { background:#2a2a2a; border:none; padding:10px 14px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all .2s ease; font-size:1em; }
+main { padding-top: 80px; }
+.tab-container { margin: 20px 0; }
+.tab-buttons { display:flex; flex-wrap:wrap; margin-bottom: 20px; border-bottom:2px solid #3a3a3a; gap:5px; word-spacing:5px; }
+.tab-button { background:#2a2a2a; border:none; padding:12px 18px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all 0.3s ease; font-size:1em; white-space:nowrap; font-family:'MagicCards', sans-serif; word-spacing:5px; letter-spacing:1.5px; }
 .tab-button:hover { background:#3a3a3a; }
-.tab-button.active { background:#1a1a1a; border-bottom:2px solid rgb(242,124,17); margin-bottom:-2px; }
-.tab-content { display:none; }
+.tab-button.active { background:#1a1a1a; border-bottom:2px solid rgb(212, 94, 0); margin-bottom:-2px; }
+.tab-content { display:none; background:#2a2a2a; padding:20px; border-radius:8px; border-top-left-radius:0; }
 .tab-content.active { display:block; }
 .embed-wrap { height: calc(100vh - 220px); min-height: 520px; border:1px solid #4a4a4a; border-radius:8px; overflow:hidden; background:#2a2a2a; }
 .embed { width:100%; height:100%; border:0; background:transparent; }
@@ -34,11 +35,9 @@ main { padding-top: 160px; }
 </style>
 
 <main>
-    <h1>Control Panel</h1>
-    <div style="display:flex; justify-content:flex-end; gap:8px; margin: 4px 0 8px 0;">
-        <a href="<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php" target="_blank" class="btn-base btn-primary" title="Generate AIAgent.ini file for the mod file.">
-            Create Custom AIAgent.ini
-        </a>
+    <div class="cp-title" style="display:flex; align-items:center; justify-content:space-between; margin: 4px 0 8px 0;">
+        <h1 style="margin:0;">Control Panel</h1>
+        <a href="<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php" target="_blank" class="btn-base btn-primary" title="Generate AIAgent.ini file for the mod file.">Create Custom AIAgent.ini</a>
     </div>
     <div class="tab-buttons">
         <button class="tab-button active" data-tab="srvlogs">🌲Server Logs</button>
