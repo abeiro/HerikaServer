@@ -23,11 +23,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
 <style>
 main { padding-top: 80px; }
 .tab-container { margin: 20px 0; }
-.tab-buttons { display:flex; flex-wrap:wrap; margin-bottom: 20px; border-bottom:2px solid #3a3a3a; gap:5px; word-spacing:5px; }
+.tab-buttons { display:flex; flex-wrap:wrap; gap:5px; word-spacing:5px; }
 .tab-button { background:#2a2a2a; border:none; padding:12px 18px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all 0.3s ease; font-size:1em; white-space:nowrap; font-family:'MagicCards', sans-serif; word-spacing:5px; letter-spacing:1.5px; }
 .tab-button:hover { background:#3a3a3a; }
 .tab-button.active { background:#1a1a1a; border-bottom:2px solid rgb(212, 94, 0); margin-bottom:-2px; }
-.tab-content { display:none; background:#2a2a2a; padding:20px; border-radius:8px; border-top-left-radius:0; }
+.tab-content { display:none; background:#2a2a2a; border-radius:8px; border-top-left-radius:0; }
 .tab-content.active { display:block; }
 .embed-wrap { height: calc(100vh - 220px); min-height: 520px; border:1px solid #4a4a4a; border-radius:8px; overflow:hidden; background:#2a2a2a; }
 .embed { width:100%; height:100%; border:0; background:transparent; }

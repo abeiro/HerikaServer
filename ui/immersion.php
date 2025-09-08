@@ -40,7 +40,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     .tab-buttons {
         display: flex;
         flex-wrap: wrap;
-        margin-bottom: 20px;
         border-bottom: 2px solid #3a3a3a;
         gap: 5px;
         word-spacing: 5px;
