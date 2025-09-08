@@ -117,10 +117,8 @@ function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
 }
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
-$sections = [
+$gsSections = [
     'General' => [
-        [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
-        [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ]
     ],
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
@@ -134,28 +132,59 @@ $sections = [
     ],
     'Events' => [
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ]
+    ],
+    'Memory' => [
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_TIME_DELAY', 'type' => 'integer' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_CONTEXT_SIZE', 'type' => 'integer' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARYS', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_A', 'type' => 'number' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_B', 'type' => 'number' ]
     ]
 ];
 
 // Build lookup for descriptions from schema
-$desc = function(string $flatName) use ($confSchema): string {
+$gsDesc = function(string $flatName) use ($confSchema): string {
     $plain = strtr($flatName, ["@" => " "]);
     return $confSchema[$plain]["description"] ?? '';
 };
 
-// Fetch DB data for foreign fields we use (core_llm_connector)
-$db = new sql();
+// Fetch DB data only if any field requires foreign options
 $foreignOptions = [];
-foreach ($sections as $sec => $fields) {
+$hasForeign = false;
+foreach ($gsSections as $sec => $fields) {
     foreach ($fields as $f) {
-        if (strpos($f['type'], 'foreign:') === 0) {
-            $parts = explode(':', $f['type']); // foreign:table:id:label
-            if (count($parts) === 4) {
-                $table = $parts[1];
-                $idCol = $parts[2];
-                $labelCol = $parts[3];
-                $rows = $db->fetchAll("select {$idCol},{$labelCol} from {$table}");
-                $foreignOptions[$f['name']] = $rows;
+        if (strpos($f['type'], 'foreign:') === 0) { $hasForeign = true; break; }
+    }
+    if ($hasForeign) break;
+}
+if ($hasForeign) {
+    // Load DB driver safely from sample or current conf
+    @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+    if (!isset($GLOBALS["DBDRIVER"])) {
+        @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
+    }
+    $dbDriverFile = $enginePath . "lib" . DIRECTORY_SEPARATOR . ($GLOBALS["DBDRIVER"] ?? '') . ".class.php";
+    if (isset($GLOBALS["DBDRIVER"]) && file_exists($dbDriverFile)) {
+        @require_once($dbDriverFile);
+        if (class_exists('sql')) {
+            $db = new sql();
+            foreach ($gsSections as $sec => $fields) {
+                foreach ($fields as $f) {
+                    if (strpos($f['type'], 'foreign:') === 0) {
+                        $parts = explode(':', $f['type']); // foreign:table:id:label
+                        if (count($parts) === 4) {
+                            $table = $parts[1];
+                            $idCol = $parts[2];
+                            $labelCol = $parts[3];
+                            $rows = $db->fetchAll("select {$idCol},{$labelCol} from {$table}");
+                            $foreignOptions[$f['name']] = $rows;
+                        }
+                    }
+                }
             }
         }
     }
@@ -288,7 +317,7 @@ function current_value(string $flatName, array $currentConf) {
 
     <form method="post" action="">
         <div class="content-grid">
-            <?php foreach ($sections as $sectionTitle => $fields): ?>
+            <?php foreach ($gsSections as $sectionTitle => $fields): ?>
                 <div class="content-section">
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
                     <div class="provider-grid">
@@ -298,7 +327,7 @@ function current_value(string $flatName, array $currentConf) {
                                 $ftype = $f['type'];
                                 $current = current_value($fname, $currentConf);
                                 $label = str_replace(['@'], [' → '], $fname);
-                                $help = $desc($fname);
+                                $help = $gsDesc($fname);
                             ?>
                             <div class="provider-card">
                                 <div class="provider-head">

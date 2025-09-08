@@ -19,7 +19,7 @@ require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.sample.php");	// Should 
 if (file_exists($rootPath."conf".DIRECTORY_SEPARATOR."conf.php"))
     require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.php");	// Should contain current ones
 
-require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
 
 $configFilepath = realpath($configFilepath).DIRECTORY_SEPARATOR;
 

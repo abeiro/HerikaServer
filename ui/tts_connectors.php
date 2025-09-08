@@ -6,6 +6,13 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
 // Load defaults first, then override with actual configuration (prevents fallback to sample values)
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
+// Capture sample defaults for Player TTS before overriding with conf.php
+$samplePlayerDefaults = [
+    'TTSFUNCTION_PLAYER' => $GLOBALS['TTSFUNCTION_PLAYER'] ?? null,
+    'TTSFUNCTION_PLAYER_VOICE' => $GLOBALS['TTSFUNCTION_PLAYER_VOICE'] ?? null,
+    'TTSFUNCTION_PLAYER_VOICE_ID' => $GLOBALS['TTSFUNCTION_PLAYER_VOICE_ID'] ?? null,
+    'TTSFUNCTION_PLAYER_LANGUAGE' => $GLOBALS['TTSFUNCTION_PLAYER_LANGUAGE'] ?? null,
+];
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 
@@ -22,6 +29,8 @@ $rawSchema = @json_decode(@file_get_contents($schemaPath), true);
 if (!is_array($rawSchema)) $rawSchema = [];
 $providersAll = is_array($rawSchema['TTS'] ?? null) ? $rawSchema['TTS'] : [];
 $ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram' ];
+// Player TTS options
+$playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio' ];
 
 // Current configuration (flattened values and titles from loader)
 $currentConf = conf_loader_load();
@@ -59,6 +68,25 @@ if ($selectedFunction === '' && !empty($ttsOptions)) $selectedFunction = $ttsOpt
 $providerKey = $ttsMap[$selectedFunction] ?? '';
 $providerSchema = ($providerKey && isset($providersAll[$providerKey]) && is_array($providersAll[$providerKey])) ? $providersAll[$providerKey] : [];
 
+// Track posted selection for save operations
+$postedFunction = (isset($_POST['TTSFUNCTION']) && is_string($_POST['TTSFUNCTION'])) ? (string)$_POST['TTSFUNCTION'] : null;
+
+// Current Player TTS selections
+$playerFunctionSaved = tts_current_value('TTSFUNCTION_PLAYER', $currentConf);
+if ($playerFunctionSaved === '') {
+    $playerFunctionSaved = (string)($samplePlayerDefaults['TTSFUNCTION_PLAYER'] ?? ($playerTtsOptions[0] ?? 'none'));
+}
+$playerVoice = tts_current_value('TTSFUNCTION_PLAYER_VOICE', $currentConf);
+if ($playerVoice === '') { $playerVoice = (string)($samplePlayerDefaults['TTSFUNCTION_PLAYER_VOICE'] ?? ''); }
+$playerVoiceId = tts_current_value('TTSFUNCTION_PLAYER_VOICE_ID', $currentConf);
+if ($playerVoiceId === '') { $playerVoiceId = (string)($samplePlayerDefaults['TTSFUNCTION_PLAYER_VOICE_ID'] ?? ''); }
+$playerLanguage = tts_current_value('TTSFUNCTION_PLAYER_LANGUAGE', $currentConf);
+if ($playerLanguage === '') { $playerLanguage = (string)($samplePlayerDefaults['TTSFUNCTION_PLAYER_LANGUAGE'] ?? ''); }
+
+// Player Re-speech controls
+$playerRespeech = tts_current_value('PLAYER_RESPEECH', $currentConf);
+$playerSpeechStyle = tts_current_value('PLAYER_SPEECH_STYLE', $currentConf);
+
 // Save handler: write TTSFUNCTION + shown provider fields to conf.php
 $saveSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
@@ -73,14 +101,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 		else if ($type === 'selectmultiple') $allPairs[$fieldName] = is_array($val) ? $val : [];
 		else $allPairs[$fieldName] = (string)$val;
 	}
-	// Overwrite TTSFUNCTION
+	// Use currently selected in the form when saving
+	if ($postedFunction !== null) {
+		$selectedFunction = $postedFunction;
+	}
 	$allPairs['TTSFUNCTION'] = (string)$selectedFunction;
+
+	// Recompute provider schema for the function we are saving
+	$saveProviderKey = $ttsMap[$selectedFunction] ?? '';
+	$saveProviderSchema = ($saveProviderKey && isset($providersAll[$saveProviderKey]) && is_array($providersAll[$saveProviderKey])) ? $providersAll[$saveProviderKey] : [];
+
 	// Overwrite selected provider fields
-	if ($providerKey && is_array($providerSchema)) {
-		foreach ($providerSchema as $fname => $def) {
+	if ($saveProviderKey && is_array($saveProviderSchema)) {
+		foreach ($saveProviderSchema as $fname => $def) {
 			if (!is_array($def)) continue;
 			$type = $def['type'] ?? 'string';
-			$key = 'TTS@' . $providerKey . '@' . $fname;
+			$key = 'TTS@' . $saveProviderKey . '@' . $fname;
 			if ($type === 'boolean') {
 				$allPairs[$key] = (isset($_POST[$fname]) && $_POST[$fname] === 'true') ? 'true' : 'false';
 			} else if ($type === 'selectmultiple') {
@@ -89,6 +125,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 				if (isset($_POST[$fname])) $allPairs[$key] = (string)$_POST[$fname];
 			}
 		}
+	}
+
+	// Overwrite Player TTS fields if present
+	if (isset($_POST['TTSFUNCTION_PLAYER'])) {
+		$allPairs['TTSFUNCTION_PLAYER'] = (string)$_POST['TTSFUNCTION_PLAYER'];
+	}
+	if (isset($_POST['TTSFUNCTION_PLAYER_VOICE'])) {
+		$allPairs['TTSFUNCTION_PLAYER_VOICE'] = (string)$_POST['TTSFUNCTION_PLAYER_VOICE'];
+	}
+	if (isset($_POST['TTSFUNCTION_PLAYER_VOICE_ID'])) {
+		$allPairs['TTSFUNCTION_PLAYER_VOICE_ID'] = (string)$_POST['TTSFUNCTION_PLAYER_VOICE_ID'];
+	}
+	if (isset($_POST['TTSFUNCTION_PLAYER_LANGUAGE'])) {
+		$allPairs['TTSFUNCTION_PLAYER_LANGUAGE'] = (string)$_POST['TTSFUNCTION_PLAYER_LANGUAGE'];
+	}
+
+	// Overwrite Player Re-speech fields
+	$allPairs['PLAYER_RESPEECH'] = (isset($_POST['PLAYER_RESPEECH']) && $_POST['PLAYER_RESPEECH'] === 'true') ? 'true' : 'false';
+	if (isset($_POST['PLAYER_SPEECH_STYLE'])) {
+		$allPairs['PLAYER_SPEECH_STYLE'] = (string)$_POST['PLAYER_SPEECH_STYLE'];
 	}
 
 	// Build conf.php content (match writer style)
@@ -117,9 +173,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 	$saveSuccess = $result !== false;
 	if ($saveSuccess) {
 		Logger::info("TTS settings saved to conf.php by UI");
-		// Reload from freshly written conf.php to reflect new values immediately
-		@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-		$currentConf = conf_loader_load();
+		// Hard redirect to ensure UI reflects new saved values and avoid resubmission
+		while (@ob_end_clean());
+		header("Location: " . strtok($_SERVER['REQUEST_URI'], '?'));
+		exit;
 	} else {
 		Logger::error("Failed writing conf.php from TTS Connectors UI");
 	}
@@ -176,7 +233,6 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
 							<?php endforeach; ?>
 						</select>
-						<div class="help">Saved as <code>TTSFUNCTION</code> in <code>conf.php</code>.</div>
 					</div>
 				</div>
 
@@ -236,6 +292,40 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 				<?php else: ?>
 					<div class="provider-card"><div class="provider-body"><div></div><div>No settings available for this provider.</div></div></div>
 				<?php endif; ?>
+
+				<!-- Player TTS Settings (below regular TTS settings) -->
+				<div class="provider-card">
+					<div class="provider-head">
+						<div class="provider-title">
+							<div class="provider-icon">🧑‍🎤</div>
+							<div>Player TTS</div>
+						</div>
+					</div>
+					<div class="provider-body">
+						<label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
+						<select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
+							<?php foreach ($playerTtsOptions as $opt): ?>
+								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+							<?php endforeach; ?>
+						</select>
+
+						<label for="TTSFUNCTION_PLAYER_VOICE">Player Voice</label>
+						<input type="text" id="TTSFUNCTION_PLAYER_VOICE" name="TTSFUNCTION_PLAYER_VOICE" value="<?php echo htmlspecialchars((string)$playerVoice); ?>">
+
+						<label for="TTSFUNCTION_PLAYER_VOICE_ID">Player Voice ID</label>
+						<input type="number" step="1" id="TTSFUNCTION_PLAYER_VOICE_ID" name="TTSFUNCTION_PLAYER_VOICE_ID" value="<?php echo htmlspecialchars((string)$playerVoiceId); ?>">
+
+						<label for="TTSFUNCTION_PLAYER_LANGUAGE">Player Language Override</label>
+						<input type="text" id="TTSFUNCTION_PLAYER_LANGUAGE" name="TTSFUNCTION_PLAYER_LANGUAGE" value="<?php echo htmlspecialchars((string)$playerLanguage); ?>">
+
+						<label for="PLAYER_RESPEECH">Player Respeech Enabled</label>
+						<input type="hidden" name="PLAYER_RESPEECH" value="false">
+						<input type="checkbox" id="PLAYER_RESPEECH" name="PLAYER_RESPEECH" value="true" <?php echo ($playerRespeech ? 'checked' : ''); ?> style="width:auto;">
+
+						<label for="PLAYER_SPEECH_STYLE">Player Respeech Style</label>
+						<textarea id="PLAYER_SPEECH_STYLE" name="PLAYER_SPEECH_STYLE" rows="3"><?php echo htmlspecialchars((string)$playerSpeechStyle); ?></textarea>
+					</div>
+				</div>
 			</div>
 			<div class="actions">
 				<button type="submit" class="btn-primary" name="save_all" value="1">Save</button>
