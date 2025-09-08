@@ -27,21 +27,25 @@ if (!$isEmbedded) {
 main { padding-top: <?php echo $isEmbedded ? '40' : '80'; ?>px; padding-bottom: 40px; padding-left: 10px; }
 footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
 /* MagicCards font import and heading styling to match core pages */
-@font-face { font-family: 'MagicCards'; src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype'); font-weight: normal; font-style: normal; }
-h1 { font-family: 'MagicCards', sans-serif; letter-spacing: 1.5px; }
+@font-face {
+    font-family: 'MagicCards';
+    src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+h1 { font-family: 'MagicCards', serif; letter-spacing: 1.5px; }
 /* Centered orange header like Oghma page */
 .page-header { text-align:center; margin: 0 0 20px 0; padding: 20px; background:#2a2a2a; border-radius:8px; border:1px solid #4a4a4a; }
-.page-header h1 { margin:0; font-family:'MagicCards', serif; word-spacing:8px; font-size:2.2em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+.page-header h1, #page-title, #title-text { font-family:'MagicCards', serif !important; }
+.page-header h1 { margin:0; word-spacing:8px; font-size:2.2em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
 .table-container { background-color: #2a2a2a; border-radius: 5px; padding: 15px; margin-bottom: 20px; overflow-x: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 table { width: 100%; border-collapse: collapse; background-color: #3a3a3a; margin-bottom: 20px; font-size: small; }
 th { background-color: #1a1a1a; color: #fff; font-weight: bold; padding: 12px; text-align: left; border-bottom: 2px solid #444; }
 td { padding: 10px; text-align: left; border-bottom: 1px solid #444; color: #f8f9fa; }
-/* Button styles aligned with Oghma/Events pages */
-.btn-base { cursor:pointer; padding: 8px 12px; border-radius: 4px; border: 1px solid #666; background: #3a3a3a; color:#fff; }
-.btn-primary { background: #204e7a; border-color:#1b3f63; }
-.btn-danger { background: #dc2626; border-color:#b91c1c; }
-.btn-save { background: #2e7d32; border-color:#255d29; }
-.btn-base:disabled { opacity: 0.6; cursor: not-allowed; }
+/* Use main.css button system; do not override rounded corners/colors here */
+/* .btn-* styles intentionally inherited from main.css */
+ .btn-base:disabled { opacity: 0.6; cursor: not-allowed; }
 /* Extra styling parity with index.php */
 .title-with-button { display:flex; align-items:center; }
 .title-with-button h2 { margin-right:10px; margin-bottom:0; }
