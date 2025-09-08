@@ -393,7 +393,7 @@
     }
   },
   "ITTFUNCTION": {
-    "type":"select","values":["openai","google_openai","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter!<br><br><strong>Must be configured in default profile!</strong>", 
+    "type":"select","values":["openai","google_openai","openrouter","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter!<br><br><strong>Must be configured in default profile!</strong>", 
     "_title":"Soulgaze (ITT)","scope":"global",
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
   },
@@ -422,6 +422,16 @@
       "_title":"LLama Server (Installed in DwemerDistro)",
       "URL": {"type":"url","description":"URL of the llama.cpp server","helpurl":"https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md","scope":"global"},
       "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the llama vision model.","scope":"global"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
+    },
+    "openrouter": {
+      "_title":"OpenRouter API",
+      "url": {"type":"url","description":"OpenRouter API endpoint","scope":"global"},
+      "model": {"type":"string","description":"Model to use","scope":"global"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate","scope":"global"},
+      "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","scope":"global"},
+      "API_KEY":  {"type":"apikey","description":"OpenRouter API key","code":"OPENAI_API_KEY","scope":"global"},
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the vision model.","scope":"global"},
       "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
     }
   },

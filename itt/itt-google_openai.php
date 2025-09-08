@@ -2,6 +2,7 @@
 
 $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
+require_once($localPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
 
 
 function itt($file,$hints)
@@ -52,9 +53,19 @@ function itt($file,$hints)
     */
     $fileContent = base64_encode(file_get_contents($file));
 
+    // Resolve API key: prefer configured, else fall back to API Badge (Google)
+    $apiKey = trim((string)($GLOBALS["ITT"]["google_openai"]["API_KEY"] ?? ''));
+    if ($apiKey === '') {
+        $badge = new ApiBadge();
+        $badges = $badge->getAll();
+        foreach ($badges as $b) {
+            $lbl = strtolower((string)($b['label'] ?? ''));
+            if (strpos($lbl, 'google') !== false && trim((string)($b['api_key'] ?? '')) !== '') { $apiKey = trim((string)$b['api_key']); break; }
+        }
+    }
     $headers = [
         'Content-Type: application/json',
-        "Authorization: Bearer {$GLOBALS["ITT"]["google_openai"]["API_KEY"]}"
+        'Authorization: Bearer ' . $apiKey
     ];
 
     $payload = array(

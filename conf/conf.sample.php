@@ -414,7 +414,7 @@ $STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:9876/api/v0/transcribe"; //API end
 $STT["LOCALWHISPER"]["FORMFIELD"]="audio_file"; //(audio_file,file) Form field name.
 
 //[Image to Text (Soulgaze)]
-$ITTFUNCTION="none";
+$ITTFUNCTION="openrouter";
 //OpenAI
 $ITT["openai"]["url"]='https://api.openai.com/v1/chat/completions';	//OpenAI API endpoint.
 $ITT["openai"]["model"]='gpt-4o-mini'; //LLM model.
@@ -437,6 +437,14 @@ $ITT["google_openai"]["AI_VISION_PROMPT"]="Let's roleplay in the world of Skyrim
     . "Describe the environment, objects, and people you see at a fifth grade reading level. "
     . "Ignore video game HUD and UI elements in your description."; //Prompt to sent to the Vision AI.
 $ITT["google_openai"]["AI_PROMPT"]='#HERIKA_NPC1# describes what they are seeing'; //Prompt sent to the LLM.
+//OpenRouter
+$ITT["openrouter"]["url"]='https://openrouter.ai/api/v1/chat/completions'; //OpenRouter API endpoint.
+$ITT["openrouter"]["model"]='google/gemini-2.5-flash'; //LLM model.
+$ITT["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
+$ITT["openrouter"]["detail"]='low'; //(Low|high) fidelity image understanding.
+$ITT["openrouter"]["API_KEY"]=''; //OpenRouter API key.
+$ITT["openrouter"]["AI_VISION_PROMPT"]="Let's roleplay in the world of Skyrim. Describe this Skyrim image as if it is real life. Describe the environment, objects, and people you see at a fifth grade reading level. Ignore video game HUD and UI elements in your description."; //Prompt to send to the Vision API.
+$ITT["openrouter"]["AI_PROMPT"]='#HERIKA_NPC1# describes what they are seeing'; //Prompt sent to the LLM.
 //Azure
 $ITT["AZURE"]["ENDPOINT"]=""; //API endpoint.
 $ITT["AZURE"]["API_KEY"]=""; //API key.

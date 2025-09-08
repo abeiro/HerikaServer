@@ -168,7 +168,6 @@ h1.stt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
 							<?php endforeach; ?>
 						</select>
-						<div class="help">Saved as <code>STTFUNCTION</code> in <code>conf.php</code>.</div>
 					</div>
 				</div>
 

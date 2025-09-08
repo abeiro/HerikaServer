@@ -4,8 +4,11 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
-@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+// Load defaults first, then override with actual configuration so saved values stick
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
+@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+// Now that DBDRIVER is known, load database driver
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 
 // Determine web root (match other pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -19,7 +22,7 @@ $schemaPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_schema.json";
 $rawSchema = @json_decode(@file_get_contents($schemaPath), true);
 if (!is_array($rawSchema)) $rawSchema = [];
 $providersAll = is_array($rawSchema['ITT'] ?? null) ? $rawSchema['ITT'] : [];
-$ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_openai','llamacpp' ];
+$ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_openai','openrouter','llamacpp' ];
 // Exclude llamacpp per request
 $ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return strtolower($v) !== 'llamacpp'; }));
 
@@ -38,11 +41,12 @@ function itt_current_value(string $flatName, array $currentConf) {
 $ittMap = [
 	'openai' => 'openai',
 	'google_openai' => 'google_openai',
+	'openrouter' => 'openrouter',
 ];
 
-// Selected provider
+// Selected provider: prefer saved value; only use POST preview unless saving
 $selectedFunction = itt_current_value('ITTFUNCTION', $currentConf);
-if (isset($_POST['ITTFUNCTION']) && is_string($_POST['ITTFUNCTION'])) {
+if (isset($_POST['ITTFUNCTION']) && is_string($_POST['ITTFUNCTION']) && !isset($_POST['save_all'])) {
 	$selectedFunction = (string)$_POST['ITTFUNCTION'];
 }
 if ($selectedFunction === '' && !empty($ittOptions)) $selectedFunction = $ittOptions[0];
@@ -56,21 +60,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 	$allPairs = [];
 	// Preserve existing pairs
 	foreach ($currentConf as $pname => $parms) {
-		$fieldName = strtr($pname, [" " => "@"]);
+		$fieldName = strtr($pname, [" " => "@"]); // flatten
 		$type = $parms['type'] ?? ($confSchemaFlat[$pname]['type'] ?? 'string');
 		$val = $parms['currentValue'] ?? '';
 		if ($type === 'boolean') $allPairs[$fieldName] = $val ? 'true' : 'false';
 		else if ($type === 'selectmultiple') $allPairs[$fieldName] = is_array($val) ? $val : [];
 		else $allPairs[$fieldName] = (string)$val;
 	}
-	// Overwrite ITTFUNCTION
-	$allPairs['ITTFUNCTION'] = (string)$selectedFunction;
-	// Overwrite selected provider fields
-	if ($providerKey && is_array($providerSchema)) {
-		foreach ($providerSchema as $fname => $def) {
+	// Use posted selection for save (sync with UI)
+	$selectedFunctionSave = isset($_POST['ITTFUNCTION']) ? (string)$_POST['ITTFUNCTION'] : (string)$selectedFunction;
+	$allPairs['ITTFUNCTION'] = $selectedFunctionSave;
+	// Overwrite selected provider fields based on the selection being saved
+	$providerKeySave = $ittMap[$selectedFunctionSave] ?? '';
+	$providerSchemaSave = ($providerKeySave && isset($providersAll[$providerKeySave]) && is_array($providersAll[$providerKeySave])) ? $providersAll[$providerKeySave] : [];
+	if ($providerKeySave && is_array($providerSchemaSave)) {
+		foreach ($providerSchemaSave as $fname => $def) {
 			if (!is_array($def)) continue;
 			$type = $def['type'] ?? 'string';
-			$key = 'ITT@' . $providerKey . '@' . $fname;
+			$key = 'ITT@' . $providerKeySave . '@' . $fname;
 			if ($type === 'boolean') {
 				$allPairs[$key] = (isset($_POST[$fname]) && $_POST[$fname] === 'true') ? 'true' : 'false';
 			} else if ($type === 'selectmultiple') {
@@ -145,7 +152,16 @@ h1.itt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 	<div id="toast" class="toast-notification" style="display:none;"><span class="message"></span></div>
 
 	<?php if ($saveSuccess): ?>
-		<script>setTimeout(function(){ try{ const t=document.getElementById('toast'); if(t){ t.style.display='block'; t.textContent='Settings saved to conf.php'; setTimeout(()=>{ t.style.display='none'; }, 2500); } }catch(_e){} }, 50);</script>
+		<script>
+		// Show toast briefly, then hard refresh so selection reflects saved conf.php
+		setTimeout(function(){
+		  try{
+		    const t=document.getElementById('toast');
+		    if(t){ t.style.display='block'; t.textContent='Settings saved to conf.php'; }
+		  }catch(_e){}
+		}, 50);
+		setTimeout(function(){ window.location.replace(window.location.pathname + window.location.search); }, 200);
+		</script>
 	<?php endif; ?>
 
 	<form method="post" action="">
@@ -165,7 +181,6 @@ h1.itt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
 							<?php endforeach; ?>
 						</select>
-						<div class="help">Saved as <code>ITTFUNCTION</code> in <code>conf.php</code>.</div>
 					</div>
 				</div>
 
@@ -178,7 +193,23 @@ h1.itt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 							</div>
 						</div>
 						<div class="provider-body">
-							<?php foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $ftype = $def['type'] ?? 'string'; $plainName = 'ITT ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? ''; ?>
+							<?php
+							// Query API badges for OpenAI / Google status
+							$apiBadges = [];
+							try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) $GLOBALS['db'] = new sql(); $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC"); } catch (Throwable $_e) {}
+							foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $ftype = $def['type'] ?? 'string'; $plainName = 'ITT ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? '';
+								// API badge status for API_KEY
+								$lnameProv = strtolower($providerKey);
+								if ($fname === 'API_KEY' && in_array($lnameProv, ['openai','google_openai','openrouter'])) {
+									$badgeName = ($lnameProv==='google_openai') ? 'Google' : ($lnameProv==='openrouter' ? 'OpenRouter' : 'OpenAI');
+									$hasKey = false;
+									foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
+									echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
+									echo '<div>'.($hasKey?'<span class="badge-ok">Configured</span>':'<span class="badge-missing">Missing</span>').' — <a href="'.htmlspecialchars($webRoot).'/ui/core/api_badge.php" target="_blank" rel="noopener">Manage Keys</a></div>';
+									if (!empty($help)) echo '<div class="help">'.$help.'</div>';
+									continue;
+								}
+							?>
 								<label for="f_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
 								<?php if ($ftype === 'boolean'): ?>
 									<input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
@@ -212,6 +243,7 @@ h1.itt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 			</div>
 			<div class="actions">
 				<button type="submit" class="btn-primary" name="save_all" value="1">Save</button>
+				<button type="button" id="btn_test_itt" class="btn-primary" style="margin-left:8px;">Test</button>
 			</div>
 		</div>
 	</form>
@@ -225,5 +257,46 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+
+<script>
+(function(){
+    const MODAL_ID = 'itttest_modal';
+    const modal = document.createElement('div');
+    modal.id = MODAL_ID;
+    modal.style.cssText = 'position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
+    modal.innerHTML = `
+        <div style="width:90%; max-width:1100px; height:80vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
+            <button id=\"itttest_close\" style=\"position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;\">Close</button>
+            <div id=\"itttest_loading\" style=\"position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;\">
+                <div style=\"width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: spin 1s linear infinite;\"></div>
+            </div>
+            <iframe id=\"itttest_iframe\" src=\"about:blank\" style=\"width:100%; height:100%; border:0; background:#0e1624; position:relative; z-index:1;\"></iframe>
+        </div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+    document.body.appendChild(modal);
+    function openModal(url){ const iframe = document.getElementById('itttest_iframe'); const loader = document.getElementById('itttest_loading'); if (loader) loader.style.display = 'flex'; iframe.onload = function(){ if (loader) loader.style.display = 'none'; }; iframe.src = url; modal.style.display = 'flex'; }
+    function closeModal(){ modal.style.display = 'none'; try { document.getElementById('itttest_iframe').src='about:blank'; } catch(_){} }
+    document.addEventListener('click', function(e){ if (e.target && e.target.id==='itttest_close') closeModal(); });
+    modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
+    document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+
+    const testBtn = document.getElementById('btn_test_itt');
+    if (testBtn){
+        testBtn.addEventListener('click', async function(){
+            // Save current form first to ensure ITTFUNCTION and settings are applied
+            try {
+                const form = document.querySelector('form[method="post"]');
+                if (form){
+                    const fd = new FormData(form);
+                    if (!fd.has('save_all')) fd.append('save_all','1');
+                    await fetch('itt_connectors.php', { method:'POST', body: fd });
+                }
+            } catch(_e){}
+            const cb = Date.now();
+            openModal('<?php echo $webRoot; ?>/ui/tests/itt-test.php?cb='+cb);
+        });
+    }
+})();
+</script>
 
 
