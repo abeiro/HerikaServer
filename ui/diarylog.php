@@ -456,6 +456,35 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <!-- Ensure main.css is loaded after any reboot.css -->
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/diary_adventure.css">
+<style>
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .page-header h1 {
+        margin-bottom: 10px;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .page-header h3 {
+        margin: 0;
+    }
+    <?php if ($isEmbed): ?>
+    main { padding-top: 20px; }
+    <?php endif; ?>
+    @media (max-width: 480px) {
+        .page-header h1 { font-size: 1.6em; }
+    }
+</style>
 <?php if ($isEmbed): ?>
 <style>
     /* Embedded in container: reduce top padding since navbar is hidden */
@@ -868,8 +897,9 @@ if ($shouldFetchEvents) {
 </head>
 <body>
     <main class="container">
-        <h1>📝CHIM Diary Log</h1>
-        <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
+        <div class="page-header">
+            <h1>📝CHIM Diary Log</h1>
+        </div>
 
         <?php
         function renderHeader() {
