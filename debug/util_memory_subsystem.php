@@ -70,7 +70,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
             $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
                 
             $connector=new LLMConnector();
-            $currentConnectorData=$connector->getById($currentProfileData["diary_connector_id"]);
+            $currentConnectorData=$connector->getById($GLOBALS["CORE_CONNECTOR_SUMMARY"]);
         
             $connector->setOldGlobals($currentConnectorData);
             $profile->setOldGlobals($currentProfileData);

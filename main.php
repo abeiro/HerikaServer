@@ -482,14 +482,14 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["PLAYER_RESPEECH"]) && $GLOBALS["PLAYER_RESPEECH"]) {
     // Use preg_replace to remove the name and colon before the dialogue
-    $cleaned_player_dialogue = addcslashes(preg_replace('/^[^:]+:/', '', $gameRequest[3]),"'");
+    $cleaned_player_dialogue = addcslashes(preg_replace('/^[^:]+:/', '', $gameRequest[3]),'"');
     error_log($cleaned_player_dialogue);
     if (strpos($gameRequest[3],"**")===0 || strpos($cleaned_player_dialogue,"**")===0 ) {
         // If player speech starts with **
         error_log("Overwritting user prompt $cleaned_player_dialogue");
 
         //$newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
-        $newSpeech=`php player_rewrite.php '$cleaned_player_dialogue'`;
+        $newSpeech=`php player_rewrite.php "$cleaned_player_dialogue"`;
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$newSpeech";
 
     }
@@ -1314,6 +1314,17 @@ $dynamicBiography = buildDynamicBiography($GLOBALS);
 if (isset($GLOBALS["PROFILE_PROMPT"])) {
     $dynamicBiography.="\n\n#Part of a group\n{$GLOBALS["PROFILE_PROMPT"]}";
 }
+
+// Middle term memory experiment
+$npcMaster=new NpcMaster();
+$currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+$extended_data=$npcMaster->getExtendedData($currentNpcData);
+if (isset($extended_data["middle_term_memory"])) {
+    $middle_term_memory = end($extended_data["middle_term_memory"]);
+    $dynamicBiography.="\n\n#Past events\n{$middle_term_memory}";
+
+} 
+    
 
 if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
     

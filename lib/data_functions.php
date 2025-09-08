@@ -2506,7 +2506,7 @@ function call_llm() {
         if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
             require(__DIR__."/../processor/player_tts.php");
         }
-
+        $currentConnectorData=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
         error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
 
 
@@ -2548,7 +2548,7 @@ function call_llm() {
             array('role' => 'user', 'content' => "* Available actions:\n".$GLOBALS["COMMAND_PROMPT"]),
             array('role' => 'user', 'content' => "* Historic context information:\n".implode("\n",$minimalContext)),
             array('role' => 'user', 'content' => "* Generated dialogue line: <$buffer>"),
-            array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
+            array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' , and ONLY the  '* Generated dialogue line' , to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
         ];
 
         $connector=new LLMConnector();
@@ -3462,6 +3462,7 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
 
         // Original logic for pulling from database
         if (isset($npcTemlate[0]) && is_array($npcTemlate[0])) {
+                error_log("Creating from template ");
 
             $npcMaster->create([
 
@@ -3482,11 +3483,12 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
 
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
-
+            
             // Query for new HERIKA fields for bracket match
             $npcNewFields2 = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates WHERE npc_name='" . $db->escape($bracketMatch) . "'");
 
             if (!empty($npcNewFields2[0])) {
+                error_log("Creating from template bracketMatch");
                 $npcMaster->create([
                         "npc_name" => $npcname,
                         'npc_static_bio' => $npcNewFields2[0]["npc_background"] ?? '',
@@ -3501,8 +3503,15 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                         'oghma_knowledge_tags' => $npcNewFields2[0]["npc_misc"]
                     ]
                 );
+            } else {
+                error_log("Creating initial empty profile");
+                $npcMaster->create([
+                        "npc_name" => $npcname
+                    ]
+                );
             }
         } else {
+            error_log("Creating initial empty profile");
             $npcMaster->create([
                     "npc_name" => $npcname
                 ]

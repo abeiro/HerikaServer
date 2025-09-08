@@ -18,6 +18,47 @@ $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password
 
 $TITLE = "🌲 CHIM Server Logs";
 
+// Auto-trim logs setting (chim_meta.settings)
+$autoTrimEnabled = true; // default enabled
+
+// Handle toggle request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_auto_trim_logs') {
+    try {
+        // Ensure chim_meta.settings exists
+        @pg_query($conn, "CREATE SCHEMA IF NOT EXISTS chim_meta");
+        @pg_query($conn, "CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+
+        // Read current value
+        $res = @pg_query($conn, "SELECT value FROM chim_meta.settings WHERE key='AUTO_TRIM_LOGS_ENABLED' LIMIT 1");
+        $val = 'true';
+        if ($res && pg_num_rows($res) > 0) {
+            $row = pg_fetch_assoc($res);
+            $current = strtolower(trim((string)$row['value']));
+            $val = in_array($current, ['true','1','yes','on']) ? 'false' : 'true';
+        }
+        // Upsert
+        @pg_query($conn, "INSERT INTO chim_meta.settings(key,value) VALUES ('AUTO_TRIM_LOGS_ENABLED', '".$val."') ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value");
+    } catch (Throwable $e) { /* ignore */ }
+    // Redirect back (PRG)
+    header('Location: '.$_SERVER['PHP_SELF']);
+    exit;
+}
+
+// Read current value (default true if missing)
+try {
+    @pg_query($conn, "CREATE SCHEMA IF NOT EXISTS chim_meta");
+    @pg_query($conn, "CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+    $res = @pg_query($conn, "SELECT value FROM chim_meta.settings WHERE key='AUTO_TRIM_LOGS_ENABLED' LIMIT 1");
+    if ($res && pg_num_rows($res) > 0) {
+        $row = pg_fetch_assoc($res);
+        $autoTrimEnabled = in_array(strtolower(trim((string)$row['value'])), ['true','1','yes','on']);
+    } else {
+        // Persist default true
+        @pg_query($conn, "INSERT INTO chim_meta.settings(key,value) VALUES ('AUTO_TRIM_LOGS_ENABLED','true') ON CONFLICT (key) DO NOTHING");
+        $autoTrimEnabled = true;
+    }
+} catch (Throwable $e) { /* ignore */ }
+
 ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
@@ -1262,6 +1303,15 @@ if (isset($_GET['download_logs'])) {
 <div class="indent5">
     <div class="title-container">
         <h1>🌲 CHIM Server Logs</h1>
+        <form method="post" style="margin-left: 10px; display:inline;">
+            <input type="hidden" name="action" value="toggle_auto_trim_logs">
+            <button class="refresh-button" type="submit" title="Toggle auto-trim logs on server startup (keeps last 10,000 lines)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;">
+                    <path d="M8 3a5 5 0 1 0 0 10A5 5 0 0 0 8 3zm0-2a7 7 0 1 1 0 14A7 7 0 0 1 8 1z"/>
+                </svg>
+                Auto-trim: <?php echo $autoTrimEnabled ? 'On' : 'Off'; ?>
+            </button>
+        </form>
         <button class="refresh-button" id="refreshLogs">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 3a5 5 0 0 0-5 5H1l3.5 3.5L8 8H6a2 2 0 1 1 2 2v2a4 4 0 1 0-4-4H2a6 6 0 1 1 6 6v-2a4 4 0 0 0 0-8z"/>
