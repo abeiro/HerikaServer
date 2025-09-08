@@ -231,7 +231,7 @@ if (isset($_GET["delete"])) {
 }
 
 // Fetch Data
-$perPage = 9;
+$perPage = 12;
 $page = isset($_GET["page"]) ? intval($_GET["page"]) : 1;
 if ($page < 1) $page = 1;
 
