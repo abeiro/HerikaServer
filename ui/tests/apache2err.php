@@ -23,7 +23,10 @@ ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+$isEmbedded = (isset($_GET['embed']) && $_GET['embed']);
+if (!$isEmbedded) {
+    include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+}
 
 $logPath = __DIR__ . '/../../log/';
 $distroLogPath = $logPath . 'apache_error.log';
@@ -574,7 +577,7 @@ if (isset($_GET['download_logs'])) {
     <style>
         /* Override main container styles */
         main {
-            padding-top: 160px;
+            padding-top: <?php echo $isEmbedded? '20' : '160'; ?>px;
             padding-bottom: 40px;
             padding-left: 10px;
             padding-right: 10px;
@@ -584,14 +587,7 @@ if (isset($_GET['download_logs'])) {
         }
         
         /* Override footer styles */
-        footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            height: 20px;
-            background: #031633;
-            z-index: 100;
-        }
+        footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
 
         /* Updated color scheme for a more mellow dark theme */
         body {

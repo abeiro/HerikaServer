@@ -33,19 +33,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <style>
     /* Override main container styles */
     main {
-        padding-top: 160px; /* Space for navbar */
+        padding-top: <?php echo ((isset($_GET['embed']) && $_GET['embed'])) ? '20' : '160'; ?>px; /* Space for navbar */
         padding-bottom: 40px; /* Reduced space for footer */
         padding-left: 10px;
     }
     
     /* Override footer styles */
     footer {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        height: 20px; /* Reduced footer height */
-        background: #031633;
-        z-index: 100
+        <?php if (isset($_GET['embed']) && $_GET['embed']) { echo 'display:none;'; } else { echo 'position: fixed; bottom: 0; width: 100%; height: 20px; background: #031633; z-index: 100;'; } ?>
     }
 
     /* Additional index-specific styles */
@@ -121,6 +116,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <?php
 
 $hide_navbar = ((isset($_GET["navbar"])) && ($_GET["navbar"] == "hidden"));
+if (isset($_GET['embed']) && $_GET['embed']) { $hide_navbar = true; }
 if (!$hide_navbar) { 
     include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 }
