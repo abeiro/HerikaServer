@@ -144,6 +144,9 @@ h1.itt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 .btn-primary { background:#204e7a; color:#fff; border:1px solid rgba(138,155,182,0.4); border-radius:8px; padding:8px 14px; cursor:pointer; }
 .btn-primary:hover { background:#285c8f; }
 .help { margin-top:6px; color:#bbb; font-size:12px; grid-column: 1 / -1; }
+/* Badge colors to match STT connectors */
+.badge-ok { color:#6dd19c; }
+.badge-missing { color:#ffb862; }
 @media (max-width: 900px) { main { padding-left: 5%; padding-right: 5%; } .provider-body { grid-template-columns: 1fr; } }
 </style>
 
@@ -205,7 +208,7 @@ h1.itt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 									$hasKey = false;
 									foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
 									echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
-									echo '<div>'.($hasKey?'<span class="badge-ok">Configured</span>':'<span class="badge-missing">Missing</span>').' — <a href="'.htmlspecialchars($webRoot).'/ui/core/api_badge.php" target="_blank" rel="noopener">Manage Keys</a></div>';
+									echo '<div>'.($hasKey?'<span class="badge-ok">Configured</span>':'<span class="badge-missing">Missing</span>').' — <a href="#" onclick="try{ if(window.top){ window.top.location.href=\''.htmlspecialchars($webRoot).'/ui/core/config_hub.php?tab=keys\'; } else { window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } }catch(e){ window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } return false;">Manage Keys</a></div>';
 									if (!empty($help)) echo '<div class="help">'.$help.'</div>';
 									continue;
 								}
