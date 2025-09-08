@@ -755,8 +755,8 @@ if (isset($_GET['race_icon'])) {
     <div class="modal-header">
       <h2 class="modal-title">Edit NPC</h2>
       <div class="modal-actions">
-        <button id="npc_modal_save_header" class="modal-save">Save</button>
-        <button id="npc_modal_close" class="modal-close">Close</button>
+        <button id="npc_modal_save_header" class="btn-save">Save</button>
+        <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
     </div>
     <div class="modal-body">

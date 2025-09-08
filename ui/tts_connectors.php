@@ -328,7 +328,7 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 				</div>
 			</div>
 			<div class="actions">
-				<button type="submit" class="btn-primary" name="save_all" value="1">Save</button>
+				<button type="submit" class="btn-save" name="save_all" value="1">Save</button>
 				<?php if ($saveSuccess): ?>
 				<script>
 				setTimeout(function(){ window.location.replace(window.location.pathname + window.location.search); }, 100);

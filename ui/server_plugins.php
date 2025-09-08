@@ -32,7 +32,6 @@ h1 { font-family: 'MagicCards', sans-serif; letter-spacing: 1.5px; }
 /* Centered orange header like Oghma page */
 .page-header { text-align:center; margin: 0 0 20px 0; padding: 20px; background:#2a2a2a; border-radius:8px; border:1px solid #4a4a4a; }
 .page-header h1 { margin:0; font-family:'MagicCards', serif; word-spacing:8px; font-size:2.2em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-#title-text { font-family:'MagicCards', serif !important; }
 .table-container { background-color: #2a2a2a; border-radius: 5px; padding: 15px; margin-bottom: 20px; overflow-x: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 table { width: 100%; border-collapse: collapse; background-color: #3a3a3a; margin-bottom: 20px; font-size: small; }
 th { background-color: #1a1a1a; color: #fff; font-weight: bold; padding: 12px; text-align: left; border-bottom: 2px solid #444; }

@@ -202,7 +202,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
                     <?php if ($editItem): ?>
                         <button type="submit" name="save" class="btn-save">Save</button>
-                        <button type="button" id="btn_test_connector" class="btn-save">Test</button>
+                        <button type="button" id="btn_test_connector" class="btn-primary">Test</button>
                     <?php else: ?>
                         <button type="submit" name="create" class="btn-save">Create</button>
                     <?php endif; ?>
@@ -643,7 +643,7 @@ if (isset($_GET["edit"])) {
                             <div class="sub">${escapeHtml(r.model||'')}</div>
                             <div class="actions">
                                 <a class="btn-danger" href="?delete=${r.id}" onclick="return confirm('Are you sure you want to delete this connector?');">Delete</a>
-                                <a class="btn-save" href="?clone=${r.id}">Clone</a>
+                                <a class="btn-primary" href="?clone=${r.id}">Clone</a>
                             </div>
                         </div>`;
                 });
@@ -741,7 +741,7 @@ if (typeof window.consolidation !== 'function') {
             <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
                 <?php if ($editItem): ?>
                     <button type="submit" name="save" class="btn-save">Save</button>
-                    <button type="button" id="btn_test_connector" class="btn-save">Test</button>
+                    <button type="button" id="btn_test_connector" class="btn-primary">Test</button>
                 <?php else: ?>
                     <button type="submit" name="create" class="btn-save">Create</button>
                 <?php endif; ?>

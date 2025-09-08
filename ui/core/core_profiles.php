@@ -371,7 +371,7 @@ $ittById = $byId($ittRows);
                             </div>
                             <div class="actions">
                                 <a class="btn-danger" href="?delete=${r.id}" onclick="return confirm('Delete this profile?');">Delete</a>
-                                <a class="action-button" href="?clone=${r.id}">Clone</a>
+                                <a class="btn-primary" href="?clone=${r.id}">Clone</a>
                             </div>
                         </div>`;
                 });
