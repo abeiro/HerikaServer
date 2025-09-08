@@ -1010,6 +1010,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+    
+    logEvent($gameRequest);
+    
+    $MUST_END=true;
+    
+    
 } 
 
 ?>

@@ -3305,6 +3305,12 @@ function GetAnimationHex($mood)
         $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=0.65';
         return "DrunkStart";
         
+    } else if ($mood=="sober") {
+
+        Logger::info("Resetting mood drunk.");
+        
+        return "DrunkStop";
+        
     } else if ($mood=="high") {
         // No animation :(
         $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=1.45';

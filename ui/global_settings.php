@@ -118,6 +118,13 @@ function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
+     'General' => [
+        [ 'name' => 'PROMPT_HEAD', 'type' => 'text' ],
+        [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
+    ],
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
