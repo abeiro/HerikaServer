@@ -1215,14 +1215,13 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 
 // Rolemaster stuff
 
-$namedKey="{$GLOBALS["HERIKA_NAME"]}_is_rolemastered";
-$npcRoleMastered=$GLOBALS["db"]->fetchOne("select 1  as is_rolemastered from conf_opts where id='".$GLOBALS["db"]->escape($namedKey)."'");
-if (isset($npcRoleMastered["is_rolemastered"])) {
+
+if (isset($GLOBALS["is_rolemastered"])) {
     // ReturnBackHome is initially disabled. Les restore it from copy here. Only applies to rolemastered NPCs
     $GLOBALS["NPC_ROLEMASTERED"]=true;
     $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
     $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
-    error_log("{$GLOBALS["HERIKA_NAME"]}_is_rolemastered");
+    error_log("{$GLOBALS["HERIKA_NAME"]} is_rolemastered");
     if ((rand(0,5)!==0)){ // Remeber goal from time to time
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";

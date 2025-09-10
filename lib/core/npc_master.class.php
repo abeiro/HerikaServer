@@ -397,6 +397,16 @@ class NpcMaster {
         return $currentNpcData;
     }
 
+    public function getMetadata($currentNpcData): array {
+        return json_decode($currentNpcData['metadata'] ?? '{}', true) ?: [];
+    }
+
+    public function setMetadata($currentNpcData, array $data) {
+        
+        $currentNpcData['metadata'] = json_encode($data);
+        return $currentNpcData;
+    }
+
     public function backupNpcById($id) {
         $id = (int)$id;
         
