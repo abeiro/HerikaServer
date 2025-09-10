@@ -233,7 +233,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     else 
         $lastDialog[] = array('role' => 'user', 'content' => "# YOU'RE NOT PART OF THE GROUP FORMED BY\n## ". (implode("\n## ",$followers)));
 
-    $lastDialog[] = array('role' => 'user', 'content' => "# POIs \n## ". (implode("\n## ",DataPosibleLocationsToGo())));
+    $arr_poi = DataPosibleLocationsToGo();
+    if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
+        $lastDialog[] = array('role' => 'user', 'content' => "# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi)));
+    }
  
     // Rolemaster notes
     
@@ -251,6 +254,30 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     return $lastDialog;
 
 }
+
+function DataLocationsAround($current_location = "") {
+    global $db;
+
+    $s_res = "";
+
+    if (strlen($current_location) > 0) {
+        $s_loc = $db->escape(strtolower(trim($current_location))); 
+        $s_sql = "SELECT data FROM eventlog WHERE (type in ('infoloc')) AND (data ILIKE '(Context location: {$s_loc}%') ORDER BY gamets DESC, ts DESC LIMIT 1";
+    } else {
+        $s_sql = "SELECT data FROM eventlog WHERE (type in ('infoloc')) AND (data ILIKE '(Context location:%') ORDER BY gamets DESC, ts DESC LIMIT 1";
+    }
+    $results = $db->fetchAll($s_sql);
+    foreach ($results as $row) {
+        $re = '/(to go:)(.+),,/';
+        preg_match($re, $row["data"], $matches, PREG_OFFSET_CAPTURE, 0);
+        if (isset($matches[2][0])) {
+            $s_res .= $matches[2][0];
+        }
+        break;
+    }
+    
+    return $s_res;
+} 
 
 function DataPosibleLocationsToGo()
 {
@@ -274,7 +301,7 @@ function DataPosibleLocationsToGo()
     }
 
     //print_r($matches);
-
+    // ? this part with 'Herika can see this beings in range:' seems outdated 
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
     WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
     $lastData = "";
@@ -3104,11 +3131,52 @@ function DataRetrieveFirstTimeMet($s_player_name, $s_npc_name) {
 	return $s_res;
 }
 
+function GetFirstTimeMetMemory($s_player_name, $s_npc_name) {
+    global $db;
+    $i_res = 0;
+
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
+		$s_player = $db->escape($s_player_name);
+		$s_npc = $db->escape($s_npc_name);
+
+        //$crt_gamets = intval(DataLastKnownGameTS());
+
+		$db_rec = $db->fetchAll("SELECT speaker,listener,
+			message,gamets,momentum,rowid  
+			FROM memory 
+			WHERE event = 'first_met' AND gamets > 0 AND
+			((speaker = '{$s_player}' AND listener = '$s_npc') OR
+			(listener = '{$s_player}' AND speaker = '$s_npc'))
+			ORDER BY rowid ASC LIMIT 1; ");
+            
+        $b_found_memory = (is_array($db_rec) && sizeof($db_rec)>0); 
+        
+        if ($b_found_memory) { 
+			$i_res = intval($db_rec[0]['gamets'] ?? 0);
+		}
+
+	}
+	return $i_res;
+}
+
+function GetFirstTimeMet($s_player_name, $s_npc_name) {
+    $i_res = 0;
+
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
+        
+        $i_res = GetFirstTimeMetMemory($s_player_name, $s_npc_name); 
+
+        if ($i_res <= 0) { // check conversations
+            $i_res = GetFirstInteraction($s_player_name, $s_npc_name); 
+		}
+	}
+	return $i_res;
+}
 
 function GetLastInteraction($s_player_name, $s_npc_name) {
     global $db;
 	$i_res = 0;
-	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0)) {
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
 		$s_player = $db->escape($s_player_name);
 		$s_npc = $db->escape($s_npc_name);
 		$db_rec = $db->fetchAll("SELECT gamets FROM speech 
@@ -3122,6 +3190,7 @@ function GetLastInteraction($s_player_name, $s_npc_name) {
 	}
 	return $i_res;
 }
+
 
 function GetFirstInteraction($s_player_name, $s_npc_name) {
     global $db;
