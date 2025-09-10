@@ -1,5 +1,5 @@
 {
-    "name":"time_awareness",
-    "description":"Plugin for the TIME_AWARNESS Configuration Wizard option.",
-    "version":"1.0.0"
+    "name":"Time Awareness",
+    "description":"Inserts into the prompt mentions about when interactions between NPCs took place.",
+    "version":"2.0.0"
 }
