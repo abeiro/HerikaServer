@@ -5,12 +5,13 @@
 // 2) infonpc_close and infonpc should me moved to another table
 // 3) prechat events used for buffering
 
+global $db;
 $db->execQuery("
-DELETE FROM eventlog
+DELETE FROM public.eventlog
 WHERE type IN ('request', 'infonpc_close', 'infonpc')
   AND gamets < (
     SELECT MAX(gamets) - (72 / 0.0000024)
-    FROM eventlog
+    FROM public.eventlog
     WHERE type IN ('request', 'infonpc_close', 'infonpc','prechat')
   );
 ");
