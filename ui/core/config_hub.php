@@ -25,115 +25,122 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-main { padding-top: 80px; }
+    main {
+        padding: 80px 10px 10px;
+        height: 100vh;
+        overflow: hidden;
+    }
 .tab-container { margin: 20px 0; }
 .tab-buttons { display:flex; flex-wrap:wrap; gap:5px; word-spacing:5px; }
 .tab-button { background:#2a2a2a; border:none; padding:12px 18px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all 0.3s ease; font-size:1em; white-space:nowrap; font-family:'MagicCards', sans-serif; word-spacing:5px; letter-spacing:1.5px; }
 .tab-button:hover { background:#3a3a3a; }
 .tab-button.active { background:#1a1a1a; border-bottom:2px solid rgb(212, 94, 0); margin-bottom:-2px; }
 .tab-content { display:none; background:#2a2a2a; border-radius:8px; border-top-left-radius:0; }
-.tab-content.active { display:block; }
-.embed-wrap { height: calc(100vh - 220px); min-height: 520px; border:1px solid #4a4a4a; border-radius:8px; overflow:hidden; background:#2a2a2a; }
-.embed { width:100%; height:100%; border:0; background:transparent; }
+.tab-content.active { display:flex; flex-grow: 1}
+.embed-wrap { height: 100%; width: 100%; border:1px solid #4a4a4a; border-radius:8px; overflow:hidden; background:#2a2a2a; }
+.embed { width: 100%; height:100%; border:0; background:transparent; }
 @media (max-height: 800px){ .embed-wrap { min-height: 420px; } }
 .tab-divider { padding: 10px 8px; color:#9fb1c9; font-weight:700; user-select:none; pointer-events:none; }
 </style>
 
-<main>
+<main class="d-flex flex-column">
     <div id="toast" class="toast-notification">
         <span class="message"></span>
     </div>
 
-    <h1>Configuration</h1>
-    <div class="tab-buttons">
-        <button class="tab-button" data-tab="globals">🌐Global Settings</button>
-        <button class="tab-button active" data-tab="npc">🌟CHIM NPCs</button>
-        <button class="tab-button" data-tab="profiles">🏗️Profile Builder</button>
-        <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
-        <button class="tab-button" data-tab="ttscfg">🔊TTS Connectors</button>
-        <button class="tab-button" data-tab="sttcfg">🎤STT Connectors</button>
-        <button class="tab-button" data-tab="ittcfg">🖼️ITT Connectors</button>
-        <button class="tab-button" data-tab="keys">🔑API Keys</button>
-        <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
-        <button class="tab-button" data-tab="npcbio">📚NPC Biographies</button>
-        <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
-        <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
-        <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
-    </div>
-
-    <div id="npc" class="tab-content active">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="eager" src="<?php echo $webRoot; ?>/ui/core/npc_master.php?embed=1"></iframe>
+    <div class="top-area">
+        <h1>Configuration</h1>
+        <div class="tab-buttons">
+            <button class="tab-button" data-tab="globals">🌐Global Settings</button>
+            <button class="tab-button active" data-tab="npc">🌟CHIM NPCs</button>
+            <button class="tab-button" data-tab="profiles">🏗️Profile Builder</button>
+            <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
+            <button class="tab-button" data-tab="ttscfg">🔊TTS Connectors</button>
+            <button class="tab-button" data-tab="sttcfg">🎤STT Connectors</button>
+            <button class="tab-button" data-tab="ittcfg">🖼️ITT Connectors</button>
+            <button class="tab-button" data-tab="keys">🔑API Keys</button>
+            <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
+            <button class="tab-button" data-tab="npcbio">📚NPC Biographies</button>
+            <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
+            <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
+            <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
         </div>
     </div>
-    <div id="profiles" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/core_profiles.php?embed=1"></iframe>
+    <div class="content-area flex-grow-1 d-flex overflow-hidden" style="min-height: 0;">
+        <div id="npc" class="tab-content active">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="eager" src="<?php echo $webRoot; ?>/ui/core/npc_master.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="llm" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/llm_connectors.php?embed=1"></iframe>
+        <div id="profiles" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/core_profiles.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="oghma" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/oghma_upload.php?embed=1"></iframe>
+        <div id="llm" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/llm_connectors.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="npcbio" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/npc_upload.php?embed=1"></iframe>
+        <div id="oghma" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/oghma_upload.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="actions" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/function_editor.php?embed=1"></iframe>
+        <div id="npcbio" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/npc_upload.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="xtts" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/xtts_clone.php?embed=1"></iframe>
+        <div id="actions" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/function_editor.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="playthrough" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/playthrough_manager.php?embed=1"></iframe>
+        <div id="xtts" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/xtts_clone.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="dbmgr" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/import_db.php?embed=1"></iframe>
+        <div id="playthrough" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/playthrough_manager.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="ttscfg" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/tts_connectors.php?embed=1"></iframe>
+        <div id="dbmgr" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/import_db.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="sttcfg" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/stt_connectors.php?embed=1"></iframe>
+        <div id="ttscfg" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/tts_connectors.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="ittcfg" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/itt_connectors.php?embed=1"></iframe>
+        <div id="sttcfg" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/stt_connectors.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="keys" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/api_badge.php?embed=1"></iframe>
+        <div id="ittcfg" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/itt_connectors.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="globals" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/global_settings.php?embed=1"></iframe>
+        <div id="keys" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/api_badge.php?embed=1"></iframe>
+            </div>
         </div>
-    </div>
-    <div id="serverplugins" class="tab-content">
-        <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/server_plugins.php?embed=1"></iframe>
+        <div id="globals" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/global_settings.php?embed=1"></iframe>
+            </div>
+        </div>
+        <div id="serverplugins" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/server_plugins.php?embed=1"></iframe>
+            </div>
         </div>
     </div>
 </main>
