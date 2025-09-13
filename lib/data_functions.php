@@ -3507,19 +3507,17 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         error_log("Creating/overwriting:$overwrite  profile for $npcname");
         //sleep (1);
         if (empty($GLOBALS["CORE_LANG"])) {
-            $npcTemlate = $db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
-            $npcdynamic = $db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
-            // Query for new HERIKA fields
-            $npcNewFields = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates where npc_name='$codename'");
+            $npcTemlate = $db->fetchAll("SELECT core FROM combined_bio_templates where npc_name='$codename'");
+            // Query for new HERIKA fields (bio tables)
+            $npcNewFields = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates where npc_name='$codename'");
         } else {
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             $npcTemlate = $db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             if (!isset($npcTemlate[0])) {
                 Logger::info("No trl found, using standard template");
-                $npcTemlate = $db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
-                $npcdynamic = $db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
-                // Query for new HERIKA fields
-                $npcNewFields = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals, npc_misc  FROM combined_npc_templates where npc_name='$codename'");
+                $npcTemlate = $db->fetchAll("SELECT core FROM combined_bio_templates where npc_name='$codename'");
+                // Query for new HERIKA fields (bio tables)
+                $npcNewFields = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates where npc_name='$codename'");
             } else {
                 // For translated templates, set empty new fields for now
                 $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
@@ -3539,19 +3537,28 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         if (isset($npcTemlate[0]) && is_array($npcTemlate[0])) {
                 error_log("Creating from template ");
 
+            // Build core with optional meta (voiceid, gender, race, refid)
+            $coreBase = trim($npcname . ". " . ($npcNewFields[0]["appearance"] ?? ''));
+            $coreMeta = [];
+            if (!empty($npcNewFields[0]["voiceid"])) { $coreMeta[] = 'Voice:' . $npcNewFields[0]["voiceid"]; }
+            if (!empty($npcNewFields[0]["gender"])) { $coreMeta[] = 'Gender:' . $npcNewFields[0]["gender"]; }
+            if (!empty($npcNewFields[0]["race"])) { $coreMeta[] = 'Race:' . $npcNewFields[0]["race"]; }
+            if (!empty($npcNewFields[0]["refid"])) { $coreMeta[] = 'RefId:' . $npcNewFields[0]["refid"]; }
+            $coreFull = $coreBase . (empty($coreMeta) ? '' : (' ' . implode(' ', $coreMeta)));
+
             $npcMaster->create([
 
                     "npc_name" => $npcname,
-                    'npc_static_bio' => $npcNewFields[0]["npc_background"] ?? '',
-                    'personality' => ($npcNewFields[0]["npc_personality"] ?? '') . "." . ($npcdynamic ?? ''),
-                    'core' => trim($npcname . ". " . ($npcNewFields[0]["npc_appearance"] ?? '')),
-                    'relationships' => $npcNewFields[0]["npc_relationships"] ?? '',
-                    'occupation' => $npcNewFields[0]["npc_occupation"] ?? '',
-                    'appearance' => $npcNewFields[0]["npc_appearance"] ?? '',
-                    'skills' => $npcNewFields[0]["npc_skills"] ?? '',
-                    'speechstyle' => $npcNewFields[0]["npc_speechstyle"] ?? '',
-                    'goals' => $npcNewFields[0]["npc_goals"] ?? '',
-                    'oghma_knowledge_tags' => $npcNewFields[0]["npc_misc"]
+                    'npc_static_bio' => $npcNewFields[0]["npc_static_bio"] ?? '',
+                    'personality' => $npcNewFields[0]["personality"] ?? '',
+                    'core' => $coreFull,
+                    'relationships' => $npcNewFields[0]["relationships"] ?? '',
+                    'occupation' => $npcNewFields[0]["occupation"] ?? '',
+                    'appearance' => $npcNewFields[0]["appearance"] ?? '',
+                    'skills' => $npcNewFields[0]["skills"] ?? '',
+                    'speechstyle' => $npcNewFields[0]["speechstyle"] ?? '',
+                    'goals' => $npcNewFields[0]["goals"] ?? '',
+                    'oghma_knowledge_tags' => $npcNewFields[0]["oghma_knowledge_tags"] ?? ''
 
                 ]
             );
@@ -3559,23 +3566,32 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
             
-            // Query for new HERIKA fields for bracket match
-            $npcNewFields2 = $db->fetchAll("SELECT npc_background, coalesce(npc_personality,npc_pers) as npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals,npc_misc FROM combined_npc_templates WHERE npc_name='" . $db->escape($bracketMatch) . "'");
+            // Query for new HERIKA fields for bracket match (bio tables)
+            $npcNewFields2 = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates WHERE npc_name='" . $db->escape($bracketMatch) . "'");
 
             if (!empty($npcNewFields2[0])) {
                 error_log("Creating from template bracketMatch");
+                // Build core with optional meta (voiceid, gender, race, refid)
+                $coreBase2 = trim($npcname . ". " . ($npcNewFields2[0]["appearance"] ?? ''));
+                $coreMeta2 = [];
+                if (!empty($npcNewFields2[0]["voiceid"])) { $coreMeta2[] = 'Voice:' . $npcNewFields2[0]["voiceid"]; }
+                if (!empty($npcNewFields2[0]["gender"])) { $coreMeta2[] = 'Gender:' . $npcNewFields2[0]["gender"]; }
+                if (!empty($npcNewFields2[0]["race"])) { $coreMeta2[] = 'Race:' . $npcNewFields2[0]["race"]; }
+                if (!empty($npcNewFields2[0]["refid"])) { $coreMeta2[] = 'RefId:' . $npcNewFields2[0]["refid"]; }
+                $coreFull2 = $coreBase2 . (empty($coreMeta2) ? '' : (' ' . implode(' ', $coreMeta2)));
+
                 $npcMaster->create([
                         "npc_name" => $npcname,
-                        'npc_static_bio' => $npcNewFields2[0]["npc_background"] ?? '',
-                        'personality' => $npcNewFields2[0]["npc_personality"] ?? '',
-                        'core' => trim($npcname . ". " . ($npcNewFields2[0]["npc_appearance"] ?? '')),
-                        'relationships' => $npcNewFields2[0]["npc_relationships"] ?? '',
-                        'occupation' => $npcNewFields2[0]["npc_occupation"] ?? '',
-                        'appearance' => $npcNewFields2[0]["npc_appearance"] ?? '',
-                        'skills' => $npcNewFields2[0]["npc_skills"] ?? '',
-                        'speechstyle' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
-                        'goals' => $npcNewFields2[0]["npc_goals"] ?? '',
-                        'oghma_knowledge_tags' => $npcNewFields2[0]["npc_misc"]
+                        'npc_static_bio' => $npcNewFields2[0]["npc_static_bio"] ?? '',
+                        'personality' => $npcNewFields2[0]["personality"] ?? '',
+                        'core' => $coreFull2,
+                        'relationships' => $npcNewFields2[0]["relationships"] ?? '',
+                        'occupation' => $npcNewFields2[0]["occupation"] ?? '',
+                        'appearance' => $npcNewFields2[0]["appearance"] ?? '',
+                        'skills' => $npcNewFields2[0]["skills"] ?? '',
+                        'speechstyle' => $npcNewFields2[0]["speechstyle"] ?? '',
+                        'goals' => $npcNewFields2[0]["goals"] ?? '',
+                        'oghma_knowledge_tags' => $npcNewFields2[0]["oghma_knowledge_tags"] ?? ''
                     ]
                 );
             } else {
@@ -3595,36 +3611,37 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
 
         // Voice
         //TODO i dont think these ids are used to set the voice in this code - not sure i follow it [needs review]
-        $xttsid = $db->fetchAll("SELECT xtts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
-        $melottsid = $db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
-        $xvasynthid = $db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
+        // $voiceRow = $db->fetchAll("SELECT voiceid FROM combined_bio_templates WHERE npc_name='$codename'");
+        // $melottsid = $db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+        // $xvasynthid = $db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
 
-        $cn = $db->escape("Voicetype/$codename");
-        $vtype = $db->fetchAll("select value from conf_opts where id='$cn'");
-        $voicetypeString = (isOk($vtype)) ? $vtype[0]["value"] : null;
-        if ($voicetypeString) {
-            $voicetype = explode("\\", $voicetypeString);
-        }
+        // $cn = $db->escape("Voicetype/$codename");
+        // $vtype = $db->fetchAll("select value from conf_opts where id='$cn'");
+        // $voicetypeString = (isOk($vtype)) ? $vtype[0]["value"] : null;
+        // if ($voicetypeString) {
+            // $voicetype = explode("\\", $voicetypeString);
+        // } else {
+        //     $voicetype = null;
+        // }
 
-        $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
+        // $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
         //use the Nametype conf opts to latch onto the character name while still being able to pull the correct voicetype[3]
-        if ($voicelogic === "voicetype") {
-            $codename = npcNameToCodename($npcname);
-            $cn = $db->escape("Nametype/$codename");
-            $vtype = $db->fetchAll("select value from conf_opts where id='$cn'");
-            $voicetypeString = (isOk($vtype)) ? $vtype[0]["value"] : null;
-            if ($voicetypeString) {
-                $voicetype = explode("\\", $voicetypeString);
-            }
-        }
+        // if ($voicelogic === "voicetype") {
+            //$codename = npcNameToCodename($npcname);
+            //$cn = $db->escape("Nametype/$codename");
+            //$vtype = $db->fetchAll("select value from conf_opts where id='$cn'");
+            //$voicetypeString = (isOk($vtype)) ? $vtype[0]["value"] : null;
+            //if ($voicetypeString) {
+                //$voicetype = explode("\\", $voicetypeString);
+            //}
+        //}
+        // Legacy per-engine voice ids (deprecated in favor of unified voiceid)
+        // $melottsid = $db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+        // $xvasynthid = $db->fetchAll("SELECT xvasynth_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
 
         // XTTS voiceid override from table. if fails then xtts voicelogic pick
         $voiceid = isset($voicetype) && sizeof($voicetype) >= 4 ? $voicetype[3] : "";
-        if (!$voiceid && (
-                (empty($xttsid[0]['xtts_voiceid']) && $voicelogic === "voicetype") ||
-                empty($melottsid[0]['melotts_voiceid']) ||
-                empty($xvasynthid[0]['xvasynth_voiceid']))
-        ) {
+        if (!$voiceid && (empty($voiceRow[0]['voiceid']) && $voicelogic === "voicetype")) {
             Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
         }
 
