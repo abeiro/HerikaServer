@@ -691,6 +691,24 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
     </style>
 </head>
 <body>
+    <!-- Server/Plugin Versions and Social Links (moved from navbar) -->
+    <div class="container" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; margin-top:6px;">
+        <div class="server-version-info" style="color:#6c757d; font-size:0.9em; font-family: Arial, sans-serif;">
+            Server: <?php echo htmlspecialchars($serverVersionDisplay ?? '', ENT_QUOTES, 'UTF-8'); ?>
+            Plugin: <?php echo htmlspecialchars($pluginVersionDisplay ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?>
+        </div>
+        <div class="social-links" style="display:flex; align-items:center; gap:12px;">
+            <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
+                <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube" style="width:20px;height:20px;">
+            </a>
+            <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
+                <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord" style="width:20px;height:20px;">
+            </a>
+            <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
+                <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon" style="width:20px;height:20px;">
+            </a>
+        </div>
+    </div>
     <main class="container">
         <h1>📊 Dwemer Dashboard</h1>
 
