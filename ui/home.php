@@ -713,30 +713,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         <h1>📊 Dwemer Dashboard</h1>
 
         <div class="dashboard-buttons">
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/events-memories.php'" class="dashboard-btn">
-                <span class="btn-icon">📜</span> Events & Memories
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php'" class="dashboard-btn">
-                <span class="btn-icon">🧙</span> Configuration Wizard
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/npc_upload.php'" class="dashboard-btn">
-                <span class="btn-icon">🧑</span> NPC Biography Management
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/oghma_upload.php'" class="dashboard-btn">
-                <span class="btn-icon">📙</span> Oghma Management
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/diarylog.php'" class="dashboard-btn">
-                <span class="btn-icon">📖</span> Diaries
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/adventurelog.php'" class="dashboard-btn">
-                <span class="btn-icon">⚔</span> Adventure Log
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'" class="dashboard-btn">
-                <span class="btn-icon">🔌</span> Server Plugins
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/tests/apache2err.php'" class="dashboard-btn">
-                <span class="btn-icon">🌲</span> Server Logs
-            </button>
             <button onclick="window.open('https://dwemerdynamics.hostwiki.io/', '_blank')" class="dashboard-btn">
                 <span class="btn-icon">📚</span> CHIM Wiki
             </button>
