@@ -39,7 +39,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     font-weight: normal;
     font-style: normal;
 }
-main { padding-top: 40px; padding-bottom: 40px; }
+main { padding: 30px 5px 5px;height: 100%; overflow: hidden; }
 h1.api-title {
     margin: 0 0 20px 0;
     font-family: 'MagicCards', serif;
@@ -52,7 +52,7 @@ h1.api-title {
 .llm-left .llm-title { font-family: 'MagicCards', serif; word-spacing: 6px; }
 </style>
 
-<main>
+<main class="d-flex flex-column">
     <div id="toast" class="toast-notification">
         <span class="message"></span>
     </div>
@@ -615,8 +615,8 @@ if (isset($_GET["edit"])) {
 
 <h1 class="api-title">LLM Connectors</h1>
 
-<div class="llm-layout">
-    <div class="llm-left">
+<div class="llm-layout flex-grow-1" style="height: 0;"> <!-- height 0 to make content not overflow -->
+    <div class="llm-left h-100">
         <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Connectors</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
             <a class="btn-save" href="?create_blank=1">New Connector</a>
@@ -661,10 +661,10 @@ if (isset($_GET["edit"])) {
         })();
         </script>
     </div>
-    <div class="llm-right">
+    <div class="llm-right d-flex flex-column overflow-y-auto">
 <div class="form-container wide-centered">
 <style>
-.wide-centered { max-width: 1300px; margin: 0 auto; }
+.wide-centered { max-width: 1300px; margin: 0 auto; width: 100%; }
 .two-col-llm { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 1000px) { .two-col-llm { grid-template-columns: 1fr; } }
 .kv-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; }
