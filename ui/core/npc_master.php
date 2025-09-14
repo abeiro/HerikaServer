@@ -572,7 +572,21 @@ if (isset($_GET['race_icon'])) {
             const save = document.getElementById('npc_modal_save');
             if (!save) return;
             save.addEventListener('click', async function(){
-                const form = save.closest('form');
+                let form = save.closest('form');
+                // Needed to actually update json data. Was done before at consolidation()
+                if (form.extended_data!=undefined) {
+                  const content2 = jsonEditor2.get()
+
+                  try {
+                    form.extended_data.value=JSON.stringify(content2.json, null, 0)
+                    console.log("JSON editor values copied to form")
+                  } catch (idontcare) {}
+        
+                  if (form.extended_data.value=='')  {
+                    return confirm("Extended data is empty. You sure?");
+                  }
+                }
+
                 const fd = new FormData(form);
                 fd.append('inline_update_npc','1');
                 if (!fd.has('id') && <?= json_encode(!empty($editItem['id'])) ?>){ fd.append('id', <?= json_encode($editItem['id'] ?? '') ?>); }
@@ -681,7 +695,7 @@ if (isset($_GET['race_icon'])) {
 .modal-container { position:relative; top:auto; left:auto; transform:none; margin: 120px auto 40px auto; max-width:1000px; width:90%; background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; }
 .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
 .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; }
-.modal-body { max-height:calc(85vh - 100px); overflow-y:auto; background:#2a2a2a; }
+.modal-body { max-height:calc(85vh - 100px); overflow-y:hidden; background:#2a2a2a; }
 .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; }
 .modal-actions { display:flex; gap:8px; align-items:center; }
 .modal-save { background: rgb(242, 124, 17); color:#111; border:1px solid rgb(242, 124, 17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }

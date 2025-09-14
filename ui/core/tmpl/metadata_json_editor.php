@@ -273,8 +273,8 @@ function metaClamp(rangeId, numberId, min, max){
 }
 
 function consolidation() {
-    const SHOW_VISUAL = <?= $showVisual ? 'true' : 'false' ?>
-    const VISUAL_KEYS = <?= json_encode($visualKeys, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>
+    const SHOW_VISUAL = <?= $showVisual ? 'true' : 'false' ?>;
+    const VISUAL_KEYS = <?= json_encode($visualKeys, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
     const content = jsonEditor.get()
     let base = {}
     try {
@@ -325,7 +325,7 @@ function consolidation() {
         return confirm("Metadata is empty. You sure?");
     }
 
-    
+    debugger;
     if (form.extended_data!=undefined) {
         const content2 = jsonEditor2.get()
 
