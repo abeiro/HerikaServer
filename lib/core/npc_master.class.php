@@ -233,17 +233,19 @@ class NpcMaster {
     private function fetchTemplateRow($codename) {
         $lang = $GLOBALS["CORE_LANG"] ?? '';
         if ($lang) {
+            // If translations exist, we only pull legacy npc_pers; otherwise fallback to bio view
             $templateRow = $this->db->fetchOne("SELECT npc_pers FROM npc_templates_trl WHERE name_trl = '$codename' AND lang = '$lang'");
         }
 
         if (!$templateRow) {
-            $templateRow = $this->db->fetchOne("SELECT npc_pers, npc_dynamic, npc_misc, npc_background, coalesce(npc_personality,npc_pers) as npc_personality,  npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates WHERE npc_name = '$codename'");
+            $templateRow = $this->db->fetchOne(
+                "SELECT core, oghma_knowledge_tags as npc_misc, npc_static_bio as npc_background, personality as npc_personality, appearance as npc_appearance, relationships as npc_relationships, occupation as npc_occupation, skills as npc_skills, speechstyle as npc_speechstyle, goals as npc_goals FROM combined_bio_templates WHERE npc_name = '$codename'"
+            );
         }
 
         
         return $templateRow ?: [
-            'npc_pers' => 'Roleplay as ' . $codename,
-            'npc_dynamic' => '',
+            'core' => 'Roleplay as ' . $codename,
             'npc_misc' => $codename,
             'npc_background' => '',
             'npc_personality' => '',
@@ -265,10 +267,10 @@ class NpcMaster {
     }
 
     private function fetchVoiceData($codename) {
-        $voiceData = $this->db->fetchOne("SELECT xtts_voiceid, melotts_voiceid, xvasynth_voiceid FROM combined_npc_templates WHERE npc_name = '$codename'");
+        $voiceRow = $this->db->fetchOne("SELECT voiceid FROM combined_bio_templates WHERE npc_name = '$codename'");
         $voicetypeString = $this->fetchVoicetype($codename);
 
-        return array_merge($voiceData ?: [], ['voicetype' => $voicetypeString]);
+        return array_merge($voiceRow ?: [], ['voicetype' => $voicetypeString]);
     }
 
     private function fetchVoicetype($codename) {
