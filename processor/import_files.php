@@ -60,7 +60,8 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
         }
         
         // Read and process header
-        $header = fgetcsv($handle, 0, ',', '"', '"');
+        // Use default enclosure '"' and escape '\\' to correctly parse commas within quoted fields
+        $header = fgetcsv($handle, 0, ',');
         if ($header === false || empty($header)) {
             Logger::error("Biography Import: Invalid CSV header");
             fclose($handle);
@@ -76,7 +77,7 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
         }
         
         // Process each data row
-        while (($data = fgetcsv($handle, 0, ',', '"', '"')) !== false) {
+        while (($data = fgetcsv($handle, 0, ',')) !== false) {
             if (empty($data) || count($data) < 2) {
                 continue; // Skip empty or invalid rows
             }
@@ -87,9 +88,12 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
                 $npc_name = strtolower(trim($data[$headerMap['npc_name']]));
             }
             
-            $npc_pers = '';
-            if (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) {
-                $npc_pers = trim($data[$headerMap['npc_pers']]);
+            // core (summary) - support new and legacy header
+            $core = '';
+            if (isset($headerMap['core']) && isset($data[$headerMap['core']])) {
+                $core = trim($data[$headerMap['core']]);
+            } elseif (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) {
+                $core = trim($data[$headerMap['npc_pers']]);
             }
             
             // Extract optional fields
@@ -99,9 +103,12 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
                 $npc_dynamic = ($temp !== '') ? $temp : null;
             }
             
-            $npc_misc = '';
-            if (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) {
-                $npc_misc = trim($data[$headerMap['npc_misc']]);
+            // Oghma tags (new and legacy)
+            $oghma_knowledge_tags = '';
+            if (isset($headerMap['oghma_knowledge_tags']) && isset($data[$headerMap['oghma_knowledge_tags']])) {
+                $oghma_knowledge_tags = trim($data[$headerMap['oghma_knowledge_tags']]);
+            } elseif (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) {
+                $oghma_knowledge_tags = trim($data[$headerMap['npc_misc']]);
             }
             
             $melotts_voiceid = null;
@@ -123,15 +130,21 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
             }
 
             // Extract extended biography fields
-            $npc_background = null;
-            if (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
+            $npc_static_bio = null;
+            if (isset($headerMap['npc_static_bio']) && isset($data[$headerMap['npc_static_bio']])) {
+                $temp = trim($data[$headerMap['npc_static_bio']]);
+                $npc_static_bio = ($temp !== '') ? $temp : null;
+            } elseif (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
                 $temp = trim($data[$headerMap['npc_background']]);
-                $npc_background = ($temp !== '') ? $temp : null;
+                $npc_static_bio = ($temp !== '') ? $temp : null;
             }
             
             $npc_personality = null;
             if (isset($headerMap['npc_personality']) && isset($data[$headerMap['npc_personality']])) {
                 $temp = trim($data[$headerMap['npc_personality']]);
+                $npc_personality = ($temp !== '') ? $temp : null;
+            } elseif (isset($headerMap['personality']) && isset($data[$headerMap['personality']])) {
+                $temp = trim($data[$headerMap['personality']]);
                 $npc_personality = ($temp !== '') ? $temp : null;
             }
             
@@ -139,11 +152,17 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
             if (isset($headerMap['npc_appearance']) && isset($data[$headerMap['npc_appearance']])) {
                 $temp = trim($data[$headerMap['npc_appearance']]);
                 $npc_appearance = ($temp !== '') ? $temp : null;
+            } elseif (isset($headerMap['appearance']) && isset($data[$headerMap['appearance']])) {
+                $temp = trim($data[$headerMap['appearance']]);
+                $npc_appearance = ($temp !== '') ? $temp : null;
             }
             
             $npc_relationships = null;
             if (isset($headerMap['npc_relationships']) && isset($data[$headerMap['npc_relationships']])) {
                 $temp = trim($data[$headerMap['npc_relationships']]);
+                $npc_relationships = ($temp !== '') ? $temp : null;
+            } elseif (isset($headerMap['relationships']) && isset($data[$headerMap['relationships']])) {
+                $temp = trim($data[$headerMap['relationships']]);
                 $npc_relationships = ($temp !== '') ? $temp : null;
             }
             
@@ -151,11 +170,17 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
             if (isset($headerMap['npc_occupation']) && isset($data[$headerMap['npc_occupation']])) {
                 $temp = trim($data[$headerMap['npc_occupation']]);
                 $npc_occupation = ($temp !== '') ? $temp : null;
+            } elseif (isset($headerMap['occupation']) && isset($data[$headerMap['occupation']])) {
+                $temp = trim($data[$headerMap['occupation']]);
+                $npc_occupation = ($temp !== '') ? $temp : null;
             }
             
             $npc_skills = null;
             if (isset($headerMap['npc_skills']) && isset($data[$headerMap['npc_skills']])) {
                 $temp = trim($data[$headerMap['npc_skills']]);
+                $npc_skills = ($temp !== '') ? $temp : null;
+            } elseif (isset($headerMap['skills']) && isset($data[$headerMap['skills']])) {
+                $temp = trim($data[$headerMap['skills']]);
                 $npc_skills = ($temp !== '') ? $temp : null;
             }
             
@@ -163,41 +188,43 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
             if (isset($headerMap['npc_speechstyle']) && isset($data[$headerMap['npc_speechstyle']])) {
                 $temp = trim($data[$headerMap['npc_speechstyle']]);
                 $npc_speechstyle = ($temp !== '') ? $temp : null;
+            } elseif (isset($headerMap['speechstyle']) && isset($data[$headerMap['speechstyle']])) {
+                $temp = trim($data[$headerMap['speechstyle']]);
+                $npc_speechstyle = ($temp !== '') ? $temp : null;
             }
             
             $npc_goals = null;
             if (isset($headerMap['npc_goals']) && isset($data[$headerMap['npc_goals']])) {
                 $temp = trim($data[$headerMap['npc_goals']]);
                 $npc_goals = ($temp !== '') ? $temp : null;
+            } elseif (isset($headerMap['goals']) && isset($data[$headerMap['goals']])) {
+                $temp = trim($data[$headerMap['goals']]);
+                $npc_goals = ($temp !== '') ? $temp : null;
             }
             
             // Skip if required fields are missing
-            if (empty($npc_name) || empty($npc_pers)) {
-                Logger::warn("Biography Import: Skipping row with missing npc_name or npc_pers");
+            if (empty($npc_name) || empty($core)) {
+                Logger::warn("Biography Import: Skipping row with missing npc_name or core");
                 $errorCount++;
                 continue;
             }
 
-            // Insert or update record using upsertRowOnConflict
+            // Insert or update record using upsertRowOnConflict (bio schema)
             try {
                 $db->upsertRowOnConflict(
-                    'npc_templates_custom',
+                    'bio_templates_custom',
                     array(
                         'npc_name' => $npc_name,
-                        'npc_pers' => $npc_pers,
-                        'npc_dynamic' => $npc_dynamic,
-                        'npc_misc' => $npc_misc,
-                        'melotts_voiceid' => $melotts_voiceid,
-                        'xtts_voiceid' => $xtts_voiceid,
-                        'xvasynth_voiceid' => $xvasynth_voiceid,
-                        'npc_background' => $npc_background,
-                        'npc_personality' => $npc_personality,
-                        'npc_appearance' => $npc_appearance,
-                        'npc_relationships' => $npc_relationships,
-                        'npc_occupation' => $npc_occupation,
-                        'npc_skills' => $npc_skills,
-                        'npc_speechstyle' => $npc_speechstyle,
-                        'npc_goals' => $npc_goals
+                        'core' => $core,
+                        'oghma_knowledge_tags' => $oghma_knowledge_tags,
+                        'npc_static_bio' => $npc_static_bio,
+                        'personality' => $npc_personality,
+                        'appearance' => $npc_appearance,
+                        'relationships' => $npc_relationships,
+                        'occupation' => $npc_occupation,
+                        'skills' => $npc_skills,
+                        'speechstyle' => $npc_speechstyle,
+                        'goals' => $npc_goals
                     ),
                     'npc_name'
                 );

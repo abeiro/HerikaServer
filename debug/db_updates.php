@@ -1130,6 +1130,7 @@ if ($checkVersion("rolemaster")<20250528001) {
     Logger::info("Applied patch rolemaster 20250528001");
 }
 
+
 if ($checkVersion("audit_request")<20250616001) {
     Logger::debug(" try patch: audit_request 20250616001");
     $a=$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"url\"  text");
@@ -1380,6 +1381,132 @@ if ($checkTableExists(("core_profiles")>0) && $checkVersion("core_profiles") < 2
     $updateVersion("core_profiles",20250904004);
 } else
     Logger::info(__FILE__." core_profiles 2 exists");
+
+//----------------------------------------------------
+// Bio templates: new tables and combined view
+// Version 20250913001
+//----------------------------------------------------
+
+if ($checkVersion("bio_templates")<20250913001) {
+    Logger::debug("Applying bio_templates 20250913001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.bio_templates (
+            npc_name character varying(128) NOT NULL PRIMARY KEY,
+            oghma_knowledge_tags text,
+            core text,
+            npc_static_bio text,
+            appearance text,
+            personality text,
+            relationships text,
+            occupation text,
+            skills text,
+            speechstyle text,
+            goals text,
+            voiceid text,
+            gender text,
+            race text,
+            refid text
+        );
+    ");
+    $updateVersion("bio_templates",20250913001);
+    Logger::info("Applied patch bio_templates 20250913001");
+}
+
+if ($checkVersion("bio_templates_custom")<20250913001) {
+    Logger::debug("Applying bio_templates_custom 20250913001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.bio_templates_custom (
+            npc_name character varying(128) NOT NULL PRIMARY KEY,
+            oghma_knowledge_tags text,
+            core text,
+            npc_static_bio text,
+            appearance text,
+            personality text,
+            relationships text,
+            occupation text,
+            skills text,
+            speechstyle text,
+            goals text,
+            voiceid text,
+            gender text,
+            race text,
+            refid text
+        );
+    ");
+    $updateVersion("bio_templates_custom",20250913001);
+    Logger::info("Applied patch bio_templates_custom 20250913001");
+}
+
+// Seed base bio templates from SQL file (run once)
+if ($checkVersion("bio_templates_seed")<20250913001) {
+    try {
+        $sqlFile = __DIR__ . "/../data/bio_templates_20250913.sql";
+        if (file_exists($sqlFile)) {
+            $sqlContent = file_get_contents($sqlFile);
+            if ($sqlContent !== false && strlen($sqlContent) > 0) {
+                $db->execQuery($sqlContent);
+                $updateVersion("bio_templates_seed", 20250913001);
+                Logger::info("Seeded bio_templates from bio_templates_20250913.sql");
+            } else {
+                Logger::warn("bio_templates seed file is empty: " . $sqlFile);
+            }
+        } else {
+            Logger::warn("bio_templates seed file not found: " . $sqlFile);
+        }
+    } catch (Exception $e) {
+        Logger::error("Error seeding bio_templates: " . $e->getMessage());
+    }
+}
+
+// Always (re)create combined view once base tables exist
+try {
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_bio_templates CASCADE;");
+    $db->execQuery("
+        CREATE VIEW public.combined_bio_templates AS
+        SELECT c.npc_name,
+               c.oghma_knowledge_tags,
+               c.core,
+               c.npc_static_bio,
+               c.appearance,
+               c.personality,
+               c.relationships,
+               c.occupation,
+               c.skills,
+               c.speechstyle,
+               c.goals,
+               c.voiceid,
+               c.gender,
+               c.race,
+               c.refid
+          FROM public.bio_templates_custom c
+        UNION ALL
+        SELECT b.npc_name,
+               b.oghma_knowledge_tags,
+               b.core,
+               b.npc_static_bio,
+               b.appearance,
+               b.personality,
+               b.relationships,
+               b.occupation,
+               b.skills,
+               b.speechstyle,
+               b.goals,
+               b.voiceid,
+               b.gender,
+               b.race,
+               b.refid
+          FROM (public.bio_templates b
+                LEFT JOIN public.bio_templates_custom c
+                  ON ((b.npc_name)::text = (c.npc_name)::text))
+         WHERE c.npc_name IS NULL;
+    ");
+    // Track the view version under the same version key
+    $updateVersion("combined_bio_templates",20250913001);
+    Logger::info("Created view combined_bio_templates 20250913001");
+} catch (Exception $e) {
+    Logger::error("Error creating combined_bio_templates view: " . $e->getMessage());
+}
+
 
 
 

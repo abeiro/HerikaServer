@@ -52,9 +52,11 @@ try {
             $npc_name = strtolower(trim($data[$headerMap['npc_name']]));
         }
         
-        $npc_pers = '';
-        if (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) {
-            $npc_pers = trim($data[$headerMap['npc_pers']]);
+        $core = '';
+        if (isset($headerMap['core']) && isset($data[$headerMap['core']])) {
+            $core = trim($data[$headerMap['core']]);
+        } elseif (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) { // legacy
+            $core = trim($data[$headerMap['npc_pers']]);
         }
         
         // Extract optional fields
@@ -64,9 +66,11 @@ try {
             $npc_dynamic = ($temp !== '') ? $temp : null;
         }
         
-        $npc_misc = '';
-        if (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) {
-            $npc_misc = trim($data[$headerMap['npc_misc']]);
+        $oghma_knowledge_tags = '';
+        if (isset($headerMap['oghma_knowledge_tags']) && isset($data[$headerMap['oghma_knowledge_tags']])) {
+            $oghma_knowledge_tags = trim($data[$headerMap['oghma_knowledge_tags']]);
+        } elseif (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) { // legacy
+            $oghma_knowledge_tags = trim($data[$headerMap['npc_misc']]);
         }
         
         $melotts_voiceid = null;
@@ -88,10 +92,13 @@ try {
         }
 
         // Extract extended biography fields
-        $npc_background = null;
-        if (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
+        $npc_static_bio = null;
+        if (isset($headerMap['npc_static_bio']) && isset($data[$headerMap['npc_static_bio']])) {
+            $temp = trim($data[$headerMap['npc_static_bio']]);
+            $npc_static_bio = ($temp !== '') ? $temp : null;
+        } elseif (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) { // legacy
             $temp = trim($data[$headerMap['npc_background']]);
-            $npc_background = ($temp !== '') ? $temp : null;
+            $npc_static_bio = ($temp !== '') ? $temp : null;
         }
         
         $npc_personality = null;
@@ -137,8 +144,8 @@ try {
         }
         
         // Skip if required fields are missing
-        if (empty($npc_name) || empty($npc_pers)) {
-            Logger::warn("Biography Import: Skipping row with missing npc_name or npc_pers");
+        if (empty($npc_name) || empty($core)) {
+            Logger::warn("Biography Import: Skipping row with missing npc_name or core");
             $errorCount++;
             continue;
         }
@@ -146,23 +153,19 @@ try {
         // Insert or update record using upsertRowOnConflict
         try {
             $db->upsertRowOnConflict(
-                'npc_templates_custom',
+                'bio_templates_custom',
                 array(
                     'npc_name' => $npc_name,
-                    'npc_pers' => $npc_pers,
-                    'npc_dynamic' => $npc_dynamic,
-                    'npc_misc' => $npc_misc,
-                    'melotts_voiceid' => $melotts_voiceid,
-                    'xtts_voiceid' => $xtts_voiceid,
-                    'xvasynth_voiceid' => $xvasynth_voiceid,
-                    'npc_background' => $npc_background,
-                    'npc_personality' => $npc_personality,
-                    'npc_appearance' => $npc_appearance,
-                    'npc_relationships' => $npc_relationships,
-                    'npc_occupation' => $npc_occupation,
-                    'npc_skills' => $npc_skills,
-                    'npc_speechstyle' => $npc_speechstyle,
-                    'npc_goals' => $npc_goals
+                    'core' => $core,
+                    'oghma_knowledge_tags' => $oghma_knowledge_tags,
+                    'npc_static_bio' => $npc_static_bio,
+                    'personality' => $npc_personality,
+                    'appearance' => $npc_appearance,
+                    'relationships' => $npc_relationships,
+                    'occupation' => $npc_occupation,
+                    'skills' => $npc_skills,
+                    'speechstyle' => $npc_speechstyle,
+                    'goals' => $npc_goals
                 ),
                 'npc_name'
             );

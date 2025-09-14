@@ -157,12 +157,16 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             // This should be on new npc profile table
             $codename = npcNameToCodename($response["name"]);
             $GLOBALS["db"]->insert(
-                'npc_templates_custom',
+                'bio_templates_custom',
                 array(
                     'npc_name' => $codename,
-                    'npc_dynamic' => "Goal: {$response["goal"]}. Traits: {$response["traits"]}",
-                    'npc_pers' => "{$response["name"]} {$response["race"]} {$response["gender"]} {$response["background"]}\n#SpeechStyle\n{$response["speechStyle"]}\n",
-                    "npc_misc" =>"rolemastered"
+                    'core' => "{$response["name"]} ({$response["race"]} {$response["gender"]})",
+                    'npc_static_bio' => "{$response["background"]}",
+                    'personality' => "{$response["traits"]}",
+                    'appearance' => "{$response["appearance"]}",
+                    'speechstyle' => "{$response["speechStyle"]}",
+                    'goals' => "{$response["goal"]}",
+                    'oghma_knowledge_tags' => 'rolemastered'
                 )
             );
 
