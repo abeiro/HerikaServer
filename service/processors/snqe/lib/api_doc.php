@@ -19,10 +19,10 @@ name (string, required) – NPC display name.
 gender (string, required) – "Male" or "Female".
 class (enum, required) – beggar, warrior, assassin, mage, farmer, soldier, merchant, noble.
 race (enum, required) – Nord, Imperial, Argonian, RedGuard, Orc, Breton.
-location (string, required) – Initial placement, e.g., "Whiterun" or "nearby".
+location (string, required) – Default placement, e.g., "Whiterun" or "nearby".
 appearance (string, optional) – Hair, clothes, scars, visual description.
-background (string, optional) – Lore or backstory.
-speechStyle (string, optional) – How NPC talks (formal, rustic, archaic, etc.).
+background (string, optional) – Lore or backstory. Should be about 200 character long for good roleplay. 
+speechStyle (string, optional) – How NPC talks (formal, rustic, archaic, etc., cursed words, uses specific fillir words).
 disposition (enum, optional) – defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high.
 
 * CreateItem(quest_id, item_ref, name, type, location, description)
@@ -33,18 +33,18 @@ item_ref (string, required) – Internal item reference ID.
 name (string, required) – Item display name.
 type (enum, required) – sword, armor, helmet, ring, amulet, book, note, axe, long sword, staff, great axe, bow.
 location (enum, required) – "nearby", "major city".
-description (string, optional) – Description or content if item is book or note.
+description (string) – Description, or content if item is book or note.
 
 * CreateTopic(quest_id, topic_ref, name, type, item, giver, info, target)
 Declares a dialogue topic.
 
 quest_id (string, required) – Quest identifier.
 topic_ref (string, required) – Internal topic reference ID.
-name (string, required) – Display name of the topic.
+name (string, required) –  // topic concept/description
 type (enum, required) – Lore, Item, Location.
 item (string, optional) – If type=Item, the item_ref this topic refers to.
 giver (string, required) – NPC reference or name giving the topic.
-info (string, required) – Dialogue text or explanation.
+info (string, required) – Topic the NPC should talk about. Use a few example phrases, but mainly describe the topic.
 target (string, required) – NPC reference (char_ref) or "player" who receives the topic.
 
 2. Spawn Functions
@@ -57,17 +57,16 @@ Spawns a declared NPC at a location.
 
 quest_id (string, required)
 npc_ref (string, required) – NPC reference created via CreateNPC.
-location (string, required) – Placement location.
+location (string, required) – Placement location. eg: "Whiterun" or "nearby".
 
-* CheckNPCSpawn(quest_id, npc_ref, location, maxAttempts)
+* CheckNPCSpawn(quest_id, npc_ref, maxAttempts)
 Checks if NPC has successfully spawned.
 
 quest_id (string, required)
 npc_ref (string, required)
-location (string, required)
 maxAttempts (int, optional, default=5) – Maximum retries before failure.
 
-Returns: true → spawned, false → failed, null → still waiting.
+Returns: "done" | "pending" | "failed".
 
 * SpawnItem(quest_id, item_ref, location_or_char_ref)
 
@@ -86,7 +85,7 @@ item_ref (string, required)
 location_or_char_ref (string, required)
 maxAttempts (int, optional, default=5)
 
-Returns: true → spawned, false → failed, null → still waiting.
+Returns: "done" | "pending" | "failed".
 
 3. Interaction Functions
 
@@ -145,7 +144,7 @@ quest_id (string, required)
 item_ref (string, required)
 timeout (int, optional, default=10)
 
-Returns: success | timeout | waiting.
+Returns: "done" | "pending" | "failed".
 
 * WaitForCoins(quest_id, npc_ref, amount, timeout)
 
@@ -156,7 +155,7 @@ npc_ref (string, required)
 amount (int, required)
 timeout (int, optional, default=10)
 
-Returns: success | timeout | waiting.
+Returns: "done" | "pending" | "failed".
 
 * WaitToItemBeTraded(quest_id, item_ref, npc_ref, timeout)
 
@@ -167,7 +166,47 @@ item_ref (string, required)
 npc_ref (string, required)
 timeout (int, optional, default=10)
 
-Returns: success | timeout | waiting.
+Returns: "done" | "pending" | "failed".
+
+* CheckTopicToPlayer(quest_id, topic_ref, maxAttempts)
+
+Checks whether an NPC has successfully delivered a declared topic to the player.
+This function is typically used after TellTopicToPlayer to confirm dialogue delivery.
+
+quest_id (string, required) – Quest identifier.
+topic_ref (string, required) – Topic reference created via CreateTopic.
+maxAttempts (int, optional, default=50) – Maximum number of retries before failure.
+Returns: "done" | "pending" | "failed"
+
+"done" → Topic was delivered to the player.
+"pending" → NPC has not yet delivered the topic; further checks required.
+"failed" → Maximum attempts exceeded without successful delivery.
+
+Notes:
+
+Function is idempotent. If the topic was already delivered, it returns "done".
+Tracks delivery_attempts per topic in quest state.
+
+* CompleteQuest(quest_id, result)
+
+Marks a quest as finished and updates its state. This function is intended to be called as the final step in a quest sequence.
+
+quest_id (string, required) – Quest identifier.
+
+result (string, optional) – Optional textual description or outcome of the quest.
+
+Returns: void
+
+Notes:
+
+Updates the quest state quest_run_state to "finished".
+
+Records a timestamp (completed_at) in quest data.
+
+Logs the completion in responselog for traceability.
+
+Idempotent: if the quest is already finished, calling it again does not cause side effects
+
 
 ✅ Execution Flow Notes
 
@@ -179,6 +218,131 @@ Wait functions allow branching: success → continue, timeout → alternate path
 
 
 Interaction functions (MoveToPlayer, TellTopic*, CombatPlayer) are executed once and persist state.
+
+
+Example quest:
+
+// Quest: Find the Lost Tome
+
+$quest_id = "find_lost_ring";
+$npc_ref = "wizard_ulfric";
+$item_ref = "ancient_tome";
+
+
+// 1. Declare the wizard NPC
+CreateNPC(
+    $quest_id,
+    $npc_ref,
+    "Ulfric the Wise",
+    "Male",
+    "mage",
+    "Breton",
+    "Raven Rock",
+    "Long white beard, blue robes, staff",
+    "A reclusive scholar seeking lost knowledge.",
+    "formal",
+    "serious"
+);
+
+
+// 2. Declare the book item
+CreateItem(
+    $quest_id,
+    $item_ref,
+    "Ancient Ring",
+    "ring",
+    "nearby",
+    "A ring tome filled with arcane secrets."
+);
+
+
+// 3. Declare a topic for the wizard to ask for the book
+CreateTopic(
+    $quest_id,
+    "t_ask_ring",
+    "Seeking the Ancient Ring",
+    "Item",
+    $item_ref,
+    $npc_ref,
+    "Character should talk about the ring and ask the player to find it. E.g.:'I require the Ancient Ring for my research. Can you find it for me?'",
+    "player"
+);
+
+
+
+
+// 4. Spawn the wizard in Winterhold
+SpawnNPC($quest_id, $npc_ref, "Raven Rock");
+if (CheckNPCSpawn($quest_id, $npc_ref)!="done") {
+    error_log("NPC not spawned <SpawnItem($quest_id, $item_ref>".PHP_EOL);
+    return;
+}
+
+
+// 5. Spawn the book somewhere nearby
+SpawnItem($quest_id, $item_ref, "nearby");
+if (CheckItemSpawn($quest_id, $item_ref)!="done") {
+    error_log("Item not spawned <SpawnItem($quest_id, $item_ref>".PHP_EOL);
+    return;
+}
+
+
+
+// 6. Wizard tells the player about the quest
+if (TellTopicToPlayer($quest_id, $npc_ref, "t_ask_ring") !="done") {
+    error_log("TellTopicToPlayer failed, will retry".PHP_EOL);
+    return;
+}
+
+if (CheckTopicToPlayer($quest_id, "t_ask_ring") !="done") {
+    error_log("Topic not covered ".PHP_EOL);
+    return;
+}
+
+// 7. Wait for the player to recover the book
+if (WaitToItemBeRecovered($quest_id, $item_ref)  != "done") {
+    error_log("Item not recovered ".PHP_EOL);
+    return;
+
+}
+
+// 8. Wait for the player to give the book to the wizard
+if (WaitToItemBeTraded($quest_id, $item_ref, $npc_ref) == "pending") {
+    error_log("Item not traded, pending ".PHP_EOL);
+    return;
+} else if (WaitToItemBeTraded($quest_id, $item_ref, $npc_ref) == "failed") {
+    error_log("Item not traded, failed after reachinf timeout ".PHP_EOL);
+    // Note: Quest can branch here and execute different steps
+
+} if (WaitToItemBeTraded($quest_id, $item_ref, $npc_ref) == "done") {
+    error_log("Item traded ".PHP_EOL);
+    
+} else  // Default case
+    return;
+
+// 9. (Optional) Wizard thanks the player
+CreateTopic(
+    $quest_id,
+    "t_thanks",
+    "Thank You",
+    "Lore",
+    null,
+    $npc_ref,
+    "Thank you for retrieving the ring. Your help is invaluable.",
+    "player"
+);
+
+TellTopicToPlayer($quest_id, $npc_ref, "t_thanks");
+if (CheckTopicToPlayer($quest_id, "t_thanks") !="done") {
+    error_log("Topic not covered ".PHP_EOL);
+    return;
+}
+// 10. Remove the wizard (optional, quest end)
+ToGoAway($quest_id, $npc_ref);
+
+CompleteQuest($quest_id);
+
+return;
 
 */
 ?>

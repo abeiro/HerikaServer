@@ -619,6 +619,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='waitstop' then 'CONTEXTI' 
       when type='spellcast' then 'CONTEXTI' 
       when type='npcspellcast' then 'CONTEXTI' 
+      when type='info_timeforward' then 'TIMELAPSE' 
       when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
@@ -628,7 +629,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive'
     ".(($actorEscaped)?" 
-    and (people like '|%$actorEscaped%|' or people like '$actorEscaped') ":"")." 
+    and (people like '|%$actorEscaped%|' or people like '$actorEscaped' or type='info_timeforward') ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
     " order by gamets desc,ts desc,rowid desc LIMIT $nRecordsLimit OFFSET 0";  
@@ -740,6 +741,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="CONTEXTI") {
+            if (strpos($rowData,"should not be visible")!==false)
+                continue;
             if ($focusOnChat) {
                 if (strpos($rowData," uses ")!==false) 
                     continue;
@@ -761,8 +764,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="ITEM") {
-            if ($focusOnChat)
-                continue;
+            if ($focusOnChat) {
+                if (strpos($rowData,"{$GLOBALS["HERIKA_NAME"]}")===false) // This NPC's item transaction conserved
+                    continue;
+            }
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_WORD") {
@@ -797,7 +802,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
             
-        } else if ($row["subtype"]=="PLUGIN") {
+        } else if ($row["subtype"]=="TIMELAPSE") {
+            $rowData = strtoupper($rowData);
+            
+        }  else if ($row["subtype"]=="PLUGIN") {
             $speaker = $row["type"];
             
         } else {
@@ -805,8 +813,6 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $speaker = "npc";
             
         }
-
-    
 
         if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(true)) {
             

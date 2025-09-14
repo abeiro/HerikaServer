@@ -2,6 +2,20 @@
 
 
 class SNQEQuestManager {
+    /**
+     * Create a new quest with default state and data
+     *
+     * @param string $quest_id Unique identifier for the quest
+     * @param string $code     The PHP code of the quest
+     * @param array  $data     Arbitrary quest state data (optional)
+     * @param string $state    Quest run state: running|not_running|finished (optional)
+     */
+    public static function createNewQuest(string $quest_id, string $code, array $data = [], string $state = "not_running") {
+        if (self::questExists($quest_id)) {
+            throw new \Exception("Quest with id '$quest_id' already exists.");
+        }
+        self::upsertQuest($quest_id, $code, $data, $state);
+    }
 
     const TABLE_NAME = "sneq_quests";
 
@@ -21,7 +35,7 @@ class SNQEQuestManager {
             "quest_run_state" => $state,
             "quest_data" => $serializedData
         ];
-        $GLOBALS["db"]->upsertRow(self::TABLE_NAME, $row, ["quest_id" => $quest_id]);
+        $GLOBALS["db"]->upsertRow(self::TABLE_NAME, $row, "quest_id='$quest_id'");
     }
 
     /**
@@ -51,9 +65,10 @@ class SNQEQuestManager {
      * @param string $state
      */
     public static function updateQuestState(string $quest_id, string $state) {
-        $GLOBALS["db"]->updateRow(self::TABLE_NAME, ["quest_run_state" => $state], ["quest_id" => $quest_id]);
+        $GLOBALS["db"]->updateRow(self::TABLE_NAME, ["quest_run_state" => $state], "quest_id='$quest_id'");
     }
 
+    
     /**
      * Update quest data (partial or full)
      *

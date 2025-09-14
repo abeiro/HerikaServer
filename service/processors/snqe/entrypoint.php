@@ -26,7 +26,7 @@ $GLOBALS["TASKS"]["snqe"]["fn"]=function() {
         Logger::info("Loading suggestion command");
         require_once("cmd" . DIRECTORY_SEPARATOR . "main.php");
     } else if ($GLOBALS["argv"][2]=="reset") {
-        $GLOBALS["db"]->execQuery("update sneq_quests set quest_data='{}'");
+        $GLOBALS["db"]->execQuery("update sneq_quests set quest_data='{}',quest_run_state='not started'");
     }
 
 

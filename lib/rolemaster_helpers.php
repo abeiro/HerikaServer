@@ -268,7 +268,7 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
 
     $head[]   = ["role"	=> "system", "content"	=> "You are an assistant. You will analyze a dialogue and determine if a topic has been fully or partially covered. ", ];
     $prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-    $prompt[] = ["role"=> "user", "content"	=> "is this topic fully or partially covered in the dialogue history? \"$topic\".\n". 
+    $prompt[] = ["role"=> "user", "content"	=> "is this topic/intent fully or partially covered in the dialogue history? Topic/Intent:\"$topic\".\n". 
     "Answer yes,or give a score from 1 , (not covered) to 10 (fully covered), and then write a dialogue sentence as the speaker (hint) to provide the missing info. Use a JSON object to give reponse {\"score\":[0-9],\"hint\":\"\"}"];
     $contextData       = array_merge($head, $prompt);
 
@@ -307,6 +307,43 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
     
     //$res=true;
     return ["res"=>$res,"missing"=>$buffer];
+    
+}
+
+function simpleTopicCheck($npc,$topic) {
+
+    $lastListener="";
+    $lastPlace="";
+    $historyData="";
+
+    foreach (json_decode(DataSpeechJournal($npc,50),true) as $element) {
+    
+        if ($lastListener!=$element["listener"]) {
+            if ($element["listener"]!="The Narrator")
+                $listener=" (talking to {$element["listener"]})";
+            $lastListener=$element["listener"];
+        }
+        else
+            $listener="";
+
+        if ($lastPlace!=$element["location"]){
+            $place=" (at {$element["location"]})";
+            $lastPlace=$element["location"];
+        }
+        else
+            $place="";
+
+        if (strpos($element["speaker"],$npc)!==false)  // Only NPC lines
+            $historyData.=trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place").PHP_EOL;
+    
+    }
+
+    if (strpos($historyData,$topic)!== false) {
+      return true;
+    } else
+      return false;
+
+    
     
 }
 
@@ -717,13 +754,26 @@ function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
 {
     $contextDataHistoric = checkHistory($character);
     
-    // To avoid call LLM all times
-    if ((time()-$lastCall)< 60) {
-        return WILL_DO_LATER;
+    if (simpleTopicCheck($character,$topic)) {
+        return TOPIC_COVERED;
     }
+
+    // To avoid call LLM all times
+    if ((time()-$lastCall)< 90)  {
+        if ($GLOBALS["NPCS_ARE_NOT_TALKING"]==1) {
+          error_log("[SkTopicCheck]\t SHOULD DO LATER, but  NPCS_ARE_NOT_TALKING <$character>  <$retries> <$quest_id>, will call in ".((time()-$lastCall-90)));
+        } else {
+          error_log("[SkTopicCheck]\t WILL_DO_LATER <$character>  <$retries> <$quest_id>, will call in ".((time()-$lastCall-90)));
+          return WILL_DO_LATER;
+        }
+    }
+    
+    error_log("[SkTopicCheck]\t <$character>  <$retries> <$quest_id>");
+
     if (($contextDataHistoric) >= 4) {
         // But first, check if topic already has been covered
-        
+        error_log("[SkTopicCheck]\tMaking LLM request: $lastCall, interval <".(time()-$lastCall).">");
+
         $topiCall                      = askLLMForTopic($character, $topic, $lastCall);
         
         if ($topiCall["res"]) {
@@ -750,10 +800,11 @@ function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
             return TOPIC_UNCOVERED;
         }
     } else {
+        error_log("[SkTopicCheck]\tNot enough dialogue with NPC <$topic> <{$character}>");
         // Not enough dialogue with NPC
-        if ($retries % 5) {
+        if (($retries % 30)==0) {
           // Make suggestion, dialogue is too small
-          $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic");
+          $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: <$topic> (using its own words)");
           $GLOBALS["db"]->insert(
                   'responselog',
                   [
@@ -761,11 +812,11 @@ function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
                       'sent'    => 0,
                       'actor'   => "rolemaster",
                       'text'    => "",
-                      'action'  => "rolecommand|Suggestion@{$character}@$sugggestionText@$taskId",
+                      'action'  => "rolecommand|Suggestion@{$character}@$sugggestionText@$quest_id",
                       'tag'     => "",
                   ]
               );
-              error_log("[SkTopicCheck] Topic enforced <$topic> <{$character}>");
+              error_log("[SkTopicCheck]\tTopic enforced <$topic> <{$character}>");
          
         }
         return TOPIC_UNCOVERED;

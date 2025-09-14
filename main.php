@@ -643,6 +643,18 @@ if (isset($_GET["profile"])) {
     $GLOBALS["USING_DEFAULT_PROFILE"]=true;
 }
 
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
+    // Empty request
+    if (empty($gameRequest[3]) || trim($gameRequest[3])=="{$GLOBALS["PLAYER_NAME"]}:") {
+        error_log("[MAIN] Empty request... aborting");
+        terminate();
+    } else {
+        error_log("[MAIN] Request: {$gameRequest[3]}");
+    }
+    
+}
+
+
 /* *****
 Player TTS
 

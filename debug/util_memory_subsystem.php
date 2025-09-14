@@ -227,6 +227,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                     }
                 }
 
+                $prevMemory=$db->fetchOne("SELECT gamets_truncated, packed_message,  uid, classifier, rowid,companions,summary FROM memory_summary WHERE gamets_truncated < {$row["gamets_truncated"]} ORDER BY gamets_truncated DESC LIMIT 1");
                 // Summarization logic begins
                 if ($row["classifier"]=="diary") {
                     $TEST_TEXT=$row["packed_message"];
@@ -245,13 +246,20 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                                       'content' => "This is a playthrough in Skyrim. 
 {$GLOBALS["PLAYER_NAME"]} is the player.
 {$row["companions"]} are nearby characters.
-You must write a memory summary from narrator's point of view, by analyzing the chat history .
+
+You must write a memory summary from narrator's point of view, by analyzing the chat history.
+
 Pay attention to details that can change character's behavior, feelings, and also tag names and locations.
+
+Also add character's quotes from dialogue into the summary if relevant.
+
 Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 ");
+                    $prompt[] = array('role' => 'user', 'content' =>"#PREVIOUS MEMORY (for reference only)#\\n{$prevMemory["summary"]}\\n#END OF PREVIOUS MEMORY#\\n");
+
                     $prompt[] = array('role' => 'user', 'content' =>"#CHAT HISTORY#\\n{$row["packed_message"]}\\n#END OF CHAT HISTORY#\\n");
                     $prompt[] = array('role' => 'user', 
-                                      'content' => "Read #CHAT HISTORY# and write a memory record about events and conversations. Use this format:\\n$CLFORMAT");
+                                      'content' => "Read #CHAT HISTORY# and write a extensive memory record about events and conversations. Use this format:\\n$CLFORMAT");
                     
                     $GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
                     
