@@ -327,7 +327,10 @@ $ittById = $byId($ittRows);
     <div class="llm-left">
         <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Profiles</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn-save" href="?create_blank=1">New Profile</a>
+            <form method="get" action="core_profiles.php" style="display:inline">
+                <input type="hidden" name="create_blank" value="1">
+                <button type="submit" class="btn-save">New Profile</button>
+            </form>
         </div>
         <div id="profiles_list" class="conn-list"></div>
         <script>
@@ -373,15 +376,21 @@ $ittById = $byId($ittRows);
                                 <div class="pf-line"><span class="pf-icon">📓</span><span class="pf-key">Diary</span><span class="pf-val">${diary||'—'}</span></div>
                             </div>
                             <div class="actions">
-                                <a class="btn-danger" href="?delete=${r.id}" onclick="return confirm('Delete this profile?');">Delete</a>
-                                <a class="btn-primary" href="?clone=${r.id}">Clone</a>
+                                <form method="get" action="core_profiles.php" onsubmit="return confirm('Delete this profile?');" style="display:inline">
+                                    <input type="hidden" name="delete" value="${r.id}">
+                                    <button type="submit" class="btn-danger">Delete</button>
+                                </form>
+                                <form method="get" action="core_profiles.php" style="display:inline">
+                                    <input type="hidden" name="clone" value="${r.id}">
+                                    <button type="submit" class="btn-primary">Clone</button>
+                                </form>
                             </div>
                         </div>`;
                 });
                 list.innerHTML = html || '<div class="conn-li"><em>No profiles match filters.</em></div>';
                 list.querySelectorAll('.conn-li').forEach(li => {
                     li.addEventListener('click', (ev) => {
-                        if (ev.target.closest('a')) return;
+                        if (ev.target.closest('a') || ev.target.closest('button') || ev.target.closest('form')) return;
                         const id = li.getAttribute('data-id');
                         if (id) window.location.href = `?edit=${id}`;
                     });

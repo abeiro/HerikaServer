@@ -630,7 +630,10 @@ if (isset($_GET["edit"])) {
     <div class="llm-left position-sticky">
         <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Connectors</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn-save" href="?create_blank=1">New Connector</a>
+            <form method="get" style="display:inline" action="llm_connectors.php">
+                <input type="hidden" name="create_blank" value="1">
+                <button type="submit" class="btn-save">New Connector</button>
+            </form>
         </div>
         <div id="llm_list" class="conn-list"></div>
         <script>
@@ -653,8 +656,14 @@ if (isset($_GET["edit"])) {
                             </div>
                             <div class="sub">${escapeHtml(r.model||'')}</div>
                             <div class="actions">
-                                <a class="btn-danger" href="?delete=${r.id}" onclick="return confirm('Are you sure you want to delete this connector?');">Delete</a>
-                                <a class="btn-primary" href="?clone=${r.id}">Clone</a>
+                                <form method="get" action="llm_connectors.php" onsubmit="return confirm('Are you sure you want to delete this connector?');" style="display:inline">
+                                    <input type="hidden" name="delete" value="${String(r.id)}">
+                                    <button type="submit" class="btn-danger">Delete</button>
+                                </form>
+                                <form method="get" action="llm_connectors.php" style="display:inline">
+                                    <input type="hidden" name="clone" value="${String(r.id)}">
+                                    <button type="submit" class="btn-primary">Clone</button>
+                                </form>
                             </div>
                         </div>`;
                 });
@@ -662,7 +671,7 @@ if (isset($_GET["edit"])) {
                 // Make rows clickable to open editor, but ignore clicks on action links
                 list.querySelectorAll('.conn-li').forEach(li => {
                     li.addEventListener('click', (ev) => {
-                        if (ev.target.closest('a')) return;
+                        if (ev.target.closest('a') || ev.target.closest('button') || ev.target.closest('form')) return;
                         const id = li.getAttribute('data-id');
                         if (id) window.location.href = `?edit=${id}`;
                     });
