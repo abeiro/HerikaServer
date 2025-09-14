@@ -121,6 +121,8 @@ $gsSections = [
      'General' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'text' ],
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
+        [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
@@ -202,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
     $allPairs = flatten_current_conf($currentConf, $confSchema);
 
     // Apply posted overrides for our curated settings
-    foreach ($sections as $sec => $fields) {
+    foreach ($gsSections as $sec => $fields) {
         foreach ($fields as $f) {
             $key = $f['name'];
             $postKey = $key;

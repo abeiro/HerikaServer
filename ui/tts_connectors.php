@@ -83,9 +83,11 @@ if ($playerVoiceId === '') { $playerVoiceId = (string)($samplePlayerDefaults['TT
 $playerLanguage = tts_current_value('TTSFUNCTION_PLAYER_LANGUAGE', $currentConf);
 if ($playerLanguage === '') { $playerLanguage = (string)($samplePlayerDefaults['TTSFUNCTION_PLAYER_LANGUAGE'] ?? ''); }
 
-// Player Re-speech controls
-$playerRespeech = tts_current_value('PLAYER_RESPEECH', $currentConf);
-$playerSpeechStyle = tts_current_value('PLAYER_SPEECH_STYLE', $currentConf);
+// Descriptions for Player TTS fields (from conf schema)
+$descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? '');
+$descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? '');
+$descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? '');
+$descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? '');
 
 // Save handler: write TTSFUNCTION + shown provider fields to conf.php
 $saveSuccess = false;
@@ -141,11 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 		$allPairs['TTSFUNCTION_PLAYER_LANGUAGE'] = (string)$_POST['TTSFUNCTION_PLAYER_LANGUAGE'];
 	}
 
-	// Overwrite Player Re-speech fields
-	$allPairs['PLAYER_RESPEECH'] = (isset($_POST['PLAYER_RESPEECH']) && $_POST['PLAYER_RESPEECH'] === 'true') ? 'true' : 'false';
-	if (isset($_POST['PLAYER_SPEECH_STYLE'])) {
-		$allPairs['PLAYER_SPEECH_STYLE'] = (string)$_POST['PLAYER_SPEECH_STYLE'];
-	}
+	// Player Re-speech fields handled in Global Settings
 
 	// Build conf.php content (match writer style)
 	$buffer = "<?php" . PHP_EOL;
@@ -308,22 +306,21 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
 							<?php endforeach; ?>
 						</select>
+						<?php if (!empty($descTtsPlayer)): ?><div class="help"><?php echo $descTtsPlayer; ?></div><?php endif; ?>
 
 						<label for="TTSFUNCTION_PLAYER_VOICE">Player Voice</label>
 						<input type="text" id="TTSFUNCTION_PLAYER_VOICE" name="TTSFUNCTION_PLAYER_VOICE" value="<?php echo htmlspecialchars((string)$playerVoice); ?>">
+						<?php if (!empty($descPlayerVoice)): ?><div class="help"><?php echo $descPlayerVoice; ?></div><?php endif; ?>
 
 						<label for="TTSFUNCTION_PLAYER_VOICE_ID">Player Voice ID</label>
 						<input type="number" step="1" id="TTSFUNCTION_PLAYER_VOICE_ID" name="TTSFUNCTION_PLAYER_VOICE_ID" value="<?php echo htmlspecialchars((string)$playerVoiceId); ?>">
+						<?php if (!empty($descPlayerVoiceId)): ?><div class="help"><?php echo $descPlayerVoiceId; ?></div><?php endif; ?>
 
 						<label for="TTSFUNCTION_PLAYER_LANGUAGE">Player Language Override</label>
 						<input type="text" id="TTSFUNCTION_PLAYER_LANGUAGE" name="TTSFUNCTION_PLAYER_LANGUAGE" value="<?php echo htmlspecialchars((string)$playerLanguage); ?>">
+						<?php if (!empty($descPlayerLang)): ?><div class="help"><?php echo $descPlayerLang; ?></div><?php endif; ?>
 
-						<label for="PLAYER_RESPEECH">Player Respeech Enabled</label>
-						<input type="hidden" name="PLAYER_RESPEECH" value="false">
-						<input type="checkbox" id="PLAYER_RESPEECH" name="PLAYER_RESPEECH" value="true" <?php echo ($playerRespeech ? 'checked' : ''); ?> style="width:auto;">
 
-						<label for="PLAYER_SPEECH_STYLE">Player Respeech Style</label>
-						<textarea id="PLAYER_SPEECH_STYLE" name="PLAYER_SPEECH_STYLE" rows="3"><?php echo htmlspecialchars((string)$playerSpeechStyle); ?></textarea>
 					</div>
 				</div>
 			</div>
