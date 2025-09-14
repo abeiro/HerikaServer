@@ -246,7 +246,7 @@ function current_value(string $flatName, array $currentConf) {
 }
 ?>
 
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css?v=gs1">
 <style>
     /* Match api_badge (oghma) layout and colors */
     main {
@@ -312,6 +312,42 @@ function current_value(string $flatName, array $currentConf) {
         main { padding-left: 5%; padding-right: 5%; }
         .content-grid { grid-template-columns: 1fr; }
     }
+
+    /* Global Settings: enhance native boolean checkboxes (e.g., PLAYER_RESPEECH) */
+    .provider-card .provider-body input[type="checkbox"] {
+        accent-color: #176529 !important;
+        transform: scale(1.4) !important;
+        transform-origin: center;
+        margin: 0 !important;
+        flex: 0 0 auto;
+        cursor: pointer;
+        vertical-align: middle;
+    }
+    .provider-card .provider-body input[type="checkbox"]:focus-visible {
+        outline: 2px solid rgba(23, 101, 41, 0.6);
+        outline-offset: 2px;
+    }
+    .provider-card .provider-body { justify-content: flex-start; }
+    .provider-card .provider-body > label {
+        min-width: unset;
+        width: auto;
+        display: inline-block;
+        margin-right: 8px;
+    }
+
+    /* Ensure PLAYER_RESPEECH specifically is styled, even if other rules miss */
+    .provider-card .provider-body input[type="checkbox"][name="PLAYER_RESPEECH"] {
+        accent-color: #176529 !important;
+        transform: scale(1.6) !important;
+        transform-origin: center;
+        zoom: 1.2; /* Chromium fallback for some environments */
+    }
+
+    /* Header toggle placement and spacing */
+    .provider-title .provider-toggle { margin-left: 10px; display:flex; align-items:center; }
+    .provider-title .provider-toggle input[type="checkbox"] {
+        accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer;
+    }
 </style>
 
 <main>
@@ -341,13 +377,17 @@ function current_value(string $flatName, array $currentConf) {
                                     <div class="provider-title">
                                         <div class="provider-icon">⚙️</div>
                                         <div><?php echo htmlspecialchars($label); ?></div>
+                                        <?php if ($ftype === 'boolean'): ?>
+                                            <div class="provider-toggle">
+                                                <input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
+                                                <input type="checkbox" value="true" name="<?php echo htmlspecialchars($fname); ?>" <?php echo ($current ? 'checked' : ''); ?> style="width:auto;">
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="provider-body">
                                     <?php if ($ftype === 'boolean'): ?>
-                                        <input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
-                                        <label style="min-width:180px;">Enable</label>
-                                        <input type="checkbox" value="true" name="<?php echo htmlspecialchars($fname); ?>" <?php echo ($current ? 'checked' : ''); ?> style="width:auto;">
+                                        <!-- Boolean rendered in header next to title -->
                                     <?php elseif ($ftype === 'integer'): ?>
                                         <?php $min = isset($f['min']) ? (int)$f['min'] : null; $max = isset($f['max']) ? (int)$f['max'] : null; ?>
                                         <input type="number" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo ($min!==null?('min="'.$min.'"'):''); ?> <?php echo ($max!==null?('max="'.$max.'"'):''); ?> step="1">

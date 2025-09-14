@@ -113,6 +113,11 @@ h1.api-title {
 .collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
 .collapsible-content { padding:10px; }
 .section-title { font-weight:800; color:#e9efff; border-bottom:1px solid #4a4a4a; padding-bottom:4px; margin:10px 0 6px; }
+/* Inline title + toggle styling */
+.label-with-toggle { display:flex; align-items:center; gap:10px; }
+.label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
+/* Profile Settings (metadata editor) checkbox enhancement */
+.profile-settings-card input[type="checkbox"] { accent-color:#176529; transform: scale(1.6); transform-origin:center; cursor:pointer; }
 </style>
 
 <main>
@@ -407,14 +412,18 @@ $ittById = $byId($ittRows);
         <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
         
         <div style="height:8px;"></div>
-        <label>Default NPC</label><br>
-        <input type="hidden" name="default_npc" value="0">
-        <label><input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+        <label class="label-with-toggle">Default NPC
+            <input type="hidden" name="default_npc" value="0">
+            <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
+            <span class="toggle-text">On</span>
+        </label>
 
         <div style="height:6px;"></div>
-        <label>Default Narrator</label><br>
-        <input type="hidden" name="default_narrator" value="0">
-        <label><input type="checkbox" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+        <label class="label-with-toggle">Default Narrator
+            <input type="hidden" name="default_narrator" value="0">
+            <input type="checkbox" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>>
+            <span class="toggle-text">On</span>
+        </label>
 
         <div style="height:8px;"></div>
         <label for="prompt">Profile Prompt</label>
@@ -505,7 +514,7 @@ $ittById = $byId($ittRows);
     </div>
 
     <!-- Visual Profile Settings (first chunk) -->
-    <div class="connector-card" style="margin-bottom:10px;">
+    <div class="connector-card profile-settings-card" style="margin-bottom:10px;">
         <div class="connector-title">Profile  Settings</div>
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
         <div style="margin-top:8px; display:flex; gap:8px;">

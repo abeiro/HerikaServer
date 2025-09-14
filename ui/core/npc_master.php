@@ -387,7 +387,9 @@ if (isset($_GET['race_icon'])) {
     .form-item .hint { color:#e9efff; font-size:12px; line-height:1.35; }
     .form-item textarea { min-height:96px; }
     .form-item input[type="text"], .form-item textarea, .form-item select { background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 10px; }
-    .form-item input[type="checkbox"] { transform: scale(1.05); }
+    /* Header-style checkbox next to label title */
+    .label-with-toggle { display:flex; align-items:center; gap:10px; }
+    .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
     .span-2 { grid-column: 1 / -1; }
     .checkbox-inline { display:flex; align-items:center; gap:8px; }
     </style>
@@ -424,19 +426,17 @@ if (isset($_GET['race_icon'])) {
         </div>
 
         <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
-            <label for="lock_profile">Lock Profile</label>
-            <div class="checkbox-inline">
+            <label for="lock_profile" class="label-with-toggle">Lock Profile
                 <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
-                <span class="hint">Prevents dynamic systems from modifying this NPC's profile.</span>
-            </div>
+            </label>
+            <small class="hint">Prevents dynamic systems from modifying this NPC's profile.</small>
         </div>
 
         <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
-            <label for="npc_favorite">Favorite</label>
-            <div class="checkbox-inline">
+            <label for="npc_favorite" class="label-with-toggle">Favorite
                 <input type="checkbox" id="npc_favorite" name="npc_favorite" value="1" <?= !empty($editItem["npc_favorite"]) ? "checked" : "" ?>>
-                <span class="hint">Pin this NPC for quick access.</span>
-            </div>
+            </label>
+            <small class="hint">Pin this NPC for quick access.</small>
         </div>
 
         <div class="form-item">
@@ -500,11 +500,10 @@ if (isset($_GET['race_icon'])) {
         </div>
 
         <div class="form-item">
-            <label for="dynamic_profile">Dynamic Profile</label>
-            <div class="checkbox-inline">
+            <label for="dynamic_profile" class="label-with-toggle">Dynamic Profile
                 <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
-                <span class="hint">Allow systems to evolve the profile based on gameplay events.</span>
-            </div>
+            </label>
+            <small class="hint">Allow systems to evolve the profile based on gameplay events.</small>
         </div>
 
         <div class="dynamic-profile-section span-2">
