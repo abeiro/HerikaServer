@@ -113,6 +113,27 @@ echo '<style>
     width: 100%;
 }
 
+/* Fixed navbar height */
+.chim-navbar {
+    height: 64px;
+}
+.chim-navbar .container-fluid > * {
+    align-items: center;
+}
+.chim-navbar .navbar-brand,
+.chim-navbar .navbar-center button.navbar-brand {
+    padding: 0;
+    line-height: 1;
+}
+
+/* Hide inline nav links to keep single-line navbar */
+.navbar-left,
+.navbar-right,
+.chim-navbar .nav-item.mx-2,
+.chim-navbar .nav-item.dropdown.mx-2 {
+    display: none !important;
+}
+
 .server-version-info {
     display: flex;
     align-items: center;
@@ -236,41 +257,28 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
 <div class="chim-navbar-wrapper">
     <nav class="navbar navbar-expand-lg chim-navbar">
         <div class="container-fluid mx-1">
-            <!-- Server Version Info - Far Left -->
-            <div class="server-version-info">
-                Server: <?php echo htmlspecialchars($serverVersionDisplay, ENT_QUOTES, 'UTF-8'); ?><br>
-                Plugin: <?php echo $pluginVersionDisplay; ?>
-            </div>
+            
             
             <div class="navbar-content-wrapper">
                 <!-- Left Navigation -->
-                <ul class="navbar-nav navbar-left">
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a>
-                </li>
-
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/core/config_hub.php">Configuration</a>
-                </li>
-
                 
 
                 <!-- Center Logo -->
-                <div class="navbar-center">
-                    <a class="navbar-brand Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
+                <div class="navbar-center dropdown">
+                    <button class="navbar-brand Title btn btn-link p-0 dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" data-bs-display="static" aria-expanded="false" title="Open menu" style="text-decoration: none;">
                         <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
                         <img src="<?php echo $webRoot; ?>/ui/images/<?php echo htmlspecialchars($serverLogoFile, ENT_QUOTES, 'UTF-8'); ?>" alt="CHIM Server" style="vertical-align:bottom;"/> 
-                    </a>
+                    </button>
+                    <ul class="dropdown-menu brand-menu">
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/home.php">Home</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php">Configuration Hub</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/control_panel.php">Control Panel</a></li>
+                    </ul>
                 </div>
 
-                <!-- Right Navigation -->
-
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a>
-                </li>
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/control_panel.php">Control Panel</a>
-                </li>
+                
                 
                 <!-- <ul class="navbar-nav navbar-right">
                 <li class="nav-item dropdown mx-2">
@@ -444,22 +452,13 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                 </li>
                 </ul>
             
-            <!-- Social Media Links - Far Right -->
-            <div class="social-links">
-                <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
-                    <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
-                </a>
-                <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
-                    <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord">
-                </a>
-                <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
-                    <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon">
-                </a>
-            </div>
+            
         </div>
 
 
         </nav>
+
+        
 
 <?php
 // Start the session if not already started

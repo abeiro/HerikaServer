@@ -691,34 +691,28 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
     </style>
 </head>
 <body>
+    <!-- Server/Plugin Versions and Social Links (moved from navbar) -->
+    <div class="container" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; margin-top:6px;">
+        <div class="server-version-info" style="color:#6c757d; font-size:0.9em; font-family: Arial, sans-serif;">
+            Server: <?php echo htmlspecialchars($serverVersionDisplay ?? '', ENT_QUOTES, 'UTF-8'); ?>
+            Plugin: <?php echo htmlspecialchars($pluginVersionDisplay ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?>
+        </div>
+        <div class="social-links" style="display:flex; align-items:center; gap:12px;">
+            <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
+                <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube" style="width:20px;height:20px;">
+            </a>
+            <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
+                <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord" style="width:20px;height:20px;">
+            </a>
+            <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
+                <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon" style="width:20px;height:20px;">
+            </a>
+        </div>
+    </div>
     <main class="container">
         <h1>📊 Dwemer Dashboard</h1>
 
         <div class="dashboard-buttons">
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/events-memories.php'" class="dashboard-btn">
-                <span class="btn-icon">📜</span> Events & Memories
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php'" class="dashboard-btn">
-                <span class="btn-icon">🧙</span> Configuration Wizard
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/npc_upload.php'" class="dashboard-btn">
-                <span class="btn-icon">🧑</span> NPC Biography Management
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/oghma_upload.php'" class="dashboard-btn">
-                <span class="btn-icon">📙</span> Oghma Management
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/diarylog.php'" class="dashboard-btn">
-                <span class="btn-icon">📖</span> Diaries
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/adventurelog.php'" class="dashboard-btn">
-                <span class="btn-icon">⚔</span> Adventure Log
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'" class="dashboard-btn">
-                <span class="btn-icon">🔌</span> Server Plugins
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/tests/apache2err.php'" class="dashboard-btn">
-                <span class="btn-icon">🌲</span> Server Logs
-            </button>
             <button onclick="window.open('https://dwemerdynamics.hostwiki.io/', '_blank')" class="dashboard-btn">
                 <span class="btn-icon">📚</span> CHIM Wiki
             </button>
