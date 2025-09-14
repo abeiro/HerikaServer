@@ -15,7 +15,7 @@ $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to 
 $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically. 
 $DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to prevent spam. If a diary hotkey is pressed within this time period, the request will be ignored.
 $DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
-$AUTO_DIARY=false; //Automatically create diary entries for all current followers when sleeping. Wait events are controlled by AUTO_DIARY_WAIT setting. Each follower respects their individual diary cooldown timer.
+$AUTO_DIARY=true; //Automatically create diary entries for all current followers when sleeping. Wait events are controlled by AUTO_DIARY_WAIT setting. Each follower respects their individual diary cooldown timer.
 $AUTO_DIARY_WAIT=true; //When AUTO_DIARY is enabled, this controls whether diary entries are created during wait events. If false, auto diary will only trigger on sleep events.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
@@ -38,7 +38,7 @@ $MAX_WORDS_LIMIT=0; //Enforce a word limit for AI's responses. 0 = unlimited.
 $BOOK_EVENT_FULL=true; //Sends full contents of books to the AI
 $BOOK_EVENT_ALWAYS_NARRATOR=false; //Only The Narrator summarizes books.
 $NARRATOR_TALKS=true; //Enables the Narrator.
-$NARRATOR_WELCOME=true;
+$NARRATOR_WELCOME=false;
 $QUEST_COMMENT = false;
 $QUEST_COMMENT_CHANCE= "10%";
 $CURRENT_TASK=false; //Sends current plan/quest to the AI
@@ -125,6 +125,13 @@ $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude fro
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).
 $CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp","player2"]; //Creates diary entries and memories.
+
+// Core LLM connector defaults (IDs from core_llm_connector table)
+$CORE_CONNECTOR_DIRECTOR=1;
+$CORE_CONNECTOR_PLAYER=1;
+$CORE_CONNECTOR_SUMMARY=1;
+$CORE_CONNECTOR_MEDIUMTERM=1;
+$CORE_CONNECTOR_PROFILES=1;
 
 //[AI/LLM Connectors]
 //OpenRouter JSON
@@ -458,11 +465,11 @@ $ITT["llamacpp"]["AI_PROMPT"]=''; //Prompt sent to the LLM.
 //Memory Settings
 $FEATURES["MEMORY_EMBEDDING"]["ENABLED"]=true; //Long term memory embedding.
 $FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8082'; //Text2Vec service
-$FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=false; //NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!
+$FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=true; //NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!
 
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=10; //Time in minutes to delay before using a memory in a prompt.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1; //Amount of memory records that will be injected into the prompt.
-$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=false; //Combines individual memory logs into larger ones at the cost of tokens.
+$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=true; //Combines individual memory logs into larger ones at the cost of tokens.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10; //Time frame used to pack summary data.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]=33; //0-100 - Minimal distance to offer memory.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66; //0-100 - Minimal distance to endorse memory.

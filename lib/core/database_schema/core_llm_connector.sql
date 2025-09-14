@@ -83,23 +83,10 @@ ALTER TABLE ONLY public.core_llm_connector ALTER COLUMN id SET DEFAULT nextval('
 --
 -- Data for Name: core_llm_connector; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
-
-INSERT INTO public.core_llm_connector VALUES (2, 'openai', '{}', 'https://api.openai.com/v1/chat/completions', 'gpt-4.1-mini', NULL, 'openaijson', NULL, NULL, 1, 0, NULL, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO public.core_llm_connector VALUES (1, 'gemini flash 2', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.0-flash-001', NULL, 'openrouterjson', NULL, 250, 1, 0, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO public.core_llm_connector VALUES (2, 'qwen3-235b-a22b-2507', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'qwen/qwen3-235b-a22b-2507', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO public.core_llm_connector VALUES (3, 'deepseek-r1-0528', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'deepseek/deepseek-r1-0528', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO public.core_llm_connector VALUES (4, 'openrouter llama-4-maverick', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'meta-llama/llama-4-maverick', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (1, 'openrouter gemini flash 2', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.0-flash-001', NULL, 'openrouterjson', NULL, 250, 1, 0, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (6, 'openrouter gemini-2.5-flash-lite', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.5-flash-lite', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (8, 'openrouter anubis-70b-v1.1', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'thedrummer/anubis-70b-v1.1', NULL, 'openrouterjson', 1, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (11, 'openrouter z-ai/glm-4-32b', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'z-ai/glm-4-32b', NULL, 'openrouterjson', 1, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (3, 'openrouter anthropic/claude-sonnet-4', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'anthropic/claude-sonnet-4', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (9, 'openrouter deepseek-r1-0528', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'deepseek/deepseek-r1-0528', 'chutes', 'openrouterjson', 1, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (15, 'openrouter tencent/hunyuan-a13b-instruct', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'tencent/hunyuan-a13b-instruct', NULL, 'openrouterjson', 0, 500, 0, 0, 1, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (10, 'openrouter openrouter/horizon-beta', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'openrouter/horizon-beta', NULL, 'openrouterjson', 1, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (16, 'openrouter google/gemini-2.0-flash-lite-001', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.0-flash-lite-001', NULL, 'openrouterjson', 0, 1024, 0, 0, 1, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (5, 'openrouter mistral nemo', '{"MAX_TOKENS_MEMORY": 500}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/mistral-nemo', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (7, 'openrouter z-ai/glm-4.5-air', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'z-ai/glm-4.5-air', 'gmicloud/fp8', 'openrouterjson', 1, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (12, 'openrouter openai/gpt-oss-20b', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'openai/gpt-oss-20b', NULL, 'openrouterjson', 0, 250, 0, 0, 1, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (13, 'openrouter moonshotai/kimi-k2', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'moonshotai/kimi-k2', NULL, 'openrouterjson', 0, 250, 1, 0, 1, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO public.core_llm_connector VALUES (14, 'openrouter openai/gpt-5-nano', '{"reasoning": {"effort": "low", "enabled": false, "exclude": true}}', 'https://openrouter.ai/api/v1/chat/completions', 'openai/gpt-5-nano', NULL, 'openrouterjson', 1, 500, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 
 --
