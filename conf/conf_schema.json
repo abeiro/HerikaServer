@@ -37,7 +37,7 @@
   "ALIVE_MESSAGE": {"userlvl":"basic","type":"boolean","description":"Whether the <i>I am alive..</i> response will trigger whenever you activate an AI NPC."},
   "TIME_AWARENESS": {"userlvl":"pro","type":"boolean","description":"Whether the NPC will be aware of how long it has been since you last talked to them, or if you are talking for the first time."},
   "BOOK_EVENT_FULL": {"userlvl":"pro","type":"boolean","description":"Send full contents of book instead of only the book title to the AI. This will consume more tokens, but the AI will accurately summarize any book or note!"},
-  "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.<br><strong>SET THIS ON default profile to apply to all NPCs.</strong>","scope":"global"},
+  "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game. Has a 10 minute IRL cooldown so its not annoying.","scope":"global"},
   "QUEST_COMMENT":{"type":"boolean","userlvl":"basic","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
@@ -214,21 +214,21 @@
       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","mimic3","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
       "_title":"MeloTTS (Installed in DwemerDistro)",
-      "endpoint":{"type":"url","description":"Endpoint URL. Should be 'http://127.0.0.1:8084' if using default installation","helpurl":"https://github.com/myshell-ai/MeloTTS"},
+      "endpoint":{"type":"url","description":"Endpoint URL. Leave as is.","helpurl":"https://github.com/myshell-ai/MeloTTS"},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model. Should be EN if using default installation"},
       "speed":{"type":"number","description":"Speech Speed"},
       "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids"}
     },
     "XTTSFASTAPI": {
       "_title":"CHIM XTTS (Installed in DwemerDistro)",
-      "endpoint":{"type":"url","description":"Endpoint URL. Leave as default if you use CHIM XTTS.<br>You can run it on the cloud or use Mantella XTTS. Click the help link to learn more.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
-      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language"},
+      "endpoint":{"type":"url","description":"Endpoint URL. Leave as default if you use CHIM XTTS.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS XTTSFASTAPI voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
     },
@@ -373,17 +373,17 @@
       "_title":"OpenAI's Whisper",
       "LANG": {"type":"string","description":"Language to detect for STT."},
       "TRANSLATE": {"type":"boolean","description":"Will try to translate to english."},
-      "API_KEY": {"type":"apikey","description":"OpenAI API key. Same used for OpenAI/ChatGPT AI service.","code":"OPENAI_API_KEY"}
+      "API_KEY": {"type":"apikey","description":"OpenAI API key.","code":"OPENAI_API_KEY"}
     },
     "AZURE": {
       "_title":"Azure Speech-to-Text",
       "LANG": {"type":"string","description":"Language to detect for STT."},
       "profanity": {"type":"select","values":["masked","removed","raw"],"description":"Specifies how to handle profanity in recognition results. Accepted values are:<br>MASKED, which replaces profanity with asterisks.<br>REMOVED, which removes all profanity from the result.<br>RAW, which includes profanity in the result.","helpurl":"https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short"},
-      "API_KEY": {"type":"apikey","description":"Azure API key. Same used for Azure TTS Service.","code":"AZURE_API_KEY"}
+      "API_KEY": {"type":"apikey","description":"Azure API key.","code":"AZURE_API_KEY"}
     },
     "LOCALWHISPER": {
       "_title":"Local Whisper (Installed in DwemerDistro)",
-      "URL": {"type":"url","description":"Local whisper endpoint. Leave as Default if you installed whisper through the Distro.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
+      "URL": {"type":"url","description":"Local whisper endpoint. Leave as is if you installed localwhisper through the Distro.","helpurl":"https://www.nexusmods.com/skyrimspecialedition/mods/89931?tab=files"},
       "FORMFIELD": {"type":"select","values":["audio_file","file"],"description":"Form field name for audio file. Sometimes needed to change to file to use another shiper implementations"}
     },"DEEPGRAM": {
       "_title":"Deepgram's Whisper Speech-to-Text",
