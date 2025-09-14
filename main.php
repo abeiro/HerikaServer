@@ -1433,7 +1433,7 @@ if ($gameRequest[0] == "funcret") {
     
 }
 
-//error_log("*TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+error_log("*TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 //returnLines(["Mmm..let me think"]);
 
 // Global switch. Needed id we need to stop processing because sme function requires it. Example, funcret conditions.
@@ -1447,7 +1447,7 @@ if ($gameRequest[0] == "diary") {
     // TO-DO move this to its own processor file.
 
     generateFollowerDiary($GLOBALS["HERIKA_NAME"],$gameRequest,"diary");
-    
+    Logger::info("Terminated after diary request");
     terminate();
 }
 
@@ -1455,12 +1455,6 @@ if ($gameRequest[0] == "diary") {
 CALL INITIALIZATION
 ***********************/
 
-if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
-    die("{$GLOBALS["HERIKA_NAME"]}|AASPGQuestDialogue2Topic1B1Topic|I'm mindless. Choose a LLM model and connector.".PHP_EOL);
-} else {
-
-    require_once(__DIR__.DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
-}
 
 audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 

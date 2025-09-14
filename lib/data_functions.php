@@ -2521,12 +2521,16 @@ function call_llm() {
     global $overrideParameters, $request;
     
     $outputWasValid = true;
-    $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
+    
 
     if (isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         $connector=new LLMConnector();
         $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
         error_log("[CORE SYSTEM] Using new profile system {$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["driver"]}/{$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["model"]}");
+    } else {
+        error_log("No connector defined");
+        Logger::error("No connector defined");
+        terminate();
     }
 
     if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {

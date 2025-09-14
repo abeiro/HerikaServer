@@ -125,7 +125,15 @@
 
 			if (isset($GLOBALS["FUNCRET"][$functionCodeName])) {
 				
-				$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName],["gameRequest"=>$gameRequest]);
+				$reflection = new ReflectionFunction($GLOBALS["FUNCRET"][$functionCodeName]);
+				// Get number of required parameters
+				$required = $reflection->getNumberOfRequiredParameters();
+				if ($required==1)
+					$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName],["gameRequest"=>$gameRequest]);
+				else
+					$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName],[]);
+
+				
 				
 				if (isset($frResponse["argName"]))
 					$argName = $frResponse["argName"];

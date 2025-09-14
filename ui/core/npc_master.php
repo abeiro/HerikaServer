@@ -367,7 +367,7 @@ if (isset($_GET['race_icon'])) {
 
 <?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ob_end_clean(); ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<style>html,body{background:#2a2a2a;} main{background:#2a2a2a; padding:12px;} .form-container{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px;}
+<style>html,body{background:#2a2a2a;margin-bottom:50px} main{background:#2a2a2a; padding:12px;} .form-container{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px;}
 .modal-inline-actions{display:flex; gap:6px; align-items:center; justify-content:flex-end; margin-bottom:8px;}
 .modal-inline-actions .btn-toggle{background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; cursor:pointer;}
 .modal-inline-actions .btn-toggle:hover{color: rgb(242, 124, 17); text-decoration:none;}
@@ -692,7 +692,7 @@ if (isset($_GET['race_icon'])) {
 <style>
 /* Modal styling aligned with Oghma edit modal */
 .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10000; align-items:center; justify-content:center; overflow-y:auto; padding:20px 0; }
-.modal-container { position:relative; top:auto; left:auto; transform:none; margin: 120px auto 40px auto; max-width:1000px; width:90%; background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; }
+.modal-container { position:relative; top:auto; left:auto; transform:none; /*margin: 120px auto 40px auto*/; max-width:1000px; width:90%; background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; }
 .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
 .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; }
 .modal-body { max-height:calc(85vh - 100px); overflow-y:hidden; background:#2a2a2a; }
@@ -914,7 +914,7 @@ if (isset($_GET['race_icon'])) {
   let debTimer = null;
   function refreshListDebounced(page){
     if (debTimer) clearTimeout(debTimer);
-    debTimer = setTimeout(()=>refreshList(page), 180);
+    debTimer = setTimeout(()=>refreshList(page), 500)
   }
   if (searchInput){ searchInput.addEventListener('input', function(){ refreshListDebounced(1); }); }
   const profileSel = document.getElementById('npc_profile_filter');
