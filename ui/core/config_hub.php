@@ -25,11 +25,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-    main {
-        padding: 80px 10px 10px;
-        height: 100vh;
-        overflow: hidden;
-    }
+main { padding: 80px 10px 10px; height: 100vh; }
 .tab-container { margin: 20px 0; }
 .tab-buttons { display:flex; flex-wrap:wrap; gap:5px; word-spacing:5px; }
 .tab-button { background:#2a2a2a; border:none; padding:12px 18px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all 0.3s ease; font-size:1em; white-space:nowrap; font-family:'MagicCards', sans-serif; word-spacing:5px; letter-spacing:1.5px; }
@@ -66,6 +62,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
             <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
         </div>
     </div>
+
     <div class="content-area flex-grow-1 d-flex overflow-hidden" style="min-height: 0;">
         <div id="npc" class="tab-content active">
             <div class="embed-wrap">

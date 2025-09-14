@@ -39,7 +39,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     font-weight: normal;
     font-style: normal;
 }
-main { padding: 30px 5px 5px;height: 100%; overflow: hidden; }
+main { padding: 30px 5px 5px; }
 h1.api-title {
     margin: 0 0 20px 0;
     font-family: 'MagicCards', serif;
@@ -615,8 +615,8 @@ if (isset($_GET["edit"])) {
 
 <h1 class="api-title">LLM Connectors</h1>
 
-<div class="llm-layout flex-grow-1" style="height: 0;"> <!-- height 0 to make content not overflow -->
-    <div class="llm-left h-100">
+<div class="llm-layout">
+    <div class="llm-left position-sticky">
         <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Connectors</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
             <a class="btn-save" href="?create_blank=1">New Connector</a>
@@ -661,10 +661,10 @@ if (isset($_GET["edit"])) {
         })();
         </script>
     </div>
-    <div class="llm-right d-flex flex-column overflow-y-auto">
+    <div class="llm-right">
 <div class="form-container wide-centered">
 <style>
-.wide-centered { max-width: 1300px; margin: 0 auto; width: 100%; }
+.wide-centered { max-width: 1300px; margin: 0 auto; padding-bottom: calc((2.2em * 1.2) + 50px); /*bottom padding fixes scroll issue with sticky */ }
 .two-col-llm { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 1000px) { .two-col-llm { grid-template-columns: 1fr; } }
 .kv-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; }
@@ -696,7 +696,7 @@ if (isset($_GET["edit"])) {
 /* Keep two-column layout even on narrower screens so half-screen works */
 @media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
 @media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
-.llm-left { display:flex; flex-direction:column; height:800px; overflow:hidden; padding:8px; padding-right:8px; border:1px solid #4a4a4a; border-radius:8px; background:#2a2a2a; }
+.llm-left { display:flex; flex-direction:column; height:calc(100vh - (2.2em*1.2) - 55px); overflow:hidden; padding:8px; padding-right:8px; border:1px solid #4a4a4a; border-radius:8px; background:#2a2a2a; top: calc((2.2em*1.2) + 50px)}
 .llm-left .llm-title { margin: 6px 0 10px 4px; font-size: 20px; color: #e9efff; }
 .llm-right { min-width: 0; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
