@@ -365,8 +365,6 @@ $ittById = $byId($ittRows);
                                 <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM2</span><span class="pf-val">${llm2||'—'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM3</span><span class="pf-val">${llm3||'—'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM4</span><span class="pf-val">${llm4||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">🔊</span><span class="pf-key">TTS</span><span class="pf-val">${tts||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">🎙️</span><span class="pf-key">ITT</span><span class="pf-val">${itt||'—'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">📓</span><span class="pf-key">Diary</span><span class="pf-val">${diary||'—'}</span></div>
                             </div>
                             <div class="actions">
