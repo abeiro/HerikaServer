@@ -111,6 +111,9 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     .orm-muted { color:#97a6ba; }
     .orm-err { color:#ff6b6b; padding:8px 10px; }
     .orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; }
+    /* Inline title + toggle styling */
+    .label-with-toggle { display:flex; align-items:center; gap:10px; }
+    .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
     </style>
     <script>
     // Define consolidation() if not present (embedded partial doesn't include metadata editor)
@@ -265,22 +268,30 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 ?>
                 </div>
                 <div id="reasoning_row">
-                    <label><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span></label><br>
-                    <input type="hidden" name="reasoning_model" value="0">
-                    <label><input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
+                        <input type="hidden" name="reasoning_model" value="0">
+                        <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
                 </div>
                 <div id="json_toggles" style="margin-top:8px;">
-                    <label><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span></label><br>
-                    <input type="hidden" name="enforce_json" value="0">
-                    <label><input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span>
+                        <input type="hidden" name="enforce_json" value="0">
+                        <input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
                     <div style="height:6px;"></div>
-                    <label><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span></label><br>
-                    <input type="hidden" name="json_schema" value="0">
-                    <label><input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span>
+                        <input type="hidden" name="json_schema" value="0">
+                        <input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
                     <div style="height:6px;"></div>
-                    <label><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span></label><br>
-                    <input type="hidden" name="prefill_json" value="0">
-                    <label><input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span>
+                        <input type="hidden" name="prefill_json" value="0">
+                        <input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
                 </div>
             </div>
             <div>
@@ -619,7 +630,10 @@ if (isset($_GET["edit"])) {
     <div class="llm-left position-sticky">
         <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Connectors</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="btn-save" href="?create_blank=1">New Connector</a>
+            <form method="get" style="display:inline" action="llm_connectors.php">
+                <input type="hidden" name="create_blank" value="1">
+                <button type="submit" class="btn-save">New Connector</button>
+            </form>
         </div>
         <div id="llm_list" class="conn-list"></div>
         <script>
@@ -642,8 +656,14 @@ if (isset($_GET["edit"])) {
                             </div>
                             <div class="sub">${escapeHtml(r.model||'')}</div>
                             <div class="actions">
-                                <a class="btn-danger" href="?delete=${r.id}" onclick="return confirm('Are you sure you want to delete this connector?');">Delete</a>
-                                <a class="btn-primary" href="?clone=${r.id}">Clone</a>
+                                <form method="get" action="llm_connectors.php" onsubmit="return confirm('Are you sure you want to delete this connector?');" style="display:inline">
+                                    <input type="hidden" name="delete" value="${String(r.id)}">
+                                    <button type="submit" class="btn-danger">Delete</button>
+                                </form>
+                                <form method="get" action="llm_connectors.php" style="display:inline">
+                                    <input type="hidden" name="clone" value="${String(r.id)}">
+                                    <button type="submit" class="btn-primary">Clone</button>
+                                </form>
                             </div>
                         </div>`;
                 });
@@ -651,7 +671,7 @@ if (isset($_GET["edit"])) {
                 // Make rows clickable to open editor, but ignore clicks on action links
                 list.querySelectorAll('.conn-li').forEach(li => {
                     li.addEventListener('click', (ev) => {
-                        if (ev.target.closest('a')) return;
+                        if (ev.target.closest('a') || ev.target.closest('button') || ev.target.closest('form')) return;
                         const id = li.getAttribute('data-id');
                         if (id) window.location.href = `?edit=${id}`;
                     });
@@ -718,6 +738,9 @@ if (isset($_GET["edit"])) {
 .collapsible[open] .collapsible-header { border-bottom:1px solid #4a4a4a; }
 .collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
 .collapsible-content { padding:10px; }
+/* Inline title + toggle styling */
+.label-with-toggle { display:flex; align-items:center; gap:10px; }
+.label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
 </style>
 <?php if (!$editItem): ?>
     <div class="connector-placeholder" style="border:1px dashed #4a4a4a; background:#2a2a2a; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
@@ -817,24 +840,32 @@ if (typeof window.consolidation !== 'function') {
             ?>
             </div>
             <div id="reasoning_row">
-                <label><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span></label><br>
-                <input type="hidden" name="reasoning_model" value="0">
-                <label><input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
+                    <input type="hidden" name="reasoning_model" value="0">
+                    <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
+                    <span class="toggle-text">On</span>
+                </label>
             </div>
             <div id="json_toggles" style="margin-top:8px;">
-                <label><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span></label><br>
-                <input type="hidden" name="enforce_json" value="0">
-                <label><input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span>
+                    <input type="hidden" name="enforce_json" value="0">
+                    <input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>>
+                    <span class="toggle-text">On</span>
+                </label>
 
                 <div style="height:6px;"></div>
-                <label><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span></label><br>
-                <input type="hidden" name="json_schema" value="0">
-                <label><input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span>
+                    <input type="hidden" name="json_schema" value="0">
+                    <input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>>
+                    <span class="toggle-text">On</span>
+                </label>
 
                 <div style="height:6px;"></div>
-                <label><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span></label><br>
-                <input type="hidden" name="prefill_json" value="0">
-                <label><input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>> <span class="toggle-text">On</span></label>
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span>
+                    <input type="hidden" name="prefill_json" value="0">
+                    <input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>>
+                    <span class="toggle-text">On</span>
+                </label>
             </div>
         </div>
 

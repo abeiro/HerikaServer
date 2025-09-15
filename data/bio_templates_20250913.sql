@@ -1,21 +1,3 @@
-CREATE TABLE "mytable" (
-  "npc_name" text,
-  "oghma_knowledge_tags" text NULL,
-  "core" text,
-  "npc_static_bio" text NULL,
-  "appearance" text NULL,
-  "personality" text NULL,
-  "relationships" text NULL,
-  "occupation" text NULL,
-  "skills" text NULL,
-  "speechstyle" text NULL,
-  "goals" text NULL,
-  "voiceid" text NULL,
-  "gender" text NULL,
-  "race" text NULL,
-  "refid" text NULL
-);
-
 INSERT INTO public.bio_templates ("npc_name","oghma_knowledge_tags","core","npc_static_bio","appearance","personality","relationships","occupation","skills","speechstyle","goals","voiceid","gender","race","refid")VALUES
 ('abelone','nord, innkeeper, pale','Abelone is a hardworking Nord woman who serves as the primary laborer at the Windpeak Inn in Dawnstar, maintaining its daily operations through various physical tasks.','Abelone is a Nord citizen who works as a laborer at the Windpeak Inn in Dawnstar, performing various outdoor duties including carrying firewood, chopping wood, and maintaining the grounds. She serves as a general worker for innkeeper Thoring, spending her days in manual labor around the inn''s exterior before socializing with patrons inside during the evenings. Her role represents the typical working-class Nord supporting the hospitality industry in one of Skyrim''s northern settlements.','Abelone possesses the sturdy build typical of Nord women, with strong arms and callused hands from years of physical labor. Her weather-worn features reflect a life spent working outdoors in Dawnstar''s harsh climate, while her posture remains straight and strong despite the demanding nature of her work.','Abelone exhibits the typical Nord traits of industriousness and straightforwardness, approaching her work with dedication and without complaint. She maintains a professional demeanor with visitors while showing loyalty to her employer, though she prefers to defer official business to Thoring. Her consistent routine and dedication to manual labor suggest a person who finds satisfaction in honest work and maintaining order.','* Thoring - Employer and innkeeper whom she respects and defers to for business matters 
 * Inn Regulars - Maintains cordial but professional relationships with frequent patrons 

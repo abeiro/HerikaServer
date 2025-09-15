@@ -20,6 +20,116 @@ if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
     require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");  // Should contain current ones
 }
 
+// Inline quicksave handlers
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
+    try { require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php"); } catch (Throwable $_e) {}
+    try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { $GLOBALS['db'] = new sql(); } } catch (Throwable $_e) {}
+    header('Content-Type: application/json');
+
+    $action = (string)($_POST['qs_action'] ?? '');
+
+    if ($action === 'api_badge_quicksave') {
+        $openrouter = isset($_POST['openrouter_api_key']) ? (string)$_POST['openrouter_api_key'] : '';
+        $deepgram = isset($_POST['deepgram_api_key']) ? (string)$_POST['deepgram_api_key'] : '';
+        $save = function($labelLower, $apiKey) {
+            if ($labelLower === '' || $apiKey === null) return;
+            $db = $GLOBALS['db'];
+            $row = $db->fetchOne("SELECT id FROM core_api_badge WHERE lower(label)='" . $db->escape($labelLower) . "' LIMIT 1");
+            if (isset($row['id']) && $row['id'] !== '' && $row['id'] !== null) {
+                $db->updateRow('core_api_badge', [ 'api_key' => (string)$apiKey ], "id=".intval($row['id']));
+            } else {
+                $db->insert('core_api_badge', [ 'label' => (string)$labelLower, 'api_key' => (string)$apiKey ]);
+            }
+        };
+        if ($openrouter !== '') { $save('openrouter', $openrouter); }
+        if ($deepgram !== '') { $save('deepgram', $deepgram); }
+        echo json_encode([ 'ok' => true ]);
+        exit;
+    }
+
+    if ($action === 'profile_quicksave_metadata') {
+        $truthy = function($v) {
+            if ($v === null) return null;
+            $s = strtolower(trim((string)$v));
+            if ($s === '') return null;
+            return in_array($s, ['1','true','on','yes'], true);
+        };
+        $rowPid = $GLOBALS['db']->fetchOne("SELECT id FROM core_profiles ORDER BY CASE WHEN lower(label)='default' THEN 0 WHEN default_narrator='1' THEN 1 WHEN default_npc='1' THEN 2 ELSE 3 END, id ASC LIMIT 1");
+        $pid = isset($rowPid['id']) ? intval($rowPid['id']) : 0;
+        if ($pid <= 0) { echo json_encode(['ok'=>false,'error'=>'No profile found']); exit; }
+        $minime = $truthy($_POST['minime_t5'] ?? null);
+        $oghma  = $truthy($_POST['oghma_infinium'] ?? null);
+        $row = $GLOBALS['db']->fetchOne("SELECT metadata FROM core_profiles WHERE id=".$pid." LIMIT 1");
+        $meta = [];
+        if (isset($row['metadata']) && $row['metadata'] !== '') {
+            try { $tmp = json_decode($row['metadata'], true); if (is_array($tmp)) $meta = $tmp; } catch (Throwable $_) {}
+        }
+        if ($minime !== null) { $meta['MINIME_T5'] = $minime ? true : false; }
+        if ($oghma  !== null) { $meta['OGHMA_INFINIUM'] = $oghma ? true : false; }
+        $json = json_encode($meta, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+        $GLOBALS['db']->updateRow('core_profiles', [ 'metadata' => $json ], "id=".$pid);
+        echo json_encode(['ok'=>true, 'id'=>$pid]);
+        exit;
+    }
+
+    if ($action === 'save_conf') {
+        require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
+        $confSchemaFlat = conf_loader_load_schema();
+        $currentConf = conf_loader_load();
+        $allPairs = [];
+        foreach ($currentConf as $pname => $parms) {
+            $fieldName = strtr($pname, [" " => "@"]); // flatten
+            $type = $parms['type'] ?? ($confSchemaFlat[$pname]['type'] ?? 'string');
+            $val = $parms['currentValue'] ?? '';
+            if ($type === 'boolean') $allPairs[$fieldName] = $val ? 'true' : 'false';
+            else if ($type === 'selectmultiple') $allPairs[$fieldName] = is_array($val) ? $val : [];
+            else $allPairs[$fieldName] = (string)$val;
+        }
+        // Override with posted values from Quickstart form
+        foreach ($_POST as $k => $v) {
+            if ($k === 'qs_action' || $k === 'profile') continue;
+            $plain = strtr($k, ["@" => " "]);
+            $type = $confSchemaFlat[$plain]['type'] ?? 'string';
+            if (is_array($v)) {
+                $allPairs[$k] = $v;
+            } else if ($type === 'number') {
+                if ($v === '') continue; else $allPairs[$k] = (string)$v;
+            } else if ($type === 'boolean') {
+                $allPairs[$k] = ($v === 'true') ? 'true' : 'false';
+            } else {
+                $allPairs[$k] = (string)$v;
+            }
+        }
+        // Build and write conf.php
+        $buffer = "<?php" . PHP_EOL;
+        $oldGroup = '';
+        $oldSubGroup = '';
+        $process_slashes = function(string $s_input): string { $sx = str_replace("\\'", "'", $s_input); return addcslashes($sx, "'"); };
+        foreach ($allPairs as $k => $v) {
+            $full = explode('@', $k);
+            $plain = strtr($k, ['@' => ' ']);
+            $type = $confSchemaFlat[$plain]['type'] ?? 'string';
+            if (is_array($v)) $value = json_encode($v, true);
+            else if ($type === 'number') { if ($v === '') continue; else $value = "" . addcslashes($v, "'") . ""; }
+            else if ($type === 'boolean') $value = ($v === 'true') ? 'true' : 'false';
+            else $value = "'" . $process_slashes((string)$v) . "'";
+            if ($oldGroup !== $full[0]) { $buffer .= PHP_EOL . PHP_EOL; $oldGroup = $full[0]; }
+            if (isset($full[1]) && $oldSubGroup !== $full[1]) { $buffer .= PHP_EOL; $oldSubGroup = $full[1]; }
+            if (count($full) === 1) { if (isset($confSchemaFlat[$plain]['description'])) $buffer .= "//" . $confSchemaFlat[$plain]['description'] . PHP_EOL; $buffer .= '$' . $full[0] . '=' . $value . ';' . PHP_EOL; }
+            else if (count($full) === 2) { $inline = isset($confSchemaFlat[$plain]['description']) ? ("//" . $confSchemaFlat[$plain]['description']) : ''; $buffer .= '$' . $full[0] . '["' . $full[1] . '"]=' . $value . ';' . "\t" . $inline . PHP_EOL; }
+            else if (count($full) === 3) { $inline = isset($confSchemaFlat[$plain]['description']) ? ("//" . $confSchemaFlat[$plain]['description']) : ''; $buffer .= '$' . $full[0] . '["' . $full[1] . '"]["' . $full[2] . '"]=' . $value . ';' . "\t" . $inline . PHP_EOL; }
+        }
+        $buffer .= "?>" . PHP_EOL;
+        $target = $rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+        $result = @file_put_contents($target, $buffer);
+        echo json_encode([ 'ok' => $result !== false ]);
+        exit;
+    }
+
+    echo json_encode([ 'ok' => false, 'error' => 'Unknown action' ]);
+    exit;
+}
+
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
@@ -44,7 +154,7 @@ foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as 
         $pattern = '/conf_([a-f0-9]+)\.php/';
         preg_match($pattern, $filename, $matches);
         $hash = $matches[1];
-        $GLOBALS["PROFILES"][$hash] = $mconf;
+        $GLOBALS["PROFILES"]["$hash"] = $mconf;
     }
 }
 
@@ -98,10 +208,8 @@ $currentConfTitles = conf_loader_load_titles();
 // Filter the configurations you want to display in the Quickstart Menu
 $quickstartKeys = [
     "PLAYER_NAME",
-    "CONNECTOR openrouter API_KEY",
-    "CONNECTOR openrouterjson API_KEY",
     "TTSFUNCTION",
-    "STT WHISPER API_KEY"
+    "STTFUNCTION"
 ];
 
 $quickstartConf = array_filter($currentConf, function($key) use ($quickstartKeys) {
@@ -120,6 +228,77 @@ echo '<div class="container">
       <h2 class="text-center mb-4">Only to be used for the initial setup!</h2>
       <h3 class="text-center mb-4">If you want to make more advanced changes, enter the appropriate info below to the best of your ability. Click Save and make further changes in the Configuration Wizard.</h3>
     </div>';
+
+// Render PLAYER_NAME first if present
+if (isset($quickstartConf['PLAYER_NAME'])) {
+    $parms = $quickstartConf['PLAYER_NAME'];
+    $fieldName = strtr('PLAYER_NAME', array(' ' => '@'));
+    $fieldValue = !is_array($parms['currentValue']) ? htmlspecialchars(stripslashes($parms['currentValue'])) : '';
+    echo "<div class='form-group'>";
+    echo "<label for='$fieldName'>" . htmlspecialchars('PLAYER_NAME') . "</label>";
+    echo "<input type='text' class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' value=\"$fieldValue\">";
+    if (isset($parms['description']) && !empty($parms['description'])) {
+        echo "<small class='form-text'>" . $parms['description'] . "</small>";
+    }
+    echo "</div>";
+    unset($quickstartConf['PLAYER_NAME']);
+}
+
+// API Keys section (OpenRouter only here; Deepgram rendered under STT)
+try { $openrouterRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='openrouter' LIMIT 1"); } catch (Throwable $_e) { $openrouterRow = []; }
+$openrouterKey = isset($openrouterRow["api_key"]) ? $openrouterRow["api_key"] : "";
+
+// Preload default profile metadata flags for MiniMe and Oghma
+$minimeChecked = "";
+$oghmaChecked = "";
+try {
+    $rowPid = $db->fetchOne("SELECT id FROM core_profiles ORDER BY CASE WHEN lower(label)='default' THEN 0 WHEN default_narrator='1' THEN 1 WHEN default_npc='1' THEN 2 ELSE 3 END, id ASC LIMIT 1");
+    $pid = isset($rowPid['id']) ? intval($rowPid['id']) : 0;
+    if ($pid > 0) {
+        $rowMeta = $db->fetchOne("SELECT metadata FROM core_profiles WHERE id=".$pid." LIMIT 1");
+        if (isset($rowMeta['metadata']) && $rowMeta['metadata'] !== '') {
+            $meta = json_decode($rowMeta['metadata'], true);
+            if (is_array($meta)) {
+                if (isset($meta['MINIME_T5']) && ($meta['MINIME_T5']===true || $meta['MINIME_T5']==='1' || $meta['MINIME_T5']===1)) { $minimeChecked = " checked"; }
+                if (isset($meta['OGHMA_INFINIUM']) && ($meta['OGHMA_INFINIUM']===true || $meta['OGHMA_INFINIUM']==='1' || $meta['OGHMA_INFINIUM']===1)) { $oghmaChecked = " checked"; }
+            }
+        }
+    }
+} catch (Throwable $_e) { }
+
+echo '<div class="container">
+        <div class="form-group">
+            <label for="qs_openrouter_api_key">OpenRouter API Key</label>
+            <div class="input-group">
+                <input type="password" class="form-control" id="qs_openrouter_api_key" value="' . htmlspecialchars($openrouterKey) . '" style="filter: blur(3px);">
+                <div class="input-group-append">
+                    <button class="btn-primary" type="button" onclick="document.getElementById(\'qs_openrouter_api_key\').style.filter=\'blur(0px)\'; document.getElementById(\'qs_openrouter_api_key\').setAttribute(\'type\', \'text\');">Unhide</button>
+                </div>
+            </div>
+            <small class="form-text">Paste your OpenRouter API key. <a href="https://openrouter.ai/keys" target="_blank">Create key</a></small>
+        </div>
+        
+        <div class="form-group">
+            <label>Enable MiniMe (T5)</label>
+            <div class="mt-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="qs_minime_t5" value="1"' . $minimeChecked . '>
+                    <label class="form-check-label" for="qs_minime_t5">On</label>
+                </div>
+            </div>
+            <small class="form-text">Turns on MiniMe-T5 assistant behavior for profiles.</small>
+        </div>
+        <div class="form-group">
+            <label>Enable Oghma Infinium</label>
+            <div class="mt-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="qs_oghma_infinium" value="1"' . $oghmaChecked . '>
+                    <label class="form-check-label" for="qs_oghma_infinium">On</label>
+                </div>
+            </div>
+            <small class="form-text">Enable Oghma Infinium (auto-knowledge and related features).</small>
+        </div>
+      </div>';
 
 if ($_SESSION["PROFILE"] == "$configFilepath/conf.php") {
     $DEFAULT_PROFILE = true;
@@ -159,8 +338,8 @@ foreach ($quickstartConf as $pname => $parms) {
         $FORCE_DISABLED = "";
     }
 
-    if (!$DEFAULT_PROFILE && isset($parms["scope"]) && $parms["scope"] == "global") {
-        $FORCE_DISABLED = " readonly='true' disabled='true' title='This is a global parameter. Set it on default profile' ";
+    if (isset($parms["scope"]) && $parms["scope"] == "global") {
+        $FORCE_DISABLED = "";
     }
 
     if (isset($parms["scope"]) && $parms["scope"] == "constant") {
@@ -185,8 +364,11 @@ foreach ($quickstartConf as $pname => $parms) {
         echo "</div></div>";
     } else if ($parms["type"] == "select") {
         if ($pname == "TTSFUNCTION") {
-            $parms["values"] = ["melotts","xtts-fastapi","xvasynth"];
+            $parms["values"] = ["melotts","xtts-fastapi","xvasynth","piper-tts"];
             $parms["description"] = "Select the TTS service you wish to use. <br>You can install MeloTTS under <i>Tools/Components/AMD or NVIDIA GPU<i> in the DwemerDistro folder.<br> You can install XTTS under <i>Tools/Components/NVIDIA GPU</i> in the DwemerDistro folder. <br><b>For xVASynth you will need to edit the [TTS XVASynTH url] in the Configuration Wizard to complete the setup after you are done with this menu!</b> <br><b>We recommend MeloTTS for most first time users.</b>";
+        } else if ($pname == "STTFUNCTION") {
+            $parms["values"] = ["deepgram","localwhisper"];
+            $parms["description"] = "Select the STT service you wish to use (Deepgram or Whisper).";
         }
     
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
@@ -195,6 +377,22 @@ foreach ($quickstartConf as $pname => $parms) {
             echo "<option value='" . htmlspecialchars($item) . "' $selected>" . htmlspecialchars($item) . "</option>";
         }
         echo "</select>";
+        
+        if ($pname == "STTFUNCTION") {
+            try { $deepgramRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='deepgram' LIMIT 1"); } catch (Throwable $_e) { $deepgramRow = []; }
+            $deepgramKey = isset($deepgramRow["api_key"]) ? $deepgramRow["api_key"] : "";
+            $showDG = ($parms["currentValue"] === "deepgram") ? "" : " style=\"display:none\"";
+            echo "<div class='form-group' id='dg_api_wrap'".$showDG.">";
+            echo "<label for='qs_deepgram_api_key'>Deepgram API Key</label>";
+            echo "<div class='input-group'>";
+            echo "<input type='password' class='form-control' id='qs_deepgram_api_key' value='" . htmlspecialchars($deepgramKey) . "' style='filter: blur(3px);'>";
+            echo "<div class='input-group-append'>";
+            echo "<button class='btn-primary' type='button' onclick=\"document.getElementById('qs_deepgram_api_key').style.filter='blur(0px)'; document.getElementById('qs_deepgram_api_key').setAttribute('type','text');\">Unhide</button>";
+            echo "</div></div>";
+            echo "<small class='form-text'>Paste your Deepgram API key. <a href='https://console.deepgram.com/' target='_blank'>Create key</a></small>";
+            echo "</div>";
+            echo "<script>(function(){try{var s=document.getElementById('STTFUNCTION'); if(!s) return; var w=document.getElementById('dg_api_wrap'); var f=function(){ if(!w) return; w.style.display = (s.value==='deepgram') ? '' : 'none'; }; s.addEventListener('change', f); f();}catch(_e){}})();</script>";
+        }
     
     } else if ($parms["type"] == "boolean") {
         // Add a wrapper div to ensure radio buttons are on a new line
@@ -248,10 +446,6 @@ foreach ($quickstartConf as $pname => $parms) {
 }
 
 echo '<div class="btn-group-custom text-center">
-        <p class="warning-text">
-            Click "Download AIAgent.ini" and place it in the AIAgent Skyrim mod folder under SKSE/Plugins 
-            <a href="https://www.nexusmods.com/skyrimspecialedition/mods/126330?tab=files/" target="_blank" class="btn-primary">Download CHIM Mod</a>
-        </p>
         <div class="btn-group-custom text-center">
             <p class="warning-text2">
                 After you click <b>Save</b> we <b>HIGHLY RECOMMEND</b> to open the Troubleshooting menu and run the LLM/AI, TTS and STT tests to verify everything is setup correctly.
@@ -267,31 +461,10 @@ echo '<div class="btn-group-custom text-center">
             <button
                 type="button"
                 class="btn-primary"
-                name="aiagentdownload"
-                value="aiagentdownload"
-                style="background-color: #ffcc00 !important; color: #000000 !important;"
-                onclick=\'
-                    formSubmitting = true;
-                    document.getElementById("top").target = "_self";
-                    document.getElementById("top").action = "tests/ai_agent_ini.php";
-                    document.getElementById("top").submit();
-                \'
-            >
-                Download AIAgent.ini
-            </button>
-
-            <button
-                type="button"
-                class="btn-primary"
                 name="save"
                 value="Save"
                 style="background-color: #28a745 !important;"
-                onclick=\'
-                    formSubmitting = true;
-                    document.getElementById("top").target = "_self";
-                    document.getElementById("top").action = "tools/conf_writer.php?save=true&incomplete=true&sc=" + getAnchorNH();
-                    document.getElementById("top").submit();
-                \'
+                onclick="saveQuickstartAndDB()"
             >
                 Save
             </button>
@@ -414,5 +587,41 @@ echo '<style>
         color: #ffd700 !important;
     }
 </style>';
+
+echo '<script>
+function saveQuickstartAndDB(){
+    try {
+        var fd = new FormData();
+        var orKey = document.getElementById("qs_openrouter_api_key");
+        var dgKey = document.getElementById("qs_deepgram_api_key");
+        fd.append("qs_action", "api_badge_quicksave");
+        fd.append("openrouter_api_key", orKey ? orKey.value : "");
+        fd.append("deepgram_api_key", dgKey ? dgKey.value : "");
+        fetch("quickstart.php", { method: "POST", body: fd })
+            .finally(function(){
+                var fdm = new FormData();
+                try { fdm.append("minime_t5", document.getElementById("qs_minime_t5").checked ? "1" : "0"); } catch(_e){}
+                try { fdm.append("oghma_infinium", document.getElementById("qs_oghma_infinium").checked ? "1" : "0"); } catch(_e){}
+                fdm.append("qs_action", "profile_quicksave_metadata");
+                fetch("quickstart.php", { method: "POST", body: fdm })
+                    .finally(function(){
+                        try {
+                            var form = document.getElementById("top");
+                            var fdw = new FormData(form);
+                            fdw.append("qs_action", "save_conf");
+                            fetch("quickstart.php", { method: "POST", body: fdw })
+                                .finally(function(){
+                                    window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
+                                });
+                        } catch(_e2) {
+                            window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
+                        }
+                    });
+            });
+    } catch (_e) {
+        window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
+    }
+}
+</script>';
 
 ?>

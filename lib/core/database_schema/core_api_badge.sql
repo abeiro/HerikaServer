@@ -66,8 +66,12 @@ ALTER TABLE ONLY public.core_api_badge ALTER COLUMN id SET DEFAULT nextval('publ
 -- Data for Name: core_api_badge; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
 
-INSERT INTO public.core_api_badge VALUES (1, 'openrouter api key', '');
-INSERT INTO public.core_api_badge VALUES (2, 'openai api key ', '');
+INSERT INTO public.core_api_badge VALUES (1, 'openrouter', '');
+INSERT INTO public.core_api_badge VALUES (2, 'OpenAI', '');
+INSERT INTO public.core_api_badge VALUES (3, 'Deepgram', '');
+INSERT INTO public.core_api_badge VALUES (4, 'Google', '');
+INSERT INTO public.core_api_badge VALUES (5, 'Azure', '');
+INSERT INTO public.core_api_badge VALUES (6, 'ElevenLabs', '');
 
 
 --

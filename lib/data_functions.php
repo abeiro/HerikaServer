@@ -3652,12 +3652,36 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         // $melottsid = $db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
         // $xvasynthid = $db->fetchAll("SELECT xvasynth_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
 
-        // XTTS voiceid override from table. if fails then xtts voicelogic pick
-        $voiceid = isset($voicetype) && sizeof($voicetype) >= 4 ? $voicetype[3] : "";
-        if (!$voiceid && (empty($voiceRow[0]['voiceid']) && $voicelogic === "voicetype")) {
-            Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
+        // Populate voiceid for core_npc_master using XTTS-style logic with template fallback
+        $voiceid = "";
+
+        // 1) Prefer explicit template voiceid if present
+        if (isset($npcNewFields) && isset($npcNewFields[0]["voiceid"]) && !empty($npcNewFields[0]["voiceid"])) {
+            $voiceid = trim($npcNewFields[0]["voiceid"]);
+        } else if (isset($npcNewFields2) && isset($npcNewFields2[0]["voiceid"]) && !empty($npcNewFields2[0]["voiceid"])) {
+            $voiceid = trim($npcNewFields2[0]["voiceid"]);
         }
 
+        // 2) Else derive from conf_opts Nametype/Voicetype path (old XTTS behavior)
+        if (empty($voiceid)) {
+            $codename = npcNameToCodename($npcname);
+            $cnVoicetype = $db->escape("Voicetype/$codename");
+            $cnNametype  = $db->escape("Nametype/$codename");
+
+            $row = $db->fetchAll("select value from conf_opts where id='$cnVoicetype' limit 1");
+            if (!is_array($row) || sizeof($row) == 0) {
+                $row = $db->fetchAll("select value from conf_opts where id='$cnNametype' limit 1");
+            }
+
+            if (is_array($row) && sizeof($row) > 0 && isset($row[0]["value"])) {
+                $parts = explode("\\", $row[0]["value"]);
+                if (sizeof($parts) >= 4 && !empty($parts[3])) {
+                    $voiceid = strtolower($parts[3]);
+                }
+            }
+        }
+
+        // 3) Assign (may remain empty if nothing found)
         $currentData = $npcMaster->GetByName($npcname);
         $currentData["voiceid"] = $voiceid;
 
