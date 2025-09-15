@@ -2580,12 +2580,15 @@ function call_llm() {
         }
         array_pop($minimalContext);
 
+        $minimalContext[]="$buffer";// Add whole generated content.
+        
+        $buffer=preg_replace('/\([^)]*\)/', '', $buffer);//Remove text between space.
         $contextData2=[
             array('role' => 'system', 'content' => "Create a JSON object with this format: $jsonformat , using a 'Generated dialogue line' as source. "),
             array('role' => 'user', 'content' => "* Available actions:\n".$GLOBALS["COMMAND_PROMPT"]),
             array('role' => 'user', 'content' => "* Historic context information:\n".implode("\n",$minimalContext)),
             array('role' => 'user', 'content' => "* Generated dialogue line: <$buffer>"),
-            array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' , and ONLY the  '* Generated dialogue line' , to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
+            array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' , and ONLY the  '* Generated dialogue line' section, to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
         ];
 
         $connector=new LLMConnector();
