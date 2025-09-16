@@ -101,28 +101,44 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                     require_once($enginePath . "prompts" . DIRECTORY_SEPARATOR . "command_prompt.php");
                     require_once($enginePath . "functions" . DIRECTORY_SEPARATOR . "functions.php");
 
-                    // Execute
-                    require_once($enginePath . "connector" . DIRECTORY_SEPARATOR . $driver . ".php");
-                    $handler = new $driver();
-                    $start = microtime(true);
-                    $handler->open($contextData, []);
-                    $accum = '';
-                    $done = false;
-                    while (!$done) {
-                        $chunk = $handler->process();
-                        if ($chunk === -1) { $done = true; break; }
-                        $accum .= $chunk;
-                        if ($handler->isDone()) $done = true;
+                    // Execute with error capture
+                    $errors = [];
+                    $prevHandler = set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$errors) {
+                        $errors[] = [ 'no' => $errno, 'str' => $errstr, 'file' => $errfile, 'line' => $errline ];
+                        return false; // allow default handling too
+                    });
+                    try {
+                        require_once($enginePath . "connector" . DIRECTORY_SEPARATOR . $driver . ".php");
+                        $handler = new $driver();
+                        $start = microtime(true);
+                        $handler->open($contextData, []);
+                        $accum = '';
+                        $done = false;
+                        while (!$done) {
+                            $chunk = $handler->process();
+                            if ($chunk === -1) { $done = true; break; }
+                            $accum .= $chunk;
+                            if ($handler->isDone()) $done = true;
+                        }
+                        $buffer = $handler->close();
+                        $endTimeTrans = microtime(true) - $start;
+                    } catch (Throwable $e) {
+                        $errors[] = [ 'no' => E_ERROR, 'str' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine() ];
+                        $buffer = (string)($buffer ?? '');
+                    } finally {
+                        if ($prevHandler !== null) { set_error_handler($prevHandler); } else { restore_error_handler(); }
                     }
-                    $buffer = $handler->close();
-                    $endTimeTrans = microtime(true) - $start;
 
-                    echo '<div class="status"><span class="label">Status:</span> <span class="ok">Completed</span></div>';
+                    $hasBuffer = isset($buffer) && trim((string)$buffer) !== '';
+                    $hasErrors = !empty($errors);
+                    $success = ($hasBuffer && !$hasErrors);
+                    echo '<div class="status"><span class="label">Status:</span> ' . ($success ? '<span class="ok">Completed</span>' : '<span class="error">Failed</span>') . '</div>';
                     echo '</div>'; // panel
 
                     echo '<div class="panel">';
                     echo '<div class="status"><span class="label">LLM Response:</span></div>';
-                    echo '<div class="response" style="font-size: 1.0em; color: #ffffff;">' . nl2br(htmlspecialchars($buffer)) . '</div>';
+                    $respStr = isset($buffer) ? (string)$buffer : '';
+                    echo '<div class="response" style="font-size: 1.0em; color: #ffffff;">' . ($respStr !== '' ? nl2br(htmlspecialchars($respStr)) : '<span class="error">(empty)</span>') . '</div>';
                     // Styled timing similar to tests.php
                     $perf = 'TOO CHIMMING SLOW'; $color = '#dc3545';
                     if ($endTimeTrans < 2) { $perf='FAST!'; $color='#28a745'; }
@@ -133,8 +149,8 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                     echo '<span style="color: '.$color.'; font-weight:bold; font-size:1.1em;">'.$perf.'</span></pre>';
                     echo '</div>';
 
-                    // Troubleshooting block if response is empty
-                    if (!isset($buffer) || trim((string)$buffer) === '') {
+                    // Troubleshooting + error list when failed
+                    if (!$success) {
                         echo '<div class="panel">';
                         echo '<div class="status"><span class="label" style="color: #ffc107;">TROUBLESHOOTING FIXES</span></div>';
                         echo '<ul style="margin-top: 10px; list-style-type: none; padding-left: 0; color:#cfd8e3;">';
@@ -146,6 +162,16 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                         echo '<li style="margin-bottom: 10px;"><strong>LLM Response is Empty</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Ensure your account has credits.</li></ul></li>';
                         echo '<li style="margin-bottom: 10px;"><strong>Response fails in-game</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Check server logs for token limits.</li></ul></li>';
                         echo '</ul>';
+                        if ($hasErrors) {
+                            echo '<div class="status"><span class="label">Errors captured:</span></div>';
+                            echo '<pre>';
+                            foreach ($errors as $er) {
+                                $line = '['.intval($er['no']).'] '.($er['str'] ?? '');
+                                $src = ($er['file'] ?? '?') . ':' . ($er['line'] ?? '?');
+                                echo htmlspecialchars($src.' - '.$line) . "\n";
+                            }
+                            echo '</pre>';
+                        }
                         echo '</div>';
                     }
 
