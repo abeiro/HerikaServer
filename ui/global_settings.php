@@ -127,6 +127,15 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
+    'Prompts' => [
+        [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
+        [ 'name' => 'DYNAMIC_PROMPT_PERSONALITY', 'type' => 'longstring' ],
+        [ 'name' => 'DYNAMIC_PROMPT_RELATIONSHIPS', 'type' => 'longstring' ],
+        [ 'name' => 'DYNAMIC_PROMPT_OCCUPATION', 'type' => 'longstring' ],
+        [ 'name' => 'DYNAMIC_PROMPT_SKILLS', 'type' => 'longstring' ],
+        [ 'name' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'type' => 'longstring' ],
+        [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
+    ],
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
