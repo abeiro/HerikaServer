@@ -350,8 +350,11 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     'min_p' => 'Ignore words with very low probability. [0-1]',
                     'top_a' => 'Adjusts word probabilities for better balance. [0-1]'
                 ];
+                // Temperature only
                 echo "<div class='kv-grid'>";
-                foreach ($ranges as $field => $conf) {
+                $field = 'temperature';
+                if (isset($ranges[$field])){
+                    $conf = $ranges[$field];
                     $label = ucfirst(str_replace('_',' ', $field));
                     $rid = "rng_{$field}";
                     $nid = "num_{$field}";
@@ -366,9 +369,43 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
                     echo "<div>";
                     echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
-                    echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\"></div>";
+                    echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\" data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'></div>";
                     echo "</div>";
                 }
+                echo "</div>";
+
+                // Advanced block
+                echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
+                echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Advanced LLM Settings</div>";
+                echo "<div class='kv-grid'>";
+                $advancedFields = ['presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a'];
+                foreach ($advancedFields as $advField) {
+                    if (!isset($ranges[$advField])) continue;
+                    $conf = $ranges[$advField];
+                    $label = ucfirst(str_replace('_',' ', $advField));
+                    $rid = "rng_{$advField}";
+                    $nid = "num_{$advField}";
+                    $raw = $editItem[$advField] ?? '';
+                    $use = ($raw === '' || $raw === null) ? '' : $raw;
+                    $val = htmlspecialchars($use);
+                    $min = $conf['min'];
+                    $max = $conf['max'];
+                    $step = $conf['step'];
+                    $tip = isset($tips[$advField]) ? $tips[$advField] : '';
+                    $labelHtml = $tip ? ("<span class='tip-label' data-tip='" . htmlspecialchars($tip, ENT_QUOTES) . "'>" . $label . "</span>") : $label;
+                    echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
+                    echo "<div>";
+                    echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value; try{document.getElementById('{$nid}_null').value='0';}catch(e){}\">";
+                    echo "<div style='margin-top:6px;'>";
+                    echo "<input type='number' class='inline-num' id='{$nid}' name='{$advField}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'>";
+                    echo "<input type='hidden' id='{$nid}_null' name='{$advField}_is_null' value='" . (($raw === '' || $raw === null) ? '1' : '0') . "'>";
+                    echo "</div>";
+                    echo "</div>";
+                }
+                echo "</div>";
+                echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
+                echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
+                echo "</div>";
                 echo "</div>";
                 ?>
             </div>
@@ -1009,9 +1046,12 @@ if (typeof window.consolidation !== 'function') {
                 $labelHtml = $tip ? ("<span class='tip-label' data-tip='" . htmlspecialchars($tip, ENT_QUOTES) . "'>" . $label . "</span>") : $label;
                 echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
                 echo "<div>";
-                echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
+                echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value; try{document.getElementById('{$nid}_null').value='0';}catch(e){}\">";
                 // No clamp on number so empty stays empty (gets saved as NULL). Range still writes number when moved.
-                echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$advField}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'></div>";
+                echo "<div style='margin-top:6px;'>";
+                echo "<input type='number' class='inline-num' id='{$nid}' name='{$advField}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'>";
+                echo "<input type='hidden' id='{$nid}_null' name='{$advField}_is_null' value='" . (($raw === '' || $raw === null) ? '1' : '0') . "'>";
+                echo "</div>";
                 echo "</div>";
             }
             echo "</div>";
@@ -1092,11 +1132,13 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         pairs.forEach(([rid,nid])=>{
             const r = document.getElementById(rid);
             const n = document.getElementById(nid);
+            const h = document.getElementById(nid + '_null');
             if (n) {
                 n.value=''; // empty => server maps to NULL
                 n.setAttribute('data-null','1');
                 try { n.dispatchEvent(new Event('change', { bubbles:true })); } catch(_){}
             }
+            if (h) { h.value = '1'; }
             if (r) { r.value = r.getAttribute('min') || '0'; }
         });
     });

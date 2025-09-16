@@ -477,7 +477,7 @@ $ittById = $byId($ittRows);
         <div class="pf-pane active" id="pane_llm1">
             <div class="select-row">
                 <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
-                <button type="button" class="btn-apply" data-apply-select="llm_primary_id">Set</button>
+                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_primary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_primary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
@@ -486,7 +486,7 @@ $ittById = $byId($ittRows);
         <div class="pf-pane" id="pane_llm2">
             <div class="select-row">
                 <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
-                <button type="button" class="btn-apply" data-apply-select="llm_secondary_id">Set</button>
+                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_secondary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_secondary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
@@ -495,7 +495,7 @@ $ittById = $byId($ittRows);
         <div class="pf-pane" id="pane_llm3">
             <div class="select-row">
                 <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
-                <button type="button" class="btn-apply" data-apply-select="llm_tertiary_id">Set</button>
+                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_tertiary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_tertiary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
@@ -504,7 +504,7 @@ $ittById = $byId($ittRows);
         <div class="pf-pane" id="pane_llm4">
             <div class="select-row">
                 <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
-                <button type="button" class="btn-apply" data-apply-select="llm_quaternary_id">Set</button>
+                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_quaternary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_quaternary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
@@ -513,7 +513,7 @@ $ittById = $byId($ittRows);
         <div class="pf-pane" id="pane_diary">
             <div class="select-row">
                 <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
-                <button type="button" class="btn-apply" data-apply-select="diary_connector_id">Set</button>
+                <button type="button" class="btn-apply btn-primary" data-apply-select="diary_connector_id">Set</button>
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
