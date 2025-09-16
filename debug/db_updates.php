@@ -1388,12 +1388,36 @@ if ($checkTableExists("core_npc_master") == -1) {
     Logger::info(__FILE__." core_npc_master exists");
 
 
-if ($checkTableExists(("core_profiles")>0) && $checkVersion("core_profiles") < 20250904004) {
-    
+if ($checkTableExists("core_profiles") > 0 && $checkVersion("core_profiles") < 20250904005) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles_2.sql"));
-    $updateVersion("core_profiles",20250904004);
-} else
-    Logger::info(__FILE__." core_profiles 2 exists");
+    // ensure slot column exists for existing installs
+    $db->execQuery('ALTER TABLE "core_profiles" ADD COLUMN IF NOT EXISTS "slot" integer');
+    // set default profile slot to 1 if missing
+    $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
+    $updateVersion("core_profiles",20250904005);
+    Logger::info("Applied core_profiles 20250904005 (added slot, set default slot=1)");
+} else {
+    Logger::info(__FILE__." core_profiles up-to-date");
+}
+
+// Ensure core_profiles.slot exists even if version was previously bumped
+try {
+    $colCheck = $db->fetchAll("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='core_profiles' AND column_name='slot'");
+    if (!$colCheck || !isset($colCheck[0]["column_name"])) {
+        Logger::warn("core_profiles.slot missing; adding column now");
+        $db->execQuery('ALTER TABLE "core_profiles" ADD COLUMN "slot" integer');
+        $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
+        if ($checkVersion("core_profiles") < 20250904006) {
+            $updateVersion("core_profiles",20250904006);
+        }
+        Logger::info("Added core_profiles.slot and set default profile slot=1");
+    } else {
+        // Column exists; still ensure default profile set to 1
+        $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
+    }
+} catch (Exception $e) {
+    Logger::error("Error ensuring core_profiles.slot: ".$e->getMessage());
+}
 
 //----------------------------------------------------
 // Bio templates: new tables and combined view
