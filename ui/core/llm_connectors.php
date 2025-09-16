@@ -61,6 +61,18 @@ h1.api-title {
 $GLOBALS["db"] = new sql();
 $llm = new LLMConnector();
 
+// Read network IPs for Custom service helper buttons
+$WSL_IP = '';
+$HOST_IP = '';
+try {
+    $row = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='Network/WSL_IP' LIMIT 1");
+    if (isset($row["value"])) $WSL_IP = $row["value"]; 
+} catch (Exception $e) {}
+try {
+    $row = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='Network/HOST_IP' LIMIT 1");
+    if (isset($row["value"])) $HOST_IP = $row["value"]; 
+} catch (Exception $e) {}
+
 // Lightweight partial to render only the editor UI (for embedding)
 if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     $id = $_GET["edit"] ?? '';
@@ -399,7 +411,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         (function init(){ const service = detectService(); applyService(service); })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
         if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
-        if (urlInput){ urlInput.addEventListener('change', ()=> applyService(detectService())); }
+        if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService()); }); }
     })();
     function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
     // LLM Test Modal
@@ -812,8 +824,11 @@ if (typeof window.consolidation !== 'function') {
             <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
 
             <label for='url'>URL</label><br>
-            <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>"><br>
-
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>" style="flex:1 1 auto;">
+                <button type="button" id="btn_wsl_ip" class="btn-primary" title="Use WSL IP" style="display:none;" data-ip="<?= htmlspecialchars($WSL_IP) ?>">WSL IP</button>
+                <button type="button" id="btn_host_ip" class="btn-primary" title="Use HOST IP" style="display:none;" data-ip="<?= htmlspecialchars($HOST_IP) ?>">PC IP</button>
+            </div>
             <label for='model'>Model</label><br>
             <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
 
@@ -1006,9 +1021,9 @@ if (typeof window.consolidation !== 'function') {
     const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', custom: 'openaijson' };
     const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
     function syncApiBadge(service){ if (!apiBadgeSelect) return; const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-    function applyService(service){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (service === 'custom') { if (urlInput) urlInput.value = ''; } else if (defaults[service]) { urlInput.value = defaults[service]; } providerRow.style.display = (service === 'openrouter' || service === 'custom') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.style.display = (service==='custom') ? '' : 'none'; driverInput.style.display = (service==='custom') ? 'none' : ''; if (service==='custom') { driverSelect.value = 'openaijson'; if (driverInput) driverInput.value = 'openaijson'; } } syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
+    function applyService(service){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; const prevService = (serviceLabelEl && serviceLabelEl.textContent||'').toLowerCase(); const isSwitchingToCustom = (service==='custom') && !/service:\s*custom/i.test(prevService||''); if (service === 'custom') { if (isSwitchingToCustom && urlInput) urlInput.value = ''; } else if (defaults[service]) { urlInput.value = defaults[service]; } providerRow.style.display = (service === 'openrouter' || service === 'custom') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.style.display = (service==='custom') ? '' : 'none'; driverInput.style.display = (service==='custom') ? 'none' : ''; if (service==='custom') { driverSelect.value = 'openaijson'; if (driverInput) driverInput.value = 'openaijson'; } } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); const urlHint = document.getElementById('urlhint'); const isCustom = (service==='custom'); if (btnWSL) btnWSL.style.display = isCustom ? '' : 'none'; if (btnHost) btnHost.style.display = isCustom ? '' : 'none'; if (urlHint) urlHint.style.display = isCustom ? '' : 'none'; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
     function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google','custom'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
-    (function init(){ const service = detectService(); applyService(service); const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); if (driverInput && driverInput.value) driverSelect.value = driverInput.value; } })();
+    (function init(){ const service = detectService(); applyService(service); const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); if (driverInput && driverInput.value) driverSelect.value = driverInput.value; } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); function fillFrom(buttonEl, ip){ if (!buttonEl) return; const form = buttonEl.closest('form'); const urlEl = form ? form.querySelector('input[name="url"]') : document.querySelector('input[name="url"]'); if (!ip || !urlEl) return; urlEl.value = 'http://' + ip + ':5001'; try { urlEl.dispatchEvent(new Event('input', { bubbles:true })); } catch(_e){} try { urlEl.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){} try { urlEl.focus(); } catch(_e){} } if (btnWSL) btnWSL.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($WSL_IP) ?>'; } fillFrom(this, String(ip).trim()); }); if (btnHost) btnHost.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($HOST_IP) ?>'; } fillFrom(this, String(ip).trim()); }); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
     if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
     if (urlInput){ urlInput.addEventListener('change', ()=> applyService(detectService())); }
