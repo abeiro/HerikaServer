@@ -5,14 +5,14 @@ class LLMConnector {
 
     public function create($data) {
         $fields = [
-            "label", "metadata", "url", "model", "provider", "driver", "reasoning_model",
+            "label", "metadata", "url", "model", "provider", "driver", "service", "reasoning_model",
             "max_tokens", "enforce_json", "prefill_json", "api_badge_id", "json_schema",
             "temperature", "presence_penalty", "frequency_penalty", "repetition_penalty",
             "top_p", "top_k", "min_p", "top_a"
         ];
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            if (empty("$v") && $v !== "0") {
                 $data[$k] = null;
             }
         }
@@ -38,7 +38,7 @@ class LLMConnector {
 
     public function update($id, $data) {
         $fields = [
-            "label", "metadata", "url", "model", "provider", "driver", "reasoning_model",
+            "label", "metadata", "url", "model", "provider", "driver", "service", "reasoning_model",
             "max_tokens", "enforce_json", "prefill_json", "api_badge_id", "json_schema",
             "temperature", "presence_penalty", "frequency_penalty", "repetition_penalty",
             "top_p", "top_k", "min_p", "top_a"

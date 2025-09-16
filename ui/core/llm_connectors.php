@@ -61,6 +61,18 @@ h1.api-title {
 $GLOBALS["db"] = new sql();
 $llm = new LLMConnector();
 
+// Read network IPs for Custom service helper buttons
+$WSL_IP = '';
+$HOST_IP = '';
+try {
+    $row = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='Network/WSL_IP' LIMIT 1");
+    if (isset($row["value"])) $WSL_IP = $row["value"]; 
+} catch (Exception $e) {}
+try {
+    $row = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='Network/HOST_IP' LIMIT 1");
+    if (isset($row["value"])) $HOST_IP = $row["value"]; 
+} catch (Exception $e) {}
+
 // Lightweight partial to render only the editor UI (for embedding)
 if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     $id = $_GET["edit"] ?? '';
@@ -219,8 +231,12 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
-                        <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.jpg" alt="Kobold" class="service-icon" data-service="kobold" />
                     </div>
+                </div>
+                <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
+
+                <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
+                    Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. For advanced users only
                 </div>
 
                 <label for='url'>URL</label><br>
@@ -236,7 +252,12 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
                 <div id="driver_row" style="display:none;">
                     <label for='driver'>Driver</label><br>
-                    <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>"><br>
+                    <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>" style="display:none"><br>
+                    <select id="driver_select" style="display:none">
+                        <option value="openrouterjson">OpenRouter JSON</option>
+                        <option value="openaijson">OpenAI JSON</option>
+                        <option value="google_openaijson">Google OpenAI JSON</option>
+                    </select>
                 </div>
 
                 <div id="api_key_row">
@@ -310,11 +331,11 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
                 ];
                 $displayDefaults = [
-                    'temperature' => 1.05,
+                    'temperature' => 1,
                     'presence_penalty' => 0,
                     'frequency_penalty' => 0,
-                    'repetition_penalty' => 1,
-                    'top_p' => 0.7,
+                    'repetition_penalty' => 0,
+                    'top_p' => 0,
                     'top_k' => 0,
                     'min_p' => 0,
                     'top_a' => 0,
@@ -329,8 +350,11 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     'min_p' => 'Ignore words with very low probability. [0-1]',
                     'top_a' => 'Adjusts word probabilities for better balance. [0-1]'
                 ];
+                // Temperature only
                 echo "<div class='kv-grid'>";
-                foreach ($ranges as $field => $conf) {
+                $field = 'temperature';
+                if (isset($ranges[$field])){
+                    $conf = $ranges[$field];
                     $label = ucfirst(str_replace('_',' ', $field));
                     $rid = "rng_{$field}";
                     $nid = "num_{$field}";
@@ -345,9 +369,43 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
                     echo "<div>";
                     echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
-                    echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\"></div>";
+                    echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\" data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'></div>";
                     echo "</div>";
                 }
+                echo "</div>";
+
+                // Advanced block
+                echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
+                echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Advanced LLM Settings</div>";
+                echo "<div class='kv-grid'>";
+                $advancedFields = ['presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a'];
+                foreach ($advancedFields as $advField) {
+                    if (!isset($ranges[$advField])) continue;
+                    $conf = $ranges[$advField];
+                    $label = ucfirst(str_replace('_',' ', $advField));
+                    $rid = "rng_{$advField}";
+                    $nid = "num_{$advField}";
+                    $raw = $editItem[$advField] ?? '';
+                    $use = ($raw === '' || $raw === null) ? '' : $raw;
+                    $val = htmlspecialchars($use);
+                    $min = $conf['min'];
+                    $max = $conf['max'];
+                    $step = $conf['step'];
+                    $tip = isset($tips[$advField]) ? $tips[$advField] : '';
+                    $labelHtml = $tip ? ("<span class='tip-label' data-tip='" . htmlspecialchars($tip, ENT_QUOTES) . "'>" . $label . "</span>") : $label;
+                    echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
+                    echo "<div>";
+                    echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value; try{document.getElementById('{$nid}_null').value='0';}catch(e){}\">";
+                    echo "<div style='margin-top:6px;'>";
+                    echo "<input type='number' class='inline-num' id='{$nid}' name='{$advField}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'>";
+                    echo "<input type='hidden' id='{$nid}_null' name='{$advField}_is_null' value='" . (($raw === '' || $raw === null) ? '1' : '0') . "'>";
+                    echo "</div>";
+                    echo "</div>";
+                }
+                echo "</div>";
+                echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
+                echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
+                echo "</div>";
                 echo "</div>";
                 ?>
             </div>
@@ -373,8 +431,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const defaults = {
             openrouter: 'https://openrouter.ai/api/v1/chat/completions',
             openai: 'https://api.openai.com/v1/chat/completions',
-            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-            kobold: 'http://127.0.0.1:5001'
+            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
         };
         // No dropdown; selection by icons only
         const providerRow = document.getElementById('provider_row');
@@ -385,17 +442,17 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const icons = document.querySelectorAll('.service-icon');
         const apiKeyRow = document.getElementById('api_key_row');
         const serviceLabelEl = document.getElementById('service_label');
-        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', kobold: 'Kobold' };
+        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google' };
         function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
+        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', custom: '' };
         const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
-        function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-        function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
-        function detectService(){ const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('kobold')||u.includes('127.0.0.1')||u.includes('localhost')) return 'kobold'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
-        (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
+        function syncApiBadge(service){ if (!apiBadgeSelect) return; const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
+        function applyService(service){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
+        function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
+        (function init(){ const service = detectService(); applyService(service); })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
         if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
-        if (urlInput){ urlInput.addEventListener('change', ()=> applyService(detectService())); }
+        if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService()); }); }
     })();
     function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
     // LLM Test Modal
@@ -478,7 +535,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             positionDropdown();
         }
         async function loadModels(){ if (cache) return cache; ensureDropdown(); dropdown.innerHTML = '<div class="orm-head">OpenRouter Models</div><div class="orm-note">Loading…</div>'; positionDropdown(); try { const res = await fetch('https://openrouter.ai/api/v1/models'); if (!res.ok) throw new Error('HTTP '+res.status); const json = await res.json(); const data = Array.isArray(json && json.data) ? json.data : []; cache = data.map(m => ({ id: m.id || m.canonical_slug || '', name: m.name || '', pricing: m.pricing || {}, top_provider: m.top_provider || {}, context_length: m.context_length || undefined, description: m.description || '' })); cache.sort((a,b)=> (a.name||'').localeCompare(b.name||'') || (a.id||'').localeCompare(b.id||'')); return cache; } catch (e) { dropdown.innerHTML = '<div class="orm-head">OpenRouter Models</div><div class="orm-err">Failed to load models. Check network/CORS.</div>'; positionDropdown(); throw e; } }
-        function isOpenRouter(){ const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); return url.includes('openrouter.ai') || /openrouter/.test(driver); }
+        function isOpenRouter(){ const svc = ((document.getElementById('service_input')||{}).value||'').toLowerCase(); if (svc !== 'openrouter') return false; const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); return url.includes('openrouter.ai') || /openrouter/.test(driver); }
         async function maybeOpenDropdown(){ if (!isOpenRouter()) return; try { const models = await loadModels(); renderList(models, modelInput.value); } catch (_e) {} }
         modelInput.addEventListener('focus', () => { if (isOpenRouter()) maybeOpenDropdown(); });
         modelInput.addEventListener('click', () => { if (isOpenRouter()) maybeOpenDropdown(); });
@@ -503,7 +560,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(infoEl, anchor.nextSibling);
             }
             function ctxOf(m){ return (m.top_provider && m.top_provider.context_length) || m.context_length || ''; }
-            function renderInfo(m){ const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctx = formatContext(ctxOf(m)); return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div><div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): input ${prompt} • output ${completion}${ctx? ` • context ${ctx}`: ''}</div>`; }
+            function renderInfo(m){ const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctx = formatContext(ctxOf(m)); return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div><div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): Input ${prompt} • Output ${completion}${ctx? ` • Context ${ctx}`: ''}</div>`; }
             async function update(){
                 const val = (modelInput.value||'').trim();
                 const url = (document.querySelector('input[name=\"url\"]').value||'');
@@ -541,7 +598,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             positionDropdown(); }
         async function loadProviders(){ if (providersCache) return providersCache; ensureDropdown(); dropdown.innerHTML = '<div class="orm-head">OpenRouter Providers</div><div class="orm-note">Loading…</div>'; positionDropdown(); try { const res = await fetch('https://openrouter.ai/api/v1/providers'); if (!res.ok) throw new Error('HTTP '+res.status); const json = await res.json(); const data = Array.isArray(json && json.data) ? json.data : []; providersCache = data.map(p => ({ name: p.name || '', slug: p.slug || '', privacy_policy_url: p.privacy_policy_url || '', terms_of_service_url: p.terms_of_service_url || '', status_page_url: p.status_page_url || '' })).filter(p => p.slug); providersCache.sort((a,b)=> (a.slug||'').localeCompare(b.slug||'')); return providersCache; } catch (e) { dropdown.innerHTML = '<div class="orm-head">OpenRouter Providers</div><div class="orm-err">Failed to load providers. Check network/CORS.</div>'; positionDropdown(); throw e; } }
         function getRelevantProviderSlugs(){ const val = (modelInput.value || '').trim(); const ix = val.indexOf('/'); if (ix > 0){ const slug = val.slice(0, ix).trim(); if (slug) return [slug]; } return []; }
-        function isOpenRouter(){ const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); return url.includes('openrouter.ai') || /openrouter/.test(driver); }
+        function isOpenRouter(){ const svc = ((document.getElementById('service_input')||{}).value||'').toLowerCase(); if (svc !== 'openrouter') return false; const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); return url.includes('openrouter.ai') || /openrouter/.test(driver); }
         async function maybeOpenDropdown(){ if (!isOpenRouter()) return; try { const items = await loadProviders(); renderList(items, providerInput.value, getRelevantProviderSlugs()); } catch (_e) {} }
         function extractProviderSlugFromModel(val){ if (!val) return ''; const s = String(val); const ix = s.indexOf('/'); if (ix <= 0) return ''; return s.slice(0, ix).trim(); }
         function maybeAutofillProvider(){ const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); if (!(url.includes('openrouter.ai') || /openrouter/.test(driver))) return; const slug = extractProviderSlugFromModel(modelInput.value); if (!slug) return; providerInput.value = slug; try { providerInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} try { providerInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
@@ -575,15 +632,40 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
-    $llm->create($_POST);
-    header("Location: llm_connectors.php");
+    // Seed required defaults for new connector (force values on create)
+    $payload = $_POST;
+    $payload['driver'] = 'openrouterjson';
+    $payload['temperature'] = 1;
+    $payload['url'] = 'https://openrouter.ai/api/v1/chat/completions';
+    $payload['reasoning_model'] = 0;
+    $payload['max_tokens'] = 250;
+    $payload['api_badge_id'] = 1;
+    $payload['enforce_json'] = 1;
+    $payload['json_schema'] = 1;
+    $payload['service'] = 'openrouter';
+
+    $newId = $llm->create($payload);
+    if (!$newId) {
+        $last = $GLOBALS["db"]->fetchOne("SELECT id FROM core_llm_connector ORDER BY id DESC LIMIT 1");
+        $newId = $last['id'] ?? '';
+    }
+    header("Location: llm_connectors.php" . ($newId ? ('?edit=' . urlencode($newId)) : ''));
     exit;
 }
 
 // Create a blank LLM connector and open it for editing
 if (isset($_GET["create_blank"])) {
     $newId = $llm->create([
-        "label" => "New Connector"
+        "label" => "New Connector",
+        'driver' => 'openrouterjson',
+        'temperature' => 1,
+        'url' => 'https://openrouter.ai/api/v1/chat/completions',
+        'reasoning_model' => 0,
+        'max_tokens' => 250,
+        'api_badge_id' => 1,
+        'enforce_json' => 1,
+        'json_schema' => 1,
+        'service' => 'openrouter'
     ]);
     $redir = 'llm_connectors.php' . ($newId ? ('?edit=' . urlencode($newId)) : '');
     header("Location: $redir");
@@ -778,13 +860,22 @@ if (typeof window.consolidation !== 'function') {
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
-                    <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.jpg" alt="Kobold" class="service-icon" data-service="kobold" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/custom.jpg" alt="Custom" class="service-icon" data-service="custom" />                </div>
                 </div>
+            <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
+
+            <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
+                Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. Depending on the service you may not need to fill out all fields. For advanced users only
             </div>
 
+            <div id="url_row">
             <label for='url'>URL</label><br>
-            <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>"><br>
-
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>" style="flex:1 1 auto;">
+                    <button type="button" id="btn_wsl_ip" class="btn-primary" title="Use WSL IP" style="display:none;" data-ip="<?= htmlspecialchars($WSL_IP) ?>">WSL IP</button>
+                    <button type="button" id="btn_host_ip" class="btn-primary" title="Use HOST IP" style="display:none;" data-ip="<?= htmlspecialchars($HOST_IP) ?>">PC IP</button>
+                </div>
+            </div>
             <label for='model'>Model</label><br>
             <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
 
@@ -795,7 +886,12 @@ if (typeof window.consolidation !== 'function') {
 
             <div id="driver_row" style="display:none;">
                 <label for='driver'>Driver</label><br>
-                <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>"><br>
+                <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>" style="display:none"><br>
+                <select id="driver_select">
+                    <option value="openrouterjson">OpenRouter JSON</option>
+                    <option value="openaijson">OpenAI JSON</option>
+                    <option value="google_openaijson">Google OpenAI JSON</option>
+                </select>
             </div>
 
             <div id="api_key_row">
@@ -885,11 +981,11 @@ if (typeof window.consolidation !== 'function') {
                 'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
             ];
             $displayDefaults = [
-                'temperature' => 1.05,
+                'temperature' => 1,
                 'presence_penalty' => 0,
                 'frequency_penalty' => 0,
                 'repetition_penalty' => 1,
-                'top_p' => 0.7,
+                'top_p' => 0,
                 'top_k' => 0,
                 'min_p' => 0,
                 'top_a' => 0,
@@ -904,8 +1000,11 @@ if (typeof window.consolidation !== 'function') {
                 'min_p' => 'Ignore words with very low probability. [0-1]',
                 'top_a' => 'Adjusts word probabilities for better balance. [0-1]'
             ];
+            // Render Temperature control only
             echo "<div class='kv-grid'>";
-            foreach ($ranges as $field => $conf) {
+            $field = 'temperature';
+            if (isset($ranges[$field])){
+                $conf = $ranges[$field];
                 $label = ucfirst(str_replace('_',' ', $field));
                 $rid = "rng_{$field}";
                 $nid = "num_{$field}";
@@ -920,9 +1019,45 @@ if (typeof window.consolidation !== 'function') {
                 echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
                 echo "<div>";
                 echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
-                echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\"></div>";
+                echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\" data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'></div>";
                 echo "</div>";
             }
+            echo "</div>";
+
+            // Advanced block
+            echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
+            echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Advanced LLM Settings</div>";
+            echo "<div class='kv-grid'>";
+            $advancedFields = ['presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a'];
+            foreach ($advancedFields as $advField) {
+                if (!isset($ranges[$advField])) continue;
+                $conf = $ranges[$advField];
+                $label = ucfirst(str_replace('_',' ', $advField));
+                $rid = "rng_{$advField}";
+                $nid = "num_{$advField}";
+                $raw = $editItem[$advField] ?? '';
+                // For advanced fields, if DB is null/empty, show empty box so it saves as NULL
+                $use = ($raw === '' || $raw === null) ? '' : $raw;
+                $val = htmlspecialchars($use);
+                $min = $conf['min'];
+                $max = $conf['max'];
+                $step = $conf['step'];
+                $tip = isset($tips[$advField]) ? $tips[$advField] : '';
+                $labelHtml = $tip ? ("<span class='tip-label' data-tip='" . htmlspecialchars($tip, ENT_QUOTES) . "'>" . $label . "</span>") : $label;
+                echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
+                echo "<div>";
+                echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value; try{document.getElementById('{$nid}_null').value='0';}catch(e){}\">";
+                // No clamp on number so empty stays empty (gets saved as NULL). Range still writes number when moved.
+                echo "<div style='margin-top:6px;'>";
+                echo "<input type='number' class='inline-num' id='{$nid}' name='{$advField}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'>";
+                echo "<input type='hidden' id='{$nid}_null' name='{$advField}_is_null' value='" . (($raw === '' || $raw === null) ? '1' : '0') . "'>";
+                echo "</div>";
+                echo "</div>";
+            }
+            echo "</div>";
+            echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
+            echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
+            echo "</div>";
             echo "</div>";
             ?>
         </div>
@@ -956,8 +1091,7 @@ if (typeof window.consolidation !== 'function') {
     const defaults = {
         openrouter: 'https://openrouter.ai/api/v1/chat/completions',
         openai: 'https://api.openai.com/v1/chat/completions',
-        google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-        kobold: 'http://127.0.0.1:5001'
+        google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
     };
     // No dropdown; selection by icons only
     const providerRow = document.getElementById('provider_row');
@@ -968,19 +1102,47 @@ if (typeof window.consolidation !== 'function') {
     const icons = document.querySelectorAll('.service-icon');
     const apiKeyRow = document.getElementById('api_key_row');
     const serviceLabelEl = document.getElementById('service_label');
-    const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', kobold: 'Kobold' };
+    const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', custom: 'Custom' };
     function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
+    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', custom: 'openaijson' };
     const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
-    function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-    function applyService(service){ /*if (defaults[service]) urlInput.value = defaults[service];*/ providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
-    function detectService(){ const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('kobold')||u.includes('127.0.0.1')||u.includes('localhost')) return 'openai'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
-    (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
-    icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
-    if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
-    if (urlInput){ urlInput.addEventListener('change', ()=> applyService(detectService())); }
+    function syncApiBadge(service){ if (!apiBadgeSelect) return; const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
+    function applyService(service, fromUser){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (service !== 'custom' && defaults[service]) { urlInput.value = defaults[service]; } const urlRow = document.getElementById('url_row'); if (urlRow) urlRow.style.display = (service==='custom') ? '' : 'none'; providerRow.style.display = (service === 'openrouter' || service === 'custom') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.style.display = (service==='custom') ? '' : 'none'; driverInput.style.display = (service==='custom') ? 'none' : ''; if (service==='custom') { driverSelect.value = 'openaijson'; if (driverInput) driverInput.value = 'openaijson'; } } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); const isCustom = (service==='custom'); if (btnWSL) btnWSL.style.display = isCustom ? '' : 'none'; if (btnHost) btnHost.style.display = isCustom ? '' : 'none'; const customNote = document.getElementById('custom_note'); if (customNote) customNote.style.display = isCustom ? '' : 'none'; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
+    function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google','custom'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
+    (function init(){ const service = detectService(); applyService(service, false); const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); if (driverInput && driverInput.value) driverSelect.value = driverInput.value; } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); function fillFrom(buttonEl, ip){ if (!buttonEl) return; const form = buttonEl.closest('form'); const urlEl = form ? form.querySelector('input[name="url"]') : document.querySelector('input[name="url"]'); if (!ip || !urlEl) return; urlEl.value = 'http://' + ip + ':5001'; try { urlEl.dispatchEvent(new Event('input', { bubbles:true })); } catch(_e){} try { urlEl.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){} try { urlEl.focus(); } catch(_e){} } if (btnWSL) btnWSL.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($WSL_IP) ?>'; } fillFrom(this, String(ip).trim()); }); if (btnHost) btnHost.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($HOST_IP) ?>'; } fillFrom(this, String(ip).trim()); }); })();
+    icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
+    if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService(), false)); driverInput.addEventListener('change', ()=> applyService(detectService(), false)); }
+    if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService(), false); }); }
 })();
 function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
+// Clear advanced settings (all below Temperature)
+(function(){
+    const btn = document.getElementById('btn_clear_adv');
+    if (!btn) return;
+    btn.addEventListener('click', function(){
+        const pairs = [
+            ['rng_presence_penalty','num_presence_penalty'],
+            ['rng_frequency_penalty','num_frequency_penalty'],
+            ['rng_repetition_penalty','num_repetition_penalty'],
+            ['rng_top_p','num_top_p'],
+            ['rng_top_k','num_top_k'],
+            ['rng_min_p','num_min_p'],
+            ['rng_top_a','num_top_a']
+        ];
+        pairs.forEach(([rid,nid])=>{
+            const r = document.getElementById(rid);
+            const n = document.getElementById(nid);
+            const h = document.getElementById(nid + '_null');
+            if (n) {
+                n.value=''; // empty => server maps to NULL
+                n.setAttribute('data-null','1');
+                try { n.dispatchEvent(new Event('change', { bubbles:true })); } catch(_){}
+            }
+            if (h) { h.value = '1'; }
+            if (r) { r.value = r.getAttribute('min') || '0'; }
+        });
+    });
+})();
 // LLM Test Modal
 (function(){
     const MODAL_ID = 'llmtest_modal';

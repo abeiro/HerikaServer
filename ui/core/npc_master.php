@@ -252,10 +252,23 @@ $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_profiles ORDER BY label ASC");
+// Preload profile connector mappings and LLM connector labels for modal summary
+$profileConnRows = $GLOBALS["db"]->fetchAll("SELECT id, llm_primary_id, llm_secondary_id, llm_tertiary_id, llm_quaternary_id, diary_connector_id FROM core_profiles ORDER BY id ASC");
+$llmRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_llm_connector ORDER BY id ASC");
 $profilesById = [];
 foreach (($profileRows ?? []) as $pr) {
     $pid = (string)($pr['id'] ?? '');
     if ($pid !== '') $profilesById[$pid] = $pr['label'] ?? ('Profile #'.$pid);
+}
+$profilesConnById = [];
+foreach (($profileConnRows ?? []) as $prc) {
+    $pid = (string)($prc['id'] ?? '');
+    if ($pid !== '') $profilesConnById[$pid] = $prc;
+}
+$llmById = [];
+foreach (($llmRows ?? []) as $lr) {
+    $lid = (string)($lr['id'] ?? '');
+    if ($lid !== '') $llmById[$lid] = $lr['label'] ?? ('Connector #'.$lid);
 }
 
 $where = "1=1";
@@ -405,6 +418,46 @@ if (isset($_GET['race_icon'])) {
         <a id="modal_fav_btn" class="btn btn-toggle<?= $isFav? ' active':'' ?>" href="#" title="Toggle favorite" data-favorite><?= $isFav? '★' : '☆' ?></a>
         <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
     </div>
+    <?php
+    // Render LLM summary container (will live-update via JS)
+    $curPid = (string)($editItem['profile_id'] ?? '');
+    $pc = ($curPid !== '' && isset($profilesConnById[$curPid])) ? $profilesConnById[$curPid] : null;
+    $m = function($id) use ($llmById){ $k = (string)($id ?? ''); return $k !== '' && isset($llmById[$k]) ? $llmById[$k] : '—'; };
+    ?>
+    <div id="profile_llm_summary" style="display:grid; grid-template-columns: 120px 1fr; gap:6px; color:#cfd9ea; border:1px solid #4a4a4a; border-radius:8px; padding:8px; margin-bottom:8px;">
+        <div style="color:rgb(242,124,17); font-weight:700;">LLM1</div><div><?= htmlspecialchars($pc ? $m($pc['llm_primary_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700;">LLM2</div><div><?= htmlspecialchars($pc ? $m($pc['llm_secondary_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700;">LLM3</div><div><?= htmlspecialchars($pc ? $m($pc['llm_tertiary_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700;">LLM4</div><div><?= htmlspecialchars($pc ? $m($pc['llm_quaternary_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700;">Diary</div><div><?= htmlspecialchars($pc ? $m($pc['diary_connector_id'] ?? '') : '—') ?></div>
+    </div>
+    <script>
+    (function(){
+        const PROFILE_CONN = <?= json_encode($profilesConnById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+        const LLM_LABELS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+        function labelOf(id){ const k=String(id||''); return (k && LLM_LABELS[k]) ? String(LLM_LABELS[k]) : '—'; }
+        function renderProfileSummary(pid){
+            const box = document.getElementById('profile_llm_summary'); if (!box) return;
+            const pc = PROFILE_CONN[String(pid||'')] || null;
+            const rows = [
+                ['LLM1', pc ? labelOf(pc.llm_primary_id) : '—'],
+                ['LLM2', pc ? labelOf(pc.llm_secondary_id) : '—'],
+                ['LLM3', pc ? labelOf(pc.llm_tertiary_id) : '—'],
+                ['LLM4', pc ? labelOf(pc.llm_quaternary_id) : '—'],
+                ['Diary', pc ? labelOf(pc.diary_connector_id) : '—']
+            ];
+            let html = '';
+            rows.forEach(([k,v])=>{
+                html += '<div style="color:rgb(242,124,17); font-weight:700;">'+k+'</div><div>'+String(v||'—')+'</div>';
+            });
+            box.innerHTML = html;
+        }
+        document.addEventListener('DOMContentLoaded', function(){
+            const sel = document.getElementById('profile_id');
+            if (sel){ sel.addEventListener('change', function(){ renderProfileSummary(this.value||''); }); renderProfileSummary(sel.value||''); }
+        });
+    })();
+    </script>
     <?php endif; ?>
 
     <div class="form-grid">

@@ -1348,6 +1348,19 @@ if ($checkTableExists("core_llm_connector") == -1) {
 } else
     Logger::info(__FILE__." core_llm_connector exists");
 
+// Add 'service' column to core_llm_connector if missing
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'core_llm_connector' AND column_name = 'service'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn || !$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE "core_llm_connector" ADD COLUMN "service" text');
+    echo '<script>alert("A patch (add service column to core_llm_connector) has been applied to Database")</script>';
+}
+
 if ($checkTableExists("core_npc_master_history") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master_history.sql"));
 } else
