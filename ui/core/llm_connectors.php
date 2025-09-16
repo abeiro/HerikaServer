@@ -219,9 +219,9 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
-                        <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.jpg" alt="Kobold" class="service-icon" data-service="kobold" />
                     </div>
                 </div>
+                <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
 
                 <label for='url'>URL</label><br>
                 <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>"><br>
@@ -373,8 +373,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const defaults = {
             openrouter: 'https://openrouter.ai/api/v1/chat/completions',
             openai: 'https://api.openai.com/v1/chat/completions',
-            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-            kobold: 'http://127.0.0.1:5001'
+            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
         };
         // No dropdown; selection by icons only
         const providerRow = document.getElementById('provider_row');
@@ -385,14 +384,14 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const icons = document.querySelectorAll('.service-icon');
         const apiKeyRow = document.getElementById('api_key_row');
         const serviceLabelEl = document.getElementById('service_label');
-        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', kobold: 'Kobold' };
+        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google' };
         function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
+        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', custom: '' };
         const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
-        function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-        function applyService(service){ if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
-        function detectService(){ const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('kobold')||u.includes('127.0.0.1')||u.includes('localhost')) return 'kobold'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
-        (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
+        function syncApiBadge(service){ if (!apiBadgeSelect) return; const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
+        function applyService(service){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
+        function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
+        (function init(){ const service = detectService(); applyService(service); })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
         if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
         if (urlInput){ urlInput.addEventListener('change', ()=> applyService(detectService())); }
@@ -503,7 +502,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(infoEl, anchor.nextSibling);
             }
             function ctxOf(m){ return (m.top_provider && m.top_provider.context_length) || m.context_length || ''; }
-            function renderInfo(m){ const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctx = formatContext(ctxOf(m)); return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div><div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): input ${prompt} • output ${completion}${ctx? ` • context ${ctx}`: ''}</div>`; }
+            function renderInfo(m){ const prompt = formatPrice(m.pricing && m.pricing.prompt); const completion = formatPrice(m.pricing && m.pricing.completion); const ctx = formatContext(ctxOf(m)); return `<div style=\"font-weight:600; margin-bottom:4px;\">OpenRouter model info</div><div class=\"orm-muted\" style=\"font-size:12px;\">Pricing (per 1M tokens): Input ${prompt} • Output ${completion}${ctx? ` • Context ${ctx}`: ''}</div>`; }
             async function update(){
                 const val = (modelInput.value||'').trim();
                 const url = (document.querySelector('input[name=\"url\"]').value||'');
@@ -575,15 +574,40 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
-    $llm->create($_POST);
-    header("Location: llm_connectors.php");
+    // Seed required defaults for new connector (force values on create)
+    $payload = $_POST;
+    $payload['driver'] = 'openrouterjson';
+    $payload['temperature'] = 1;
+    $payload['url'] = 'https://openrouter.ai/api/v1/chat/completions';
+    $payload['reasoning_model'] = 0;
+    $payload['max_tokens'] = 250;
+    $payload['api_badge_id'] = 1;
+    $payload['enforce_json'] = 1;
+    $payload['json_schema'] = 1;
+    $payload['service'] = 'openrouter';
+
+    $newId = $llm->create($payload);
+    if (!$newId) {
+        $last = $GLOBALS["db"]->fetchOne("SELECT id FROM core_llm_connector ORDER BY id DESC LIMIT 1");
+        $newId = $last['id'] ?? '';
+    }
+    header("Location: llm_connectors.php" . ($newId ? ('?edit=' . urlencode($newId)) : ''));
     exit;
 }
 
 // Create a blank LLM connector and open it for editing
 if (isset($_GET["create_blank"])) {
     $newId = $llm->create([
-        "label" => "New Connector"
+        "label" => "New Connector",
+        'driver' => 'openrouterjson',
+        'temperature' => 1,
+        'url' => 'https://openrouter.ai/api/v1/chat/completions',
+        'reasoning_model' => 0,
+        'max_tokens' => 250,
+        'api_badge_id' => 1,
+        'enforce_json' => 1,
+        'json_schema' => 1,
+        'service' => 'openrouter'
     ]);
     $redir = 'llm_connectors.php' . ($newId ? ('?edit=' . urlencode($newId)) : '');
     header("Location: $redir");
@@ -778,9 +802,9 @@ if (typeof window.consolidation !== 'function') {
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
-                    <img src="<?= $webRoot; ?>/ui/images/core/icons/kobold.jpg" alt="Kobold" class="service-icon" data-service="kobold" />
                 </div>
             </div>
+            <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
 
             <label for='url'>URL</label><br>
             <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>"><br>
@@ -956,8 +980,7 @@ if (typeof window.consolidation !== 'function') {
     const defaults = {
         openrouter: 'https://openrouter.ai/api/v1/chat/completions',
         openai: 'https://api.openai.com/v1/chat/completions',
-        google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-        kobold: 'http://127.0.0.1:5001'
+        google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
     };
     // No dropdown; selection by icons only
     const providerRow = document.getElementById('provider_row');
@@ -968,14 +991,14 @@ if (typeof window.consolidation !== 'function') {
     const icons = document.querySelectorAll('.service-icon');
     const apiKeyRow = document.getElementById('api_key_row');
     const serviceLabelEl = document.getElementById('service_label');
-    const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', kobold: 'Kobold' };
+    const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google' };
     function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', kobold: 'koboldcppjson', custom: '' };
+    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', custom: '' };
     const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
-    function syncApiBadge(service){ if (!apiBadgeSelect) return; if (service === 'kobold') { apiBadgeSelect.value = ''; return; } const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-    function applyService(service){ /*if (defaults[service]) urlInput.value = defaults[service];*/ providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = (service === 'kobold') ? 'none' : ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
-    function detectService(){ const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('kobold')||u.includes('127.0.0.1')||u.includes('localhost')) return 'openai'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
-    (function init(){ let service = 'openrouter'; const val = (urlInput && urlInput.value) ? urlInput.value : ''; if (val.includes('openai.com')) service = 'openai'; else if (val.includes('generativelanguage.googleapis.com')) service = 'google'; else if (val.includes('127.0.0.1') || val.includes('localhost')) service = 'kobold'; else if (driverInput && /openai/.test(String(driverInput.value||''))) service = 'openai'; else if (driverInput && /google/.test(String(driverInput.value||''))) service = 'google'; else if (driverInput && /kobold/.test(String(driverInput.value||''))) service = 'kobold'; else service = 'custom'; applyService(service); })();
+    function syncApiBadge(service){ if (!apiBadgeSelect) return; const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
+    function applyService(service){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; if (driverInput && driverDefaults[service]) driverInput.value = driverDefaults[service]; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
+    function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
+    (function init(){ const service = detectService(); applyService(service); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
     if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
     if (urlInput){ urlInput.addEventListener('change', ()=> applyService(detectService())); }
