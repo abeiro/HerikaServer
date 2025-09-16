@@ -331,11 +331,11 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
                 ];
                 $displayDefaults = [
-                    'temperature' => 1.05,
+                    'temperature' => 1,
                     'presence_penalty' => 0,
                     'frequency_penalty' => 0,
-                    'repetition_penalty' => 1,
-                    'top_p' => 0.7,
+                    'repetition_penalty' => 0,
+                    'top_p' => 0,
                     'top_k' => 0,
                     'min_p' => 0,
                     'top_a' => 0,
@@ -944,11 +944,11 @@ if (typeof window.consolidation !== 'function') {
                 'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
             ];
             $displayDefaults = [
-                'temperature' => 1.05,
+                'temperature' => 1,
                 'presence_penalty' => 0,
                 'frequency_penalty' => 0,
                 'repetition_penalty' => 1,
-                'top_p' => 0.7,
+                'top_p' => 0,
                 'top_k' => 0,
                 'min_p' => 0,
                 'top_a' => 0,
@@ -963,8 +963,11 @@ if (typeof window.consolidation !== 'function') {
                 'min_p' => 'Ignore words with very low probability. [0-1]',
                 'top_a' => 'Adjusts word probabilities for better balance. [0-1]'
             ];
+            // Render Temperature control only
             echo "<div class='kv-grid'>";
-            foreach ($ranges as $field => $conf) {
+            $field = 'temperature';
+            if (isset($ranges[$field])){
+                $conf = $ranges[$field];
                 $label = ucfirst(str_replace('_',' ', $field));
                 $rid = "rng_{$field}";
                 $nid = "num_{$field}";
@@ -979,9 +982,42 @@ if (typeof window.consolidation !== 'function') {
                 echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
                 echo "<div>";
                 echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
-                echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\"></div>";
+                echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\" data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'></div>";
                 echo "</div>";
             }
+            echo "</div>";
+
+            // Advanced block
+            echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
+            echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Advanced LLM Settings</div>";
+            echo "<div class='kv-grid'>";
+            $advancedFields = ['presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a'];
+            foreach ($advancedFields as $advField) {
+                if (!isset($ranges[$advField])) continue;
+                $conf = $ranges[$advField];
+                $label = ucfirst(str_replace('_',' ', $advField));
+                $rid = "rng_{$advField}";
+                $nid = "num_{$advField}";
+                $raw = $editItem[$advField] ?? '';
+                // For advanced fields, if DB is null/empty, show empty box so it saves as NULL
+                $use = ($raw === '' || $raw === null) ? '' : $raw;
+                $val = htmlspecialchars($use);
+                $min = $conf['min'];
+                $max = $conf['max'];
+                $step = $conf['step'];
+                $tip = isset($tips[$advField]) ? $tips[$advField] : '';
+                $labelHtml = $tip ? ("<span class='tip-label' data-tip='" . htmlspecialchars($tip, ENT_QUOTES) . "'>" . $label . "</span>") : $label;
+                echo "<div><label for='{$rid}'>{$labelHtml}</label></div>";
+                echo "<div>";
+                echo "<input type='range' id='{$rid}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"document.getElementById('{$nid}').value=this.value\">";
+                // No clamp on number so empty stays empty (gets saved as NULL). Range still writes number when moved.
+                echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$advField}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'></div>";
+                echo "</div>";
+            }
+            echo "</div>";
+            echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
+            echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
+            echo "</div>";
             echo "</div>";
             ?>
         </div>
@@ -1039,6 +1075,32 @@ if (typeof window.consolidation !== 'function') {
     if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService(), false); }); }
 })();
 function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
+// Clear advanced settings (all below Temperature)
+(function(){
+    const btn = document.getElementById('btn_clear_adv');
+    if (!btn) return;
+    btn.addEventListener('click', function(){
+        const pairs = [
+            ['rng_presence_penalty','num_presence_penalty'],
+            ['rng_frequency_penalty','num_frequency_penalty'],
+            ['rng_repetition_penalty','num_repetition_penalty'],
+            ['rng_top_p','num_top_p'],
+            ['rng_top_k','num_top_k'],
+            ['rng_min_p','num_min_p'],
+            ['rng_top_a','num_top_a']
+        ];
+        pairs.forEach(([rid,nid])=>{
+            const r = document.getElementById(rid);
+            const n = document.getElementById(nid);
+            if (n) {
+                n.value=''; // empty => server maps to NULL
+                n.setAttribute('data-null','1');
+                try { n.dispatchEvent(new Event('change', { bubbles:true })); } catch(_){}
+            }
+            if (r) { r.value = r.getAttribute('min') || '0'; }
+        });
+    });
+})();
 // LLM Test Modal
 (function(){
     const MODAL_ID = 'llmtest_modal';
