@@ -534,7 +534,7 @@ class openaijson
 
             if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
-                $error_message = "Request to openaijson connector failed: {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
+                $error_message = "Request to openaijson connector failed:{$this->_url} {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {

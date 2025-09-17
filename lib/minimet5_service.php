@@ -9,12 +9,16 @@ function minimeCommand($text) {
     return file_get_contents($url);
 }
 
-function minimeExtract($text) {
+function minimeExtract($text,$useOnlyDetector=false) {
     if (isset($GLOBALS["mockMinimeExtract"])) {
         return call_user_func($GLOBALS["mockMinimeExtract"], $text);
     }
 
-    $url = "http://127.0.0.1:8082/extract?text=" . urlencode($text);
+    if ($useOnlyDetector)
+        $url = "http://127.0.0.1:8082/detectMemory?text=" . urlencode($text);
+    else
+        $url = "http://127.0.0.1:8082/extract?text=" . urlencode($text);
+    
     return file_get_contents($url);
 }
 

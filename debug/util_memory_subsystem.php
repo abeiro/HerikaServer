@@ -88,7 +88,8 @@ Note: Memories are stored in memory_summary table, which holds info from events/
             $res=DataSearchMemory($argv[2],$argv[3]);
         }
 
-        print_r($res);
+        if (is_array($res) && sizeof($res)>0)
+            print_r($res[0]);
         
         
 
@@ -151,6 +152,33 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         } else {
             echo "TEXT2VEC feature is not enabled. Skipping memory synchronization.".PHP_EOL;
         }
+        echo "Memory synchronization process finished.".PHP_EOL;
+
+    }  elseif ($argv[1]=="resync") {
+            echo "Starting memory vector synchronization...".PHP_EOL;
+            $db = new sql();
+
+            $results = $db->fetchOne("select count(*) as n from memory_summary where summary is not null");
+            $memories_to_sync_count=$results["n"];
+            echo "Found {$memories_to_sync_count} memories to sync. Starting process...".PHP_EOL;
+            // Fetch all results for processing, as original script did.
+            $results = $db->fetchAll("select summary as content,uid,classifier,rowid,companions from memory_summary where summary is not null");
+            $processed_counter = 0;
+            foreach ($results as $row) {
+                $TEST_TEXT=$row["content"];
+                if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) 
+                    storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"],$row["companions"]); // JUST UPDATE embedding in memory_summary
+                else
+                    echo "TEXT2VEC feature is not enabled. Skipping vector  synchronization.".PHP_EOL;
+                $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$row["rowid"]}");
+                $processed_counter++;
+                echo "Updated vector for memory ID {$row["rowid"]}. (Processed {$processed_counter} of {$memories_to_sync_count})".PHP_EOL;
+            }
+            if ($processed_counter > 0) {
+                echo "Successfully synchronized {$processed_counter} memories.".PHP_EOL;
+            }
+
+         
         echo "Memory synchronization process finished.".PHP_EOL;
 
     } elseif ($argv[1]=="sync_oghma") {
