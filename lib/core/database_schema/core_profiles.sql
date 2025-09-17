@@ -37,6 +37,7 @@ CREATE TABLE public.core_profiles (
     llm_quaternary_id integer,
     metadata jsonb,
     diary_connector_id integer,
+    slot integer,
     prompt text
 );
 
@@ -83,7 +84,37 @@ ALTER TABLE ONLY public.core_profiles ALTER COLUMN id SET DEFAULT nextval('publi
 -- Data for Name: core_profiles; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
 
-INSERT INTO public.core_profiles VALUES (1, 'Default Profile', '1', '1', 1, NULL, 1, 2, 3, 4, '{"RECHAT_H": "7", "RECHAT_P": "100", "CORE_LANG": "", "MINIME_T5": false, "AUTO_DIARY": true, "BORED_EVENT": "100", "CURRENT_TASK": true, "DIARY_PROMPT": "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#''s last dialogues and events written above into #HERIKA_NAME#''s diary . WRITE AS IF YOU WERE #HERIKA_NAME#. Start the diary entry with the current date and time.", "OGHMA_AMOUNT": "1", "ALIVE_MESSAGE": true, "LANG_LLM_XTTS": true, "QUEST_COMMENT": false, "DIARY_COOLDOWN": "120", "OGHMA_INFINIUM": false, "TIME_AWARENESS": false, "AUTO_DIARY_WAIT": true, "CONTEXT_HISTORY": "75", "MAX_WORDS_LIMIT": "0", "HERIKA_ANIMATIONS": true, "QUEST_COMMENT_CHANCE": "10%", "RECHAT_ALLOW_ACTIONS": true, "CONTEXT_HISTORY_DIARY": "100", "BORED_EVENT_SERVERSIDE": true, "ENFORCE_ACTIONS_PROMPT": true, "REMOVE_ASTERISKS_FROM_OUTPUT": false, "CONTEXT_HISTORY_DYNAMIC_PROFILE": "50"}', 1, NULL);
+INSERT INTO public.core_profiles (
+    id,
+    label,
+    default_npc,
+    default_narrator,
+    tts_connector_id,
+    itt_connector_id,
+    llm_primary_id,
+    llm_secondary_id,
+    llm_tertiary_id,
+    llm_quaternary_id,
+    metadata,
+    diary_connector_id,
+    slot,
+    prompt
+) VALUES (
+    1,
+    'Default Profile',
+    '1',
+    '1',
+    1,
+    NULL,
+    1,
+    2,
+    3,
+    4,
+    '{"RECHAT_H": "7", "RECHAT_P": "100", "CORE_LANG": "", "MINIME_T5": false, "AUTO_DIARY": true, "BORED_EVENT": "100", "CURRENT_TASK": true, "DIARY_PROMPT": "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#''s last dialogues and events written above into #HERIKA_NAME#''s diary . WRITE AS IF YOU WERE #HERIKA_NAME#. Start the diary entry with the current date and time.", "OGHMA_AMOUNT": "1", "ALIVE_MESSAGE": true, "LANG_LLM_XTTS": true, "QUEST_COMMENT": false, "DIARY_COOLDOWN": "120", "OGHMA_INFINIUM": false, "TIME_AWARENESS": false, "AUTO_DIARY_WAIT": true, "CONTEXT_HISTORY": "75", "MAX_WORDS_LIMIT": "0", "HERIKA_ANIMATIONS": true, "QUEST_COMMENT_CHANCE": "10%", "RECHAT_ALLOW_ACTIONS": true, "CONTEXT_HISTORY_DIARY": "100", "BORED_EVENT_SERVERSIDE": true, "ENFORCE_ACTIONS_PROMPT": true, "REMOVE_ASTERISKS_FROM_OUTPUT": false, "CONTEXT_HISTORY_DYNAMIC_PROFILE": "50"}',
+    1,
+    1,
+    NULL
+);
 
 
 --

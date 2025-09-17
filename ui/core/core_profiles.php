@@ -47,7 +47,8 @@ main { padding-top: 40px; padding-bottom: 40px; }
 h1.api-title {
     margin: 0 0 20px 0;
     font-family: 'MagicCards', serif;
-    word-spacing: 8px;
+    letter-spacing: 0.7px;
+    word-spacing: 12px;
     font-size: 2.2em;
     color: rgb(242, 124, 17);
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -56,7 +57,7 @@ h1.api-title {
 .wide-centered { max-width: 1300px; margin: 0 auto; }
 .two-col-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .connector-card { background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 8px; padding: 12px; }
-.connector-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.1em; }
+.connector-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.1em; letter-spacing: 0.6px; word-spacing: 10px; }
 @media (max-width: 1000px) { .two-col-grid { grid-template-columns: 1fr; } }
 /* Split layout like LLM Connectors */
 .llm-layout { display:grid; grid-template-columns: minmax(240px, 340px) 1fr; gap:16px; align-items:stretch; }
@@ -68,7 +69,7 @@ h1.api-title {
 .list-filters input[type="text"]{ width: 100%; max-width: 260px; }
 .list-filters select { max-width: 200px; }
 .conn-list { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; overflow:auto; }
-.llm-left .llm-title { font-family: 'MagicCards', serif; word-spacing: 6px; }
+.llm-left .llm-title { font-family: 'MagicCards', serif; letter-spacing: 0.6px; word-spacing: 10px; }
 .conn-li { border:1px solid #4a4a4a; background:#2a2a2a; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
 .conn-li:hover { background:#3a3a3a; transform: translateY(-1px); }
 .conn-li.active { outline:2px solid rgb(242,124,17); }
@@ -77,8 +78,9 @@ h1.api-title {
 .conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid #4a4a4a; border-radius:999px; color:#9fb1c9; }
 .conn-li .sub { font-size:12px; color:#9fb1c9; margin-top:3px; overflow-wrap:anywhere; }
 .conn-li .actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
-.pf-badges { display:flex; gap:6px; align-items:center; }
-.pf-flag { font-size:11px; padding:2px 6px; border:1px solid #4a4a4a; border-radius:999px; color:#9fb1c9; }
+.pf-badges { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
+.pf-badges-row { display:flex; gap:10px; align-items:center; flex-wrap:nowrap; }
+.pf-flag { display:inline-flex; align-items:center; font-size:12px; padding:2px 8px; border:1px solid #4a4a4a; border-radius:0; color:#cfd9ea; background:rgba(255,255,255,0.04); line-height:1.4; }
 .pf-tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0 10px; border-bottom: 2px solid #3a3a3a; }
 .pf-tab { background:#2a2a2a; border:none; padding:8px 12px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all .2s ease; font-size:0.95em; }
 .pf-tab:hover { background:#3a3a3a; }
@@ -348,6 +350,26 @@ $ittById = $byId($ittRows);
             function render(){
                 const rows=(RAW||[]).filter(pass);
                 let html='';
+                // Active Slots summary (always render slots 1-4, even if empty)
+                {
+                    const slotToProfile = { 1: null, 2: null, 3: null, 4: null };
+                    (rows||[]).forEach(r=>{
+                        const s = Number(r && r.slot);
+                        if (s>=1 && s<=4 && slotToProfile[s]===null) slotToProfile[s] = r;
+                    });
+                    html += '<div class="connector-card" style="padding:8px;">';
+                    html += '<div class="connector-title">Active Slots</div>';
+                    [1,2,3,4].forEach(s=>{
+                        const r = slotToProfile[s];
+                        if (r){
+                            const title = escapeHtml(r.label||('Profile #'+r.id));
+                            html += `<div class="pf-line" style="cursor:pointer;" data-jump-id="${String(r.id)}"><span class="pf-key">Slot ${String(s)}</span> <span class="pf-val">${title}</span></div>`;
+                        } else {
+                            html += `<div class="pf-line" style="opacity:.6;"><span class="pf-key">Slot ${String(s)}</span> <span class="pf-val">— Empty —</span></div>`;
+                        }
+                    });
+                    html += '</div>';
+                }
                 rows.forEach(r=>{
                     const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';
                     const llm1 = escapeHtml(labelOf(LLM, r.llm_primary_id));
@@ -357,16 +379,22 @@ $ittById = $byId($ittRows);
                     const tts = escapeHtml(labelOf(TTS, r.tts_connector_id));
                     const itt = escapeHtml(labelOf(ITT, r.itt_connector_id));
                     const diary = escapeHtml(labelOf(LLM, r.diary_connector_id));
-                    const flags = [];
                     const npcCount = Number((NPC_COUNT||{})[String(r.id)]||0);
-                    if (npcCount > 0) flags.push('<span class="pf-flag">'+npcCount+' NPCs</span>');
-                    if (String(r.default_npc)==='1') flags.push('<span class="pf-flag">NPC</span>');
-                    if (String(r.default_narrator)==='1') flags.push('<span class="pf-flag">Narrator</span>');
+                    const row1 = [];
+                    if (String(r.default_npc)==='1') row1.push('<span class="pf-flag">Default NPC</span>');
+                    if (String(r.default_narrator)==='1') row1.push('<span class="pf-flag">Default Narrator</span>');
+                    const row2 = [];
+                    const slotBadge = (r.slot && Number(r.slot)>=1 && Number(r.slot)<=4) ? `<span class="pf-flag">Slot ${String(r.slot)}</span>` : '';
+                    if (slotBadge) row2.push(slotBadge);
+                    if (npcCount > 0) row2.push('<span class="pf-flag">'+npcCount+' NPCs</span>');
                     html += `
                         <div class="conn-li${active}" data-id="${String(r.id)}">
                             <div class="head">
                                 <div class="title">${escapeHtml(r.label||('Profile #'+r.id))}</div>
-                                <div class="pf-badges">${flags.join(' ')}</div>
+                                <div class="pf-badges">`+
+                                    (row1.length?('<div class=\"pf-badges-row\">'+row1.join(' ')+'</div>'):'')+
+                                    (row2.length?('<div class=\"pf-badges-row\">'+row2.join(' ')+'</div>'):'')+
+                                `</div>
                             </div>
                             <div class="pf-lines">
                                 <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM1</span><span class="pf-val">${llm1||'—'}</span></div>
@@ -388,6 +416,13 @@ $ittById = $byId($ittRows);
                         </div>`;
                 });
                 list.innerHTML = html || '<div class="conn-li"><em>No profiles match filters.</em></div>';
+                // wire slot jump links
+                list.querySelectorAll('[data-jump-id]').forEach(el=>{
+                    el.addEventListener('click', ()=>{
+                        const id = el.getAttribute('data-jump-id');
+                        if (id) window.location.href = `?edit=${id}`;
+                    });
+                });
                 list.querySelectorAll('.conn-li').forEach(li => {
                     li.addEventListener('click', (ev) => {
                         if (ev.target.closest('a') || ev.target.closest('button') || ev.target.closest('form')) return;
@@ -420,6 +455,26 @@ $ittById = $byId($ittRows);
         <label for='label'>Name</label><br>
         <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
         
+        <div style="height:8px;"></div>
+        <label for='slot'>Slot</label><br>
+        <?php
+            $usedSlotsRows = $GLOBALS["db"]->fetchAll("SELECT id, slot FROM core_profiles WHERE slot IS NOT NULL ORDER BY slot ASC");
+            $usedSlots = [];
+            foreach ($usedSlotsRows as $r){ $s=intval($r['slot']??0); if ($s>=1 && $s<=4) $usedSlots[$s]=(int)$r['id']; }
+            $currentId = (int)($editItem['id'] ?? 0);
+            $currentSlot = isset($editItem['slot']) ? (int)$editItem['slot'] : 0;
+        ?>
+        <select name="slot" id="slot">
+            <option value="">—</option>
+            <?php for($s=1;$s<=4;$s++):
+                $takenBy = $usedSlots[$s] ?? null;
+                $disabled = ($takenBy !== null && $takenBy !== $currentId) ? ' disabled' : '';
+                $sel = ($currentSlot === $s) ? ' selected' : '';
+            ?>
+            <option value="<?= $s ?>"<?= $sel.$disabled ?>><?= $s ?></option>
+            <?php endfor; ?>
+        </select>
+
         <div style="height:8px;"></div>
         <label class="label-with-toggle">Default NPC
             <input type="hidden" name="default_npc" value="0">
@@ -610,9 +665,11 @@ $ittById = $byId($ittRows);
             const pid = idEl ? (idEl.value||'') : '';
             if (!pid){ if (typeof showToast==='function') showToast('Save failed: create the profile first', true); return; }
             const label = (form.querySelector('input[name="label"]').value||'');
-            const defNpc = !!(form.querySelector('input[type="checkbox"][name="default_npc"]').checked) ? '1' : '0';
+            const defNpc = !!(form.querySelector('input[type=\"checkbox\"][name=\"default_npc\"]').checked) ? '1' : '0';
             const defNarr = !!(form.querySelector('input[type="checkbox"][name="default_narrator"]').checked) ? '1' : '0';
             const prompt = (form.querySelector('textarea[name="prompt"]').value||'');
+            const slotSel = form.querySelector('select[name="slot"]');
+            const slotVal = slotSel ? (slotSel.value||'') : '';
             const fd = new FormData();
             fd.append('update','1');
             fd.append('id', pid);
@@ -620,11 +677,13 @@ $ittById = $byId($ittRows);
             fd.append('default_npc', defNpc);
             fd.append('default_narrator', defNarr);
             fd.append('prompt', prompt);
+            fd.append('slot', slotVal);
             const res = await fetch('core_profiles.php', { method:'POST', headers:{ 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
             let json={}; try { json = await res.json(); } catch(_){ json = { ok:false, error:'Invalid response' }; }
             if (json && json.ok){
                 if (typeof showToast==='function') showToast('Profile settings saved');
                 try { updateLeftListBasics(label, defNpc==='1', defNarr==='1'); } catch(_e){}
+                try { window.location.reload(); } catch(_){}
             } else {
                 if (typeof showToast==='function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
             }

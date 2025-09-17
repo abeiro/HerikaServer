@@ -2,6 +2,7 @@
 
 class CoreProfile {
     private $table = "core_profiles";
+    private $lastError = '';
 
     public function create($data) {
         $fields = [
@@ -16,12 +17,31 @@ class CoreProfile {
             "llm_tertiary_id",
             "llm_quaternary_id",
             "metadata",
+            "slot",
             "prompt"
         ];
 
         foreach ($data as $k=>$v)
             if (empty($v))
                 $data[$k]=null;
+
+        // Validate slot (NULL or 1..4 and unique)
+        if (array_key_exists('slot', $data)) {
+            $slotRaw = $data['slot'];
+            $slotVal = ($slotRaw === null || $slotRaw === '') ? null : intval($slotRaw);
+            if (!is_null($slotVal) && ($slotVal < 1 || $slotVal > 4)) {
+                $this->lastError = 'Slot must be 1-4 or empty';
+                return false;
+            }
+            if (!is_null($slotVal)) {
+                $exists = $GLOBALS["db"]->fetchOne("SELECT id FROM core_profiles WHERE slot=".$slotVal." LIMIT 1");
+                if (is_array($exists) && isset($exists['id'])) {
+                    $this->lastError = 'That slot is already assigned to another profile';
+                    return false;
+                }
+            }
+            $data['slot'] = $slotVal;
+        }
 
         $filtered = array_intersect_key($data, array_flip($fields));
         return $GLOBALS["db"]->insert($this->table, $filtered);
@@ -58,12 +78,31 @@ class CoreProfile {
             "llm_tertiary_id",// fk to table  core_llm_connector
             "llm_quaternary_id",// fk to table  core_llm_connector
             "metadata",
+            "slot",
             "prompt"
         ];
 
         foreach ($data as $k=>$v)
             if (empty($v))
                 $data[$k]=null;
+
+        // Validate slot (NULL or 1..4 and unique for other profiles)
+        if (array_key_exists('slot', $data)) {
+            $slotRaw = $data['slot'];
+            $slotVal = ($slotRaw === null || $slotRaw === '') ? null : intval($slotRaw);
+            if (!is_null($slotVal) && ($slotVal < 1 || $slotVal > 4)) {
+                $this->lastError = 'Slot must be 1-4 or empty';
+                return false;
+            }
+            if (!is_null($slotVal)) {
+                $exists = $GLOBALS["db"]->fetchOne("SELECT id FROM core_profiles WHERE slot=".$slotVal." AND id<>".$id." LIMIT 1");
+                if (is_array($exists) && isset($exists['id'])) {
+                    $this->lastError = 'That slot is already assigned to another profile';
+                    return false;
+                }
+            }
+            $data['slot'] = $slotVal;
+        }
 
         $filtered = array_intersect_key($data, array_flip($fields));
         return $GLOBALS["db"]->updateRow($this->table, $filtered, $where);
@@ -79,6 +118,7 @@ class CoreProfile {
     }
 
     public function getLastError() {
+        if (!empty($this->lastError)) return $this->lastError;
         return $GLOBALS["db"]->GetLastError();
     }
 
