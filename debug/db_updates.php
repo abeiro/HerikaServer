@@ -1419,6 +1419,30 @@ try {
     Logger::error("Error ensuring core_profiles.slot: ".$e->getMessage());
 }
 
+// Enforce uniqueness of core_profiles.slot (1-4), allowing NULLs
+try {
+    $idx = $db->fetchAll("SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='core_profiles' AND indexname='core_profiles_slot_unique_idx'");
+    if (!$idx || !isset($idx[0]["indexname"])) {
+        // Clear duplicates: keep the lowest id per slot, set others to NULL
+        $db->execQuery("WITH d AS (
+            SELECT id, slot, ROW_NUMBER() OVER (PARTITION BY slot ORDER BY id) AS rn
+            FROM core_profiles WHERE slot IS NOT NULL
+        )
+        UPDATE core_profiles p SET slot = NULL
+        FROM d WHERE p.id = d.id AND d.rn > 1");
+        // Create unique partial index
+        $db->execQuery("CREATE UNIQUE INDEX IF NOT EXISTS core_profiles_slot_unique_idx ON public.core_profiles (slot) WHERE slot IS NOT NULL");
+        // Ensure default profile has slot 1
+        $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
+        if ($checkVersion("core_profiles") < 20250904007) {
+            $updateVersion("core_profiles",20250904007);
+        }
+        Logger::info("Enforced unique slot on core_profiles and set default slot=1");
+    }
+} catch (Exception $e) {
+    Logger::error("Error enforcing unique slot index: ".$e->getMessage());
+}
+
 //----------------------------------------------------
 // Bio templates: new tables and combined view
 // Version 20250913001
