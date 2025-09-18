@@ -231,6 +231,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
+                        <img src="<?= $webRoot; ?>/ui/images/core/icons/custom.jpg" alt="Custom" class="service-icon" data-service="custom" />
                     </div>
                 </div>
                 <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
@@ -239,8 +240,14 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. For advanced users only
                 </div>
 
-                <label for='url'>URL</label><br>
-                <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>"><br>
+                <div id="url_row">
+                    <label for='url'>URL</label><br>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" name="url" value="<?= htmlspecialchars($editItem["url"] ?? "") ?>" style="flex:1 1 auto;">
+                        <button type="button" id="btn_wsl_ip" class="btn-primary" title="Use WSL IP" style="display:none;" data-ip="<?= htmlspecialchars($WSL_IP) ?>">WSL IP</button>
+                        <button type="button" id="btn_host_ip" class="btn-primary" title="Use HOST IP" style="display:none;" data-ip="<?= htmlspecialchars($HOST_IP) ?>">PC IP</button>
+                    </div>
+                </div>
 
                 <label for='model'>Model</label><br>
                 <input type="text" name="model" value="<?= htmlspecialchars($editItem["model"] ?? "") ?>"><br>
@@ -411,6 +418,69 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             </div>
         </div>
     </form>
+    <script>
+    (function(){
+        // Service selection logic for embedded editor
+        const defaults = {
+            openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+            openai: 'https://api.openai.com/v1/chat/completions',
+            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+        };
+        const serviceInput = document.getElementById('service_input');
+        const urlInput = document.querySelector('input[name="url"]');
+        const providerRow = document.getElementById('provider_row');
+        const driverRow = document.getElementById('driver_row');
+        const driverInput = document.getElementById('driver_input');
+        const driverSelect = document.getElementById('driver_select');
+        const urlRow = document.getElementById('url_row');
+        const icons = document.querySelectorAll('.service-icon');
+        const serviceLabelEl = document.getElementById('service_label');
+        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', custom: 'Custom' };
+
+        function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
+
+        function applyService(service){
+            if (serviceInput) serviceInput.value = service;
+            // Defaults for non-custom
+            if (service !== 'custom' && defaults[service]) {
+                if (urlInput) urlInput.value = defaults[service];
+            }
+            if (providerRow) providerRow.style.display = (service === 'openrouter') ? '' : 'none';
+            if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none';
+            if (driverSelect) driverSelect.style.display = (service === 'custom') ? '' : 'none';
+            if (driverInput) driverInput.style.display = (service === 'custom') ? 'none' : '';
+            if (driverSelect && service === 'custom' && !driverSelect.value) driverSelect.value = 'openaijson';
+            if (driverInput && service !== 'custom' && !driverInput.value) driverInput.value = (service === 'openrouter') ? 'openrouterjson' : (service === 'openai' ? 'openaijson' : 'google_openaijson');
+            if (urlRow) urlRow.style.display = (service === 'custom') ? '' : 'none';
+            if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || '');
+            setActive(service);
+        }
+
+        function detectService(){
+            const sVal = (serviceInput && String(serviceInput.value||'')) || '';
+            if (['openrouter','openai','google','custom'].includes(sVal)) return sVal;
+            const d = (driverInput && String(driverInput.value||'').toLowerCase()) || '';
+            const u = (urlInput && String(urlInput.value||'').toLowerCase()) || '';
+            if (d.includes('openai')||u.includes('openai.com')) return 'openai';
+            if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google';
+            if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter';
+            return 'openrouter';
+        }
+
+        (function init(){ const svc = detectService(); applyService(svc);
+            // Expose WSL/PC IP helpers if values present
+            try {
+                const btnWSL = document.getElementById('btn_wsl_ip');
+                const btnHost = document.getElementById('btn_host_ip');
+                function fillFrom(buttonEl, ip){ if (!buttonEl) return; const form = buttonEl.closest('form'); const urlEl = form ? form.querySelector('input[name="url"]') : document.querySelector('input[name="url"]'); if (!ip || !urlEl) return; urlEl.value = 'http://' + ip + ':5001'; try { urlEl.dispatchEvent(new Event('input', { bubbles:true })); } catch(_){} try { urlEl.dispatchEvent(new Event('change', { bubbles:true })); } catch(_){} try { urlEl.focus(); } catch(_){} }
+                if (btnWSL){ const ip=(btnWSL.getAttribute('data-ip')||'').trim(); btnWSL.style.display = ip? '' : 'none'; btnWSL.addEventListener('click', function(){ let v = this.getAttribute('data-ip')||''; if (!v) return; fillFrom(this, String(v).trim()); }); }
+                if (btnHost){ const ip=(btnHost.getAttribute('data-ip')||'').trim(); btnHost.style.display = ip? '' : 'none'; btnHost.addEventListener('click', function(){ let v = this.getAttribute('data-ip')||''; if (!v) return; fillFrom(this, String(v).trim()); }); }
+            } catch(_e){}
+        })();
+        icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
+        if (driverSelect){ driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); }
+    })();
+    </script>
     <div id="toast" class="toast-notification" style="display:none"><span class="message"></span></div>
     <script>
     // Sync On/Off labels for checkboxes

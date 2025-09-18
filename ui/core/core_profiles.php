@@ -518,6 +518,18 @@ $ittById = $byId($ittRows);
         if (basicBtn){ basicBtn.addEventListener('click', function(){ try{ saveProfileBasics(); }catch(_e){} }); }
         const metaBtn = document.getElementById('btn_save_meta_settings');
         if (metaBtn){ metaBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
+
+        // Responsive iframe heights for embedded editors
+        function sizeIframes(){
+            try {
+                const panes = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id'];
+                const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+                const available = Math.max(400, vh - 260);
+                panes.forEach(id=>{ const f=document.getElementById(id); if (f) f.style.minHeight = available + 'px'; });
+            } catch(_){ }
+        }
+        sizeIframes();
+        window.addEventListener('resize', sizeIframes);
     });
     </script>
 
@@ -571,7 +583,7 @@ $ittById = $byId($ittRows);
         </div>
         <div class="pf-pane" id="pane_diary">
             <div class="select-row">
-                <?= renderSelect($profiles, "diary_connector_id", "Diary Connector", $editItem["diary_connector_id"] ?? "") ?>
+                <?= renderSelect($profiles, "diary_connector_id", "📓 Diary LLM", $editItem["diary_connector_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="diary_connector_id">Set</button>
             </div>
             <div style="margin-top:8px;">

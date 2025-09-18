@@ -24,7 +24,7 @@ $localSchemaOverrides = [
     ],
     'MINIME_T5' => [
         'type' => 'boolean',
-        'description' => "Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. Must be configured in default profile and only works in English!",
+        'description' => "Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. Only works for English!",
     ],
     'AUTO_DIARY' => [
         'type' => 'boolean',
