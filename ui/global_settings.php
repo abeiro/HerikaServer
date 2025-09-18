@@ -181,11 +181,6 @@ $gsSections = [
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
         [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ]
     ],
-    'Diary' => [
-        [ 'name' => 'AUTO_DIARY', 'type' => 'boolean' ],
-        [ 'name' => 'AUTO_DIARY_WAIT', 'type' => 'boolean' ],
-        [ 'name' => 'DIARY_COOLDOWN', 'type' => 'integer', 'min' => 10, 'max' => 1200 ]
-    ],
     'Memory' => [
         [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
