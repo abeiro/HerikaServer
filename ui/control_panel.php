@@ -13,7 +13,7 @@ if ($uiPos !== false) { $webRoot = substr($scriptPath, 0, $uiPos); } else { $web
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
-$TITLE = "CHIM - Control Panel";
+$TITLE = "Control Panel";
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");

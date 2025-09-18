@@ -23,7 +23,7 @@ if (!file_exists($configFilepath."conf.php")) {
 // Load profiles through the centralized profile loader
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "Events & Memories - CHIM";
+$TITLE = "Events & Memories";
 
 ob_start();
 

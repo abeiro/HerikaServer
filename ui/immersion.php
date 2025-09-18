@@ -9,7 +9,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "🎭 Immersion - CHIM";
+$TITLE = "Immersion";
 
 ob_start();
 
@@ -97,6 +97,7 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'diaries';
             <button class="tab-button <?php echo $activeTab === 'diaries' ? 'active' : ''; ?>" onclick="switchTab('diaries')">📔 CHIM Diaries</button>
             <button class="tab-button <?php echo $activeTab === 'adventure' ? 'active' : ''; ?>" onclick="switchTab('adventure')">📆 Adventure Log</button>
             <button class="tab-button <?php echo $activeTab === 'chat' ? 'active' : ''; ?>" onclick="switchTab('chat')">💬 Chat Testing</button>
+            <button class="tab-button <?php echo $activeTab === 'soulgaze' ? 'active' : ''; ?>" onclick="switchTab('soulgaze')">🖼️ Soulgaze Gallery</button>
         </div>
 
         <div id="diaries-tab" class="tab-content <?php echo $activeTab === 'diaries' ? 'active' : ''; ?>">
@@ -109,6 +110,9 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'diaries';
 
         <div id="chat-tab" class="tab-content <?php echo $activeTab === 'chat' ? 'active' : ''; ?>">
             <iframe class="embed-frame" src="<?php echo $webRoot; ?>/ui/chat-testing.php?embed=1"></iframe>
+        </div>
+        <div id="soulgaze-tab" class="tab-content <?php echo $activeTab === 'soulgaze' ? 'active' : ''; ?>">
+            <iframe class="embed-frame" src="<?php echo $webRoot; ?>/ui/soulgaze_gallery.php?embed=1"></iframe>
         </div>
     </div>
 </div>

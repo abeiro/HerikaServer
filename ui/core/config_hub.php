@@ -17,7 +17,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
-$TITLE = "CHIM - Configuration";
+$TITLE = "Configuration";
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");

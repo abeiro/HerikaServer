@@ -26,7 +26,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "📊 Dwemer Dashboard";
+$TITLE = "Dwemer Dashboard";
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -220,7 +220,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
-    <title>📊 Dwemer Dashboard</title>
+    <title>Dwemer Dashboard</title>
     <style>
         /* Dashboard specific styles */
         .dashboard-container {
@@ -710,7 +710,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         </div>
     </div>
     <main class="container">
-        <h1>📊 Dwemer Dashboard</h1>
+        <h1>Dwemer Dashboard</h1>
 
         <div class="dashboard-buttons">
             <button onclick="window.open('https://dwemerdynamics.hostwiki.io/', '_blank')" class="dashboard-btn">
