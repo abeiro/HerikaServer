@@ -114,7 +114,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     .api-key-notice { margin-top:6px; font-size:12px; }
     .api-key-notice.warn { color:#ffb862; }
     .api-key-notice.ok { color:#6dd19c; }
-    .orm-dropdown { position:absolute; z-index: 9999; max-height: 360px; overflow:auto; background:#111; border:1px solid rgba(138,155,182,0.3); border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); display:none; }
+    .orm-dropdown { position:absolute; z-index: 9999; max-height: 360px; overflow:auto; background:#111; border:1px solid rgba(138,155,182,0.3); border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); display:none; min-width: 420px; }
     .orm-item { padding:8px 10px; cursor:pointer; border-bottom:1px solid rgba(138,155,182,0.15); }
     .orm-item:last-child { border-bottom:none; }
     .orm-item:hover { background:#1a1f29; }
@@ -122,7 +122,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     .orm-note { padding:6px 10px; font-size:12px; color:#97a6ba; border-bottom:1px dashed rgba(138,155,182,0.25); background:#0c0f14; }
     .orm-muted { color:#97a6ba; }
     .orm-err { color:#ff6b6b; padding:8px 10px; }
-    .orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; }
+    .orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; max-width: 800px; }
     /* Inline title + toggle styling */
     .label-with-toggle { display:flex; align-items:center; gap:10px; }
     .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
@@ -254,7 +254,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
                 <div id="provider_row">
                     <label for='provider'>Provider</label><br>
-                    <input type="text" name="provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
+                    <input type="text" name="provider" placeholder="(Optional) leave empty to use recommended provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
+                    <small class="hint">(Optional): Leave empty to default to recommended provider.</small>
                 </div>
 
                 <div id="driver_row" style="display:none;">
@@ -383,7 +384,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
                 // Advanced block
                 echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
-                echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Advanced LLM Settings</div>";
+                echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Advanced LLM Settings Override</div>";
                 echo "<div class='kv-grid'>";
                 $advancedFields = ['presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a'];
                 foreach ($advancedFields as $advField) {
@@ -585,7 +586,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         if (!modelInput) return;
         let cache = null, dropdown = null, isOpen = false;
         function ensureDropdown(){ if (dropdown) return dropdown; dropdown = document.createElement('div'); dropdown.className = 'orm-dropdown'; document.body.appendChild(dropdown); dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); return dropdown; }
-        function positionDropdown(){ const rect = modelInput.getBoundingClientRect(); const style = dropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.width = rect.width + 'px'; style.display = 'block'; isOpen = true; }
+        function positionDropdown(){ const rect = modelInput.getBoundingClientRect(); const style = dropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.minWidth = Math.max(rect.width, 420) + 'px'; style.display = 'block'; isOpen = true; }
         function closeDropdown(){ if (!dropdown) return; dropdown.style.display = 'none'; isOpen = false; }
         function formatPrice(n){ if (n === undefined || n === null || n === '' || isNaN(parseFloat(n))) return 'N/A'; const perTok = parseFloat(n); const perM = perTok * 1000000.0; return '$' + perM.toFixed(4) + ' / 1M tokens'; }
         function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -658,7 +659,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         if (!providerInput || !modelInput) return;
         let providersCache = null, dropdown = null, isOpen = false;
         function ensureDropdown(){ if (dropdown) return dropdown; dropdown = document.createElement('div'); dropdown.className = 'orm-dropdown'; document.body.appendChild(dropdown); dropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); return dropdown; }
-        function positionDropdown(){ const rect = providerInput.getBoundingClientRect(); const style = dropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.width = rect.width + 'px'; style.display = 'block'; isOpen = true; }
+        function positionDropdown(){ const rect = providerInput.getBoundingClientRect(); const style = dropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.minWidth = Math.max(rect.width, 420) + 'px'; style.display = 'block'; isOpen = true; }
         function closeDropdown(){ if (!dropdown) return; dropdown.style.display = 'none'; isOpen = false; }
         function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
         function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -951,7 +952,8 @@ if (typeof window.consolidation !== 'function') {
 
             <div id="provider_row">
                 <label for='provider'>Provider</label><br>
-                <input type="text" name="provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
+                <input type="text" name="provider" placeholder="(Optional) leave empty to use recommended provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
+                <small class="hint">(Optional): Leave empty to default to recommended provider.</small>
             </div>
 
             <div id="driver_row" style="display:none;">
@@ -1096,7 +1098,8 @@ if (typeof window.consolidation !== 'function') {
 
             // Advanced block
             echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
-            echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Advanced LLM Settings</div>";
+                echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:4px;\">Advanced LLM Settings Override</div>";
+                echo "<small class=\"hint\" style=\"display:block; margin-bottom:8px; color:#9fb1c9;\">If a value is left empty, the API provider's recommended default will be used.</small>";
             echo "<div class='kv-grid'>";
             $advancedFields = ['presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a'];
             foreach ($advancedFields as $advField) {

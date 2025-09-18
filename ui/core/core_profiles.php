@@ -385,11 +385,10 @@ $ittById = $byId($ittRows);
                     const diary = escapeHtml(labelOf(LLM, r.diary_connector_id));
                     const npcCount = Number((NPC_COUNT||{})[String(r.id)]||0);
                     const row1 = [];
-                    if (String(r.default_npc)==='1') row1.push('<span class="pf-flag">Default NPC</span>');
-                    if (String(r.default_narrator)==='1') row1.push('<span class="pf-flag">Default Narrator</span>');
+                    if (String(r.default_npc)==='1') row1.push('<span class="pf-flag">👤 NPC</span>');
+                    if (String(r.default_narrator)==='1') row1.push('<span class="pf-flag">🗣️Narrator</span>');
                     const row2 = [];
-                    const slotBadge = (r.slot && Number(r.slot)>=1 && Number(r.slot)<=4) ? `<span class="pf-flag">Slot ${String(r.slot)}</span>` : '';
-                    if (slotBadge) row2.push(slotBadge);
+                    // Slot badge removed from list items
                     if (npcCount > 0) row2.push('<span class="pf-flag">'+npcCount+' NPCs</span>');
                     html += `
                         <div class="conn-li${active}" data-id="${String(r.id)}">
@@ -458,6 +457,7 @@ $ittById = $byId($ittRows);
         <div class="connector-title">Profile Core</div>
         <label for='label'>Name</label><br>
         <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
+        <small class="hint">Name for the profile.</small>
         
         <div style="height:8px;"></div>
         <label for='slot'>Slot</label><br>
@@ -478,6 +478,7 @@ $ittById = $byId($ittRows);
             <option value="<?= $s ?>"<?= $sel.$disabled ?>><?= $s ?></option>
             <?php endfor; ?>
         </select>
+        <small class="hint">Optional quick-access slot (1–4). Can be quickchanged ingame.</small>
 
         <div style="height:8px;"></div>
         <label class="label-with-toggle">Default NPC
@@ -485,6 +486,7 @@ $ittById = $byId($ittRows);
             <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
             <span class="toggle-text">On</span>
         </label>
+        <small class="hint">When enabled, new NPCs will default to using this profile. Only 1 profile can be default.</small>
 
         <div style="height:6px;"></div>
         <label class="label-with-toggle">Default Narrator
@@ -492,10 +494,12 @@ $ittById = $byId($ittRows);
             <input type="checkbox" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>>
             <span class="toggle-text">On</span>
         </label>
+        <small class="hint">When enabled, this profile is used for the narrator. Only 1 profile can be default narrator.</small>
 
         <div style="height:8px;"></div>
         <label for="prompt">Profile Prompt</label>
         <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
+        <small class="hint">Optional: profile-specific system instructions appended to requests. Example is using this to hold specific instructions for followers and assigning the profile only to followers.</small>
 
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_profile_settings" class="btn-save">Save Profile Settings</button>
