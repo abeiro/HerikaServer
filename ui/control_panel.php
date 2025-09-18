@@ -21,7 +21,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-main { padding-top: 80px; }
+main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
 .tab-container { margin: 20px 0; }
 .tab-buttons { display:flex; flex-wrap:wrap; gap:5px; word-spacing:5px; }
 .tab-button { background:#2a2a2a; border:none; padding:12px 18px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all 0.3s ease; font-size:1em; white-space:nowrap; font-family:'MagicCards', sans-serif; word-spacing:5px; letter-spacing:1.5px; }
@@ -32,12 +32,17 @@ main { padding-top: 80px; }
 .embed-wrap { height: calc(100vh - 220px); min-height: 520px; border:1px solid #4a4a4a; border-radius:8px; overflow:hidden; background:#2a2a2a; }
 .embed { width:100%; height:100%; border:0; background:transparent; }
 @media (max-height: 800px){ .embed-wrap { min-height: 420px; } }
+/* Actions in header */
+.cp-title .cp-actions { display:flex; align-items:center; gap:8px; }
 </style>
 
 <main>
     <div class="cp-title" style="display:flex; align-items:center; justify-content:space-between; margin: 4px 0 8px 0;">
         <h1 style="margin:0;">Control Panel</h1>
-        <a href="<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php" target="_blank" class="btn-base btn-primary" title="Generate AIAgent.ini file for the mod file.">Create Custom AIAgent.ini</a>
+        <div class="cp-actions">
+            <a href="<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php" target="_blank" class="btn-base btn-primary" title="Generate AIAgent.ini file for the mod file.">Create Custom AIAgent.ini</a>
+            <a href="<?php echo $webRoot; ?>/ui/core/migrate_profiles.php" class="btn-base btn-primary" title="Migrate all legacy conf_*.php profiles to the database and archive them.">⚙️ Migrate Legacy Profiles</a>
+        </div>
     </div>
     <div class="tab-buttons">
         <button class="tab-button active" data-tab="srvlogs">🌲Server Logs</button>
@@ -46,7 +51,6 @@ main { padding-top: 80px; }
         <button class="tab-button" data-tab="responses">💬Response Queue</button>
         <button class="tab-button" data-tab="playthrough">🎮Playthrough Manager</button>
         <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
-        <a href="<?php echo $webRoot; ?>/ui/core/migrate_profiles.php" class="btn-base btn-primary" style="margin-left:auto" title="Migrate all legacy conf_*.php profiles to the database and archive them.">⚙️ Migrate Legacy Profiles</a>
     </div>
 
     <div id="srvlogs" class="tab-content active">
