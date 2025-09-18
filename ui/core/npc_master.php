@@ -424,12 +424,12 @@ if (isset($_GET['race_icon'])) {
     $pc = ($curPid !== '' && isset($profilesConnById[$curPid])) ? $profilesConnById[$curPid] : null;
     $m = function($id) use ($llmById){ $k = (string)($id ?? ''); return $k !== '' && isset($llmById[$k]) ? $llmById[$k] : '—'; };
     ?>
-    <div id="profile_llm_summary" style="display:grid; grid-template-columns: 120px 1fr; gap:6px; color:#cfd9ea; border:1px solid #4a4a4a; border-radius:8px; padding:8px; margin-bottom:8px;">
-        <div style="color:rgb(242,124,17); font-weight:700;">LLM1</div><div><?= htmlspecialchars($pc ? $m($pc['llm_primary_id'] ?? '') : '—') ?></div>
-        <div style="color:rgb(242,124,17); font-weight:700;">LLM2</div><div><?= htmlspecialchars($pc ? $m($pc['llm_secondary_id'] ?? '') : '—') ?></div>
-        <div style="color:rgb(242,124,17); font-weight:700;">LLM3</div><div><?= htmlspecialchars($pc ? $m($pc['llm_tertiary_id'] ?? '') : '—') ?></div>
-        <div style="color:rgb(242,124,17); font-weight:700;">LLM4</div><div><?= htmlspecialchars($pc ? $m($pc['llm_quaternary_id'] ?? '') : '—') ?></div>
-        <div style="color:rgb(242,124,17); font-weight:700;">Diary</div><div><?= htmlspecialchars($pc ? $m($pc['diary_connector_id'] ?? '') : '—') ?></div>
+    <div id="profile_llm_summary" style="display:grid; grid-template-columns: 210px 1fr; gap:6px; color:#cfd9ea; border:1px solid #4a4a4a; border-radius:8px; padding:8px; margin-bottom:8px;">
+        <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">🕹️ Standard LLM</div><div><?= htmlspecialchars($pc ? $m($pc['llm_primary_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">🏃‍♂️‍➡️ Fast LLM</div><div><?= htmlspecialchars($pc ? $m($pc['llm_secondary_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">💪 Powerful LLM</div><div><?= htmlspecialchars($pc ? $m($pc['llm_tertiary_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">🧪 Experimental LLM</div><div><?= htmlspecialchars($pc ? $m($pc['llm_quaternary_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">📓 Diary LLM</div><div><?= htmlspecialchars($pc ? $m($pc['diary_connector_id'] ?? '') : '—') ?></div>
     </div>
     <script>
     (function(){
@@ -440,15 +440,15 @@ if (isset($_GET['race_icon'])) {
             const box = document.getElementById('profile_llm_summary'); if (!box) return;
             const pc = PROFILE_CONN[String(pid||'')] || null;
             const rows = [
-                ['LLM1', pc ? labelOf(pc.llm_primary_id) : '—'],
-                ['LLM2', pc ? labelOf(pc.llm_secondary_id) : '—'],
-                ['LLM3', pc ? labelOf(pc.llm_tertiary_id) : '—'],
-                ['LLM4', pc ? labelOf(pc.llm_quaternary_id) : '—'],
-                ['Diary', pc ? labelOf(pc.diary_connector_id) : '—']
+                ['🕹️ Standard LLM', pc ? labelOf(pc.llm_primary_id) : '—'],
+                ['🏃‍♂️‍➡️ Fast LLM', pc ? labelOf(pc.llm_secondary_id) : '—'],
+                ['💪 Powerful LLM', pc ? labelOf(pc.llm_tertiary_id) : '—'],
+                ['🧪 Experimental LLM', pc ? labelOf(pc.llm_quaternary_id) : '—'],
+                ['📓 Diary LLM', pc ? labelOf(pc.diary_connector_id) : '—']
             ];
             let html = '';
             rows.forEach(([k,v])=>{
-                html += '<div style="color:rgb(242,124,17); font-weight:700;">'+k+'</div><div>'+String(v||'—')+'</div>';
+                html += '<div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">'+k+'</div><div>'+String(v||'—')+'</div>';
             });
             box.innerHTML = html;
         }

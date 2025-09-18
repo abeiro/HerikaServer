@@ -81,6 +81,10 @@ h1.api-title {
 .pf-badges { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
 .pf-badges-row { display:flex; gap:10px; align-items:center; flex-wrap:nowrap; }
 .pf-flag { display:inline-flex; align-items:center; font-size:12px; padding:2px 8px; border:1px solid #4a4a4a; border-radius:0; color:#cfd9ea; background:rgba(255,255,255,0.04); line-height:1.4; }
+/* Active Slots block rows */
+.slot-row { display:flex; align-items:center; justify-content:flex-start; gap:10px; padding:2px 0; }
+.slot-key { color: rgb(242,124,17); font-weight:700; min-width:70px; white-space:nowrap; }
+.slot-val { color:#cfd9ea; overflow-wrap:anywhere; }
 .pf-tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0 10px; border-bottom: 2px solid #3a3a3a; }
 .pf-tab { background:#2a2a2a; border:none; padding:8px 12px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all .2s ease; font-size:0.95em; }
 .pf-tab:hover { background:#3a3a3a; }
@@ -88,9 +92,9 @@ h1.api-title {
 .pf-pane { display:none; }
 .pf-pane.active { display:block; }
 .pf-lines { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
-.pf-line { display:flex; align-items:center; gap:8px; font-size:12px; color:#cfd9ea; }
+.pf-line { display:grid; grid-template-columns: 18px 150px 1fr; align-items:center; gap:6px; font-size:12px; color:#cfd9ea; }
 .pf-icon { width:18px; text-align:center; opacity:0.9; }
-.pf-key { color:#9fb1c9; min-width:44px; font-weight:600; }
+.pf-key { color:#9fb1c9; font-weight:600; white-space:nowrap; text-align:left; }
 .pf-val { overflow-wrap:anywhere; }
 /* Ensure inputs fit within card borders */
 .connector-card input[type="text"],
@@ -105,7 +109,7 @@ h1.api-title {
 .toast-notification.error { background: linear-gradient(135deg, #ff6b6b, #e55a5a); border: 1px solid rgba(255, 107, 107, 0.3); }
 /* Compact select row with Set button */
 .select-row { display:flex; gap:8px; align-items:center; }
-.select-row select { max-width: 420px; }
+.select-row select { max-width: 480px; }
 .btn-apply { white-space: nowrap; padding: 6px 10px; }
 /* Collapsible block for Metadata */
 .collapsible { margin-top: 8px; border:1px solid #4a4a4a; border-radius:10px; background:#2a2a2a; }
@@ -358,14 +362,14 @@ $ittById = $byId($ittRows);
                         if (s>=1 && s<=4 && slotToProfile[s]===null) slotToProfile[s] = r;
                     });
                     html += '<div class="connector-card" style="padding:8px;">';
-                    html += '<div class="connector-title">Active Slots</div>';
+                    html += '<div class="connector-title">Profile Slots</div>';
                     [1,2,3,4].forEach(s=>{
                         const r = slotToProfile[s];
                         if (r){
                             const title = escapeHtml(r.label||('Profile #'+r.id));
-                            html += `<div class="pf-line" style="cursor:pointer;" data-jump-id="${String(r.id)}"><span class="pf-key">Slot ${String(s)}</span> <span class="pf-val">${title}</span></div>`;
+                            html += `<div class=\"slot-row\" style=\"cursor:pointer;\" data-jump-id=\"${String(r.id)}\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">${title}</span></div>`;
                         } else {
-                            html += `<div class="pf-line" style="opacity:.6;"><span class="pf-key">Slot ${String(s)}</span> <span class="pf-val">— Empty —</span></div>`;
+                            html += `<div class=\"slot-row\" style=\"opacity:.75;\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">— Empty —</span></div>`;
                         }
                     });
                     html += '</div>';
@@ -397,11 +401,11 @@ $ittById = $byId($ittRows);
                                 `</div>
                             </div>
                             <div class="pf-lines">
-                                <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM1</span><span class="pf-val">${llm1||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM2</span><span class="pf-val">${llm2||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM3</span><span class="pf-val">${llm3||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">🧠</span><span class="pf-key">LLM4</span><span class="pf-val">${llm4||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">📓</span><span class="pf-key">Diary</span><span class="pf-val">${diary||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🕹️</span><span class="pf-key">Standard LLM</span><span class="pf-val">${llm1||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🏃‍♂️‍➡️</span><span class="pf-key">Fast LLM</span><span class="pf-val">${llm2||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">💪</span><span class="pf-key">Powerful LLM</span><span class="pf-val">${llm3||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🧪</span><span class="pf-key">Experimental LLM</span><span class="pf-val">${llm4||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">📓</span><span class="pf-key">Diary LLM</span><span class="pf-val">${diary||'—'}</span></div>
                             </div>
                             <div class="actions">
                                 <form method="get" action="core_profiles.php" onsubmit="return confirm('Delete this profile?');" style="display:inline">
@@ -522,16 +526,16 @@ $ittById = $byId($ittRows);
     <div class="connector-card">
         <div class="connector-title">Connector Selection</div>
         <div class="pf-tabs" id="pf_tabs">
-            <button type="button" class="pf-tab active" data-pane="pane_llm1">LLM 1</button>
-            <button type="button" class="pf-tab" data-pane="pane_llm2">LLM 2</button>
-            <button type="button" class="pf-tab" data-pane="pane_llm3">LLM 3</button>
-            <button type="button" class="pf-tab" data-pane="pane_llm4">LLM 4</button>
-            <button type="button" class="pf-tab" data-pane="pane_diary">Diary</button>
+            <button type="button" class="pf-tab active" data-pane="pane_llm1">🕹️ Standard LLM</button>
+            <button type="button" class="pf-tab" data-pane="pane_llm2">🏃‍♂️‍➡️ Fast LLM</button>
+            <button type="button" class="pf-tab" data-pane="pane_llm3">💪 Powerful LLM</button>
+            <button type="button" class="pf-tab" data-pane="pane_llm4">🧪 Experimental LLM</button>
+            <button type="button" class="pf-tab" data-pane="pane_diary">📓 Diary LLM</button>
             
         </div>
         <div class="pf-pane active" id="pane_llm1">
             <div class="select-row">
-                <?= renderSelect($profiles, "llm_primary_id", "LLM Primary", $editItem["llm_primary_id"] ?? "") ?>
+                <?= renderSelect($profiles, "llm_primary_id", "🕹️ Standard LLM", $editItem["llm_primary_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_primary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
@@ -540,7 +544,7 @@ $ittById = $byId($ittRows);
         </div>
         <div class="pf-pane" id="pane_llm2">
             <div class="select-row">
-                <?= renderSelect($profiles, "llm_secondary_id", "LLM Secondary", $editItem["llm_secondary_id"] ?? "") ?>
+                <?= renderSelect($profiles, "llm_secondary_id", "🏃‍♂️‍➡️ Fast LLM", $editItem["llm_secondary_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_secondary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
@@ -549,7 +553,7 @@ $ittById = $byId($ittRows);
         </div>
         <div class="pf-pane" id="pane_llm3">
             <div class="select-row">
-                <?= renderSelect($profiles, "llm_tertiary_id", "LLM Tertiary", $editItem["llm_tertiary_id"] ?? "") ?>
+                <?= renderSelect($profiles, "llm_tertiary_id", "💪 Powerful LLM", $editItem["llm_tertiary_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_tertiary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
@@ -558,7 +562,7 @@ $ittById = $byId($ittRows);
         </div>
         <div class="pf-pane" id="pane_llm4">
             <div class="select-row">
-                <?= renderSelect($profiles, "llm_quaternary_id", "LLM Quaternary", $editItem["llm_quaternary_id"] ?? "") ?>
+                <?= renderSelect($profiles, "llm_quaternary_id", "🧪 Experimental LLM", $editItem["llm_quaternary_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_quaternary_id">Set</button>
             </div>
             <div style="margin-top:8px;">
@@ -877,10 +881,10 @@ $ittById = $byId($ittRows);
             else if (connectorField==='itt_connector_id') label = (ITT_DETAILS[connId] && (ITT_DETAILS[connId].label||'')) || '';
             else label = (LLM_DETAILS[connId] && (LLM_DETAILS[connId].label||'')) || '';
             let key = '';
-            if (connectorField==='llm_primary_id') key = 'LLM1';
-            else if (connectorField==='llm_secondary_id') key = 'LLM2';
-            else if (connectorField==='llm_tertiary_id') key = 'LLM3';
-            else if (connectorField==='llm_quaternary_id') key = 'LLM4';
+            if (connectorField==='llm_primary_id') key = 'LLM Standard';
+            else if (connectorField==='llm_secondary_id') key = 'LLM Fast';
+            else if (connectorField==='llm_tertiary_id') key = 'LLM Powerful';
+            else if (connectorField==='llm_quaternary_id') key = 'LLM Experimental';
             else if (connectorField==='tts_connector_id') key = 'TTS';
             else if (connectorField==='itt_connector_id') key = 'ITT';
             else if (connectorField==='diary_connector_id') key = 'Diary';
