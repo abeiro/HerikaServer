@@ -70,7 +70,10 @@ if (!function_exists('race_icon_web_path')) {
         $in = strtolower((string)$race);
         $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);
         $slug = implode('', $words);
-        if ($slug === '') return '';
+        // If no race provided, skip early return so we can use default fallback
+        if ($slug === '') {
+            $words = [];
+        }
         $aliases = [
             'highelf'=>'altmer', 'altmer'=>'altmer',
             'woodelf'=>'bosmer', 'bosmer'=>'bosmer',
@@ -97,6 +100,11 @@ if (!function_exists('race_icon_web_path')) {
                 $fs = $fsDir . $name . '.' . $ext;
                 if (file_exists($fs)) return $webRoot . '/ui/images/races/' . $name . '.' . $ext;
             }
+        }
+        // Fallback to default.png if no specific image is found
+        $defaultFs = $fsDir . 'default.png';
+        if (file_exists($defaultFs)) {
+            return $webRoot . '/ui/images/races/default.png';
         }
         return '';
     }
