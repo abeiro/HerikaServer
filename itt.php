@@ -100,5 +100,8 @@ require_once($path."itt/itt-{$GLOBALS["ITTFUNCTION"]}.php");
 
 echo itt($finalNameJpeg,$hints);
 
+@mkdir(__DIR__.DIRECTORY_SEPARATOR."data/pictures/gallery/",0777);
+@rename($finalNameJpeg,__DIR__.DIRECTORY_SEPARATOR."data/pictures/gallery/".basename($finalNameJpeg));
+
 
 ?>

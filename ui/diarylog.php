@@ -650,8 +650,8 @@ if ($allDatesResult) {
                 $eventMonth = intval(date('m', $ts_time));
                 $eventYear = intval(ltrim(date('Y', $ts_time), '0'));
                 
-                error_log("Debug - Event found: Month={$eventMonth}, Year={$eventYear}, Day={$eventDay}");
-                error_log("Debug - Looking for: Month={$month}, Year={$year}");
+                //error_log("Debug - Event found: Month={$eventMonth}, Year={$eventYear}, Day={$eventDay}");
+                //error_log("Debug - Looking for: Month={$month}, Year={$year}");
                 
                 if ($eventMonth == $month && $eventYear == $year) {
                     error_log("Debug - Adding event for day {$eventDay}");
@@ -765,7 +765,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                             if ($eventDateStr === $dateStr) {
                                 $hasEvents = true;
                                 $eventCount++;
-                                error_log("Debug - Found event for date {$dateStr}");
+                                //error_log("Debug - Found event for date {$dateStr}");
                             }
                         }
                     }

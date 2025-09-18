@@ -47,6 +47,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     .lightbox .tools { position:absolute; top:8px; right:8px; display:flex; gap:6px; }
     .lightbox .tools a, .lightbox .tools button { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; text-decoration:none; font-weight:700; }
     .lightbox .tools a:hover, .lightbox .tools button:hover { background:#3a3a3a; }
+    body {min-height:auto}
 </style>
 <?php
 
@@ -57,7 +58,7 @@ if (!$isEmbed) {
 }
 
 // Scan soundcache recursively for image files
-$rootFs = realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'soundcache');
+$rootFs = realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data/pictures/gallery/');
 $images = [];
 if ($rootFs && is_dir($rootFs)) {
     try {
@@ -72,7 +73,7 @@ if ($rootFs && is_dir($rootFs)) {
             $absPath = $fi->getPathname();
             $rel = substr($absPath, strlen($rootFs) + 1);
             $rel = str_replace('\\', '/', $rel);
-            $url = $webRoot . '/soundcache/' . $rel;
+            $url = $webRoot . '/data/pictures/gallery/' . $rel;
             $images[] = [
                 'name' => $fi->getFilename(),
                 'url' => $url,
@@ -95,7 +96,7 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         <div class="gallery-meta">Found <?php echo number_format(count($images)); ?> image(s)</div>
     </div>
     <?php if (empty($images)): ?>
-        <div class="empty">No images found in <code>/soundcache</code>.</div>
+        <div class="empty">No images found in <code>/data/pictures/gallery/</code>.</div>
     <?php else: ?>
         <div class="grid">
             <?php foreach ($images as $img): $n = $img['name']; $u = $img['url']; ?>
@@ -118,7 +119,11 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         <div class="tools">
             <a id="lb_open" href="#" target="_blank" rel="noopener">Open</a>
             <a id="lb_dl" href="#" download>Download</a>
+            <a id="lb_reimage1" href="#" title="Will send image to gptimage to create a reimagined version">GPT Reimagine</a>
+            <a id="lb_reimage2" href="#" title="Will send image to replicate to create a reimagined version,needs a replicate API key">Replicate Reimagine</a>
+            <a id="lb_reimage3" href="#" title="Will send image to OpenRouter to create a reimagined version,needs a OpenRouter API key">OR-Gemini Reimagine</a>
             <button id="lb_close" type="button">Close</button>
+            <button id="lb_del" type="button">Delete</button>
         </div>
         <img id="lb_img" src="" alt="preview">
     </div>
@@ -133,11 +138,122 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
   const lbOpen = document.getElementById('lb_open');
   const lbDl = document.getElementById('lb_dl');
   const lbClose = document.getElementById('lb_close');
+  const lb_reimage1 = document.getElementById('lb_reimage1');
+  const lb_reimage2 = document.getElementById('lb_reimage2');
+  const lb_reimage3 = document.getElementById('lb_reimage3');
+  const lb_del = document.getElementById('lb_del');
+  function showProcessing() {
+    processingMessage = document.createElement('div');
+    processingMessage.textContent = 'Processing...';
+    processingMessage.style.position = 'fixed';
+    processingMessage.style.top = '50%';
+    processingMessage.style.left = '50%';
+    processingMessage.style.transform = 'translate(-50%, -50%)';
+    processingMessage.style.backgroundColor = '#000';
+    processingMessage.style.color = '#fff';
+    processingMessage.style.padding = '10px 20px';
+    processingMessage.style.borderRadius = '8px';
+    processingMessage.style.zIndex = '10001';
+    document.body.appendChild(processingMessage);
+  }
+  function hideProcessing() {
+    processingMessage.innerHTML=''
+  }
+  var processingMessage;
   function open(url){ if (!lb) return; lbImg.src=url; lbOpen.href=url; lbDl.href=url; lb.style.display='flex'; document.body.style.overflow='hidden'; }
   function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribute('src'); document.body.style.overflow='auto'; }
   document.addEventListener('click', function(e){ const card = e.target && e.target.closest && e.target.closest('.card'); if (!card) return; const img = card.querySelector('.thumb'); if (!img) return; if (e.target.tagName === 'A') return; e.preventDefault(); open(img.src); });
   if (lbClose) lbClose.addEventListener('click', close);
-  if (lb) lb.addEventListener('click', function(e){ if (e.target === lb) close(); });
+  if (lb) lb.addEventListener('click', function(e){
+     if (e.target === lb) close(); 
+     if (e.target === lb_reimage1) {
+        showProcessing();
+       
+        fetch('cmd/gallery_tool_convert_style_gpt.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            close()
+            window.location.reload();
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+     } else if (e.target === lb_reimage2) {
+        showProcessing();
+
+        fetch('cmd/gallery_tool_convert_style_replicate.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            
+            close()
+            window.location.reload();
+            
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+     } else if (e.target === lb_reimage3) {
+        showProcessing();
+
+        fetch('cmd/gallery_tool_convert_style_or.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            close()
+            // Reload the current document to reflect changes
+            window.location.reload();
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+     } else if (e.target === lb_del) {
+        showProcessing();
+
+        fetch('cmd/gallery_delete.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            close()
+            // Reload the current document to reflect changes
+            window.location.reload();
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+     }
+    });
+
+    
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') close(); });
 })();
 </script>

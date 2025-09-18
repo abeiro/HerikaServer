@@ -70,7 +70,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .embed-frame {
         width: 100%;
-        height: 82vh;
+        height: 75vh;
         border: 1px solid #444;
         border-radius: 6px;
         background: #1a1a1a;
