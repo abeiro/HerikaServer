@@ -252,6 +252,11 @@ $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_profiles ORDER BY label ASC");
+// Default to first profile id for new NPCs
+$firstProfileId = '';
+if (is_array($profileRows) && count($profileRows) > 0) {
+    $firstProfileId = (string)($profileRows[0]['id'] ?? '');
+}
 // Preload profile connector mappings and LLM connector labels for modal summary
 $profileConnRows = $GLOBALS["db"]->fetchAll("SELECT id, llm_primary_id, llm_secondary_id, llm_tertiary_id, llm_quaternary_id, diary_connector_id FROM core_profiles ORDER BY id ASC");
 $llmRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_llm_connector ORDER BY id ASC");
@@ -372,6 +377,117 @@ if (isset($_GET['race_icon'])) {
     echo json_encode(['url' => $url]);
     exit;
 }
+
+// Bio database: search existing templates (combined_bio_templates)
+if (isset($_GET['bio_search'])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    $search = trim((string)($_GET['search'] ?? ''));
+    $letter = trim((string)($_GET['letter'] ?? ''));
+    $page = max(1, intval($_GET['page'] ?? 1));
+    $pageSize = min(50, max(1, intval($_GET['pageSize'] ?? 20)));
+    $where = [];
+    if ($search !== '') {
+        $q = '%'.$GLOBALS['db']->escape($search).'%';
+        $where[] = "(lower(npc_name) like lower('{$q}') or lower(core) like lower('{$q}'))";
+    }
+    if ($letter !== '' && preg_match('/^[A-Za-z]$/', $letter)) {
+        $l = $GLOBALS['db']->escape(strtolower($letter));
+        $where[] = "lower(npc_name) like '{$l}%'";
+    }
+    $whereSql = count($where) ? ('where '.implode(' and ', $where)) : '';
+    $cntRow = $GLOBALS['db']->fetchOne("select count(*) as c from combined_bio_templates {$whereSql}");
+    $total = intval($cntRow['c'] ?? 0);
+    $offset = ($page - 1) * $pageSize;
+    $rows = $GLOBALS['db']->fetchAll("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates {$whereSql} order by lower(npc_name) asc limit {$pageSize} offset {$offset}");
+    $items = [];
+    foreach (($rows ?? []) as $r) {
+        $extFields = ['npc_static_bio','personality','appearance','relationships','occupation','skills','speechstyle','goals'];
+        $filled = 0; foreach ($extFields as $f) { $v = trim((string)($r[$f] ?? '')); if ($v !== '') $filled++; }
+        $coreFull = (string)($r['core'] ?? '');
+        if (function_exists('mb_strimwidth')) {
+            $corePreview = mb_strimwidth($coreFull, 0, 160, '…', 'UTF-8');
+        } else {
+            $corePreview = (strlen($coreFull) > 160) ? (substr($coreFull, 0, 157).'…') : $coreFull;
+        }
+        $items[] = [
+            'npc_name' => $r['npc_name'] ?? '',
+            'core_preview' => $corePreview,
+            'voiceid' => $r['voiceid'] ?? '',
+            'gender' => $r['gender'] ?? '',
+            'race' => $r['race'] ?? '',
+            'refid' => $r['refid'] ?? '',
+            'extended_filled' => $filled
+        ];
+    }
+    echo json_encode(['ok'=>true,'total'=>$total,'page'=>$page,'pageSize'=>$pageSize,'items'=>$items]);
+    exit;
+}
+
+// Bio database: detail of a specific template by npc_name
+if (isset($_GET['bio_detail'])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    $name = trim((string)($_GET['name'] ?? ''));
+    if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
+    $esc = $GLOBALS['db']->escape($name);
+    $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where npc_name = '{$esc}' limit 1");
+    if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
+    echo json_encode(['ok'=>true,'data'=>$r]);
+    exit;
+}
+
+// Import from bio: server builds row and creates/updates NPC
+if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $name = trim((string)($_POST['name'] ?? ''));
+        if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
+        $includeCore = ($_POST['include_core'] ?? '1') ? true : false;
+        $includeExt  = ($_POST['include_extended'] ?? '1') ? true : false;
+        $includeOgh  = ($_POST['include_oghma'] ?? '1') ? true : false;
+        $includeVM   = ($_POST['include_voice_meta'] ?? '1') ? true : false;
+        $profileId   = isset($_POST['profile_id']) && $_POST['profile_id']!=='' ? intval($_POST['profile_id']) : null;
+
+        $esc = $GLOBALS['db']->escape($name);
+        $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where npc_name = '{$esc}' limit 1");
+        if (!$r) { echo json_encode(['ok'=>false,'error'=>'Template not found']); exit; }
+
+        $data = [ 'npc_name' => $r['npc_name'] ?? $name ];
+        if ($profileId !== null) $data['profile_id'] = $profileId;
+        if ($includeCore) { $data['core'] = $r['core'] ?? null; }
+        if ($includeExt) {
+            foreach (['npc_static_bio','personality','appearance','relationships','occupation','skills','speechstyle','goals'] as $f) {
+                $data[$f] = $r[$f] ?? null;
+            }
+        }
+        if ($includeOgh) { $data['oghma_knowledge_tags'] = $r['oghma_knowledge_tags'] ?? null; }
+        if ($includeVM) {
+            foreach (['voiceid','gender','race','refid'] as $f) { $data[$f] = $r[$f] ?? null; }
+        }
+
+        // Upsert by name
+        $existing = $npc->getByName($data['npc_name']);
+        if ($existing) {
+            $data['md5'] = md5((string)$data['npc_name']);
+            $ok = $npc->update((int)$existing['id'], $data);
+            if ($ok === false) { echo json_encode(['ok'=>false,'error'=>'Update failed']); exit; }
+            $newId = (int)$existing['id'];
+        } else {
+            $npc->create($data);
+            // Fetch newly created row
+            $row = $npc->getByName($data['npc_name']);
+            $newId = (int)($row['id'] ?? 0);
+        }
+        if (!$newId) { echo json_encode(['ok'=>false,'error'=>'Insert failed']); exit; }
+        $payload = $npc->getById($newId) ?: $data;
+        echo json_encode(['ok'=>true,'id'=>$newId,'data'=>$payload]);
+    } catch (Throwable $e) {
+        echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
+    }
+    exit;
+}
 ?>
 
 <?php if ($editItem): ?>
@@ -464,18 +580,18 @@ if (isset($_GET['race_icon'])) {
         <div class="form-item span-2">
             <label for="npc_name">NPC Name</label>
             <input type="text" id="npc_name" name="npc_name" placeholder="e.g. Aela the Huntress" value="<?= htmlspecialchars($editItem["npc_name"] ?? "") ?>">
-            <small class="hint">Display name shown in UI and used to build prompts. Changing it will also update the MD5 key.</small>
+            <small class="hint">The character's name. Must match their Skyrim in-game name!</small>
         </div>
 
         <div class="form-item">
             <label for="profile_id">Profile</label>
             <select id="profile_id" name="profile_id">
                 <option value="">-- Select Profile --</option>
-                <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); ?>
-                    <option value="<?= htmlspecialchars($pid) ?>" <?= ((string)($editItem['profile_id'] ?? '') === $pid) ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
+                <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); $sel = ((string)($editItem['profile_id'] ?? '') === $pid) ? ' selected' : ((empty($editItem) && $firstProfileId === $pid) ? ' selected' : ''); ?>
+                    <option value="<?= htmlspecialchars($pid) ?>"<?= $sel ?>><?= htmlspecialchars($lbl) ?></option>
                 <?php endforeach; ?>
             </select>
-            <small class="hint">Select which core profile this NPC uses.</small>
+            <small class="hint">Select which profile the NPC uses.</small>
         </div>
 
         <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
@@ -494,62 +610,62 @@ if (isset($_GET['race_icon'])) {
 
         <div class="form-item">
             <label for="gender">Gender</label>
-            <input type="text" id="gender" name="gender" placeholder="e.g. female, male, nonbinary" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
-            <small class="hint">Used for pronouns and voice selection guidance.</small>
+            <input type="text" id="gender" name="gender" placeholder="female, male" value="<?= htmlspecialchars($editItem["gender"] ?? "") ?>">
+            <small class="hint">Used for prompts.</small>
         </div>
 
         <div class="form-item">
             <label for="race">Race</label>
-            <input type="text" id="race" name="race" placeholder="e.g. nord, dunmer, argonian" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
+            <input type="text" id="race" name="race" placeholder="nord, dunmer, farm tool" value="<?= htmlspecialchars($editItem["race"] ?? "") ?>">
             <small class="hint">Lore-accurate race label used in prompts.</small>
         </div>
 
         <div class="form-item">
             <label for="base">Base</label>
-            <input type="text" id="base" name="base" placeholder="Base actor/form ID if applicable" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
+            <input type="text" id="base" name="base" placeholder="Bandit Reaver" value="<?= htmlspecialchars($editItem["base"] ?? "") ?>">
             <small class="hint">Optional: base form identifier or template this NPC derives from.</small>
         </div>
 
         <div class="form-item">
             <label for="refid">Ref ID</label>
-            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000...)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
-            <small class="hint">Skyrim reference ID for in-game linkage (optional).</small>
+            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000A2C94)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
+            <small class="hint">Skyrim reference ID for in-game linkage.</small>
         </div>
 
         <div class="form-item">
             <label for="oghma_knowledge_tags">Oghma Tags</label>
             <input type="text" id="oghma_knowledge_tags" name="oghma_knowledge_tags" placeholder="Comma-separated knowledge tags" value="<?= htmlspecialchars($editItem["oghma_knowledge_tags"] ?? "") ?>">
-            <small class="hint">Used by Oghma systems for knowledge lookup and indexing.</small>
+            <small class="hint">Used by Oghma systems for knowledge lookup restrictions.</small>
         </div>
 
         <div class="form-item">
             <label for="voiceid">Voice ID</label>
-            <input type="text" id="voiceid" name="voiceid" placeholder="Matches TTS voice identifier" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
-            <small class="hint">Identifier for the TTS backend (e.g., ElevenLabs, XTTS, etc.).</small>
+            <input type="text" id="voiceid" name="voiceid" placeholder="malenord" value="<?= htmlspecialchars($editItem["voiceid"] ?? "") ?>">
+            <small class="hint">Voice ID for TTS.</small>
         </div>
 
         <div class="form-item span-2">
             <label for="prompt_head">Prompt Head</label>
             <textarea id="prompt_head" name="prompt_head" placeholder="High-level system instructions injected before the core."><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
-            <small class="hint">System preamble inserted before other sections. Keep concise and stable.</small>
+            <small class="hint">System preamble inserted before other sections. Keep concise and stable Do not worry if it is empty, as will pull from global settings prompt head.</small>
         </div>
 
         <div class="form-item span-2">
             <label for="core">Core</label>
             <textarea id="core" name="core" placeholder="Unchanging rules, boundaries, and core identity."><?= htmlspecialchars($editItem["core"] ?? "") ?></textarea>
-            <small class="hint">Canonical constraints and non-negotiable behavior. Keep evergreen and tightly scoped.</small>
+            <small class="hint">Core NPC description. 1-2 sentences describing the character.</small>
         </div>
 
         <div class="form-item span-2">
             <label for="npc_static_bio">Static Bio</label>
             <textarea id="npc_static_bio" name="npc_static_bio" placeholder="Fixed background, history, and facts."><?= htmlspecialchars($editItem["npc_static_bio"] ?? "") ?></textarea>
-            <small class="hint">Persistent biography that never changes during play. Good for canon facts.</small>
+            <small class="hint">Historical facts and background information.</small>
         </div>
 
         <div class="form-item span-2">
             <label for="appearance">Appearance</label>
             <textarea id="appearance" name="appearance" placeholder="Physical appearance."><?= htmlspecialchars($editItem["appearance"] ?? "") ?></textarea>
-            <small class="hint">Physical appearance.</small>
+            <small class="hint">Physical appearance. Keep it limited to character cosmetics, not equipment.</small>
         </div>
 
         <div class="form-item">
@@ -563,7 +679,7 @@ if (isset($_GET['race_icon'])) {
         <div class="form-item">
             <label for="personality">Personality</label>
             <textarea id="personality" name="personality" placeholder="Personality traits and speaking characteristics."><?= htmlspecialchars($editItem["personality"] ?? "") ?></textarea>
-            <small class="hint">Concise traits that guide tone and behavior. Avoid contradictions with Core.</small>
+            <small class="hint">Traits and quirks that guide tone and behavior.</small>
         </div>
 
         
@@ -583,19 +699,19 @@ if (isset($_GET['race_icon'])) {
         <div class="form-item">
             <label for="skills">Skills</label>
             <textarea id="skills" name="skills" placeholder="Strengths, abilities, and specialties."><?= htmlspecialchars($editItem["skills"] ?? "") ?></textarea>
-            <small class="hint">Highlight notable competencies that affect dialogue choices.</small>
+            <small class="hint">Highlight notable competencies of the NPC.</small>
         </div>
 
         <div class="form-item">
             <label for="speechstyle">Speech Style</label>
             <textarea id="speechstyle" name="speechstyle" placeholder="Dialect, cadence, verbal tics."><?= htmlspecialchars($editItem["speechstyle"] ?? "") ?></textarea>
-            <small class="hint">How they speak: formal, curt, poetic, archaic, etc.</small>
+            <small class="hint">How the NPC speaks their dialogue.</small>
         </div>
 
         <div class="form-item">
             <label for="goals">Goals</label>
             <textarea id="goals" name="goals" placeholder="Short and long-term objectives."><?= htmlspecialchars($editItem["goals"] ?? "") ?></textarea>
-            <small class="hint">Motivations that drive decisions and quest hooks.</small>
+            <small class="hint">Motivations and goals for the NPC.</small>
         </div>
 
 
@@ -747,12 +863,12 @@ if (isset($_GET['race_icon'])) {
 .modal-container { position:relative; top:auto; left:auto; transform:none; /*margin: 120px auto 40px auto*/; max-width:1000px; width:90%; background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; }
 .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
 .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; }
-.modal-body { max-height:calc(85vh - 100px); overflow-y:hidden; background:#2a2a2a; }
+.modal-body { max-height:calc(85vh - 100px); overflow-y:auto; background:#2a2a2a; }
 .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; }
 .modal-actions { display:flex; gap:8px; align-items:center; }
 .modal-save { background: rgb(242, 124, 17); color:#111; border:1px solid rgb(242, 124, 17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
 </style>
-<?php if ($totalPages > 1): ?>
+<?php if ($totalPages >= 1): ?>
 <style>
 .pagination { display:flex; gap:6px; align-items:center; justify-content:center; margin:10px 0 12px; flex-wrap:wrap; }
 .pagination a, .pagination span { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; text-decoration:none; }
@@ -835,7 +951,46 @@ if (isset($_GET['race_icon'])) {
       </div>
     </div>
     <div class="modal-body">
-      <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:75vh; border:0; background:transparent;"></iframe>
+      <div id="npc_modal_tabs" style="display:flex; gap:8px; padding:8px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2;">
+        <button type="button" class="pf-tab active" data-pane="pane_manual">✍️ Manual</button>
+        <button type="button" class="pf-tab" data-pane="pane_bio">📚 From Bio Database</button>
+      </div>
+      <div id="pane_manual" class="pf-pane active" style="padding:0;">
+        <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:70vh; border:0; background:transparent;"></iframe>
+      </div>
+      <div id="pane_bio" class="pf-pane" style="display:none; padding:10px;">
+        <div style="display:flex; gap:12px; align-items:flex-start;">
+          <div style="flex: 0 0 340px; max-width:340px; border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#2a2a2a;">
+            <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
+              <input id="bio_search_input" type="text" placeholder="Search bio database..." style="flex:1; padding:6px 8px; border:1px solid #4a4a4a; border-radius:6px; background:#2a2a2a; color:#e9efff;">
+              <select id="bio_letter" style="padding:6px 8px; border:1px solid #4a4a4a; border-radius:6px; background:#2a2a2a; color:#e9efff;">
+                <option value="">All</option>
+                <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option><option>K</option><option>L</option><option>M</option><option>N</option><option>O</option><option>P</option><option>Q</option><option>R</option><option>S</option><option>T</option><option>U</option><option>V</option><option>W</option><option>X</option><option>Y</option><option>Z</option>
+              </select>
+            </div>
+            <div id="bio_list" style="height:58vh; overflow:auto; display:flex; flex-direction:column; gap:6px;"></div>
+            <div id="bio_pager" style="display:flex; gap:6px; align-items:center; justify-content:center; margin-top:6px;"></div>
+          </div>
+          <div style="flex: 1 1 auto; min-width:0; border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#2a2a2a;">
+            <div style="margin-bottom:8px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <label class="label-with-toggle"><input id="bio_inc_core" type="checkbox" checked> Core</label>
+              <label class="label-with-toggle"><input id="bio_inc_ext" type="checkbox" checked> Extended Profile</label>
+              <label class="label-with-toggle"><input id="bio_inc_oghma" type="checkbox" checked> Oghma Tags</label>
+              <label class="label-with-toggle"><input id="bio_inc_vm" type="checkbox" checked> Voice & Meta</label>
+              <select id="bio_profile_id" title="Assign Profile" style="margin-left:auto; padding:6px 8px; border:1px solid #4a4a4a; border-radius:6px; background:#2a2a2a; color:#e9efff;">
+                <option value="">— Profile —</option>
+                <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); $sel = ($firstProfileId === $pid) ? ' selected' : ''; ?>
+                <option value="<?= htmlspecialchars($pid) ?>"<?= $sel ?>><?= htmlspecialchars($lbl) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <button id="bio_use_template" type="button" class="btn-base btn-primary">Use Template</button>
+            </div>
+            <div id="bio_detail" style="min-height:58vh;">
+              <div style="color:#9fb1c9">Select a template on the left</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -847,20 +1002,201 @@ if (isset($_GET['race_icon'])) {
   const PROFILES_BY_ID = <?= json_encode($profilesById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
-  function openModal(url){ iframe.src = url; modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  function openModal(url){
+    iframe.src = url;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    try {
+      const tabs = document.getElementById('npc_modal_tabs');
+      const bioPane = document.getElementById('pane_bio');
+      const manualPane = document.getElementById('pane_manual');
+      const isEdit = /[?&]edit=/.test(url);
+      if (isEdit){
+        if (tabs) tabs.style.display = 'none';
+        if (bioPane) { bioPane.style.display = 'none'; bioPane.classList.remove('active'); }
+        if (manualPane) { manualPane.style.display = 'block'; manualPane.classList.add('active'); }
+      } else {
+        if (tabs) tabs.style.display = 'flex';
+      }
+    } catch(_e){}
+  }
   function closeModal(){ modal.style.display = 'none'; document.body.style.overflow = 'auto'; try { iframe.src='about:blank'; } catch(_){} }
   const headerSave = document.getElementById('npc_modal_save_header');
   if (headerSave){
+    window.NPC_UPDATE_SAVE_STATE = function(){
+      try {
+        const doc = iframe && iframe.contentDocument;
+        const nameEl = doc ? doc.getElementById('npc_name') : null;
+        const val = nameEl ? String(nameEl.value||'').trim() : '';
+        const disable = (val === '');
+        headerSave.disabled = disable;
+        if (disable) headerSave.title = 'Enter NPC Name to save'; else headerSave.removeAttribute('title');
+      } catch(_e){}
+    };
+    // Watch for iframe content load and bind input listener
+    try {
+      iframe.addEventListener('load', function(){
+        try {
+          const doc = iframe && iframe.contentDocument;
+          const nameEl = doc ? doc.getElementById('npc_name') : null;
+          if (nameEl){
+            ['input','change','keyup'].forEach(evt=> nameEl.addEventListener(evt, window.NPC_UPDATE_SAVE_STATE));
+          }
+        } catch(_e){}
+        window.NPC_UPDATE_SAVE_STATE();
+      });
+    } catch(_e){}
     headerSave.addEventListener('click', function(){
       try {
+        // Guard: require NPC name
+        window.NPC_UPDATE_SAVE_STATE(); if (headerSave.disabled) { return; }
         const btn = iframe && iframe.contentDocument ? iframe.contentDocument.getElementById('npc_modal_save') : null;
         if (btn){ btn.click(); }
+        // else: nothing (no bio import submit anymore)
       } catch(_e){}
     });
   }
   document.addEventListener('click', function(e){ if (e.target && e.target.id==='npc_modal_close') closeModal(); });
   modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+  // Tabs in modal
+  (function(){
+    const tabs = document.querySelectorAll('#npc_modal_tabs .pf-tab');
+    function activate(id){
+      tabs.forEach(t=>t.classList.toggle('active', t.getAttribute('data-pane')===id));
+      document.querySelectorAll('.pf-pane').forEach(p=>{ p.style.display = (p.id===id) ? 'block' : 'none'; p.classList.toggle('active', p.id===id); });
+    }
+    tabs.forEach(tb=> tb.addEventListener('click', ()=> activate(tb.getAttribute('data-pane'))));
+    activate('pane_manual');
+  })();
+  // Bio DB wiring
+  (function(){
+    const list = document.getElementById('bio_list');
+    const pager = document.getElementById('bio_pager');
+    const inp = document.getElementById('bio_search_input');
+    const letter = document.getElementById('bio_letter');
+    const detail = document.getElementById('bio_detail');
+    const useBtn = document.getElementById('bio_use_template');
+    const createBtn = document.getElementById('bio_use_create');
+    const incCore = document.getElementById('bio_inc_core');
+    const incExt = document.getElementById('bio_inc_ext');
+    const incOgh = document.getElementById('bio_inc_oghma');
+    const incVM  = document.getElementById('bio_inc_vm');
+    const selProfile = document.getElementById('bio_profile_id');
+    let currentName = '';
+    let page = 1; let total = 0; let pageSize = 20;
+    async function fetchList(){
+      const params = new URLSearchParams({ bio_search:'1', search:(inp.value||''), letter:(letter.value||''), page:String(page), pageSize:String(pageSize) });
+      const res = await fetch('npc_master.php?'+params.toString()); let j={}; try{ j=await res.json(); }catch(_){ j={ok:false}; }
+      if (!j.ok) { list.innerHTML = '<div style="color:#ff6b6b">Failed to load</div>'; return; }
+      total = Number(j.total||0); page = Number(j.page||1); pageSize = Number(j.pageSize||20);
+      list.innerHTML = '';
+      (j.items||[]).forEach(it=>{
+        const div = document.createElement('div');
+        div.style.border = '1px solid #4a4a4a'; div.style.borderRadius='8px'; div.style.padding='8px'; div.style.cursor='pointer';
+        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${it.npc_name}</div>
+          <div style="color:#9fb1c9; font-size:12px; margin:4px 0">${it.core_preview||''}</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:#cfd9ea;">
+            ${it.voiceid?('<span>Voice: '+it.voiceid+'</span>'):''}
+            ${it.gender?('<span>Gender: '+it.gender+'</span>'):''}
+            ${it.race?('<span>Race: '+it.race+'</span>'):''}
+            ${it.refid?('<span>RefID: '+it.refid+'</span>'):''}
+            <span>Extended: ${String(it.extended_filled||0)}</span>
+          </div>`;
+        div.addEventListener('click', ()=> loadDetail(it.npc_name));
+        list.appendChild(div);
+      });
+      // pager
+      const pages = Math.max(1, Math.ceil(total / Math.max(1,pageSize)));
+      pager.innerHTML='';
+      const mk = (lab, p, dis)=>{ const b=document.createElement('button'); b.textContent=lab; b.disabled=!!dis; b.addEventListener('click', ()=>{ page=p; fetchList(); }); return b; };
+      pager.appendChild(mk('«', 1, page<=1));
+      pager.appendChild(mk('‹', Math.max(1,page-1), page<=1));
+      const start = Math.max(1, page-2), end = Math.min(pages, page+2);
+      for(let i=start;i<=end;i++){ const b=mk(String(i), i, i===page); pager.appendChild(b); }
+      pager.appendChild(mk('›', Math.min(pages,page+1), page>=pages));
+      pager.appendChild(mk('»', pages, page>=pages));
+    }
+    async function loadDetail(name){
+      currentName = name;
+      const params = new URLSearchParams({ bio_detail:'1', name:name });
+      const res = await fetch('npc_master.php?'+params.toString()); let j={}; try{ j=await res.json(); }catch(_){ j={ok:false}; }
+      if (!j.ok){ detail.innerHTML = '<div style="color:#ff6b6b">Failed to load detail</div>'; return; }
+      const d = j.data||{};
+      detail.innerHTML = `
+        <div style="font-size:18px; font-weight:700; color:#e9efff;">${d.npc_name||''}</div>
+        <div style="margin-top:8px; color:#cfd9ea;"><b style="color:rgb(242,124,17)">Core:</b><br>${escapeHtml(d.core||'')}</div>
+        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-top:8px;">
+          ${kv('Static', d.npc_static_bio)}
+          ${kv('Personality', d.personality)}
+          ${kv('Appearance', d.appearance)}
+          ${kv('Relationships', d.relationships)}
+          ${kv('Occupation', d.occupation)}
+          ${kv('Skills', d.skills)}
+          ${kv('Speech Style', d.speechstyle)}
+          ${kv('Goals', d.goals)}
+        </div>
+        <div style="margin-top:8px; color:#cfd9ea; display:flex; gap:10px; flex-wrap:wrap;">
+          ${badge('VoiceID', d.voiceid)}
+          ${badge('Gender', d.gender)}
+          ${badge('Race', d.race)}
+          ${badge('RefID', d.refid)}
+        </div>
+        <div style="margin-top:8px; color:#cfd9ea;"><b style="color:rgb(242,124,17)">Oghma Tags:</b> ${escapeHtml(d.oghma_knowledge_tags||'—')}</div>
+      `;
+    }
+    function kv(title, val){ const v=(val||'').trim(); return `<div><div style="color:rgb(242,124,17); font-weight:700;">${title}</div><div style="white-space:pre-wrap;">${escapeHtml(v||'—')}</div></div>`; }
+    function badge(k, v){ v=(v||'').trim(); if (!v) return ''; return `<span style="background:#3a3a3a; border:1px solid #4a4a4a; border-radius:999px; padding:3px 8px;">${k}: ${escapeHtml(v)}</span>`; }
+    function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    let deb = null; function refetch(){ if (deb) clearTimeout(deb); deb=setTimeout(()=>{ page=1; fetchList(); }, 250); }
+    if (inp) inp.addEventListener('input', refetch);
+    if (letter) letter.addEventListener('change', refetch);
+    if (useBtn) useBtn.addEventListener('click', async ()=>{
+      if (!currentName) return;
+      // Load detail and fill manual form in iframe
+      const params = new URLSearchParams({ bio_detail:'1', name:currentName });
+      const res = await fetch('npc_master.php?'+params.toString()); let j={}; try{ j=await res.json(); }catch(_){ j={ok:false}; }
+      if (!j.ok) return;
+      const d = j.data||{};
+      const doc = iframe && iframe.contentDocument; if (!doc) return;
+      function setVal(id, val){ const el = doc.getElementById(id); if (el) el.value = val==null?'':String(val); }
+      function setChk(id, on){ const el = doc.getElementById(id); if (el && el.type==='checkbox') el.checked = !!on; }
+      setVal('npc_name', d.npc_name||'');
+      if (incCore && incCore.checked) setVal('core', d.core||'');
+      if (incExt && incExt.checked) {
+        setVal('npc_static_bio', d.npc_static_bio||''); setVal('personality', d.personality||''); setVal('appearance', d.appearance||''); setVal('relationships', d.relationships||''); setVal('occupation', d.occupation||''); setVal('skills', d.skills||''); setVal('speechstyle', d.speechstyle||''); setVal('goals', d.goals||'');
+      }
+      if (incOgh && incOgh.checked) setVal('oghma_knowledge_tags', d.oghma_knowledge_tags||'');
+      if (incVM && incVM.checked) { setVal('voiceid', d.voiceid||''); setVal('gender', d.gender||''); setVal('race', d.race||''); setVal('refid', d.refid||''); }
+      if (selProfile && selProfile.value) { const el = doc.getElementById('profile_id'); if (el) el.value = selProfile.value; }
+      // Switch to manual tab
+      document.querySelectorAll('#npc_modal_tabs .pf-tab').forEach(t=> t.classList.toggle('active', t.getAttribute('data-pane')==='pane_manual'));
+      document.getElementById('pane_manual').style.display='block'; document.getElementById('pane_manual').classList.add('active');
+      document.getElementById('pane_bio').style.display='none'; document.getElementById('pane_bio').classList.remove('active');
+      // Update save button state after auto-filling name
+      try { if (typeof window.NPC_UPDATE_SAVE_STATE === 'function') window.NPC_UPDATE_SAVE_STATE(); } catch(_e){}
+    });
+    if (createBtn) createBtn.addEventListener('click', async ()=>{
+      if (!currentName) return;
+      const fd = new FormData();
+      fd.append('import_from_bio','1');
+      fd.append('name', currentName);
+      fd.append('include_core', (incCore && incCore.checked) ? '1':'');
+      fd.append('include_extended', (incExt && incExt.checked) ? '1':'');
+      fd.append('include_oghma', (incOgh && incOgh.checked) ? '1':'');
+      fd.append('include_voice_meta', (incVM && incVM.checked) ? '1':'');
+      if (selProfile && selProfile.value) fd.append('profile_id', selProfile.value);
+      const res = await fetch('npc_master.php', { method:'POST', body: fd });
+      let j={}; try{ j=await res.json(); }catch(_){ j={ok:false}; }
+      if (j && j.ok){
+        window.postMessage({ type:'npc_saved', id: j.id, data: j.data }, '*');
+      } else {
+        alert('Import failed: '+(j && j.error ? j.error : 'Unknown'));
+      }
+    });
+    // initial fetch
+    try { fetchList(); } catch(_){}
+  })();
   // Prevent browser history back/forward inside modal (mouse buttons/backspace)
   (function(){
     function blockNav(ev){ ev.preventDefault(); ev.stopPropagation(); return false; }
@@ -1041,16 +1377,13 @@ if (isset($_GET['race_icon'])) {
                 <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
                 <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"></span></div>
                 <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"></span></div>
-                <div class="npc-line"><span class="npc-muted">Tags:</span> <span class="npc-tags"></span></div>
               </div>
               <div class="npc-right"></div>
             </div>
-            <div class="npc-actions">
-                <a class="btn btn-danger" href="?delete=${id}" onclick="return confirm('Delete this NPC?');">Delete</a>
-            </div>`;
+            `;
           grid.prepend(div);
           // Wire edit button
-          div.addEventListener('click', function(ev){ if (ev.target.closest('.npc-actions')) return; ev.preventDefault(); openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
+          div.addEventListener('click', function(ev){ if (ev.target.closest('.npc-title-actions')) return; ev.preventDefault(); openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1'); });
           card = div;
         }
       }
@@ -1062,7 +1395,6 @@ if (isset($_GET['race_icon'])) {
         setText('.npc-voiceid', data.voiceid);
         setText('.npc-refid', data.refid);
         setText('.npc-oghma', (data.oghma_knowledge_tags==null || String(data.oghma_knowledge_tags).trim()==='') ? 'none' : data.oghma_knowledge_tags);
-        setText('.npc-tags', (data.tags==null || String(data.tags).trim()==='') ? 'none' : data.tags);
         // Update title tags pill
         try {
           const top = card.querySelector('.npc-title-actions .npc-tags-top');
