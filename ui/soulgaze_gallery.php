@@ -23,9 +23,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
     main { padding-top: 60px; padding-bottom: 40px; }
-    .gallery-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:6px 0 12px; }
-    .gallery-header h1 { margin:0; font-family:'MagicCards', serif; word-spacing:6px; color:rgb(242,124,17); font-size:1.8em; }
-    .gallery-meta { color:#cfd9ea; font-size:13px; }
+    @font-face { font-family: 'MagicCards'; src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype'); font-weight: normal; font-style: normal; }
+    .gallery-header { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; margin:10px 0 16px; }
+    .gallery-header h1 { margin:0; font-family:'MagicCards', serif; word-spacing:8px; color:rgb(242,124,17); font-size:2.2em; text-align:center; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .gallery-meta { color:#cfd9ea; font-size:13px; text-align:center; }
     .grid { display:grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap:10px; }
     @media (max-width: 1600px){ .grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
     @media (max-width: 1300px){ .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -96,7 +97,7 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         <div class="gallery-meta">Found <?php echo number_format(count($images)); ?> image(s)</div>
     </div>
     <?php if (empty($images)): ?>
-        <div class="empty">No images found in <code>/data/pictures/gallery/</code>.</div>
+        <div class="empty">No images found/ Make sure to use the Soulgaze hotkey ingame to take pictures!</code>.</div>
     <?php else: ?>
         <div class="grid">
             <?php foreach ($images as $img): $n = $img['name']; $u = $img['url']; ?>
