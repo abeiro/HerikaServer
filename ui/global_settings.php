@@ -116,20 +116,59 @@ function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
     return $buffer;
 }
 
+// Helper: humanize a flat name like PLAYER_NAME or FEATURES@MEMORY_EMBEDDING@ENABLED
+function pretty_label(string $flatName): string {
+    // For Memory Embedding keys, show only the final part
+    if (strpos($flatName, 'FEATURES@MEMORY_EMBEDDING@') === 0) {
+        $parts = explode('@', $flatName);
+        $last = end($parts) ?: $flatName;
+        $last2 = str_replace('_', ' ', strtolower(trim($last)));
+        return ucwords($last2);
+    }
+    $parts = explode('@', $flatName);
+    $prettyParts = [];
+    foreach ($parts as $p) {
+        $p2 = str_replace('_', ' ', strtolower(trim($p)));
+        $prettyParts[] = ucwords($p2);
+    }
+    return implode(' → ', $prettyParts);
+}
+
+// Helper: choose icon per setting name
+function icon_for_field(string $flatName): string {
+    $u = strtoupper($flatName);
+    // Memory-related
+    if (strpos($u, 'FEATURES@MEMORY_EMBEDDING@') === 0 || strpos($u, 'MEMORY_') !== false) return '💭';
+    // Specific keys
+    if ($u === 'PLAYER_NAME') return '🏷️';
+    if ($u === 'PROMPT_HEAD') return '🔝';
+    // Respeech related
+    if (strpos($u, 'RESPEECH') !== false) return '🦜';
+    if (strpos($u, 'SPEECH_STYLE') !== false) return '🦜';
+    // Prompts (summary / dynamic prompts)
+    if (strpos($u, 'SUMMARY_PROMPT') === 0) return '🎭';
+    if (strpos($u, 'DYNAMIC_PROMPT_') === 0) return '🎭';
+    // Diary
+    if (strpos($u, 'DIARY') !== false) return '📙';
+    // Narrator
+    if (strpos($u, 'NARRATOR') !== false) return '🗣️';
+    return '⚙️';
+}
+
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
-     'General' => [
+    'General' => [
         [ 'name' => 'PLAYER_NAME', 'type' => 'text' ],
-        [ 'name' => 'PROMPT_HEAD', 'type' => 'text' ],
+        [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
         [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
     ],
-    'Prompts' => [
-        [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
+    'Dynamic Prompts' => [
         [ 'name' => 'DYNAMIC_PROMPT_PERSONALITY', 'type' => 'longstring' ],
         [ 'name' => 'DYNAMIC_PROMPT_RELATIONSHIPS', 'type' => 'longstring' ],
         [ 'name' => 'DYNAMIC_PROMPT_OCCUPATION', 'type' => 'longstring' ],
@@ -147,10 +186,8 @@ $gsSections = [
         [ 'name' => 'AUTO_DIARY_WAIT', 'type' => 'boolean' ],
         [ 'name' => 'DIARY_COOLDOWN', 'type' => 'integer', 'min' => 10, 'max' => 1200 ]
     ],
-    'Events' => [
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ]
-    ],
     'Memory' => [
+        [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
@@ -379,13 +416,13 @@ function current_value(string $flatName, array $currentConf) {
                                 $fname = $f['name'];
                                 $ftype = $f['type'];
                                 $current = current_value($fname, $currentConf);
-                                $label = str_replace(['@'], [' → '], $fname);
+                                $label = pretty_label($fname);
                                 $help = $gsDesc($fname);
                             ?>
                             <div class="provider-card">
                                 <div class="provider-head">
                                     <div class="provider-title">
-                                        <div class="provider-icon">⚙️</div>
+                                        <div class="provider-icon"><?php echo icon_for_field($fname); ?></div>
                                         <div><?php echo htmlspecialchars($label); ?></div>
                                         <?php if ($ftype === 'boolean'): ?>
                                             <div class="provider-toggle">
