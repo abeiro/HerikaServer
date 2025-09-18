@@ -131,6 +131,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
         <span class="message"></span>
     </div>
 
+    <form method="post" action="api_badge.php">
+
 <?php
 $GLOBALS["db"] = new sql();
 $apiBadge = new ApiBadge();
@@ -264,7 +266,7 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
 
 <div class="content-grid">
     <div class="content-section full-width-section">
-        <h2>Preset Keys</h2>
+        <h2>Preset Keys (Saves Automatically)</h2>
         <div class="provider-grid">
             <?php foreach ($presetRows as $slug => $row): ?>
                 <div class="provider-card">
@@ -303,6 +305,10 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
                             <div class="provider-icon">🧩</div>
                             <div>Custom Key</div>
                         </div>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="button btn-save" data-save-id="<?= htmlspecialchars($row['id']) ?>">Save</button>
+                            <button type="button" class="button btn-delete" data-delete-id="<?= htmlspecialchars($row['id']) ?>">Delete</button>
+                        </div>
                     </div>
                     <input type="hidden" name="custom[id][]" value="<?= htmlspecialchars($row['id']) ?>">
                     <label>Label</label>
@@ -318,6 +324,8 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
         <button type="button" class="action-button add-new" onclick="addCustomKey()">Add Custom Key</button>
     </div>
 </div>
+
+    </form>
 
 <script>
 function toggleVisibility(btn){
@@ -341,13 +349,17 @@ function addCustomKey(){
                 <div class="provider-icon">🧩</div>
                 <div>Custom Key</div>
             </div>
+            <div style="display:flex; gap:6px;">
+                <button type="button" class="button btn-save" data-save-id="">Save</button>
+                <button type="button" class="button btn-delete" data-delete-id="">Delete</button>
+            </div>
         </div>
         <input type="hidden" name="custom[id][]" value="">
         <label>Label</label>
-        <input type="text" name="custom[label][]" value="" placeholder="Provider label (e.g., MyService)">
+        <input type="text" name="custom[label][]" value="" placeholder="Provider label (e.g., MyService)" data-autosave="custom" data-field="label" data-id="">
         <label>API Key</label>
         <div class="provider-body">
-            <input type="password" name="custom[api_key][]" value="" placeholder="Paste API key">
+            <input type="password" name="custom[api_key][]" value="" placeholder="Paste API key" data-autosave="custom" data-field="api_key" data-id="">
             <button type="button" class="button" onclick="toggleVisibility(this)">Show</button>
         </div>
     `;
@@ -384,14 +396,57 @@ function addCustomKey(){
                 formData.append('id', id);
                 formData.append(field, t.value || '');
             } else {
-                // Create new custom row when user types and no id yet
-                formData.append('create','1');
-                // Prevent preset label usage for customs
-                formData.append('label', field==='label' ? (t.value||'') : 'Custom Key');
-                if (field==='api_key') formData.append('api_key', t.value || '');
+                // Do not auto-create new rows; require explicit Save
+                return;
             }
         }
         postUpdate(formData);
+    }, { passive:true });
+    // Per-card Save handler
+    document.addEventListener('click', async function(e){
+        const btn = e.target && e.target.closest && e.target.closest('.btn-save');
+        if (!btn) return;
+        const card = btn.closest('.custom-card');
+        if (!card) return;
+        const id = btn.getAttribute('data-save-id') || '';
+        const labelInput = card.querySelector('input[name="custom[label][]"]');
+        const keyInput = card.querySelector('input[name="custom[api_key][]"]');
+        const labelVal = labelInput ? labelInput.value.trim() : '';
+        const keyVal = keyInput ? keyInput.value.trim() : '';
+        const fd = new FormData();
+        if (id){
+            fd.append('update','1');
+            fd.append('id', id);
+            fd.append('label', labelVal);
+            fd.append('api_key', keyVal);
+        } else {
+            if (!labelVal && !keyVal) return; // nothing to save
+            fd.append('create','1');
+            fd.append('label', labelVal || 'Custom Key');
+            fd.append('api_key', keyVal);
+        }
+        try { await fetch('api_badge.php', { method:'POST', body: fd }); } catch(_e){}
+        // Reload to reflect persisted id/state
+        try { window.location.reload(); } catch(_){}
+    }, { passive:true });
+    // Delete handler (existing rows: server delete; new rows: remove card)
+    document.addEventListener('click', function(e){
+        const btn = e.target && e.target.closest && e.target.closest('.btn-delete');
+        if (!btn) return;
+        const id = btn.getAttribute('data-delete-id') || '';
+        const card = btn.closest('.custom-card');
+        if (!confirm('Delete this custom API key?')) return;
+        if (!id){
+            if (card && card.parentNode) card.parentNode.removeChild(card);
+            return;
+        }
+        try {
+            const url = new URL('api_badge.php', window.location.href);
+            url.searchParams.set('delete', id);
+            window.location.href = url.toString();
+        } catch(_e){
+            window.location.href = 'api_badge.php?delete=' + encodeURIComponent(id);
+        }
     }, { passive:true });
 })();
 
