@@ -751,7 +751,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                         // Compare Tamrielic dates
                         $eventDay = isset($eventDate['day']) ? $eventDate['day'] : null;
                         if ($eventDay == $dayCount) {
-                            error_log("Debug - Found event for day {$dayCount}");
+                            //error_log("Debug - Found event for day {$dayCount}");
                             $hasEvents = true;
                             $eventCount++;
                         }
@@ -1109,11 +1109,11 @@ if ($shouldFetchEvents) {
             </tr>
             <?php
             if (isset($_GET['filter']) && $_GET['filter'] === 'people' && isset($_GET['person'])) {
-                error_log("Filtering by person: " . urldecode($_GET['person']));
+                //error_log("Filtering by person: " . urldecode($_GET['person']));
                 
                 // Get entries for the selected person
                 $entries = getEntriesByPerson($conn, $schema, urldecode($_GET['person']));
-                error_log("Retrieved entries: " . print_r($entries, true));
+                //error_log("Retrieved entries: " . print_r($entries, true));
                 
                 if (!empty($entries)) {
                     // Sort entries by localts in descending order
@@ -1124,7 +1124,7 @@ if ($shouldFetchEvents) {
                     foreach ($entries as $row) {
                         $processed_row = process_diary_row($row, false);
                         if ($processed_row === null) {
-                            error_log("Skipping null processed row");
+                            //error_log("Skipping null processed row");
                             continue;
                         }
 
@@ -1160,7 +1160,7 @@ if ($shouldFetchEvents) {
                               </tr>";
                     }
                 } else {
-                    error_log("No entries found for person");
+                    //error_log("No entries found for person");
                     echo "<tr><td colspan='5' style='text-align: center; padding: 20px;'>No diary entries found for this person.</td></tr>";
                 }
             } elseif ($shouldFetchEvents && $result) {

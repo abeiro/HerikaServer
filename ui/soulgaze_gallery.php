@@ -42,8 +42,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     .empty { color:#9fb1c9; text-align:center; margin:30px 0; }
     /* Lightbox */
     .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; padding:20px; }
-    .lightbox .inner { position:relative; max-width:95vw; max-height:92vh; }
-    .lightbox img { max-width:95vw; max-height:92vh; display:block; border:1px solid #4a4a4a; border-radius:8px; background:#111; }
+    .lightbox .inner { position:relative; max-width:95vw; max-height:92vh;min-width: 1024px;margin-left: auto;margin-right: auto;text-align: center;background-color: black; }
+    .lightbox img { max-width:95vw; max-height:92vh; display:block; border:1px solid #4a4a4a; border-radius:8px; background:#111; margin-left: auto;margin-right: auto;}
     .lightbox .tools { position:absolute; top:8px; right:8px; display:flex; gap:6px; }
     .lightbox .tools a, .lightbox .tools button { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; text-decoration:none; font-weight:700; }
     .lightbox .tools a:hover, .lightbox .tools button:hover { background:#3a3a3a; }
