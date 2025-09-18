@@ -230,26 +230,28 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
             console.error('Error:', error);
         });
      } else if (e.target === lb_del) {
-        showProcessing();
+        if (confirm('Sure thing?. No recycle bin here')) {
+            showProcessing();
 
-        fetch('cmd/gallery_delete.php', {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ source: lbImg.src })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Success:', data);
-            close()
-            // Reload the current document to reflect changes
-            window.location.reload();
-            // Handle the response data here
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
+            fetch('cmd/gallery_delete.php', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ source: lbImg.src })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                close()
+                // Reload the current document to reflect changes
+                window.location.reload();
+                // Handle the response data here
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
      }
     });
 
