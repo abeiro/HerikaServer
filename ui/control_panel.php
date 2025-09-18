@@ -46,6 +46,7 @@ main { padding-top: 80px; }
         <button class="tab-button" data-tab="responses">💬Response Queue</button>
         <button class="tab-button" data-tab="playthrough">🎮Playthrough Manager</button>
         <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
+        <a href="<?php echo $webRoot; ?>/ui/core/migrate_profiles.php" class="btn-base btn-primary" style="margin-left:auto" title="Migrate all legacy conf_*.php profiles to the database and archive them.">⚙️ Migrate Legacy Profiles</a>
     </div>
 
     <div id="srvlogs" class="tab-content active">
