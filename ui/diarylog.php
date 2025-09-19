@@ -893,12 +893,12 @@ if ($shouldFetchEvents) {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
-    <title>📝CHIM Diary Log</title>
+    <title>📝Diary Log</title>
 </head>
 <body>
     <main class="container">
         <div class="page-header">
-            <h1>📝CHIM Diary Log</h1>
+            <h1>📝Diary Log</h1>
         </div>
 
         <?php

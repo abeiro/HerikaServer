@@ -750,12 +750,12 @@ if ($shouldFetchEvents) {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
-    <title>📆CHIM Adventure Log</title>
+    <title>📆Adventure Log</title>
 </head>
 <body>
     <main class="container">
         <div class="page-header">
-            <h1>📆CHIM Adventure Log</h1>
+            <h1>📆Adventure Log</h1>
         </div>
 
         <?php
