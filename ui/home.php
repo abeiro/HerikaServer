@@ -910,7 +910,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 <td>" . htmlspecialchars($chimModel) . "</td>
                             </tr>
                             <tr>
-                                <td>Focus on Chat</td>
+                                <td>Focus Chat</td>
                                 <td>" . htmlspecialchars($chimContextMode) . "</td>
                             </tr>
                         </table>
