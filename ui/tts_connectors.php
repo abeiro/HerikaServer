@@ -15,6 +15,9 @@ $samplePlayerDefaults = [
 ];
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "online_translation.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 
 // Determine web root (match other pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -34,6 +37,72 @@ $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melo
 
 // Current configuration (flattened values and titles from loader)
 $currentConf = conf_loader_load();
+
+// TTS Quick Test handler
+$ttsTestOutputUrl = '';
+$ttsTestTextDefault = "In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
+$ttsTestText = $ttsTestTextDefault;
+$ttsTestVoice = '';
+
+// Default voice per provider for the quick test (only applied if the field is blank)
+$__selLower = strtolower($selectedFunction);
+$__defaultVoice = ($__selLower === 'xtts-fastapi') ? 'TheNarrator' : (in_array($__selLower, ['melotts','piper-tts','xvasynth'], true) ? 'malenord' : '');
+if ($ttsTestVoice === '') { $ttsTestVoice = $__defaultVoice; }
+try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) $GLOBALS['db'] = new sql(); } catch (Throwable $_) {}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
+    $ttsTestText = isset($_POST['tts_text']) ? (string)$_POST['tts_text'] : '';
+    if (trim($ttsTestText) === '') {
+        $ttsTestText = $ttsTestTextDefault;
+    }
+    $ttsTestVoice = isset($_POST['tts_voiceid']) ? trim((string)$_POST['tts_voiceid']) : '';
+    // Allow previewing current dropdown provider without saving
+    if (isset($_POST['TTSFUNCTION']) && is_string($_POST['TTSFUNCTION'])) {
+        $selectedFunction = (string)$_POST['TTSFUNCTION'];
+    }
+    // Prepare globals for TTS (minimal runtime context expected by returnLines and TTS backends)
+    $GLOBALS["TTSFUNCTION"] = $selectedFunction;
+    $GLOBALS["HERIKA_NAME"] = "The Narrator";
+    $GLOBALS["AVOID_TTS_CACHE"] = true;
+    $GLOBALS["TTS_FFMPEG_FILTERS"] = [];
+    $GLOBALS["HERIKA_ANIMATIONS"] = false;
+    $GLOBALS["SCRIPTLINE_LISTENER"] = '';
+    $GLOBALS["SCRIPTLINE_EXPRESSION"] = '';
+    $GLOBALS["DEBUG_DATA"] = [];
+    $GLOBALS["FEATURES"] = $GLOBALS["FEATURES"] ?? [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"])) $GLOBALS["FEATURES"]["MISC"] = [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
+    if (!isset($GLOBALS["PLAYER_NAME"])) $GLOBALS["PLAYER_NAME"] = 'Player';
+    // Fake gameRequest indices used by logging in returnLines
+    $gameRequest = [ 'tts_quick_test', time(), time(), '' ];
+    $startTime = microtime(true);
+    // Voice override mapping (custom input wins)
+    $selLower = strtolower($selectedFunction);
+    if ($ttsTestVoice !== '') {
+        $GLOBALS["PATCH_OVERRIDE_VOICE"] = $ttsTestVoice;
+    } else {
+        if ($selLower === 'xtts-fastapi') {
+            $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
+        } else {
+            $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
+        }
+    }
+    try {
+        // Optional translation flow (kept simple)
+        // Translation::translate($ttsTestText);
+        // $speakText = Translation::$response ?: $ttsTestText;
+        $speakText = $ttsTestText;
+        // Generate TTS without streaming
+        returnLines([$speakText], false);
+        $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
+        if ($file !== '') {
+            $ttsTestOutputUrl = $webRoot . '/soundcache/' . $file . '?ts=' . time();
+        }
+    } catch (Throwable $e) {
+        Logger::error('TTS quick test failed: '.$e->getMessage());
+        $ttsTestOutputUrl = '';
+    }
+    unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+}
 
 // Helpers
 function tts_current_value(string $flatName, array $currentConf) {
@@ -226,11 +295,13 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 					</div>
 					<div class="provider-body">
 						<label for="TTSFUNCTION">TTS Selection</label>
-						<select name="TTSFUNCTION" id="TTSFUNCTION" onchange="this.form.submit()">
+                        <select name="TTSFUNCTION" id="TTSFUNCTION" onchange="this.form.submit()">
 							<?php foreach ($ttsOptions as $opt): ?>
 								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
 							<?php endforeach; ?>
 						</select>
+						<div></div>
+						<div class="help">Quick test will synthesize a short sample using: <b><?php echo htmlspecialchars(strtolower($selectedFunction)==='xtts-fastapi'?'TheNarrator':'malenord'); ?></b></div>
 					</div>
 				</div>
 
@@ -321,6 +392,56 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 						<?php if (!empty($descPlayerLang)): ?><div class="help"><?php echo $descPlayerLang; ?></div><?php endif; ?>
 
 
+					</div>
+				</div>
+				<!-- TTS Test -->
+				<div class="provider-card">
+					<div class="provider-head">
+						<div class="provider-title">
+							<div class="provider-icon">🧪</div>
+							<div>TTS Test</div>
+						</div>
+					</div>
+					<div class="provider-body">
+						<label for="tts_text">Text to synthesize</label>
+						<textarea id="tts_text" name="tts_text" rows="3" placeholder="Write a sample line to synthesize..."><?php echo htmlspecialchars($ttsTestText); ?></textarea>
+						<div></div>
+						<div>
+                        <label for="tts_voiceid">Voice ID (optional)</label>
+                        <input type="text" id="tts_voiceid" name="tts_voiceid" value="<?php echo htmlspecialchars($ttsTestVoice); ?>" placeholder="e.g. TheNarrator or malenord" style="width:100%">
+                        <script>
+                        (function(){
+                            try {
+                                var sel = document.getElementById('TTSFUNCTION');
+                                var voice = document.getElementById('tts_voiceid');
+                                if (sel && voice && !voice.value) {
+                                    var v = sel.value.toLowerCase();
+                                    if (v==='xtts-fastapi') voice.placeholder = 'TheNarrator';
+                                    else if (v==='melotts' || v==='piper-tts' || v==='xvasynth') voice.placeholder = 'malenord';
+                                }
+                                if (sel && voice){
+                                    sel.addEventListener('change', function(){
+                                        if (voice && !voice.value){
+                                            var vv = String(sel.value||'').toLowerCase();
+                                            voice.placeholder = (vv==='xtts-fastapi') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
+                                        }
+                                    });
+                                }
+                            } catch(e){}
+                        })();
+                        </script>
+						</div>
+						<div>
+							<button type="submit" class="btn-primary" name="tts_quick_test" value="1">Test</button>
+						</div>
+						<div></div>
+						<div>
+							<?php if (!empty($ttsTestOutputUrl)): ?>
+								<audio controls style="width:100%; max-width:500px"><source src="<?php echo htmlspecialchars($ttsTestOutputUrl); ?>" type="audio/wav"></audio>
+							<?php elseif (isset($_POST['tts_quick_test'])): ?>
+								<div style="color:#ffb862">No audio produced. Check connector settings and logs.</div>
+							<?php endif; ?>
+						</div>
 					</div>
 				</div>
 			</div>
