@@ -97,7 +97,7 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         <div class="gallery-meta">Found <?php echo number_format(count($images)); ?> image(s)</div>
     </div>
     <?php if (empty($images)): ?>
-        <div class="empty">No images found/ Make sure to use the Soulgaze hotkey ingame to take pictures!</code>.</div>
+        <div class="empty">No images found. Make sure to use the Soulgaze hotkey ingame to take pictures!</div>
     <?php else: ?>
         <div class="grid">
             <?php foreach ($images as $img): $n = $img['name']; $u = $img['url']; ?>
