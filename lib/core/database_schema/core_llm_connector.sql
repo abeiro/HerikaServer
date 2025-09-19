@@ -84,10 +84,11 @@ ALTER TABLE ONLY public.core_llm_connector ALTER COLUMN id SET DEFAULT nextval('
 --
 -- Data for Name: core_llm_connector; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
-INSERT INTO public.core_llm_connector VALUES (1, 'gemini flash 2', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.0-flash-001', NULL, 'openrouterjson', NULL, 250, 1, 0, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'openrouter');
-INSERT INTO public.core_llm_connector VALUES (2, 'qwen3-235b-a22b-2507', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'qwen/qwen3-235b-a22b-2507', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'openrouter');
-INSERT INTO public.core_llm_connector VALUES (3, 'deepseek-r1-0528', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'deepseek/deepseek-r1-0528', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'openrouter');
-INSERT INTO public.core_llm_connector VALUES (4, 'openrouter llama-4-maverick', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'meta-llama/llama-4-maverick', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'openrouter');
+
+INSERT INTO public.core_llm_connector VALUES (1, 'DeepSeek Chat V3.1', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'deepseek/deepseek-chat-v3.1', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'openrouter');
+INSERT INTO public.core_llm_connector VALUES (2, 'Gemini Flash 2', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.0-flash-001', NULL, 'openrouterjson', NULL, 250, 1, 0, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'openrouter');
+INSERT INTO public.core_llm_connector VALUES (3, 'Sonnet 3.7', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'anthropic/claude-3.7-sonnet', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'openrouter');
+INSERT INTO public.core_llm_connector VALUES (4, 'Qwen3-235b', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'qwen/qwen3-235b-a22b-2507', NULL, 'openrouterjson', NULL, 250, 1, NULL, 1, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'openrouter');
 
 
 --
