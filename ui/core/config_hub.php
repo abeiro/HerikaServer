@@ -51,9 +51,6 @@ main { padding: 80px 10px 10px; height: 100vh; }
             <button class="tab-button active" data-tab="npc">🌟CHIM NPCs</button>
             <button class="tab-button" data-tab="profiles">🏗️Profile Builder</button>
             <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
-            <button class="tab-button" data-tab="ttscfg">🔊TTS Connectors</button>
-            <button class="tab-button" data-tab="sttcfg">🎤STT Connectors</button>
-            <button class="tab-button" data-tab="ittcfg">🖼️ITT Connectors</button>
             <button class="tab-button" data-tab="keys">🔑API Keys</button>
             <button class="tab-button" data-tab="oghma">🐙Oghma Infium</button>
             <button class="tab-button" data-tab="npcbio">📚NPC Biographies</button>

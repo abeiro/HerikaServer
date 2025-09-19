@@ -8,6 +8,10 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
 // Load schema/helpers without requiring a potentially broken conf.php
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
+// Include helpers used by TTS quick test
+@include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
+@include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "online_translation.php");
+@include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 // Seed defaults from sample so UI has baseline values even if conf.php is broken
 @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
 
@@ -31,6 +35,88 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
 // Load schema and current configuration
 $confSchema = conf_loader_load_schema();
 $currentConf = conf_loader_load();
+
+// Raw schema for provider groups (TTS/STT/ITT)
+$schemaPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_schema.json";
+$rawSchema = @json_decode(@file_get_contents($schemaPath), true);
+if (!is_array($rawSchema)) $rawSchema = [];
+$providersTts = is_array($rawSchema['TTS'] ?? null) ? $rawSchema['TTS'] : [];
+$providersStt = is_array($rawSchema['STT'] ?? null) ? $rawSchema['STT'] : [];
+$ittProviders = is_array($rawSchema['ITT'] ?? null) ? $rawSchema['ITT'] : [];
+$ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram' ];
+$sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram' ];
+$ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_openai','openrouter','llamacpp' ];
+// Exclude llamacpp per existing ITT page behavior
+$ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return strtolower($v) !== 'llamacpp'; }));
+
+// Mappings
+$ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram' ];
+$sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM' ];
+$ittMap = [ 'openai' => 'openai','google_openai' => 'google_openai','openrouter' => 'openrouter' ];
+
+// Active tab tracking for postback previews
+$activeTab = (isset($_POST['gs_tab']) && is_string($_POST['gs_tab'])) ? (string)$_POST['gs_tab'] : 'tab-global';
+
+// Selected providers for render; preview POST (no save) should reflect immediate selection
+$ttsSelRender = isset($_POST['TTSFUNCTION']) && !isset($_POST['save_all']) ? (string)$_POST['TTSFUNCTION'] : (string)current_value('TTSFUNCTION', $currentConf);
+if ($ttsSelRender === '' && !empty($ttsOptions)) { $ttsSelRender = (string)$ttsOptions[0]; }
+$sttSelRender = isset($_POST['STTFUNCTION']) && !isset($_POST['save_all']) ? (string)$_POST['STTFUNCTION'] : (string)current_value('STTFUNCTION', $currentConf);
+if ($sttSelRender === '' && !empty($sttOptions)) { $sttSelRender = (string)$sttOptions[0]; }
+$ittSelRender = isset($_POST['ITTFUNCTION']) && !isset($_POST['save_all']) ? (string)$_POST['ITTFUNCTION'] : (string)current_value('ITTFUNCTION', $currentConf);
+if ($ittSelRender === '' && !empty($ittOptions)) { $ittSelRender = (string)$ittOptions[0]; }
+
+// TTS Quick Test (inline) handler
+$ttsTestOutputUrl = '';
+$ttsTestTextDefault = "In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
+$ttsTestText = $ttsTestTextDefault;
+$ttsTestVoice = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
+    try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php"); if (isset($GLOBALS["DBDRIVER"])) @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php"); $GLOBALS['db'] = new sql(); } } catch (Throwable $_) {}
+    $ttsTestText = isset($_POST['tts_text']) ? (string)$_POST['tts_text'] : '';
+    if (trim($ttsTestText) === '') { $ttsTestText = $ttsTestTextDefault; }
+    $selectedFunction = isset($_POST['TTSFUNCTION']) ? (string)$_POST['TTSFUNCTION'] : $ttsSelRender;
+    $ttsTestVoice = isset($_POST['tts_voiceid']) ? trim((string)$_POST['tts_voiceid']) : '';
+    $GLOBALS["TTSFUNCTION"] = $selectedFunction;
+    $GLOBALS["HERIKA_NAME"] = "The Narrator";
+    $GLOBALS["AVOID_TTS_CACHE"] = true;
+    $GLOBALS["TTS_FFMPEG_FILTERS"] = [];
+    $GLOBALS["HERIKA_ANIMATIONS"] = false;
+    $GLOBALS["SCRIPTLINE_LISTENER"] = '';
+    $GLOBALS["SCRIPTLINE_EXPRESSION"] = '';
+    $GLOBALS["DEBUG_DATA"] = [];
+    $GLOBALS["FEATURES"] = $GLOBALS["FEATURES"] ?? [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"])) $GLOBALS["FEATURES"]["MISC"] = [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
+    if (!isset($GLOBALS["PLAYER_NAME"])) $GLOBALS["PLAYER_NAME"] = 'Player';
+    $gameRequest = [ 'tts_quick_test', time(), time(), '' ];
+    $selLower = strtolower($selectedFunction);
+    if ($ttsTestVoice !== '') {
+        $GLOBALS["PATCH_OVERRIDE_VOICE"] = $ttsTestVoice;
+    } else {
+        if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator'; else $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
+    }
+    try {
+        $speakText = $ttsTestText;
+        returnLines([$speakText], false);
+        $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
+        if ($file !== '') { $ttsTestOutputUrl = $webRoot . '/soundcache/' . $file . '?ts=' . time(); }
+    } catch (Throwable $e) {
+        Logger::error('TTS quick test failed: '.$e->getMessage());
+        $ttsTestOutputUrl = '';
+    }
+    unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+}
+
+// If TTS quick test was requested via AJAX, return JSON and exit early
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test']) && isset($_POST['ajax'])) {
+    while (@ob_end_clean());
+    header('Content-Type: application/json');
+    echo json_encode([
+        'ok' => ($ttsTestOutputUrl !== ''),
+        'url' => $ttsTestOutputUrl,
+    ]);
+    exit;
+}
 
 // Helper: flatten currentConf into name=>value pairs like conf_wizard/conf_writer
 function flatten_current_conf(array $currentConf, array $confSchema): array {
@@ -242,6 +328,10 @@ if ($hasForeign) {
 // Handle Save
 $saveSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
+	// Reload latest configuration to avoid overwriting changes from other pages
+	$confFile = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+	@clearstatcache(true, $confFile);
+	$currentConf = conf_loader_load();
     // Flatten existing conf to full map
     $allPairs = flatten_current_conf($currentConf, $confSchema);
 
@@ -265,18 +355,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         }
     }
 
+	// Apply TTS overrides (selection + provider fields + Player TTS)
+	if (isset($_POST['TTSFUNCTION'])) {
+		$ttsSel = (string)$_POST['TTSFUNCTION'];
+		$allPairs['TTSFUNCTION'] = $ttsSel;
+		$ttsKey = $ttsMap[$ttsSel] ?? '';
+		$ttsSchema = ($ttsKey && isset($providersTts[$ttsKey]) && is_array($providersTts[$ttsKey])) ? $providersTts[$ttsKey] : [];
+		if ($ttsKey && $ttsSchema) {
+			foreach ($ttsSchema as $fname => $def) {
+				if (!is_array($def)) continue;
+				$type = $def['type'] ?? 'string';
+				$key = 'TTS@' . $ttsKey . '@' . $fname;
+				$postName = 'tts__' . $fname;
+				if ($type === 'boolean') {
+					$allPairs[$key] = (isset($_POST[$postName]) && $_POST[$postName] === 'true') ? 'true' : 'false';
+				} else if ($type === 'selectmultiple') {
+					$allPairs[$key] = isset($_POST[$postName]) && is_array($_POST[$postName]) ? array_values($_POST[$postName]) : [];
+				} else if (isset($_POST[$postName])) {
+					$allPairs[$key] = (string)$_POST[$postName];
+				}
+			}
+		}
+	}
+	if (isset($_POST['TTSFUNCTION_PLAYER'])) { $allPairs['TTSFUNCTION_PLAYER'] = (string)$_POST['TTSFUNCTION_PLAYER']; }
+	if (isset($_POST['TTSFUNCTION_PLAYER_VOICE'])) { $allPairs['TTSFUNCTION_PLAYER_VOICE'] = (string)$_POST['TTSFUNCTION_PLAYER_VOICE']; }
+	if (isset($_POST['TTSFUNCTION_PLAYER_VOICE_ID'])) { $allPairs['TTSFUNCTION_PLAYER_VOICE_ID'] = (string)$_POST['TTSFUNCTION_PLAYER_VOICE_ID']; }
+	if (isset($_POST['TTSFUNCTION_PLAYER_LANGUAGE'])) { $allPairs['TTSFUNCTION_PLAYER_LANGUAGE'] = (string)$_POST['TTSFUNCTION_PLAYER_LANGUAGE']; }
+
+	// Apply STT overrides
+	if (isset($_POST['STTFUNCTION'])) {
+		$sttSel = (string)$_POST['STTFUNCTION'];
+		$allPairs['STTFUNCTION'] = $sttSel;
+		$sttKey = $sttMap[$sttSel] ?? '';
+		$sttSchema = ($sttKey && isset($providersStt[$sttKey]) && is_array($providersStt[$sttKey])) ? $providersStt[$sttKey] : [];
+		if ($sttKey && $sttSchema) {
+			foreach ($sttSchema as $fname => $def) {
+				if (!is_array($def)) continue;
+				$type = $def['type'] ?? 'string';
+				$key = 'STT@' . $sttKey . '@' . $fname;
+				$postName = 'stt__' . $fname;
+				if ($type === 'boolean') {
+					$allPairs[$key] = (isset($_POST[$postName]) && $_POST[$postName] === 'true') ? 'true' : 'false';
+				} else if ($type === 'selectmultiple') {
+					$allPairs[$key] = isset($_POST[$postName]) && is_array($_POST[$postName]) ? array_values($_POST[$postName]) : [];
+				} else if (isset($_POST[$postName])) {
+					$allPairs[$key] = (string)$_POST[$postName];
+				}
+			}
+		}
+	}
+
+	// Apply ITT overrides
+	if (isset($_POST['ITTFUNCTION'])) {
+		$ittSel = (string)$_POST['ITTFUNCTION'];
+		$allPairs['ITTFUNCTION'] = $ittSel;
+		$ittKey = $ittMap[$ittSel] ?? '';
+		$ittSchema = ($ittKey && isset($ittProviders[$ittKey]) && is_array($ittProviders[$ittKey])) ? $ittProviders[$ittKey] : [];
+		if ($ittKey && $ittSchema) {
+			foreach ($ittSchema as $fname => $def) {
+				if (!is_array($def)) continue;
+				$type = $def['type'] ?? 'string';
+				$key = 'ITT@' . $ittKey . '@' . $fname;
+				$postName = 'itt__' . $fname;
+				if ($type === 'boolean') {
+					$allPairs[$key] = (isset($_POST[$postName]) && $_POST[$postName] === 'true') ? 'true' : 'false';
+				} else if ($type === 'selectmultiple') {
+					$allPairs[$key] = isset($_POST[$postName]) && is_array($_POST[$postName]) ? array_values($_POST[$postName]) : [];
+				} else if (isset($_POST[$postName])) {
+					$allPairs[$key] = (string)$_POST[$postName];
+				}
+            }
+        }
+    }
+
     // Build and write buffer to default conf.php (always default profile)
     $buffer = build_conf_php_from_pairs($allPairs, $confSchema);
     $target = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-    $result = @file_put_contents($target, $buffer);
+	$tmpTarget = $target . '.tmp.' . getmypid() . '.' . str_replace('.', '_', (string)microtime(true));
+	$result = @file_put_contents($tmpTarget, $buffer, LOCK_EX);
     $saveSuccess = $result !== false;
     if ($saveSuccess) {
+		$moved = @rename($tmpTarget, $target);
+		if (!$moved) { $moved = (@copy($tmpTarget, $target) && @unlink($tmpTarget)); }
+		$saveSuccess = $moved;
+	}
+	if ($saveSuccess) {
+		@clearstatcache(true, $target);
+		if (function_exists('opcache_invalidate')) { @opcache_invalidate($target, true); }
         Logger::info("Global settings saved to conf.php by UI");
+		while (@ob_end_clean());
+		$redirectUrl = strtok($_SERVER['REQUEST_URI'], '?') . '?_ts=' . time();
+		header("Location: " . $redirectUrl);
+		exit;
     } else {
         Logger::error("Failed writing conf.php from Global Settings UI");
+		// Reload current conf after failed save to keep UI consistent
+		$currentConf = conf_loader_load();
     }
-    // Reload current conf after save
-    $currentConf = conf_loader_load();
 }
 
 // Helper: get current value by field name in our curated list
@@ -328,7 +503,7 @@ function current_value(string $flatName, array $currentConf) {
 
     .content-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: 30px;
         margin-bottom: 30px;
     }
@@ -339,12 +514,14 @@ function current_value(string $flatName, array $currentConf) {
         border: 1px solid #4a4a4a;
     }
     .content-section h2 { font-family: 'MagicCards', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin-bottom: 15px; font-size: 1.4em; }
-    .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+    .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
     .provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
     .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
     .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
     .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
     .provider-body { display:flex; gap:8px; align-items:center; }
+    .provider-body.grid { display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; }
+    .provider-body.grid .help { grid-column: 1 / -1; margin-top:6px; color:#bbb; font-size:12px; }
     .provider-body input[type="text"], .provider-body input[type="url"], .provider-body input[type="number"], .provider-body input[type="password"], .provider-body select, .provider-body textarea { flex:1; background-color:#333; color:#fff; border:1px solid #444; border-radius:4px; padding:8px; }
     .actions { display:flex; justify-content:flex-end; margin-top:10px; }
     .btn-primary { background:#204e7a; color:#fff; border:1px solid rgba(138,155,182,0.4); border-radius:8px; padding:8px 14px; cursor:pointer; }
@@ -353,6 +530,7 @@ function current_value(string $flatName, array $currentConf) {
     @media (max-width: 900px) {
         main { padding-left: 5%; padding-right: 5%; }
         .content-grid { grid-template-columns: 1fr; }
+        .provider-grid { grid-template-columns: 1fr; }
     }
 
     /* Global Settings: enhance native boolean checkboxes (e.g., PLAYER_RESPEECH) */
@@ -390,18 +568,48 @@ function current_value(string $flatName, array $currentConf) {
     .provider-title .provider-toggle input[type="checkbox"] {
         accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer;
     }
+
+\\
+    .tab-buttons { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; justify-content:center; align-items:center; }
+    .tab-button { background:#1a2940; color:#cfd8e3; border:1px solid rgba(138,155,182,0.35); padding:6px 12px; border-radius:8px; cursor:pointer; }
+    .tab-button:hover { background:#203553; }
+    .tab-button.active { background:#204e7a; color:#fff; border-color: rgba(138,155,182,0.6); }
+    .btn-save-green { 
+        background-color: rgba(32, 122, 74, 0.8);
+        color: #fff;
+        border: 1px solid rgba(138, 155, 182, 0.3);
+        border-radius: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+    }
+    .btn-save-green:hover { background-color: rgba(42, 142, 94, 0.9); }
 </style>
 
 <main>
     <h1 class="gs-title">Global Settings</h1>
+    <div class="provider-card" style="margin-bottom:16px;">
+    <div style="display:flex; justify-content:center; margin-top:8px; margin-bottom:12px;">
+            <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
+        </div>
+        <div class="provider-head" style="justify-content:center;">
+            <div class="tab-buttons">
+                <button type="button" class="tab-button active" data-gs-tab="tab-global">🌐General</button>
+                <button type="button" class="tab-button" data-gs-tab="tab-tts">🔊TTS</button>
+                <button type="button" class="tab-button" data-gs-tab="tab-stt">🎤STT</button>
+                <button type="button" class="tab-button" data-gs-tab="tab-itt">🖼️ITT</button>
+            </div>
+        </div>
+
+    </div>
     <div id="toast" class="toast-notification" style="display:none;"><span class="message"></span></div>
 
     <?php if ($saveSuccess): ?>
         <script>setTimeout(function(){ try{ const t=document.getElementById('toast'); if(t){ t.style.display='block'; t.textContent='Settings saved to conf.php'; setTimeout(()=>{ t.style.display='none'; }, 2500); } }catch(_e){} }, 50);</script>
     <?php endif; ?>
 
-    <form method="post" action="">
-        <div class="content-grid">
+    <form method="post" action="" id="gs_form">
+        <input type="hidden" name="gs_tab" id="gs_tab" value="<?php echo htmlspecialchars($activeTab); ?>">
+        <div class="content-grid" id="tab-global">
             <?php foreach ($gsSections as $sectionTitle => $fields): ?>
                 <div class="content-section">
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
@@ -469,9 +677,354 @@ function current_value(string $flatName, array $currentConf) {
                 </div>
             <?php endforeach; ?>
         </div>
-        <div class="actions">
-            <button type="submit" class="btn-primary" name="save_all" value="1">Save All</button>
+        
+        <div class="content-section" id="tab-tts" style="display:none;">
+            <h2>Text-to-Speech</h2>
+            <div class="provider-grid">
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🔊</div>
+                            <div>TTS Provider</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <label for="TTSFUNCTION">TTS Selection</label>
+                        <select name="TTSFUNCTION" id="TTSFUNCTION" onchange="document.getElementById('gs_tab').value='tab-tts'; this.form.submit()">
+                            <?php foreach ($ttsOptions as $opt): ?>
+                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$ttsSelRender===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        
+                        <div></div>
+                        <div class="help">Quick test will synthesize a short sample using: <b><?php echo htmlspecialchars(strtolower($ttsSelRender)==='xtts-fastapi'?'TheNarrator':'malenord'); ?></b></div>
+                    </div>
+                </div>
+                <?php $ttsKeyCur = $ttsMap[$ttsSelRender] ?? ''; $ttsSchemaCur = ($ttsKeyCur && isset($providersTts[$ttsKeyCur]) && is_array($providersTts[$ttsKeyCur])) ? $providersTts[$ttsKeyCur] : []; ?>
+                <?php if (!empty($ttsSchemaCur)): ?>
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">⚙️</div>
+                            <div><?php echo htmlspecialchars($ttsKeyCur); ?> Settings</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <?php
+                        // API badge status (once)
+                        $apiBadges = [];
+                        try {
+                            if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+                                @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+                                if (isset($GLOBALS["DBDRIVER"])) { @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php"); }
+                                $GLOBALS['db'] = new sql();
+                            }
+                            $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC");
+                        } catch (Throwable $_e) {}
+                        foreach ($ttsSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='TTS '.$ttsKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??''; $lname=strtolower($fname); $lnameNorm=str_replace(['_','-'],'',$lname); if ($lnameNorm==='voiceid' || $lnameNorm==='voicelogic') continue; 
+                            // API KEY badge handling for known providers
+                            $provLower = strtolower($ttsKeyCur);
+                            if ($fname === 'API_KEY' && in_array($provLower, ['azure','eleven_labs','openai','deepgram'])) {
+                                $badgeName = ($provLower==='eleven_labs') ? 'ElevenLabs' : ucfirst($provLower);
+                                $hasKey=false; foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
+                                echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
+                                echo '<div>'.($hasKey?'<span style="color:#6dd19c">Configured</span>':'<span style="color:#ffb862">Missing</span>').' — <a href="#" onclick="try{ if(window.top){ window.top.location.href=\''.htmlspecialchars($webRoot).'/ui/core/config_hub.php?tab=keys\'; } else { window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } }catch(e){ window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } return false;">Manage Keys</a></div>';
+                                if (!empty($help)) echo '<div class="help">'.$help.'</div>';
+                                continue;
+                            }
+                        ?>
+                            <label for="tts_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <?php if ($ftype==='boolean'): ?>
+                                <input type="hidden" name="tts__<?php echo htmlspecialchars($fname); ?>" value="false">
+                                <input type="checkbox" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
+                            <?php elseif ($ftype==='integer'): ?>
+                                <input type="number" step="1" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='number'): ?>
+                                <input type="number" step="0.01" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='longstring'): ?>
+                                <textarea id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
+                            <?php elseif ($ftype==='url'): ?>
+                                <input type="url" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
+                                <select id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>">
+                                    <?php foreach ($values as $opt): ?>
+                                        <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$current===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php elseif ($ftype==='apikey'): ?>
+                                <input type="password" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" placeholder="Paste API key">
+                            <?php else: ?>
+                                <input type="text" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php endif; ?>
+                            <?php if (!empty($help)): ?><div class="help"><?php echo $help; ?></div><?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php else: ?>
+                    <div class="provider-card"><div class="provider-body"><div></div><div>No settings available for this provider.</div></div></div>
+                <?php endif; ?>
+
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🧑‍🎤</div>
+                            <div>Player TTS</div>
+                        </div>
+                    </div>
+                    <?php $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); ?>
+                    <div class="provider-body grid">
+                        <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
+                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio' ]; $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); ?>
+                        <select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
+                            <?php foreach ($playerTtsOptions as $opt): ?>
+                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if (!empty($descTtsPlayer)): ?><div class="help"><?php echo $descTtsPlayer; ?></div><?php endif; ?>
+                        <label for="TTSFUNCTION_PLAYER_VOICE">Player Voice</label>
+                        <input type="text" id="TTSFUNCTION_PLAYER_VOICE" name="TTSFUNCTION_PLAYER_VOICE" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_VOICE',$currentConf)); ?>">
+                        <?php if (!empty($descPlayerVoice)): ?><div class="help"><?php echo $descPlayerVoice; ?></div><?php endif; ?>
+                        <label for="TTSFUNCTION_PLAYER_VOICE_ID">Player Voice ID</label>
+                        <input type="number" step="1" id="TTSFUNCTION_PLAYER_VOICE_ID" name="TTSFUNCTION_PLAYER_VOICE_ID" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_VOICE_ID',$currentConf)); ?>">
+                        <?php if (!empty($descPlayerVoiceId)): ?><div class="help"><?php echo $descPlayerVoiceId; ?></div><?php endif; ?>
+                        <label for="TTSFUNCTION_PLAYER_LANGUAGE">Player Language Override</label>
+                        <input type="text" id="TTSFUNCTION_PLAYER_LANGUAGE" name="TTSFUNCTION_PLAYER_LANGUAGE" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_LANGUAGE',$currentConf)); ?>">
+                        <?php if (!empty($descPlayerLang)): ?><div class="help"><?php echo $descPlayerLang; ?></div><?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🧪</div>
+                            <div>TTS Test</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <label for="tts_text">Text to synthesize</label>
+                        <textarea id="tts_text" name="tts_text" rows="3" placeholder="Write a sample line to synthesize..."><?php echo htmlspecialchars($ttsTestText); ?></textarea>
+                        <div></div>
+                        <div>
+                            <label for="tts_voiceid">Voice ID (optional)</label>
+                            <input type="text" id="tts_voiceid" name="tts_voiceid" value="<?php echo htmlspecialchars($ttsTestVoice); ?>" placeholder="e.g. TheNarrator or malenord" style="width:100%">
+                            <script>
+                            (function(){
+                                try {
+                                    var sel = document.getElementById('TTSFUNCTION');
+                                    var voice = document.getElementById('tts_voiceid');
+                                    if (sel && voice && !voice.value) {
+                                        var v = (sel.value||'').toLowerCase();
+                                        if (v==='xtts-fastapi') voice.placeholder = 'TheNarrator';
+                                        else if (v==='melotts' || v==='piper-tts' || v==='xvasynth') voice.placeholder = 'malenord';
+                                    }
+                                    if (sel && voice){
+                                        sel.addEventListener('change', function(){
+                                            if (voice && !voice.value){
+                                                var vv = String(sel.value||'').toLowerCase();
+                                                voice.placeholder = (vv==='xtts-fastapi') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
+                                            }
+                                        });
+                                    }
+                                } catch(e){}
+                            })();
+                            </script>
+                        </div>
+                        <div>
+                            <button type="button" id="btn_test_tts_gs" class="btn-primary">Test</button>
+                        </div>
+                        <div></div>
+                        <div>
+                            <?php if (!empty($ttsTestOutputUrl)): ?>
+                                <audio controls style="width:100%; max-width:500px"><source src="<?php echo htmlspecialchars($ttsTestOutputUrl); ?>" type="audio/wav"></audio>
+                                <input type="hidden" id="tts_test_audio_url_hidden" value="<?php echo htmlspecialchars($ttsTestOutputUrl); ?>">
+                            <?php elseif (isset($_POST['tts_quick_test'])): ?>
+                                <div style="color:#ffb862">No audio produced. Check connector settings and logs.</div>
+                                <input type="hidden" id="tts_test_audio_url_hidden" value="">
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <div class="content-section" id="tab-stt" style="display:none;">
+            <h2>Speech-to-Text</h2>
+            <div class="provider-grid">
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🎤</div>
+                            <div>STT Provider</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <label for="STTFUNCTION">STT Selection</label>
+                        <select name="STTFUNCTION" id="STTFUNCTION" onchange="document.getElementById('gs_tab').value='tab-stt'; this.form.submit()">
+                            <?php foreach ($sttOptions as $opt): ?>
+                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$sttSelRender===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        
+                    </div>
+                </div>
+                <?php $sttKeyCur = $sttMap[$sttSelRender] ?? ''; $sttSchemaCur = ($sttKeyCur && isset($providersStt[$sttKeyCur]) && is_array($providersStt[$sttKeyCur])) ? $providersStt[$sttKeyCur] : []; ?>
+                <?php if (!empty($sttSchemaCur)): ?>
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">⚙️</div>
+                            <div><?php echo htmlspecialchars($sttKeyCur); ?> Settings</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <?php
+                        $apiBadges = [];
+                        try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { $GLOBALS['db'] = new sql(); } $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC"); } catch (Throwable $_e) {}
+                        foreach ($sttSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='STT '.$sttKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??'';
+                            $lnameProv = strtolower($sttKeyCur);
+                            if ($fname === 'API_KEY' && in_array($lnameProv, ['whisper','azure','deepgram'])) {
+                                $badgeName = ($lnameProv==='whisper') ? 'OpenAI' : ucfirst($lnameProv);
+                                $hasKey=false; foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
+                                echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
+                                echo '<div>'.($hasKey?'<span style="color:#6dd19c">Configured</span>':'<span style="color:#ffb862">Missing</span>').' — <a href="#" onclick="try{ if(window.top){ window.top.location.href=\''.htmlspecialchars($webRoot).'/ui/core/config_hub.php?tab=keys\'; } else { window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } }catch(e){ window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } return false;">Manage Keys</a></div>';
+                                if (!empty($help)) echo '<div class="help">'.$help.'</div>';
+                                continue;
+                            }
+                        ?>
+                            <label for="stt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <?php if ($ftype==='boolean'): ?>
+                                <input type="hidden" name="stt__<?php echo htmlspecialchars($fname); ?>" value="false">
+                                <input type="checkbox" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
+                            <?php elseif ($ftype==='integer'): ?>
+                                <input type="number" step="1" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='number'): ?>
+                                <input type="number" step="0.01" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='longstring'): ?>
+                                <textarea id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
+                            <?php elseif ($ftype==='url'): ?>
+                                <input type="url" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
+                                <select id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>">
+                                    <?php foreach ($values as $opt): ?>
+                                        <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$current===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php elseif ($ftype==='apikey'): ?>
+                                <input type="password" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" placeholder="Paste API key">
+                            <?php else: ?>
+                                <input type="text" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php endif; ?>
+                            <?php if (!empty($help)): ?><div class="help"><?php echo $help; ?></div><?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php else: ?>
+                    <div class="provider-card"><div class="provider-body"><div></div><div>No settings available for this provider.</div></div></div>
+                <?php endif; ?>
+
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🧪</div>
+                            <div>STT Test</div>
+                        </div>
+                    </div>
+                    <div class="provider-body">
+                        <button type="button" id="btn_test_stt_gs" class="btn-primary">Test</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section" id="tab-itt" style="display:none;">
+            <h2>Image-to-Text</h2>
+            <div class="provider-grid">
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🖼️</div>
+                            <div>ITT Provider</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <label for="ITTFUNCTION">ITT Selection</label>
+                        <select name="ITTFUNCTION" id="ITTFUNCTION" onchange="document.getElementById('gs_tab').value='tab-itt'; this.form.submit()">
+                            <?php foreach ($ittOptions as $opt): ?>
+                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$ittSelRender===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        
+                    </div>
+                </div>
+                <?php $ittKeyCur = $ittMap[$ittSelRender] ?? ''; $ittSchemaCur = ($ittKeyCur && isset($ittProviders[$ittKeyCur]) && is_array($ittProviders[$ittKeyCur])) ? $ittProviders[$ittKeyCur] : []; ?>
+                <?php if (!empty($ittSchemaCur)): ?>
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">⚙️</div>
+                            <div><?php echo htmlspecialchars($ittKeyCur); ?> Settings</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <?php
+                        $apiBadges = [];
+                        try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { $GLOBALS['db'] = new sql(); } $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC"); } catch (Throwable $_e) {}
+                        foreach ($ittSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='ITT '.$ittKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??'';
+                            $lnameProv = strtolower($ittKeyCur);
+                            if ($fname === 'API_KEY' && in_array($lnameProv, ['openai','google_openai','openrouter'])) {
+                                $badgeName = ($lnameProv==='google_openai') ? 'Google' : ($lnameProv==='openrouter' ? 'OpenRouter' : 'OpenAI');
+                                $hasKey=false; foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
+                                echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
+                                echo '<div>'.($hasKey?'<span style="color:#6dd19c">Configured</span>':'<span style="color:#ffb862">Missing</span>').' — <a href="#" onclick="try{ if(window.top){ window.top.location.href=\''.htmlspecialchars($webRoot).'/ui/core/config_hub.php?tab=keys\'; } else { window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } }catch(e){ window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } return false;">Manage Keys</a></div>';
+                                if (!empty($help)) echo '<div class="help">'.$help.'</div>';
+                                continue;
+                            }
+                        ?>
+                            <label for="itt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <?php if ($ftype==='boolean'): ?>
+                                <input type="hidden" name="itt__<?php echo htmlspecialchars($fname); ?>" value="false">
+                                <input type="checkbox" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
+                            <?php elseif ($ftype==='integer'): ?>
+                                <input type="number" step="1" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='number'): ?>
+                                <input type="number" step="0.01" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='longstring'): ?>
+                                <textarea id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
+                            <?php elseif ($ftype==='url'): ?>
+                                <input type="url" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
+                                <select id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>">
+                                    <?php foreach ($values as $opt): ?>
+                                        <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$current===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php elseif ($ftype==='apikey'): ?>
+                                <input type="password" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" placeholder="Paste API key">
+                            <?php else: ?>
+                                <input type="text" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                            <?php endif; ?>
+                            <?php if (!empty($help)): ?><div class="help"><?php echo $help; ?></div><?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php else: ?>
+                    <div class="provider-card"><div class="provider-body"><div></div><div>No settings available for this provider.</div></div></div>
+                <?php endif; ?>
+
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🧪</div>
+                            <div>ITT Test</div>
+                        </div>
+                    </div>
+                    <div class="provider-body">
+                        <button type="button" id="btn_test_itt_gs" class="btn-primary">Test</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="actions"></div>
     </form>
 </main>
 
@@ -483,5 +1036,128 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+
+<script>
+(function(){
+  try{
+    function showTab(id){
+      var ids=['tab-global','tab-tts','tab-stt','tab-itt'];
+      ids.forEach(function(x){ var el=document.getElementById(x); if(el){ el.style.display=(x===id?'block':'none'); }});
+    }
+    var btns=document.querySelectorAll('[data-gs-tab]');
+    for (var i=0;i<btns.length;i++){
+      btns[i].addEventListener('click', function(){
+        var id=this.getAttribute('data-gs-tab');
+        showTab(id);
+        for (var j=0;j<btns.length;j++){ btns[j].classList.remove('active'); }
+        this.classList.add('active');
+      });
+    }
+    // Persist active tab on postback
+    var active = '<?php echo htmlspecialchars($activeTab); ?>';
+    if (active && active !== 'tab-global'){
+      showTab(active);
+      for (var j=0;j<btns.length;j++){ if (btns[j].getAttribute('data-gs-tab')===active){ btns[j].classList.add('active'); } else { btns[j].classList.remove('active'); } }
+    }
+  }catch(_e){}
+})();
+</script>
+
+<script>
+(function(){
+  try{
+    // STT/ITT test modals opener (reuse existing test pages)
+    function openModal(url){
+      var modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
+      modal.innerHTML = '\n        <div style="width:90%; max-width:1100px; height:80vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">\n            <button id="hubtest_close" style="position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;">Close<\/button>\n            <div id="hubtest_loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;">\n                <div style="width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: spin 1s linear infinite;"><\/div>\n            <\/div>\n            <iframe id="hubtest_iframe" src="about:blank" style="width:100%; height:100%; border:0; background:#0e1624; position:relative; z-index:1;"><\/iframe>\n        <\/div>\n        <style>@keyframes spin{to{transform:rotate(360deg)}}<\/style>';
+      document.body.appendChild(modal);
+      var iframe = modal.querySelector('#hubtest_iframe');
+      var loader = modal.querySelector('#hubtest_loading');
+      if (loader) loader.style.display='flex';
+      iframe.onload = function(){ if (loader) loader.style.display='none'; };
+      iframe.src = url;
+      function close(){ try{ document.body.removeChild(modal); }catch(e){} }
+      modal.addEventListener('click', function(e){ if (e.target===modal) close(); });
+      document.addEventListener('click', function(e){ if (e.target && e.target.id==='hubtest_close') close(); });
+      document.addEventListener('keydown', function(e){ if (e.key==='Escape') close(); });
+    }
+    function openAudioModal(src){
+      var modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
+      modal.innerHTML = '\n        <div style="width:90%; max-width:700px; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; padding:16px;">\n            <button id="hubtest_close" style="position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;">Close<\/button>\n            <h3 style="margin:0 0 10px 0; color:#cfd8e3;">TTS Preview<\/h3>\n            <audio controls style="width:100%"><source src="'+src+'" type="audio/wav"><\/audio>\n        <\/div>';
+      document.body.appendChild(modal);
+      function close(){ try{ document.body.removeChild(modal); }catch(e){} }
+      modal.addEventListener('click', function(e){ if (e.target===modal) close(); });
+      document.addEventListener('click', function(e){ if (e.target && e.target.id==='hubtest_close') close(); });
+      document.addEventListener('keydown', function(e){ if (e.key==='Escape') close(); });
+    }
+    function openTtsGeneratingModal(){
+      var modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
+      modal.innerHTML = '\n        <div style="width:90%; max-width:700px; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; padding:16px;">\n            <button id="hubtest_close" style="position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;">Close<\/button>\n            <h3 style="margin:0 0 10px 0; color:#cfd8e3;">Generating TTS...<\/h3>\n            <div id="tts_gen_body" style="min-height:80px; display:flex; align-items:center; justify-content:center; color:#cfd8e3;">\n              <div style="width:36px; height:36px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: spin 1s linear infinite;"><\/div>\n            <\/div>\n        <\/div>\n        <style>@keyframes spin{to{transform:rotate(360deg)}}<\/style>';
+      document.body.appendChild(modal);
+      function close(){ try{ document.body.removeChild(modal); }catch(e){} }
+      modal.addEventListener('click', function(e){ if (e.target===modal) close(); });
+      document.addEventListener('click', function(e){ if (e.target && e.target.id==='hubtest_close') close(); });
+      document.addEventListener('keydown', function(e){ if (e.key==='Escape') close(); });
+      return {
+        update: function(url){
+          try{
+            var b = modal.querySelector('#tts_gen_body');
+            if (!b) return;
+            if (!url){ b.innerHTML = '<div style="color:#ffb862">No audio produced. Check connector settings and logs.<\/div>'; return; }
+            var ts = Date.now();
+            b.innerHTML = '<audio autoplay controls style="width:100%"><source src="'+url+'" type="audio/wav"><\/audio>';
+          }catch(e){}
+        }
+      };
+    }
+    async function saveFormSilently(){
+      try {
+        var form=document.getElementById('gs_form');
+        if (!form) return;
+        var fd=new FormData(form);
+        if (!fd.has('save_all')) fd.append('save_all','1');
+        await fetch(window.location.pathname, { method:'POST', body: fd });
+      } catch(_e){}
+    }
+    var sttBtn = document.getElementById('btn_test_stt_gs');
+    if (sttBtn){
+      sttBtn.addEventListener('click', async function(){ await saveFormSilently(); var cb=Date.now(); openModal('<?php echo $webRoot; ?>/ui/tests/stt-test.php?cb='+cb); });
+    }
+    var ittBtn = document.getElementById('btn_test_itt_gs');
+    if (ittBtn){
+      ittBtn.addEventListener('click', async function(){ await saveFormSilently(); var cb=Date.now(); openModal('<?php echo $webRoot; ?>/ui/tests/itt-test.php?cb='+cb); });
+    }
+    var ttsBtn = document.getElementById('btn_test_tts_gs');
+    if (ttsBtn){
+      ttsBtn.addEventListener('click', async function(){
+        try {
+          var modalCtl = openTtsGeneratingModal();
+          var form=document.getElementById('gs_form');
+          if (!form) return;
+          // Save current provider settings so test uses latest config
+          await saveFormSilently();
+          var fd=new FormData(form);
+          fd.append('tts_quick_test','1');
+          fd.append('ajax','1');
+          fd.set('gs_tab','tab-tts');
+          var resp = await fetch(window.location.pathname, { method:'POST', body: fd });
+          var data = null;
+          try { data = await resp.json(); } catch(e) { data = null; }
+          var url = (data && data.url) ? data.url : '';
+          if (url) {
+            // Update modal with playable audio (autoplay allowed due to user gesture that opened modal)
+            modalCtl.update(url);
+          } else {
+            modalCtl.update('');
+          }
+        } catch(_e){}
+      });
+    }
+  }catch(_e){}
+})();
+</script>
 
 

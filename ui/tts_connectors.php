@@ -162,6 +162,10 @@ $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['descriptio
 $saveSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 	$confSchemaFlat = conf_loader_load_schema();
+	// Reload latest configuration to avoid overwriting changes from other pages
+	$confFile = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+	@clearstatcache(true, $confFile);
+	$currentConf = conf_loader_load();
 	$allPairs = [];
 	// Preserve all existing pairs from currentConf
 	foreach ($currentConf as $pname => $parms) {
@@ -236,13 +240,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 	$buffer .= "?>" . PHP_EOL;
 
 	$target = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-	$result = @file_put_contents($target, $buffer);
+	$tmpTarget = $target . '.tmp.' . getmypid() . '.' . str_replace('.', '_', (string)microtime(true));
+	$result = @file_put_contents($tmpTarget, $buffer, LOCK_EX);
 	$saveSuccess = $result !== false;
 	if ($saveSuccess) {
+		$moved = @rename($tmpTarget, $target);
+		if (!$moved) { $moved = (@copy($tmpTarget, $target) && @unlink($tmpTarget)); }
+		$saveSuccess = $moved;
+	}
+	if ($saveSuccess) {
+		// Ensure the updated configuration file is visible immediately on next request
+		@clearstatcache(true, $target);
+		if (function_exists('opcache_invalidate')) { @opcache_invalidate($target, true); }
 		Logger::info("TTS settings saved to conf.php by UI");
 		// Hard redirect to ensure UI reflects new saved values and avoid resubmission
 		while (@ob_end_clean());
-		header("Location: " . strtok($_SERVER['REQUEST_URI'], '?'));
+		$redirectUrl = strtok($_SERVER['REQUEST_URI'], '?') . '?_ts=' . time();
+		header("Location: " . $redirectUrl);
 		exit;
 	} else {
 		Logger::error("Failed writing conf.php from TTS Connectors UI");
