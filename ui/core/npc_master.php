@@ -51,7 +51,7 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 
 <main>
 
-<h1 class="api-title">NPC Master</h1>
+<h1 class="api-title">CHIM NPCs</h1>
 
 <?php
 $GLOBALS["db"] = new sql();
