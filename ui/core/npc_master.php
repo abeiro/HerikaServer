@@ -266,8 +266,8 @@ if (is_array($profileRows) && count($profileRows) > 0) {
     $firstProfileId = (string)($profileRows[0]['id'] ?? '');
 }
 // Preload profile connector mappings and LLM connector labels for modal summary
-$profileConnRows = $GLOBALS["db"]->fetchAll("SELECT id, llm_primary_id, llm_secondary_id, llm_tertiary_id, llm_quaternary_id, diary_connector_id FROM core_profiles ORDER BY id ASC");
-$llmRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_llm_connector ORDER BY id ASC");
+$profileConnRows = $GLOBALS["db"]->fetchAll("SELECT id, llm_primary_id, llm_secondary_id, llm_tertiary_id, llm_quaternary_id, llm_formatter_id, diary_connector_id FROM core_profiles ORDER BY id ASC");
+$llmRows = $GLOBALS["db"]->fetchAll("SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM core_llm_connector ORDER BY id ASC");
 $profilesById = [];
 foreach (($profileRows ?? []) as $pr) {
     $pid = (string)($pr['id'] ?? '');
@@ -554,6 +554,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">💪 Powerful LLM</div><div><?= htmlspecialchars($pc ? $m($pc['llm_tertiary_id'] ?? '') : '—') ?></div>
         <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">🧪 Experimental LLM</div><div><?= htmlspecialchars($pc ? $m($pc['llm_quaternary_id'] ?? '') : '—') ?></div>
         <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">📓 Diary LLM</div><div><?= htmlspecialchars($pc ? $m($pc['diary_connector_id'] ?? '') : '—') ?></div>
+        <div style="color:rgb(242,124,17); font-weight:700; white-space:nowrap;">🧾 Formatter LLM</div><div><?= htmlspecialchars($pc ? $m($pc['llm_formatter_id'] ?? '') : '—') ?></div>
     </div>
     <script>
     (function(){
@@ -568,7 +569,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 ['🏃‍♂️‍➡️ Fast LLM', pc ? labelOf(pc.llm_secondary_id) : '—'],
                 ['💪 Powerful LLM', pc ? labelOf(pc.llm_tertiary_id) : '—'],
                 ['🧪 Experimental LLM', pc ? labelOf(pc.llm_quaternary_id) : '—'],
-                ['📓 Diary LLM', pc ? labelOf(pc.diary_connector_id) : '—']
+                ['📓 Diary LLM', pc ? labelOf(pc.diary_connector_id) : '—'],
+                ['🧾 Formatter LLM', pc ? labelOf(pc.llm_formatter_id) : '—']
             ];
             let html = '';
             rows.forEach(([k,v])=>{

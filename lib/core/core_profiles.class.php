@@ -16,6 +16,7 @@ class CoreProfile {
             "llm_secondary_id",
             "llm_tertiary_id",
             "llm_quaternary_id",
+            "llm_formatter_id",
             "metadata",
             "slot",
             "prompt"
@@ -77,6 +78,7 @@ class CoreProfile {
             "llm_secondary_id",// fk to table  core_llm_connector
             "llm_tertiary_id",// fk to table  core_llm_connector
             "llm_quaternary_id",// fk to table  core_llm_connector
+            "llm_formatter_id",// fk to table  core_llm_connector
             "metadata",
             "slot",
             "prompt"
@@ -131,7 +133,8 @@ class CoreProfile {
             "llm_primary_id"       => "core_llm_connector",
             "llm_secondary_id"     => "core_llm_connector",
             "llm_tertiary_id"      => "core_llm_connector",
-            "llm_quaternary_id"    => "core_llm_connector"
+            "llm_quaternary_id"    => "core_llm_connector",
+            "llm_formatter_id"     => "core_llm_connector"
         ];
     
         if (!array_key_exists($field, $fkMap)) {

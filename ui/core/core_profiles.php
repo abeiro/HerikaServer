@@ -146,6 +146,7 @@ $llmPrimaryOptions = getSelectOptions($profiles, "llm_primary_id");
 $llmSecondaryOptions = getSelectOptions($profiles, "llm_secondary_id");
 $llmTertiaryOptions = getSelectOptions($profiles, "llm_tertiary_id");
 $llmQuaternaryOptions = getSelectOptions($profiles, "llm_quaternary_id");
+$llmFormatterOptions = getSelectOptions($profiles, "llm_formatter_id");
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
@@ -259,14 +260,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_profile
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
         $field = (string)($_POST['field'] ?? '');
         $allowed = [
-            'llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id',
+            'llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id','llm_formatter_id',
             'diary_connector_id','tts_connector_id','itt_connector_id'
         ];
         if (!in_array($field, $allowed, true)) { echo json_encode(["ok"=>false, "error"=>"Invalid field"]); exit; }
         $raw = $_POST['value'] ?? '';
         $val = ($raw === '' ? null : intval($raw));
         $data = [ $field => $val ];
-        $ok = $profiles->update($id, $data);
+        // Fallback direct update for llm_formatter_id to ensure persistence
+        if ($field === 'llm_formatter_id') {
+            $ok = $GLOBALS["db"]->updateRow('core_profiles', ['llm_formatter_id' => $val], 'id = '.$id);
+        } else {
+            $ok = $profiles->update($id, $data);
+        }
         if ($ok === false) {
             echo json_encode(["ok"=>false, "error"=>($profiles->getLastError() ?: 'Update failed')]);
         } else {
@@ -383,6 +389,7 @@ $ittById = $byId($ittRows);
                     const tts = escapeHtml(labelOf(TTS, r.tts_connector_id));
                     const itt = escapeHtml(labelOf(ITT, r.itt_connector_id));
                     const diary = escapeHtml(labelOf(LLM, r.diary_connector_id));
+                    const formatter = escapeHtml(labelOf(LLM, r.llm_formatter_id));
                     const npcCount = Number((NPC_COUNT||{})[String(r.id)]||0);
                     const row1 = [];
                     if (String(r.default_npc)==='1') row1.push('<span class="pf-flag">👤 NPC</span>');
@@ -405,6 +412,7 @@ $ittById = $byId($ittRows);
                                 <div class="pf-line"><span class="pf-icon">💪</span><span class="pf-key">Powerful LLM</span><span class="pf-val">${llm3||'—'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">🧪</span><span class="pf-key">Experimental LLM</span><span class="pf-val">${llm4||'—'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">📓</span><span class="pf-key">Diary LLM</span><span class="pf-val">${diary||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">🧾</span><span class="pf-key">Formatter LLM</span><span class="pf-val">${formatter||'—'}</span></div>
                             </div>
                             <div class="actions">
                                 <form method="get" action="core_profiles.php" onsubmit="return confirm('Delete this profile?');" style="display:inline">
@@ -526,7 +534,7 @@ $ittById = $byId($ittRows);
         // Responsive iframe heights for embedded editors
         function sizeIframes(){
             try {
-                const panes = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id'];
+                const panes = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id','frame_llm_formatter_id'];
                 const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
                 const available = Math.max(400, vh - 260);
                 panes.forEach(id=>{ const f=document.getElementById(id); if (f) f.style.minHeight = available + 'px'; });
@@ -547,6 +555,7 @@ $ittById = $byId($ittRows);
             <button type="button" class="pf-tab" data-pane="pane_llm3">💪 Powerful LLM</button>
             <button type="button" class="pf-tab" data-pane="pane_llm4">🧪 Experimental LLM</button>
             <button type="button" class="pf-tab" data-pane="pane_diary">📓 Diary LLM</button>
+            <button type="button" class="pf-tab" data-pane="pane_llm_formatter">🧾 Formatter LLM</button>
             
         </div>
         <div class="pf-pane active" id="pane_llm1">
@@ -592,6 +601,15 @@ $ittById = $byId($ittRows);
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
+            </div>
+        </div>
+        <div class="pf-pane" id="pane_llm_formatter">
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_formatter_id", "🧾 Formatter LLM", $editItem["llm_formatter_id"] ?? "") ?>
+                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_formatter_id">Set</button>
+            </div>
+            <div style="margin-top:8px;">
+                <iframe id="frame_llm_formatter_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
         </div>
         
@@ -690,6 +708,8 @@ $ittById = $byId($ittRows);
             const prompt = (form.querySelector('textarea[name="prompt"]').value||'');
             const slotSel = form.querySelector('select[name="slot"]');
             const slotVal = slotSel ? (slotSel.value||'') : '';
+            const fmtSel = form.querySelector('select[name="llm_formatter_id"]');
+            const fmtVal = fmtSel ? (fmtSel.value||'') : '';
             const fd = new FormData();
             fd.append('update','1');
             fd.append('id', pid);
@@ -698,6 +718,7 @@ $ittById = $byId($ittRows);
             fd.append('default_narrator', defNarr);
             fd.append('prompt', prompt);
             fd.append('slot', slotVal);
+            if (fmtSel) fd.append('llm_formatter_id', fmtVal);
             const res = await fetch('core_profiles.php', { method:'POST', headers:{ 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
             let json={}; try { json = await res.json(); } catch(_){ json = { ok:false, error:'Invalid response' }; }
             if (json && json.ok){
@@ -750,7 +771,7 @@ $ittById = $byId($ittRows);
         }
         // (Inline editors for TTS/ITT removed; now embedded full pages are used)
         // Attempt to trigger embedded LLM editor saves (if available)
-        const frameIds = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id'];
+        const frameIds = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id','frame_llm_formatter_id'];
         frameIds.forEach(fid => {
             const f = document.getElementById(fid);
             try {
@@ -877,8 +898,9 @@ $ittById = $byId($ittRows);
         refreshEmbeddedEditor('llm_secondary_id','frame_llm_secondary_id');
         refreshEmbeddedEditor('llm_tertiary_id','frame_llm_tertiary_id');
         refreshEmbeddedEditor('llm_quaternary_id','frame_llm_quaternary_id');
+        refreshEmbeddedEditor('llm_formatter_id','frame_llm_formatter_id');
 
-        ['diary_connector_id','llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id'].forEach(id=>{
+        ['diary_connector_id','llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id','llm_formatter_id'].forEach(id=>{
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', ()=>{
                 if (id==='diary_connector_id') refreshEmbeddedEditor(id,'frame_diary_connector_id');
@@ -886,6 +908,7 @@ $ittById = $byId($ittRows);
                 else if (id==='llm_secondary_id') refreshEmbeddedEditor(id,'frame_llm_secondary_id');
                 else if (id==='llm_tertiary_id') refreshEmbeddedEditor(id,'frame_llm_tertiary_id');
                 else if (id==='llm_quaternary_id') refreshEmbeddedEditor(id,'frame_llm_quaternary_id');
+                else if (id==='llm_formatter_id') refreshEmbeddedEditor(id,'frame_llm_formatter_id');
             });
         });
 
@@ -904,6 +927,7 @@ $ittById = $byId($ittRows);
             else if (connectorField==='tts_connector_id') key = 'TTS';
             else if (connectorField==='itt_connector_id') key = 'ITT';
             else if (connectorField==='diary_connector_id') key = 'Diary';
+            else if (connectorField==='llm_formatter_id') key = 'Formatter LLM';
             if (!key) return;
             const lines = li.querySelectorAll('.pf-line');
             lines.forEach(line=>{
@@ -934,6 +958,7 @@ $ittById = $byId($ittRows);
                             else if (selId==='llm_tertiary_id') refreshEmbeddedEditor(selId,'frame_llm_tertiary_id');
                             else if (selId==='llm_quaternary_id') refreshEmbeddedEditor(selId,'frame_llm_quaternary_id');
                             else if (selId==='diary_connector_id') refreshEmbeddedEditor(selId,'frame_diary_connector_id');
+                            else if (selId==='llm_formatter_id') refreshEmbeddedEditor(selId,'frame_llm_formatter_id');
                         } else {
                             showToast('Update failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
                         }
