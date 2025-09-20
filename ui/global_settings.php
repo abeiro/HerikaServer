@@ -71,6 +71,9 @@ $ttsTestTextDefault = "In Skyrim's land of snow and ice, Where dragons soar and 
 $ttsTestText = $ttsTestTextDefault;
 $ttsTestVoice = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
+    // Hard timeouts to prevent server lock if TTS backend stalls
+    try { @set_time_limit(30); } catch (Throwable $_) {}
+    try { @ini_set('default_socket_timeout', '20'); } catch (Throwable $_) {}
     try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php"); if (isset($GLOBALS["DBDRIVER"])) @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php"); $GLOBALS['db'] = new sql(); } } catch (Throwable $_) {}
     $ttsTestText = isset($_POST['tts_text']) ? (string)$_POST['tts_text'] : '';
     if (trim($ttsTestText) === '') { $ttsTestText = $ttsTestTextDefault; }
@@ -84,6 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
     $GLOBALS["SCRIPTLINE_LISTENER"] = '';
     $GLOBALS["SCRIPTLINE_EXPRESSION"] = '';
     $GLOBALS["DEBUG_DATA"] = [];
+    // Respect a shorter HTTP timeout when testing
+    if (!isset($GLOBALS["HTTP_TIMEOUT"]) || (int)$GLOBALS["HTTP_TIMEOUT"] <= 0) { $GLOBALS["HTTP_TIMEOUT"] = 20; }
     $GLOBALS["FEATURES"] = $GLOBALS["FEATURES"] ?? [];
     if (!isset($GLOBALS["FEATURES"]["MISC"])) $GLOBALS["FEATURES"]["MISC"] = [];
     if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
@@ -450,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
     } else {
         Logger::error("Failed writing conf.php from Global Settings UI");
 		// Reload current conf after failed save to keep UI consistent
-		$currentConf = conf_loader_load();
+    $currentConf = conf_loader_load();
     }
 }
 
@@ -719,7 +724,7 @@ function current_value(string $flatName, array $currentConf) {
                         </div>
                     </div>
                 </div>
-                <?php $ttsKeyCur = $ttsMap[$ttsSelRender] ?? ''; $ttsSchemaCur = ($ttsKeyCur && isset($providersTts[$ttsKeyCur]) && is_array($providersTts[$ttsKeyCur])) ? $providersTts[$ttsKeyCur] : []; ?>
+                <?php $ttsKeyCur = $ttsMap[$ttsSelRender] ?? ''; $ttsSchemaCur = ($ttsKeyCur && isset($providersTts[$ttsKeyCur]) && is_array($providersTts[$ttsKeyCur])) ? $providersTts[$ttsKeyCur] : []; $HOST_IP=''; $WSL_IP=''; if ($ttsKeyCur==='XVASYNTH' || $ttsKeyCur==='XTTSFASTAPI'){ try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { @include_once($enginePath.'conf'.DIRECTORY_SEPARATOR.'conf.php'); if (isset($GLOBALS['DBDRIVER'])) { @require_once($enginePath.'lib'.DIRECTORY_SEPARATOR.$GLOBALS['DBDRIVER'].'.class.php'); } $GLOBALS['db'] = new sql(); } $row = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='Network/HOST_IP' LIMIT 1"); if (is_array($row) && isset($row['value'])) { $HOST_IP = (string)$row['value']; } $row2 = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='Network/WSL_IP' LIMIT 1"); if (is_array($row2) && isset($row2['value'])) { $WSL_IP = (string)$row2['value']; } } catch (Throwable $_e) { $HOST_IP=''; $WSL_IP=''; } } ?>
                 <?php if (!empty($ttsSchemaCur)): ?>
                 <div class="provider-card">
                     <div class="provider-head">
@@ -740,7 +745,7 @@ function current_value(string $flatName, array $currentConf) {
                             }
                             $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC");
                         } catch (Throwable $_e) {}
-                        foreach ($ttsSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='TTS '.$ttsKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??''; $lname=strtolower($fname); $lnameNorm=str_replace(['_','-'],'',$lname); if ($lnameNorm==='voiceid' || $lnameNorm==='voicelogic') continue; 
+                        foreach ($ttsSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='TTS '.$ttsKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??''; $lname=strtolower($fname); $lnameNorm=str_replace(['_','-'],'',$lname); if ($lnameNorm==='voiceid' || $lnameNorm==='voicelogic') continue; if ($ttsKeyCur==='XVASYNTH' && $lname==='model') continue; 
                             // API KEY badge handling for known providers
                             $provLower = strtolower($ttsKeyCur);
                             if ($fname === 'API_KEY' && in_array($provLower, ['azure','eleven_labs','openai','deepgram'])) {
@@ -764,6 +769,22 @@ function current_value(string $flatName, array $currentConf) {
                                 <textarea id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
                             <?php elseif ($ftype==='url'): ?>
                                 <input type="url" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                                <?php if ($ttsKeyCur==='XVASYNTH'): ?>
+                                    <div style="margin-top:6px;">
+                                        <button type="button" id="btn_host_ip_xvasynth" class="btn-primary" data-ip="<?php echo htmlspecialchars($HOST_IP); ?>">Host PC IP</button>
+                                        <script>(function(){ try{ var b=document.getElementById('btn_host_ip_xvasynth'); var inp=document.getElementById('tts_url'); if(b && inp){ b.addEventListener('click', function(){ var ip=(b.getAttribute('data-ip')||'').trim(); if(!ip){ try{ alert('Host IP not set. Configure Network/HOST_IP in Settings.'); }catch(_){} return; } var v='http://'+ip+':8008'; inp.value=v; try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }); } }catch(_e){} })();</script>
+                                    </div>
+                                <?php elseif ($ttsKeyCur==='XTTSFASTAPI' && strtolower($fname)==='endpoint'): ?>
+                                    <div style="margin-top:6px;">
+                                        <button type="button" id="btn_host_ip_xtts" class="btn-primary" data-ip="<?php echo htmlspecialchars($HOST_IP); ?>">Host PC IP</button>
+                                        <button type="button" id="btn_wsl_ip_xtts" class="btn-primary" data-ip="<?php echo htmlspecialchars($WSL_IP); ?>">WSL IP</button>
+                                        <script>(function(){ try{ var bh=document.getElementById('btn_host_ip_xtts'); var bw=document.getElementById('btn_wsl_ip_xtts'); var inp=document.getElementById('tts_endpoint'); function setHost(ip){ if(!ip){ try{ alert('Host IP not set. Configure Network/HOST_IP in Settings.'); }catch(_){} return; } try{ var u = new URL(inp.value||('http://'+ip+':8020')); u.protocol = 'http:'; u.hostname = ip; u.port = '8020'; inp.value = u.toString(); } catch(e){ inp.value = 'http://'+ip+':8020'; } try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }
+                                        function setWsl(ip){ if(!ip){ try{ alert('WSL IP not set. Configure Network/WSL_IP in Settings.'); }catch(_){} return; } try{ var u = new URL(inp.value||('http://'+ip+':8020')); u.protocol='http:'; u.hostname=ip; u.port='8020'; inp.value = u.toString(); } catch(e){ inp.value = 'http://'+ip+':8020'; } try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }
+                                        if(bh && inp){ bh.addEventListener('click', function(){ setHost((bh.getAttribute('data-ip')||'').trim()); }); }
+                                        if(bw && inp){ bw.addEventListener('click', function(){ setWsl((bw.getAttribute('data-ip')||'').trim()); }); }
+                                        }catch(_e){} })();</script>
+                                    </div>
+                                <?php endif; ?>
                             <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
                                 <select id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>">
                                     <?php foreach ($values as $opt): ?>
@@ -1118,8 +1139,9 @@ echo $buffer;
       document.body.appendChild(modal);
       function close(){ try{ document.body.removeChild(modal); }catch(e){} }
       modal.addEventListener('click', function(e){ if (e.target===modal) close(); });
-      document.addEventListener('click', function(e){ if (e.target && e.target.id==='hubtest_close') close(); });
-      document.addEventListener('keydown', function(e){ if (e.key==='Escape') close(); });
+      document.addEventListener('click', function(e){ if (e.target && e.target.id==='hubtest_close'){ try{ if (window.__tts_abortController){ window.__tts_abortController.abort(); window.__tts_abortController = null; } }catch(_e){} close(); } });
+      document.addEventListener('keydown', function(e){ if (e.key==='Escape'){ try{ if (window.__tts_abortController){ window.__tts_abortController.abort(); window.__tts_abortController = null; } }catch(_e){} close(); } });
+      modal.addEventListener('click', function(e){ if (e.target===modal){ try{ if (window.__tts_abortController){ window.__tts_abortController.abort(); window.__tts_abortController = null; } }catch(_e){} close(); } });
       return {
         update: function(url){
           try{
@@ -1162,7 +1184,13 @@ echo $buffer;
           fd.append('tts_quick_test','1');
           fd.append('ajax','1');
           fd.set('gs_tab','tab-tts');
-          var resp = await fetch(window.location.pathname, { method:'POST', body: fd });
+          var controller = new AbortController();
+          try { window.__tts_abortController = controller; } catch(_){ }
+          var timedOut = false;
+          var timeoutId = setTimeout(function(){ timedOut=true; try{ controller.abort(); }catch(e){} }, 30000);
+          var resp = await fetch(window.location.pathname, { method:'POST', body: fd, signal: controller.signal }).catch(function(e){ if (timedOut) throw new Error('TTS test timed out'); throw e; });
+          clearTimeout(timeoutId);
+          try { if (window.__tts_abortController === controller) window.__tts_abortController = null; } catch(_){ }
           var data = null;
           try { data = await resp.json(); } catch(e) { data = null; }
           var url = (data && data.url) ? data.url : '';
@@ -1172,7 +1200,13 @@ echo $buffer;
           } else {
             modalCtl.update('');
           }
-        } catch(_e){}
+        } catch(e){
+          try { console.warn('TTS quick test failed or timed out', e); } catch(_){ }
+          try {
+            var modalCtl2 = openTtsGeneratingModal();
+            modalCtl2.update('');
+          } catch(_){ }
+        }
       });
     }
   }catch(_e){}
