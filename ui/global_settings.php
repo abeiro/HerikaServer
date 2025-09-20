@@ -272,7 +272,8 @@ $gsSections = [
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
-        [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ]
+        [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ],
+        [ 'name' => 'HIDE_NARRATOR_CONTEXT', 'type' => 'boolean' ]
     ],
     'Memory' => [
         [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],

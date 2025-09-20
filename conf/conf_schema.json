@@ -40,6 +40,7 @@
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game. Has a 10 minute IRL cooldown so its not annoying.","scope":"global"},
+  "HIDE_NARRATOR_CONTEXT": {"userlvl":"basic","type":"boolean","description":"If true, narrator context lines (e.g. 'The Narrator: …') are removed from NPC LLM context. Only dialogue remains.","scope":"global"},
   "QUEST_COMMENT":{"type":"boolean","userlvl":"basic","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
   "QUEST_COMMENT_CHANCE":{"type":"select","userlvl":"basic","values":["10%","25%","50%","75%","100%"],"description":"Chance that an AI Quest Comment will happen every time a quest updates."},
   "CURRENT_TASK": {"userlvl":"basic","type":"boolean","description":"Include the current Dynamic AI Objective to the AI NPC's prompt. Disable this if the AI NPC becomes fixated on the task."},

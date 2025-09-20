@@ -1306,6 +1306,33 @@ if (sizeof($memoryInjectionCtx)>0) {
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
+// If enabled, hide narrator dialogue lines from NPC prompts, but keep narrator context
+if (!empty($GLOBALS["HIDE_NARRATOR_CONTEXT"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
+    $isContextNarratorLine = function(string $content): bool {
+        if (strpos($content, 'The Narrator:') !== 0) return false;
+        // Keep known context markers
+        if (preg_match('/^The Narrator:\s*\(/', $content)) return true; // parenthetical events
+        if (strpos($content, 'The Narrator: background dialogue:') === 0) return true;
+        if (strpos($content, 'The Narrator: action moved to new location:') === 0) return true;
+        if (strpos($content, 'The Narrator: SCENARIO CHANGE') === 0) return true;
+        if (preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content)) return true;
+        return false;
+    };
+    // Filter only historic part to avoid dropping world info
+    $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) use ($isContextNarratorLine){
+        if (!is_array($entry)) return true;
+        $content = isset($entry['content']) ? (string)$entry['content'] : '';
+        // Remove user lines that are explicitly directed to The Narrator
+        if (strpos($content, '(Talking to The Narrator)') !== false) return false;
+        if (strpos($content, 'The Narrator:') === 0) {
+            // Remove narrator dialogue (non-context narrator lines)
+            return $isContextNarratorLine($content);
+        }
+        return true;
+    }));
+    $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
+}
+
 // audit_log(__FILE__." [OGHMA]  ".__LINE__);
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
