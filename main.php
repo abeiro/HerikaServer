@@ -1306,7 +1306,7 @@ if (sizeof($memoryInjectionCtx)>0) {
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 // If enabled, hide narrator dialogue lines from NPC prompts, but keep narrator context
-if (!empty($GLOBALS["HIDE_NARRATOR_CONTEXT"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
+if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
     $isContextNarratorLine = function(string $content): bool {
         if (strpos($content, 'The Narrator:') !== 0) return false;
         // Keep known context markers

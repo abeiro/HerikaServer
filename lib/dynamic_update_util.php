@@ -406,7 +406,7 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
 
     $sqlfilter=" and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' ";
     $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
-    if (!empty($GLOBALS["HIDE_NARRATOR_CONTEXT"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
+    if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
         $isContextNarratorLine = function(string $content): bool {
             if (strpos($content, 'The Narrator:') !== 0) return false;
             if (preg_match('/^The Narrator:\s*\(/', $content)) return true; // parenthetical
