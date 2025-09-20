@@ -102,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
         if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator'; else $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
     }
     try {
+        $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;
         $speakText = $ttsTestText;
         returnLines([$speakText], false);
         $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
