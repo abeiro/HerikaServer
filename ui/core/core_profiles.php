@@ -102,6 +102,10 @@ h1.api-title {
 .connector-card input[type="password"],
 .connector-card select,
 .connector-card textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+/* Connector help text */
+.connector-help { color:#cfd9ea; font-size:12px; margin-top:6px; }
+.connector-help ul { margin:6px 0 0 16px; padding:0; }
+.connector-help li { margin:2px 0; }
 /* Toast notification */
 .toast-notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; z-index: 10000; opacity: 0; transform: translateX(400px); transition: all 0.3s ease; max-width: 400px; }
 .toast-notification.show { opacity: 1; transform: translateX(0); }
@@ -563,6 +567,14 @@ $ittById = $byId($ittRows);
                 <?= renderSelect($profiles, "llm_primary_id", "🕹️ Standard LLM", $editItem["llm_primary_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_primary_id">Set</button>
             </div>
+            <div class="connector-help">
+                General purpose LLM for general roleplay.
+                <ul>
+                    <li>meta-llama/llama-3.3-70b-instruct</li>
+                    <li>deepseek/deepseek-chat-v3.1</li>
+                    <li>qwen/qwen3-235b-a22b</li>
+                </ul>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_primary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
@@ -571,6 +583,14 @@ $ittById = $byId($ittRows);
             <div class="select-row">
                 <?= renderSelect($profiles, "llm_secondary_id", "🏃‍♂️‍➡️ Fast LLM", $editItem["llm_secondary_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_secondary_id">Set</button>
+            </div>
+            <div class="connector-help">
+                Fast and lesspowerful LLM for quick responses. Good for combat.
+                <ul>
+                    <li>google/gemini-2.5-flash-lite</li>
+                    <li>Google Gemini 1.5 Flash</li>
+                    <li>OpenRouter Llama-3.1-70B-Instruct</li>
+                </ul>
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_secondary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
@@ -581,6 +601,14 @@ $ittById = $byId($ittRows);
                 <?= renderSelect($profiles, "llm_tertiary_id", "💪 Powerful LLM", $editItem["llm_tertiary_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_tertiary_id">Set</button>
             </div>
+            <div class="connector-help">
+                Smarter and more expensive LLM for indepth conversations.
+                <ul>
+                    <li>anthropic/claude-3.7-sonnet</li>
+                    <li>deepseek/deepseek-r1-0528</li>
+                    <li>openai/gpt-5</li>
+                </ul>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_tertiary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
@@ -589,6 +617,14 @@ $ittById = $byId($ittRows);
             <div class="select-row">
                 <?= renderSelect($profiles, "llm_quaternary_id", "🧪 Experimental LLM", $editItem["llm_quaternary_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_quaternary_id">Set</button>
+            </div>
+            <div class="connector-help">
+                Wildcard and uncensored LLM's.
+                <ul>
+                    <li>qwen/qwen3-235b-a22b</li>
+                    <li>deepseek/deepseek-chat-v3.1</li>
+                    <li>anthropic/claude-3.7-sonnet</li>
+                </ul>
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_quaternary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
@@ -599,6 +635,14 @@ $ittById = $byId($ittRows);
                 <?= renderSelect($profiles, "diary_connector_id", "📓 Diary LLM", $editItem["diary_connector_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="diary_connector_id">Set</button>
             </div>
+            <div class="connector-help">
+                LLM good for writing character based diary entries.
+                <ul>
+                    <li>meta-llama/llama-3.3-70b-instruct</li>
+                    <li>google/gemini-2.5-pro</li>
+                    <li>Anthropic Claude 3.5 Sonnet</li>
+                </ul>
+            </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
@@ -607,6 +651,14 @@ $ittById = $byId($ittRows);
             <div class="select-row">
                 <?= renderSelect($profiles, "llm_formatter_id", "🧾 Formatter LLM", $editItem["llm_formatter_id"] ?? "") ?>
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_formatter_id">Set</button>
+            </div>
+            <div class="connector-help">
+                For assiting with formatting events.
+                <ul>
+                    <li>OpenAI o3-mini / GPT-4o-mini</li>
+                    <li>Anthropic Claude 3.5 Sonnet</li>
+                    <li>OpenRouter Mistral-Nemo / Llama-3.1-70B</li>
+                </ul>
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_formatter_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
