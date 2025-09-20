@@ -228,7 +228,7 @@
     },
     "XTTSFASTAPI": {
       "_title":"CHIM XTTS (Installed in DwemerDistro)",
-      "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS, If you want to use Mantella XTTS then click[HOST PC IP] or WSL IP.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
+      "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS. If you want to use Mantella XTTS then click[HOST PC IP]. [WSL IP] will set it back to point to CHIM XTTS.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS XTTSFASTAPI voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
