@@ -106,6 +106,17 @@ h1.api-title {
 .connector-help { color:#cfd9ea; font-size:12px; margin-top:6px; }
 .connector-help ul { margin:6px 0 0 16px; padding:0; }
 .connector-help li { margin:2px 0; }
+/* Profile Settings: provider-style cards (match Global Settings look) */
+.provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
+.provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
+.provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
+.provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
+.provider-body { display:flex; gap:8px; align-items:center; }
+.provider-body.grid { display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; }
+.provider-body.grid .help { grid-column: 1 / -1; margin-top:6px; color:#bbb; font-size:12px; }
+.provider-title .provider-toggle { margin-left: 10px; display:flex; align-items:center; }
+.provider-title .provider-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
 /* Toast notification */
 .toast-notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; z-index: 10000; opacity: 0; transform: translateX(400px); transition: all 0.3s ease; max-width: 400px; }
 .toast-notification.show { opacity: 1; transform: translateX(0); }

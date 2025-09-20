@@ -127,6 +127,25 @@ $visualGroups = [
   'Language/Voice' => ["LANG_LLM_XTTS"],
 ];
 
+// Pretty label similar to global_settings General tab
+function meta_pretty_label(string $name): string {
+    $p = str_replace('_', ' ', strtolower(trim($name)));
+    return ucwords($p);
+}
+
+// Simple icon mapping for common groups/keys
+function meta_icon_for(string $key): string {
+    $u = strtoupper($key);
+    if (strpos($u, 'DIARY') !== false) return '📙';
+    if (strpos($u, 'RECHAT') === 0) return '🔁';
+    if (strpos($u, 'CONTEXT_HISTORY') === 0) return '🧠';
+    if (strpos($u, 'OGHMA') === 0) return '🧾';
+    if (strpos($u, 'QUEST_') === 0) return '🧭';
+    if (strpos($u, 'LANG_') === 0 || strpos($u, 'CORE_LANG') === 0) return '🌐';
+    if ($u === 'HERIKA_ANIMATIONS') return '🎞️';
+    return '⚙️';
+}
+
 $metadataCurrent = [];
 if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
     $tmp = json_decode($editItem["metadata"], true);
@@ -140,19 +159,15 @@ $showVisual = ($currentScript === 'core_profiles.php');
 $visualKeysLookup = array_flip($visualKeys);
 $nonVisualCurrent = $showVisual ? array_diff_key($metadataCurrent, $visualKeysLookup) : $metadataCurrent;
 
-function renderMetaInput($key, $schema, $value) {
+function renderMetaInput($key, $schema, $value, $controlOnly = false) {
     $type = $schema["type"] ?? 'string';
     $desc = htmlspecialchars($schema["description"] ?? '');
     $values = $schema["values"] ?? [];
-    $html = "<div class=\"conf-item\" style=\"max-width:900px;\">";
-    $html .= "<label style=\"color: rgb(242,124,17)\">" . htmlspecialchars($key) . "</label>";
-    if ($desc) $html .= "<span>" . $desc . "</span>";
+    $html = '';
     if ($type === 'boolean') {
         $isTrue = ($value === true || $value === 'true' || $value === 1 || $value === '1');
-        $html .= "<div>";
         $html .= "<input type=\"hidden\" name=\"meta_vis[$key]\" value=\"false\">";
-        $html .= "<label><input class=\"meta-toggle\" type=\"checkbox\" name=\"meta_vis[$key]\" value=\"true\"" . ($isTrue ? ' checked' : '') . "> <span class=\"toggle-text\">" . ($isTrue ? 'On' : 'Off') . "</span></label>";
-        $html .= "</div>";
+        $html .= "<input class=\"meta-toggle\" type=\"checkbox\" name=\"meta_vis[$key]\" value=\"true\"" . ($isTrue ? ' checked' : '') . ">";
     } elseif ($type === 'select' && is_array($values) && count($values)>0) {
         $html .= "<select name=\"meta_vis[$key]\">";
         $html .= "<option value=\"\">-- select --</option>";
@@ -194,10 +209,8 @@ function renderMetaInput($key, $schema, $value) {
             $max = $ranges[$key]['max'];
             $step = $ranges[$key]['step'];
             $safeVal = htmlspecialchars($val);
-            $html .= "<div>";
             $html .= "<input type=\"range\" id=\"$rid\" min=\"$min\" max=\"$max\" step=\"$step\" value=\"$safeVal\" oninput=\"document.getElementById('$nid').value=this.value\">";
             $html .= "<div style=\"margin-top:6px;\"><input type=\"number\" id=\"$nid\" name=\"meta_vis[$key]\" min=\"$min\" max=\"$max\" step=\"$step\" value=\"$safeVal\" style=\"width:80px;\" oninput=\"metaClamp('$rid','$nid',$min,$max)\"></div>";
-            $html .= "</div>";
         } else if ($type === 'longstring') {
             $html .= "<textarea name=\"meta_vis[$key]\" rows=\"4\" placeholder=\"" . htmlspecialchars($ph) . "\">" . htmlspecialchars($val) . "</textarea>";
         } else if ($type==='integer' || $type==='number') {
@@ -206,7 +219,6 @@ function renderMetaInput($key, $schema, $value) {
             $html .= "<input type=\"text\" name=\"meta_vis[$key]\" value=\"" . htmlspecialchars($val) . "\" placeholder=\"" . htmlspecialchars($ph) . "\">";
         }
     }
-    $html .= "</div>";
     return $html;
 }
 ?>
@@ -214,29 +226,76 @@ function renderMetaInput($key, $schema, $value) {
 <?php if ($showVisual): ?>
     <div class="content-section" style="margin-bottom:10px;">
         <?php
-        // Track which keys were rendered via groups
         $rendered = [];
         foreach ($visualGroups as $title => $keys) {
-            // Filter to only keys present in visualKeys (safety)
             $keysInVisual = array_values(array_intersect($keys, $visualKeys));
             if (count($keysInVisual) === 0) continue;
-            echo '<div style="margin:10px 0 6px; font-weight:800; color:#e9efff; border-bottom:1px solid rgba(138,155,182,0.35); padding-bottom:4px;">'.htmlspecialchars($title).'</div>';
-            echo '<div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">';
+            echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em;">'.htmlspecialchars($title).'</h2>';
+            echo '<div class="provider-grid">';
             foreach ($keysInVisual as $k) {
                 $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
-                echo renderMetaInput($k, $schemaEntry, $metadataCurrent[$k] ?? '');
+                $type = $schemaEntry['type'] ?? 'string';
+                $desc = htmlspecialchars($schemaEntry['description'] ?? '');
+                $label = meta_pretty_label($k);
+                $icon = meta_icon_for($k);
+                $val = $metadataCurrent[$k] ?? '';
+                echo '<div class="provider-card">';
+                echo   '<div class="provider-head">';
+                echo     '<div class="provider-title">';
+                echo       '<div class="provider-icon">'.htmlspecialchars($icon).'</div>';
+                echo       '<div>'.htmlspecialchars($label).'</div>';
+                if ($type === 'boolean') {
+                    $isTrue = ($val === true || $val === 'true' || $val === 1 || $val === '1');
+                    echo   '<div class="provider-toggle">'
+                         . '<input type="hidden" name="meta_vis['.htmlspecialchars($k).']" value="false">'
+                         . '<input type="checkbox" value="true" name="meta_vis['.htmlspecialchars($k).']"'.($isTrue?' checked':'').'>'
+                         . '</div>';
+                }
+                echo     '</div>';
+                echo   '</div>';
+                echo   '<div class="provider-body">';
+                if ($type !== 'boolean') {
+                    echo renderMetaInput($k, $schemaEntry, $val, true);
+                }
+                echo   '</div>';
+                if (!empty($desc)) echo '<div style="margin-top:6px; color:#bbb; font-size:12px;">'.$desc.'</div>';
+                echo '</div>';
                 $rendered[$k] = true;
             }
             echo '</div>';
         }
-        // Render any remaining visual keys not in groups under "Other"
         $remaining = array_values(array_diff($visualKeys, array_keys($rendered)));
         if (count($remaining) > 0) {
-            echo '<div style="margin:10px 0 6px; font-weight:800; color:#e9efff; border-bottom:1px solid rgba(138,155,182,0.35); padding-bottom:4px;">Other</div>';
-            echo '<div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">';
+            echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em;">Other</h2>';
+            echo '<div class="provider-grid">';
             foreach ($remaining as $k) {
                 $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
-                echo renderMetaInput($k, $schemaEntry, $metadataCurrent[$k] ?? '');
+                $type = $schemaEntry['type'] ?? 'string';
+                $desc = htmlspecialchars($schemaEntry['description'] ?? '');
+                $label = meta_pretty_label($k);
+                $icon = meta_icon_for($k);
+                $val = $metadataCurrent[$k] ?? '';
+                echo '<div class="provider-card">';
+                echo   '<div class="provider-head">';
+                echo     '<div class="provider-title">';
+                echo       '<div class="provider-icon">'.htmlspecialchars($icon).'</div>';
+                echo       '<div>'.htmlspecialchars($label).'</div>';
+                if (($schemaEntry['type'] ?? '') === 'boolean') {
+                    $isTrue = ($val === true || $val === 'true' || $val === 1 || $val === '1');
+                    echo   '<div class="provider-toggle">'
+                         . '<input type="hidden" name="meta_vis['.htmlspecialchars($k).']" value="false">'
+                         . '<input type="checkbox" value="true" name="meta_vis['.htmlspecialchars($k).']"'.($isTrue?' checked':'').'>'
+                         . '</div>';
+                }
+                echo     '</div>';
+                echo   '</div>';
+                echo   '<div class="provider-body">';
+                if (($schemaEntry['type'] ?? '') !== 'boolean') {
+                    echo renderMetaInput($k, $schemaEntry, $val, true);
+                }
+                echo   '</div>';
+                if (!empty($desc)) echo '<div style="margin-top:6px; color:#bbb; font-size:12px;">'.$desc.'</div>';
+                echo '</div>';
             }
             echo '</div>';
         }
