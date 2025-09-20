@@ -697,7 +697,26 @@ function current_value(string $flatName, array $currentConf) {
                         </select>
                         
                         <div></div>
-                        <div class="help">Quick test will synthesize a short sample using: <b><?php echo htmlspecialchars(strtolower($ttsSelRender)==='xtts-fastapi'?'TheNarrator':'malenord'); ?></b></div>
+                        <div class="help">
+                            <?php
+                            $ttsDescMap = [
+                                'melotts' => "[Skyrim Voices] MeloTTS runs locally installed via DwemerDistro. It's fast and free, but low quality voices. Under 1GB of VRAM.",
+                                'xtts-fastapi' => "[Skyrim Voices] CHIM XTTS runs locally and generates cloned voices from samples. Great for immersive, consistent character voices. Uses roughly 4GB of VRAM.",
+                                'mimic3' => "Mimic3 is a very basic LLM installed in DwemerDistro. It's fast and free, but low quality custom voices. Under 1GB of VRAM.",
+                                'xvasynth' => "[Skyrim Voices] xVASynth uses pre-trained game voices. Good fit for Skyrim-style character voices and mod voicepacks.",
+                                'azure' => "Azure TTS offers decent voices with emotion control. Requires Azure subscription and API key.",
+                                '11labs' => "ElevenLabs provides realistic, emotive voices. Requires manual generation of voices. Requires API key and credits.",
+                                'openai' => "OpenAI TTS supports a limited amount of decent quality voices. Requires API key.",
+                                'kokoro' => "KOKORO is a lightweight TTS. Useful when you need a simple, fast voice without complex configs.",
+                                'koboldcpp' => "KoboldCPP TTS routes to a local service. Use if you maintain a custom local TTS pipeline.",
+                                'zonos_gradio' => "Zonos TTS provides expressive voices with emotion controls. Recommended to use with cloud GPU hosting (Vast.ai). Uses roughly 6GB of VRAM.",
+                                'piper-tts' => "[Skyrim Voices]Piper-TTS is a middle quality and fast TTS. Requires manual installation of voices though. Under 1GB of VRAM. https://dwemerdynamics.hostwiki.io/en/TTS-Options",
+                                'deepgram' => "Deepgram TTS is a cloud option aimed at simple, quick voice generation. Requires API key."
+                            ];
+                            $ttsLower = strtolower((string)$ttsSelRender);
+                            echo htmlspecialchars($ttsDescMap[$ttsLower] ?? '');
+                            ?>
+                        </div>
                     </div>
                 </div>
                 <?php $ttsKeyCur = $ttsMap[$ttsSelRender] ?? ''; $ttsSchemaCur = ($ttsKeyCur && isset($providersTts[$ttsKeyCur]) && is_array($providersTts[$ttsKeyCur])) ? $providersTts[$ttsKeyCur] : []; ?>
