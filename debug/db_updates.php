@@ -68,6 +68,12 @@ try {
     if ($checkTableExists("core_api_badge") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
     }
+    if ($checkTableExists("core_itt_connector") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
+    }
+    if ($checkTableExists("core_tts_connector") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
+    }
     if ($checkTableExists("core_llm_connector") == -1) {
         // ensure api_badge for FK first
         if ($checkTableExists("core_api_badge") == -1) {
@@ -1200,7 +1206,7 @@ if ($checkVersion("db_maintenance")<20250528002) {
     $$; 
     ");
 
-    $db->execQuery("SELECT sql_exec2('ALTER TABLE \"'||pgc.relname||'\" SET (autovacuum_enabled = on, toast.autovacuum_enabled = on) '||';')
+    $db->execQuery("SELECT public.sql_exec2('ALTER TABLE '||quote_ident(pgn.nspname)||'.'||quote_ident(pgc.relname)||' SET (autovacuum_enabled = on, toast.autovacuum_enabled = on);')
         FROM pg_catalog.pg_class pgc
         LEFT JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
         WHERE (pgc.relkind ='r')
