@@ -55,6 +55,51 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] == '1';
 $isPicker = isset($_GET['picker']) && $_GET['picker'] == '1';
 
+// Handle direct uploads into the gallery
+$uploadError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload_image'])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    $file = $_FILES['upload_image'] ?? null;
+    if (!$file || !is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        $uploadError = 'Upload failed';
+    } else {
+        $extAllowed = ['jpg','jpeg','png'];
+        $maxBytes = 20 * 1024 * 1024; // 20MB
+        $name = (string)($file['name'] ?? '');
+        $tmp  = (string)($file['tmp_name'] ?? '');
+        $size = (int)($file['size'] ?? 0);
+        $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (!in_array($ext, $extAllowed, true)) {
+            $uploadError = 'Only JPG/PNG are allowed';
+        } elseif ($size <= 0 || $size > $maxBytes) {
+            $uploadError = 'File too large';
+        } else {
+            $galleryRoot = realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data/pictures/gallery');
+            if ($galleryRoot === false) {
+                $uploadError = 'Gallery folder not found';
+            } else {
+                $uploadsDir = $galleryRoot . DIRECTORY_SEPARATOR . 'uploads';
+                if (!is_dir($uploadsDir)) { @mkdir($uploadsDir, 0775, true); }
+                $safeBase = preg_replace('/[^a-zA-Z0-9._-]+/', '_', pathinfo($name, PATHINFO_FILENAME));
+                if ($safeBase === '' || $safeBase === '_' ) { $safeBase = 'image'; }
+                $fname = date('Ymd_His') . '_' . uniqid($safeBase . '_', true) . '.' . $ext;
+                $dst = $uploadsDir . DIRECTORY_SEPARATOR . $fname;
+                if (@move_uploaded_file($tmp, $dst)) {
+                    // Redirect to avoid resubmission; preserve picker/embed flags
+                    $qs = [];
+                    if ($isEmbed) $qs['embed'] = '1';
+                    if ($isPicker) $qs['picker'] = '1';
+                    $loc = 'soulgaze_gallery.php' . (count($qs)?('?'.http_build_query($qs)):'');
+                    header('Location: ' . $loc);
+                    exit;
+                } else {
+                    $uploadError = 'Could not save file';
+                }
+            }
+        }
+    }
+}
+
 if (!$isEmbed) {
     include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 }
@@ -96,6 +141,13 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
     <div class="gallery-header">
         <h1>🖼️ Soulgaze Gallery</h1>
         <div class="gallery-meta"><?php echo number_format(count($images)); ?> image(s)</div>
+        <form method="post" enctype="multipart/form-data" class="upload-inline" style="display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:6px;">
+            <input type="hidden" name="embed" value="<?= $isEmbed? '1':'' ?>">
+            <input type="hidden" name="picker" value="<?= $isPicker? '1':'' ?>">
+            <input type="file" name="upload_image" accept="image/jpeg,image/png" style="background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:6px 8px;" />
+            <button type="submit" class="btn">Upload</button>
+            <?php if (!empty($uploadError)): ?><span style="color:#ff6b6b; font-size:12px;"><?= htmlspecialchars($uploadError) ?></span><?php endif; ?>
+        </form>
     </div>
     <?php if (empty($images)): ?>
         <div class="empty">No images found. Make sure to use the Soulgaze hotkey ingame to take pictures!</div>
