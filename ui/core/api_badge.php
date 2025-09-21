@@ -109,6 +109,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     .provider-card .provider-links a { font-size:12px; color: rgb(242,124,17); text-decoration: underline; }
     .provider-card .provider-body { display:flex; gap:8px; align-items:center; }
     .provider-card input[type="password"], .provider-card input[type="text"] { flex:1; background-color:#333; color:#fff; border:1px solid #444; }
+    .provider-card .provider-subtext { margin-top:8px; color:#bdbdbd; font-size:12px; }
+    .provider-card .provider-subtext ul { margin:4px 0 0 18px; padding:0; }
+    .provider-card .provider-subtext li { line-height:1.4; }
+    .provider-card .provider-subtext .desc { margin:0 0 2px 0; color:#cfcfcf; }
 
     #custom-keys { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
     .custom-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
@@ -157,6 +161,17 @@ $providerLinks = [
     'azure' => 'https://ai.azure.com/',
     'elevenlabs' => 'https://elevenlabs.io/app/settings/api-keys',
     'replicate' => 'https://replicate.com/account/api-tokens'
+];
+
+// Subtext bullet points per provider
+$providerSubtext = [
+    'openrouter' => ['LLM', 'ITT'],
+    'deepgram' => ['STT'],
+    'openai' => ['LLM', 'TTS', 'STT', 'ITT'],
+    'azure' => ['TTS', 'STT'],
+    'google' => ['LLM', 'TTS', 'ITT'],
+    'elevenlabs' => ['TTS'],
+    'replicate' => ['Soulgaze Gallery Processor'],
 ];
 
 // Seed presets if missing
@@ -291,6 +306,16 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
                             <button type="button" class="btn-save" data-test-provider="<?= htmlspecialchars($slug) ?>" data-badge-id="<?= htmlspecialchars($row['id']) ?>">Test</button>
                         <?php endif; ?>
                     </div>
+                    <?php if (!empty($providerSubtext[$slug])): ?>
+                        <div class="provider-subtext">
+                            <div class="desc">This key can be used for:</div>
+                            <ul>
+                                <?php foreach ($providerSubtext[$slug] as $item): ?>
+                                    <li><?= htmlspecialchars($item) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
