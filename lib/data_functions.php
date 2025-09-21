@@ -2234,7 +2234,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
 }
 
 
-function DataSearchMemoryByVector($rawstring,$npcfilter) {
+function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
     
         $localStartTime=microtime(true);
         Logger::info("Using DataSearchMemoryByVector");
@@ -2246,6 +2246,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
         } else if ($GLOBALS["MINIME_T5"]) {
             // MiniMe keyword extraction
             Logger::info("Using minime-t5 context");
+            error_log("[DataSearchMemoryByVector] Using minime-t5 context");
             $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
             $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
@@ -2257,7 +2258,10 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             error_log("[DataSearchMemoryByVector start] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
-            $keywords=minimeExtract($TEST_TEXT,true);
+            $TEST_TEXT=internalDumbTranslator($TEST_TEXT);
+            
+            $keywords=minimeExtract($TEST_TEXT,true);// Only to check if memory is needed
+
             error_log("[DataSearchMemoryByVector end] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
             $reponse=json_decode($keywords,true);
             
@@ -2277,7 +2281,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                 );
                 return null;
 
-            } else  if (isset($reponse["is_memory_recall"])) {
+            }/* else  if (isset($reponse["is_memory_recall"])) {
             
                 if (isset($reponse["version"]) && $reponse["version"]==2) {
                     $altKeywords=explode(" ",lastNames(15,["inputtext"]));
@@ -2314,9 +2318,12 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                    
                 }
                 Logger::debug("CONTEXT SEARCH KEYWORDS FROM MINIME: ".print_r($result,true));
-            }
+            }*/
             
-        } 
+        } else {
+            error_log("[DataSearchMemoryByVector] Minime-Disabled. what to do here?");
+
+        }
 
         if (sizeof($result)<1) {
             Logger::info("Using dumb context");
@@ -2345,62 +2352,34 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
             }
             $result = array_unique($kw);
 
-            $kwStringAny=implode(" | ",$result);
-            $kwStringAll=implode(" & ",$result);
-            Logger::debug("CONTEXT SEARCH KEYWORDS FROM DUMB: ".print_r($result,true));
-        }
-
-        $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
-        $replacement = "";
-        $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
-                    
-        $pattern = '/\(talking to [^()]+\)/i';
-        $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
-
-        if (empty($npcfilter)) {
-            $npcfilter=$GLOBALS["HERIKA_NAME"];
-        }
-
-        $contextKeywords  = "$TEST_TEXT ".implode(" ", $result);
-
-        if (isset($GLOBALS["LLM_LANG"]) && $GLOBALS["LLM_LANG"]!="en") {
-            
-            // Use word by word translation
-            if (file_exists($GLOBALS["ENGINE_PATH"]."/data/dict/{$GLOBALS["LLM_LANG"]}-en.txt")) {
-                // Load the dictionary file
-                $dictionary = [];
-                error_log("[DataSearchMemoryByVector start] Loading dictionary: " . (microtime(true) - $localStartTime) . " seconds");
-
-                $csvFile = fopen($GLOBALS["ENGINE_PATH"]."/data/dict/{$GLOBALS["LLM_LANG"]}-en.txt", 'r');
-                if ($csvFile) {//
-                    while (($line = fgetcsv($csvFile,0, " ","\"",'\\')) !== false) {
-                        if (isset($line[0]) && isset($line[1])) {
-                            $dictionary[trim($line[0])] = trim($line[1]);
-                        }
-                    }
-                    fclose($csvFile);
-                }
-
-                error_log("[DataSearchMemoryByVector start] End Loading dictionary: " . (microtime(true) - $localStartTime) . " seconds");
-                //print_r($dictionary);
-                // Translate context keywords
-                $translatedKeywords = [];
-                foreach (explode(" ", $contextKeywords) as $word) {
-                    $translatedKeywords[] = $dictionary[strtolower($word)] ?? $word; // Use translation if available, otherwise keep original word
-                }
-
-                // Update context keywords with translated words
-                $contextKeywords = implode(" ", $translatedKeywords);
+            foreach ($result as $r) {
+                $resultEn[]=internalDumbTranslator($r);
             }
 
-           
+            $kwStringAny=implode(" | ",$resultEn);
+            $kwStringAll=implode(" & ",$resultEn);
+
+            Logger::debug("CONTEXT SEARCH KEYWORDS FROM DUMB: ".print_r($resultEn,true));
+            error_log("CONTEXT SEARCH KEYWORDS FROM DUMB: <".implode("><",$resultEn).">");
         }
+
+       
+        if (empty($npcfilter)) {
+            $npcfilter=$GLOBALS["HERIKA_NAME"];
+        } else {
+            if ($useContextKw)
+                $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
+        }
+
+        $contextKeywords  = implode(" ", $result);
+        $contextKeywords=strtr(internalDumbTranslator($contextKeywords),["remember"=>"","Remember"=>"","do you remember"=>""]);
 
 
         $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
 
         $data = [
-            'text' => strtolower($contextKeywords)   // We add previous keywords
+            
+            'text' => $contextKeywords   
         ];
 
         // Convert to JSON
@@ -2429,29 +2408,26 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
 
         }
 
-        $keywords=hashtagifySentences("$contextKeywords");
-        $kw=[];
-        
-        //print_r($keywords);
+        $result = explode(" ",$contextKeywords);
 
-        foreach (explode(" ",$keywords) as $tag) {
-            if (strlen($tag)<4)
+        $resultNormalized=[];
+        foreach ($result as $word) {
+            if (strlen($word)<3)
                 continue;
-            $lkw=hashtagify(strtr($tag,["remember"=>"","Remember"=>""]));    
-            if ($lkw) {
-                $kw=array_merge($kw,explode(" ",$lkw));
-            }
+            if (!empty($word))
+                $resultNormalized[]=$word;
         }
-        $result = array_unique($kw);
 
-        $kwStringAny=implode(" | ",$result);
-        $kwStringAll=implode(" & ",$result);
-
+        
+        $kwStringAny=implode(" | ",$resultNormalized);
+        $kwStringAll=implode(" & ",$resultNormalized);
+        error_log("[DataSearchMemoryByVector] Generated Tags: $kwStringAny" );
         $vector=json_decode($response,true);
+
         if (is_array($vector) && isset($vector["embedding"])) {
             $vectorString="'[".implode(",",$vector["embedding"])."]'";
    
-            $memory=$GLOBALS["db"]->fetchAll("
+            $finalQuery="
                 SELECT summary, gamets_truncated,
                         embedding <-> $vectorString as distance,
                          ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
@@ -2460,17 +2436,43 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
                     and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
-                    ORDER BY (embedding <-> $vectorString)-ts_rank(native_vec, to_tsquery('$kwStringAny')) 
+                    ORDER BY (embedding <-> $vectorString)
                     LIMIT 5 OFFSET 0
-                ");
-                    
-            if (!isset($memory[0])) {
-                $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
-                $memory[0]["distance"]=1.4;
+                ";
+
+             $finalQuery="
+                SELECT rowid,summary, gamets_truncated,
+                        embedding <-> $vectorString as distance,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
+                         (embedding <-> $vectorString) - ts_rank(native_vec, to_tsquery('$kwStringAny')) AS mixed_distance
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    ORDER BY 
+                        round((embedding <-> $vectorString)::numeric, 2) ASC,
+                        ts_rank(native_vec, to_tsquery('$kwStringAny')) DESC
+                    LIMIT 50 OFFSET 0
+                ";    
+            $memory=$GLOBALS["db"]->fetchAll($finalQuery);
+            //error_log($finalQuery);
+            $singleMemory = null;
+            $maxRankAny = -INF;
+
+            foreach ($memory as $entry) {
+                if (isset($entry['rank_any_fts']) && $entry['rank_any_fts'] > $maxRankAny) {
+                    $maxRankAny = $entry['rank_any_fts'];
+                    $singleMemory = $entry;
+                }
+            }
+         
+            if (!isset($singleMemory)) {
+                $singleMemory=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
+                $singleMemory["distance"]=1.4;
             }
             else {
-                 $memory[0]['rank_any']=(1.40-$memory[0]["distance"]);
-                 $memory[0]['rank_all']=(1.40-$memory[0]["mixed_distance"]);
+                 $singleMemory['rank_any']=(($singleMemory["rank_any_fts"])+($singleMemory["rank_all_fts"])/2);
+                 $singleMemory['rank_all']=($singleMemory["rank_all_fts"]);
             }
             
             /*error_log("
@@ -2490,9 +2492,9 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
                     array(
                         'input' => $TEST_TEXT,
                         'keywords' =>'text2vec search / (input plus "'.$contextKeywords.'"',
-                        'rank_any'=> (1.40-$memory[0]["mixed_distance"]),// Try to mimic FTS query rank
-                        'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
-                        'memory'=>$memory[0]["summary"],
+                        'rank_any'=> (1.40-$singleMemory["mixed_distance"]),// Try to mimic FTS query rank
+                        'rank_all'=> (1.40-$singleMemory["distance"]),// Try to mimic FTS query rank
+                        'memory'=>$singleMemory["summary"],
                         'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
                     )
                 );
@@ -2502,7 +2504,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
         }
             
     
-    return $memory;
+    return [$singleMemory];
     
 }
 

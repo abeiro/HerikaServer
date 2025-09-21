@@ -290,6 +290,10 @@ if ($GLOBALS["MINIME_T5"]) {
                 );
             }
         }
+    } else {
+        error_log("[OGHMA] OGHMA_INFINIUM disabled: {$GLOBALS["OGHMA_INFINIUM"]}");
     }
+}  else {
+        error_log("[OGHMA]  MINIME_T5 disabled: {$GLOBALS["MINIME_T5"]}");
 }
 ?>

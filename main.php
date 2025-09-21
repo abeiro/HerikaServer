@@ -497,6 +497,31 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 // Profile selection and migration
 
+$npcMaster=new NpcMaster();
+$profileMgr=new CoreProfile();
+$currentNpcData=$npcMaster->getByname("The Narrator");
+if (!$currentNpcData) {
+            
+    $npcMaster->create(["npc_name"=>"The Narrator"]);
+    $currentNpcData=$npcMaster->getByname("The Narrator");
+
+    if ($currentNpcData) {
+        $newNpcData=$npcMaster->migrateFromOldProfile($currentNpcData,$GLOBALS);
+
+
+        $ingameDataRef=getBaseDataForNpcFromLog("The Narrator");
+        $newNpcData=array_merge($newNpcData,$ingameDataRef??[]);
+        $defProfile=$profileMgr->getDefaultNarrator();
+        $newNpcData["profile_id"]=$defProfile["id"];
+        $newNpcData["voiceid"]="malenord";
+        if ($newNpcData) {
+            $npcMaster->updateByArray($newNpcData);
+        }
+        
+    }
+
+} 
+
 if (isset($_GET["profile"])) {
     
     $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
@@ -629,7 +654,7 @@ if (isset($_GET["profile"])) {
     }
     
     $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
-    $GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
+    //$GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
     $GLOBALS["STTFUNCTION"]=$OVERRIDES["STTFUNCTION"];
     $GLOBALS["TTSFUNCTION_PLAYER"]=$OVERRIDES["TTSFUNCTION_PLAYER"];
     $GLOBALS["TTSFUNCTION_PLAYER_VOICE"]=$OVERRIDES["TTSFUNCTION_PLAYER_VOICE"];

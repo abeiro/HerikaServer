@@ -14,12 +14,16 @@ function minimeExtract($text,$useOnlyDetector=false) {
         return call_user_func($GLOBALS["mockMinimeExtract"], $text);
     }
 
+    if (isset($GLOBALS["MINIME_CACHE"][md5($text)]))
+        return $GLOBALS["MINIME_CACHE"][md5($text)];
+    
     if ($useOnlyDetector)
         $url = "http://127.0.0.1:8082/detectMemory?text=" . urlencode($text);
     else
         $url = "http://127.0.0.1:8082/extract?text=" . urlencode($text);
     
-    return file_get_contents($url);
+    $GLOBALS["MINIME_CACHE"][md5($text)]=file_get_contents($url);
+    return $GLOBALS["MINIME_CACHE"][md5($text)];
 }
 
 function minimePostTopic($text) {

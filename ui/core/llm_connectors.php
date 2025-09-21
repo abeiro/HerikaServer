@@ -413,7 +413,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 }
                 echo "</div>";
                 echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
-                echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
+                // Seems not working on profiles tab, so not print
+                //echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
                 echo "</div>";
                 echo "</div>";
                 ?>
@@ -1195,6 +1196,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     const btn = document.getElementById('btn_clear_adv');
     if (!btn) return;
     btn.addEventListener('click', function(){
+        
         const pairs = [
             ['rng_presence_penalty','num_presence_penalty'],
             ['rng_frequency_penalty','num_frequency_penalty'],

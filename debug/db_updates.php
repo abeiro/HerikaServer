@@ -1569,6 +1569,10 @@ try {
 }
 
 
+if ($checkTableExists("translations") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/translations_table.sql"));
+} else
+    Logger::info(__FILE__." core_itt_connector exists");
 
 
 //----------------------------------------------------

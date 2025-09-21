@@ -53,6 +53,16 @@ class CoreProfile {
         return $GLOBALS["db"]->fetchAll($query);
     }
 
+    public function getDefaultNpc() {
+        $query = "SELECT * FROM {$this->table} where default_npc='1' ORDER BY id ASC";
+        return $GLOBALS["db"]->fetchOne($query);
+    }
+
+    public function getDefaultNarrator() {
+        $query = "SELECT * FROM {$this->table} where default_narrator='1' ORDER BY id ASC";
+        return $GLOBALS["db"]->fetchOne($query);
+    }
+
     public function readOne($id) {
         $id = intval($id);
         $query = "SELECT * FROM {$this->table} WHERE id = {$id} LIMIT 1";
@@ -164,6 +174,7 @@ class CoreProfile {
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
                 $GLOBALS[$key] = $value;
+                //error_log("[CORE] PROFILE  GLOBALS[$key] = $value");
             }
         }
         if (isset($currentProfileData["prompt"]))

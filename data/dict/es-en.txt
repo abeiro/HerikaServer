@@ -1376,7 +1376,7 @@ animales kennels
 animales animals
 animales animal
 animales pets
-esposa wife
+esposa "wife,marriage,wedding"
 ríos rios
 ríos ríos
 ríos rivers
@@ -8665,3 +8665,6 @@ montana montana
 privados private
 onu un
 francesco francesco
+recuerdas "do you remember"
+acuerdas "do you remember"
+recordar "do you remember"
