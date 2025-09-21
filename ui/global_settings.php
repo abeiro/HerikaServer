@@ -218,6 +218,17 @@ function pretty_label(string $flatName): string {
         $last2 = str_replace('_', ' ', strtolower(trim($last)));
         return ucwords($last2);
     }
+    // Custom display names for connectors (UI-only)
+    $connectorLabels = [
+        'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
+        'CORE_CONNECTOR_SUMMARY' => 'Summaries',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
+        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
+        'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+    ];
+    if (isset($connectorLabels[$flatName])) {
+        return $connectorLabels[$flatName];
+    }
     $parts = explode('@', $flatName);
     $prettyParts = [];
     foreach ($parts as $p) {
@@ -235,6 +246,15 @@ function icon_for_field(string $flatName): string {
     // Specific keys
     if ($u === 'PLAYER_NAME') return '🏷️';
     if ($u === 'PROMPT_HEAD') return '🔝';
+    // Connectors
+    if (strpos($u, 'CORE_CONNECTOR_') === 0) {
+        if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
+        if ($u === 'CORE_CONNECTOR_SUMMARY') return '📝';
+        if ($u === 'CORE_CONNECTOR_MEDIUMTERM') return '🧠';
+        if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
+        if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
+        return '🔌';
+    }
     // Respeech related
     if (strpos($u, 'RESPEECH') !== false) return '🦜';
     if (strpos($u, 'SPEECH_STYLE') !== false) return '🦜';
@@ -253,14 +273,16 @@ $gsSections = [
     'General' => [
         [ 'name' => 'PLAYER_NAME', 'type' => 'text' ],
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
-        [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
         [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
+        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+    ],
+    'Global Connectors' => [
+        [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
     ],
     'Dynamic Prompts' => [
         [ 'name' => 'DYNAMIC_PROMPT_PERSONALITY', 'type' => 'longstring' ],

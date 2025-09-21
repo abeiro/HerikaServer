@@ -68,11 +68,11 @@
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","web_connector","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter","player2json"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Connectors Selection"},
   "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Is one of the SUMMARY connectors. Used for creating diary entries, dynamic profiles and summarized memories!<br><br><strong>You will need to place your API key in the (SUMMARY) connector for this to work!</strong>"},
   "HERIKA_DYNAMIC": {"userlvl":"basic","type": "longstring","description": "Deprecated. Use the new fields listed above instead."},
-  "CORE_CONNECTOR_DIRECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for director mode."},
+  "CORE_CONNECTOR_DIRECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Director mode."},
   "CORE_CONNECTOR_PLAYER": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for player re-speech."},
-  "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for summaries. "},
+  "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for creating memory summaries. "},
   "CORE_CONNECTOR_MEDIUMTERM": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Currently not used yet. Connector used to generate mid-term memories. Should have very long context >32k. Use a cheap one!."},
-  "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate/update NPC profiles","scope":"global"},
+  "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to update CHIM NPC Dynamic Profiles.","scope":"global"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Historic context to use when Focus on Chat mode. Should be lower than normal context.","scope":"global"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
@@ -363,7 +363,7 @@
       "API_KEY":{"type":"apikey","scope":"global","description":"DeepL api key. Default profile only.<br/><strong>Required</strong> even when using the free version."}
     }
   },
-  "PLAYER_RESPEECH":{"type":"boolean","description":"Use default diary connector AI to rewrite player speech Currently only triggers when strating speech with **","scope":"global"},
+  "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
     "type":"select","values":["none","whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
