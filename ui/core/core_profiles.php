@@ -787,7 +787,6 @@ $ittById = $byId($ittRows);
             if (json && json.ok){
                 if (typeof showToast==='function') showToast('Profile settings saved');
                 try { updateLeftListBasics(label, defNpc==='1', defNarr==='1'); } catch(_e){}
-                try { window.location.reload(); } catch(_){}
             } else {
                 if (typeof showToast==='function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
             }

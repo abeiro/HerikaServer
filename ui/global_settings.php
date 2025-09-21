@@ -93,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
     if (!isset($GLOBALS["FEATURES"]["MISC"])) $GLOBALS["FEATURES"]["MISC"] = [];
     if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
     if (!isset($GLOBALS["PLAYER_NAME"])) $GLOBALS["PLAYER_NAME"] = 'Player';
+    $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"] = true;
     $gameRequest = [ 'tts_quick_test', time(), time(), '' ];
     $selLower = strtolower($selectedFunction);
     if ($ttsTestVoice !== '') {
@@ -271,7 +272,8 @@ $gsSections = [
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
-        [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ]
+        [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ],
+        [ 'name' => 'HIDE_NARRATOR_DIALOGUE', 'type' => 'boolean' ]
     ],
     'Memory' => [
         [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],

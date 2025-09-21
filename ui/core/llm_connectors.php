@@ -256,7 +256,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 <div id="provider_row">
                     <label for='provider'>Provider</label><br>
                     <input type="text" name="provider" placeholder="(Optional) leave empty to use recommended provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
-                    <small class="hint">(Optional): Leave empty to default to recommended provider.</small>
                 </div>
 
                 <div id="driver_row" style="display:none;">
@@ -956,7 +955,6 @@ if (typeof window.consolidation !== 'function') {
             <div id="provider_row">
                 <label for='provider'>Provider</label><br>
                 <input type="text" name="provider" placeholder="(Optional) leave empty to use recommended provider" value="<?= htmlspecialchars($editItem["provider"] ?? "") ?>"><br>
-                <small class="hint">(Optional): Leave empty to default to recommended provider.</small>
             </div>
 
             <div id="driver_row" style="display:none;">
