@@ -90,7 +90,7 @@ INSERT INTO public.core_llm_connector (
     (2, 'Gemini Flash 2',      '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.0-flash-001', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 'openrouter'),
     (3, 'Sonnet 3.7',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'anthropic/claude-3.7-sonnet', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 'openrouter'),
     (4, 'Qwen3-235b',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'qwen/qwen3-235b-a22b-2507', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 'openrouter'),
-    (5, 'Mistral Small 3.2 24B', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/mistral-small-3.2-24b-instruct', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 'openrouter');
+    (5, 'Mistral Small 3.2 24B', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/mistral-small-3.2-24b-instruct', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 'openrouter'),
     (6, 'Gemini Flash 1.5 8B',   '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-flash-1.5-8b', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 'openrouter');
 
 
@@ -98,7 +98,7 @@ INSERT INTO public.core_llm_connector (
 -- Name: llm_connector_id_seq; Type: SEQUENCE SET; Schema: public; Owner: dwemer
 --
 
-SELECT pg_catalog.setval('public.llm_connector_id_seq', 4, true);
+SELECT pg_catalog.setval('public.llm_connector_id_seq', 6, true);
 
 
 --

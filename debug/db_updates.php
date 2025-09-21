@@ -53,12 +53,26 @@ $db->execQuery("SET search_path TO public");
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS vector');
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS pg_trgm');
 
+// Ensure database_versioning exists before version checks
+try {
+    $exists = $db->fetchAll("SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='database_versioning'");
+    if (!$exists) {
+        $db->execQuery(file_get_contents(__DIR__."/../data/database_versioning.sql"));
+    }
+} catch (Exception $e) {
+    Logger::warn("database_versioning bootstrap: ".$e->getMessage());
+}
+
 // Bootstrap critical core tables early to avoid UI queries failing during initial load
 try {
     if ($checkTableExists("core_api_badge") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
     }
     if ($checkTableExists("core_llm_connector") == -1) {
+        // ensure api_badge for FK first
+        if ($checkTableExists("core_api_badge") == -1) {
+            $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+        }
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
     }
     if ($checkTableExists("core_profiles") == -1) {
@@ -1332,6 +1346,7 @@ if ($checkVersion("npc_templates")<20250619001) {
             // Replace table references to use temp table
             $newDataSql = str_replace('INSERT INTO public.npc_templates', 'INSERT INTO npc_templates_new', $newDataSql);
             $newDataSql = str_replace('INSERT INTO npc_templates', 'INSERT INTO npc_templates_new', $newDataSql);
+            $newDataSql = str_replace('npc_templates_new_new', 'npc_templates_new', $newDataSql);
             
             $db->execQuery($newDataSql);
             
