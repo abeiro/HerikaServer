@@ -136,7 +136,7 @@ $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script lo
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
-$TITLE = "QUICKSTART MENU";
+$TITLE = "⚡ CHIM - Quickstart";
 
 require($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
 
@@ -217,6 +217,8 @@ $quickstartConf = array_filter($currentConf, function($key) use ($quickstartKeys
 }, ARRAY_FILTER_USE_KEY);
 
 // Start of Form
+echo '<link rel="stylesheet" href="'.$webRoot.'/ui/css/main.css">';
+echo '<main>';
 echo '<div class="container">
         <form action="" method="post" name="mainC" class="confwizard" id="top">
             <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"]) . '" />
@@ -224,12 +226,13 @@ echo '<div class="container">
 
 // Main Heading
 echo '<div class="container">
-      <h1 class="text-center mb-4">QUICKSTART MENU</h1>
-      <h2 class="text-center mb-4">Only to be used for the initial setup!</h2>
-      <h3 class="text-center mb-4">If you want to make more advanced changes, enter the appropriate info below to the best of your ability. Click Save and make further changes in the Configuration Wizard.</h3>
+      <h1 class="qs-title text-center mb-4">Quickstart Menu</h1>
+      <h2 class="qs-subtitle text-center mb-4">Only to be used for the initial setup!</h2>
+      <h3 class="qs-note text-center mb-4">If you want to make more advanced changes before playing go to the Configuration tab above.</h3>
     </div>';
 
 // Render PLAYER_NAME first if present
+echo '<div class="container"><h2 class="qs-section-title">Basics</h2></div>';
 if (isset($quickstartConf['PLAYER_NAME'])) {
     $parms = $quickstartConf['PLAYER_NAME'];
     $fieldName = strtr('PLAYER_NAME', array(' ' => '@'));
@@ -259,8 +262,13 @@ try {
         if (isset($rowMeta['metadata']) && $rowMeta['metadata'] !== '') {
             $meta = json_decode($rowMeta['metadata'], true);
             if (is_array($meta)) {
-                if (isset($meta['MINIME_T5']) && ($meta['MINIME_T5']===true || $meta['MINIME_T5']==='1' || $meta['MINIME_T5']===1)) { $minimeChecked = " checked"; }
-                if (isset($meta['OGHMA_INFINIUM']) && ($meta['OGHMA_INFINIUM']===true || $meta['OGHMA_INFINIUM']==='1' || $meta['OGHMA_INFINIUM']===1)) { $oghmaChecked = " checked"; }
+                $isTruthy = function($v){
+                    if ($v === true || $v === 1) return true;
+                    $s = strtolower(trim((string)$v));
+                    return in_array($s, ['1','true','yes','on'], true);
+                };
+                if (array_key_exists('MINIME_T5', $meta) && $isTruthy($meta['MINIME_T5'])) { $minimeChecked = " checked"; }
+                if (array_key_exists('OGHMA_INFINIUM', $meta) && $isTruthy($meta['OGHMA_INFINIUM'])) { $oghmaChecked = " checked"; }
             }
         }
     }
@@ -277,26 +285,27 @@ echo '<div class="container">
             </div>
             <small class="form-text">Paste your OpenRouter API key. <a href="https://openrouter.ai/keys" target="_blank">Create key</a></small>
         </div>
-        
+        <br>
         <div class="form-group">
             <label>Enable MiniMe (T5)</label>
             <div class="mt-2">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="qs_minime_t5" value="1"' . $minimeChecked . '>
-                    <label class="form-check-label" for="qs_minime_t5">On</label>
+                    <label class="form-check-label" for="qs_minime_t5"></label>
                 </div>
             </div>
-            <small class="form-text">Turns on MiniMe-T5 assistant behavior for profiles.</small>
+            <small class="form-text">Turns on MiniMe-T5 LLM for roleplay assitance. Required for Oghma.</small>
         </div>
+        <br>
         <div class="form-group">
             <label>Enable Oghma Infinium</label>
             <div class="mt-2">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="qs_oghma_infinium" value="1"' . $oghmaChecked . '>
-                    <label class="form-check-label" for="qs_oghma_infinium">On</label>
+                    <label class="form-check-label" for="qs_oghma_infinium"></label>
                 </div>
             </div>
-            <small class="form-text">Enable Oghma Infinium (auto-knowledge and related features).</small>
+            <small class="form-text">Requires Minime-T5 enabled. Oghma Infinium improves AI roleplay by adding and restrciting lore to NPCs.</small>
         </div>
       </div>';
 
@@ -362,15 +371,15 @@ foreach ($quickstartConf as $pname => $parms) {
         echo "<div class='input-group-append'>";
         echo "<button class='btn btn-outline-secondary' type='button' onclick=\"checkUrlFromServer('$fieldName')\">Check</button>";
         echo "</div></div>";
+
     } else if ($parms["type"] == "select") {
         if ($pname == "TTSFUNCTION") {
-            $parms["values"] = ["melotts","xtts-fastapi","xvasynth","piper-tts"];
-            $parms["description"] = "Select the TTS service you wish to use. <br>You can install MeloTTS under <i>Tools/Components/AMD or NVIDIA GPU<i> in the DwemerDistro folder.<br> You can install XTTS under <i>Tools/Components/NVIDIA GPU</i> in the DwemerDistro folder. <br><b>For xVASynth you will need to edit the [TTS XVASynTH url] in the Configuration Wizard to complete the setup after you are done with this menu!</b> <br><b>We recommend MeloTTS for most first time users.</b>";
+            $parms["values"] = ["melotts","xtts-fastapi"];
+            $parms["description"] = "Select the TTS service you wish to use. <br>You can install MeloTTS and CHIM XTTS in the CHIM Launcher under <b>Install Components.</b>";
         } else if ($pname == "STTFUNCTION") {
             $parms["values"] = ["deepgram","localwhisper"];
             $parms["description"] = "Select the STT service you wish to use (Deepgram or Whisper).";
         }
-    
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
         foreach ($parms["values"] as $item) {
             $selected = ($item == $parms["currentValue"]) ? "selected" : "";
@@ -444,17 +453,12 @@ foreach ($quickstartConf as $pname => $parms) {
 
     echo "</div>";
 }
-
+echo "<br>";
 echo '<div class="btn-group-custom text-center">
         <div class="btn-group-custom text-center">
-            <p class="warning-text2">
-                After you click <b>Save</b> we <b>HIGHLY RECOMMEND</b> to open the Troubleshooting menu and run the LLM/AI, TTS and STT tests to verify everything is setup correctly.
-            </p>
             <div class="btn-group-custom text-center">
                 <h3 class="warning-text3">
-                    PLEASE READ the <a href="/HerikaServer/ui/index.php?notes=true" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM 101</a> guide and the 
-                    <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Manual</a> 
-                    to learn how to make the most out of this mod!
+                    Once done click Save and startup Skyrim with CHIM AIAgent mod installed. Please read the <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
                 </h3>
             </div>
 
@@ -472,17 +476,19 @@ echo '<div class="btn-group-custom text-center">
     </div>';
 
 echo '</form>
-      </div>'; // End of container
+      </div>';
+echo '</main>'; // End of container/main
 
 include("tmpl/footer.html");
 
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = "CHIM";
+$title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 
 echo '<style>
+    @font-face { font-family: "MagicCards"; src: url("css/font/MagicCardsNormal.ttf") format("truetype"); font-weight: normal; font-style: normal; }
     /* Override main container styles */
     main {
         padding-top: 80px;
@@ -507,9 +513,43 @@ echo '<style>
         padding: 20px;
     }
 
+    /* Headings styled like Oghma */
+    .qs-title {
+        margin: 0 0 12px 0;
+        font-family: "MagicCards", serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        text-align: center;
+    }
+    .qs-subtitle {
+        font-family: "MagicCards", serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        margin-bottom: 10px;
+        font-size: 1.4em;
+        text-align: center;
+    }
+    .qs-note {
+        color: #cfd8e3;
+        margin-bottom: 18px;
+        text-align: center;
+    }
+
+    .qs-section-title {
+        font-family: "MagicCards", serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        margin: 12px 0 10px 0;
+        font-size: 1.4em;
+    }
+
     .confwizard {
         background-color: #1e1e1e;
-        padding: 30px;
+        padding: 30px 30px 24px 30px;
         border-radius: 8px;
         box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
     }
@@ -518,7 +558,7 @@ echo '<style>
     .confwizard .btn-primary,
     .confwizard button.btn-primary,
     .confwizard a.btn-primary {
-        padding: 10px 20px !important;
+        padding: 10px 18px !important;
         color: #ffffff !important;
         border: 2px solid rgba(255, 255, 255, 0.65) !important;
         border-radius: 6px !important;
@@ -527,7 +567,7 @@ echo '<style>
         text-decoration: none !important;
         display: inline-block !important;
         transition: background-color 0.3s, color 0.3s !important;
-        margin: 5px !important;
+        margin: 6px !important;
         font-weight: bold !important;
         background-color: rgb(0, 48, 176) !important;
     }
