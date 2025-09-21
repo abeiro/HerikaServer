@@ -2322,7 +2322,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
             
         } else {
             error_log("[DataSearchMemoryByVector] Minime-Disabled. what to do here?");
-
+            return null;
         }
 
         if (sizeof($result)<1) {

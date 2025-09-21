@@ -1421,7 +1421,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else if (($memories[0]["rank_any"]>0.25) && isset($memories[0]["mixed_distance"])) {// Search by mixed vector/fts .
+        } else if (($memories[0]["rank_any"]>0.50) && isset($memories[0]["mixed_distance"])) {// Search by mixed vector/fts .
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
