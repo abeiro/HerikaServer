@@ -47,8 +47,29 @@ $updateVersion = function($tablename,$version) {
 
 /////////////////////////
 
-// Must
+// Ensure base schema and extensions exist for fresh installs
+$db->execQuery('CREATE SCHEMA IF NOT EXISTS public');
+$db->execQuery("SET search_path TO public");
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS vector');
+$db->execQuery('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+
+// Bootstrap critical core tables early to avoid UI queries failing during initial load
+try {
+    if ($checkTableExists("core_api_badge") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+    }
+    if ($checkTableExists("core_llm_connector") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
+    }
+    if ($checkTableExists("core_profiles") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
+    }
+    if ($checkTableExists("core_npc_master") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
+    }
+} catch (Exception $e) {
+    Logger::warn("Bootstrap core tables: " . $e->getMessage());
+}
 
 $query = "
     SELECT column_name 
@@ -1286,11 +1307,27 @@ if ($checkVersion("npc_templates")<20250619001) {
     try {
         $sqlFile = __DIR__."/../data/npc_templates_20250618001.sql";
         if (file_exists($sqlFile)) {
-            // Create temporary table for new data
+            // Create temporary table for new data (define columns explicitly to avoid dependency on base table)
             $db->execQuery("DROP TABLE IF EXISTS npc_templates_new");
-            $db->execQuery("CREATE TEMP TABLE npc_templates_new AS SELECT * FROM npc_templates WHERE 1=0");
+            $db->execQuery("CREATE TEMP TABLE npc_templates_new (
+                npc_name character varying(128) PRIMARY KEY,
+                npc_pers text NOT NULL,
+                npc_misc text,
+                npc_dynamic text,
+                melotts_voiceid text,
+                xtts_voiceid text,
+                xvasynth_voiceid text,
+                npc_background text,
+                npc_personality text,
+                npc_appearance text,
+                npc_relationships text,
+                npc_occupation text,
+                npc_skills text,
+                npc_speechstyle text,
+                npc_goals text
+            )");
             
-            // Load new data, handling the SQL file properly
+            // Load new data into temp table
             $newDataSql = file_get_contents($sqlFile);
             // Replace table references to use temp table
             $newDataSql = str_replace('INSERT INTO public.npc_templates', 'INSERT INTO npc_templates_new', $newDataSql);
@@ -1298,28 +1335,35 @@ if ($checkVersion("npc_templates")<20250619001) {
             
             $db->execQuery($newDataSql);
             
-            // Upsert from temp table to main table
-            $db->execQuery("
-                INSERT INTO npc_templates 
-                SELECT * FROM npc_templates_new 
-                ON CONFLICT (npc_name) DO UPDATE SET
-                    npc_pers = EXCLUDED.npc_pers,
-                    npc_dynamic = EXCLUDED.npc_dynamic,
-                    npc_misc = EXCLUDED.npc_misc,
-                    melotts_voiceid = EXCLUDED.melotts_voiceid,
-                    xtts_voiceid = EXCLUDED.xtts_voiceid,
-                    xvasynth_voiceid = EXCLUDED.xvasynth_voiceid,
-                    npc_background = EXCLUDED.npc_background,
-                    npc_personality = EXCLUDED.npc_personality,
-                    npc_appearance = EXCLUDED.npc_appearance,
-                    npc_relationships = EXCLUDED.npc_relationships,
-                    npc_occupation = EXCLUDED.npc_occupation,
-                    npc_skills = EXCLUDED.npc_skills,
-                    npc_speechstyle = EXCLUDED.npc_speechstyle,
-                    npc_goals = EXCLUDED.npc_goals
-            ");
+            // Upsert from temp table to main table with explicit column list
+            $db->execQuery("INSERT INTO npc_templates (
+                npc_name, npc_pers, npc_misc, npc_dynamic,
+                melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
+                npc_background, npc_personality, npc_appearance, npc_relationships,
+                npc_occupation, npc_skills, npc_speechstyle, npc_goals
+            )
+            SELECT 
+                npc_name, npc_pers, npc_misc, npc_dynamic,
+                melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
+                npc_background, npc_personality, npc_appearance, npc_relationships,
+                npc_occupation, npc_skills, npc_speechstyle, npc_goals
+            FROM npc_templates_new
+            ON CONFLICT (npc_name) DO UPDATE SET
+                npc_pers = EXCLUDED.npc_pers,
+                npc_dynamic = EXCLUDED.npc_dynamic,
+                npc_misc = EXCLUDED.npc_misc,
+                melotts_voiceid = EXCLUDED.melotts_voiceid,
+                xtts_voiceid = EXCLUDED.xtts_voiceid,
+                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid,
+                npc_background = EXCLUDED.npc_background,
+                npc_personality = EXCLUDED.npc_personality,
+                npc_appearance = EXCLUDED.npc_appearance,
+                npc_relationships = EXCLUDED.npc_relationships,
+                npc_occupation = EXCLUDED.npc_occupation,
+                npc_skills = EXCLUDED.npc_skills,
+                npc_speechstyle = EXCLUDED.npc_speechstyle,
+                npc_goals = EXCLUDED.npc_goals");
             
-            //$db->execQuery("DROP TABLE IF EXISTS npc_templates_new");
             Logger::info("NPC template data loaded/updated successfully");
         }
     } catch (Exception $e) {
