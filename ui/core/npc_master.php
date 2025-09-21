@@ -957,7 +957,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-tags-top { font-size:11px; color:#9fb1c9; border:1px solid #4a4a4a; border-radius:999px; padding:2px 6px; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .npc-row { display:flex; gap:10px; align-items:flex-start; }
 .npc-right { margin-left:auto; flex:0 0 auto; }
-.npc-race-art { width:200px; height:200px; max-width:200px; max-height:200px; object-fit:contain; display:block; }
+.npc-race-art { width:200px; height:200px; max-width:200px; max-height:200px; object-fit:cover; display:block; }
 @media (max-width: 1100px){ .npc-race-art { width:160px; height:160px; } }
 @media (max-width: 900px){ .npc-race-art { width:140px; height:140px; } }
 @media (max-width: 720px){ .npc-right { display:none; } }
