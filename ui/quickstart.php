@@ -458,7 +458,7 @@ echo '<div class="btn-group-custom text-center">
         <div class="btn-group-custom text-center">
             <div class="btn-group-custom text-center">
                 <h3 class="warning-text3">
-                    Once done click Save and startup Skyrim with CHIM AIAgent mod installed. Please read the <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
+                    Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
                 </h3>
             </div>
 

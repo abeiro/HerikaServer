@@ -1377,6 +1377,11 @@ if ($checkTableExists("core_tts_connector") == -1) {
 } else
     Logger::info(__FILE__." core_tts_connector exists");
 
+if ($checkTableExists("core_llm_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
+} else
+    Logger::info(__FILE__." core_llm_connector exists");
+
 if ($checkTableExists("core_profiles") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
 } else
@@ -1441,6 +1446,26 @@ try {
     }
 } catch (Exception $e) {
     Logger::error("Error enforcing unique slot index: ".$e->getMessage());
+}
+
+// Final repair pass: ensure critical core tables exist even if versions were bumped earlier
+try {
+    $coreTables = [
+        ["name"=>"core_api_badge",   "file"=>__DIR__."/../lib/core/database_schema/core_api_badge.sql"],
+        ["name"=>"core_llm_connector","file"=>__DIR__."/../lib/core/database_schema/core_llm_connector.sql"],
+        ["name"=>"core_tts_connector","file"=>__DIR__."/../lib/core/database_schema/core_tts_connector.sql"],
+        ["name"=>"core_stt_connector","file"=>__DIR__."/../lib/core/database_schema/core_stt_connector.sql"],
+        ["name"=>"core_profiles",     "file"=>__DIR__."/../lib/core/database_schema/core_profiles.sql"],
+        ["name"=>"core_npc_master",   "file"=>__DIR__."/../lib/core/database_schema/core_npc_master.sql"]
+    ];
+    foreach ($coreTables as $t) {
+        if ($checkTableExists($t["name"]) == -1) {
+            Logger::warn("Repair: creating missing table ".$t["name"]);
+            $db->execQuery(file_get_contents($t["file"]));
+        }
+    }
+} catch (Exception $e) {
+    Logger::error("Final repair pass failed: ".$e->getMessage());
 }
 
 //----------------------------------------------------
