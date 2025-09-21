@@ -144,7 +144,8 @@ $presetMap = [
     'deepgram'    => 'Deepgram',
     'google'      => 'Google',
     'azure'       => 'Azure',
-    'elevenlabs'  => 'ElevenLabs'
+    'elevenlabs'  => 'ElevenLabs',
+    'replicate'   => 'Replicate'
 ];
 
 // Provider key/dashboard links
@@ -154,7 +155,8 @@ $providerLinks = [
     'deepgram' => 'https://console.deepgram.com/',
     'google' => 'https://console.cloud.google.com/apis/credentials',
     'azure' => 'https://ai.azure.com/',
-    'elevenlabs' => 'https://elevenlabs.io/app/settings/api-keys'
+    'elevenlabs' => 'https://elevenlabs.io/app/settings/api-keys',
+    'replicate' => 'https://replicate.com/account/api-tokens'
 ];
 
 // Seed presets if missing

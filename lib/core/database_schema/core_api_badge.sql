@@ -72,6 +72,7 @@ INSERT INTO public.core_api_badge VALUES (3, 'Deepgram', '');
 INSERT INTO public.core_api_badge VALUES (4, 'Google', '');
 INSERT INTO public.core_api_badge VALUES (5, 'Azure', '');
 INSERT INTO public.core_api_badge VALUES (6, 'ElevenLabs', '');
+INSERT INTO public.core_api_badge VALUES (7, 'Replicate', '');
 
 
 --
