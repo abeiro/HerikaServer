@@ -53,6 +53,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <?php
 
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] == '1';
+$isPicker = isset($_GET['picker']) && $_GET['picker'] == '1';
 
 if (!$isEmbed) {
     include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
@@ -94,7 +95,7 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
 <div class="container-fluid">
     <div class="gallery-header">
         <h1>🖼️ Soulgaze Gallery</h1>
-        <div class="gallery-meta">Found <?php echo number_format(count($images)); ?> image(s)</div>
+        <div class="gallery-meta"><?php echo number_format(count($images)); ?> image(s)</div>
     </div>
     <?php if (empty($images)): ?>
         <div class="empty">No images found. Make sure to use the Soulgaze hotkey ingame to take pictures!</div>
@@ -106,7 +107,11 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
                     <div class="info">
                         <div class="name" title="<?php echo htmlspecialchars($img['rel']); ?>"><?php echo htmlspecialchars($n); ?></div>
                         <div class="actions">
+                            <?php if (!$isPicker): ?>
                             <a class="btn" href="<?php echo htmlspecialchars($u); ?>" download>Download</a>
+                            <?php else: ?>
+                            <button class="btn pick" type="button" data-pick="<?php echo htmlspecialchars($u); ?>">Use</button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -163,7 +168,21 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
   var processingMessage;
   function open(url){ if (!lb) return; lbImg.src=url; lbOpen.href=url; lbDl.href=url; lb.style.display='flex'; document.body.style.overflow='hidden'; }
   function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribute('src'); document.body.style.overflow='auto'; }
-  document.addEventListener('click', function(e){ const card = e.target && e.target.closest && e.target.closest('.card'); if (!card) return; const img = card.querySelector('.thumb'); if (!img) return; if (e.target.tagName === 'A') return; e.preventDefault(); open(img.src); });
+  document.addEventListener('click', function(e){
+    const card = e.target && e.target.closest && e.target.closest('.card');
+    if (!card) return;
+    const useBtn = e.target && e.target.classList && e.target.classList.contains('pick');
+    const img = card.querySelector('.thumb');
+    if (!img) return;
+    if (useBtn) {
+      // Picker mode: send selection to parent
+      try { window.parent.postMessage({ type:'gallery_selected', url: e.target.getAttribute('data-pick') || img.src }, '*'); } catch(_e){}
+      return;
+    }
+    if (e.target.tagName === 'A') return;
+    e.preventDefault();
+    open(img.src);
+  });
   if (lbClose) lbClose.addEventListener('click', close);
   if (lb) lb.addEventListener('click', function(e){
      if (e.target === lb) close(); 

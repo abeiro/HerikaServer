@@ -59,21 +59,53 @@ $npc = new NpcMaster();
 
 // Helper: resolve race icon web path if file exists
 if (!function_exists('race_icon_web_path')) {
-    function race_icon_web_path($race, $webRoot,$refid){
-
-        $refid=strtoupper($refid);
-
-        if (!empty($refid) && file_exists("{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/$refid.jpg")) {
-          error_log("{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/$refid.jpg");
-          return "$webRoot/data/pictures/profile/$refid.jpg";
+    function race_icon_web_path($race, $webRoot, $refid, $md5 = '', $npcName = '', $portraitRel = ''){
+        // 0) If metadata specifies a portrait relative path under data/pictures, use it first
+        $portraitRel = trim((string)$portraitRel);
+        if ($portraitRel !== '') {
+            $portraitRel = ltrim(str_replace(['\\'], '/', $portraitRel), '/');
+            $picturesRootFs = rtrim("{$GLOBALS["ENGINE_PATH"]}/data/pictures/", '/\\') . DIRECTORY_SEPARATOR;
+            $picturesRootUrl = rtrim($webRoot . '/data/pictures/', '/');
+            $fs = realpath($picturesRootFs . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $portraitRel));
+            if ($fs !== false && strpos($fs, $picturesRootFs) === 0 && is_file($fs)) {
+                return $picturesRootUrl . '/' . str_replace('%2F','/', rawurlencode($portraitRel));
+            }
         }
+        // 1) Prefer per-NPC portrait from data/pictures/profile
+        $refid = strtoupper($refid);
+        $profileDirFs = rtrim("{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/", '/\\') . DIRECTORY_SEPARATOR;
+        $profileDirUrl = rtrim($webRoot . '/data/pictures/profile/', '/');
+        $exts = ['jpg','jpeg','png','webp','gif'];
+        $candidates = [];
+        if (!empty($refid)) { $candidates[] = $refid; }
+        if (!empty($md5)) { $candidates[] = $md5; }
+        if (!empty($npcName)) {
+            $in = strtolower((string)$npcName);
+            $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);
+            if (!empty($words)) {
+                $candidates[] = implode('', $words);
+                $candidates[] = implode('-', $words);
+                $candidates[] = implode('_', $words);
+            }
+        }
+        $seen = [];
+        foreach ($candidates as $base){
+            $base = trim((string)$base);
+            if ($base === '' || isset($seen[$base])) continue;
+            $seen[$base] = true;
+            foreach ($exts as $ext){
+                $fs = $profileDirFs . $base . '.' . $ext;
+                if (file_exists($fs)) {
+                    return $profileDirUrl . '/' . rawurlencode($base . '.' . $ext);
+                }
+            }
+        }
+
+        // 2) Fallback to race icon pack
         $in = strtolower((string)$race);
         $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);
         $slug = implode('', $words);
-        // If no race provided, skip early return so we can use default fallback
-        if ($slug === '') {
-            $words = [];
-        }
+        if ($slug === '') { $words = []; }
         $aliases = [
             'highelf'=>'altmer', 'altmer'=>'altmer',
             'woodelf'=>'bosmer', 'bosmer'=>'bosmer',
@@ -94,18 +126,15 @@ if (!function_exists('race_icon_web_path')) {
         }
         $variants = array_values(array_unique(array_filter($variants, function($v){ return $v !== ''; })));
         $fsDir = __DIR__ . '/../images/races/';
-        $exts = ['png','jpg','jpeg','webp','gif','svg'];
+        $exts2 = ['png','jpg','jpeg','webp','gif','svg'];
         foreach ($variants as $name){
-            foreach ($exts as $ext){
+            foreach ($exts2 as $ext){
                 $fs = $fsDir . $name . '.' . $ext;
                 if (file_exists($fs)) return $webRoot . '/ui/images/races/' . $name . '.' . $ext;
             }
         }
-        // Fallback to default.png if no specific image is found
         $defaultFs = $fsDir . 'default.png';
-        if (file_exists($defaultFs)) {
-            return $webRoot . '/ui/images/races/default.png';
-        }
+        if (file_exists($defaultFs)) { return $webRoot . '/ui/images/races/default.png'; }
         return '';
     }
 }
@@ -240,6 +269,67 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_lock"])) {
     exit;
 }
 
+// Set portrait from gallery (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["set_portrait"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['id'] ?? 0);
+        $sourceUrl = (string)($_POST['source'] ?? '');
+        if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
+        if ($sourceUrl === '') { echo json_encode(["ok"=>false, "error"=>"Missing source"]); exit; }
+
+        $row = $npc->getById($id);
+        if (!$row) { echo json_encode(["ok"=>false, "error"=>"NPC not found"]); exit; }
+
+        $name = (string)($row['npc_name'] ?? '');
+        $md5 = (string)($row['md5'] ?? '');
+        if ($md5 === '' && $name !== '') { $md5 = md5($name); }
+        $refid = strtoupper((string)($row['refid'] ?? ''));
+
+        // Map web URL to filesystem path under gallery root
+        $path = parse_url($sourceUrl, PHP_URL_PATH);
+        $webPrefix = rtrim($webRoot, '/');
+        $galleryWeb = $webPrefix . '/data/pictures/gallery/';
+        if (strpos($path, $galleryWeb) !== 0) { echo json_encode(["ok"=>false, "error"=>"Source not in gallery"]); exit; }
+        $rel = substr($path, strlen($galleryWeb));
+        $rel = str_replace(['\\'], '/', $rel);
+        $rel = ltrim($rel, '/');
+        $galleryRoot = realpath($GLOBALS["ENGINE_PATH"] . '/data/pictures/gallery');
+        if ($galleryRoot === false) { echo json_encode(["ok"=>false, "error"=>"Gallery root missing"]); exit; }
+        $srcFs = realpath($galleryRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $rel));
+        if ($srcFs === false || strpos($srcFs, $galleryRoot) !== 0) { echo json_encode(["ok"=>false, "error"=>"Invalid source path"]); exit; }
+
+        $ext = strtolower(pathinfo($srcFs, PATHINFO_EXTENSION));
+        $allowed = ['jpg','jpeg','png','webp','gif'];
+        if (!in_array($ext, $allowed, true)) { echo json_encode(["ok"=>false, "error"=>"Unsupported format"]); exit; }
+
+        $profileRoot = rtrim($GLOBALS["ENGINE_PATH"] . '/data/pictures/profile/', '/\\') . DIRECTORY_SEPARATOR;
+        if (!is_dir($profileRoot)) { @mkdir($profileRoot, 0775, true); }
+        $base = $md5 !== '' ? $md5 : ($refid !== '' ? $refid : preg_replace('/[^a-z0-9_-]+/i','_', (string)$name));
+        if ($base === '') { echo json_encode(["ok"=>false, "error"=>"Cannot determine filename"]); exit; }
+        $dstFs = $profileRoot . $base . '.' . $ext;
+
+        if (!@copy($srcFs, $dstFs)) { echo json_encode(["ok"=>false, "error"=>"Copy failed"]); exit; }
+
+        // Update metadata.portrait to relative path under data/pictures
+        $portraitRel = 'profile/' . $base . '.' . $ext;
+        $meta = [];
+        if (!empty($row['metadata'])) {
+            $tmp = json_decode((string)$row['metadata'], true);
+            if (is_array($tmp)) { $meta = $tmp; }
+        }
+        $meta['portrait'] = $portraitRel;
+        $npc->update($id, ['metadata' => json_encode($meta)]);
+
+        $url = rtrim($webRoot, '/') . '/data/pictures/' . str_replace('%2F','/', rawurlencode($portraitRel));
+        echo json_encode(["ok"=>true, "url"=>$url, "portrait"=>$portraitRel]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
 // Handle Delete
 if (isset($_GET["delete"])) {
     $npc->delete($_GET["delete"]);
@@ -339,15 +429,16 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
-        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row["refid"]); $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? '' : $tagsVal; ?>
+        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $metaTmp = []; if (!empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $metaTmp = $tmp; } } $portraitRel = (string)($metaTmp['portrait'] ?? ''); $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row["refid"] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? '' : $tagsVal; ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title">
                 <div class="npc-title-left"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
-                <div class="npc-title-actions">
+            <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
                     <?php endif; ?>
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
+                <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                     <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                     <a class="btn btn-trash" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
                 </div>
@@ -381,7 +472,15 @@ if (isset($_GET['race_icon'])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
     $race = (string)($_GET['race'] ?? '');
-    $url = race_icon_web_path($race, $webRoot,'');
+    $refid = (string)($_GET['refid'] ?? '');
+    $name = (string)($_GET['name'] ?? '');
+    $md5 = $name !== '' ? md5($name) : (string)($_GET['md5'] ?? '');
+    $portraitRel = '';
+    $id = intval($_GET['id'] ?? 0);
+    if ($id > 0) {
+        try { $row = $npc->getById($id); if ($row && !empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $portraitRel = (string)($tmp['portrait'] ?? ''); } } } catch (Throwable $e) {}
+    }
+    $url = race_icon_web_path($race, $webRoot, $refid, $md5, $name, $portraitRel);
     echo json_encode(['url' => $url]);
     exit;
 }
@@ -916,7 +1015,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 <?php endif; ?>
 <div class="npc-grid">
 <?php foreach ($data as $row): ?>
-    <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row['refid']); ?>
+    <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; $metaTmp = []; if (!empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $metaTmp = $tmp; } } $portraitRel = (string)($metaTmp['portrait'] ?? ''); $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row['refid'] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
         <div class="npc-title">
             <div class="npc-title-left"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?></div>
@@ -926,6 +1025,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <span class="npc-tags-top" title="Use Search to filter by these tags: <?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
                 <?php endif; ?>
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
+                <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash" href="?delete=<?= $row["id"] ?>" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
             </div>
@@ -1005,6 +1105,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   </div>
 </div>
 
+<!-- Gallery picker overlay -->
+<div id="gallery_picker" class="modal-backdrop" style="z-index:10001;">
+  <div class="modal-container" style="max-width:1200px; width:95%;">
+    <div class="modal-header">
+      <h2 class="modal-title">Choose Picture</h2>
+      <div class="modal-actions">
+        <button id="gallery_picker_close" class="btn-cancel">Close</button>
+      </div>
+    </div>
+    <div class="modal-body" style="height:80vh;">
+      <iframe id="gallery_picker_iframe" src="about:blank" style="width:100%; height:100%; border:0; background:transparent;"></iframe>
+    </div>
+  </div>
+  
+</div>
+
  
 
 <script>
@@ -1017,6 +1133,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     try {
+      // Track current editing id for portrait updates
+      (function(){
+        try { const m = url.match(/[?&]edit=([^&]+)/); window.CURRENT_NPC_ID = m ? String(decodeURIComponent(m[1])) : ''; } catch(_e){ window.CURRENT_NPC_ID=''; }
+      })();
       const tabs = document.getElementById('npc_modal_tabs');
       const bioPane = document.getElementById('pane_bio');
       const manualPane = document.getElementById('pane_manual');
@@ -1232,6 +1352,56 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       openModal('npc_master.php?partial=1');
     });
   }
+  // Gallery picker wiring
+  (function(){
+    const picker = document.getElementById('gallery_picker');
+    const pickerIframe = document.getElementById('gallery_picker_iframe');
+    const pickerClose = document.getElementById('gallery_picker_close');
+    function openPickerFor(id){
+      window.CURRENT_NPC_ID = String(id||'');
+      if (!window.CURRENT_NPC_ID) return;
+      pickerIframe.src = '<?php echo $webRoot; ?>/ui/soulgaze_gallery.php?embed=1&picker=1';
+      picker.style.display = 'flex';
+    }
+    function closePicker(){ picker.style.display = 'none'; try { pickerIframe.src='about:blank'; } catch(_){} }
+    if (pickerClose) pickerClose.addEventListener('click', function(e){ e.preventDefault(); closePicker(); });
+    picker.addEventListener('click', function(e){ if (e.target===picker) closePicker(); });
+    window.addEventListener('keydown', function(e){ if (picker.style.display==='flex' && e.key==='Escape') closePicker(); });
+    // Receive selection from gallery
+    window.addEventListener('message', async function(e){
+      const d = e.data || {};
+      if (d.type === 'gallery_selected'){
+        const url = String(d.url||'');
+        if (!url || !window.CURRENT_NPC_ID) { closePicker(); return; }
+        try {
+          const fd = new FormData(); fd.append('set_portrait','1'); fd.append('id', String(window.CURRENT_NPC_ID)); fd.append('source', url);
+          const res = await fetch('npc_master.php', { method:'POST', body: fd });
+          let j={}; try { j = await res.json(); } catch(_e){}
+          if (j && j.ok) {
+            closePicker();
+            try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='Portrait updated'; toast.classList.add('show'); } } catch(_e){}
+            window.location.reload();
+            return;
+          }
+          // Fallback: refresh only the card image
+          try {
+            const u = 'npc_master.php?race_icon=1&id=' + encodeURIComponent(String(window.CURRENT_NPC_ID));
+            const rr = await fetch(u); let rj={}; try { rj = await rr.json(); } catch(_e){}
+            const card = document.getElementById('npc_card_'+String(window.CURRENT_NPC_ID));
+            if (card){ const right = card.querySelector('.npc-right'); if (right){ right.innerHTML=''; if (rj && rj.url){ right.innerHTML = '<img class=\"npc-race-art\" alt=\"Race icon\" src=\"'+rj.url+'\" />'; } } }
+          } catch(_e){}
+        } catch(_e){}
+        closePicker();
+        try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='Portrait updated'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
+      }
+    });
+    // Bind card-level pick buttons (initial render)
+    document.querySelectorAll('[data-pick-picture-id]').forEach(btn=>{
+      btn.addEventListener('click', function(e){ e.preventDefault(); const id = this.getAttribute('data-pick-picture-id'); if (!id) return; openPickerFor(id); });
+    });
+    // Expose for rebind after list refresh
+    window.OPEN_GALLERY_PICKER_FOR = openPickerFor;
+  })();
   // Live search and alpha sort
   const searchInput = document.getElementById('npc_search');
   let listAbort = null;
@@ -1287,6 +1457,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const newCreate = document.getElementById('npc_create_btn');
       if (newCreate){ newCreate.addEventListener('click', function(){ openModal('npc_master.php?partial=1'); }); }
       // Hook pagination links to AJAX
+      // Bind pick-picture buttons after refresh
+      document.querySelectorAll('[data-pick-picture-id]').forEach(btn=>{
+        btn.addEventListener('click', function(e){ e.preventDefault(); const id = this.getAttribute('data-pick-picture-id'); if (!id) return; if (typeof window.OPEN_GALLERY_PICKER_FOR === 'function') window.OPEN_GALLERY_PICKER_FOR(id); });
+      });
       document.querySelectorAll('.pagination a[href]').forEach(a=>{
         a.addEventListener('click', function(e){
           e.preventDefault();
