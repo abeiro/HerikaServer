@@ -1400,7 +1400,20 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     $contextKeywords  = implode(" ", lastKeyWordsContext(5,$npc));
 
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
-        $memories=DataSearchMemoryByVector($gameRequest[3],$npc);
+        $localStartTime = microtime(true);
+        error_log("[DataSearchMemoryByVector calling]  : " . (microtime(true) - $localStartTime) . " seconds");
+        $res = DataSearchMemoryByVector($gameRequest[3], $npc, true);
+        error_log("[DataSearchMemoryByVector called 1]  : " . (microtime(true) - $localStartTime) . " seconds");
+        $res2 = DataSearchMemoryByVector($gameRequest[3], $npc);
+        error_log("[DataSearchMemoryByVector called 2]  : " . (microtime(true) - $localStartTime) . " seconds");
+
+        if (isset($res[0]) && isset($res2[0])) {
+            $resFinal = ($res[0]['rank_any'] >= $res2[0]['rank_any']) ? $res : $res2;
+        } else {
+            $resFinal = isset($res[0]['rank_any']) ? $res : (isset($res2[0]['rank_any']) ? $res2 : []);
+        }
+        $memories = $resFinal;
+        
     } else {
         $memories=DataSearchMemory($gameRequest[3],$npc);
     }
