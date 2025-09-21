@@ -837,7 +837,7 @@ function current_value(string $flatName, array $currentConf) {
                             <div>Player TTS</div>
                         </div>
                     </div>
-                    <?php $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); ?>
+					<?php $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
                     <div class="provider-body grid">
                         <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
                         <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio' ]; $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); ?>
@@ -850,12 +850,12 @@ function current_value(string $flatName, array $currentConf) {
                         <label for="TTSFUNCTION_PLAYER_VOICE">Player Voice</label>
                         <input type="text" id="TTSFUNCTION_PLAYER_VOICE" name="TTSFUNCTION_PLAYER_VOICE" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_VOICE',$currentConf)); ?>">
                         <?php if (!empty($descPlayerVoice)): ?><div class="help"><?php echo $descPlayerVoice; ?></div><?php endif; ?>
-                        <label for="TTSFUNCTION_PLAYER_VOICE_ID">Player Voice ID</label>
-                        <input type="number" step="1" id="TTSFUNCTION_PLAYER_VOICE_ID" name="TTSFUNCTION_PLAYER_VOICE_ID" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_VOICE_ID',$currentConf)); ?>">
-                        <?php if (!empty($descPlayerVoiceId)): ?><div class="help"><?php echo $descPlayerVoiceId; ?></div><?php endif; ?>
-                        <label for="TTSFUNCTION_PLAYER_LANGUAGE">Player Language Override</label>
-                        <input type="text" id="TTSFUNCTION_PLAYER_LANGUAGE" name="TTSFUNCTION_PLAYER_LANGUAGE" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_LANGUAGE',$currentConf)); ?>">
-                        <?php if (!empty($descPlayerLang)): ?><div class="help"><?php echo $descPlayerLang; ?></div><?php endif; ?>
+						<label for="TTSFUNCTION_PLAYER_VOICE_ID" class="player-voice-id-only" style="<?php echo (strtolower((string)$playerFunctionSaved)==='piper-tts') ? '' : 'display:none;'; ?>">Player Voice ID</label>
+						<input type="number" step="1" id="TTSFUNCTION_PLAYER_VOICE_ID" name="TTSFUNCTION_PLAYER_VOICE_ID" class="player-voice-id-only" style="<?php echo (strtolower((string)$playerFunctionSaved)==='piper-tts') ? '' : 'display:none;'; ?>" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_VOICE_ID',$currentConf)); ?>">
+						<?php if (!empty($descPlayerVoiceId)): ?><div class="help player-voice-id-only" style="<?php echo (strtolower((string)$playerFunctionSaved)==='piper-tts') ? '' : 'display:none;'; ?>"><?php echo $descPlayerVoiceId; ?></div><?php endif; ?>
+					<label for="TTSFUNCTION_PLAYER_LANGUAGE" class="player-language-only" style="<?php echo ($showPlayerLang ? '' : 'display:none;'); ?>">Player Language Override</label>
+					<input type="text" id="TTSFUNCTION_PLAYER_LANGUAGE" name="TTSFUNCTION_PLAYER_LANGUAGE" class="player-language-only" style="<?php echo ($showPlayerLang ? '' : 'display:none;'); ?>" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_LANGUAGE',$currentConf)); ?>">
+					<?php if (!empty($descPlayerLang)): ?><div class="help player-language-only" style="<?php echo ($showPlayerLang ? '' : 'display:none;'); ?>"><?php echo $descPlayerLang; ?></div><?php endif; ?>
                     </div>
                 </div>
 
@@ -1132,6 +1132,19 @@ echo $buffer;
 <script>
 (function(){
   try{
+    // Toggle Player Voice ID for Piper-TTS only
+    function togglePlayerVoiceId(){
+      var sel = document.getElementById('TTSFUNCTION_PLAYER');
+      var show = !!sel && String(sel.value||'').toLowerCase()==='piper-tts';
+      var nodes = document.querySelectorAll('.player-voice-id-only');
+      for (var i=0;i<nodes.length;i++){
+        nodes[i].style.display = show ? '' : 'none';
+      }
+    }
+    var sel = document.getElementById('TTSFUNCTION_PLAYER');
+    if (sel){ sel.addEventListener('change', togglePlayerVoiceId); }
+    // Initialize on load
+    togglePlayerVoiceId();
     // STT/ITT test modals opener (reuse existing test pages)
     function openModal(url){
       var modal = document.createElement('div');
@@ -1189,6 +1202,20 @@ echo $buffer;
         await fetch(window.location.pathname, { method:'POST', body: fd });
       } catch(_e){}
     }
+    // Toggle Player Language Override for supported providers
+    function togglePlayerLanguage(){
+      var sel = document.getElementById('TTSFUNCTION_PLAYER');
+      var v = (sel && sel.value) ? String(sel.value).toLowerCase() : '';
+      var supported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio'];
+      var show = supported.indexOf(v) >= 0;
+      var nodes = document.querySelectorAll('.player-language-only');
+      for (var i=0;i<nodes.length;i++){
+        nodes[i].style.display = show ? '' : 'none';
+      }
+    }
+    var selPlayer = document.getElementById('TTSFUNCTION_PLAYER');
+    if (selPlayer){ selPlayer.addEventListener('change', function(){ togglePlayerVoiceId(); togglePlayerLanguage(); }); }
+    togglePlayerLanguage();
     var sttBtn = document.getElementById('btn_test_stt_gs');
     if (sttBtn){
       sttBtn.addEventListener('click', async function(){ await saveFormSilently(); var cb=Date.now(); openModal('<?php echo $webRoot; ?>/ui/tests/stt-test.php?cb='+cb); });
