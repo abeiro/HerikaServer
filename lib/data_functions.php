@@ -620,6 +620,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='spellcast' then 'CONTEXTI' 
       when type='npcspellcast' then 'CONTEXTI' 
       when type='info_timeforward' then 'TIMELAPSE' 
+      when type='backgroundaction' then 'CONTEXTI' 
       when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location

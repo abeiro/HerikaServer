@@ -502,6 +502,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     endforeach; 
                     ?>
                 </div>
+                <div class="function-category">
+                    <h3>📖 Plugin functions</h3>
+                    <?php
+                    
+                    foreach ($currentList as $func):
+                        if ((strpos($func,"ExtCmd")!==false) || (strpos($func,"WebCmd")!==false)):
+                    ?>
+                        <div class="function-item">
+                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
+                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
+                            <label for="func_<?= $func ?>">
+                                <?= htmlspecialchars($func) ?>
+                                <div class="function-description">
+                                    <?php
+                                    echo $GLOBALS["F_TRANSLATIONS"][$func] ?? 'Player-specific function';
+                                    ?>
+                                </div>
+                            </label>
+                        </div>
+                    <?php 
+                        endif;
+                    endforeach; 
+                    ?>
+                </div>
                 <?php endif; ?>
             </div>
         </form>

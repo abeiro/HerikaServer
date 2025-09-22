@@ -793,7 +793,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'Attack',
         'AttackHunt',
         'TravelTo',
-        //'Follow',
+        'Follow',
         'CheckInventory',
         'SheatheWeapon',
         'Relax',

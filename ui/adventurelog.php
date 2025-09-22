@@ -597,7 +597,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                         // Compare Tamrielic dates
                         $eventDay = isset($eventDate['day']) ? $eventDate['day'] : null;
                         if ($eventDay == $dayCount) {
-                            error_log("Debug - Found event for day {$dayCount}");
+                            //error_log("Debug - Found event for day {$dayCount}");
                             $hasEvents = true;
                             $eventCount++;
                         }
@@ -611,7 +611,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                             if ($eventDateStr === $dateStr) {
                                 $hasEvents = true;
                                 $eventCount++;
-                                error_log("Debug - Found event for date {$dateStr}");
+                                //error_log("Debug - Found event for date {$dateStr}");
                             }
                         }
                     }

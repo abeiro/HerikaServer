@@ -21,8 +21,16 @@ if ($method === 'POST') {
 
     $GLOBALS["ENGINE_PATH"] = $enginePath;
 
-    $source=$jsonDataInput["source"];
-    $filename  = "$enginePath/data/pictures/gallery/" .basename($source);
+    $source = $jsonDataInput["source"];
+    $parsedUrl = parse_url($source);
+    $path = $parsedUrl['path'];
+    $pathParts = explode('/', trim($path, '/'));
+    $lastFolder = $pathParts[count($pathParts) - 2]; // Get the second last part of the path
+    if ($lastFolder=="gallery")
+        $filename  = "$enginePath/data/pictures/gallery/" .basename($source);
+    else if ($lastFolder=="uploads")
+        $filename  = "$enginePath/data/pictures/gallery/uploads/" .basename($source);
+
     unlink($filename);
     
     die(json_encode(["status" => "success"]));

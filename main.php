@@ -821,7 +821,7 @@ if ($gameRequest[0] == "npcspellcast") {
 // Exit if only a event info log.
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
-    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast"])) {
+    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close'])) {
@@ -832,7 +832,11 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
             terminate();
         }
     }
-    logEvent($gameRequest);
+    if (in_array($gameRequest[0],['backgroundaction'])) {
+        logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
+        require_once($GLOBALS["ENGINE_PATH"]."/processor/background_event.php");
+    } else
+        logEvent($gameRequest);
     terminate();
 }
 
