@@ -810,6 +810,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     LIMIT 1
                 ");
                 $chimModel = (!isset($chimModelRow['error']) && !empty($chimModelRow) && isset($chimModelRow[0]['value'])) ? $chimModelRow[0]['value'] : '1';
+                $chimModelLabelMap = [
+                    '1' => '🕹️ Standard',
+                    '2' => '🏃‍♀️‍➡️Fast',
+                    '3' => '💪 Powerful',
+                    '4' => '🧪 Experimental'
+                ];
+                $chimModelLabel = isset($chimModelLabelMap[(string)$chimModel]) ? $chimModelLabelMap[(string)$chimModel] : (string)$chimModel;
 
 
                 if (!isset($questsCheck['error']) && !empty($questsCheck) && isset($questsCheck[0]['table_exists']) && $questsCheck[0]['table_exists'] === 't') {
@@ -907,7 +914,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             </tr>
                             <tr>
                                 <td>CHIM Active Model</td>
-                                <td>" . htmlspecialchars($chimModel) . "</td>
+                                <td>" . htmlspecialchars($chimModelLabel) . "</td>
                             </tr>
                             <tr>
                                 <td>Focus Chat</td>
