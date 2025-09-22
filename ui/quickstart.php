@@ -631,6 +631,7 @@ echo '<style>
 </style>';
 
 echo '<script>
+const WEB_ROOT = '.json_encode($webRoot).';
 async function saveQuickstartAndDB(){
   try {
     // 1) Save API keys
@@ -657,10 +658,10 @@ async function saveQuickstartAndDB(){
 
     // Notify user, then redirect
     try { alert("Quickstart settings have been saved."); } catch(_a){}
-    window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
+    window.location.href = WEB_ROOT + "/";
   } catch (_e) {
-    try { alert("Save failed or partially completed. Redirecting to settings."); } catch(_a){}
-    window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
+    try { alert("Save failed or partially completed. Redirecting to home."); } catch(_a){}
+    window.location.href = WEB_ROOT + "/";
   }
 }
 </script>';
