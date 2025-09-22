@@ -269,6 +269,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_lock"])) {
     exit;
 }
 
+// Bulk delete unlocked NPCs except The Narrator (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_delete_npcs"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $confirm = trim((string)($_POST['confirm'] ?? ''));
+        if ($confirm !== 'Delete') { echo json_encode(["ok"=>false, "error"=>"Confirmation text mismatch"]); exit; }
+        // Delete all unlocked NPCs except The Narrator (by name or id=1)
+        $sql = "with del as (delete from core_npc_master where coalesce(lock_profile,0)=0 and not (npc_name='The Narrator' or id=1) returning 1) select count(*) as c from del";
+        $row = $GLOBALS['db']->fetchOne($sql);
+        $deleted = intval($row['c'] ?? 0);
+        echo json_encode(["ok"=>true, "deleted"=>$deleted]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
 // Set portrait from gallery (AJAX)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["set_portrait"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
@@ -432,6 +450,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
       <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
       <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
+      <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
@@ -1027,6 +1046,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
   <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
   <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
+  <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
 </div>
 <?php endif; ?>
 <div class="npc-grid">
@@ -1422,6 +1442,49 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   })();
   // Live search and alpha sort
   const searchInput = document.getElementById('npc_search');
+  // Bulk delete wiring
+  (function(){
+    function bindBulk(btn){
+      if (!btn) return;
+      btn.addEventListener('click', function(){
+        const box = document.createElement('div');
+        box.style.position='fixed'; box.style.inset='0'; box.style.zIndex='10050'; box.style.display='flex'; box.style.alignItems='center'; box.style.justifyContent='center'; box.style.background='rgba(0,0,0,0.65)';
+        box.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:520px; width:92%; color:#e9efff;">\
+          <div style="font-weight:700; color:#ff6b6b; margin-bottom:8px;">Danger: Delete ALL unlocked NPCs</div>\
+          <div style="font-size:13px; color:#cfd9ea; margin-bottom:8px;">This will permanently delete every NPC that is not locked. The Narrator and any locked profiles will be preserved.</div>\
+          <label style="display:block; font-size:13px; margin:6px 0; color:#cfd9ea;">Type <b style="color:#ffd166">Delete</b> to confirm:</label>\
+          <input id="bulk_del_confirm" type="text" style="width:100%; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;"/>\
+          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
+            <button id="bulk_del_cancel" class="btn-cancel">Cancel</button>\
+            <button id="bulk_del_ok" class="btn-danger" disabled>Delete</button>\
+          </div></div>';
+        document.body.appendChild(box);
+        const inp = box.querySelector('#bulk_del_confirm');
+        const ok  = box.querySelector('#bulk_del_ok');
+        const cancel = box.querySelector('#bulk_del_cancel');
+        function upd(){ ok.disabled = (String(inp.value||'').trim() !== 'Delete'); }
+        inp.addEventListener('input', upd); upd(); inp.focus();
+        cancel.addEventListener('click', function(){ document.body.removeChild(box); });
+        ok.addEventListener('click', async function(){
+          ok.disabled = true; try {
+            const fd = new FormData(); fd.append('bulk_delete_npcs','1'); fd.append('confirm', String(inp.value||''));
+            const res = await fetch('npc_master.php', { method:'POST', body: fd });
+            let j={}; try{ j=await res.json(); }catch(_){ j={ok:false}; }
+            document.body.removeChild(box);
+            if (j && j.ok){
+              try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='Deleted '+String(j.deleted||0)+' NPCs'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2000); } } catch(_){}
+              refreshList(1);
+            } else {
+              alert('Bulk delete failed: '+(j && j.error ? j.error : 'Unknown'));
+            }
+          } catch(_e){ ok.disabled=false; }
+        });
+      });
+    }
+    // expose for rebind after AJAX refresh
+    window.bindNpcBulkDelete = bindBulk;
+    bindBulk(document.getElementById('npc_bulk_delete_btn'));
+  })();
   let listAbort = null;
   async function refreshList(page){
     const params = new URLSearchParams(window.location.search);
@@ -1474,6 +1537,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       });
       const newCreate = document.getElementById('npc_create_btn');
       if (newCreate){ newCreate.addEventListener('click', function(){ openModal('npc_master.php?partial=1'); }); }
+      // rebind bulk delete in refreshed DOM
+      try { if (window.bindNpcBulkDelete) window.bindNpcBulkDelete(document.getElementById('npc_bulk_delete_btn')); } catch(_){}
       // Hook pagination links to AJAX
       // Bind pick-picture buttons after refresh
       document.querySelectorAll('[data-pick-picture-id]').forEach(btn=>{
