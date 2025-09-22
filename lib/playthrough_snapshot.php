@@ -17,7 +17,7 @@ function dragon_break_is_enabled() {
 
 function dragon_break_min_days() {
 	if (!isset($GLOBALS["DRAGON_BREAK_MIN_DAYS"])) {
-		$GLOBALS["DRAGON_BREAK_MIN_DAYS"] = 7;
+		$GLOBALS["DRAGON_BREAK_MIN_DAYS"] = 3;
 	}
 	return intval($GLOBALS["DRAGON_BREAK_MIN_DAYS"]);
 }
