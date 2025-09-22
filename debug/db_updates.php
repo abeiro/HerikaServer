@@ -121,6 +121,7 @@ try {
                     occupation,
                     speechstyle,
                     goals,
+                    md5,
                     voiceid,
                     metadata,
                     gender,
@@ -139,6 +140,7 @@ try {
                     'Narrator',
                     '',
                     '',
+                    md5('The Narrator'),
                     'TheNarrator',
                     '{}'::jsonb,
                     'male',
@@ -153,6 +155,14 @@ try {
     }
 } catch (Exception $e) {
     Logger::warn("Narrator seed skipped: ".$e->getMessage());
+}
+
+// Defensive repair: ensure The Narrator exists and is bound to profile 1
+try {
+    $db->execQuery("UPDATE public.core_npc_master SET profile_id = 1 WHERE npc_name = 'The Narrator' AND (profile_id IS NULL OR profile_id <> 1)");
+    $db->execQuery("UPDATE public.core_profiles SET default_npc = '1', default_narrator = '1' WHERE id = 1 AND (default_npc IS NULL OR default_npc = '' OR default_narrator IS NULL OR default_narrator = '')");
+} catch (Exception $e) {
+    Logger::warn("Narrator/profile binding repair skipped: ".$e->getMessage());
 }
 
 $query = "
