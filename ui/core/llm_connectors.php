@@ -253,7 +253,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     <?php if ($editItem): ?>
                         <button type="submit" name="save" class="btn-save">Save</button>
                         <button type="button" id="btn_test_connector" class="btn-primary">Test</button>
-                        <button type="submit" formmethod="get" formaction="llm_connectors.php" name="export" value="<?= htmlspecialchars($editItem['id'] ?? '') ?>" class="btn-primary">Export</button>
                         <div class="orm-note" style="margin-top:6px;">Please save any changes before testing to ensure the latest settings are used.</div>
                     <?php else: ?>
                         <button type="submit" name="create" class="btn-save">Create</button>
