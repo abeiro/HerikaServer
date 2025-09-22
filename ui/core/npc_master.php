@@ -845,9 +845,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <div class="form-item span-2">
-            <label for="prompt_head">Prompt Head</label>
+            <label for="prompt_head">Prompt Head Override</label>
             <textarea id="prompt_head" name="prompt_head" placeholder="High-level system instructions injected before the core."><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
-            <small class="hint">System preamble inserted before other sections. Keep concise and stable Do not worry if it is empty, as will pull from global settings prompt head.</small>
+            <small class="hint">System preamble inserted before other sections. Do not worry if it is empty, as will pull from global settings prompt head.</small>
         </div>
 
         <div class="form-item span-2">
