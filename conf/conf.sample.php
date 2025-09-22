@@ -422,6 +422,10 @@ $STT["AZURE"]["API_KEY"]=""; //API key.
 $STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:9876/api/v0/transcribe"; //API endpoint.
 $STT["LOCALWHISPER"]["FORMFIELD"]="audio_file"; //(audio_file,file) Form field name.
 
+//Deepgram STT
+$STT["DEEPGRAM"]["LANG"]="en"; //Language.
+$STT["DEEPGRAM"]["MODEL"]="nova-3"; //Model to use.
+
 //[Image to Text (Soulgaze)]
 $ITTFUNCTION="openrouter";
 //OpenAI
