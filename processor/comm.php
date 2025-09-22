@@ -1,5 +1,7 @@
 <?php
 require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
+require_once($GLOBALS["ENGINE_PATH"]."/lib/utils_game_timestamp.php");
+require_once($GLOBALS["ENGINE_PATH"]."/lib/playthrough_snapshot.php");
 
 $MUST_END=false;
 
@@ -19,6 +21,18 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         return;
     }
     $now=time();
+
+    // Dragon Break autosnapshot: detect large rollback and snapshot before pruning
+    try {
+        $prevGamets = DataLastKnownGameTS();
+        $incomingGamets = intval($gameRequest[2]);
+        $snapshotId = dragon_break_snapshot_if_needed($prevGamets, $incomingGamets);
+        if ($snapshotId > 0) {
+            Logger::info("DragonBreak: Created snapshot id {$snapshotId} prior to rollback prune");
+        }
+    } catch (Exception $e) {
+        Logger::warn("DragonBreak: Snapshot attempt failed: ".$e->getMessage());
+    }
     $db->delete("eventlog", "gamets>={$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
     //$db->delete("eventlog", "type='playerinfo'");
@@ -427,6 +441,18 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "playerdied") {
     
     
+    // Dragon Break autosnapshot: detect large rollback and snapshot before pruning
+    try {
+        $prevGamets = DataLastKnownGameTS();
+        $incomingGamets = intval($gameRequest[2]);
+        $snapshotId = dragon_break_snapshot_if_needed($prevGamets, $incomingGamets);
+        if ($snapshotId > 0) {
+            Logger::info("DragonBreak: Created snapshot id {$snapshotId} prior to death rollback prune");
+        }
+    } catch (Exception $e) {
+        Logger::warn("DragonBreak: Snapshot attempt (playerdied) failed: ".$e->getMessage());
+    }
+
     $lastSaveHistory=$db->fetchAll("select gamets from eventlog where type='infosave' order by ts desc limit 1 offset 0");
     if (isset($lastSaveHistory[0]["ts"])) {
         $lastSave=$lastSaveHistory[0]["ts"];
