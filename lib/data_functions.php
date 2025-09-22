@@ -3693,14 +3693,17 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         if (isset($npcTemlate[0]) && is_array($npcTemlate[0])) {
                 error_log("Creating from template ");
 
-            // Build core with optional meta (voiceid, gender, race, refid)
-            $coreBase = trim($npcname . ". " . ($npcNewFields[0]["appearance"] ?? ''));
-            $coreMeta = [];
-            if (!empty($npcNewFields[0]["voiceid"])) { $coreMeta[] = 'Voice:' . $npcNewFields[0]["voiceid"]; }
-            if (!empty($npcNewFields[0]["gender"])) { $coreMeta[] = 'Gender:' . $npcNewFields[0]["gender"]; }
-            if (!empty($npcNewFields[0]["race"])) { $coreMeta[] = 'Race:' . $npcNewFields[0]["race"]; }
-            if (!empty($npcNewFields[0]["refid"])) { $coreMeta[] = 'RefId:' . $npcNewFields[0]["refid"]; }
-            $coreFull = $coreBase . (empty($coreMeta) ? '' : (' ' . implode(' ', $coreMeta)));
+            // Build core from template core (or npc_pers in translated case)
+            $coreFull = '';
+            if (array_key_exists('core', $npcTemlate[0])) {
+                $coreFull = trim((string)$npcTemlate[0]['core']);
+            } elseif (array_key_exists('npc_pers', $npcTemlate[0])) {
+                $coreFull = trim((string)$npcTemlate[0]['npc_pers']);
+            }
+            if ($coreFull === '') {
+                // Fallback: minimal core
+                $coreFull = trim($npcname);
+            }
 
             $npcMaster->create([
 
@@ -3724,17 +3727,16 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
             
             // Query for new HERIKA fields for bracket match (bio tables)
             $npcNewFields2 = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates WHERE npc_name='" . $db->escape($bracketMatch) . "'");
+            $npcCore2 = $db->fetchAll("SELECT core FROM combined_bio_templates WHERE npc_name='" . $db->escape($bracketMatch) . "'");
 
             if (!empty($npcNewFields2[0])) {
                 error_log("Creating from template bracketMatch");
-                // Build core with optional meta (voiceid, gender, race, refid)
-                $coreBase2 = trim($npcname . ". " . ($npcNewFields2[0]["appearance"] ?? ''));
-                $coreMeta2 = [];
-                if (!empty($npcNewFields2[0]["voiceid"])) { $coreMeta2[] = 'Voice:' . $npcNewFields2[0]["voiceid"]; }
-                if (!empty($npcNewFields2[0]["gender"])) { $coreMeta2[] = 'Gender:' . $npcNewFields2[0]["gender"]; }
-                if (!empty($npcNewFields2[0]["race"])) { $coreMeta2[] = 'Race:' . $npcNewFields2[0]["race"]; }
-                if (!empty($npcNewFields2[0]["refid"])) { $coreMeta2[] = 'RefId:' . $npcNewFields2[0]["refid"]; }
-                $coreFull2 = $coreBase2 . (empty($coreMeta2) ? '' : (' ' . implode(' ', $coreMeta2)));
+                // Build core from template core
+                $coreFull2 = '';
+                if (!empty($npcCore2[0]) && array_key_exists('core', $npcCore2[0])) {
+                    $coreFull2 = trim((string)$npcCore2[0]['core']);
+                }
+                if ($coreFull2 === '') { $coreFull2 = trim($npcname); }
 
                 $npcMaster->create([
                         "npc_name" => $npcname,
