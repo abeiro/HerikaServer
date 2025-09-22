@@ -127,6 +127,14 @@ class NpcMaster {
         $id = (int)$id;
         $where = "id = $id";
 
+        // Prevent renaming The Narrator
+        $existing = $this->getById($id);
+        if ($existing && isset($existing['npc_name']) && $existing['npc_name'] === 'The Narrator') {
+            if (isset($data['npc_name']) && $data['npc_name'] !== $existing['npc_name']) {
+                unset($data['npc_name']);
+            }
+        }
+
         foreach ($data as $k => $v) {
             if (empty($v)) {
                 $data[$k] = null;
@@ -157,6 +165,11 @@ class NpcMaster {
     public function delete($id) {
         $id = (int)$id;
         $where = "id = $id";
+        // Disallow deleting The Narrator profile (by id or name)
+        $row = $this->getById($id);
+        if ($row && (intval($row['id']) === 1 || ($row['npc_name'] ?? '') === 'The Narrator')) {
+            return false;
+        }
         return $this->db->delete($this->table, $where);
     }
 

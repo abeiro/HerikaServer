@@ -116,11 +116,14 @@ try {
                     lock_profile,
                     core,
                     npc_static_bio,
+                    oghma_knowledge_tags,
                     personality,
                     occupation,
                     speechstyle,
                     goals,
+                    voiceid,
                     metadata,
+                    gender,
                     extended_data,
                     tags
                 ) VALUES (
@@ -131,16 +134,21 @@ try {
                     1,
                     'Narrates events and scene changes.',
                     'A guiding voice that describes the world, events, and transitions.',
+                    'knowall',
                     'Detached, descriptive, impartial, helpful',
                     'Narrator',
                     '',
                     '',
+                    'TheNarrator',
                     '{}'::jsonb,
+                    'male',
                     '{}'::jsonb,
                     'system'
                 )"
             );
             $__seed_narrator_done = true;
+            // Optional safety: make sure id sequence remains valid
+            try { $db->execQuery("SELECT setval('public.npc_master_id_seq', GREATEST((SELECT MAX(id) FROM public.core_npc_master), 1), true)"); } catch (Exception $e2) {}
         }
     }
 } catch (Exception $e) {
@@ -1740,6 +1748,21 @@ try {
     Logger::info("Created view combined_bio_templates 20250913001");
 } catch (Exception $e) {
     Logger::error("Error creating combined_bio_templates view: " . $e->getMessage());
+}
+
+// Enforce DB-layer protection for The Narrator: prevent delete or rename
+try {
+    $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_delete() CASCADE");
+    $db->execQuery("CREATE OR REPLACE FUNCTION public.protect_narrator_delete() RETURNS trigger AS $$\nBEGIN\n    IF OLD.id = 1 OR OLD.npc_name = 'The Narrator' THEN\n        RAISE EXCEPTION 'Deletion of The Narrator is not allowed';\n    END IF;\n    RETURN OLD;\nEND;\n$$ LANGUAGE plpgsql;");
+    $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_delete ON public.core_npc_master");
+    $db->execQuery("CREATE TRIGGER trg_protect_narrator_delete BEFORE DELETE ON public.core_npc_master FOR EACH ROW EXECUTE FUNCTION public.protect_narrator_delete();");
+
+    $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_rename() CASCADE");
+    $db->execQuery("CREATE OR REPLACE FUNCTION public.protect_narrator_rename() RETURNS trigger AS $$\nBEGIN\n    IF (OLD.id = 1 OR OLD.npc_name = 'The Narrator') AND NEW.npc_name IS DISTINCT FROM OLD.npc_name THEN\n        RAISE EXCEPTION 'Renaming The Narrator is not allowed';\n    END IF;\n    RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;");
+    $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_rename ON public.core_npc_master");
+    $db->execQuery("CREATE TRIGGER trg_protect_narrator_rename BEFORE UPDATE OF npc_name ON public.core_npc_master FOR EACH ROW EXECUTE FUNCTION public.protect_narrator_rename();");
+} catch (Exception $e) {
+    Logger::warn("DB trigger setup for narrator protection failed or already present: ".$e->getMessage());
 }
 
 
