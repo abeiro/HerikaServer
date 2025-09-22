@@ -761,6 +761,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Voice ID for TTS.</small>
         </div>
 
+        <div class="form-item">
+            <label for="dynamic_profile" class="label-with-toggle">Dynamic Profile
+                <input type="hidden" name="dynamic_profile" value="0">
+                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
+            </label>
+            <small class="hint">Allow systems to evolve the profile based on gameplay events.</small>
+        </div>
+
         <div class="form-item span-2">
             <label for="prompt_head">Prompt Head</label>
             <textarea id="prompt_head" name="prompt_head" placeholder="High-level system instructions injected before the core."><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
@@ -783,13 +791,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <label for="appearance">Appearance</label>
             <textarea id="appearance" name="appearance" placeholder="Physical appearance."><?= htmlspecialchars($editItem["appearance"] ?? "") ?></textarea>
             <small class="hint">Physical appearance. Keep it limited to character cosmetics, not equipment.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="dynamic_profile" class="label-with-toggle">Dynamic Profile
-                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
-            </label>
-            <small class="hint">Allow systems to evolve the profile based on gameplay events.</small>
         </div>
 
         <div class="dynamic-profile-section span-2">
@@ -955,12 +956,18 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-actions .btn-danger:hover { background:#6a2a2a; }
 .npc-title-actions a { text-decoration:none; border:none; }
 .npc-title-actions a:hover { text-decoration:none; }
-.btn-toggle { background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; }
-.btn-toggle:hover { color: rgb(242, 124, 17); background:transparent; text-decoration:none; }
+.btn-toggle { background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; transition: color .15s ease, text-shadow .15s ease; }
+/* Navbar-like glow only for lock and gallery on cards */
+.btn-toggle[data-lock-id]:hover,
+.btn-toggle[data-lock-id]:focus-visible,
+.btn-toggle[data-pick-picture-id]:hover,
+.btn-toggle[data-pick-picture-id]:focus-visible { color: rgb(242, 124, 17); background:transparent; text-decoration:none; text-shadow: 0 0 6px rgba(242, 124, 17, 0.6), 0 0 12px rgba(242, 124, 17, 0.35); }
+.btn-toggle[data-favorite-id]:hover,
+.btn-toggle[data-favorite-id]:focus-visible { color:#ffd700; text-shadow: 0 0 8px rgba(255, 215, 0, 0.7), 0 0 14px rgba(255, 215, 0, 0.45); }
 .btn-toggle.active { color: rgb(242, 124, 17); font-weight:700; text-decoration:none; }
 .btn-toggle.active[data-favorite-id] { color:#ffd700; }
-.btn-trash { background:transparent; border:none; padding:6px; color:#e9efff; font-size:20px; line-height:1; text-decoration:none; }
-.btn-trash:hover { color:#ff6b6b; }
+.btn-trash { background:transparent; border:none; padding:6px; color:#e9efff; font-size:20px; line-height:1; text-decoration:none; transition: color .15s ease, text-shadow .15s ease; }
+.btn-trash:hover, .btn-trash:focus-visible { color:#ff6b6b; text-shadow: 0 0 6px rgba(255, 107, 107, 0.7), 0 0 12px rgba(255, 107, 107, 0.45); }
 .npc-tags-label { font-size:11px; color:#9fb1c9; margin-right:4px; }
 .npc-tags-top { font-size:11px; color:#9fb1c9; border:1px solid #4a4a4a; border-radius:999px; padding:2px 6px; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .npc-row { display:flex; gap:10px; align-items:flex-start; }
