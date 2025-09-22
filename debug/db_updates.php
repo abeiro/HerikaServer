@@ -87,10 +87,10 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
-    if ($checkTableExists("core_profiles") == -1) {
-        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
-        $db->execQuery("SET search_path TO public");
-    }
+if ($checkTableExists("core_profiles") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
+    $db->execQuery("SET search_path TO public");
+}
     if ($checkTableExists("core_npc_master") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
         $db->execQuery("SET search_path TO public");
@@ -1119,10 +1119,10 @@ if ($checkVersion("dynamic_bio")<20250710001) {
         
         foreach ($prompts as $prompt) {
             $escapedPrompt = $db->escape($prompt);
-            $db->execQuery("INSERT INTO dynamic_bio (prompt) 
+            $db->execQuery("INSERT INTO public.dynamic_bio (prompt) 
                 SELECT '".$escapedPrompt."' 
                 WHERE NOT EXISTS (
-                    SELECT 1 FROM dynamic_bio WHERE prompt = '".$escapedPrompt."'
+                    SELECT 1 FROM public.dynamic_bio WHERE prompt = '".$escapedPrompt."'
                 )");
         }
     
@@ -1427,17 +1427,20 @@ if ($checkVersion("npc_templates")<20250619001) {
 
 if ($checkTableExists("core_api_badge") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+    $db->execQuery("SET search_path TO public");
 } else
     Logger::info(__FILE__." core_api_badge exists");
 
 
 if ($checkTableExists("core_itt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
+    $db->execQuery("SET search_path TO public");
 } else
     Logger::info(__FILE__." core_itt_connector exists");
 
 if ($checkTableExists("core_llm_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
+    $db->execQuery("SET search_path TO public");
 } else
     Logger::info(__FILE__." core_llm_connector exists");
 
@@ -1467,6 +1470,7 @@ if ($checkTableExists("core_stt_connector") == -1) {
 
 if ($checkTableExists("core_tts_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
+    $db->execQuery("SET search_path TO public");
 } else
     Logger::info(__FILE__." core_tts_connector exists");
 
@@ -1477,19 +1481,22 @@ if ($checkTableExists("core_llm_connector") == -1) {
 
 if ($checkTableExists("core_profiles") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
+    $db->execQuery("SET search_path TO public");
 } else
     Logger::info(__FILE__." core_profiles exists");
 
 if ($checkTableExists("core_npc_master") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
+    $db->execQuery("SET search_path TO public");
 } else
     Logger::info(__FILE__." core_npc_master exists");
 
 
 if ($checkTableExists("core_profiles") > 0 && $checkVersion("core_profiles") < 20250904005) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles_2.sql"));
+    $db->execQuery("SET search_path TO public");
     // ensure slot column exists for existing installs
-    $db->execQuery('ALTER TABLE "core_profiles" ADD COLUMN IF NOT EXISTS "slot" integer');
+    $db->execQuery('ALTER TABLE public.core_profiles ADD COLUMN IF NOT EXISTS "slot" integer');
     // set default profile slot to 1 if missing
     $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
     $updateVersion("core_profiles",20250904005);
@@ -1503,7 +1510,7 @@ try {
     $colCheck = $db->fetchAll("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='core_profiles' AND column_name='slot'");
     if (!$colCheck || !isset($colCheck[0]["column_name"])) {
         Logger::warn("core_profiles.slot missing; adding column now");
-        $db->execQuery('ALTER TABLE "core_profiles" ADD COLUMN "slot" integer');
+        $db->execQuery('ALTER TABLE public.core_profiles ADD COLUMN "slot" integer');
         $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
         if ($checkVersion("core_profiles") < 20250904006) {
             $updateVersion("core_profiles",20250904006);
@@ -1524,12 +1531,13 @@ try {
         // Clear duplicates: keep the lowest id per slot, set others to NULL
         $db->execQuery("WITH d AS (
             SELECT id, slot, ROW_NUMBER() OVER (PARTITION BY slot ORDER BY id) AS rn
-            FROM core_profiles WHERE slot IS NOT NULL
+            FROM public.core_profiles WHERE slot IS NOT NULL
         )
-        UPDATE core_profiles p SET slot = NULL
+        UPDATE public.core_profiles p SET slot = NULL
         FROM d WHERE p.id = d.id AND d.rn > 1");
         // Create unique partial index
-        $db->execQuery("CREATE UNIQUE INDEX IF NOT EXISTS core_profiles_slot_unique_idx ON public.core_profiles (slot) WHERE slot IS NOT NULL");
+    $db->execQuery("CREATE UNIQUE INDEX IF NOT EXISTS core_profiles_slot_unique_idx ON public.core_profiles (slot) WHERE slot IS NOT NULL");
+    $db->execQuery("SET search_path TO public");
         // Ensure default profile has slot 1
         $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
         if ($checkVersion("core_profiles") < 20250904007) {

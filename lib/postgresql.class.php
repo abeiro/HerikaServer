@@ -13,6 +13,8 @@ class sql
         if (!self::$link) {
             die("Error in connection: " . pg_last_error());
         }
+        // Ensure consistent schema resolution across sessions
+        pg_query(self::$link, "SET search_path TO public");
     }
 
     public function __destruct()

@@ -39,11 +39,11 @@ function compareFileModificationDate($a, $b) {
     return filemtime($b) - filemtime($a);
 }
 
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"]))
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-else
+// Ensure PROFILES is initialized and sort by modification date
+if (!isset($GLOBALS["PROFILES"]) || !is_array($GLOBALS["PROFILES"])) {
     $GLOBALS["PROFILES"] = [];
+}
+usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
 
 $GLOBALS["PROFILES"] = array_merge(["default"=>"$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
 
