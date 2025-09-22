@@ -66,12 +66,16 @@ function dragon_break_create_snapshot($name, $notes) {
 
 	dragon_break_ensure_meta_schema($adminConn);
 
-	// Idempotency: if a profile with the same name exists, return its id
-	$existsRes = @pg_query_params($adminConn, 'SELECT id FROM chim_meta.playthrough_profiles WHERE name=$1 LIMIT 1', [$name]);
-	if ($existsRes) {
-		$er = pg_fetch_assoc($existsRes);
-		if ($er && isset($er['id'])) {
-			return intval($er['id']);
+	// Ensure unique name (table enforces UNIQUE(name)); append timestamp if collision
+	$finalName = $name;
+	$existsRes = @pg_query_params($adminConn, 'SELECT 1 FROM chim_meta.playthrough_profiles WHERE name=$1 LIMIT 1', [$finalName]);
+	if ($existsRes && pg_fetch_assoc($existsRes)) {
+		$tsSuffix = ' @ ' . gmdate('Y-m-d H:i:s') . ' UTC';
+		$finalName = $name . $tsSuffix;
+		// Double-check; if still collides, add uniqid
+		$existsRes2 = @pg_query_params($adminConn, 'SELECT 1 FROM chim_meta.playthrough_profiles WHERE name=$1 LIMIT 1', [$finalName]);
+		if ($existsRes2 && pg_fetch_assoc($existsRes2)) {
+			$finalName = $name . $tsSuffix . ' #' . substr(uniqid('', true), -6);
 		}
 	}
 
@@ -112,7 +116,7 @@ function dragon_break_create_snapshot($name, $notes) {
 	$res1 = @pg_query_params(
 		$adminConn,
 		'INSERT INTO chim_meta.playthrough_profiles (name, size_bytes, storage_format, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets) VALUES ($1,$2,$3,$4,false,$5,$6,$7,$8,$9) RETURNING id',
-		[$name, (string)$size, 'plain_sql', $notes, $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets]
+		[$finalName, (string)$size, 'plain_sql', $notes, $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets]
 	);
 	if ($res1 && ($row = pg_fetch_assoc($res1))) {
 		$pid = intval($row['id']);
