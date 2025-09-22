@@ -2,7 +2,7 @@
 
 $enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php");
@@ -18,7 +18,6 @@ if ($uiPos !== false) {
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
-require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 $TITLE = "🎮 CHIM - Playthrough Manager";
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
@@ -409,7 +408,7 @@ $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveL
     <div class="page-header">
         <h1>Playthrough Manager</h1>
         <div style="font-size: 0.95em; color: #ccc;">Create, switch, and manage full database playthrough snapshots.</div>
-        <div style="font-size: 0.95em; color: #ccc;">"Dragonn Breaks" (snapshots) are created automatically when you load a save 3 ingame days behind your previous save.</div>
+        <div style="font-size: 0.95em; color: #ccc;">"Dragon Breaks" (snapshots) are created automatically when you load a save 3 ingame days behind your previous save.</div>
     </div>
 
     <div class="content-section full-width-section">
