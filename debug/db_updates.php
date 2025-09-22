@@ -99,6 +99,54 @@ if ($checkTableExists("core_profiles") == -1) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
 }
 
+$__seed_narrator_done = false;
+try {
+    // Seed default Narrator (ID = 1) only on truly fresh installs
+    // Conditions: table exists AND is empty
+    if ($checkTableExists("core_npc_master") == 1) {
+        $cntRows = $db->fetchAll("SELECT COUNT(*) AS c FROM public.core_npc_master");
+        if ($cntRows && intval($cntRows[0]["c"]) === 0) {
+            Logger::info("Seeding core_npc_master with ID 1 'The Narrator' (fresh install)");
+            $db->execQuery(
+                "INSERT INTO public.core_npc_master (
+                    id,
+                    npc_name,
+                    profile_id,
+                    npc_favorite,
+                    lock_profile,
+                    core,
+                    npc_static_bio,
+                    personality,
+                    occupation,
+                    speechstyle,
+                    goals,
+                    metadata,
+                    extended_data,
+                    tags
+                ) VALUES (
+                    1,
+                    'The Narrator',
+                    1,
+                    1,
+                    1,
+                    'Narrates events and scene changes.',
+                    'A guiding voice that describes the world, events, and transitions.',
+                    'Detached, descriptive, impartial, helpful',
+                    'Narrator',
+                    '',
+                    '',
+                    '{}'::jsonb,
+                    '{}'::jsonb,
+                    'system'
+                )"
+            );
+            $__seed_narrator_done = true;
+        }
+    }
+} catch (Exception $e) {
+    Logger::warn("Narrator seed skipped: ".$e->getMessage());
+}
+
 $query = "
     SELECT column_name 
     FROM information_schema.columns 
