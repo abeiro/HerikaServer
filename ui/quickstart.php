@@ -24,6 +24,8 @@ if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
     try { require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php"); } catch (Throwable $_e) {}
     try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { $GLOBALS['db'] = new sql(); } } catch (Throwable $_e) {}
+    // Ensure database schema/tables exist before handling any quicksave actions
+    try { require_once($rootPath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php"); } catch (Throwable $_e) {}
     header('Content-Type: application/json');
 
     $action = (string)($_POST['qs_action'] ?? '');
@@ -251,7 +253,7 @@ if (isset($quickstartConf['PLAYER_NAME'])) {
 try { $openrouterRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='openrouter' LIMIT 1"); } catch (Throwable $_e) { $openrouterRow = []; }
 $openrouterKey = isset($openrouterRow["api_key"]) ? $openrouterRow["api_key"] : "";
 
-// Preload default profile metadata flags for MiniMe and Oghma
+// Preload default profile metadata flags for MiniMe and Oghma (safe if tables missing)
 $minimeChecked = "";
 $oghmaChecked = "";
 try {
@@ -272,7 +274,7 @@ try {
             }
         }
     }
-} catch (Throwable $_e) { }
+} catch (Throwable $_e) { /* ignore on first-run before tables exist */ }
 
 echo '<div class="container">
         <div class="form-group">
