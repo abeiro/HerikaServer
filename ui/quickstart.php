@@ -629,38 +629,37 @@ echo '<style>
 </style>';
 
 echo '<script>
-function saveQuickstartAndDB(){
-    try {
-        var fd = new FormData();
-        var orKey = document.getElementById("qs_openrouter_api_key");
-        var dgKey = document.getElementById("qs_deepgram_api_key");
-        fd.append("qs_action", "api_badge_quicksave");
-        fd.append("openrouter_api_key", orKey ? orKey.value : "");
-        fd.append("deepgram_api_key", dgKey ? dgKey.value : "");
-        fetch("quickstart.php", { method: "POST", body: fd })
-            .finally(function(){
-                var fdm = new FormData();
-                try { fdm.append("minime_t5", document.getElementById("qs_minime_t5").checked ? "1" : "0"); } catch(_e){}
-                try { fdm.append("oghma_infinium", document.getElementById("qs_oghma_infinium").checked ? "1" : "0"); } catch(_e){}
-                fdm.append("qs_action", "profile_quicksave_metadata");
-                fetch("quickstart.php", { method: "POST", body: fdm })
-                    .finally(function(){
-                        try {
-                            var form = document.getElementById("top");
-                            var fdw = new FormData(form);
-                            fdw.append("qs_action", "save_conf");
-                            fetch("quickstart.php", { method: "POST", body: fdw })
-                                .finally(function(){
-                                    window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
-                                });
-                        } catch(_e2) {
-                            window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
-                        }
-                    });
-            });
-    } catch (_e) {
-        window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
-    }
+async function saveQuickstartAndDB(){
+  try {
+    // 1) Save API keys
+    const fd = new FormData();
+    const orKey = document.getElementById("qs_openrouter_api_key");
+    const dgKey = document.getElementById("qs_deepgram_api_key");
+    fd.append("qs_action", "api_badge_quicksave");
+    fd.append("openrouter_api_key", orKey ? orKey.value : "");
+    fd.append("deepgram_api_key", dgKey ? dgKey.value : "");
+    await fetch("quickstart.php", { method: "POST", body: fd, cache: "no-store", credentials: "same-origin" });
+
+    // 2) Save profile metadata flags
+    const fdm = new FormData();
+    try { fdm.append("minime_t5", document.getElementById("qs_minime_t5").checked ? "1" : "0"); } catch(_e){}
+    try { fdm.append("oghma_infinium", document.getElementById("qs_oghma_infinium").checked ? "1" : "0"); } catch(_e){}
+    fdm.append("qs_action", "profile_quicksave_metadata");
+    await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
+
+    // 3) Save conf.php with all form values
+    const form = document.getElementById("top");
+    const fdw = new FormData(form);
+    fdw.append("qs_action", "save_conf");
+    await fetch("quickstart.php", { method: "POST", body: fdw, cache: "no-store", credentials: "same-origin" });
+
+    // Notify user, then redirect
+    try { alert("Quickstart settings have been saved."); } catch(_a){}
+    window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
+  } catch (_e) {
+    try { alert("Save failed or partially completed. Redirecting to settings."); } catch(_a){}
+    window.location.href = "/HerikaServer/ui/core/config_hub.php?tab=globals";
+  }
 }
 </script>';
 
