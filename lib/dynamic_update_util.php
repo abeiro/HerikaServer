@@ -289,17 +289,31 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
     // Check if profile exists for this NPC
     $npcMaster=new NpcMaster();
     $npcData=$npcMaster->getByName($npcName);
+
+    // Load profile, maybe DYNAMIC_PROFILE_FIELDS is defined there
+    $profile=new CoreProfile();
+    $currentProfileData=$profile->getById($npcData["profile_id"]);
+
+    $npcDataMetadata=json_decode($npcData["metadata"],true);
+    $profileMetadata=json_decode($currentProfileData["metadata"],true);
+    if (empty($npcDataMetadata["DYNAMIC_PROFILE_FIELDS"])) {
+        $npcData["DYNAMIC_PROFILE_FIELDS"]=$profileMetadata["DYNAMIC_PROFILE_FIELDS"];
+    } else
+        $npcData["DYNAMIC_PROFILE_FIELDS"]=$npcDataMetadata["DYNAMIC_PROFILE_FIELDS"];
+    
+
     if (!$npcData) {
         Logger::debug("processSingleDynamicProfile: No profile found for $npcName");
         return false;
     }
 
+   
     try {
         $characterDynamicProfile = $npcData["dynamic_profile"] ?? $GLOBALS["DYNAMIC_PROFILE"] ?? false;
 
         // when dynamic profile fields are added to db profiles swap these lines for original default logic
         // $characterDynamicProfileFields = $npcData["dynamic_profile_fields"] ?? $GLOBALS["DYNAMIC_PROFILE_FIELDS"] ?? ["personality", "relationships"];
-        $characterDynamicProfileFields = $npcData["dynamic_profile_fields"] ??
+        $characterDynamicProfileFields = $npcData["DYNAMIC_PROFILE_FIELDS"] ??
             $GLOBALS["DYN_FIELDS_OVERRIDE"][$npcName] ??
             $GLOBALS["DYN_FIELDS_OVERRIDE_DEFAULTS"] ??
             $GLOBALS["DYNAMIC_PROFILE_FIELDS"] ?? // use default conf.php settings
@@ -311,6 +325,9 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
             return false;
         }
         
+        print_r($characterDynamicProfileFields);
+        die();
+
         // Check if update connector is configured
         $connector = new LLMConnector();
         $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
@@ -710,81 +727,83 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
             
         }
         
-        // Create backup
-        copy($configFile, $path . "conf" . DIRECTORY_SEPARATOR . ".conf_{$newConfFile}_" . time() . ".php");
-        
-        $backup = file_get_contents($configFile);
-        $backupFmtd = $db->escape($backup);
-        
-        $db->insert(
-            'npc_profile_backup',
-            array(
-                'name' => $db->escape($npcName),
-                'data' => $backupFmtd
-            )
-        );
-        
-        // Read current file content
-        $content = file_get_contents($configFile);
-        $currentConfContent=extract_assignments($configFile);
-        
-        // Map field names to their corresponding HERIKA variables
-        $fieldMapping = [
-            'personality' => 'HERIKA_PERSONALITY',
-            'relationships' => 'HERIKA_RELATIONSHIPS',
-            'occupation' => 'HERIKA_OCCUPATION',
-            'skills' => 'HERIKA_SKILLS',
-            'speechstyle' => 'HERIKA_SPEECHSTYLE',
-            'goals' => 'HERIKA_GOALS'
-        ];
-        
-        // Update each field in the file
-        foreach ($updatedFields as $field => $newValue) {
-            if (!isset($fieldMapping[$field])) {
-                continue;
-            }
+        if (file_exists($configFile)) {
+            // Create backup
+            @copy($configFile, $path . "conf" . DIRECTORY_SEPARATOR . ".conf_{$newConfFile}_" . time() . ".php");
             
-            // Sanitize AI-generated content to prevent PHP syntax errors
-            if (is_string($newValue)) {
-                $newValue = str_replace("\0", '', $newValue); // Remove null bytes
-                $newValue = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $newValue); // Remove control chars
-                if (!mb_check_encoding($newValue, 'UTF-8')) {
-                    $newValue = mb_convert_encoding($newValue, 'UTF-8', 'UTF-8'); // Fix encoding
+            $backup = file_get_contents($configFile);
+            $backupFmtd = $db->escape($backup);
+            
+            $db->insert(
+                'npc_profile_backup',
+                array(
+                    'name' => $db->escape($npcName),
+                    'data' => $backupFmtd
+                )
+            );
+            
+            // Read current file content
+            $content = file_get_contents($configFile);
+            $currentConfContent=extract_assignments($configFile);
+            
+            // Map field names to their corresponding HERIKA variables
+            $fieldMapping = [
+                'personality' => 'HERIKA_PERSONALITY',
+                'relationships' => 'HERIKA_RELATIONSHIPS',
+                'occupation' => 'HERIKA_OCCUPATION',
+                'skills' => 'HERIKA_SKILLS',
+                'speechstyle' => 'HERIKA_SPEECHSTYLE',
+                'goals' => 'HERIKA_GOALS'
+            ];
+            
+            // Update each field in the file
+            foreach ($updatedFields as $field => $newValue) {
+                if (!isset($fieldMapping[$field])) {
+                    continue;
                 }
-                if (strlen($newValue) > 50000) {
-                    $newValue = substr($newValue, 0, 50000) . '... [truncated]'; // Limit length
-                }
-                $newValue = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $newValue); // Escape PHP tags
                 
-                // Additional sanitization for var_export compatibility
-                $newValue = str_replace('\\', '\\\\', $newValue); // Escape backslashes
-                $newValue = str_replace("\r\n", "\n", $newValue); // Normalize line endings
-                $newValue = str_replace("\r", "\n", $newValue); // Convert Mac line endings
-                $newValue = preg_replace('/\n{3,}/', "\n\n", $newValue); // Limit consecutive newlines
+                // Sanitize AI-generated content to prevent PHP syntax errors
+                if (is_string($newValue)) {
+                    $newValue = str_replace("\0", '', $newValue); // Remove null bytes
+                    $newValue = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $newValue); // Remove control chars
+                    if (!mb_check_encoding($newValue, 'UTF-8')) {
+                        $newValue = mb_convert_encoding($newValue, 'UTF-8', 'UTF-8'); // Fix encoding
+                    }
+                    if (strlen($newValue) > 50000) {
+                        $newValue = substr($newValue, 0, 50000) . '... [truncated]'; // Limit length
+                    }
+                    $newValue = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $newValue); // Escape PHP tags
+                    
+                    // Additional sanitization for var_export compatibility
+                    $newValue = str_replace('\\', '\\\\', $newValue); // Escape backslashes
+                    $newValue = str_replace("\r\n", "\n", $newValue); // Normalize line endings
+                    $newValue = str_replace("\r", "\n", $newValue); // Convert Mac line endings
+                    $newValue = preg_replace('/\n{3,}/', "\n\n", $newValue); // Limit consecutive newlines
+                }
+                
+                $currentConfContent[$fieldMapping[$field]]=$newValue;
+                
+                /*
+                $varName = $fieldMapping[$field];
+                $escapedValue = var_export($newValue, true);
+                
+                // Check if variable already exists in file
+                $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
+                
+                if (preg_match($pattern, $content)) {
+                    // Update existing variable
+                    $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
+                } else {
+                    // Add new variable before the closing 
+                    $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
+                }
+                */
             }
             
-            $currentConfContent[$fieldMapping[$field]]=$newValue;
-            
-            /*
-            $varName = $fieldMapping[$field];
-            $escapedValue = var_export($newValue, true);
-            
-            // Check if variable already exists in file
-            $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
-            
-            if (preg_match($pattern, $content)) {
-                // Update existing variable
-                $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
-            } else {
-                // Add new variable before the closing 
-                $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
-            }
-            */
+            // Write updated content back to file
+            //file_put_contents($configFile, $content, LOCK_EX);
+            write_php_assignments($currentConfContent,$configFile);
         }
-        
-        // Write updated content back to file
-        //file_put_contents($configFile, $content, LOCK_EX);
-        write_php_assignments($currentConfContent,$configFile);
         
         
         Logger::info("saveDynamicProfileUpdates: Successfully saved updates for $npcName");
