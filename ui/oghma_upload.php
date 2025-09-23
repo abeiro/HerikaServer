@@ -15,9 +15,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 $isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
-if (!$isEmbed) {
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
-}
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -627,7 +624,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <style>
     /* Override main container styles */
     main {
-        padding-top: 80px; /* Space for navbar */
+        padding-top: 20px; /* Top padding */
         padding-bottom: 40px; /* Reduced space for footer */
         padding-left: 10%;
         padding-right: 10%;

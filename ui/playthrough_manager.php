@@ -408,7 +408,9 @@ $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveL
     <div class="page-header">
         <h1>Playthrough Manager</h1>
         <div style="font-size: 0.95em; color: #ccc;">Create, switch, and manage full database playthrough snapshots.</div>
-        <div style="font-size: 0.95em; color: #ccc;">"Dragon Breaks" (snapshots) are created automatically when you load a save 3 ingame days behind your previous save.</div>
+        <div style="font-size: 0.95em; color: #ccc;">Dragon Breaks (snapshots) are created automatically when you load a save 3 ingame days behind your previous save.</div>
+        <div style="font-size: 0.95em; color: #ccc;">When loading a Dragon Break it is recommend to create a new snapshot from it and use that before you load back into your previous save.</div>
+
     </div>
 
     <div class="content-section full-width-section">

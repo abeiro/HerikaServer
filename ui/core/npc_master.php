@@ -8,6 +8,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php");
 
 $GLOBALS["ENGINE_PATH"]=$enginePath;
 
@@ -512,6 +513,61 @@ if (isset($_GET['race_icon'])) {
     exit;
 }
 
+// NPC history: return timeline of snapshots for a given NPC (Tamrielic time)
+if (isset($_GET['history'])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_GET['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(['ok'=>false, 'error'=>'Invalid id']); exit; }
+        // Skip the most recent snapshot (current state); show only historical entries
+        $sel = "select history_id,npc_id,npc_name,npc_favorite,lock_profile,prompt_head,npc_static_bio,oghma_knowledge_tags,emote_moods,personality,relationships,occupation,appearance,skills,speechstyle,goals,voiceid,gender,race,refid,profile_id,dynamic_profile,md5,gamets_last_updated,created,core,base,tags from core_npc_master_history where npc_id = {$id} order by coalesce(gamets_last_updated,0) desc, created desc, history_id desc offset 1";
+        $rows = $GLOBALS['db']->fetchAll($sel) ?: [];
+        $entries = [];
+        foreach ($rows as $r){
+            $g = isset($r['gamets_last_updated']) ? floatval($r['gamets_last_updated']) : 0.0;
+            $tam = $g > 0 ? convert_gamets2skyrim_long_date2($g) : '';
+            $greg = $g > 0 ? gamets2str_format_gregorian_date($g, 'Y-m-d H:i') : '';
+            $created = (string)($r['created'] ?? '');
+            $entries[] = [
+                'history_id' => (int)($r['history_id'] ?? 0),
+                'gamets' => $g,
+                'when_tamrielic' => $tam,
+                'when_gregorian' => $greg,
+                'created' => $created,
+                'fields' => [
+                    'npc_name' => $r['npc_name'] ?? '',
+                    'profile_id' => isset($r['profile_id']) ? (string)$r['profile_id'] : '',
+                    'gender' => $r['gender'] ?? '',
+                    'race' => $r['race'] ?? '',
+                    'voiceid' => $r['voiceid'] ?? '',
+                    'refid' => $r['refid'] ?? '',
+                    'core' => $r['core'] ?? '',
+                    'npc_static_bio' => $r['npc_static_bio'] ?? '',
+                    'personality' => $r['personality'] ?? '',
+                    'relationships' => $r['relationships'] ?? '',
+                    'occupation' => $r['occupation'] ?? '',
+                    'skills' => $r['skills'] ?? '',
+                    'speechstyle' => $r['speechstyle'] ?? '',
+                    'goals' => $r['goals'] ?? '',
+                    'oghma_knowledge_tags' => $r['oghma_knowledge_tags'] ?? '',
+                    'emote_moods' => $r['emote_moods'] ?? '',
+                    'prompt_head' => $r['prompt_head'] ?? '',
+                    'dynamic_profile' => !empty($r['dynamic_profile']),
+                    'npc_favorite' => !empty($r['npc_favorite']),
+                    'lock_profile' => !empty($r['lock_profile']),
+                    'tags' => $r['tags'] ?? '',
+                    'base' => $r['base'] ?? ''
+                ]
+            ];
+        }
+        echo json_encode(['ok'=>true,'count'=>count($entries),'entries'=>$entries]);
+    } catch (Throwable $e) {
+        echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
+    }
+    exit;
+}
+
 // Bio database: search existing templates (combined_bio_templates)
 if (isset($_GET['bio_search'])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
@@ -789,9 +845,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <div class="form-item span-2">
-            <label for="prompt_head">Prompt Head</label>
+            <label for="prompt_head">Prompt Head Override</label>
             <textarea id="prompt_head" name="prompt_head" placeholder="High-level system instructions injected before the core."><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
-            <small class="hint">System preamble inserted before other sections. Keep concise and stable Do not worry if it is empty, as will pull from global settings prompt head.</small>
+            <small class="hint">System preamble inserted before other sections. Do not worry if it is empty, as will pull from global settings prompt head.</small>
         </div>
 
         <div class="form-item span-2">
@@ -1095,6 +1151,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <h2 class="modal-title">Edit NPC</h2>
       <div class="modal-actions">
         <button id="npc_modal_save_header" class="btn-save">Save</button>
+        <button id="npc_modal_history" class="btn-cancel">View History</button>
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
     </div>
@@ -1157,6 +1214,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     </div>
   </div>
   
+</div>
+
+<!-- NPC History viewer overlay -->
+<div id="history_viewer" class="modal-backdrop" style="z-index:10002;">
+  <div class="modal-container" style="max-width:1100px; width:95%;">
+    <div class="modal-header">
+      <h2 class="modal-title">NPC History</h2>
+      <div class="modal-actions">
+        <button id="history_close" class="btn-cancel">Close</button>
+      </div>
+    </div>
+    <div class="modal-body" style="height:75vh; display:flex; gap:10px;">
+      <div id="history_list" style="flex: 0 0 320px; max-width:320px; border-right:1px solid #4a4a4a; overflow:auto; padding:8px;">
+      </div>
+      <div id="history_detail" style="flex: 1 1 auto; min-width:0; overflow:auto; padding:8px;">
+        <div style="color:#9fb1c9">Select a snapshot to view details</div>
+      </div>
+    </div>
+  </div>
 </div>
 
  
@@ -1224,6 +1300,92 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       } catch(_e){}
     });
   }
+  // View History button wiring
+  (function(){
+    const btn = document.getElementById('npc_modal_history');
+    const overlay = document.getElementById('history_viewer');
+    const listBox = document.getElementById('history_list');
+    const detailBox = document.getElementById('history_detail');
+    const closeBtn = document.getElementById('history_close');
+    const LABELS = {
+      npc_name: 'NPC Name',
+      profile_id: 'Profile',
+      gender: 'Gender',
+      race: 'Race',
+      voiceid: 'Voice ID',
+      refid: 'Ref ID',
+      core: 'Core',
+      npc_static_bio: 'Static Bio',
+      appearance: 'Appearance',
+      personality: 'Personality',
+      relationships: 'Relationships',
+      occupation: 'Occupation',
+      skills: 'Skills',
+      speechstyle: 'Speech Style',
+      goals: 'Goals',
+      oghma_knowledge_tags: 'Oghma Tags',
+      emote_moods: 'Emote Moods',
+      prompt_head: 'Prompt Head',
+      dynamic_profile: 'Dynamic Profile',
+      npc_favorite: 'Favorite',
+      lock_profile: 'Lock Profile',
+      tags: 'Tags',
+      base: 'Base'
+    };
+    function close(){ if (overlay) overlay.style.display='none'; }
+    if (closeBtn) closeBtn.addEventListener('click', function(e){ e.preventDefault(); close(); });
+    if (overlay) overlay.addEventListener('click', function(e){ if (e.target===overlay) close(); });
+    function renderDetail(entry, prev){
+      if (!entry){ detailBox.innerHTML = '<div style="color:#9fb1c9">No data</div>'; return; }
+      const f = entry.fields||{}; const prevF = (prev && prev.fields) ? prev.fields : {};
+      const order = ['npc_name','profile_id','gender','race','voiceid','refid','core','npc_static_bio','appearance','personality','relationships','occupation','skills','speechstyle','goals','oghma_knowledge_tags','emote_moods','prompt_head','dynamic_profile','npc_favorite','lock_profile','tags','base'];
+      let html = '';
+      html += '<div style="color:#cfd9ea; margin-bottom:8px;">'+(entry.when_tamrielic || (entry.created?('Created '+entry.created):'Unknown time'))+(entry.created?(' <span style="color:#9fb1c9">('+entry.created+')</span>'):'')+'</div>';
+      html += '<div style="display:grid; grid-template-columns: 220px 1fr; gap:6px;">';
+      order.forEach(k=>{
+        let v = f[k]; const has = (v!==null && v!==undefined && String(v).trim()!=='');
+        if (!has) return;
+        const changed = (prevF && String(prevF[k]??'') !== String(v));
+        const label = LABELS[k] || k.replace(/_/g,' ');
+        if (k==='profile_id') { v = (PROFILES_BY_ID && PROFILES_BY_ID[String(v||'')]) ? PROFILES_BY_ID[String(v)] : v; }
+        html += '<div style="color:rgb(242,124,17); font-weight:700;">'+label+'</div>';
+        html += '<div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px;'+(changed?' background:#333333;':'')+'">'+String(v).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</div>';
+      });
+      html += '</div>';
+      detailBox.innerHTML = html;
+    }
+    function openHistory(){
+      try {
+        const id = String(window.CURRENT_NPC_ID||'').trim();
+        if (!id){ return; }
+        if (overlay) { overlay.style.display='flex'; }
+        if (listBox) { listBox.innerHTML = '<div style="color:#9fb1c9">Loading…</div>'; }
+        if (detailBox) { detailBox.innerHTML = '<div style="color:#9fb1c9">Fetching history…</div>'; }
+        fetch('npc_master.php?history=1&id='+encodeURIComponent(id))
+          .then(r=>r.json()).then(j=>{
+            if (!j || !j.ok){ listBox.innerHTML = '<div style="color:#ff6b6b">Failed to load history</div>'; detailBox.innerHTML=''; return; }
+            const entries = j.entries||[];
+            if (entries.length===0){ listBox.innerHTML = '<div style="color:#9fb1c9">No history yet</div>'; detailBox.innerHTML=''; return; }
+            listBox.innerHTML = '';
+            entries.forEach((e, idx)=>{
+              const div = document.createElement('div');
+              div.style.border='1px solid #4a4a4a'; div.style.borderRadius='8px'; div.style.padding='8px'; div.style.cursor='pointer'; div.style.marginBottom='6px';
+              const label = e.when_tamrielic || (e.created?('Created '+e.created):('Snapshot #'+String(e.history_id||idx+1)));
+              const second = e.created?('<div style="color:#9fb1c9; font-size:11px;">'+e.created+'</div>') : '';
+              div.innerHTML = '<div style="font-weight:700; color:#e9efff;">'+label+'</div>'+second;
+              div.addEventListener('click', function(){
+                listBox.querySelectorAll('.active').forEach(n=>{ n.classList.remove('active'); n.style.background=''; });
+                this.classList.add('active'); this.style.background='#333333';
+                renderDetail(e, idx>0?entries[idx-1]:null);
+              });
+              listBox.appendChild(div);
+            });
+          })
+          .catch(()=>{ listBox.innerHTML = '<div style="color:#ff6b6b">Failed to load history</div>'; detailBox.innerHTML=''; });
+      } catch(_){}
+    }
+    if (btn){ btn.addEventListener('click', function(e){ e.preventDefault(); openHistory(); }); }
+  })();
   document.addEventListener('click', function(e){ if (e.target && e.target.id==='npc_modal_close') closeModal(); });
   modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });

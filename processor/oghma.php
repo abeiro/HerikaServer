@@ -133,14 +133,38 @@ if ($GLOBALS["MINIME_T5"]) {
                                 ts_rank(native_vector, to_tsquery('$locationCtxQuery')) *
                                     CASE WHEN native_vector @@ to_tsquery('$locationCtxQuery') THEN 2.0 ELSE 1.0 END +
                                 ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) *
-                                    CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END 
+                                    CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END +
+                                -- Strong boost for alias match in the topic column (commas/underscores normalized)
+                                ts_rank(
+                                    to_tsvector('simple',
+                                        regexp_replace(
+                                            replace(lower(topic), '_',' '),
+                                            ',', ' ', 'g'
+                                        )
+                                    ),
+                                    to_tsquery('$currentInputTopicQuery')
+                                ) *
+                                CASE WHEN
+                                    to_tsvector('simple',
+                                        regexp_replace(
+                                            replace(lower(topic), '_',' '),
+                                            ',', ' ', 'g'
+                                        )
+                                    ) @@ to_tsquery('$currentInputTopicQuery')
+                                THEN 20.0 ELSE 0.0 END 
                                 AS combined_rank
                             FROM oghma
                             WHERE
                                 native_vector @@ to_tsquery('$currentInputTopicQuery') OR
                                 native_vector @@ to_tsquery('$currentOghmaTopicQuery') OR
                                 native_vector @@ to_tsquery('$locationCtxQuery') OR
-                                native_vector @@ to_tsquery('$contextKeywordsQuery')
+                                native_vector @@ to_tsquery('$contextKeywordsQuery') OR
+                                to_tsvector('simple',
+                                    regexp_replace(
+                                        replace(lower(topic), '_',' '),
+                                        ',', ' ', 'g'
+                                    )
+                                ) @@ to_tsquery('$currentInputTopicQuery')
                             ORDER BY combined_rank DESC
                             LIMIT 1;
                         ";

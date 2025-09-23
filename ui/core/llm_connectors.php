@@ -25,6 +25,41 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+$GLOBALS["db"] = $GLOBALS["db"] ?? null;
+// Early Export CSV handler (must run before any output)
+if (isset($_GET["export"])) {
+    if (!$GLOBALS["db"]) { $GLOBALS["db"] = new sql(); }
+    $llmEarly = new LLMConnector();
+    $idEarly = $_GET['export'];
+    $rowEarly = $llmEarly->getById($idEarly);
+    if (!$rowEarly) { header('HTTP/1.1 404 Not Found'); echo 'Not found'; exit; }
+    $colsEarly = [
+        'id','label','service','url','model','provider','driver','api_badge_id','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','json_schema','prefill_json','reasoning_model','metadata'
+    ];
+    $boolKeysEarly = ['enforce_json','json_schema','prefill_json','reasoning_model'];
+    $filenameBase = (string)($rowEarly['label'] ?? ('connector_'.$idEarly));
+    if ($filenameBase==='') { $filenameBase = 'connector_'.$idEarly; }
+    $filename = $filenameBase . '.csv';
+    $asciiName = str_replace(["\r","\n","\""], '', $filename);
+    header('Content-Type: text/csv; charset=utf-8');
+    $cd = 'attachment; filename="'.str_replace(['\\','"'], '', $asciiName).'"; filename*=UTF-8\'\'' . rawurlencode($filename);
+    header('Content-Disposition: ' . $cd);
+    $outEarly = fopen('php://output','w');
+    fputcsv($outEarly, $colsEarly);
+    $valsEarly = [];
+    foreach ($colsEarly as $k){
+        $v = $rowEarly[$k] ?? '';
+        if (in_array($k, $boolKeysEarly, true)) {
+            if ($v === '' || $v === null) { $v = ''; }
+            else { $v = ((int)$v) ? 'true' : 'false'; }
+        }
+        if ($k==='metadata' && is_array($v)) { $v = json_encode($v, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); }
+        $valsEarly[] = $v;
+    }
+    fputcsv($outEarly, $valsEarly);
+    fclose($outEarly);
+    exit;
+}
 $TITLE = "🧠 CHIM - LLM Connectors";
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
@@ -725,6 +760,90 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     exit;
 }
 
+// Handle Import CSV (create new connector from CSV)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
+    $redir = 'llm_connectors.php';
+    try {
+        if (!isset($_FILES['import_file']) || !is_uploaded_file($_FILES['import_file']['tmp_name'])) {
+            header("Location: $redir");
+            exit;
+        }
+        $tmp = $_FILES['import_file']['tmp_name'];
+        $fh = fopen($tmp, 'r');
+        if (!$fh) { header("Location: $redir"); exit; }
+        $header = fgetcsv($fh);
+        if ($header === false) { fclose($fh); header("Location: $redir"); exit; }
+        $cols = array_map(function($v){ return strtolower(trim((string)$v)); }, $header);
+        $row = fgetcsv($fh);
+        fclose($fh);
+        if ($row === false) { header("Location: $redir"); exit; }
+        $dataMap = [];
+        for ($i=0; $i<count($cols); $i++) { $k = $cols[$i] ?? ''; if ($k==='') continue; $dataMap[$k] = $row[$i] ?? ''; }
+
+        $getString = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? (string)$dataMap[$k] : ''; return trim($v); };
+        $getInt = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $v = trim((string)$v); if ($v==='') return null; return (int)$v; };
+        $getFloat = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $v = trim((string)$v); if ($v==='') return null; return (float)$v; };
+        $getBool = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $s = strtolower(trim((string)$v)); if ($s==='') return null; if ($s==='1'||$s==='true'||$s==='yes'||$s==='y'||$s==='on') return 1; if ($s==='0'||$s==='false'||$s==='no'||$s==='n'||$s==='off') return 0; return null; };
+
+        $payload = [];
+        $payload['label'] = $getString('label');
+        $payload['service'] = $getString('service');
+        $payload['url'] = $getString('url');
+        $payload['model'] = $getString('model');
+        $payload['provider'] = $getString('provider');
+        $payload['driver'] = $getString('driver');
+        $payload['api_badge_id'] = $getInt('api_badge_id');
+        $payload['max_tokens'] = $getInt('max_tokens');
+        $payload['temperature'] = $getFloat('temperature');
+        $payload['presence_penalty'] = $getFloat('presence_penalty');
+        $payload['frequency_penalty'] = $getFloat('frequency_penalty');
+        $payload['repetition_penalty'] = $getFloat('repetition_penalty');
+        $payload['top_p'] = $getFloat('top_p');
+        $payload['top_k'] = $getInt('top_k');
+        $payload['min_p'] = $getFloat('min_p');
+        $payload['top_a'] = $getFloat('top_a');
+        $b = $getBool('enforce_json'); if ($b!==null) $payload['enforce_json'] = $b; else unset($payload['enforce_json']);
+        $b = $getBool('json_schema'); if ($b!==null) $payload['json_schema'] = $b; else unset($payload['json_schema']);
+        $b = $getBool('prefill_json'); if ($b!==null) $payload['prefill_json'] = $b; else unset($payload['prefill_json']);
+        $b = $getBool('reasoning_model'); if ($b!==null) $payload['reasoning_model'] = $b; else unset($payload['reasoning_model']);
+        $meta = $getString('metadata'); if ($meta !== '') { $payload['metadata'] = $meta; }
+
+        // Infer service if missing
+        if (($payload['service'] ?? '') === '') {
+            $d = strtolower((string)($payload['driver'] ?? ''));
+            $u = strtolower((string)($payload['url'] ?? ''));
+            if (strpos($d,'openai')!==false || strpos($u,'openai.com')!==false) $payload['service']='openai';
+            elseif (strpos($d,'google')!==false || strpos($u,'generativelanguage.googleapis.com')!==false) $payload['service']='google';
+            elseif (strpos($d,'openrouter')!==false || strpos($u,'openrouter.ai')!==false) $payload['service']='openrouter';
+            else $payload['service']='custom';
+        }
+        // Seed minimal defaults similar to create_blank when missing
+        if (!isset($payload['driver']) || $payload['driver']==='') {
+            $svc = $payload['service'] ?? 'openrouter';
+            $payload['driver'] = ($svc==='openrouter') ? 'openrouterjson' : (($svc==='openai') ? 'openaijson' : (($svc==='google') ? 'google_openaijson' : 'openaijson'));
+        }
+        if (!isset($payload['temperature']) || $payload['temperature']===null) $payload['temperature'] = 1;
+        if (!isset($payload['max_tokens']) || $payload['max_tokens']===null) $payload['max_tokens'] = 250;
+
+        // Ensure label present
+        if ($payload['label'] === '') { $payload['label'] = 'Imported Connector'; }
+        // Keep label as-is (no import suffix)
+
+        $newId = $llm->create($payload);
+        if (!$newId) {
+            $last = $GLOBALS["db"]->fetchOne("SELECT id FROM core_llm_connector ORDER BY id DESC LIMIT 1");
+            $newId = $last['id'] ?? '';
+        }
+        $redir = 'llm_connectors.php' . ($newId ? ('?edit=' . urlencode($newId)) : '');
+    } catch (Exception $_e) {
+        $redir = 'llm_connectors.php';
+    }
+    header("Location: $redir");
+    exit;
+}
+
+// (moved) export handler is now at top before any output
+
 // Create a blank LLM connector and open it for editing
 if (isset($_GET["create_blank"])) {
     $newId = $llm->create([
@@ -788,6 +907,11 @@ if (isset($_GET["edit"])) {
                 <input type="hidden" name="create_blank" value="1">
                 <button type="submit" class="btn-save">New Connector</button>
             </form>
+            <form method="post" style="display:inline" action="llm_connectors.php" enctype="multipart/form-data" id="llm_import_form">
+                <input type="hidden" name="import" value="1">
+                <input type="file" name="import_file" id="llm_import_file" accept=".csv" style="display:none">
+                <button type="button" class="btn-primary" id="llm_import_btn">Import</button>
+            </form>
         </div>
         <div id="llm_list" class="conn-list"></div>
         <script>
@@ -832,6 +956,16 @@ if (isset($_GET["edit"])) {
                 });
             }
             render();
+        })();
+        </script>
+        <script>
+        (function(){
+            const btn = document.getElementById('llm_import_btn');
+            const file = document.getElementById('llm_import_file');
+            const form = document.getElementById('llm_import_form');
+            if (!btn || !file || !form) return;
+            btn.addEventListener('click', function(){ file.click(); });
+            file.addEventListener('change', function(){ if (file.files && file.files.length>0) { form.submit(); }});
         })();
         </script>
     </div>
@@ -919,6 +1053,7 @@ if (typeof window.consolidation !== 'function') {
                 <?php if ($editItem): ?>
                     <button type="submit" name="save" class="btn-save">Save</button>
                     <button type="button" id="btn_test_connector" class="btn-primary">Test</button>
+                    <button type="submit" formmethod="get" formaction="llm_connectors.php" name="export" value="<?= htmlspecialchars($editItem['id'] ?? '') ?>" class="btn-primary">Export</button>
                     <div class="orm-note" style="margin-top:6px;">Please save any changes before testing to ensure the latest settings are used.</div>
                 <?php else: ?>
                     <button type="submit" name="create" class="btn-save">Create</button>
