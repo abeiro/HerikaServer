@@ -1246,7 +1246,7 @@ class openrouterjson
             'audit_request',
                 array(
                     'request' => json_encode($data),
-                    'result' => $json_response??$error["message"],
+                    'result' => $error["message"]??"Ok",
                     'connector'=>$this->name,
                     'url'=>$this->_url
                 ));

@@ -325,9 +325,7 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
             return false;
         }
         
-        print_r($characterDynamicProfileFields);
-        die();
-
+       
         // Check if update connector is configured
         $connector = new LLMConnector();
         $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);

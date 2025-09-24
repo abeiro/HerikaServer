@@ -1223,6 +1223,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <h2 class="modal-title">NPC History</h2>
       <div class="modal-actions">
         <button id="history_close" class="btn-cancel">Close</button>
+        <button id="history_generation" class="btn-cancel">Evolution report</button>
       </div>
     </div>
     <div class="modal-body" style="height:75vh; display:flex; gap:10px;">
@@ -1307,7 +1308,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     const listBox = document.getElementById('history_list');
     const detailBox = document.getElementById('history_detail');
     const closeBtn = document.getElementById('history_close');
+    const reportBtn = document.getElementById('history_generation');
+
     const LABELS = {
+
       npc_name: 'NPC Name',
       profile_id: 'Profile',
       gender: 'Gender',
@@ -1334,6 +1338,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     };
     function close(){ if (overlay) overlay.style.display='none'; }
     if (closeBtn) closeBtn.addEventListener('click', function(e){ e.preventDefault(); close(); });
+    if (reportBtn) reportBtn.addEventListener('click', function(e){ window.open("npc_report.php?npcid="+ String(window.CURRENT_NPC_ID||'').trim()) });
     if (overlay) overlay.addEventListener('click', function(e){ if (e.target===overlay) close(); });
     function renderDetail(entry, prev){
       if (!entry){ detailBox.innerHTML = '<div style="color:#9fb1c9">No data</div>'; return; }
