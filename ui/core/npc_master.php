@@ -76,10 +76,10 @@ if (!function_exists('race_icon_web_path')) {
         $refid = strtoupper($refid);
         $profileDirFs = rtrim("{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/", '/\\') . DIRECTORY_SEPARATOR;
         $profileDirUrl = rtrim($webRoot . '/data/pictures/profile/', '/');
-        $exts = ['jpg','jpeg','png','webp','gif'];
+        $exts = ['png','jpg','jpeg','webp','gif'];
         $candidates = [];
-        if (!empty($refid)) { $candidates[] = $refid; }
         if (!empty($md5)) { $candidates[] = $md5; }
+        if (!empty($refid)) { $candidates[] = $refid; }
         if (!empty($npcName)) {
             $in = strtolower((string)$npcName);
             $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);

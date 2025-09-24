@@ -127,6 +127,7 @@ if (!$npcData) {
 
 @mkdir("{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/",0777,true);
 @copy($finalNameJpeg,"{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/{$npcData["refid"]}.jpg");
+@copy($finalNameJpeg,"{$GLOBALS["ENGINE_PATH"]}/data/pictures/gallery/{$npcData["refid"]}.jpg");
 
  
 
