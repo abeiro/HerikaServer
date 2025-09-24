@@ -355,7 +355,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch profiles
-$profiles = $db->fetchAll("SELECT id, name, created_at, size_bytes, storage_format, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets FROM chim_meta.playthrough_profiles ORDER BY created_at DESC");
+$profiles = $db->fetchAll("SELECT id, name, created_at, size_bytes, storage_format, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets FROM chim_meta.playthrough_profiles ORDER BY COALESCE(last_gamets,0) DESC, created_at DESC");
 
 // Live stats for currently loaded (active) database; do not rely on metadata
 $activeProfileName = '';
@@ -454,6 +454,22 @@ $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveL
                                 <div style="flex:1; min-width:0;">
                                     <div style="font-weight:bold; font-size: 14px; word-break: break-all;">
                                         <?php echo h($p['name']); ?>
+                                        <?php 
+                                            $lg = isset($p['last_gamets']) ? intval($p['last_gamets']) : 0; 
+                                            if ($liveLastGamets > 0 && $lg > 0) {
+                                                if ($lg === $liveLastGamets) {
+                                                    echo '<span style="color:#9fb1c9; margin-left:6px;">| Current Time</span>';
+                                                } elseif ($lg < $liveLastGamets) {
+                                                    $d = gamets2days_between($lg, $liveLastGamets);
+                                                    $txt = $d.' '.($d===1?'day':'days').' behind';
+                                                    echo '<span style="color:#dc2626; margin-left:6px;">| '.h($txt).'</span>';
+                                                } else {
+                                                    $d = gamets2days_between($liveLastGamets, $lg);
+                                                    $txt = $d.' '.($d===1?'day':'days').' ahead';
+                                                    echo '<span style="color:#16a34a; margin-left:6px;">| '.h($txt).'</span>'; #16a34a
+                                                }
+                                            }
+                                        ?>
                                         <?php if ((int)$p['is_active'] === 1) { echo '<span style="color:#eaee05; font-weight:normal;"> (active)</span>'; } ?>
                                     </div>
                                     <div style="font-size: 12px; color:#ccc; display:flex; gap:10px; flex-wrap:wrap;">
