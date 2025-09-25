@@ -455,6 +455,8 @@ foreach ($quickstartConf as $pname => $parms) {
 
     echo "</div>";
 }
+
+
 echo "<br>";
 echo '<div class="btn-group-custom text-center">
         <div class="btn-group-custom text-center">
@@ -462,6 +464,34 @@ echo '<div class="btn-group-custom text-center">
                 <h3 class="warning-text3">
                     Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
                 </h3>
+            </div>';
+
+
+echo '      <div class="container">
+                <h2 class="qs-section-title">LLM Connectors Note</h2>
+                <p class="form-text">The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame.</p>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-top:8px;">
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">🕹️ <b>Standard</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Hermes 4 70B</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.11/M input | $0.38/M output</div>
+                    </div>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">🏃‍♂️ <b>Fast</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Gemini Flash 2</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.30/M input | $2.50/M output</div>
+                    </div>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">💪 <b>Powerful</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Sonnet 3.7</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$3/M input (starting) | $15/M output</div>
+                    </div>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">🧪 <b>Experimental</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">DeepSeek Chat V3.1</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.25/M input | $1/M output</div>
+                    </div>
+                </div>
             </div>
 
             <button
@@ -477,8 +507,8 @@ echo '<div class="btn-group-custom text-center">
         </div>
     </div>';
 
-echo '</form>
-      </div>';
+
+
 echo '</main>'; // End of container/main
 
 include("tmpl/footer.html");
