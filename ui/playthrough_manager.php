@@ -382,6 +382,46 @@ if ($adminConn) {
 }
 $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveLastGamets) : '';
 
+// Prepare timeline items based on last_gamets
+$timelineItems = [];
+foreach ($profiles as $p) {
+    $lg = isset($p['last_gamets']) ? intval($p['last_gamets']) : 0;
+    if ($lg <= 0) { continue; }
+    $timelineItems[] = [
+        'id' => (int)$p['id'],
+        'name' => (string)$p['name'],
+        'last_gamets' => $lg,
+        'skyrim_date' => convert_gamets2skyrim_long_date($lg),
+        'created_at' => (string)$p['created_at'],
+        'size' => formatFileSize((int)$p['size_bytes']),
+        'is_active' => ((int)$p['is_active'] === 1)
+    ];
+}
+
+// Timeline ticks (static notches with labels)
+$timelineTicks = [];
+if (!empty($timelineItems)) {
+    $values = array_map(function($i){ return (int)$i['last_gamets']; }, $timelineItems);
+    $minGamets = min($values);
+    $maxGamets = max($values);
+    $segments = min(max(count($timelineItems) - 1, 4), 12); // 4..12 ticks based on data
+    if ($maxGamets === $minGamets) {
+        // Degenerate: place a center tick
+        $timelineTicks[] = [
+            'gamets' => $minGamets,
+            'date' => convert_gamets2skyrim_long_date($minGamets)
+        ];
+    } else {
+        for ($s = 0; $s <= $segments; $s++) {
+            $g = (int)round($minGamets + ($s * ($maxGamets - $minGamets) / $segments));
+            $timelineTicks[] = [
+                'gamets' => $g,
+                'date' => convert_gamets2skyrim_long_date($g)
+            ];
+        }
+    }
+}
+
 ?>
 
 <style>
@@ -396,6 +436,22 @@ $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveL
     .button-group { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
     @font-face { font-family: 'MagicCards'; src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype'); font-weight: normal; font-style: normal; }
     @media (max-width: 768px) { main { padding-left: 5%; padding-right: 5%; } .content-grid { grid-template-columns: 1fr; } .content-section { padding: 15px; } }
+    /* Timeline */
+    .timeline { position: relative; padding: 28px 8px 30px 8px; }
+    .timeline-title { text-align:center; color:#e0e0e0; font-size: 13px; margin-bottom: 12px; }
+    .timeline-track { position: relative; height: 4px; background: linear-gradient(90deg, rgba(138,155,182,0.5), rgba(242,124,17,0.6)); border-radius: 2px; }
+    .timeline-nodes { position: relative; height: 0; }
+    .timeline-node { position: absolute; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: #ffb862; border: 2px solid #1a1a1a; box-shadow: 0 0 0 2px rgba(255,255,255,0.08); transform: translateX(-50%); cursor: pointer; }
+    .timeline-node.active { background: #eaee05; box-shadow: 0 0 0 2px rgba(234,238,5,0.25), 0 0 10px rgba(234,238,5,0.2); }
+    .timeline-tooltip { position: absolute; display: none; max-width: 280px; background: #111; border: 1px solid rgba(138,155,182,0.4); color: #e0e0e0; padding: 8px 10px; border-radius: 6px; font-size: 12px; z-index: 20; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .timeline-tooltip .name { color: #ffb862; font-weight: bold; }
+    .timeline-legend { display:flex; justify-content:space-between; font-size: 12px; color:#9fb1c9; margin-top: 8px; }
+    .timeline-notches { position: relative; height: 0; }
+    .timeline-notch { position: absolute; top: -12px; width: 2px; height: 10px; background: #9fb1c9; opacity: 0.7; transform: translateX(-50%); }
+    .timeline-notch.major { height: 14px; background:#e0e0e0; opacity: 0.9; }
+    .timeline-tick-label { position: absolute; top: -30px; transform: translateX(-50%); color:#9fb1c9; font-size: 11px; white-space: nowrap; pointer-events: none; }
+    .timeline-label { position: absolute; top: -28px; transform: translateX(-50%); color:#9fb1c9; font-size: 11px; white-space: nowrap; pointer-events: none; }
+    .timeline-label.active { color:#eaee05; }
 </style>
 
 <?php if ($isEmbed): ?>
@@ -423,6 +479,16 @@ $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveL
                 <div><strong style="color:#f8f9fa;">oghma:</strong> <?php echo intval($liveOghmaCount); ?></div>
                 <div><strong style="color:#f8f9fa;">last in-game:</strong> <?php echo h($liveSkyrimDate !== '' ? $liveSkyrimDate : 'n/a'); ?></div>
         </div>
+        <?php if (!empty($timelineItems)) { ?>
+        <div class="timeline" id="pt-timeline">
+            <div class="timeline-title" id="pt-title"></div>
+            <div class="timeline-track"></div>
+            <div class="timeline-notches" id="pt-timeline-notches"></div>
+            <div class="timeline-nodes" id="pt-timeline-nodes"></div>
+            <div class="timeline-legend"><span id="pt-min"></span><span id="pt-max"></span></div>
+            <div class="timeline-tooltip" id="pt-tooltip"></div>
+        </div>
+        <?php } ?>
     </div>
 
     <?php if (!empty($message)) { echo '<div class="content-section">'.$message.'</div>'; } ?>
@@ -520,5 +586,95 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+
+<script>
+(function(){
+    const items = <?php echo json_encode($timelineItems, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    const ticks = <?php echo json_encode($timelineTicks, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    if (!items || !items.length) return;
+    const nodesEl = document.getElementById('pt-timeline-nodes');
+    const notchesEl = document.getElementById('pt-timeline-notches');
+    const trackEl = document.querySelector('#pt-timeline .timeline-track');
+    const tooltip = document.getElementById('pt-tooltip');
+    const minEl = document.getElementById('pt-min');
+    const maxEl = document.getElementById('pt-max');
+    const titleEl = document.getElementById('pt-title');
+    if (!nodesEl || !trackEl) return;
+
+    const values = items.map(i => i.last_gamets);
+    const min = Math.min.apply(null, values);
+    const max = Math.max.apply(null, values);
+    const minItem = items.find(i => i.last_gamets === min);
+    const maxItem = items.find(i => i.last_gamets === max);
+    const minLabel = minItem ? minItem.skyrim_date : String(min);
+    const maxLabel = maxItem ? maxItem.skyrim_date : String(max);
+    minEl && (minEl.textContent = 'Earliest: ' + minLabel);
+    maxEl && (maxEl.textContent = 'Latest: ' + maxLabel);
+
+    function pct(x){
+        if (max === min) return 50; // collapse to center if identical
+        return ((x - min) / (max - min)) * 100;
+    }
+
+    function showTip(e, html){
+        if (!tooltip) return;
+        tooltip.innerHTML = html;
+        tooltip.style.display = 'block';
+        const rect = nodesEl.getBoundingClientRect();
+        const x = e.clientX - rect.left + 10;
+        const y = e.clientY - rect.top + 14;
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+    }
+    function hideTip(){ if (tooltip) tooltip.style.display = 'none'; }
+
+    items.sort((a,b) => a.last_gamets - b.last_gamets);
+    items.forEach(it => {
+        const node = document.createElement('div');
+        node.className = 'timeline-node' + (it.is_active ? ' active' : '');
+        node.style.left = pct(it.last_gamets) + '%';
+        node.setAttribute('role','button');
+        node.setAttribute('tabindex','0');
+        const tip = `<div class="name">${escapeHtml(it.name)}</div>
+            <div>Skyrim date: ${escapeHtml(it.skyrim_date)}</div>
+            <div>Created: ${escapeHtml(it.created_at)}</div>
+            <div>Size: ${escapeHtml(it.size)}</div>`;
+        node.addEventListener('mouseenter', (e)=>showTip(e, tip));
+        node.addEventListener('mousemove', (e)=>showTip(e, tip));
+        node.addEventListener('mouseleave', hideTip);
+        nodesEl.appendChild(node);
+    });
+
+    // Static ticks (major/minor) with labels aligned to gamets scale
+    if (notchesEl && ticks && ticks.length) {
+        const values = items.map(i => i.last_gamets);
+        const min = Math.min.apply(null, values);
+        const max = Math.max.apply(null, values);
+        const isDegenerate = (max === min);
+        const pct = (x) => isDegenerate ? 50 : ((x - min) / (max - min)) * 100;
+        ticks.forEach((t, idx) => {
+            const notch = document.createElement('div');
+            notch.className = 'timeline-notch' + ((idx % 2 === 0) ? ' major' : '');
+            notch.style.left = pct(t.gamets) + '%';
+            notchesEl.appendChild(notch);
+            // Add labels for major interior ticks only (skip first and last)
+            if (idx % 2 === 0 && idx > 0 && idx < (ticks.length - 1)) {
+                const lbl = document.createElement('div');
+                lbl.className = 'timeline-tick-label';
+                lbl.style.left = pct(t.gamets) + '%';
+                lbl.textContent = t.date;
+                notchesEl.appendChild(lbl);
+            }
+        });
+    }
+
+    document.addEventListener('scroll', hideTip, { passive:true });
+    window.addEventListener('resize', hideTip, { passive:true });
+
+    function escapeHtml(s){
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+})();
+</script>
 
 
