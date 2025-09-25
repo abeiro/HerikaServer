@@ -327,7 +327,7 @@ class NpcMaster {
         }
         */
         if (empty($currentNpcData['personality']) && isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) {
-            $currentNpcData['personality']=$OLD_GLOBALS_ARRAY['HERIKA_PERS'];
+            $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
         }
         $currentNpcData['metadata'] = json_encode($overrides);
         $currentNpcData['extended_data'] = json_encode(["chim_core_migrated"=>1]);
@@ -335,7 +335,14 @@ class NpcMaster {
         $currentNpcData['race'] = null; // Optional: no race found
         $currentNpcData['refid'] = null; // Optional: no race found
         $currentNpcData['base'] = null; // Optional: no race found
-        $currentNpcData['core']=$OLD_GLOBALS_ARRAY['HERIKA_NAME'];
+        // Prefer HERIKA_PERS for core; fallback to HERIKA_NAME if core not set
+        if (!isset($currentNpcData['core']) || $currentNpcData['core'] === '') {
+            if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERS']) && $OLD_GLOBALS_ARRAY['HERIKA_PERS'] !== '') {
+                $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_PERS'];
+            } else if (isset($OLD_GLOBALS_ARRAY['HERIKA_NAME']) && $OLD_GLOBALS_ARRAY['HERIKA_NAME'] !== '') {
+                $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_NAME'];
+            }
+        }
         $currentNpcData['profile_id'] = 1; // Default profile
         $currentNpcData['md5'] = md5($currentNpcData["npc_name"]); // Default profile
 
