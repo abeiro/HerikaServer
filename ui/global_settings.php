@@ -273,6 +273,7 @@ $gsSections = [
     'General' => [
         [ 'name' => 'PLAYER_NAME', 'type' => 'text' ],
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
+        [ 'name' => 'PLAYER_BIOS', 'type' => 'longstring' ],
         [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
         [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
