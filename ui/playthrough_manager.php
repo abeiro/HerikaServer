@@ -385,16 +385,20 @@ $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveL
 // Prepare timeline items based on last_gamets
 $timelineItems = [];
 foreach ($profiles as $p) {
-    $lg = isset($p['last_gamets']) ? intval($p['last_gamets']) : 0;
+    $nameStr = (string)($p['name'] ?? '');
+    $isActive = ((int)($p['is_active'] ?? 0) === 1) || (strcasecmp($nameStr, (string)$activeProfileName) === 0);
+    $lgMeta = isset($p['last_gamets']) ? intval($p['last_gamets']) : 0;
+    $lg = $lgMeta;
+    if ($lg <= 0 && $isActive && $liveLastGamets > 0) { $lg = $liveLastGamets; }
     if ($lg <= 0) { continue; }
     $timelineItems[] = [
         'id' => (int)$p['id'],
-        'name' => (string)$p['name'],
+        'name' => $nameStr,
         'last_gamets' => $lg,
         'skyrim_date' => convert_gamets2skyrim_long_date($lg),
         'created_at' => (string)$p['created_at'],
         'size' => formatFileSize((int)$p['size_bytes']),
-        'is_active' => ((int)$p['is_active'] === 1)
+        'is_active' => $isActive
     ];
 }
 
@@ -442,7 +446,7 @@ if (!empty($timelineItems)) {
     .timeline-track { position: relative; height: 4px; background: linear-gradient(90deg, rgba(138,155,182,0.5), rgba(242,124,17,0.6)); border-radius: 2px; }
     .timeline-nodes { position: relative; height: 0; }
     .timeline-node { position: absolute; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: #ffb862; border: 2px solid #1a1a1a; box-shadow: 0 0 0 2px rgba(255,255,255,0.08); transform: translateX(-50%); cursor: pointer; }
-    .timeline-node.active { background: #eaee05; box-shadow: 0 0 0 2px rgba(234,238,5,0.25), 0 0 10px rgba(234,238,5,0.2); }
+    .timeline-node.active { background: #2ea8ff; box-shadow: 0 0 0 2px rgba(46,168,255,0.25), 0 0 12px rgba(46,168,255,0.35); }
     .timeline-tooltip { position: absolute; display: none; max-width: 280px; background: #111; border: 1px solid rgba(138,155,182,0.4); color: #e0e0e0; padding: 8px 10px; border-radius: 6px; font-size: 12px; z-index: 20; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
     .timeline-tooltip .name { color: #ffb862; font-weight: bold; }
     .timeline-legend { display:flex; justify-content:space-between; font-size: 12px; color:#9fb1c9; margin-top: 8px; }
@@ -452,6 +456,9 @@ if (!empty($timelineItems)) {
     .timeline-tick-label { position: absolute; top: -30px; transform: translateX(-50%); color:#9fb1c9; font-size: 11px; white-space: nowrap; pointer-events: none; }
     .timeline-label { position: absolute; top: -28px; transform: translateX(-50%); color:#9fb1c9; font-size: 11px; white-space: nowrap; pointer-events: none; }
     .timeline-label.active { color:#eaee05; }
+    /* Dragon Break styling */
+    .backup-item.dragonbreak { background-color: #1e2a3a; }
+    .backup-item.dragonbreak:hover { background-color: #223044; }
 </style>
 
 <?php if ($isEmbed): ?>
@@ -514,8 +521,12 @@ if (!empty($timelineItems)) {
                     <div style="text-align:center; color:#ccc; padding: 12px;">No profiles yet. Create one from the left panel.</div>
                 <?php } else { ?>
                     <div class="backup-list" style="max-height: 420px; overflow-y:auto; padding: 0; margin: 0; border: 1px solid #333333; border-radius: 8px; background-color: #1a1a1a;">
-                        <?php foreach ($profiles as $p) { ?>
-                        <div class="backup-item" style="padding: 12px; border-bottom: 1px solid #333333;">
+                        <?php foreach ($profiles as $p) { 
+                            $nm = strtolower((string)($p['name'] ?? ''));
+                            $nt = strtolower((string)($p['notes'] ?? ''));
+                            $isDragon = (strpos($nm,'dragon') !== false) || (strpos($nt,'dragon') !== false);
+                        ?>
+                        <div class="backup-item<?php echo $isDragon ? ' dragonbreak' : ''; ?>" style="padding: 12px; border-bottom: 1px solid #333333;">
                             <div style="display:flex; justify-content:space-between; gap: 10px;">
                                 <div style="flex:1; min-width:0;">
                                     <div style="font-weight:bold; font-size: 14px; word-break: break-all;">
@@ -644,6 +655,9 @@ echo $buffer;
         node.addEventListener('mouseleave', hideTip);
         nodesEl.appendChild(node);
     });
+
+    // Position "You are here" marker at the active profile's position
+    // Blue active node styling remains; no arrow/label needed
 
     // Static ticks (major/minor) with labels aligned to gamets scale
     if (notchesEl && ticks && ticks.length) {
