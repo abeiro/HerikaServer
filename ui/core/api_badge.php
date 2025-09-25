@@ -174,6 +174,12 @@ $providerSubtext = [
     'replicate' => ['Soulgaze Gallery Processor'],
 ];
 
+// Reserved labels (both slugs and pretty names), used to keep presets distinct from customs
+$reservedLabelsLower = array_values(array_unique(array_merge(
+    array_keys($presetMap),
+    array_map('strtolower', array_values($presetMap))
+)));
+
 // Seed presets if missing
 $existing = $apiBadge->getAll();
 $existingLabelsLower = array_map(function($row){ return strtolower($row['label'] ?? ''); }, $existing);
@@ -228,15 +234,35 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["save_all"])) {
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
-    $apiBadge->create($_POST);
-    header("Location: api_badge.php");
+    $incomingLabel = trim($_POST['label'] ?? '');
+    if (in_array(strtolower($incomingLabel), $reservedLabelsLower, true)) {
+        header("Location: api_badge.php?err=reserved_label");
+        exit;
+    }
+    $apiBadge->create([ 'label' => $incomingLabel !== '' ? $incomingLabel : 'Custom Key', 'api_key' => trim($_POST['api_key'] ?? '') ]);
+    header("Location: api_badge.php?ok=saved");
     exit;
 }
 
 // Handle Update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
-    $apiBadge->update($_POST["id"], $_POST);
-    header("Location: api_badge.php");
+    $uid = isset($_POST['id']) ? intval($_POST['id']) : 0;
+    $current = $uid ? $apiBadge->getById($uid) : null;
+    $currentIsPreset = false;
+    if (is_array($current)) {
+        $currentIsPreset = in_array(strtolower($current['label'] ?? ''), $reservedLabelsLower, true);
+    }
+    $newLabel = isset($_POST['label']) ? trim($_POST['label']) : null;
+    if ($newLabel !== null) {
+        $newIsReserved = in_array(strtolower($newLabel), $reservedLabelsLower, true);
+        // Block turning a custom row into a reserved preset label
+        if (!$currentIsPreset && $newIsReserved) {
+            header("Location: api_badge.php?err=reserved_label");
+            exit;
+        }
+    }
+    $apiBadge->update($uid, $_POST);
+    header("Location: api_badge.php?ok=saved");
     exit;
 }
 
@@ -392,6 +418,7 @@ function addCustomKey(){
 <script>
 // Autosave for presets and custom keys
 (function(){
+    const RESERVED_LABELS = <?php echo json_encode($reservedLabelsLower); ?>;
     async function postUpdate(payload){
         try { await fetch('api_badge.php', { method:'POST', body: payload }); } catch(_e){}
     }
@@ -435,6 +462,12 @@ function addCustomKey(){
         const keyInput = card.querySelector('input[name="custom[api_key][]"]');
         const labelVal = labelInput ? labelInput.value.trim() : '';
         const keyVal = keyInput ? keyInput.value.trim() : '';
+        if (!id) {
+            if (RESERVED_LABELS.indexOf(labelVal.toLowerCase()) !== -1) {
+                alert('That label is reserved for presets. Please use a different name.');
+                return;
+            }
+        }
         const fd = new FormData();
         if (id){
             fd.append('update','1');
@@ -522,6 +555,18 @@ function addCustomKey(){
             try { form.submit(); } catch(_e){}
         });
     });
+})();
+
+// Lightweight feedback based on query params
+(function(){
+    try {
+        const sp = new URLSearchParams(window.location.search);
+        if (sp.get('err') === 'reserved_label') {
+            alert('That label is reserved for a preset provider. Please choose another.');
+        } else if (sp.get('ok') === 'saved') {
+            // no-op to avoid noisy alerts; keep silent success
+        }
+    } catch(_e){}
 })();
 </script>
 
