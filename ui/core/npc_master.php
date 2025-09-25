@@ -1223,7 +1223,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <h2 class="modal-title">NPC History</h2>
       <div class="modal-actions">
         <button id="history_close" class="btn-cancel">Close</button>
-        <button id="history_generation" class="btn-cancel">Evolution report</button>
+        <button id="history_generation" class="btn-cancel" title="Note: Will do a LLM request.">Evolution report (AI request)</button>
       </div>
     </div>
     <div class="modal-body" style="height:75vh; display:flex; gap:10px;">

@@ -571,6 +571,32 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $currentNpcData["gender"]=$splitNameBase[2];
         $currentNpcData["race"]=$splitNameBase[3];
         $currentNpcData["refid"]=$splitNameBase[4];
+        
+
+        $meta=$npcMaster->getMetadata($currentNpcData);
+        // NPC skills
+        $meta["skills"]["archery"]=$splitNameBase[5];
+        $meta["skills"]["block"]=$splitNameBase[6];
+        $meta["skills"]["onehanded"]=$splitNameBase[7];
+        $meta["skills"]["twohanded"]=$splitNameBase[8];
+        $meta["skills"]["conjuration"]=$splitNameBase[9];
+        $meta["skills"]["destruction"]=$splitNameBase[10];
+        $meta["skills"]["restoration"]=$splitNameBase[11];
+        $meta["skills"]["alteration"]=$splitNameBase[12];
+        $meta["skills"]["illusion"]=$splitNameBase[13];
+        $meta["skills"]["heavyarmor"]=$splitNameBase[14];
+        $meta["skills"]["lightarmor"]=$splitNameBase[15];
+        $meta["skills"]["lockpicking"]=$splitNameBase[16];
+        $meta["skills"]["pickpocket"]=$splitNameBase[17];
+        $meta["skills"]["sneak"]=$splitNameBase[18];
+        $meta["skills"]["speech"]=$splitNameBase[19];
+        $meta["skills"]["smithing"]=$splitNameBase[10];
+        $meta["skills"]["alchemy"]=$splitNameBase[21];
+        $meta["skills"]["enchanting"]=$splitNameBase[22];
+        
+
+        $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
+
         $npcMaster->updateByArray($currentNpcData);
         
         

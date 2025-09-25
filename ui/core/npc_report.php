@@ -70,16 +70,19 @@ $npcData=$npc->getById($_GET["npcid"]);
 if ($npcData) {
     $npcName = $npcData["npc_name"] ?? '';
     $query=
-    "SELECT personality, created
+    "SELECT coalesce(npc_static_bio,'')||'\n'||personality as personality, created
     FROM (
-    SELECT personality,
+    SELECT personality,npc_static_bio,
             created,
             ROW_NUMBER() OVER (PARTITION BY personality ORDER BY created) AS rn
     FROM core_npc_master_history
     WHERE npc_name = '".$GLOBALS["db"]->escape($npcName)."'
     ) AS sub
     WHERE rn = 1
+    AND coalesce(npc_static_bio,'')||'\n'||personality is not null
     ORDER BY created";
+
+    
     $hdata=$GLOBALS["db"]->fetchAll($query);
 
     $connector = new LLMConnector();
