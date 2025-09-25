@@ -19,9 +19,6 @@ echo '<meta name="api-endpoint" content="' . htmlspecialchars($GLOBALS["TTS"]["X
 $isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
-if (!$isEmbed) {
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
-}
 
 // Enable error reporting (for development purposes)
 ini_set('display_errors', 1);
