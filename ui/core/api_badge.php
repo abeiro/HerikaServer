@@ -308,12 +308,7 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
                     </div>
                     <?php if (!empty($providerSubtext[$slug])): ?>
                         <div class="provider-subtext">
-                            <div class="desc">This key can be used for:</div>
-                            <ul>
-                                <?php foreach ($providerSubtext[$slug] as $item): ?>
-                                    <li><?= htmlspecialchars($item) ?></li>
-                                <?php endforeach; ?>
-                            </ul>
+                            <div class="desc">This key can be used for: <?= htmlspecialchars(implode(', ', $providerSubtext[$slug])) ?></div>
                         </div>
                     <?php endif; ?>
                 </div>
