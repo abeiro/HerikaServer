@@ -168,8 +168,10 @@ require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
 $__confSchema = conf_loader_load_schema();
 $__rpgOptionsRaw = is_array($__confSchema['RPG_COMMENTS']['values'] ?? null) ? $__confSchema['RPG_COMMENTS']['values'] : [];
 $__rpgHelp = (string)($__confSchema['RPG_COMMENTS']['description'] ?? '');
-// Do not display 'keepmechecked' but ensure it is always saved in metadata
 $__rpgOptions = array_values(array_filter($__rpgOptionsRaw, function($v){ return strtolower((string)$v) !== 'keepmechecked'; }));
+// Load Dynamic Profile Fields options for per-profile control
+$__dynOptions = is_array($__confSchema['DYNAMIC_PROFILE_FIELDS']['values'] ?? null) ? $__confSchema['DYNAMIC_PROFILE_FIELDS']['values'] : [];
+$__dynHelp = (string)($__confSchema['DYNAMIC_PROFILE_FIELDS']['description'] ?? '');
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
@@ -187,14 +189,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
         foreach ((array)$_POST['meta_vis'] as $k=>$v) unset($base[$k]);
         foreach ((array)$_POST['meta_vis'] as $k=>$v) {
             if (is_array($v)) {
-                $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null; }));
-                if ($k === 'rpg_comments') {
-                    // Always include 'keepmechecked' in the saved list
-                    $hasKeep = false;
-                    foreach ($v as $vv){ if (strtolower((string)$vv) === 'keepmechecked'){ $hasKeep = true; break; } }
-                    if (!$hasKeep) $v[] = 'keepmechecked';
-                    $v = array_values(array_unique(array_map('strval', $v)));
-                }
+                $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null && strtolower((string)$x) !== 'keepmechecked'; }));
             }
             $base[$k] = $v;
         }
@@ -226,13 +221,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         foreach ((array)$_POST['meta_vis'] as $k=>$v) unset($base[$k]);
         foreach ((array)$_POST['meta_vis'] as $k=>$v) {
             if (is_array($v)) {
-                $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null; }));
-                if ($k === 'rpg_comments') {
-                    $hasKeep = false;
-                    foreach ($v as $vv){ if (strtolower((string)$vv) === 'keepmechecked'){ $hasKeep = true; break; } }
-                    if (!$hasKeep) $v[] = 'keepmechecked';
-                    $v = array_values(array_unique(array_map('strval', $v)));
-                }
+                $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null && strtolower((string)$x) !== 'keepmechecked'; }));
             }
             $base[$k] = $v;
         }
@@ -344,7 +333,10 @@ if (isset($_GET["clone"])) {
 // Create a blank profile and open it for editing
 if (isset($_GET["create_blank"])) {
     try {
-        $defaultMeta = json_encode(['rpg_comments'=>['levelup','sleep','lockpick','keepmechecked']], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+        $defaultMeta = json_encode([
+            'rpg_comments'=>['levelup','sleep','lockpick'],
+            'DYNAMIC_PROFILE_FIELDS'=>['relationships','goals']
+        ], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label, metadata) VALUES ('New Profile', '".pg_escape_string($defaultMeta)."') RETURNING id");
         $newId = is_array($row) ? ($row['id'] ?? '') : '';
         $redir = 'core_profiles.php' . ($newId !== '' ? ('?edit=' . urlencode($newId)) : '');
@@ -729,7 +721,40 @@ $ittById = $byId($ittRows);
                 $arr = $metaObj['rpg_comments'] ?? [];
                 if (is_array($arr)) { $rpgSelected = array_values(array_map('strval', $arr)); }
             } catch (Throwable $_e) { $rpgSelected = []; }
+            // Resolve current selected Dynamic Profile Fields from metadata
+            $dynSelected = [];
+            try {
+                $metaObj2 = [];
+                if (!empty($editItem["metadata"])) {
+                    $tmp2 = json_decode($editItem["metadata"], true);
+                    if (is_array($tmp2)) $metaObj2 = $tmp2;
+                }
+                $arr2 = $metaObj2['DYNAMIC_PROFILE_FIELDS'] ?? [];
+                if (is_array($arr2)) { $dynSelected = array_values(array_map('strval', $arr2)); }
+            } catch (Throwable $_e) { $dynSelected = []; }
         ?>
+        <?php if (!empty($__dynOptions)): ?>
+        <div class="provider-card" style="margin-bottom:8px;">
+            <div class="provider-head">
+                <div class="provider-title">
+                    <div class="provider-icon">🛠️</div>
+                    <div>Dynamic Profile Fields</div>
+                </div>
+            </div>
+            <div class="provider-body grid">
+                <div style="grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:10px;">
+                    <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_FIELDS][]" value="">
+                    <?php foreach ($__dynOptions as $opt): $val=(string)$opt; $checked = in_array($val, $dynSelected, true) ? ' checked' : ''; ?>
+                        <label style="display:inline-flex; align-items:center; gap:6px; background:#1f2a36; border:1px solid #33485f; padding:6px 10px; border-radius:8px;">
+                            <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_FIELDS][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
+                            <span><?= htmlspecialchars($val) ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (!empty($__dynHelp)): ?><div class="help" style="grid-column:1/-1;"><?= htmlspecialchars($__dynHelp) ?></div><?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
         <?php if (!empty($__rpgOptions)): ?>
         <div class="provider-card" style="margin-bottom:8px;">
             <div class="provider-head">
@@ -741,8 +766,6 @@ $ittById = $byId($ittRows);
             <div class="provider-body grid">
                 <div style="grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:10px;">
                     <input type="hidden" name="meta_vis[rpg_comments][]" value="">
-                    <!-- Hidden persistent keepmechecked so it's always saved but not displayed -->
-                    <input type="hidden" name="meta_vis[rpg_comments][]" value="keepmechecked">
                     <?php foreach ($__rpgOptions as $opt): $val=(string)$opt; $checked = in_array($val, $rpgSelected, true) ? ' checked' : ''; ?>
                         <label style="display:inline-flex; align-items:center; gap:6px; background:#1f2a36; border:1px solid #33485f; padding:6px 10px; border-radius:8px;">
                             <input type="checkbox" name="meta_vis[rpg_comments][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
