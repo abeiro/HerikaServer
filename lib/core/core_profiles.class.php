@@ -191,7 +191,16 @@ class CoreProfile {
         }
 
         unset($original['id']); // Remove the ID to create a new record
-        $original['label'] = $original['label'] . ' (Copy)'; // Modify label to indicate it's a clone
+        // Clear fields that must be unique or should not be duplicated verbatim
+        // Slot must be unique 1-4; clear to avoid conflict
+        $original['slot'] = null;
+        // Avoid inadvertently setting new defaults
+        $original['default_npc'] = 0;
+        $original['default_narrator'] = 0;
+        // Modify label to indicate it's a clone and keep it concise
+        $original['label'] = (isset($original['label']) && $original['label'] !== ''
+            ? ($original['label'] . ' (Copy)')
+            : ('Profile ' . $id . ' (Copy)'));
 
         return $this->create($original);
     }

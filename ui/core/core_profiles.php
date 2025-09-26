@@ -163,6 +163,14 @@ $llmTertiaryOptions = getSelectOptions($profiles, "llm_tertiary_id");
 $llmQuaternaryOptions = getSelectOptions($profiles, "llm_quaternary_id");
 $llmFormatterOptions = getSelectOptions($profiles, "llm_formatter_id");
 
+// Load RPG Comments schema options for per-profile control
+require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
+$__confSchema = conf_loader_load_schema();
+$__rpgOptionsRaw = is_array($__confSchema['RPG_COMMENTS']['values'] ?? null) ? $__confSchema['RPG_COMMENTS']['values'] : [];
+$__rpgHelp = (string)($__confSchema['RPG_COMMENTS']['description'] ?? '');
+// Do not display 'keepmechecked' but ensure it is always saved in metadata
+$__rpgOptions = array_values(array_filter($__rpgOptionsRaw, function($v){ return strtolower((string)$v) !== 'keepmechecked'; }));
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
@@ -177,7 +185,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
             if (is_array($tmp)) $base = $tmp;
         }
         foreach ((array)$_POST['meta_vis'] as $k=>$v) unset($base[$k]);
-        foreach ((array)$_POST['meta_vis'] as $k=>$v) $base[$k] = $v;
+        foreach ((array)$_POST['meta_vis'] as $k=>$v) {
+            if (is_array($v)) {
+                $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null; }));
+                if ($k === 'rpg_comments') {
+                    // Always include 'keepmechecked' in the saved list
+                    $hasKeep = false;
+                    foreach ($v as $vv){ if (strtolower((string)$vv) === 'keepmechecked'){ $hasKeep = true; break; } }
+                    if (!$hasKeep) $v[] = 'keepmechecked';
+                    $v = array_values(array_unique(array_map('strval', $v)));
+                }
+            }
+            $base[$k] = $v;
+        }
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
     $newId = $profiles->create($_POST);
@@ -204,7 +224,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
             if (is_array($tmp)) $base = $tmp;
         }
         foreach ((array)$_POST['meta_vis'] as $k=>$v) unset($base[$k]);
-        foreach ((array)$_POST['meta_vis'] as $k=>$v) $base[$k] = $v;
+        foreach ((array)$_POST['meta_vis'] as $k=>$v) {
+            if (is_array($v)) {
+                $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null; }));
+                if ($k === 'rpg_comments') {
+                    $hasKeep = false;
+                    foreach ($v as $vv){ if (strtolower((string)$vv) === 'keepmechecked'){ $hasKeep = true; break; } }
+                    if (!$hasKeep) $v[] = 'keepmechecked';
+                    $v = array_values(array_unique(array_map('strval', $v)));
+                }
+            }
+            $base[$k] = $v;
+        }
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
     $profiles->update($_POST["id"], $_POST);
@@ -301,15 +332,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_profile
 
 // Add a new action for cloning a connector
 if (isset($_GET["clone"])) {
-    $profiles->clone($_GET["clone"]);
-    header("Location: core_profiles.php");
+    $newId = $profiles->clone($_GET["clone"]);
+    if ($newId) {
+        header("Location: core_profiles.php?edit=".urlencode((string)$newId));
+    } else {
+        header("Location: core_profiles.php");
+    }
     exit;
 }
 
 // Create a blank profile and open it for editing
 if (isset($_GET["create_blank"])) {
     try {
-        $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label) VALUES ('New Profile') RETURNING id");
+        $defaultMeta = json_encode(['rpg_comments'=>['levelup','sleep','lockpick','keepmechecked']], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+        $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label, metadata) VALUES ('New Profile', '".pg_escape_string($defaultMeta)."') RETURNING id");
         $newId = is_array($row) ? ($row['id'] ?? '') : '';
         $redir = 'core_profiles.php' . ($newId !== '' ? ('?edit=' . urlencode($newId)) : '');
         header("Location: $redir");
@@ -681,6 +717,43 @@ $ittById = $byId($ittRows);
     <!-- Visual Profile Settings (first chunk) -->
     <div class="connector-card profile-settings-card" style="margin-bottom:10px;">
         <div class="connector-title">Profile  Settings</div>
+        <?php
+            // Resolve current selected RPG comments from metadata
+            $rpgSelected = [];
+            try {
+                $metaObj = [];
+                if (!empty($editItem["metadata"])) {
+                    $tmp = json_decode($editItem["metadata"], true);
+                    if (is_array($tmp)) $metaObj = $tmp;
+                }
+                $arr = $metaObj['rpg_comments'] ?? [];
+                if (is_array($arr)) { $rpgSelected = array_values(array_map('strval', $arr)); }
+            } catch (Throwable $_e) { $rpgSelected = []; }
+        ?>
+        <?php if (!empty($__rpgOptions)): ?>
+        <div class="provider-card" style="margin-bottom:8px;">
+            <div class="provider-head">
+                <div class="provider-title">
+                    <div class="provider-icon">🎲</div>
+                    <div>RPG Comments</div>
+                </div>
+            </div>
+            <div class="provider-body grid">
+                <div style="grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:10px;">
+                    <input type="hidden" name="meta_vis[rpg_comments][]" value="">
+                    <!-- Hidden persistent keepmechecked so it's always saved but not displayed -->
+                    <input type="hidden" name="meta_vis[rpg_comments][]" value="keepmechecked">
+                    <?php foreach ($__rpgOptions as $opt): $val=(string)$opt; $checked = in_array($val, $rpgSelected, true) ? ' checked' : ''; ?>
+                        <label style="display:inline-flex; align-items:center; gap:6px; background:#1f2a36; border:1px solid #33485f; padding:6px 10px; border-radius:8px;">
+                            <input type="checkbox" name="meta_vis[rpg_comments][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
+                            <span><?= htmlspecialchars($val) ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (!empty($__rpgHelp)): ?><div class="help" style="grid-column:1/-1;"><?= htmlspecialchars($__rpgHelp) ?></div><?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_meta_settings" class="btn-save">Save Profile Settings</button>
