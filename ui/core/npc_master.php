@@ -1067,6 +1067,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; }
 .modal-actions { display:flex; gap:8px; align-items:center; }
 .modal-save { background: rgb(242, 124, 17); color:#111; border:1px solid rgb(242, 124, 17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
+/* Styled tabs to match button aesthetics */
+#npc_modal_tabs .pf-tab { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; font-weight:700; }
+#npc_modal_tabs .pf-tab:hover { background:#3a3a3a; }
+#npc_modal_tabs .pf-tab.active { background: rgb(242, 124, 17); color:#111; border-color: rgb(242, 124, 17); }
 </style>
 <?php if ($totalPages >= 1): ?>
 <style>
@@ -1158,7 +1162,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <div class="modal-body">
       <div id="npc_modal_tabs" style="display:flex; gap:8px; padding:8px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2;">
         <button type="button" class="pf-tab active" data-pane="pane_manual">✍️ Manual</button>
-        <button type="button" class="pf-tab" data-pane="pane_bio">📚 From Bio Database</button>
+        <button type="button" class="pf-tab" data-pane="pane_bio">📚 NPC Biographies</button>
       </div>
       <div id="pane_manual" class="pf-pane active" style="padding:0;">
         <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:70vh; border:0; background:transparent;"></iframe>
