@@ -978,7 +978,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         <div class="content-section">
             <h1>Batch Upload</h1>
             <form action="" method="post" enctype="multipart/form-data">
-            <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
+            <h3><strong>Please user underscores instead of spaces.</strong></h3>
             <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
                 <div>
                     <label for="csv_file">Select .csv file to upload:</label>
@@ -1309,7 +1309,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <input type="hidden" name="submit_individual" value="1">
 
                 <label for="new_npc_name">NPC Name:</label>
-                <small>Make sure name is lowercase with underscores instead of spaces.</small>
+                <small>Please use underscores instead of spaces.</small>
                 <input type="text" name="npc_name" id="new_npc_name" required>
 
                 <label for="new_npc_misc">Oghma Tags:</label>
