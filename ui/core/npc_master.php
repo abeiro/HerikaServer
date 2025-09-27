@@ -112,7 +112,7 @@ if (!function_exists('race_icon_web_path')) {
             'woodelf'=>'bosmer', 'bosmer'=>'bosmer',
             'darkelf'=>'dunmer', 'dunmer'=>'dunmer',
             'orsimer'=>'orc', 'orc'=>'orc',
-            'argonian'=>'argonian', 'khajiit'=>'khajiit',
+            'argonian'=>'argonian', 'khajiit'=>'khajiit', 'khajit'=>'khajiit',
             'breton'=>'breton', 'imperial'=>'imperial',
             'nord'=>'nord', 'redguard'=>'redguard',
             'oldpeople'=>'nord', 'oldpeoplerace'=>'nord',
@@ -125,6 +125,9 @@ if (!function_exists('race_icon_web_path')) {
             $variants[] = implode('-', $words);
             $variants[] = implode('_', $words);
         }
+        // Synonyms/misspellings
+        if ($base === 'khajiit') { $variants[] = 'khajit'; }
+        if ($base === 'khajit') { $variants[] = 'khajiit'; }
         $variants = array_values(array_unique(array_filter($variants, function($v){ return $v !== ''; })));
         $fsDir = __DIR__ . '/../images/races/';
         $exts2 = ['png','jpg','jpeg','webp','gif','svg'];
