@@ -1190,7 +1190,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
               </select>
               <button id="bio_use_template" type="button" class="btn-base btn-primary">Use Template</button>
             </div>
-            <div id="bio_detail" style="min-height:58vh;">
+            <div id="bio_detail" style="height:58vh; overflow:auto;">
               <div style="color:#9fb1c9">Select a template on the left</div>
             </div>
           </div>
