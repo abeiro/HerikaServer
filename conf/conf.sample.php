@@ -129,9 +129,9 @@ $CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp","player
 
 // Core LLM connector defaults (IDs from core_llm_connector table)
 $CORE_CONNECTOR_DIRECTOR=1;
-$CORE_CONNECTOR_PLAYER=1;
+$CORE_CONNECTOR_PLAYER=2;
 $CORE_CONNECTOR_SUMMARY=5;
-$CORE_CONNECTOR_MEDIUMTERM=6;
+$CORE_CONNECTOR_MEDIUMTERM=5;
 $CORE_CONNECTOR_PROFILES=1;
 
 ;
