@@ -47,7 +47,7 @@ footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
     // Ensure modal CSS/JS parity if you decide to add modals later
 
     $results = $db->fetchAll(
-        "SELECT created_at, request, result, url, rowid 
+        "SELECT created_at, request, result, usage, url, rowid 
          FROM audit_request 
          ORDER BY created_at DESC 
          LIMIT $limit OFFSET $offset"
@@ -57,6 +57,7 @@ footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
         'created_at' => 'Time (UTC)',
         'request' => 'Request',
         'result' => 'Result',
+        'usage' => 'Usage',
         'rowid' => 'Row ID',
         'url' => 'URL'
     ];
@@ -78,6 +79,10 @@ footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
             } else if ($key === 'result') {
                 $resultColor = (strtoupper(trim($value)) === 'OK') ? '#4CAF50' : '#f44336';
                 $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content" style="color: ' . $resultColor . '; font-weight: bold;">' . nl2br(htmlspecialchars($value)) . '</div>';
+            } else if ($key === 'usage') {
+                $jsonText = is_string($value) ? $value : json_encode($value);
+                $preview = htmlspecialchars(substr($jsonText, 0, 400)) . (strlen($jsonText) > 400 ? '...' : '');
+                $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . $preview . '</div>';
             } else if ($key === 'url') {
                 $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);
             } else {

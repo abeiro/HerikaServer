@@ -915,7 +915,7 @@ if (isset($_POST["animation"])) {
         }
 
         $results = $db->fetchAll(
-            "SELECT created_at, request, result, url, rowid 
+            "SELECT created_at, request, result, usage, url, rowid 
              FROM audit_request 
              ORDER BY created_at DESC 
              LIMIT $limit OFFSET $offset"
@@ -925,6 +925,7 @@ if (isset($_POST["animation"])) {
             'created_at' => 'Time (UTC)',
             'request' => 'Request',
             'result' => 'Result',
+            'usage' => 'Usage',
             'rowid' => 'Row ID',
             'url' => 'URL'
         ];
@@ -950,6 +951,11 @@ if (isset($_POST["animation"])) {
                     // Format result with color coding - green for OK, red for others
                     $resultColor = (strtoupper(trim($value)) === 'OK') ? '#4CAF50' : '#f44336';
                     $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content" style="color: ' . $resultColor . '; font-weight: bold;">' . nl2br(htmlspecialchars($value)) . '</div>';
+                } else if ($key === 'usage') {
+                    // Render compact JSON preview
+                    $jsonText = is_string($value) ? $value : json_encode($value);
+                    $preview = htmlspecialchars(substr($jsonText, 0, 400)) . (strlen($jsonText) > 400 ? '...' : '');
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . $preview . '</div>';
                 } else if ($key === 'url') {
                     // Format URL column
                     $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);
