@@ -369,11 +369,8 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 {$GLOBALS["PLAYER_NAME"]} is the player.
 {$row["companions"]} are nearby characters.
 
-You must write a memory summary from narrator's point of view, by analyzing the chat history.
-
-Pay attention to details that can change character's behavior, feelings, and also tag names and locations.
-
-Also add character's quotes from dialogue into the summary if relevant.
+You must write a memory summary from the narrator's point of view by analyzing the chat history. Focus only on roleplay elements: character behavior, feelings, relationships, decisions, dialogue, and locations relevant to the story. Ignore any references to game engine mechanics, menus, stats, or system messages.
+Pay close attention to details that could influence a character's behavior or emotions, as well as tag names and locations. Include quotes from character dialogue in the summary if they are relevant to understanding actions, motivations, or relationships
 
 Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 "];
@@ -453,9 +450,10 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
                         }
                     }
                 }
-
-                $db->execQuery("update memory_summary set summary='" . SQLite3::escapeString($current_summary_to_save) . "',tags='" . SQLite3::escapeString($tagsCol) . "' where rowid={$row["rowid"]}");
-                $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$row["rowid"]}");
+                if ($current_summary_to_save) {
+                    $db->execQuery("update memory_summary set summary='" . $db->escape($current_summary_to_save) . "',tags='" .$db->escape($tagsCol) . "' where rowid={$row["rowid"]}");
+                    $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$row["rowid"]}");
+                }
 
                 // Original embedding call within loop (conditionally for $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"])
                 // This was outside the 'noembed' check but was also within the $toUpdate loop which processed one item.

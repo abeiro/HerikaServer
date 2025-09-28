@@ -15,6 +15,7 @@ if (in_array($gameRequest[0],["ginputtext_s"])) {
 }
 
 require(__DIR__ . DIRECTORY_SEPARATOR . "prompts/prompts.php");
+
 $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s roleplay in the Universe of Skyrim. I\'m {$GLOBALS["PLAYER_NAME"]} ";
 
 /* 

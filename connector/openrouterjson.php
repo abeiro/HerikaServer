@@ -264,7 +264,7 @@ class openrouterjson
             $prefix="";
         }
 
-        if (stripos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
+        if (isset($GLOBALS["HERIKA_SPEECHSTYLE"])&&!empty($GLOBALS["HERIKA_SPEECHSTYLE"])) {
             $speechReinforcement="Use #SpeechStyle.";
         } else
             $speechReinforcement="";
@@ -1241,31 +1241,54 @@ class openrouterjson
             $json_response = false;
         }
 
-        if ($GLOBALS["db"]) {
-            $GLOBALS["db"]->insert(
-            'audit_request',
-                array(
-                    'request' => json_encode($data),
-                    'result' => $error["message"]??"Ok",
-                    'connector'=>$this->name,
-                    'url'=>$this->_url
-                ));
-        }
+        
         
         file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
 
         if ($json_response) {
             $text_response=json_decode($json_response,true);
+           
             if (is_valid_array($text_response)) {
-               
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($data),
+                            'result' => "Ok",
+                            'usage'=>json_encode($text_response["usage"]),
+                            'connector'=>$this->name,
+                            'url'=>$this->_url
+                        ));
+                }
                 return $text_response["choices"][0]["message"]["content"];    
             }
             else {
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($data),
+                            'result' => "ERROR|INVALID JSON RESPONSE",
+                            'connector'=>$this->name,
+                            'url'=>$this->_url
+                        ));
+                }
                 log_msg("Error in openrouter request '$url':$json_response", 3);
                 return "";
                 
             }
             
+        } else {
+            if ($GLOBALS["db"]) {
+                $GLOBALS["db"]->insert(
+                'audit_request',
+                    array(
+                        'request' => json_encode($data),
+                        'result' => "ERROR|NO RESPONSE",
+                        'connector'=>$this->name,
+                        'url'=>$this->_url
+                    ));
+            }
         }
             
 

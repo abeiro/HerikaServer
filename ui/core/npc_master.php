@@ -916,7 +916,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
 
-        
+        <div class="form-item span-2">
+            <label for="metadata">Metadata (JSON)</label>
+            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
+            <small class="hint">Advanced: large or structured data blocks consumed by integrations.</small>
+            <div id="metadata"></div>
+        </div>
 
         <div class="form-item span-2">
             <label for="extended_data">Extended Data (JSON)</label>
@@ -944,6 +949,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                   } catch (idontcare) {}
         
                   if (form.extended_data.value=='')  {
+                    return confirm("Extended data is empty. You sure?");
+                  }
+                }
+
+                if (form.metadata!=undefined) {
+                  const content2 = jsonEditor.get()
+
+                  try {
+                    form.metadata.value=JSON.stringify(content2.json, null, 0)
+                    console.log("JSON editor values copied to form")
+                  } catch (idontcare) {}
+        
+                  if (form.metadata.value=='')  {
                     return confirm("Extended data is empty. You sure?");
                   }
                 }

@@ -35,7 +35,7 @@ foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as 
 
 require("$configFilepath/conf.php");
 
-if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) {
+if (($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"])&&(false)) {
     $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
 
     $maxRow=$results[0]["gamets_truncated"]+0;

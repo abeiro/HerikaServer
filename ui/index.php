@@ -133,6 +133,21 @@ if (sizeof($_GET)==0) {
     require_once(__DIR__."/../debug/db_updates.php");
     require_once(__DIR__."/../debug/npc_removal.php");
     
+    // helper daemon
+    $port = 12345;
+    $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
+
+    if (!$connection) {
+        $startScript = __DIR__ . "/../service/start.sh";
+        if (file_exists($startScript) && is_executable($startScript)) {
+            error_log("[HELPER] Launching Helper Service");
+            shell_exec($startScript . " > /dev/null 2>&1 &");
+        }
+    } else {
+        error_log("[HELPER] Helper Service already");
+        fclose($connection);
+    }
+
     // Initialize automatic backup system now that database is ready
     if (function_exists('deferredAutomaticBackupInit')) {
         deferredAutomaticBackupInit();
