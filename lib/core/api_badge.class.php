@@ -12,12 +12,16 @@ class ApiBadge {
 
     // Create (Insert)
     public function create($data) {
-        $fields = [
-            "label",
-            "api_key"
-        ];
+		$fields = [
+			"id",
+			"label",
+			"api_key"
+		];
 
-        $filtered = array_intersect_key($data, array_flip($fields));
+		$filtered = array_intersect_key($data, array_flip($fields));
+		if (isset($filtered['id'])) {
+			$filtered['id'] = (int)$filtered['id'];
+		}
         
         return $this->db->insert($this->table, $filtered);
     }

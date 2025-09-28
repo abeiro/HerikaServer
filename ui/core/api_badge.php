@@ -149,7 +149,8 @@ $presetMap = [
     'google'      => 'Google',
     'azure'       => 'Azure',
     'elevenlabs'  => 'ElevenLabs',
-    'replicate'   => 'Replicate'
+    'replicate'   => 'Replicate',
+    'nano-gpt'    => 'Nano-GPT'
 ];
 
 // Provider key/dashboard links
@@ -160,7 +161,8 @@ $providerLinks = [
     'google' => 'https://console.cloud.google.com/apis/credentials',
     'azure' => 'https://ai.azure.com/',
     'elevenlabs' => 'https://elevenlabs.io/app/settings/api-keys',
-    'replicate' => 'https://replicate.com/account/api-tokens'
+    'replicate' => 'https://replicate.com/account/api-tokens',
+    'nano-gpt' => 'https://nano-gpt.com/'
 ];
 
 // Subtext bullet points per provider
@@ -172,6 +174,7 @@ $providerSubtext = [
     'google' => ['LLM', 'TTS', 'ITT'],
     'elevenlabs' => ['TTS'],
     'replicate' => ['Soulgaze Gallery Processor'],
+    'nano-gpt' => ['LLM'],
 ];
 
 // Reserved labels (both slugs and pretty names), used to keep presets distinct from customs
@@ -239,7 +242,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
         header("Location: api_badge.php?err=reserved_label");
         exit;
     }
-    $apiBadge->create([ 'label' => $incomingLabel !== '' ? $incomingLabel : 'Custom Key', 'api_key' => trim($_POST['api_key'] ?? '') ]);
+    // Assign custom IDs starting from 100 to leave room for preset IDs
+    $allRows = $apiBadge->getAll();
+    $maxId = 0;
+    foreach ($allRows as $r) {
+        $rid = isset($r['id']) ? intval($r['id']) : 0;
+        if ($rid > $maxId) { $maxId = $rid; }
+    }
+    $newId = max(100, $maxId + 1);
+    $apiBadge->create([
+        'id' => $newId,
+        'label' => $incomingLabel !== '' ? $incomingLabel : 'Custom Key',
+        'api_key' => trim($_POST['api_key'] ?? '')
+    ]);
     header("Location: api_badge.php?ok=saved");
     exit;
 }
