@@ -697,7 +697,7 @@ $ittById = $byId($ittRows);
                 <button type="button" class="btn-apply btn-primary" data-apply-select="llm_formatter_id">Set</button>
             </div>
             <div class="connector-help">
-                Used for Focus Chat mode & help format LLM responses.
+                Used to help format JSON responses for background tasks. Can be a very small model.
                 <ul>
                     <li>OpenAI o3-mini / GPT-4o-mini</li>
                     <li>Anthropic Claude 3.5 Sonnet</li>
