@@ -78,6 +78,9 @@ $pluginOutputPath = $logPath . 'ouput_to_plugin.log';
 $sttLogPath = $logPath . 'stt.log';
 $visionLogPath = $logPath . 'vision.log';
 $debugStreamLogPath = $logPath . 'debugstream.log';
+$llmContextFastPath = $logPath . 'context_sent_to_llm_fast.log';
+$monitorLogPath = $logPath . 'monitor.log';
+$serviceLogPath = $logPath . 'service.log';
 
 // Function to get the last N lines of a file
 function tail($filepath, $lines = 2000) {
@@ -573,27 +576,43 @@ function createLogsZip() {
         return false;
     }
 
-    // Send the file to the browser
-    header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="' . $zipName . '"');
-    header('Content-Length: ' . filesize($zipPath));
-    header('Pragma: public');
-    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-    header('Expires: 0');
-
-    // Clear any previous output
-    if (ob_get_level()) {
-        ob_end_clean();
+    // Ensure no output buffering or compression corrupts the binary download
+    @set_time_limit(0);
+    if (function_exists('ini_get') && ini_get('zlib.output_compression')) {
+        @ini_set('zlib.output_compression', 'Off');
+    }
+    if (function_exists('apache_setenv')) {
+        @apache_setenv('no-gzip', '1');
+    }
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
     }
 
-    // Read file in chunks to handle large files
+    // Send the file to the browser with robust headers
+    header('Content-Description: File Transfer');
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $zipName . '"');
+    header('Content-Transfer-Encoding: binary');
+    header('Content-Length: ' . filesize($zipPath));
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
+    // Stream file in chunks to handle large files
     if ($fp = fopen($zipPath, 'rb')) {
         while (!feof($fp)) {
-            echo fread($fp, 8192);
-            flush();
+            $buffer = fread($fp, 8192);
+            if ($buffer === false) { break; }
+            echo $buffer;
         }
         fclose($fp);
-        unlink($zipPath); // Delete the temporary zip file
+        // Ensure output is sent immediately
+        if (function_exists('fastcgi_finish_request')) {
+            @fastcgi_finish_request();
+        } else {
+            @flush();
+        }
+        @unlink($zipPath); // Delete the temporary zip file
         return true;
     }
 
@@ -1365,6 +1384,17 @@ if (isset($_GET['download_logs'])) {
 
         <div class="log-section">
             <?php
+            // Display LLM context fast log
+            if (file_exists($llmContextFastPath) && is_readable($llmContextFastPath)) {
+                readLLMContextLog($llmContextFastPath, "LLM Context Fast (context_sent_to_llm_fast.log)");
+            } else {
+                echo '<p class="error-message">Log file not found or not readable at: ' . htmlspecialchars($llmContextFastPath) . '</p>';
+            }
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
             // Display plugin output log
             readRegularLog($pluginOutputPath, "Plugin Output (ouput_to_plugin.log)");
             ?>
@@ -1379,8 +1409,22 @@ if (isset($_GET['download_logs'])) {
 
         <div class="log-section">
             <?php
+            // Display Monitor log
+            readRegularLog($monitorLogPath, "Monitor Log (monitor.log)");
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
             // Display Vision log
             readRegularLog($visionLogPath, "Vision Log (vision.log)");
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
+            // Display Service log
+            readRegularLog($serviceLogPath, "Service Log (service.log)");
             ?>
         </div>
 
@@ -1499,6 +1543,50 @@ if (isset($_GET['download_logs'])) {
     </div>
 </div>
 
+<div id="LLMContextFastcontextsenttollmfastlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">LLM Context Fast Log</h2>
+            <button class="close-modal" onclick="closeModal('LLMContextFastcontextsenttollmfastlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in LLM Context Fast Log..." data-target="LLMContextFastcontextsenttollmfastlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="LLMContextFastcontextsenttollmfastlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="MonitorLogmonitorlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Monitor Log</h2>
+            <button class="close-modal" onclick="closeModal('MonitorLogmonitorlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Monitor Log..." data-target="MonitorLogmonitorlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="MonitorLogmonitorlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="ServiceLogservicelogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Service Log</h2>
+            <button class="close-modal" onclick="closeModal('ServiceLogservicelogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Service Log..." data-target="ServiceLogservicelogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="ServiceLogservicelogModalContent"></div>
+        </div>
+    </div>
+</div>
 <div id="PluginOutputouputtopluginlogModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
