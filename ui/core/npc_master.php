@@ -928,6 +928,43 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Highlight notable competencies of the NPC.</small>
         </div>
 
+        <?php
+        // Read-only dropdown view of in-game skills from metadata.skills
+        $metadataSkills = [];
+        try {
+            $metaRaw = '';
+            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
+                $metaRaw = (string)$editItem['metadata'];
+            }
+            if ($metaRaw !== '') {
+                $metaObj = json_decode($metaRaw, true);
+                if (is_array($metaObj) && isset($metaObj['skills']) && is_array($metaObj['skills'])) {
+                    $metadataSkills = $metaObj['skills'];
+                }
+            }
+        } catch (Throwable $e) { $metadataSkills = []; }
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-skills-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">In-Game Skills</summary>
+                <small class="hint">These will also be used for Skill context.</small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataSkills) && is_array($metadataSkills)): ?>
+                        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px 12px;">
+                            <?php foreach ($metadataSkills as $sName => $sVal): $label = ucfirst((string)$sName); $disp = (is_numeric($sVal) ? (string)intval($sVal) : ((is_string($sVal) && trim($sVal)!=='') ? htmlspecialchars($sVal) : '—')); ?>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <div style="color:rgb(242, 124, 17); min-width:140px;"><?= htmlspecialchars($label) ?></div>
+                                    <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px; min-width:40px;"><?= $disp ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No in-game skills found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
         <div class="form-item">
             <label for="speechstyle">Speech Style</label>
             <textarea id="speechstyle" name="speechstyle" placeholder="Dialect, cadence, verbal tics."><?= htmlspecialchars($editItem["speechstyle"] ?? "") ?></textarea>
