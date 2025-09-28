@@ -191,6 +191,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 }
                 else
                     $actorDetailedListWithProfile[]="$ittext";
+                
             }
         }
         $actorDetailedListWithProfileSanitized=[];
@@ -219,15 +220,19 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $followers[]="{$followerdata["core"]} level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
             else
                 $followers[]="$followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+            
+            $followersV2[]=$followername;
 
         }
             
     }
 
     $followers[]="{$GLOBALS["PLAYER_NAME"]}";
+    $followersV2[]=$GLOBALS["PLAYER_NAME"];
 
     $lastDialog[] = array('role' => 'user', 'content' => "# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange");
     
+    /*
     if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"])
         $lastDialog[] = array('role' => 'user', 'content' => "# PARTY STATUS\n## ". (implode("\n## ",$followers)));
     else 
@@ -237,6 +242,30 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
         $lastDialog[] = array('role' => 'user', 'content' => "# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi)));
     }
+    */
+    if (!empty($followersV2)) {
+        $lastFollower = array_pop($followersV2);
+        if (!empty($followersV2)) {
+            $followersString = implode(", ", $followersV2) . " and " . $lastFollower;
+        } else {
+            $followersString = $lastFollower;
+        }
+    } else {
+        $followersString = "";
+    }
+
+    $lastDialog[] = array('role' => 'user', 'content' => "# ADVENTURING PARTY
+     $followersString are together as an **adventuring party**, acting as close companions.
+     - The others **can know each other**, but they are **not part** of $followersString’s group.
+     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.',
+    ");
+
+    $arr_poi = DataPosibleLocationsToGo();
+    if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
+        $lastDialog[] = array('role' => 'user', 'content' => "# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi)));
+    }
+    
+    
  
     // Rolemaster notes
     
@@ -3869,13 +3898,27 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         'HERIKA_SPEECHSTYLE' => 'SpeechStyle',
         'HERIKA_GOALS' => 'Goals'
     ];
-    
+    $SKILLS_ADD="";
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
+    $metaData=$npcMaster->getMetaData($currentNpcData);
+    if (isset($metaData["skills"])) {
+        
+        $SKILLS_ADD="\nRoleplay skills: ".json_encode($metaData["skills"]);
+
+    } 
+
     foreach ($herikaFields as $fieldName => $label) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
             $dynamicBio .= "\n\n#$label\n" . trim($FOLLOWER_CONF[$fieldName]);
+            if ($fieldName=="HERIKA_SKILLS") {
+                $dynamicBio.="$SKILLS_ADD";
+            }
         }
     }
     
+    
+
     // Fall back to HERIKA_DYNAMIC if no new fields are set
     if (empty(trim($dynamicBio)) && isset($FOLLOWER_CONF["HERIKA_DYNAMIC"]) && !empty(trim($FOLLOWER_CONF["HERIKA_DYNAMIC"]))) {
         $dynamicBio = $FOLLOWER_CONF["HERIKA_DYNAMIC"];

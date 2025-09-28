@@ -120,9 +120,9 @@ $PROMPTS=array(
         "extra"=>[],
         "cue"=>[
             "default"=>"{$GLOBALS["HERIKA_NAME"]} talks to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "TakeASeat"=>"({$GLOBALS["HERIKA_NAME"]} talks about the location where they took a seat){$GLOBALS["TEMPLATE_DIALOG"]}",
+            "TakeASeat"=>"({$GLOBALS["HERIKA_NAME"]} talks, eg: talks about the location where they took a seat){$GLOBALS["TEMPLATE_DIALOG"]}",
             "GetDateTime"=>"({$GLOBALS["HERIKA_NAME"]} answers with the current date and time in short sentence){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} makes a comment about movement to the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
+            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} talks, eg: makes a comment about movement to the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
             "CheckInventory"=>"({$GLOBALS["HERIKA_NAME"]} talks about inventory and backpack items){$GLOBALS["TEMPLATE_DIALOG"]}",
             "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected, short speech){$GLOBALS["TEMPLATE_DIALOG"]}",
             "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests they have read in the quest journal){$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -136,9 +136,9 @@ $PROMPTS=array(
     // Database Prompt (Lockpicked)
     "lockpicked"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} comments about what they lockpicked {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} what they found) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} to share what they found) {$GLOBALS["TEMPLATE_DIALOG"]}"
+            "({$GLOBALS["HERIKA_NAME"]} comments about what lockpicked  event. Consider the context as it can be a door, a chest.. and purpose can be stealing, looting, dungeon doors... {$GLOBALS["TEMPLATE_DIALOG"]}",
+            //"({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} what they found) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            //"({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} to share what they found) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
         "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked) {$gameRequest[3]})"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("lockpick", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]

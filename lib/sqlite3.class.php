@@ -1,4 +1,6 @@
 <?php
+error_log("[DEPRECATION] ". __FILE__." required");
+return;
 
 class sql
 {

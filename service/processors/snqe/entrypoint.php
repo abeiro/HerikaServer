@@ -19,16 +19,19 @@ $GLOBALS["TASKS"]["snqe"]["fn"]=function() {
     require_once $enginePath . "lib/core/core_profiles.class.php";
     require_once $enginePath . "lib/core/llm_connector.class.php";
 
-    if ($GLOBALS["argv"][2]=="create") {
-        Logger::info("Loading instruction command");
-        require_once("cmd" . DIRECTORY_SEPARATOR . "create.php");
-    } else if ($GLOBALS["argv"][2]=="run") {
-        Logger::info("Loading suggestion command");
-        require_once("cmd" . DIRECTORY_SEPARATOR . "main.php");
-    } else if ($GLOBALS["argv"][2]=="reset") {
-        $GLOBALS["db"]->execQuery("update sneq_quests set quest_data='{}',quest_run_state='not started'");
+    if (isset($GLOBALS["argv"][2])) {
+        if ($GLOBALS["argv"][2]=="create") {
+            Logger::info("Loading instruction command");
+            require_once("cmd" . DIRECTORY_SEPARATOR . "create.php");
+        } else if ($GLOBALS["argv"][2]=="run") {
+            Logger::info("Loading suggestion command");
+            require_once("cmd" . DIRECTORY_SEPARATOR . "main.php");
+        } else if ($GLOBALS["argv"][2]=="reset") {
+            $GLOBALS["db"]->execQuery("update sneq_quests set quest_data='{}',quest_run_state='not started'");
+        }
     }
 
+    unset($GLOBALS["db"]);
 
 }
 ?>

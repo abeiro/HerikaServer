@@ -944,7 +944,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
 
-        
+        <div class="form-item span-2">
+            <label for="metadata">Metadata (JSON)</label>
+            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
+            <small class="hint">Advanced: large or structured data blocks consumed by integrations.</small>
+            <div id="metadata"></div>
+        </div>
 
         <div class="form-item span-2">
             <label for="metadata">Metadata (JSON)</label>
@@ -992,6 +997,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                     form.extended_data.value = JSON.stringify(obj);
                   }
                 } catch(_e){}
+
+                if (form.metadata!=undefined) {
+                  const content2 = jsonEditor.get()
+
+                  try {
+                    form.metadata.value=JSON.stringify(content2.json, null, 0)
+                    console.log("JSON editor values copied to form")
+                  } catch (idontcare) {}
+        
+                  if (form.metadata.value=='')  {
+                    return confirm("Extended data is empty. You sure?");
+                  }
+                }
 
                 const fd = new FormData(form);
                 fd.append('inline_update_npc','1');

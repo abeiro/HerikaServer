@@ -495,7 +495,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     }
 }
 
-// Profile selection and migration
+// Profile selection and migration The Narrator
 
 $npcMaster=new NpcMaster();
 $profileMgr=new CoreProfile();
@@ -522,6 +522,8 @@ if (!$currentNpcData) {
 
 } 
 
+
+// Profile loading
 if (isset($_GET["profile"])) {
     
     $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
@@ -1150,7 +1152,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
 
-
+// Rechat case
 if (in_array($gameRequest[0],["rechat"]) ) {
     // CHAOS mode
     
@@ -1209,6 +1211,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     }
 }
 
+// Instruction reinforcement
 if (in_array($gameRequest[0],["instruction"]) ) {
     
     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
@@ -1216,7 +1219,7 @@ if (in_array($gameRequest[0],["instruction"]) ) {
     
 }
 
-
+// Enforce actions
 if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
     if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
@@ -1386,7 +1389,7 @@ if (isset($GLOBALS["PROFILE_PROMPT"])) {
 $npcMaster=new NpcMaster();
 $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
 $extended_data=$npcMaster->getExtendedData($currentNpcData);
-if (isset($extended_data["middle_term_memory"])) {
+if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle_term_memory"])) {
     $middle_term_memory = end($extended_data["middle_term_memory"]);
     $dynamicBiography.="\n\n#Past events\n{$middle_term_memory}";
 

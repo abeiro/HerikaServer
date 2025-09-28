@@ -393,8 +393,10 @@ class NpcMaster {
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
-                $GLOBALS[$key] = $value;
-                error_log("[CORE] NPC  GLOBALS[$key] = ".print_r($value,true));
+                if (!empty($value)) {
+                    $GLOBALS[$key] = $value;
+                    error_log("[CORE] NPC  GLOBALS[$key] = ".print_r($value,true));
+                }
 
             }
         }

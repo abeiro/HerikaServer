@@ -1,5 +1,6 @@
 <?php 
 //$TEMPLATE_DIALOG="genera las siguientes lineas de dialogo para {$GLOBALS["HERIKA_NAME"]}. Evita narraciones y repeticiones.";
+error_log("[LANGUAGE] Using ".__FILE__." prompts");
 
 $TEMPLATE_DIALOG="Instrucción: Escribe la siguiente línea de diálogo de {$GLOBALS["HERIKA_NAME"]}." . 
 " Evita narraciones, sé original, creativo, informado, usa tus propios pensamientos. " . 

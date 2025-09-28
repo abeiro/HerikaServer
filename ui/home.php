@@ -819,6 +819,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 $chimModelLabel = isset($chimModelLabelMap[(string)$chimModel]) ? $chimModelLabelMap[(string)$chimModel] : (string)$chimModel;
 
 
+                $port = 12345;
+                $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
+                if (!$connection) {
+                    $helperServiceRunning=false;
+                } else {
+                    $helperServiceRunning=true;
+                }
+
                 if (!isset($questsCheck['error']) && !empty($questsCheck) && isset($questsCheck[0]['table_exists']) && $questsCheck[0]['table_exists'] === 't') {
                     $questTable = fetch_widget_stats($conn, "
                         SELECT name as quest_name, briefing
@@ -919,6 +927,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <tr>
                                 <td>Focus Chat</td>
                                 <td>" . htmlspecialchars($chimContextMode) . "</td>
+                            </tr>
+                            <tr>
+                                <td>Helper Service</td>
+                                <td>" . ($helperServiceRunning?"Running":"Not running") . "</td>
                             </tr>
                         </table>
                     </div>

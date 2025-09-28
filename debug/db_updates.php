@@ -1781,6 +1781,9 @@ if ($checkTableExists("translations") == -1) {
 } else
     Logger::info(__FILE__." core_itt_connector exists");
 
+// Usage column
+$db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
+
 
 //----------------------------------------------------
 
