@@ -267,6 +267,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/nanogpt.jpg" alt="NanoGPT" class="service-icon" data-service="nanogpt" />
                         <img src="<?= $webRoot; ?>/ui/images/core/icons/custom.jpg" alt="Custom" class="service-icon" data-service="custom" />
                     </div>
                 </div>
@@ -461,7 +462,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const defaults = {
             openrouter: 'https://openrouter.ai/api/v1/chat/completions',
             openai: 'https://api.openai.com/v1/chat/completions',
-            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+            nanogpt: 'https://nano-gpt.com/api/v1/chat/completions'
         };
         const serviceInput = document.getElementById('service_input');
         const urlInput = document.querySelector('input[name="url"]');
@@ -472,7 +474,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const urlRow = document.getElementById('url_row');
         const icons = document.querySelectorAll('.service-icon');
         const serviceLabelEl = document.getElementById('service_label');
-        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', custom: 'Custom' };
+        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', nanogpt: 'Nano-GPT', custom: 'Custom' };
 
         function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
 
@@ -501,7 +503,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 }
             } else {
                 if (driverInput && !driverInput.value) {
-                    driverInput.value = (service === 'openrouter') ? 'openrouterjson' : (service === 'openai' ? 'openaijson' : 'google_openaijson');
+                    driverInput.value = (service === 'openrouter') ? 'openrouterjson' : (service === 'openai' ? 'openaijson' : (service === 'google' ? 'google_openaijson' : (service === 'nanogpt' ? 'openrouterjson' : driverInput.value)));
                 }
             }
             if (urlRow) urlRow.style.display = (service === 'custom') ? '' : 'none';
@@ -511,12 +513,13 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
         function detectService(){
             const sVal = (serviceInput && String(serviceInput.value||'')) || '';
-            if (['openrouter','openai','google','custom'].includes(sVal)) return sVal;
+            if (['openrouter','openai','google','nanogpt','custom'].includes(sVal)) return sVal;
             const d = (driverInput && String(driverInput.value||'').toLowerCase()) || '';
             const u = (urlInput && String(urlInput.value||'').toLowerCase()) || '';
             if (d.includes('openai')||u.includes('openai.com')) return 'openai';
             if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google';
             if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter';
+            if (u.includes('nano-gpt.com')) return 'nanogpt';
             return 'openrouter';
         }
 
@@ -554,7 +557,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const defaults = {
             openrouter: 'https://openrouter.ai/api/v1/chat/completions',
             openai: 'https://api.openai.com/v1/chat/completions',
-            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+            google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+            nanogpt: 'https://nano-gpt.com/api/v1/chat/completions'
         };
         // No dropdown; selection by icons only
         const providerRow = document.getElementById('provider_row');
@@ -565,13 +569,13 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const icons = document.querySelectorAll('.service-icon');
         const apiKeyRow = document.getElementById('api_key_row');
         const serviceLabelEl = document.getElementById('service_label');
-        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google' };
+        const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', nanogpt: 'Nano-GPT' };
         function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', custom: '' };
-        const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
+        const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', nanogpt: 'openrouterjson', custom: '' };
+        const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'], nanogpt: ['nano-gpt','nanogpt'] };
         function syncApiBadge(service){ if (!apiBadgeSelect) return; const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
         function applyService(service){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; const savedDriver = driverInput ? String(driverInput.value || '') : ''; if (service === 'custom') { if (driverRow) driverRow.style.display = ''; if (driverSelect) driverSelect.style.display = ''; if (driverInput) driverInput.style.display = 'none'; if (driverSelect) { if (savedDriver) { driverSelect.value = savedDriver; } else if (!driverSelect.value) { driverSelect.value = 'openaijson'; } } if (driverInput && !savedDriver) { driverInput.value = driverSelect ? driverSelect.value : 'openaijson'; } } else { if (driverRow) driverRow.style.display = 'none'; if (driverSelect) driverSelect.style.display = 'none'; if (driverInput) driverInput.style.display = ''; if (driverInput && !savedDriver && driverDefaults[service]) { driverInput.value = driverDefaults[service]; } } syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
-        function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
+        function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google','nanogpt'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (u.includes('nano-gpt.com')) return 'nanogpt'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
         (function init(){ const service = detectService(); applyService(service); })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
         if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
@@ -830,13 +834,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
             $u = strtolower((string)($payload['url'] ?? ''));
             if (strpos($d,'openai')!==false || strpos($u,'openai.com')!==false) $payload['service']='openai';
             elseif (strpos($d,'google')!==false || strpos($u,'generativelanguage.googleapis.com')!==false) $payload['service']='google';
+            elseif (strpos($u,'nano-gpt.com')!==false) $payload['service']='nanogpt';
             elseif (strpos($d,'openrouter')!==false || strpos($u,'openrouter.ai')!==false) $payload['service']='openrouter';
             else $payload['service']='custom';
         }
         // Seed minimal defaults similar to create_blank when missing
         if (!isset($payload['driver']) || $payload['driver']==='') {
             $svc = $payload['service'] ?? 'openrouter';
-            $payload['driver'] = ($svc==='openrouter') ? 'openrouterjson' : (($svc==='openai') ? 'openaijson' : (($svc==='google') ? 'google_openaijson' : 'openaijson'));
+            $payload['driver'] = ($svc==='openrouter') ? 'openrouterjson' : (($svc==='openai') ? 'openaijson' : (($svc==='google') ? 'google_openaijson' : (($svc==='nanogpt') ? 'openrouterjson' : 'openaijson')));
         }
         if (!isset($payload['temperature']) || $payload['temperature']===null) $payload['temperature'] = 1;
         if (!isset($payload['max_tokens']) || $payload['max_tokens']===null) $payload['max_tokens'] = 250;
@@ -1084,6 +1089,7 @@ if (typeof window.consolidation !== 'function') {
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/openrouter.jpg" alt="OpenRouter" class="service-icon" data-service="openrouter" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/openai.jpg" alt="OpenAI" class="service-icon" data-service="openai" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/google.jpg" alt="Google" class="service-icon" data-service="google" />
+                    <img src="<?= $webRoot; ?>/ui/images/core/icons/nanogpt.jpg" alt="NanoGPT" class="service-icon" data-service="nanogpt" />
                     <img src="<?= $webRoot; ?>/ui/images/core/icons/custom.jpg" alt="Custom" class="service-icon" data-service="custom" />                </div>
                 </div>
             <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
@@ -1316,7 +1322,8 @@ if (typeof window.consolidation !== 'function') {
     const defaults = {
         openrouter: 'https://openrouter.ai/api/v1/chat/completions',
         openai: 'https://api.openai.com/v1/chat/completions',
-        google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+        google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+        nanogpt: 'https://nano-gpt.com/api/v1/chat/completions'
     };
     // No dropdown; selection by icons only
     const providerRow = document.getElementById('provider_row');
@@ -1327,10 +1334,10 @@ if (typeof window.consolidation !== 'function') {
     const icons = document.querySelectorAll('.service-icon');
     const apiKeyRow = document.getElementById('api_key_row');
     const serviceLabelEl = document.getElementById('service_label');
-    const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', custom: 'Custom' };
+    const displayNames = { openrouter: 'OpenRouter', openai: 'OpenAI', google: 'Google', nanogpt: 'Nano-GPT', custom: 'Custom' };
     function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
-    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', custom: 'openaijson' };
-    const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'] };
+    const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', nanogpt: 'openrouterjson', custom: 'openaijson' };
+    const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'], nanogpt: ['nano-gpt','nanogpt'] };
     function syncApiBadge(service){ if (!apiBadgeSelect) return; const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
     function applyService(service, fromUser){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (service !== 'custom' && defaults[service]) { urlInput.value = defaults[service]; } const urlRow = document.getElementById('url_row'); if (urlRow) urlRow.style.display = (service==='custom') ? '' : 'none'; providerRow.style.display = (service === 'openrouter' || service === 'custom') ? '' : 'none'; const driverSelect = document.getElementById('driver_select'); const currentDriver = driverInput ? String(driverInput.value || '') : ''; if (service === 'custom') { if (driverSelect) { driverSelect.style.display = ''; } if (driverInput) { driverInput.style.display = 'none'; } // reflect saved driver in select; default only if empty
         if (driverSelect) {
@@ -1353,7 +1360,7 @@ if (typeof window.consolidation !== 'function') {
         }
     }
     const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); const isCustom = (service==='custom'); if (btnWSL) btnWSL.style.display = isCustom ? '' : 'none'; if (btnHost) btnHost.style.display = isCustom ? '' : 'none'; const customNote = document.getElementById('custom_note'); if (customNote) customNote.style.display = isCustom ? '' : 'none'; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
-    function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google','custom'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
+    function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google','nanogpt','custom'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (u.includes('nano-gpt.com')) return 'nanogpt'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
     (function init(){ const service = detectService(); applyService(service, false); const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); if (driverInput && driverInput.value) driverSelect.value = driverInput.value; } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); function fillFrom(buttonEl, ip){ if (!buttonEl) return; const form = buttonEl.closest('form'); const urlEl = form ? form.querySelector('input[name="url"]') : document.querySelector('input[name="url"]'); if (!ip || !urlEl) return; urlEl.value = 'http://' + ip + ':5001'; try { urlEl.dispatchEvent(new Event('input', { bubbles:true })); } catch(_e){} try { urlEl.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){} try { urlEl.focus(); } catch(_e){} } if (btnWSL) btnWSL.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($WSL_IP) ?>'; } fillFrom(this, String(ip).trim()); }); if (btnHost) btnHost.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($HOST_IP) ?>'; } fillFrom(this, String(ip).trim()); }); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
     if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService(), false)); driverInput.addEventListener('change', ()=> applyService(detectService(), false)); }
