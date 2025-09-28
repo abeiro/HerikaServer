@@ -392,9 +392,16 @@ function consolidation() {
             form.extended_data.value=JSON.stringify(content2.json, null, 0)
         } catch (idontcare) {}
         
-        if (form.extended_data.value=='')  {
-            return confirm("Extended data is empty. You sure?");
-        }
+        // Ensure middle_term_enabled checkbox is persisted into extended_data JSON
+        try {
+            const mtm = document.getElementById('middle_term_enabled')
+            if (mtm) {
+                let obj = {}
+                try { obj = JSON.parse(String(form.extended_data.value||'')||'{}')||{} } catch(_e){ obj = {} }
+                obj.middle_term_enabled = mtm.checked ? 1 : 0
+                form.extended_data.value = JSON.stringify(obj)
+            }
+        } catch(_e) {}
     }
 
     return true;

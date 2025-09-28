@@ -187,6 +187,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
     header('Content-Type: application/json');
     try {
         $id = intval($_POST['id'] ?? 0);
+        // Server-side safeguard: ensure middle_term_enabled is reflected in extended_data
+        try {
+            $postedExt = isset($_POST['extended_data']) ? (string)$_POST['extended_data'] : '';
+            $obj = [];
+            if ($postedExt !== '') { $tmp = json_decode($postedExt, true); if (is_array($tmp)) { $obj = $tmp; } }
+            $mtm = isset($_POST['middle_term_enabled']) ? 1 : 0;
+            if (!array_key_exists('middle_term_enabled', $obj) || !in_array(intval($obj['middle_term_enabled']), [0,1], true)) {
+                $obj['middle_term_enabled'] = $mtm;
+                $_POST['extended_data'] = json_encode($obj);
+            }
+        } catch (Throwable $e) { /* best-effort only */ }
         if ($id <= 0) {
             // Create new NPC and return ID
             $allowed = [
@@ -847,9 +858,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             </label>
             <small class="hint">Allow systems to evolve the profile based on gameplay events.</small>
         </div>
+        <?php
+        // Initialize middle-term memory checkbox state from extended_data JSON
+        $mtmEnabledInit = false;
+        try {
+            if (!empty($editItem['extended_data'])){
+                $tmpEd = json_decode((string)$editItem['extended_data'], true);
+                if (is_array($tmpEd) && array_key_exists('middle_term_enabled', $tmpEd)){
+                    $mtmEnabledInit = (intval($tmpEd['middle_term_enabled']) === 1);
+                }
+            }
+        } catch (Throwable $e) { $mtmEnabledInit = false; }
+        ?>
         <div class="form-item">
             <label for="middle_term_enabled" class="label-with-toggle">📃Middle Term Memory
-                <input type="checkbox" id="middle_term_enabled" name="middle_term_enabled" value="1">
+                <input type="checkbox" id="middle_term_enabled" name="middle_term_enabled" value="1" <?= !empty($mtmEnabledInit) ? "checked" : "" ?>>
             </label>
             <small class="hint">Saves a list of recent events after every 10 memory summaries. Will be used for NPC context.</small>
         </div>
@@ -983,9 +1006,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                     console.log("JSON editor values copied to form")
                   } catch (idontcare) {}
         
-                  if (form.extended_data.value=='')  {
-                    return confirm("Extended data is empty. You sure?");
-                  }
+                  // allow empty extended_data without confirmation
                 }
                 // Sync middle_term_enabled checkbox into extended JSON
                 try {
@@ -1006,9 +1027,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                     console.log("JSON editor values copied to form")
                   } catch (idontcare) {}
         
-                  if (form.metadata.value=='')  {
-                    return confirm("Extended data is empty. You sure?");
-                  }
+                  // allow empty metadata without confirmation
                 }
 
                 const fd = new FormData(form);
