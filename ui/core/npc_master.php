@@ -624,7 +624,8 @@ if (isset($_GET['bio_detail'])) {
     $name = trim((string)($_GET['name'] ?? ''));
     if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
     $esc = $GLOBALS['db']->escape($name);
-    $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where npc_name = '{$esc}' limit 1");
+    // Case-insensitive exact match on npc_name to tolerate capitalization differences
+    $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where lower(npc_name) = lower('{$esc}') limit 1");
     if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
     echo json_encode(['ok'=>true,'data'=>$r]);
     exit;
@@ -1158,6 +1159,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <h2 class="modal-title">Edit NPC</h2>
       <div class="modal-actions">
         <button id="npc_modal_save_header" class="btn-save">Save</button>
+        <button id="npc_modal_reset" class="btn-cancel" title="Reimport bio template fields">Reset NPC</button>
         <button id="npc_modal_history" class="btn-cancel">View History</button>
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
@@ -1308,6 +1310,45 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       } catch(_e){}
     });
   }
+  // Reset NPC button wiring (reimport non-empty template fields by current name)
+  (function(){
+    const resetBtn = document.getElementById('npc_modal_reset');
+    if (!resetBtn) return;
+    resetBtn.addEventListener('click', async function(e){
+      e.preventDefault();
+      try {
+        const doc = iframe && iframe.contentDocument;
+        const nameEl = doc ? doc.getElementById('npc_name') : null;
+        const npcName = nameEl ? String(nameEl.value||'').trim() : '';
+        if (!npcName){ alert('Enter NPC Name to reset from template.'); return; }
+        // Confirm overwrite of fields present in template
+        const ok = window.confirm('Reset NPC "'+npcName+'" from bio template?\n\nThis will overwrite only fields present in the template. Other fields will remain unchanged.');
+        if (!ok) return;
+        const res = await fetch('npc_master.php?bio_detail=1&name='+encodeURIComponent(npcName));
+        let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
+        if (!j || !j.ok){ alert('No bio template found for "'+npcName+'"'); return; }
+        const d = j.data || {};
+        function setVal(id, val){ const el = doc ? doc.getElementById(id) : null; if (el) el.value = String(val); }
+        function applyIfFilled(id, val){ if (val==null) return; const s=String(val).trim(); if (!s) return; setVal(id, s); }
+        applyIfFilled('core', d.core);
+        applyIfFilled('npc_static_bio', d.npc_static_bio);
+        applyIfFilled('personality', d.personality);
+        applyIfFilled('appearance', d.appearance);
+        applyIfFilled('relationships', d.relationships);
+        applyIfFilled('occupation', d.occupation);
+        applyIfFilled('skills', d.skills);
+        applyIfFilled('speechstyle', d.speechstyle);
+        applyIfFilled('goals', d.goals);
+        applyIfFilled('oghma_knowledge_tags', d.oghma_knowledge_tags);
+        applyIfFilled('voiceid', d.voiceid);
+        applyIfFilled('gender', d.gender);
+        applyIfFilled('race', d.race);
+        applyIfFilled('refid', d.refid);
+        try { if (typeof window.NPC_UPDATE_SAVE_STATE === 'function') window.NPC_UPDATE_SAVE_STATE(); } catch(_e){}
+        try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='Template values applied'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
+      } catch(_e){}
+    });
+  })();
   // View History button wiring
   (function(){
     const btn = document.getElementById('npc_modal_history');
