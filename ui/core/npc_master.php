@@ -112,7 +112,7 @@ if (!function_exists('race_icon_web_path')) {
             'woodelf'=>'bosmer', 'bosmer'=>'bosmer',
             'darkelf'=>'dunmer', 'dunmer'=>'dunmer',
             'orsimer'=>'orc', 'orc'=>'orc',
-            'argonian'=>'argonian', 'khajiit'=>'khajiit',
+            'argonian'=>'argonian', 'khajiit'=>'khajiit', 'khajit'=>'khajiit',
             'breton'=>'breton', 'imperial'=>'imperial',
             'nord'=>'nord', 'redguard'=>'redguard',
             'oldpeople'=>'nord', 'oldpeoplerace'=>'nord',
@@ -125,6 +125,9 @@ if (!function_exists('race_icon_web_path')) {
             $variants[] = implode('-', $words);
             $variants[] = implode('_', $words);
         }
+        // Synonyms/misspellings
+        if ($base === 'khajiit') { $variants[] = 'khajit'; }
+        if ($base === 'khajit') { $variants[] = 'khajiit'; }
         $variants = array_values(array_unique(array_filter($variants, function($v){ return $v !== ''; })));
         $fsDir = __DIR__ . '/../images/races/';
         $exts2 = ['png','jpg','jpeg','webp','gif','svg'];
@@ -621,7 +624,8 @@ if (isset($_GET['bio_detail'])) {
     $name = trim((string)($_GET['name'] ?? ''));
     if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
     $esc = $GLOBALS['db']->escape($name);
-    $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where npc_name = '{$esc}' limit 1");
+    // Case-insensitive exact match on npc_name to tolerate capitalization differences
+    $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where lower(npc_name) = lower('{$esc}') limit 1");
     if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
     echo json_encode(['ok'=>true,'data'=>$r]);
     exit;
@@ -1085,6 +1089,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; }
 .modal-actions { display:flex; gap:8px; align-items:center; }
 .modal-save { background: rgb(242, 124, 17); color:#111; border:1px solid rgb(242, 124, 17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
+/* Styled tabs to match button aesthetics */
+#npc_modal_tabs .pf-tab { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; font-weight:700; }
+#npc_modal_tabs .pf-tab:hover { background:#3a3a3a; }
+#npc_modal_tabs .pf-tab.active { background: rgb(242, 124, 17); color:#111; border-color: rgb(242, 124, 17); }
 </style>
 <?php if ($totalPages >= 1): ?>
 <style>
@@ -1169,6 +1177,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <h2 class="modal-title">Edit NPC</h2>
       <div class="modal-actions">
         <button id="npc_modal_save_header" class="btn-save">Save</button>
+        <button id="npc_modal_reset" class="btn-cancel" title="Reimport bio template fields">Reset NPC</button>
         <button id="npc_modal_history" class="btn-cancel">View History</button>
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
@@ -1176,7 +1185,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <div class="modal-body">
       <div id="npc_modal_tabs" style="display:flex; gap:8px; padding:8px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2;">
         <button type="button" class="pf-tab active" data-pane="pane_manual">✍️ Manual</button>
-        <button type="button" class="pf-tab" data-pane="pane_bio">📚 From Bio Database</button>
+        <button type="button" class="pf-tab" data-pane="pane_bio">📚 NPC Biographies</button>
       </div>
       <div id="pane_manual" class="pf-pane active" style="padding:0;">
         <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:70vh; border:0; background:transparent;"></iframe>
@@ -1184,12 +1193,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <div id="pane_bio" class="pf-pane" style="display:none; padding:10px;">
         <div style="display:flex; gap:12px; align-items:flex-start;">
           <div style="flex: 0 0 340px; max-width:340px; border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#2a2a2a;">
-            <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
-              <input id="bio_search_input" type="text" placeholder="Search bio database..." style="flex:1; padding:6px 8px; border:1px solid #4a4a4a; border-radius:6px; background:#2a2a2a; color:#e9efff;">
+            <div style="display:flex; flex-direction:column; gap:6px; align-items:stretch; margin-bottom:8px;">
               <select id="bio_letter" style="padding:6px 8px; border:1px solid #4a4a4a; border-radius:6px; background:#2a2a2a; color:#e9efff;">
                 <option value="">All</option>
                 <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option><option>K</option><option>L</option><option>M</option><option>N</option><option>O</option><option>P</option><option>Q</option><option>R</option><option>S</option><option>T</option><option>U</option><option>V</option><option>W</option><option>X</option><option>Y</option><option>Z</option>
               </select>
+              <input id="bio_search_input" type="text" placeholder="Search bio database..." style="padding:6px 8px; border:1px solid #4a4a4a; border-radius:6px; background:#2a2a2a; color:#e9efff;">
             </div>
             <div id="bio_list" style="height:58vh; overflow:auto; display:flex; flex-direction:column; gap:6px;"></div>
             <div id="bio_pager" style="display:flex; gap:6px; align-items:center; justify-content:center; margin-top:6px;"></div>
@@ -1208,7 +1217,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
               </select>
               <button id="bio_use_template" type="button" class="btn-base btn-primary">Use Template</button>
             </div>
-            <div id="bio_detail" style="min-height:58vh;">
+            <div id="bio_detail" style="height:58vh; overflow:auto;">
               <div style="color:#9fb1c9">Select a template on the left</div>
             </div>
           </div>
@@ -1319,6 +1328,45 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       } catch(_e){}
     });
   }
+  // Reset NPC button wiring (reimport non-empty template fields by current name)
+  (function(){
+    const resetBtn = document.getElementById('npc_modal_reset');
+    if (!resetBtn) return;
+    resetBtn.addEventListener('click', async function(e){
+      e.preventDefault();
+      try {
+        const doc = iframe && iframe.contentDocument;
+        const nameEl = doc ? doc.getElementById('npc_name') : null;
+        const npcName = nameEl ? String(nameEl.value||'').trim() : '';
+        if (!npcName){ alert('Enter NPC Name to reset from template.'); return; }
+        // Confirm overwrite of fields present in template
+        const ok = window.confirm('Reset NPC "'+npcName+'" from bio template?\n\nThis will overwrite only fields present in the template. Other fields will remain unchanged.');
+        if (!ok) return;
+        const res = await fetch('npc_master.php?bio_detail=1&name='+encodeURIComponent(npcName));
+        let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
+        if (!j || !j.ok){ alert('No bio template found for "'+npcName+'"'); return; }
+        const d = j.data || {};
+        function setVal(id, val){ const el = doc ? doc.getElementById(id) : null; if (el) el.value = String(val); }
+        function applyIfFilled(id, val){ if (val==null) return; const s=String(val).trim(); if (!s) return; setVal(id, s); }
+        applyIfFilled('core', d.core);
+        applyIfFilled('npc_static_bio', d.npc_static_bio);
+        applyIfFilled('personality', d.personality);
+        applyIfFilled('appearance', d.appearance);
+        applyIfFilled('relationships', d.relationships);
+        applyIfFilled('occupation', d.occupation);
+        applyIfFilled('skills', d.skills);
+        applyIfFilled('speechstyle', d.speechstyle);
+        applyIfFilled('goals', d.goals);
+        applyIfFilled('oghma_knowledge_tags', d.oghma_knowledge_tags);
+        applyIfFilled('voiceid', d.voiceid);
+        applyIfFilled('gender', d.gender);
+        applyIfFilled('race', d.race);
+        applyIfFilled('refid', d.refid);
+        try { if (typeof window.NPC_UPDATE_SAVE_STATE === 'function') window.NPC_UPDATE_SAVE_STATE(); } catch(_e){}
+        try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='Template values applied'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); } } catch(_e){}
+      } catch(_e){}
+    });
+  })();
   // View History button wiring
   (function(){
     const btn = document.getElementById('npc_modal_history');

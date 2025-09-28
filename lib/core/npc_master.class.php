@@ -191,8 +191,11 @@ class NpcMaster {
     // Convert NPC name to codename
     public function npcNameToCodename($npcName) {
         $codename = mb_convert_encoding($npcName, 'UTF-8', mb_detect_encoding($npcName));
-        $codename = strtr(strtolower(trim($codename)), [" " => "_", "'" => "+"]);
-        $codename = preg_replace('/[^\w+-]/u', '', $codename);
+        // Use multibyte lowercase so accented capitals (e.g., É) convert correctly
+        $codename = mb_strtolower(trim($codename), 'UTF-8');
+        $codename = strtr($codename, [" " => "_", "'" => "+"]);
+        // Allow unicode letters/digits plus underscore, plus and hyphen
+        $codename = preg_replace('/[^\p{L}\p{N}_+-]/u', '', $codename);
         return $codename;
     }
 
@@ -245,14 +248,16 @@ class NpcMaster {
 
     private function fetchTemplateRow($codename) {
         $lang = $GLOBALS["CORE_LANG"] ?? '';
+        $escCode = $this->db->escape($codename);
         if ($lang) {
+            $escLang = $this->db->escape($lang);
             // If translations exist, we only pull legacy npc_pers; otherwise fallback to bio view
-            $templateRow = $this->db->fetchOne("SELECT npc_pers FROM npc_templates_trl WHERE name_trl = '$codename' AND lang = '$lang'");
+            $templateRow = $this->db->fetchOne("SELECT npc_pers FROM npc_templates_trl WHERE lower(name_trl) = lower('{$escCode}') AND lang = '{$escLang}'");
         }
 
         if (!$templateRow) {
             $templateRow = $this->db->fetchOne(
-                "SELECT core, oghma_knowledge_tags as npc_misc, npc_static_bio as npc_background, personality as npc_personality, appearance as npc_appearance, relationships as npc_relationships, occupation as npc_occupation, skills as npc_skills, speechstyle as npc_speechstyle, goals as npc_goals FROM combined_bio_templates WHERE npc_name = '$codename'"
+                "SELECT core, oghma_knowledge_tags as npc_misc, npc_static_bio as npc_background, personality as npc_personality, appearance as npc_appearance, relationships as npc_relationships, occupation as npc_occupation, skills as npc_skills, speechstyle as npc_speechstyle, goals as npc_goals FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')"
             );
         }
 
@@ -280,7 +285,8 @@ class NpcMaster {
     }
 
     private function fetchVoiceData($codename) {
-        $voiceRow = $this->db->fetchOne("SELECT voiceid FROM combined_bio_templates WHERE npc_name = '$codename'");
+        $escCode = $this->db->escape($codename);
+        $voiceRow = $this->db->fetchOne("SELECT voiceid FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')");
         $voicetypeString = $this->fetchVoicetype($codename);
 
         return array_merge($voiceRow ?: [], ['voicetype' => $voicetypeString]);
@@ -288,7 +294,7 @@ class NpcMaster {
 
     private function fetchVoicetype($codename) {
         $cn = $this->db->escape("Voicetype/$codename");
-        $vtypeRows = $this->db->fetchAll("SELECT value FROM conf_opts WHERE id = '$cn'");
+        $vtypeRows = $this->db->fetchAll("SELECT value FROM conf_opts WHERE lower(id) = lower('$cn')");
         return $vtypeRows[0]['value'] ?? '';
     }
 

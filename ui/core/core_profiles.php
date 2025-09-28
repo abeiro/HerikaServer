@@ -411,14 +411,14 @@ $ittById = $byId($ittRows);
                         if (s>=1 && s<=4 && slotToProfile[s]===null) slotToProfile[s] = r;
                     });
                     html += '<div class="connector-card" style="padding:8px;">';
-                    html += '<div class="connector-title">Profile Slots</div>';
+                    html += '<div class="connector-title" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Profile Slots <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">ⓘ</span></div>';
                     [1,2,3,4].forEach(s=>{
                         const r = slotToProfile[s];
                         if (r){
                             const title = escapeHtml(r.label||('Profile #'+r.id));
-                            html += `<div class=\"slot-row\" style=\"cursor:pointer;\" data-jump-id=\"${String(r.id)}\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">${title}</span></div>`;
+                            html += `<div class=\"slot-row\" style=\"cursor:pointer;\" data-jump-id=\"${String(r.id)}\" title=\"Can be assigned to NPCs ingame with the Settings Wheel hotkey\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">${title}</span></div>`;
                         } else {
-                            html += `<div class=\"slot-row\" style=\"opacity:.75;\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">— Empty —</span></div>`;
+                            html += `<div class=\"slot-row\" style=\"opacity:.75;\" title=\"Can be assigned to NPCs ingame with the Settings Wheel hotkey\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">— Empty —</span></div>`;
                         }
                     });
                     html += '</div>';
@@ -511,7 +511,7 @@ $ittById = $byId($ittRows);
         <small class="hint">Name for the profile.</small>
         
         <div style="height:8px;"></div>
-        <label for='slot'>Slot</label><br>
+        <label for='slot' title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">ⓘ</span></label><br>
         <?php
             $usedSlotsRows = $GLOBALS["db"]->fetchAll("SELECT id, slot FROM core_profiles WHERE slot IS NOT NULL ORDER BY slot ASC");
             $usedSlots = [];
@@ -519,7 +519,7 @@ $ittById = $byId($ittRows);
             $currentId = (int)($editItem['id'] ?? 0);
             $currentSlot = isset($editItem['slot']) ? (int)$editItem['slot'] : 0;
         ?>
-        <select name="slot" id="slot">
+        <select name="slot" id="slot" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">
             <option value="">—</option>
             <?php for($s=1;$s<=4;$s++):
                 $takenBy = $usedSlots[$s] ?? null;
@@ -573,6 +573,11 @@ $ittById = $byId($ittRows);
         if (basicBtn){ basicBtn.addEventListener('click', function(){ try{ saveProfileBasics(); }catch(_e){} }); }
         const metaBtn = document.getElementById('btn_save_meta_settings');
         if (metaBtn){ metaBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
+        const backTopBtn = document.getElementById('btn_back_to_top');
+        if (backTopBtn){ backTopBtn.addEventListener('click', function(){
+            try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+            catch(_) { window.scrollTo(0, 0); }
+        }); }
 
         // Responsive iframe heights for embedded editors
         function sizeIframes(){
@@ -591,7 +596,7 @@ $ittById = $byId($ittRows);
     <?php /* connector details preloaded above for both panes */ ?>
 
     <div class="connector-card">
-        <div class="connector-title">Connector Selection</div>
+        <div class="connector-title" title="Can swap the models all NPC use ingame with the Settings Wheel hotkey.">Connector Selection <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can swap the models all NPC use ingame with the Settings Wheel hotkey.">ⓘ</span></div>
         <div class="pf-tabs" id="pf_tabs">
             <button type="button" class="pf-tab active" data-pane="pane_llm1">🕹️ Standard LLM</button>
             <button type="button" class="pf-tab" data-pane="pane_llm2">🏃‍♂️‍➡️ Fast LLM</button>
@@ -780,6 +785,7 @@ $ittById = $byId($ittRows);
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_meta_settings" class="btn-save">Save Profile Settings</button>
+            <button type="button" id="btn_back_to_top" class="btn-primary" title="Scroll to top">↑ Back to top</button>
         </div>
     </div>
     <!-- JSON Editor (second chunk) in collapsible -->

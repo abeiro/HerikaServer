@@ -117,11 +117,18 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$NPC_CONF["CONNECTORS_DIARY"]}.php");
         
         $connectionHandler = new $NPC_CONF["CONNECTORS_DIARY"];
-        $maxTokens = isset($GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"]) 
-            ? $GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"] 
-            : 1500;
-            
-        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
+        // Prefer connector's configured max_tokens; fallback to legacy MAX_TOKENS_MEMORY; then a sane default
+        $maxTokens = null;
+        if (isset($GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["max_tokens"]) && $GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["max_tokens"] !== '') {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["max_tokens"];
+        } elseif (isset($GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"])) {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"];
+        } else {
+            $maxTokens = 2048;
+        }
+
+        // Pass provider-agnostic MAX_TOKENS override so connectors map to correct API field
+        $connectionHandler->open($contextData, ["MAX_TOKENS" => $maxTokens]);
         
         $buffer = "";
         $totalBuffer = "";
@@ -469,9 +476,29 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
     $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
     $GLOBALS["gameRequest"] = [0 => "diary", 1 => time(), 2 => $gameRequest[2], 3 => "Auto diary for " . $followerName];
     
-    $overrideParameters["max_tokens"]=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["MAX_TOKENS_MEMORY"]??500;
+    // Determine max tokens: prefer DB connector setting; fallback to driver config; then legacy memory; then default
+    $maxTokens = null;
+    if (isset($currentConnectorData["max_tokens"]) && $currentConnectorData["max_tokens"] !== null && $currentConnectorData["max_tokens"] !== '') {
+        $maxTokens = (int)$currentConnectorData["max_tokens"];
+    } elseif (isset($GLOBALS["CONNECTOR"][$currentConnectorData["driver"]]["max_tokens"])) {
+        $maxTokens = (int)$GLOBALS["CONNECTOR"][$currentConnectorData["driver"]]["max_tokens"];
+    } elseif (isset($GLOBALS["CONNECTOR"][$currentConnectorData["driver"]]["MAX_TOKENS_MEMORY"])) {
+        $maxTokens = (int)$GLOBALS["CONNECTOR"][$currentConnectorData["driver"]]["MAX_TOKENS_MEMORY"];
+    } else {
+        $maxTokens = 2048;
+    }
+
+    // Temporarily disable any global FORCE_MAX_TOKENS to avoid accidental clamping
+    $hadForce = array_key_exists('FORCE_MAX_TOKENS', $GLOBALS);
+    $prevForce = $hadForce ? $GLOBALS['FORCE_MAX_TOKENS'] : null;
+    if ($hadForce) { unset($GLOBALS['FORCE_MAX_TOKENS']); }
+
+    $overrideParameters["MAX_TOKENS"] = $maxTokens;
     $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
     $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
+
+    // Restore previous FORCE_MAX_TOKENS if it existed
+    if ($hadForce) { $GLOBALS['FORCE_MAX_TOKENS'] = $prevForce; }
 
     
     // Restore original gameRequest after diary generation

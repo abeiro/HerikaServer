@@ -853,8 +853,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-        $GLOBALS["FORCE_MAX_TOKENS"]=1500;
-		$connectionHandler->open($contextData, ["max_tokens"=>1500]);
+        // Prefer connector-configured max_tokens for diary; then legacy memory; else default
+        $maxTokens = null;
+        if (isset($GLOBALS["CONNECTOR"][DMgetCurrentModel()]["max_tokens"])) {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["max_tokens"];
+        } elseif (isset($GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"])) {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];
+        } else {
+            $maxTokens = 2048;
+        }
+        $connectionHandler->open($contextData, ["MAX_TOKENS"=>$maxTokens]);
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;
