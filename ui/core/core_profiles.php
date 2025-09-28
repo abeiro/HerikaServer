@@ -573,6 +573,11 @@ $ittById = $byId($ittRows);
         if (basicBtn){ basicBtn.addEventListener('click', function(){ try{ saveProfileBasics(); }catch(_e){} }); }
         const metaBtn = document.getElementById('btn_save_meta_settings');
         if (metaBtn){ metaBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
+        const backTopBtn = document.getElementById('btn_back_to_top');
+        if (backTopBtn){ backTopBtn.addEventListener('click', function(){
+            try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+            catch(_) { window.scrollTo(0, 0); }
+        }); }
 
         // Responsive iframe heights for embedded editors
         function sizeIframes(){
@@ -780,6 +785,7 @@ $ittById = $byId($ittRows);
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_meta_settings" class="btn-save">Save Profile Settings</button>
+            <button type="button" id="btn_back_to_top" class="btn-primary" title="Scroll to top">↑ Back to top</button>
         </div>
     </div>
     <!-- JSON Editor (second chunk) in collapsible -->
