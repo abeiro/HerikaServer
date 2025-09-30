@@ -85,14 +85,18 @@ h1.api-title {
     text-align: center;
 }
 .llm-left .llm-title { font-family: 'MagicCards', serif; word-spacing: 6px; }
+.toast-notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: 500; z-index: 10000; opacity: 0; transform: translateX(400px); transition: all 0.3s ease; max-width: 400px; }
+.toast-notification.show { opacity: 1; transform: translateX(0); }
+.toast-notification:not(.error) { background: linear-gradient(135deg, #6dd19c, #5bb377); border: 1px solid rgba(109, 209, 156, 0.3); }
+.toast-notification.error { background: linear-gradient(135deg, #ff6b6b, #e55a5a); border: 1px solid rgba(255, 107, 107, 0.3); }
 </style>
 
 <main class="d-flex flex-column">
-    <div id="toast" class="toast-notification">
-        <span class="message"></span>
-    </div>
-
 <?php
+$noticeMsg = '';
+if (isset($_GET['notice']) && $_GET['notice'] !== '') {
+    $noticeMsg = (string)$_GET['notice'];
+}
 $GLOBALS["db"] = new sql();
 $llm = new LLMConnector();
 
@@ -204,7 +208,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 try { json = await res.json(); } catch(_){ json = { ok:false, error:'Invalid response' }; }
                 // Re-enable button and show local toast
                 if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
-                (function(){ const toast = document.getElementById('toast'); if (!toast) return; const msg = toast.querySelector('.message'); if (msg) msg.textContent = json.ok ? 'Saved successfully' : ('Save failed: ' + (json.error||'Unknown error')); toast.style.display = 'block'; setTimeout(()=>{ toast.style.display = 'none'; }, 2000); })();
+                try { if (typeof window.showToast==='function') { window.showToast(json.ok ? 'Saved successfully' : ('Save failed: ' + (json.error||'Unknown error')), json.ok?false:true); } else { const toast = document.getElementById('toast'); if (toast){ const msg = toast.querySelector('.message'); if (msg) msg.textContent = json.ok ? 'Saved successfully' : ('Save failed: ' + (json.error||'Unknown error')); toast.classList.add('show'); setTimeout(()=>{ toast.classList.remove('show'); }, 2000); } } } catch(_e){}
                 if (json.ok) { try { window.location.reload(); } catch(_e){} }
                 // Notify parent as well
                 if (window.parent && window.parent.postMessage) {
@@ -212,7 +216,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 }
             } catch (e) {
                 if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
-                (function(){ const toast = document.getElementById('toast'); if (!toast) return; const msg = toast.querySelector('.message'); if (msg) msg.textContent = 'Save failed: ' + e.message; toast.style.display = 'block'; setTimeout(()=>{ toast.style.display = 'none'; }, 2000); })();
+                try { if (typeof window.showToast==='function') { window.showToast('Save failed: ' + e.message, true); } else { const toast = document.getElementById('toast'); if (toast){ const msg = toast.querySelector('.message'); if (msg) msg.textContent = 'Save failed: ' + e.message; toast.classList.add('show'); setTimeout(()=>{ toast.classList.remove('show'); }, 2000); } } } catch(_e){}
                 if (window.parent && window.parent.postMessage) {
                     window.parent.postMessage({ type:'llm_connector_save_result', success:false, error: e.message }, '*');
                 }
@@ -228,16 +232,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     saveBtn.textContent = 'Save';
                 }
                 
-                // Show local toast if available
-                const toast = document.getElementById('toast');
-                if (toast && toast.querySelector('.message')) {
-                    const message = event.data.success ? 'Saved successfully' : ('Save failed: ' + (event.data.error || 'Unknown error'));
-                    toast.querySelector('.message').textContent = message;
-                    toast.style.display = 'block';
-                    setTimeout(() => {
-                        toast.style.display = 'none';
-                    }, 2500);
-                }
+                const message = event.data.success ? 'Saved successfully' : ('Save failed: ' + (event.data.error || 'Unknown error'));
+                try { if (typeof window.showToast==='function') { window.showToast(message, event.data.success?false:true); } else { const toast = document.getElementById('toast'); if (toast&&toast.querySelector('.message')){ toast.querySelector('.message').textContent = message; toast.classList.add('show'); setTimeout(()=>{ toast.classList.remove('show'); }, 2500); } } } catch(_e){}
             }
         });
     }
@@ -537,8 +533,19 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         if (driverSelect){ driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); }
     })();
     </script>
-    <div id="toast" class="toast-notification" style="display:none"><span class="message"></span></div>
+    <div id="toast" class="toast-notification" style="position:static; margin: 8px auto 12px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
     <script>
+    // Toast helper for embedded editor
+    if (typeof window.showToast !== 'function') {
+        window.showToast = function(message, isError){
+            var toast = document.getElementById('toast');
+            if (!toast) return;
+            var msg = toast.querySelector('.message');
+            if (msg) msg.textContent = String(message||'');
+            toast.className = 'toast-notification show' + (isError? ' error' : '');
+            setTimeout(function(){ toast.className = 'toast-notification'; }, 2500);
+        };
+    }
     // Sync On/Off labels for checkboxes
     (function(){
         const names = ['reasoning_model','enforce_json','json_schema','prefill_json'];
@@ -754,6 +761,18 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         modelInput.addEventListener('input', () => { clearProviderIfOpenRouter(); maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
     })();
     </script>
+    <?php if ($noticeMsg !== ''): ?>
+    <script>
+    (function(){
+        var t = document.getElementById('toast');
+        if (!t) return;
+        var m = t.querySelector('.message');
+        if (m) m.textContent = <?= json_encode($noticeMsg, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+        t.style.display = 'block';
+        setTimeout(function(){ t.style.display = 'none'; }, 3000);
+    })();
+    </script>
+    <?php endif; ?>
     <?php
     exit;
 }
@@ -899,7 +918,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_P
 
 // Handle Delete
 if (isset($_GET["delete"])) {
-    $llm->delete($_GET["delete"]);
+    $id = intval($_GET["delete"]);
+    // Prevent deletion if any profile references this connector
+    try {
+        $cntRow = $GLOBALS["db"]->fetchOne(
+            "SELECT COUNT(*) AS cnt FROM core_profiles WHERE " .
+            "llm_primary_id={$id} OR llm_secondary_id={$id} OR llm_tertiary_id={$id} OR " .
+            "llm_quaternary_id={$id} OR llm_formatter_id={$id}"
+        );
+        $inUse = intval($cntRow['cnt'] ?? 0);
+    } catch (Exception $e) {
+        $inUse = 0;
+    }
+    if ($inUse > 0) {
+        $msg = "Cannot delete: connector is used by ${inUse} profile" . ($inUse>1? 's' : '') . ". Remove from all profiles first.";
+        header("Location: llm_connectors.php?notice=" . urlencode($msg));
+        exit;
+    }
+    $llm->delete($id);
     header("Location: llm_connectors.php");
     exit;
 }
@@ -920,6 +956,7 @@ if (isset($_GET["edit"])) {
 ?>
 
 <h1 class="api-title">LLM Connectors</h1>
+<div id="toast" class="toast-notification" style="position:static; margin: 8px auto 12px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
 
 <div class="llm-layout">
     <div class="llm-left position-sticky">
@@ -1586,6 +1623,11 @@ $buffer = ob_get_contents();
 ob_end_clean();
 $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+// Inject toast notice if present
+if ($noticeMsg !== '') {
+    $injection = "<script>(function(){var t=document.getElementById('toast');if(!t)return;var m=t.querySelector('.message');if(m)m.textContent=" . json_encode($noticeMsg, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) . ";try{t.className='toast-notification show error';t.style.opacity='1';setTimeout(function(){t.className='toast-notification';t.style.opacity='0';},3000);}catch(_){t.style.display='block';setTimeout(function(){t.style.display='none';},3000);} })();</script>";
+    $buffer = str_replace('</main>', $injection . '</main>', $buffer);
+}
 echo $buffer;
 ?>
 
