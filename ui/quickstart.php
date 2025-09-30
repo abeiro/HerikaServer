@@ -483,7 +483,7 @@ echo '      <div class="container">
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">💪 <b>Powerful</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Sonnet 3.7</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Sonnet 4.5</div>
                         <div style="margin-top:4px; color:#bbb; font-size:12px;">$3/M input (starting) | $15/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
