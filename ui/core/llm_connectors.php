@@ -177,6 +177,14 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     // Expose for inline handler check
     window.isInIframe = isInIframe;
     
+    // Show test button only when NOT embedded in iframe
+    if (!isInIframe) {
+        const testBtn = document.getElementById('btn_test_connector');
+        const testNote = document.getElementById('test_note');
+        if (testBtn) testBtn.style.display = '';
+        if (testNote) testNote.style.display = '';
+    }
+    
     // If in iframe, override form submission to use postMessage
     if (isInIframe) {
         window.handleEmbeddedSave = async function() {
@@ -248,8 +256,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
                     <?php if ($editItem): ?>
                         <button type="submit" name="save" class="btn-save">Save</button>
-                        <button type="button" id="btn_test_connector" class="btn-primary">Test</button>
-                        <div class="orm-note" style="margin-top:6px;">Please save any changes before testing to ensure the latest settings are used.</div>
+                        <button type="button" id="btn_test_connector" class="btn-primary" style="display:none;">Test</button>
+                        <div class="orm-note" id="test_note" style="margin-top:6px; display:none;">Please save any changes before testing to ensure the latest settings are used.</div>
                     <?php else: ?>
                         <button type="submit" name="create" class="btn-save">Create</button>
                     <?php endif; ?>
@@ -1111,7 +1119,7 @@ if (typeof window.consolidation !== 'function') {
             <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
                 <?php if ($editItem): ?>
                     <button type="submit" name="save" class="btn-save">Save</button>
-                    <button type="button" id="btn_test_connector" class="btn-primary">Test</button>
+                    <button type="button" id="btn_test_connector_main" class="btn-primary">Test</button>
                     <button type="submit" formmethod="get" formaction="llm_connectors.php" name="export" value="<?= htmlspecialchars($editItem['id'] ?? '') ?>" class="btn-primary">Export</button>
                     <div class="orm-note" style="margin-top:6px;">Please save any changes before testing to ensure the latest settings are used.</div>
                 <?php else: ?>
@@ -1455,7 +1463,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     document.addEventListener('click', function(e){ if (e.target && e.target.id==='llmtest_close') closeModal(); });
     modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
     document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
-    const testBtn = document.getElementById('btn_test_connector');
+    const testBtn = document.getElementById('btn_test_connector_main');
     if (testBtn){
         testBtn.addEventListener('click', async function(){
             const form = document.querySelector('form[method="post"]');
