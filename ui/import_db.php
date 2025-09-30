@@ -168,20 +168,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_auto' && isset($_GET
         }
         
         if ($validFile && file_exists($backupPath)) {
-            // Force download of the backup file
+            // Force download of the backup file (streamed to avoid memory usage)
             header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Content-Length: ' . filesize($backupPath));
             header('Cache-Control: must-revalidate');
             header('Pragma: public');
-            
-            // Clear any output buffer
-            if (ob_get_level()) {
-                ob_end_clean();
+
+            // Fully clear output buffers before streaming large files
+            while (ob_get_level() > 0) { ob_end_clean(); }
+
+            // Stream the file in chunks
+            $fh = fopen($backupPath, 'rb');
+            if ($fh !== false) {
+                set_time_limit(0);
+                while (!feof($fh)) {
+                    echo fread($fh, 8192);
+                    flush();
+                }
+                fclose($fh);
             }
-            
-            // Output the file
-            readfile($backupPath);
             exit();
         } else {
             $message = "<p><strong>Error:</strong> Backup file not found.</p>";
@@ -324,24 +330,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'backup') {
                     unlink($backupFile);
                 }
             } else {
-                // Successful backup - force download
+                // Successful backup - force download (streamed)
                 header('Content-Type: application/octet-stream');
                 header('Content-Disposition: attachment; filename="dwemer_backup_' . $filename . '"');
                 header('Content-Length: ' . $fileSize);
                 header('Cache-Control: must-revalidate');
                 header('Pragma: public');
-                
-                // Clear any output buffer
-                if (ob_get_level()) {
-                    ob_end_clean();
+
+                // Fully clear output buffers before streaming large files
+                while (ob_get_level() > 0) { ob_end_clean(); }
+
+                // Stream the file in chunks to avoid memory exhaustion
+                $fh = fopen($backupFile, 'rb');
+                if ($fh !== false) {
+                    set_time_limit(0);
+                    while (!feof($fh)) {
+                        echo fread($fh, 8192);
+                        flush();
+                    }
+                    fclose($fh);
                 }
-                
-                // Output the file
-                readfile($backupFile);
-                
+
                 // Clean up - delete the temporary file
                 unlink($backupFile);
-                
+
                 exit();
             }
         } else {
