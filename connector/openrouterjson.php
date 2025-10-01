@@ -157,13 +157,14 @@ class openrouterjson
             // OpenAI model names
             if ($i_pos === false) { 
                 if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
-                    ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
-                    (strpos($s_model, "o4-mini") == 0)) {
+                    ($s_model == "o3") || (strpos($s_model, "o3-mini") === 0) || (strpos($s_model, "o3-pro") === 0) || 
+                    (strpos($s_model, "o4-mini") === 0)) {
                     $i_pos = 1;
                 }
             }
             $b_res = (!($i_pos === false));
         }
+        error_log("[OPENROUTER] is openai model: $b_res");
         return $b_res;
     }
    
@@ -589,6 +590,7 @@ class openrouterjson
 
         if ($this->_is_reasoning) { // add parameter to hide <think> content
             $data["reasoning"] = array ('exclude' => true,'enabled'=>false); // Use reasoning but don't include it in the response
+            error_log("[OPENROUTER]  Excluding reasoning");
             //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
             //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
             //Logger::debug("reasoning " . $this->_model);
@@ -599,6 +601,8 @@ class openrouterjson
         
         if ($this->_is_openai) {
             // OpenAI models use max_completion_tokens
+            error_log("[OPENROUTER] Excluding reasoning this->_is_openai");
+
             $data['max_completion_tokens'] = $MAX_TOKENS;
             unset($data['max_tokens']); 
             if ($this->_is_reasoning) {
