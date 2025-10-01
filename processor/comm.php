@@ -590,10 +590,17 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $meta["skills"]["pickpocket"]=$splitNameBase[17];
         $meta["skills"]["sneak"]=$splitNameBase[18];
         $meta["skills"]["speech"]=$splitNameBase[19];
-        $meta["skills"]["smithing"]=$splitNameBase[10];
+        $meta["skills"]["smithing"]=$splitNameBase[20];
         $meta["skills"]["alchemy"]=$splitNameBase[21];
         $meta["skills"]["enchanting"]=$splitNameBase[22];
         
+        // NPC equipment (6 slots from Skyrim)
+        $meta["equipment"]["helmet"]=isset($splitNameBase[23]) ? $splitNameBase[23] : '';
+        $meta["equipment"]["armor"]=isset($splitNameBase[24]) ? $splitNameBase[24] : '';
+        $meta["equipment"]["boots"]=isset($splitNameBase[25]) ? $splitNameBase[25] : '';
+        $meta["equipment"]["gloves"]=isset($splitNameBase[26]) ? $splitNameBase[26] : '';
+        $meta["equipment"]["left_hand"]=isset($splitNameBase[27]) ? $splitNameBase[27] : '';
+        $meta["equipment"]["right_hand"]=isset($splitNameBase[28]) ? $splitNameBase[28] : '';
 
         $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
 

@@ -977,6 +977,54 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             </details>
         </div>
 
+        <?php
+        // Read equipment from metadata
+        $metadataEquipment = [];
+        try {
+            $metaRaw = '';
+            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
+                $metaRaw = (string)$editItem['metadata'];
+            }
+            if ($metaRaw !== '') {
+                $metaObj = json_decode($metaRaw, true);
+                if (is_array($metaObj) && isset($metaObj['equipment']) && is_array($metaObj['equipment'])) {
+                    $metadataEquipment = $metaObj['equipment'];
+                }
+            }
+        } catch (Throwable $e) { $metadataEquipment = []; }
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-equipment-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">Current Equipment</summary>
+                <small class="hint">Equipment NPC had when first added to AI system.</small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataEquipment) && is_array($metadataEquipment)): ?>
+                        <?php 
+                        $equipmentSlots = [
+                            'helmet' => '🪖 Helmet',
+                            'armor' => '🛡️ Armor',
+                            'boots' => '👢 Boots',
+                            'gloves' => '🧤 Gloves',
+                            'left_hand' => '🤚 Left Hand',
+                            'right_hand' => '👉 Right Hand'
+                        ];
+                        ?>
+                        <div style="display:grid; grid-template-columns: 160px 1fr; gap:8px;">
+                            <?php foreach ($equipmentSlots as $slot => $label): 
+                                $item = isset($metadataEquipment[$slot]) ? trim((string)$metadataEquipment[$slot]) : '';
+                                $display = ($item !== '') ? htmlspecialchars($item) : '<span style="color:#666">None</span>';
+                            ?>
+                                <div style="color:rgb(242, 124, 17); font-weight:600;"><?= $label ?></div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px;"><?= $display ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No equipment data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
         <div class="form-item">
             <label for="speechstyle">Speech Style</label>
             <textarea id="speechstyle" name="speechstyle" placeholder="Dialect, cadence, verbal tics."><?= htmlspecialchars($editItem["speechstyle"] ?? "") ?></textarea>
