@@ -601,6 +601,15 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $meta["equipment"]["gloves"]=isset($splitNameBase[26]) ? $splitNameBase[26] : '';
         $meta["equipment"]["left_hand"]=isset($splitNameBase[27]) ? $splitNameBase[27] : '';
         $meta["equipment"]["right_hand"]=isset($splitNameBase[28]) ? $splitNameBase[28] : '';
+        
+        // NPC stats (core attributes)
+        $meta["stats"]["level"]=isset($splitNameBase[29]) ? intval($splitNameBase[29]) : 1;
+        $meta["stats"]["health"]=isset($splitNameBase[30]) ? floatval($splitNameBase[30]) : 0;
+        $meta["stats"]["health_max"]=isset($splitNameBase[31]) ? floatval($splitNameBase[31]) : 0;
+        $meta["stats"]["magicka"]=isset($splitNameBase[32]) ? floatval($splitNameBase[32]) : 0;
+        $meta["stats"]["magicka_max"]=isset($splitNameBase[33]) ? floatval($splitNameBase[33]) : 0;
+        $meta["stats"]["stamina"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
+        $meta["stats"]["stamina_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
 
         $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
 

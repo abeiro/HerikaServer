@@ -1025,6 +1025,81 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             </details>
         </div>
 
+        <?php
+        // Read stats from metadata
+        $metadataStats = [];
+        try {
+            $metaRaw = '';
+            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
+                $metaRaw = (string)$editItem['metadata'];
+            }
+            if ($metaRaw !== '') {
+                $metaObj = json_decode($metaRaw, true);
+                if (is_array($metaObj) && isset($metaObj['stats']) && is_array($metaObj['stats'])) {
+                    $metadataStats = $metaObj['stats'];
+                }
+            }
+        } catch (Throwable $e) { $metadataStats = []; }
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-stats-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">Character Stats</summary>
+                <small class="hint">NPC stats when first added to AI system.</small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataStats) && is_array($metadataStats)): ?>
+                        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 24px;">
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:rgb(242, 124, 17); min-width:100px; font-weight:700;">Level</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; font-weight:700; background:#1a1a1a; font-size:16px;">
+                                    <?= isset($metadataStats['level']) ? intval($metadataStats['level']) : '—' ?>
+                                </div>
+                            </div>
+                            
+                            <div></div>
+                            
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#e74c3c; min-width:100px;">❤️ Health</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
+                                    <?php 
+                                    $health = isset($metadataStats['health']) ? floatval($metadataStats['health']) : 0;
+                                    $healthMax = isset($metadataStats['health_max']) ? floatval($metadataStats['health_max']) : 0;
+                                    $healthPercent = ($healthMax > 0) ? round(($health / $healthMax) * 100) : 0;
+                                    ?>
+                                    <?= intval($health) ?> / <?= intval($healthMax) ?> <span style="color:#999;">(<?= $healthPercent ?>%)</span>
+                                </div>
+                            </div>
+                            
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#3498db; min-width:100px;">💧 Magicka</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
+                                    <?php 
+                                    $magicka = isset($metadataStats['magicka']) ? floatval($metadataStats['magicka']) : 0;
+                                    $magickaMax = isset($metadataStats['magicka_max']) ? floatval($metadataStats['magicka_max']) : 0;
+                                    $magickaPercent = ($magickaMax > 0) ? round(($magicka / $magickaMax) * 100) : 0;
+                                    ?>
+                                    <?= intval($magicka) ?> / <?= intval($magickaMax) ?> <span style="color:#999;">(<?= $magickaPercent ?>%)</span>
+                                </div>
+                            </div>
+                            
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#2ecc71; min-width:100px;">⚡ Stamina</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
+                                    <?php 
+                                    $stamina = isset($metadataStats['stamina']) ? floatval($metadataStats['stamina']) : 0;
+                                    $staminaMax = isset($metadataStats['stamina_max']) ? floatval($metadataStats['stamina_max']) : 0;
+                                    $staminaPercent = ($staminaMax > 0) ? round(($stamina / $staminaMax) * 100) : 0;
+                                    ?>
+                                    <?= intval($stamina) ?> / <?= intval($staminaMax) ?> <span style="color:#999;">(<?= $staminaPercent ?>%)</span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No stats data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
         <div class="form-item">
             <label for="speechstyle">Speech Style</label>
             <textarea id="speechstyle" name="speechstyle" placeholder="Dialect, cadence, verbal tics."><?= htmlspecialchars($editItem["speechstyle"] ?? "") ?></textarea>
