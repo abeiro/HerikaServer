@@ -187,7 +187,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$data = array(
 				'text' => $newString,
 				'speaker_wav' => $voice,
-				'language' => $lang
+				'language' => $lang??'en'	//Defaults to english
 			);
 			
 		$options = array(
@@ -213,7 +213,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$data = array(
 				'text' => $newString,
 				'speaker_wav' => $codename,
-				'language' => $lang
+				'language' => $lang??"en"
 			);
 			$options = array(
 				'http' => array(
