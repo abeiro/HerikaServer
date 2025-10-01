@@ -82,6 +82,7 @@ $DYNAMIC_PROFILE_FIELDS = ["relationships", "goals"];
 $DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, update #HERIKA_NAME# personality traits. "
     . "Maintain all existing relevant personality traits and add new ones based on recent experiences. "
     . "Focus on behavioral changes, emotional growth/regression, new traits that emerged, and changes in confidence or outlook. "
+    . "Emphasize any past traumas or new traumas caused by the death of companions, allies, or other known characters, and how these events shape the character’s behavior and mindset. "
     . "Return ONLY the updated personality description in 3-5 sentences. Do not include any introductory text, meta-commentary, or phrases like 'Here is the updated personality' or 'The character's personality is'. "
     . "Start directly with the personality content.";
 
