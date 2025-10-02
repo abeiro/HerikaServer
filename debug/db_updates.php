@@ -1779,7 +1779,12 @@ try {
 if ($checkTableExists("translations") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/translations_table.sql"));
 } else
-    Logger::info(__FILE__." core_itt_connector exists");
+    Logger::info(__FILE__." translations exists");
+
+if ($checkTableExists("import_rules") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/import_rules.sql"));
+} else
+    Logger::info(__FILE__." import_rules exists");
 
 // Usage column
 $db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb");

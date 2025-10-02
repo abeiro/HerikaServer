@@ -832,6 +832,59 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         $meta["mods"]=isset($splitNameBase[38]) ?explode("#",$splitNameBase[38]):null;
 
+       
+        // Importing rules
+        $npcName = $GLOBALS["db"]->escape($localName);
+        $npcRace = $GLOBALS["db"]->escape($currentNpcData["race"]);
+        $npcGender = $GLOBALS["db"]->escape($currentNpcData["gender"]);
+        $npcBase = $GLOBALS["db"]->escape($currentNpcData["base"]);
+        $npcMods = $meta["mods"]; 
+
+        if (is_array($npcMods)) {
+            $modsArray = "ARRAY['" . implode("','", array_map([$GLOBALS["db"], 'escape'], $npcMods)) . "']";
+        } else {
+            $modsArray = "ARRAY['']";
+        }
+
+        $sql = "
+            SELECT *
+            FROM import_rules r
+            WHERE r.enabled = TRUE
+            AND (r.match_name IS NULL OR '$npcName' ~ r.match_name)
+            AND (r.match_race IS NULL OR '$npcRace' ~ r.match_race)
+            AND (r.match_gender IS NULL OR '$npcGender' = r.match_gender)
+            AND (r.match_base IS NULL OR '$npcBase' ~ r.match_base)
+            AND (r.match_mods IS NULL OR r.match_mods <@ $modsArray)
+            ORDER BY r.priority DESC
+        ";
+
+
+        $rules = $db->fetchAll($sql);
+        error_log("[ADDNPC IMPORTING RULES] Matching rules for $npcName: ".sizeof($rules));
+        foreach ($rules as $rule) {
+
+
+            if (!empty($rule["profile"])) {
+                $currentNpcData["profile_id"] = (int)$rule["profile"];
+            }
+
+
+            if (!empty($rule["action"])) {
+                $actions = json_decode($rule["action"], true);
+                if (is_array($actions)) {
+                    foreach ($actions as $key=>$value) {
+                        error_log("[ADDNPC IMPORTING RULES] Matching rules for $npcName: {$key}:".print_r($value,true));
+                        // ejemplo: guardar en $currentNpcData["properties"]
+                        if ($key=="metadata")
+                            $meta=array_merge($meta,$value);
+                        else
+                            $currentNpcData[$key] = $value;
+                    
+                    }
+                }
+            }
+        }
+
         $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
 
         $npcMaster->updateByArray($currentNpcData);

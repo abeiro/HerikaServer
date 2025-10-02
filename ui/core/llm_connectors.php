@@ -483,36 +483,41 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         function setActive(service){ icons.forEach(ic=>{ if (ic.dataset.service === service) ic.classList.add('active'); else ic.classList.remove('active'); }); }
 
         function applyService(service){
-            if (serviceInput) serviceInput.value = service;
-            // Defaults for non-custom
-            if (service !== 'custom' && defaults[service]) {
-                if (urlInput) urlInput.value = defaults[service];
-            }
-            if (providerRow) providerRow.style.display = (service === 'openrouter') ? '' : 'none';
-            if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none';
-            if (driverSelect) driverSelect.style.display = (service === 'custom') ? '' : 'none';
-            if (driverInput) driverInput.style.display = (service === 'custom') ? 'none' : '';
-            // Preserve saved driver; only set defaults when empty
-            if (service === 'custom') {
-                const savedDriver = driverInput ? String(driverInput.value || '') : '';
-                if (driverSelect) {
-                    if (savedDriver) {
-                        driverSelect.value = savedDriver;
-                    } else if (!driverSelect.value) {
-                        driverSelect.value = 'openaijson';
+            try {
+                if (serviceInput) serviceInput.value = service;
+                // Defaults for non-custom
+                if (service !== 'custom' && defaults[service]) {
+                    if (urlInput) urlInput.value = defaults[service];
+                }
+                if (providerRow) providerRow.style.display = (service === 'openrouter') ? '' : 'none';
+                if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none';
+                if (driverSelect) driverSelect.style.display = (service === 'custom') ? '' : 'none';
+                if (driverInput) driverInput.style.display = (service === 'custom') ? 'none' : '';
+                // Preserve saved driver; only set defaults when empty
+                if (service === 'custom') {
+                    const savedDriver = driverInput ? String(driverInput.value || '') : '';
+                    if (driverSelect) {
+                        if (savedDriver) {
+                            driverSelect.value = savedDriver;
+                        } else if (!driverSelect.value) {
+                            driverSelect.value = 'openaijson';
+                        }
+                    }
+                    if (driverInput && !savedDriver) {
+                        driverInput.value = driverSelect ? driverSelect.value : 'openaijson';
+                    }
+                } else {
+                    if (driverInput && !driverInput.value) {
+                        driverInput.value = (service === 'openrouter') ? 'openrouterjson' : (service === 'openai' ? 'openaijson' : (service === 'google' ? 'google_openaijson' : (service === 'nanogpt' ? 'openrouterjson' : driverInput.value)));
                     }
                 }
-                if (driverInput && !savedDriver) {
-                    driverInput.value = driverSelect ? driverSelect.value : 'openaijson';
-                }
-            } else {
-                if (driverInput && !driverInput.value) {
-                    driverInput.value = (service === 'openrouter') ? 'openrouterjson' : (service === 'openai' ? 'openaijson' : (service === 'google' ? 'google_openaijson' : (service === 'nanogpt' ? 'openrouterjson' : driverInput.value)));
-                }
+                if (urlRow) urlRow.style.display = (service === 'custom') ? '' : 'none';
+                if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || '');
+                setActive(service);
+            } catch (e) {
+                console.log(e);
+
             }
-            if (urlRow) urlRow.style.display = (service === 'custom') ? '' : 'none';
-            if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || '');
-            setActive(service);
         }
 
         function detectService(){
@@ -589,7 +594,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         const driverDefaults = { openrouter: 'openrouterjson', openai: 'openaijson', google: 'google_openaijson', nanogpt: 'openrouterjson', custom: '' };
         const apiBadgeLabelMatch = { openrouter: ['openrouter'], openai: ['openai'], google: ['google'], nanogpt: ['nano-gpt','nanogpt'] };
         function syncApiBadge(service){ if (!apiBadgeSelect) return; const targets = (apiBadgeLabelMatch[service] || []).map(s => s.toLowerCase()); if (targets.length === 0) return; let selectedVal = ''; for (let i = 0; i < apiBadgeSelect.options.length; i++) { const opt = apiBadgeSelect.options[i]; const label = (opt.textContent || opt.innerText || '').toLowerCase(); if (targets.some(t => label.includes(t))) { selectedVal = opt.value; break; } } if (selectedVal !== '') apiBadgeSelect.value = selectedVal; else apiBadgeSelect.value = ''; }
-        function applyService(service){ const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; const savedDriver = driverInput ? String(driverInput.value || '') : ''; if (service === 'custom') { if (driverRow) driverRow.style.display = ''; if (driverSelect) driverSelect.style.display = ''; if (driverInput) driverInput.style.display = 'none'; if (driverSelect) { if (savedDriver) { driverSelect.value = savedDriver; } else if (!driverSelect.value) { driverSelect.value = 'openaijson'; } } if (driverInput && !savedDriver) { driverInput.value = driverSelect ? driverSelect.value : 'openaijson'; } } else { if (driverRow) driverRow.style.display = 'none'; if (driverSelect) driverSelect.style.display = 'none'; if (driverInput) driverInput.style.display = ''; if (driverInput && !savedDriver && driverDefaults[service]) { driverInput.value = driverDefaults[service]; } } syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); document.querySelectorAll('.orm-dropdown').forEach(function(el){ el.style.display='none'; }); }
+        function applyService(service){ try {const serviceInput = document.getElementById('service_input'); if (serviceInput) serviceInput.value = service; if (defaults[service]) urlInput.value = defaults[service]; providerRow.style.display = (service === 'openrouter') ? '' : 'none'; const savedDriver = driverInput ? String(driverInput.value || '') : ''; if (service === 'custom') { if (driverRow) driverRow.style.display = ''; if (driverSelect) driverSelect.style.display = ''; if (driverInput) driverInput.style.display = 'none'; if (driverSelect) { if (savedDriver) { driverSelect.value = savedDriver; } else if (!driverSelect.value) { driverSelect.value = 'openaijson'; } } if (driverInput && !savedDriver) { driverInput.value = driverSelect ? driverSelect.value : 'openaijson'; } } else { if (driverRow) driverRow.style.display = 'none'; if (driverSelect) driverSelect.style.display = 'none'; if (driverInput) driverInput.style.display = ''; if (driverInput && !savedDriver && driverDefaults[service]) { driverInput.value = driverDefaults[service]; } } syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); document.querySelectorAll('.orm-dropdown').forEach(function(el){ el.style.display='none'; }); } catch (e) {console.log(e);console.log("Check this bug")}}
         function detectService(){ const sVal=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; if (['openrouter','openai','google','nanogpt'].includes(sVal)) return sVal; const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (d.includes('openai')||u.includes('openai.com')) return 'openai'; if (d.includes('google')||u.includes('generativelanguage.googleapis.com')) return 'google'; if (u.includes('nano-gpt.com')) return 'nanogpt'; if (d.includes('openrouter')||u.includes('openrouter.ai')) return 'openrouter'; return 'openrouter'; }
         (function init(){ const service = detectService(); applyService(service); })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
