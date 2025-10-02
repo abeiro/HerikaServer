@@ -472,7 +472,13 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $metaTmp = []; if (!empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $metaTmp = $tmp; } } $portraitRel = (string)($metaTmp['portrait'] ?? ''); $extTmp = []; if (!empty($row['extended_data'])) { $tmp2 = json_decode((string)$row['extended_data'], true); if (is_array($tmp2)) { $extTmp = $tmp2; } } $mtmEnabled = !empty($extTmp['middle_term_enabled']); $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row["refid"] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? '' : $tagsVal; ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title">
-                <div class="npc-title-left"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?></div>
+                <div class="npc-title-left"><?php 
+                    // Use already-parsed $metaTmp to avoid re-decoding
+                    $levelDisp = '';
+                    if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
+                        $levelDisp = ' ('.intval($metaTmp['stats']['level']).')';
+                    }
+                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?></div>
             <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
@@ -940,238 +946,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Highlight notable competencies of the NPC.</small>
         </div>
 
-        <?php
-        // Read-only dropdown view of in-game skills from metadata.skills
-        $metadataSkills = [];
-        try {
-            $metaRaw = '';
-            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
-                $metaRaw = (string)$editItem['metadata'];
-            }
-            if ($metaRaw !== '') {
-                $metaObj = json_decode($metaRaw, true);
-                if (is_array($metaObj) && isset($metaObj['skills']) && is_array($metaObj['skills'])) {
-                    $metadataSkills = $metaObj['skills'];
-                }
-            }
-        } catch (Throwable $e) { $metadataSkills = []; }
-        ?>
-        <div class="form-item span-2">
-            <details class="metadata-skills-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
-                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">In-Game Skills</summary>
-                <small class="hint">These will also be used for Skill context.</small>
-                <div style="margin-top:8px; color:#cfd9ea;">
-                    <?php if (!empty($metadataSkills) && is_array($metadataSkills)): ?>
-                        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px 12px;">
-                            <?php foreach ($metadataSkills as $sName => $sVal): $label = ucfirst((string)$sName); $disp = (is_numeric($sVal) ? (string)intval($sVal) : ((is_string($sVal) && trim($sVal)!=='') ? htmlspecialchars($sVal) : '—')); ?>
-                                <div style="display:flex; gap:8px; align-items:center;">
-                                    <div style="color:rgb(242, 124, 17); min-width:140px;"><?= htmlspecialchars($label) ?></div>
-                                    <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px; min-width:40px;"><?= $disp ?></div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <div style="color:#9fb1c9;">No in-game skills found in metadata.</div>
-                    <?php endif; ?>
-                </div>
-            </details>
-        </div>
-
-        <?php
-        // Read equipment from metadata
-        $metadataEquipment = [];
-        try {
-            $metaRaw = '';
-            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
-                $metaRaw = (string)$editItem['metadata'];
-            }
-            if ($metaRaw !== '') {
-                $metaObj = json_decode($metaRaw, true);
-                if (is_array($metaObj) && isset($metaObj['equipment']) && is_array($metaObj['equipment'])) {
-                    $metadataEquipment = $metaObj['equipment'];
-                }
-            }
-        } catch (Throwable $e) { $metadataEquipment = []; }
-        ?>
-        <div class="form-item span-2">
-            <details class="metadata-equipment-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
-                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">Current Equipment</summary>
-                <small class="hint">Equipment NPC had when first added to AI system.</small>
-                <div style="margin-top:8px; color:#cfd9ea;">
-                    <?php if (!empty($metadataEquipment) && is_array($metadataEquipment)): ?>
-                        <?php 
-                        $equipmentSlots = [
-                            'helmet' => '🪖 Helmet',
-                            'armor' => '🛡️ Armor',
-                            'boots' => '👢 Boots',
-                            'gloves' => '🧤 Gloves',
-                            'amulet' => '📿 Amulet',
-                            'ring' => '💍 Ring',
-                            'left_hand' => '🤚 Left Hand',
-                            'right_hand' => '👉 Right Hand'
-                        ];
-                        ?>
-                        <div style="display:grid; grid-template-columns: 160px 1fr; gap:8px;">
-                            <?php foreach ($equipmentSlots as $slot => $label): 
-                                $item = isset($metadataEquipment[$slot]) ? trim((string)$metadataEquipment[$slot]) : '';
-                                $display = ($item !== '') ? htmlspecialchars($item) : '<span style="color:#666">None</span>';
-                            ?>
-                                <div style="color:rgb(242, 124, 17); font-weight:600;"><?= $label ?></div>
-                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px;"><?= $display ?></div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <div style="color:#9fb1c9;">No equipment data found in metadata.</div>
-                    <?php endif; ?>
-                </div>
-            </details>
-        </div>
-
-        <?php
-        // Read stats from metadata
-        $metadataStats = [];
-        try {
-            $metaRaw = '';
-            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
-                $metaRaw = (string)$editItem['metadata'];
-            }
-            if ($metaRaw !== '') {
-                $metaObj = json_decode($metaRaw, true);
-                if (is_array($metaObj) && isset($metaObj['stats']) && is_array($metaObj['stats'])) {
-                    $metadataStats = $metaObj['stats'];
-                }
-            }
-        } catch (Throwable $e) { $metadataStats = []; }
-        ?>
-        <div class="form-item span-2">
-            <details class="metadata-stats-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
-                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">Character Stats</summary>
-                <small class="hint">NPC stats when first added to AI system.</small>
-                <div style="margin-top:8px; color:#cfd9ea;">
-                    <?php if (!empty($metadataStats) && is_array($metadataStats)): ?>
-                        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 24px;">
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <div style="color:rgb(242, 124, 17); min-width:100px; font-weight:700;">Level</div>
-                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; font-weight:700; background:#1a1a1a; font-size:16px;">
-                                    <?= isset($metadataStats['level']) ? intval($metadataStats['level']) : '—' ?>
-                                </div>
-                            </div>
-                            
-                            <div></div>
-                            
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <div style="color:#e74c3c; min-width:100px;">❤️ Health</div>
-                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
-                                    <?php 
-                                    $health = isset($metadataStats['health']) ? floatval($metadataStats['health']) : 0;
-                                    $healthMax = isset($metadataStats['health_max']) ? floatval($metadataStats['health_max']) : 0;
-                                    $healthPercent = ($healthMax > 0) ? round(($health / $healthMax) * 100) : 0;
-                                    ?>
-                                    <?= intval($health) ?> / <?= intval($healthMax) ?> <span style="color:#999;">(<?= $healthPercent ?>%)</span>
-                                </div>
-                            </div>
-                            
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <div style="color:#3498db; min-width:100px;">💧 Magicka</div>
-                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
-                                    <?php 
-                                    $magicka = isset($metadataStats['magicka']) ? floatval($metadataStats['magicka']) : 0;
-                                    $magickaMax = isset($metadataStats['magicka_max']) ? floatval($metadataStats['magicka_max']) : 0;
-                                    $magickaPercent = ($magickaMax > 0) ? round(($magicka / $magickaMax) * 100) : 0;
-                                    ?>
-                                    <?= intval($magicka) ?> / <?= intval($magickaMax) ?> <span style="color:#999;">(<?= $magickaPercent ?>%)</span>
-                                </div>
-                            </div>
-                            
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <div style="color:#2ecc71; min-width:100px;">⚡ Stamina</div>
-                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
-                                    <?php 
-                                    $stamina = isset($metadataStats['stamina']) ? floatval($metadataStats['stamina']) : 0;
-                                    $staminaMax = isset($metadataStats['stamina_max']) ? floatval($metadataStats['stamina_max']) : 0;
-                                    $staminaPercent = ($staminaMax > 0) ? round(($stamina / $staminaMax) * 100) : 0;
-                                    ?>
-                                    <?= intval($stamina) ?> / <?= intval($staminaMax) ?> <span style="color:#999;">(<?= $staminaPercent ?>%)</span>
-                                </div>
-                            </div>
-                        </div>
-                    <?php else: ?>
-                        <div style="color:#9fb1c9;">No stats data found in metadata.</div>
-                    <?php endif; ?>
-                </div>
-            </details>
-        </div>
-
-        <?php
-        // Read inventory from metadata
-        $metadataInventory = [];
-        $inventoryUpdated = null;
-        try {
-            $metaRaw = '';
-            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
-                $metaRaw = (string)$editItem['metadata'];
-            }
-            if ($metaRaw !== '') {
-                $metaObj = json_decode($metaRaw, true);
-                if (is_array($metaObj) && isset($metaObj['inventory']) && is_array($metaObj['inventory'])) {
-                    $metadataInventory = $metaObj['inventory'];
-                }
-                if (isset($metaObj['inventory_updated'])) {
-                    $inventoryUpdated = $metaObj['inventory_updated'];
-                }
-            }
-        } catch (Throwable $e) { $metadataInventory = []; }
-        ?>
-        <div class="form-item span-2">
-            <details class="metadata-inventory-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
-                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">
-                    Inventory (Live)
-                    <?php if ($inventoryUpdated): ?>
-                        <span style="color:#999; font-weight:400; font-size:12px;">
-                            Last updated: <?= date('Y-m-d H:i:s', $inventoryUpdated) ?>
-                        </span>
-                    <?php endif; ?>
-                </summary>
-                <small class="hint">NPC inventory updated in real-time as items are added/removed.</small>
-                <div style="margin-top:8px; color:#cfd9ea;">
-                    <?php if (!empty($metadataInventory) && is_array($metadataInventory)): ?>
-                        <div style="max-height:400px; overflow-y:auto;">
-                            <table style="width:100%; border-collapse:collapse;">
-                                <thead>
-                                    <tr style="border-bottom:2px solid #4a4a4a; color:rgb(242, 124, 17);">
-                                        <th style="text-align:left; padding:8px;">Item</th>
-                                        <th style="text-align:right; padding:8px; width:100px;">Count</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php 
-                                    // Sort by item name
-                                    usort($metadataInventory, function($a, $b) {
-                                        return strcmp($a['name'] ?? '', $b['name'] ?? '');
-                                    });
-                                    
-                                    foreach ($metadataInventory as $item): 
-                                        $itemName = isset($item['name']) ? htmlspecialchars($item['name']) : 'Unknown';
-                                        $itemCount = isset($item['count']) ? intval($item['count']) : 0;
-                                    ?>
-                                        <tr style="border-bottom:1px solid #3a3a3a;">
-                                            <td style="padding:6px 8px; color:#cfd9ea;"><?= $itemName ?></td>
-                                            <td style="padding:6px 8px; text-align:right; color:#9fb1c9; font-weight:600;">×<?= $itemCount ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                            <div style="margin-top:12px; padding:8px; background:#1a1a1a; border-radius:6px; border:1px solid #4a4a4a;">
-                                <strong style="color:rgb(242, 124, 17);">Total Items:</strong> 
-                                <span style="color:#cfd9ea;"><?= count($metadataInventory) ?> unique items</span>
-                            </div>
-                        </div>
-                    <?php else: ?>
-                        <div style="color:#9fb1c9;">No inventory data found in metadata.</div>
-                    <?php endif; ?>
-                </div>
-            </details>
-        </div>
+        
 
         <div class="form-item">
             <label for="speechstyle">Speech Style</label>
@@ -1211,6 +986,189 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Read-only view from Extended Data → middle_term_memory (latest).</small>
         </div>
 
+        <?php
+        // REINSERT Skills, Equipment, Stats, Inventory sections here (below Middle Term Memory)
+        // Read metadata once
+        $metaRaw = '';
+        $metaObj = [];
+        try {
+            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
+                $metaRaw = (string)$editItem['metadata'];
+                if ($metaRaw !== '') { $metaObj = json_decode($metaRaw, true) ?: []; }
+            }
+        } catch (Throwable $e) { $metaObj = []; }
+        // Skills
+        $metadataSkills = (isset($metaObj['skills']) && is_array($metaObj['skills'])) ? $metaObj['skills'] : [];
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-skills-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">Skills</summary>
+                <small class="hint">These will also be used for Skill context.</small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataSkills)): ?>
+                        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px 12px;">
+                            <?php foreach ($metadataSkills as $sName => $sVal): $label = ucfirst((string)$sName); $disp = (is_numeric($sVal) ? (string)intval($sVal) : ((is_string($sVal) && trim($sVal)!=='') ? htmlspecialchars($sVal) : '—')); ?>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <div style="color:rgb(242, 124, 17); min-width:140px;"><?= htmlspecialchars($label) ?></div>
+                                    <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px; min-width:40px;"><?= $disp ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No in-game skills found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
+        <?php
+        // Equipment
+        $metadataEquipment = (isset($metaObj['equipment']) && is_array($metaObj['equipment'])) ? $metaObj['equipment'] : [];
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-equipment-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">Current Equipment</summary>
+                <small class="hint">Equipment NPC had when first added to AI system.</small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataEquipment)): ?>
+                        <?php 
+                        $equipmentSlots = [
+                            'helmet' => '🪖 Helmet',
+                            'armor' => '🛡️ Armor',
+                            'boots' => '👢 Boots',
+                            'gloves' => '🧤 Gloves',
+                            'amulet' => '📿 Amulet',
+                            'ring' => '💍 Ring',
+                            'left_hand' => '🤚 Left Hand',
+                            'right_hand' => '👉 Right Hand'
+                        ];
+                        ?>
+                        <div style="display:grid; grid-template-columns: 160px 1fr; gap:8px;">
+                            <?php foreach ($equipmentSlots as $slot => $label): 
+                                $item = isset($metadataEquipment[$slot]) ? trim((string)$metadataEquipment[$slot]) : '';
+                                $display = ($item !== '') ? htmlspecialchars($item) : '<span style="color:#666">None</span>';
+                            ?>
+                                <div style="color:rgb(242, 124, 17); font-weight:600;"><?= $label ?></div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px;"><?= $display ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No equipment data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
+        <?php
+        // Stats
+        $metadataStats = (isset($metaObj['stats']) && is_array($metaObj['stats'])) ? $metaObj['stats'] : [];
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-stats-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">Character Stats</summary>
+                <small class="hint">NPC stats when first added to AI system.</small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataStats)): ?>
+                        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 24px;">
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:rgb(242, 124, 17); min-width:100px; font-weight:700;">Level</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; font-weight:700; background:#1a1a1a; font-size:16px;">
+                                    <?= isset($metadataStats['level']) ? intval($metadataStats['level']) : '—' ?>
+                                </div>
+                            </div>
+                            <div></div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#e74c3c; min-width:100px;">❤️ Health</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
+                                    <?php 
+                                    $health = isset($metadataStats['health']) ? floatval($metadataStats['health']) : 0;
+                                    $healthMax = isset($metadataStats['health_max']) ? floatval($metadataStats['health_max']) : 0;
+                                    $healthPercent = ($healthMax > 0) ? round(($health / $healthMax) * 100) : 0;
+                                    ?>
+                                    <?= intval($health) ?> / <?= intval($healthMax) ?> <span style="color:#999;">(<?= $healthPercent ?>%)</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#3498db; min-width:100px;">💧 Magicka</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
+                                    <?php 
+                                    $magicka = isset($metadataStats['magicka']) ? floatval($metadataStats['magicka']) : 0;
+                                    $magickaMax = isset($metadataStats['magicka_max']) ? floatval($metadataStats['magicka_max']) : 0;
+                                    $magickaPercent = ($magickaMax > 0) ? round(($magicka / $magickaMax) * 100) : 0;
+                                    ?>
+                                    <?= intval($magicka) ?> / <?= intval($magickaMax) ?> <span style="color:#999;">(<?= $magickaPercent ?>%)</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#2ecc71; min-width:100px;">⚡ Stamina</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
+                                    <?php 
+                                    $stamina = isset($metadataStats['stamina']) ? floatval($metadataStats['stamina']) : 0;
+                                    $staminaMax = isset($metadataStats['stamina_max']) ? floatval($metadataStats['stamina_max']) : 0;
+                                    $staminaPercent = ($staminaMax > 0) ? round(($stamina / $staminaMax) * 100) : 0;
+                                    ?>
+                                    <?= intval($stamina) ?> / <?= intval($staminaMax) ?> <span style="color:#999;">(<?= $staminaPercent ?>%)</span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No stats data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
+        <?php
+        // Inventory
+        $metadataInventory = (isset($metaObj['inventory']) && is_array($metaObj['inventory'])) ? $metaObj['inventory'] : [];
+        $inventoryUpdated = isset($metaObj['inventory_updated']) ? $metaObj['inventory_updated'] : null;
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-inventory-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">
+                    Inventory
+                    <?php if ($inventoryUpdated): ?>
+                        <span style="color:#999; font-weight:400; font-size:12px;">
+                            Last updated: <?= date('Y-m-d H:i:s', $inventoryUpdated) ?>
+                        </span>
+                    <?php endif; ?>
+                </summary>
+                <small class="hint">NPC inventory updated in real-time as items are added/removed.</small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataInventory)): ?>
+                        <div style="max-height:400px; overflow-y:auto;">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #4a4a4a; color:rgb(242, 124, 17);">
+                                        <th style="text-align:left; padding:8px;">Item</th>
+                                        <th style="text-align:right; padding:8px; width:100px;">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    usort($metadataInventory, function($a, $b){ return strcmp($a['name']??'', $b['name']??''); });
+                                    foreach ($metadataInventory as $item): 
+                                        $itemName = isset($item['name']) ? htmlspecialchars($item['name']) : 'Unknown';
+                                        $itemCount = isset($item['count']) ? intval($item['count']) : 0;
+                                    ?>
+                                        <tr style="border-bottom:1px solid #3a3a3a;">
+                                            <td style="padding:6px 8px; color:#cfd9ea;"><?= $itemName ?></td>
+                                            <td style="padding:6px 8px; text-align:right; color:#9fb1c9; font-weight:600;">×<?= $itemCount ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <div style="margin-top:12px; padding:8px; background:#1a1a1a; border-radius:6px; border:1px solid #4a4a4a;">
+                                <strong style="color:rgb(242, 124, 17);">Total Items:</strong> 
+                                <span style="color:#cfd9ea;"><?= count($metadataInventory) ?> unique items</span>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No inventory data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
 
         <div class="form-item span-2">
             <label for="metadata">Metadata (JSON)</label>
@@ -1442,7 +1400,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; $metaTmp = []; if (!empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $metaTmp = $tmp; } } $portraitRel = (string)($metaTmp['portrait'] ?? ''); $extTmp = []; if (!empty($row['extended_data'])) { $tmp2 = json_decode((string)$row['extended_data'], true); if (is_array($tmp2)) { $extTmp = $tmp2; } } $mtmEnabled = !empty($extTmp['middle_term_enabled']); $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row['refid'] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title">
-            <div class="npc-title-left"><span class="npc-name"><?= htmlspecialchars($row["npc_name"]) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?></div>
+            <div class="npc-title-left"><?php 
+                $levelDisp2 = '';
+                if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
+                    $levelDisp2 = ' ('.intval($metaTmp['stats']['level']).')';
+                }
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?></div>
             <div class="npc-title-actions">
                 <?php if ($tagsDisp !== ''): ?>
                 <span class="npc-tags-label">Tags:</span>
