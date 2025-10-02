@@ -198,17 +198,39 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .modal-content {
         background-color: #2a2a2a;
-        margin: 5% auto;
+        margin: 3% auto;
         padding: 20px;
         border: 1px solid #444;
-        width: 80%;
-        max-width: 1200px;
-        max-height: 80vh;
+        width: 90%;
+        max-width: 1600px;
+        max-height: 90vh;
         overflow-y: auto;
-        border-radius: 5px;
+        border-radius: 8px;
         color: #fff;
         position: relative;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .view-contents-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+        margin: 2px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .view-contents-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
     }
 
     .close {
@@ -230,9 +252,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     #modalText {
         white-space: pre-wrap;
         word-wrap: break-word;
-        line-height: 1.6;
-        padding: 10px 0;
-        font-size: 12px;
+        line-height: 1.8;
+        padding: 20px;
+        font-size: 13px;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        background: #1a1a1a;
+        border-radius: 8px;
+        color: #e0e0e0;
     }
 
     /* Prevent background interaction when modal is open */
@@ -327,7 +353,13 @@ function getTimeColor($time) {
 <!-- Modal HTML -->
 <div id="contentModal" class="modal">
     <div class="modal-content">
-        <span class="close">&times;</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 style="margin: 0; color: rgb(242, 124, 17); font-family: 'MagicCards', sans-serif;">📜 Prompt Viewer</h2>
+            <div>
+                <button id="copyPromptBtn" class="btn-base btn-primary" style="margin-right: 10px; padding: 8px 16px;">📋 Copy</button>
+                <span class="close">&times;</span>
+            </div>
+        </div>
         <div id="modalText"></div>
     </div>
 </div>
@@ -623,8 +655,87 @@ function getTimeColor($time) {
                 $mappedRow = [];
                 foreach ($row as $key => $value) {
                     if ($key === 'prompt') {
-                        $escapedContent = htmlspecialchars($value ?? '', ENT_QUOTES);
-                        $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">🧾</button>';
+                        // Parse and format like context_sent_to_llm with HTML for better display
+                        $formattedPrompt = '';
+                        $rawPrompt = $value ?? '';
+                        
+                        // Clean HTML artifacts first (fixes <br /> spam) and decode entities
+                        $rawPromptHtmlClean = str_replace(["<br />","<br>","<br/>"] , "\n", (string)$rawPrompt);
+                        $rawPromptDecoded = html_entity_decode($rawPromptHtmlClean, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                        
+                        // Try to decode JSON from cleaned/decoded content
+                        $decoded = json_decode($rawPromptDecoded, true);
+                        if (is_array($decoded)) {
+                            // Extract model info
+                            $model = isset($decoded['full']['model']) ? $decoded['full']['model'] : 'unknown';
+                            
+                            // Start with HTML formatted array
+                            $formattedPrompt = '<div style="font-family: \'Consolas\', monospace; line-height: 1.6;">';
+                            $formattedPrompt .= '<div style="color: #569cd6;">array</div> (';
+                            $formattedPrompt .= '<div style="padding-left: 20px;">';
+                            $formattedPrompt .= '<div style="color: #9cdcfe;">\'model\'</div> <span style="color: #d4d4d4;">=></span> <span style="color: #ce9178;">\''. htmlspecialchars($model) .'\'</span>,</div>';
+                            $formattedPrompt .= '<div style="padding-left: 20px;"><div style="color: #9cdcfe;">\'messages\'</div> <span style="color: #d4d4d4;">=></span></div>';
+                            $formattedPrompt .= '<div style="padding-left: 20px;"><div style="color: #569cd6;">array</div> (</div>';
+                            
+                            // Get messages
+                            $messages = [];
+                            if (isset($decoded['full']) && is_array($decoded['full'])) {
+                                if (isset($decoded['full']['messages']) && is_array($decoded['full']['messages'])) {
+                                    $messages = $decoded['full']['messages'];
+                                }
+                            } else if (isset($decoded['messages']) && is_array($decoded['messages'])) {
+                                $messages = $decoded['messages'];
+                            }
+                            
+                            // Format each message with collapsible sections
+                            foreach ($messages as $msgIndex => $msg) {
+                                if (isset($msg['role']) && isset($msg['content'])) {
+                                    $role = $msg['role'];
+                                    $content = $msg['content'];
+                                    $escapedContent = htmlspecialchars($content);
+                                    $contentPreview = mb_substr($content, 0, 100);
+                                    $escapedPreview = htmlspecialchars($contentPreview);
+                                    $isTruncated = strlen($content) > 100;
+                                    
+                                    $roleColor = $role === 'system' ? '#4ec9b0' : ($role === 'user' ? '#dcdcaa' : '#c586c0');
+                                    
+                                    $formattedPrompt .= '<div style="padding-left: 40px; margin: 10px 0; border-left: 3px solid ' . $roleColor . '; padding-left: 15px;">';
+                                    $formattedPrompt .= '<div style="color: #b5cea8;">' . $msgIndex . '</div> <span style="color: #d4d4d4;">=></span>';
+                                    $formattedPrompt .= '<div style="padding-left: 20px;"><div style="color: #569cd6;">array</div> (</div>';
+                                    $formattedPrompt .= '<div style="padding-left: 40px;"><span style="color: #9cdcfe;">\'role\'</span> <span style="color: #d4d4d4;">=></span> <span style="color: #ce9178; font-weight: bold;">\'' . htmlspecialchars($role) . '\'</span>,</div>';
+                                    $formattedPrompt .= '<div style="padding-left: 40px;">';
+                                    $formattedPrompt .= '<span style="color: #9cdcfe;">\'content\'</span> <span style="color: #d4d4d4;">=></span> ';
+                                    
+                                    if ($isTruncated) {
+                                        $uniqueId = 'msg_' . $msgIndex . '_' . md5($content);
+                                        // Expanded by default
+                                        $formattedPrompt .= '<button onclick="toggleContent(\'' . $uniqueId . '\')" style="background: #007acc; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-left: 5px;">▲ Collapse</button>';
+                                        $formattedPrompt .= '<div id="' . $uniqueId . '_preview" style="display:none; color: #ce9178; white-space: pre-wrap; margin-top: 5px;">\'' . $escapedPreview . '...\'</div>';
+                                        $formattedPrompt .= '<div id="' . $uniqueId . '_full" style="display: block; color: #ce9178; white-space: pre-wrap; margin-top: 5px; max-height: 400px; overflow-y: auto; background: #1e1e1e; padding: 10px; border-radius: 5px;">\'' . $escapedContent . '\'</div>';
+                                    } else {
+                                        $formattedPrompt .= '<div style="color: #ce9178; white-space: pre-wrap; margin-top: 5px;">\'' . $escapedContent . '\'</div>';
+                                    }
+                                    
+                                    $formattedPrompt .= '</div>';
+                                    $formattedPrompt .= '<div style="padding-left: 20px;">),</div>';
+                                    $formattedPrompt .= '</div>';
+                                }
+                            }
+                            
+                            $formattedPrompt .= '<div style="padding-left: 20px;">),</div>';
+                            $formattedPrompt .= '<div>)</div>';
+                            $formattedPrompt .= '</div>';
+                        }
+                        
+                        // Fallback to cleaned raw if parsing failed
+                        if (empty($formattedPrompt)) {
+                            $formattedPrompt = '<pre style="white-space: pre-wrap; word-wrap: break-word;">' . htmlspecialchars($rawPromptDecoded, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
+                        }
+                        
+                        // Store formatted prompt in a hidden div and reference it by ID
+                        $promptId = 'prompt_' . $row['ROWID'];
+                        $hiddenPrompt = '<div id="' . $promptId . '" style="display:none;">' . $formattedPrompt . '</div>';
+                        $mappedRow[$columnHeaders[$key] ?? $key] = $hiddenPrompt . '<button class="view-contents-btn" data-prompt-id="' . $promptId . '">🧾 View Prompt</button>';
                     } else if ($key === 'response') {
                         $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value ?? '')) . '</div>';
                         // Insert Oghma Topic column immediately after AI Response
@@ -997,6 +1108,7 @@ document.addEventListener("DOMContentLoaded", function() {
     var modal = document.getElementById("contentModal");
     var modalText = document.getElementById("modalText");
     var span = document.getElementsByClassName("close")[0];
+    var copyBtn = document.getElementById("copyPromptBtn");
 
     // When the user clicks on <span> (x), close the modal
     span.onclick = function() {
@@ -1012,15 +1124,85 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     };
 
+    // Copy button functionality
+    copyBtn.onclick = function() {
+        // Get the text content (not HTML)
+        var textToCopy = modalText.innerText || modalText.textContent;
+        
+        // Use modern clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(textToCopy).then(function() {
+                // Show success feedback
+                var originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '✅ Copied!';
+                copyBtn.style.background = '#28a745';
+                setTimeout(function() {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.style.background = '';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy to clipboard');
+            });
+        } else {
+            // Fallback for older browsers
+            var textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                var originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '✅ Copied!';
+                copyBtn.style.background = '#28a745';
+                setTimeout(function() {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.style.background = '';
+                }, 2000);
+            } catch (err) {
+                console.error('Fallback copy failed: ', err);
+                alert('Failed to copy to clipboard');
+            }
+            document.body.removeChild(textArea);
+        }
+    };
+
     // Add click handlers to all cell contents
     document.querySelectorAll(".view-contents-btn").forEach(function(element) {
         element.addEventListener("click", function() {
-            modalText.innerHTML = this.getAttribute("data-full-content");
+            var promptId = this.getAttribute("data-prompt-id");
+            var promptDiv = document.getElementById(promptId);
+            if (promptDiv) {
+                modalText.innerHTML = promptDiv.innerHTML;
+            } else {
+                // Fallback to data-full-content for backwards compatibility
+                modalText.innerHTML = this.getAttribute("data-full-content") || "Content not found";
+            }
             modal.style.display = "block";
             document.body.classList.add("modal-open");
         });
     });
 });
+
+// Toggle content expand/collapse
+function toggleContent(id) {
+    var preview = document.getElementById(id + '_preview');
+    var full = document.getElementById(id + '_full');
+    var btn = event.target;
+    
+    if (full.style.display === 'none') {
+        preview.style.display = 'none';
+        full.style.display = 'block';
+        btn.innerHTML = '▲ Collapse';
+    } else {
+        preview.style.display = 'block';
+        full.style.display = 'none';
+        btn.innerHTML = '▼ Expand';
+    }
+}
 
 function switchTab(tabName) {
     // Hide all tab contents
