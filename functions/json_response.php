@@ -27,27 +27,22 @@
     // specify the available actions which will be made available in the context
     Function setActions() {
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            //inject the prompt here with the actions (moved from minime block in main)
+            // inject the prompt here with the actions (original flat format)
             $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
-                //$data["tools"][]=["type"=>"function","function"=>$function];
-                if (!$function)
+                if (!$function) {
                     continue;
+                }
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"] || $function["name"]==$GLOBALS["F_NAMES"]["AttackHunt"]) {
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $GLOBALS["COMMAND_PROMPT"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
-                }/* else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                    $GLOBALS["COMMAND_PROMPT"].="(run|fastwalk|jog|walk)";
-                }*/  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
+                } else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
-                    
                 } else {
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
             }
-
             $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk";
             $GLOBALS["FUNC_LIST"][]="Talk";
             shuffle($GLOBALS["FUNC_LIST"]);

@@ -104,7 +104,8 @@ function getTimePrompt() {
 // === Main Flow ===
 
 // add prompt to help the AI become more aware of time (if enabled and not talking to the narrator)
-if (isset($GLOBALS["TIME_AWARENESS"]) && $GLOBALS["TIME_AWARENESS"]) {
+// FORCED DISABLED: ensure TIME_AWARENESS never triggers
+if (false && isset($GLOBALS["TIME_AWARENESS"]) && $GLOBALS["TIME_AWARENESS"]) {
     $additionalPrompt = getTimePrompt();
 	if (strlen($additionalPrompt) > 0) {
 		$GLOBALS["request"]="{$additionalPrompt} {$GLOBALS['request']}";

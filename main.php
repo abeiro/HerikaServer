@@ -154,7 +154,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace"];
+    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -896,6 +896,15 @@ if (in_array($gameRequest[0],["bored"])) {
     }
 }
 
+// Combat bark event - log as infoaction
+if (in_array($gameRequest[0],["combatbark"])) {
+    $localGameRequest=$gameRequest;
+    $localGameRequest[0]="infoaction";
+    $localGameRequest[3].=" ({$GLOBALS["HERIKA_NAME"]} shouts during combat)";
+    logEvent($localGameRequest);
+    $GLOBALS["ADD_PLAYER_BIOS"]=false;
+}
+
 
 // Only allow functions when explicit request
 if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","welcome"])) {
@@ -1117,7 +1126,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
     if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator")) {
         $task=DataGetCurrentTask();
         if (empty($task)) {
-            $task="\n#QUESTS\nNo active quests right now.";
+            $task="\n\n#Active Quests\nNo active quests right now.";
         }
         $GLOBALS["COMMAND_PROMPT"].=$task;
     } else {
