@@ -60,6 +60,49 @@ class TTSConnector {
         $driver = $record["driver"];
         return new $driver();
     }
+
+    public function setOldGlobals($currentTTSData) {
+        if (!$currentTTSData) {
+            return;
+        }
+
+        // Set TTS driver
+        if (isset($currentTTSData["driver"])) {
+            $GLOBALS["TTS_FUNCTION"] = $currentTTSData["driver"];
+        }
+
+        // Decode and apply metadata
+        $metadata = json_decode($currentTTSData['metadata'] ?? '{}', true);
+        if (is_array($metadata)) {
+            // Set TTS-specific configuration
+            $driver = $currentTTSData["driver"];
+            if (!isset($GLOBALS["TTS"][$driver])) {
+                $GLOBALS["TTS"][$driver] = [];
+            }
+
+            foreach ($metadata as $key => $value) {
+                if (!empty($value) || $value === 0 || $value === false) {
+                    // Store in driver-specific TTS config
+                    $GLOBALS["TTS"][$driver][$key] = $value;
+                    
+                    // If language is set, also set LLM_LANG for language-aware responses
+                    if ($key === "language" && isset($GLOBALS["LANG_LLM_XTTS"]) && $GLOBALS["LANG_LLM_XTTS"]) {
+                        $GLOBALS["LLM_LANG"] = $value;
+                        error_log("[CORE] TTS Connector set GLOBALS[LLM_LANG] = {$value}");
+                    }
+                }
+            }
+        }
+
+        // Handle URL and voice_field if present
+        if (isset($currentTTSData["url"])) {
+            $driver = $currentTTSData["driver"];
+            if (!isset($GLOBALS["TTS"][$driver])) {
+                $GLOBALS["TTS"][$driver] = [];
+            }
+            $GLOBALS["TTS"][$driver]["endpoint"] = $currentTTSData["url"];
+        }
+    }
 }
 
 ?>
