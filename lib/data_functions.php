@@ -1546,13 +1546,13 @@ function DataGetCurrentTask()
     $data = "";
     $results = $db->fetchAll("SElECT distinct description as description,gamets FROM currentmission where sess<>'ephemeral' order by gamets desc");
     if (!empty($results)) {
-        $data = "\n#PLANS\n";
+        $data = "\n\n#Current Plans\n";
         $n = 0;
         foreach ($results as $row) {
             if ($n == 0) {
-                $data .= "Current plan: {$row["description"]}.\n";
+                $data .= "  • Current: {$row["description"]}\n";
             } elseif ($n == 1) {
-                $data .= "Previous plan: {$row["description"]}.\n";
+                $data .= "  • Previous: {$row["description"]}\n";
             } else {
                 break;
             }
@@ -1576,9 +1576,14 @@ function DataGetCurrentTask()
 //        return $data;
 //    }
 
-    $data .= "\n#ACTIVE QUESTS\n";
+    $data .= "\n\n#Active Quests\n";
     foreach ($results as $row) {
-        $data .= "* {$row["name"]}/".trim($row["description"])."\n";
+        $questDesc = trim($row["description"]);
+        if (!empty($questDesc)) {
+            $data .= "  • {$row["name"]}: $questDesc\n";
+        } else {
+            $data .= "  • {$row["name"]}\n";
+        }
     }
 
     return $data;
@@ -3899,20 +3904,127 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         'HERIKA_GOALS' => 'Goals'
     ];
     $SKILLS_ADD="";
+    $EQUIPMENT_ADD="";
+    $TARGET_EQUIPMENT_ADD="";
+    
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
     $metaData=$npcMaster->getMetaData($currentNpcData);
+    
     if (isset($metaData["skills"])) {
+        // Convert numeric skills to descriptive levels, grouped by category
+        $skillCategories = [
+            'Combat' => ['archery', 'block', 'onehanded', 'twohanded', 'heavyarmor', 'lightarmor'],
+            'Magic' => ['conjuration', 'destruction', 'illusion', 'restoration', 'alteration', 'enchanting'],
+            'Stealth' => ['sneak', 'pickpocket', 'lockpicking', 'speechcraft'],
+            'Crafting' => ['smithing', 'alchemy']
+        ];
         
-        $SKILLS_ADD="\nRoleplay skills: ".json_encode($metaData["skills"]);
-
+        $formattedSkills = "\n\nSkill Proficiencies:";
+        
+        foreach ($skillCategories as $category => $skillNames) {
+            $categorySkills = [];
+            foreach ($skillNames as $skillName) {
+                if (isset($metaData["skills"][$skillName])) {
+                    $skillValue = $metaData["skills"][$skillName];
+                    $level = '';
+                    if ($skillValue >= 100) {
+                        $level = 'Master';
+                    } elseif ($skillValue >= 75) {
+                        $level = 'Expert';
+                    } elseif ($skillValue >= 50) {
+                        $level = 'Adept';
+                    } elseif ($skillValue >= 25) {
+                        $level = 'Apprentice';
+                    } else {
+                        $level = 'Novice';
+                    }
+                    
+                    // Always show skills, including Novice
+                    $categorySkills[] = ucfirst($skillName) . " (" . $level . ")";
+                }
+            }
+            
+            if (!empty($categorySkills)) {
+                $formattedSkills .= "\n  • {$category}: " . implode(", ", $categorySkills);
+            }
+        }
+        
+        $SKILLS_ADD = $formattedSkills;
     } 
+    
+    // Add NPC's own equipment
+    if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
+        $equipmentParts = [];
+        $slots = [
+            'helmet' => 'Helmet',
+            'armor' => 'Armor', 
+            'boots' => 'Boots',
+            'gloves' => 'Gloves',
+            'amulet' => 'Amulet',
+            'ring' => 'Ring',
+            'left_hand' => 'Left Hand',
+            'right_hand' => 'Right Hand'
+        ];
+        
+        foreach ($slots as $slot => $label) {
+            if (!empty($metaData["equipment"][$slot])) {
+                $equipmentParts[] = "  • {$label}: {$metaData["equipment"][$slot]}";
+            }
+        }
+        
+        if (!empty($equipmentParts)) {
+            $EQUIPMENT_ADD = "\n\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts);
+        }
+    }
+    
+    // Add dialogue target's equipment (if DIALOGUE_TARGET is set)
+    if (isset($GLOBALS["DIALOGUE_TARGET"]) && !empty($GLOBALS["DIALOGUE_TARGET"])) {
+        $targetName = $GLOBALS["DIALOGUE_TARGET"];
+        $targetNpcData = $npcMaster->getByName($targetName);
+        
+        if ($targetNpcData) {
+            $targetMetaData = $npcMaster->getMetaData($targetNpcData);
+            
+            if (isset($targetMetaData["equipment"]) && is_array($targetMetaData["equipment"])) {
+                $targetEquipmentParts = [];
+                $slots = [
+                    'helmet' => 'Helmet',
+                    'armor' => 'Armor',
+                    'boots' => 'Boots', 
+                    'gloves' => 'Gloves',
+                    'amulet' => 'Amulet',
+                    'ring' => 'Ring',
+                    'left_hand' => 'Left Hand',
+                    'right_hand' => 'Right Hand'
+                ];
+                
+                foreach ($slots as $slot => $label) {
+                    if (!empty($targetMetaData["equipment"][$slot])) {
+                        $targetEquipmentParts[] = "  • {$label}: {$targetMetaData["equipment"][$slot]}";
+                    }
+                }
+                
+                if (!empty($targetEquipmentParts)) {
+                    $TARGET_EQUIPMENT_ADD = "\n\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentParts);
+                }
+            }
+        }
+    }
 
     foreach ($herikaFields as $fieldName => $label) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
             $dynamicBio .= "\n\n#$label\n" . trim($FOLLOWER_CONF[$fieldName]);
+            
+            // Add skills right after HERIKA_SKILLS section
             if ($fieldName=="HERIKA_SKILLS") {
                 $dynamicBio.="$SKILLS_ADD";
+            }
+            
+            // Add equipment right after HERIKA_APPEARANCE section
+            if ($fieldName=="HERIKA_APPEARANCE") {
+                $dynamicBio.="$EQUIPMENT_ADD";
+                $dynamicBio.="$TARGET_EQUIPMENT_ADD";
             }
         }
     }

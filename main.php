@@ -1117,7 +1117,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
     if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator")) {
         $task=DataGetCurrentTask();
         if (empty($task)) {
-            $task="\n#QUESTS\nNo active quests right now.";
+            $task="\n\n#Active Quests\nNo active quests right now.";
         }
         $GLOBALS["COMMAND_PROMPT"].=$task;
     } else {
