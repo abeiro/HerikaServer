@@ -1005,6 +1005,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                             'armor' => '🛡️ Armor',
                             'boots' => '👢 Boots',
                             'gloves' => '🧤 Gloves',
+                            'amulet' => '📿 Amulet',
+                            'ring' => '💍 Ring',
                             'left_hand' => '🤚 Left Hand',
                             'right_hand' => '👉 Right Hand'
                         ];
@@ -1095,6 +1097,77 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         </div>
                     <?php else: ?>
                         <div style="color:#9fb1c9;">No stats data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
+        <?php
+        // Read inventory from metadata
+        $metadataInventory = [];
+        $inventoryUpdated = null;
+        try {
+            $metaRaw = '';
+            if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
+                $metaRaw = (string)$editItem['metadata'];
+            }
+            if ($metaRaw !== '') {
+                $metaObj = json_decode($metaRaw, true);
+                if (is_array($metaObj) && isset($metaObj['inventory']) && is_array($metaObj['inventory'])) {
+                    $metadataInventory = $metaObj['inventory'];
+                }
+                if (isset($metaObj['inventory_updated'])) {
+                    $inventoryUpdated = $metaObj['inventory_updated'];
+                }
+            }
+        } catch (Throwable $e) { $metadataInventory = []; }
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-inventory-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">
+                    Inventory (Live)
+                    <?php if ($inventoryUpdated): ?>
+                        <span style="color:#999; font-weight:400; font-size:12px;">
+                            Last updated: <?= date('Y-m-d H:i:s', $inventoryUpdated) ?>
+                        </span>
+                    <?php endif; ?>
+                </summary>
+                <small class="hint">NPC inventory updated in real-time as items are added/removed.</small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataInventory) && is_array($metadataInventory)): ?>
+                        <div style="max-height:400px; overflow-y:auto;">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #4a4a4a; color:rgb(242, 124, 17);">
+                                        <th style="text-align:left; padding:8px;">Item</th>
+                                        <th style="text-align:right; padding:8px; width:100px;">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    // Sort by item name
+                                    usort($metadataInventory, function($a, $b) {
+                                        return strcmp($a['name'] ?? '', $b['name'] ?? '');
+                                    });
+                                    
+                                    foreach ($metadataInventory as $item): 
+                                        $itemName = isset($item['name']) ? htmlspecialchars($item['name']) : 'Unknown';
+                                        $itemCount = isset($item['count']) ? intval($item['count']) : 0;
+                                    ?>
+                                        <tr style="border-bottom:1px solid #3a3a3a;">
+                                            <td style="padding:6px 8px; color:#cfd9ea;"><?= $itemName ?></td>
+                                            <td style="padding:6px 8px; text-align:right; color:#9fb1c9; font-weight:600;">×<?= $itemCount ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <div style="margin-top:12px; padding:8px; background:#1a1a1a; border-radius:6px; border:1px solid #4a4a4a;">
+                                <strong style="color:rgb(242, 124, 17);">Total Items:</strong> 
+                                <span style="color:#cfd9ea;"><?= count($metadataInventory) ?> unique items</span>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No inventory data found in metadata.</div>
                     <?php endif; ?>
                 </div>
             </details>
