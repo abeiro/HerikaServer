@@ -3906,6 +3906,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     $SKILLS_ADD="";
     $EQUIPMENT_ADD="";
     $TARGET_EQUIPMENT_ADD="";
+    $STATS_ADD="";
     
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
@@ -3978,6 +3979,44 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         }
     }
     
+	// Add current condition (qualitative HP/MP/SP based on percent, with richer descriptors)
+	if (isset($metaData["stats"]) && is_array($metaData["stats"])) {
+		$s = $metaData["stats"];
+		$describe = function(string $kind, float $cur, float $max): string {
+			if ($max <= 0) return "Unknown";
+			$pct = ($cur < 0 ? 0.0 : ($cur > $max ? $max : $cur)) / $max * 100.0;
+			if ($kind === 'health') {
+				if ($pct >= 75.0) return "Near full health";           // 100–75
+				if ($pct >= 50.0) return "Wounded";                    // 74–50
+				if ($pct >= 25.0) return "Badly wounded";              // 50–25
+				return "On the brink of collapse";                      // 24–0
+			}
+			if ($kind === 'magicka') {
+				if ($pct >= 75.0) return "Magicka reserves strong";
+				if ($pct >= 50.0) return "Magicka reserves middling";
+				if ($pct >= 25.0) return "Magicka reserves low";
+				return "Magicka nearly drained";
+			}
+			// stamina
+			if ($pct >= 75.0) return "Well‑rested";
+			if ($pct >= 50.0) return "Winded";
+			if ($pct >= 25.0) return "Exhausted";
+			return "Spent";
+		};
+		$h = $describe('health', (float)($s['health'] ?? 0), (float)($s['health_max'] ?? 0));
+		$m = $describe('magicka', (float)($s['magicka'] ?? 0), (float)($s['magicka_max'] ?? 0));
+		$st = $describe('stamina', (float)($s['stamina'] ?? 0), (float)($s['stamina_max'] ?? 0));
+		if ($h !== 'Unknown' || $m !== 'Unknown' || $st !== 'Unknown') {
+			$lines = [];
+			if ($h !== 'Unknown') { $lines[] = "  • Health: {$h}"; }
+			if ($m !== 'Unknown') { $lines[] = "  • Magicka: {$m}"; }
+			if ($st !== 'Unknown') { $lines[] = "  • Stamina: {$st}"; }
+			if (!empty($lines)) {
+				$STATS_ADD = "\n\n#Current Condition\n" . implode("\n", $lines);
+			}
+		}
+	}
+    
     // Add dialogue target's equipment (if DIALOGUE_TARGET is set)
     if (isset($GLOBALS["DIALOGUE_TARGET"]) && !empty($GLOBALS["DIALOGUE_TARGET"])) {
         $targetName = $GLOBALS["DIALOGUE_TARGET"];
@@ -4025,6 +4064,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             if ($fieldName=="HERIKA_APPEARANCE") {
                 $dynamicBio.="$EQUIPMENT_ADD";
                 $dynamicBio.="$TARGET_EQUIPMENT_ADD";
+                $dynamicBio.="$STATS_ADD";
             }
         }
     }
