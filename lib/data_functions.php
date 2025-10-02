@@ -2367,7 +2367,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
             $pattern = '/\(talking to [^()]+\)/i';
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
-            $keywords=($TEST_TEXT);
+            $keywords=strtr($TEST_TEXT,["."=>" ",","=>" "]);
             $kw=[];
             
             //print_r($keywords);
