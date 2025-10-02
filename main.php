@@ -154,7 +154,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace"];
+    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -894,6 +894,15 @@ if (in_array($gameRequest[0],["bored"])) {
         terminate();
 
     }
+}
+
+// Combat bark event - log as infoaction
+if (in_array($gameRequest[0],["combatbark"])) {
+    $localGameRequest=$gameRequest;
+    $localGameRequest[0]="infoaction";
+    $localGameRequest[3].=" ({$GLOBALS["HERIKA_NAME"]} shouts during combat)";
+    logEvent($localGameRequest);
+    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 }
 
 
