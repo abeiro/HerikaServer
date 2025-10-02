@@ -866,6 +866,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
             if (!empty($rule["profile"])) {
                 $currentNpcData["profile_id"] = (int)$rule["profile"];
+                error_log("[ADDNPC IMPORTING RULES] Matching rule for $npcName: Profile {$rule["profile"]}");
+
             }
 
 
