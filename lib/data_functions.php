@@ -3693,6 +3693,7 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
     $npcMaster = new NpcMaster();
     $currentNpcData = $npcMaster->getByName($npcname);
 
+    $EMPTY_PROFILE=false;
 
     if (!$currentNpcData || $overwrite ) {
         error_log("Creating/overwriting:$overwrite  profile for $npcname");
@@ -3800,6 +3801,10 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                     "npc_name" => $npcname
                 ]
             );
+            $EMPTY_PROFILE=true;
+            $newData = $npcMaster->GetByName($npcname);
+            
+
         }
 
         // Voice
@@ -3869,6 +3874,10 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         $currentData['extended_data'] = json_encode(["chim_core_migrated" => 2]);
         $currentData['profile_id'] = 1; // Default profile
         $currentData['md5'] = md5($currentData["npc_name"]);
+
+        if ($EMPTY_PROFILE) {
+            error_log("[CREATEPROFILE] Created initial empty profile");
+        }
 
         $npcMaster->updateByArray($currentData);
     }

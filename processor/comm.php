@@ -830,6 +830,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $meta["stats"]["stamina"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
         $meta["stats"]["stamina_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
 
+        $meta["mods"]=isset($splitNameBase[38]) ?explode("#",$splitNameBase[38]):null;
+
         $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
 
         $npcMaster->updateByArray($currentNpcData);

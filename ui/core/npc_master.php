@@ -424,7 +424,7 @@ if ($profileIdFilter !== ''){
 
 // Default: favorites first, then alphabetical by name
 // Ensure The Narrator is always first, then favorites, then alpha
-$order = "order by (case when npc_name='The Narrator' then 0 else 1 end) asc, coalesce(npc_favorite,0) desc, lower(npc_name) ".$alpha.", id asc";
+$order = "order by (case when npc_name='The Narrator' then 0 else 1 end) asc, coalesce(npc_favorite,0) desc, coalesce(gamets_last_updated,0) desc,lower(npc_name) ".$alpha.", id asc";
 
 // Count with filters
 $rowCountRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master where {$where}");
