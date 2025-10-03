@@ -175,13 +175,12 @@ class CoreProfile {
 
     public function setOldGlobals($currentProfileData) {
 
-        // Decode metadata and extended_data if available
-        
+        // Load TTS connector configuration
         $ttsConMgr=new TTSConnector();
         $ttsCon=$ttsConMgr->getById($currentProfileData["tts_connector_id"]);
+        $ttsConMgr->setOldGlobals($ttsCon);
 
-        $GLOBALS["TTS_FUNCTION"]=$ttsCon["driver"];
-
+        // Decode and apply profile metadata
         $metadata = json_decode($currentProfileData['metadata'] ?? '{}', true);
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
