@@ -96,6 +96,8 @@ if (!$adminConn) {
         $output = shell_exec($cmd);
         if (file_exists($tmpFile) && filesize($tmpFile) > 0) {
             $size = filesize($tmpFile);
+
+            // Instead of reading whole file, read it by chunks
             $data = file_get_contents($tmpFile);
             if ($data !== false) {
                 pg_query($adminConn, 'BEGIN');

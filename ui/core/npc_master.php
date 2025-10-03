@@ -1173,13 +1173,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div class="form-item span-2">
             <label for="metadata">Metadata (JSON)</label>
             <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
-            <small class="hint">Advanced: large or structured data blocks consumed by integrations.</small>
-            <div id="metadata"></div>
-        </div>
-
-        <div class="form-item span-2">
-            <label for="metadata">Metadata (JSON)</label>
-            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
             <small class="hint">General NPC metadata used by systems.</small>
             <div id="metadata"></div>
         </div>
@@ -1223,11 +1216,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 } catch(_e){}
 
                 if (form.metadata!=undefined) {
-                  const content2 = jsonEditor.get()
+                  const content = jsonEditor.get()
 
                   try {
-                    form.metadata.value=JSON.stringify(content2.json, null, 0)
-                    console.log("JSON editor values copied to form")
+                    form.metadata.value=JSON.stringify(content.json, null, 0)
+                    console.log("JSON editor values copied to form:",content.json)
                   } catch (idontcare) {}
         
                   // allow empty metadata without confirmation

@@ -114,6 +114,10 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         closedir($handle);
     }
     
+    /* Restore NPCs state */
+      
+    $npcMaster=new NpcMaster();
+    $npcMaster->restoreNPC($gameRequest[2]);
     Logger::trace("POST INIT PROCESSING ".(time()-$now));
     $MUST_END=true;
 
