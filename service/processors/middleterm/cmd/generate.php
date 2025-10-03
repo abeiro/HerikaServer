@@ -32,7 +32,7 @@ $contextDataFull=$GLOBALS["db"]->fetchAll("SELECT summary as content,gamets_trun
 // $task=DataGetCurrentTask();
 
 if (sizeof($contextDataFull)==0 ||sizeof($contextDataFull)<10 ) {
-    error_log("No memories to summarice\n");
+    error_log("No memories to summarize\n");
     return;
 }
 
@@ -81,7 +81,7 @@ if (!empty($previous))
 
 $prompt[] = ['role' => 'user', 'content' => "# Context History\n$history\n$task"];
 $prompt[] = ['role' => 'user', 'content' => $request];
-$prompt[] = ['role' => 'user', 'assistant' => "### Notable Events in Chronological Order"];
+$prompt[] = ['role' => 'assistant', 'content' => "### Notable Events in Chronological Order"];
 
 $contextData = array_merge($head, $prompt);
 
