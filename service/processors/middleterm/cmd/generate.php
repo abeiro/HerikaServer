@@ -1,5 +1,6 @@
 <?php 
 
+$startTime = microtime(true);
 
 $selectedNpc=$GLOBALS["SELECTED_NPC"];
 
