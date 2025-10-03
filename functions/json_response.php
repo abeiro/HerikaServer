@@ -54,6 +54,16 @@
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
     
+        // Auto-detect language from TTS config if LLM_LANG not set
+        if (!isset($GLOBALS["LLM_LANG"]) && isset($GLOBALS["LANG_LLM_XTTS"]) && $GLOBALS["LANG_LLM_XTTS"]) {
+            if (isset($GLOBALS["TTS"]["XTTSFASTAPI"]["language"])) {
+                $GLOBALS["LLM_LANG"] = $GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
+            } elseif (isset($GLOBALS["TTS"]["MELOTTS"]["language"])) {
+                $ttsLang = strtolower($GLOBALS["TTS"]["MELOTTS"]["language"]);
+                $GLOBALS["LLM_LANG"] = $ttsLang;
+            }
+        }
+    
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
@@ -63,7 +73,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es",
+                    "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -83,7 +93,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es",
+                    "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>"lines of dialogue"
                 ];
             } else {
