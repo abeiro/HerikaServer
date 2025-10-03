@@ -8,8 +8,8 @@
 
         $startTime = microtime(true);
 
-        error_reporting(E_ALL);
-        ini_set('display_errors', 1);
+        error_reporting(0);
+        ini_set('display_errors', 0);
         
 
         $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR. "..".DIRECTORY_SEPARATOR;
@@ -39,7 +39,7 @@
         $url = "https://api.openai.com/v1/images/edits";
 
         $headers = [
-            "Authorization: Bearer " . $api_key,
+            "Authorization: Bearer " . $api_keys,
         ];
 
     // Read file contents into memory
@@ -63,14 +63,15 @@
         $response = curl_exec($ch);
 
         if (curl_errno($ch)) {
-            die("cURL error: " . curl_error($ch));
+            die(json_encode(["status"=>"error","message"=>print_r(curl_error($ch),true)]));
+            
         }
 
     // Decode JSON response
         $result = json_decode($response, true);
 
         if (isset($result["error"])) {
-            die(json_encode(["status"=>"error"]));
+            die(json_encode(["status"=>"error","message"=>print_r($result,true)]));
         }
     // Save image
         $b64       = $result["data"][0]["b64_json"];
