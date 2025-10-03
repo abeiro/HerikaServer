@@ -42,6 +42,12 @@ class ImportRules {
             $filtered['action'] = json_encode($filtered['action'], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         }
 
+        if (isset($filtered["enabled"]) && $filtered["enabled"]) {
+            $filtered["enabled"]="TRUE";
+        } else
+            $filtered["enabled"]="FALSE";
+
+
         // Insert base fields
         $this->db->insert($this->table, $filtered);
 
@@ -118,6 +124,11 @@ class ImportRules {
                 $filtered['action'] = null;
             }
         }
+
+        if (isset($filtered["enabled"]) && $filtered["enabled"]) {
+            $filtered["enabled"]="TRUE";
+        } else
+            $filtered["enabled"]="FALSE";
 
         $where = "id = $id";
         $this->db->updateRow($this->table, $filtered, $where);
