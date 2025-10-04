@@ -6,6 +6,7 @@ require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "playthrough_storage.php");
 
 // Determine web root (match other core pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -49,7 +50,7 @@ if (!$adminConn) {
     $initSQL = [];
     $initSQL[] = "CREATE SCHEMA IF NOT EXISTS chim_meta";
     $initSQL[] = "CREATE TABLE IF NOT EXISTS chim_meta.playthrough_profiles (\n        id SERIAL PRIMARY KEY,\n        name TEXT NOT NULL UNIQUE,\n        created_at TIMESTAMP NOT NULL DEFAULT NOW(),\n        size_bytes BIGINT NOT NULL,\n        storage_format TEXT NOT NULL DEFAULT 'plain_sql',\n        notes TEXT,\n        is_active BOOLEAN NOT NULL DEFAULT FALSE\n    )";
-    $initSQL[] = "CREATE TABLE IF NOT EXISTS chim_meta.playthrough_blobs (\n        profile_id INT PRIMARY KEY REFERENCES chim_meta.playthrough_profiles(id) ON DELETE CASCADE,\n        dump_data TEXT NOT NULL\n    )";
+    $initSQL[] = "CREATE TABLE IF NOT EXISTS chim_meta.playthrough_blobs (\n        profile_id INT PRIMARY KEY REFERENCES chim_meta.playthrough_profiles(id) ON DELETE CASCADE,\n        dump_data TEXT\n    )";
     // Metadata columns (idempotent)
     $initSQL[] = "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS player_name TEXT";
     $initSQL[] = "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS game TEXT";
@@ -95,24 +96,18 @@ if (!$adminConn) {
         $cmd = "PGPASSWORD=".escapeshellarg($password)." pg_dump -h ".escapeshellarg($host)." -p ".escapeshellarg($port)." -U ".escapeshellarg($username)." -d ".escapeshellarg($dbname)." -N chim_meta > ".escapeshellarg($tmpFile)." 2>&1";
         $output = shell_exec($cmd);
         if (file_exists($tmpFile) && filesize($tmpFile) > 0) {
-            $size = filesize($tmpFile);
-
-            // Instead of reading whole file, read it by chunks
-            $data = file_get_contents($tmpFile);
-            if ($data !== false) {
-                pg_query($adminConn, 'BEGIN');
-                $res1 = pg_query_params($adminConn,
-                    'INSERT INTO chim_meta.playthrough_profiles (name, size_bytes, storage_format, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets) VALUES ($1,$2,$3,$4,true,$5,$6,$7,$8,$9) RETURNING id',
-                    ['default', (string)$size, 'plain_sql', 'Auto-captured default profile', $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets]
-                );
-                if ($res1 && ($row = pg_fetch_assoc($res1))) {
-                    $pid = (int)$row['id'];
-                    $res2 = pg_query_params($adminConn, 'INSERT INTO chim_meta.playthrough_blobs (profile_id, dump_data) VALUES ($1,$2)', [$pid, $data]);
-                    if ($res2) {
-                        pg_query($adminConn, 'COMMIT');
-                    } else { pg_query($adminConn, 'ROLLBACK'); }
-                } else { pg_query($adminConn, 'ROLLBACK'); }
-            }
+            $resCap = ptm_create_profile_with_lob(
+                $adminConn,
+                'default',
+                'Auto-captured default profile',
+                true,
+                $playerName,
+                $gameName,
+                (int)$eventlogCount,
+                (int)$oghmaCount,
+                (int)$lastGamets,
+                $tmpFile
+            );
         }
         @unlink($tmpFile);
     }
@@ -151,51 +146,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $preview = $output ? '<pre>'.h(substr($output,0,2000)).'</pre>' : '';
                 $message .= '<p><strong>Error:</strong> Failed to create database snapshot.</p>'.$preview;
             } else {
-                $size = filesize($tmpFile);
-                $data = file_get_contents($tmpFile);
-                if ($data === false) {
-                    $message .= '<p><strong>Error:</strong> Could not read temporary dump file.</p>';
-                } else {
-                    // Insert profile + blob in a transaction
-                    pg_query($adminConn, 'BEGIN');
-                    // Collect metadata
-                    $playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
-                    $gameName = 'Skyrim';
-                    $eventlogCount = 0; $oghmaCount = 0; $lastGamets = 0;
-                    $r1 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.eventlog");
-                    if ($r1 && ($rr = pg_fetch_assoc($r1))) { $eventlogCount = intval($rr['c']); }
-                    $rex = @pg_query_params($adminConn, "SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='oghma' LIMIT 1", [$schema]);
-                    $hasOghma = ($rex && pg_fetch_assoc($rex)) ? true : false;
-                    if ($hasOghma) {
-                        $r2 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.oghma");
-                        if ($r2 && ($rr = pg_fetch_assoc($r2))) { $oghmaCount = intval($rr['c']); }
-                    }
-                    $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
-                    if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $lastGamets = intval($rr['mx']); }
+                // Collect metadata
+                $playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
+                $gameName = 'Skyrim';
+                $eventlogCount = 0; $oghmaCount = 0; $lastGamets = 0;
+                $r1 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.eventlog");
+                if ($r1 && ($rr = pg_fetch_assoc($r1))) { $eventlogCount = intval($rr['c']); }
+                $rex = @pg_query_params($adminConn, "SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='oghma' LIMIT 1", [$schema]);
+                $hasOghma = ($rex && pg_fetch_assoc($rex)) ? true : false;
+                if ($hasOghma) {
+                    $r2 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.oghma");
+                    if ($r2 && ($rr = pg_fetch_assoc($r2))) { $oghmaCount = intval($rr['c']); }
+                }
+                $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
+                if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $lastGamets = intval($rr['mx']); }
 
-                    $res1 = pg_query_params($adminConn,
-                        'INSERT INTO chim_meta.playthrough_profiles (name, size_bytes, storage_format, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets) VALUES ($1,$2,$3,$4,false,$5,$6,$7,$8,$9) RETURNING id',
-                        [$name, (string)$size, 'plain_sql', $notes, $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets]
-                    );
-                    if ($res1 && ($row = pg_fetch_assoc($res1))) {
-                        $pid = (int)$row['id'];
-                        $res2 = pg_query_params($adminConn,
-                            'INSERT INTO chim_meta.playthrough_blobs (profile_id, dump_data) VALUES ($1,$2)',
-                            [$pid, $data]
-                        );
-                        if ($res2) {
-                            pg_query($adminConn, 'COMMIT');
-                            $message .= '<p><strong>✅ Snapshot created:</strong> '.h($name).' ('.h(formatFileSize($size)).')</p>';
-                        } else {
-                            pg_query($adminConn, 'ROLLBACK');
-                            $message .= '<p><strong>Error:</strong> Failed to store snapshot data.</p>';
-                            $message .= '<pre>'.h(pg_last_error($adminConn)).'</pre>';
-                        }
-                    } else {
-                        pg_query($adminConn, 'ROLLBACK');
-                        $message .= '<p><strong>Error:</strong> Failed to create snapshot record (name must be unique?).</p>';
-                        $message .= '<pre>'.h(pg_last_error($adminConn)).'</pre>';
-                    }
+                $resCap = ptm_create_profile_with_lob(
+                    $adminConn,
+                    $name,
+                    $notes,
+                    false,
+                    $playerName,
+                    $gameName,
+                    (int)$eventlogCount,
+                    (int)$oghmaCount,
+                    (int)$lastGamets,
+                    $tmpFile
+                );
+                if ($resCap['success']) {
+                    $message .= '<p><strong>✅ Snapshot created:</strong> '.h($name).' ('.h(formatFileSize((int)$resCap['size'])).')</p>';
+                } else {
+                    $message .= '<p><strong>Error:</strong> Failed to create snapshot.</p>';
+                    $message .= '<pre>'.h($resCap['error']).'</pre>';
                 }
                 @unlink($tmpFile);
             }
@@ -222,65 +204,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message .= '<p><strong>Error:</strong> Failed to snapshot current database before switching. Aborting to avoid data loss.</p>'.$preview;
                     // Do not proceed with switch
                 } else {
-                    $snapSize = filesize($tmpSnap);
-                    $snapData = file_get_contents($tmpSnap);
-                    if ($snapData === false) {
-                        $message .= '<p><strong>Error:</strong> Could not read temporary snapshot file. Aborting switch.</p>';
-                    } else {
-                        // Gather live metadata
-                        $playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
-                        $gameName = 'Skyrim';
-                        $eventlogCount = 0; $oghmaCount = 0; $lastGamets = 0;
-                        $r1 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.eventlog");
-                        if ($r1 && ($rr = pg_fetch_assoc($r1))) { $eventlogCount = intval($rr['c']); }
-                        $rex = @pg_query_params($adminConn, "SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='oghma' LIMIT 1", [$schema]);
-                        $hasOghma = ($rex && pg_fetch_assoc($rex)) ? true : false;
-                        if ($hasOghma) {
-                            $r2 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.oghma");
-                            if ($r2 && ($rr = pg_fetch_assoc($r2))) { $oghmaCount = intval($rr['c']); }
-                        }
-                        $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
-                        if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $lastGamets = intval($rr['mx']); }
+                    // Gather live metadata
+                    $playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
+                    $gameName = 'Skyrim';
+                    $eventlogCount = 0; $oghmaCount = 0; $lastGamets = 0;
+                    $r1 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.eventlog");
+                    if ($r1 && ($rr = pg_fetch_assoc($r1))) { $eventlogCount = intval($rr['c']); }
+                    $rex = @pg_query_params($adminConn, "SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='oghma' LIMIT 1", [$schema]);
+                    $hasOghma = ($rex && pg_fetch_assoc($rex)) ? true : false;
+                    if ($hasOghma) {
+                        $r2 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.oghma");
+                        if ($r2 && ($rr = pg_fetch_assoc($r2))) { $oghmaCount = intval($rr['c']); }
+                    }
+                    $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
+                    if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $lastGamets = intval($rr['mx']); }
 
-                        pg_query($adminConn, 'BEGIN');
-                        // Update profile metadata
-                        $u1 = pg_query_params($adminConn,
-                            'UPDATE chim_meta.playthrough_profiles SET size_bytes=$2, player_name=$3, game=$4, eventlog_count=$5, oghma_count=$6, last_gamets=$7 WHERE id=$1',
-                            [$curProfileId, (string)$snapSize, $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets]
-                        );
-                        // Update blob (or insert if missing)
-                        $u2 = pg_query_params($adminConn, 'UPDATE chim_meta.playthrough_blobs SET dump_data=$2 WHERE profile_id=$1', [$curProfileId, $snapData]);
-                        $affected = $u2 ? pg_affected_rows($u2) : 0;
-                        if ($affected === 0) {
-                            $u2 = pg_query_params($adminConn, 'INSERT INTO chim_meta.playthrough_blobs (profile_id, dump_data) VALUES ($1,$2)', [$curProfileId, $snapData]);
-                        }
-                        if ($u1 && $u2) {
-                            pg_query($adminConn, 'COMMIT');
-                        } else {
-                            pg_query($adminConn, 'ROLLBACK');
-                            $message .= '<p><strong>Error:</strong> Failed to save current snapshot before switching. Aborting.</p>';
-                            @unlink($tmpSnap);
-                            // Do not proceed with switch
-                            goto SWITCH_ABORT;
-                        }
+                    $upd = ptm_update_profile_blob_from_file(
+                        $adminConn,
+                        $curProfileId,
+                        $tmpSnap,
+                        $playerName,
+                        $gameName,
+                        (int)$eventlogCount,
+                        (int)$oghmaCount,
+                        (int)$lastGamets
+                    );
+                    if (!$upd['success']) {
+                        $message .= '<p><strong>Error:</strong> Failed to save current snapshot before switching. Aborting.</p>';
+                        @unlink($tmpSnap);
+                        // Do not proceed with switch
+                        goto SWITCH_ABORT;
                     }
                 }
                 @unlink($tmpSnap);
             }
 
-            // Fetch snapshot
-            $res = pg_query_params($adminConn, 'SELECT p.name, b.dump_data FROM chim_meta.playthrough_profiles p JOIN chim_meta.playthrough_blobs b ON b.profile_id=p.id WHERE p.id=$1', [$profileId]);
-            $row = $res ? pg_fetch_assoc($res) : null;
-            if (!$row) {
+            // Fetch snapshot to file (LOB or TEXT)
+            $resName = pg_query_params($adminConn, 'SELECT name FROM chim_meta.playthrough_profiles WHERE id=$1', [$profileId]);
+            $rowName = $resName ? pg_fetch_assoc($resName) : null;
+            if (!$rowName) {
                 $message .= '<p><strong>Error:</strong> Snapshot not found.</p>';
             } else {
-                $name = $row['name'];
-                $data = $row['dump_data'];
-                // Write snapshot to temp file
+                $name = $rowName['name'];
                 $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . ('playthrough_restore_'.time().'_'.mt_rand(1000,9999).'.sql');
-                $ok = file_put_contents($tmpFile, $data);
-                if ($ok === false) {
-                    $message .= '<p><strong>Error:</strong> Failed to write temporary restore file.</p>';
+                $ff = ptm_fetch_snapshot_to_file($adminConn, $profileId, $tmpFile);
+                if (!$ff['success']) {
+                    $message .= '<p><strong>Error:</strong> Failed to materialize snapshot file.</p><pre>'.h($ff['error']).'</pre>';
                 } else {
                     // Drop and recreate public schema and required extensions
                     $Q = array();
@@ -367,20 +336,17 @@ if ($adminConn) {
 }
 $livePlayerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
 $liveGameName = 'Skyrim';
-$liveEventlogCount = 0;
-$liveOghmaCount = 0;
-$liveLastGamets = 0;
-if ($adminConn) {
-    $r1 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.eventlog");
-    if ($r1 && ($rr = pg_fetch_assoc($r1))) { $liveEventlogCount = intval($rr['c']); }
-    $rex = @pg_query_params($adminConn, "SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='oghma' LIMIT 1", [$schema]);
-    $hasOghma = ($rex && pg_fetch_assoc($rex)) ? true : false;
-    if ($hasOghma) {
-        $r2 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.oghma");
-        if ($r2 && ($rr = pg_fetch_assoc($r2))) { $liveOghmaCount = intval($rr['c']); }
+// Use metadata for initial render (fast), refresh via AJAX later
+$liveEventlogCount = 0; $liveOghmaCount = 0; $liveLastGamets = 0;
+foreach ($profiles as $p) {
+    $nameStr = (string)($p['name'] ?? '');
+    $isActive = ((int)($p['is_active'] ?? 0) === 1) || (strcasecmp($nameStr, (string)$activeProfileName) === 0);
+    if ($isActive) {
+        $liveEventlogCount = intval($p['eventlog_count'] ?? 0);
+        $liveOghmaCount = intval($p['oghma_count'] ?? 0);
+        $liveLastGamets = intval($p['last_gamets'] ?? 0);
+        break;
     }
-    $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
-    if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $liveLastGamets = intval($rr['mx']); }
 }
 $liveSkyrimDate = ($liveLastGamets > 0) ? convert_gamets2skyrim_long_date($liveLastGamets) : '';
 
@@ -461,6 +427,17 @@ if (!empty($timelineItems)) {
     /* Dragon Break styling */
     .backup-item.dragonbreak { background-color: #1e2a3a; }
     .backup-item.dragonbreak:hover { background-color: #223044; }
+    /* Switch overlay */
+    #switch-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; display: none; align-items: center; justify-content: center; }
+    #switch-overlay .loading-modal { background:#111; border:1px solid #444; border-radius:8px; padding:20px 24px; width: 340px; color:#e0e0e0; text-align:center; box-shadow: 0 12px 36px rgba(0,0,0,0.5); }
+    #switch-overlay .loading-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.2em; }
+    #switch-overlay .loading-sub { font-size: 12px; color:#9fb1c9; margin-top: 6px; }
+    .lds-ring { display:inline-block; position:relative; width:64px; height:64px; margin: 6px 0 2px 0; }
+    .lds-ring div { box-sizing:border-box; display:block; position:absolute; width:51px; height:51px; margin:6px; border:6px solid #ffb862; border-radius:50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color:#ffb862 transparent transparent transparent; }
+    .lds-ring div:nth-child(1) { animation-delay:-0.45s; }
+    .lds-ring div:nth-child(2) { animation-delay:-0.3s; }
+    .lds-ring div:nth-child(3) { animation-delay:-0.15s; }
+    @keyframes lds-ring { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
 </style>
 
 <?php if ($isEmbed): ?>
@@ -469,6 +446,13 @@ if (!empty($timelineItems)) {
 
 <main>
     <div id="toast" class="toast-notification"><span class="message"></span></div>
+    <div id="switch-overlay" role="alert" aria-live="assertive" aria-modal="true">
+        <div class="loading-modal">
+            <div class="loading-title" id="loading-title">Restoring Snapshot…</div>
+            <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+            <div class="loading-sub">This can take a few minutes. Please keep this tab open.</div>
+        </div>
+    </div>
 
     <div class="page-header">
         <h1>Playthrough Manager</h1>
@@ -481,12 +465,12 @@ if (!empty($timelineItems)) {
     <div class="content-section full-width-section">
         <h2>🟢 Current Database Profile (Live)</h2>
         <div style="display:flex; gap:12px; flex-wrap:wrap; font-size: 14px; color:#ccc;">
-                <div><strong style="color:#f8f9fa;">Active profile:</strong> <?php echo h($activeProfileName !== '' ? $activeProfileName : '(untracked)'); ?></div>
-                <div><strong style="color:#f8f9fa;">Player:</strong> <?php echo h($livePlayerName); ?></div>
-                <div><strong style="color:#f8f9fa;">Game:</strong> <?php echo h($liveGameName); ?></div>
-                <div><strong style="color:#f8f9fa;">eventlog:</strong> <?php echo intval($liveEventlogCount); ?></div>
-                <div><strong style="color:#f8f9fa;">oghma:</strong> <?php echo intval($liveOghmaCount); ?></div>
-                <div><strong style="color:#f8f9fa;">last in-game:</strong> <?php echo h($liveSkyrimDate !== '' ? $liveSkyrimDate : 'n/a'); ?></div>
+                <div><strong style="color:#f8f9fa;">Active profile:</strong> <span id="live-active"><?php echo h($activeProfileName !== '' ? $activeProfileName : '(untracked)'); ?></span></div>
+                <div><strong style="color:#f8f9fa;">Player:</strong> <span id="live-player"><?php echo h($livePlayerName); ?></span></div>
+                <div><strong style="color:#f8f9fa;">Game:</strong> <span id="live-game"><?php echo h($liveGameName); ?></span></div>
+                <div><strong style="color:#f8f9fa;">eventlog:</strong> <span id="live-eventlog"><?php echo intval($liveEventlogCount); ?></span></div>
+                <div><strong style="color:#f8f9fa;">oghma:</strong> <span id="live-oghma"><?php echo intval($liveOghmaCount); ?></span></div>
+                <div><strong style="color:#f8f9fa;">last in-game:</strong> <span id="live-last"><?php echo h($liveSkyrimDate !== '' ? $liveSkyrimDate : 'n/a'); ?></span></div>
         </div>
         <?php if (!empty($timelineItems)) { ?>
         <div class="timeline" id="pt-timeline">
@@ -505,7 +489,7 @@ if (!empty($timelineItems)) {
     <div class="content-grid">
         <div class="content-section">
             <h2>📦 Create Snapshot From Current</h2>
-                <form method="post">
+                <form method="post" class="create-form">
                     <input type="hidden" name="action" value="create">
                     <label for="name">Profile name</label><br>
                     <input type="text" id="name" name="name" required style="width: 100%; margin: 6px 0;">
@@ -569,7 +553,7 @@ if (!empty($timelineItems)) {
                                     <?php } ?>
                                 </div>
                                 <div style="display:flex; gap:6px; align-items:flex-start;">
-                                    <form method="post" onsubmit="return confirm('This will replace the current database with this snapshot. Continue?');">
+                                    <form method="post" class="switch-form">
                                         <input type="hidden" name="action" value="switch">
                                         <input type="hidden" name="profile_id" value="<?php echo (int)$p['id']; ?>">
                                         <button type="submit" class="button" style="background-color: rgb(1 53 166 / 90%); color:#fff; padding:6px 10px;">Switch</button>
@@ -602,6 +586,25 @@ echo $buffer;
 
 <script>
 (function(){
+    const overlay = document.getElementById('switch-overlay');
+    const overlayTitle = document.getElementById('loading-title');
+    function showOverlay(){ if (overlay) overlay.style.display='flex'; }
+    function hideOverlay(){ if (overlay) overlay.style.display='none'; }
+    // Intercept switch submit to show confirm + overlay
+    document.addEventListener('submit', function(e){
+        const form = e.target;
+        if (form && form.classList && form.classList.contains('switch-form')) {
+            const ok = window.confirm('This will replace the current database with this snapshot. Continue?');
+            if (!ok) { e.preventDefault(); return false; }
+            if (overlayTitle) overlayTitle.textContent = 'Restoring Snapshot…';
+            showOverlay();
+        }
+        if (form && form.classList && form.classList.contains('create-form')) {
+            if (overlayTitle) overlayTitle.textContent = 'Creating Snapshot…';
+            showOverlay();
+        }
+    }, true);
+
     const items = <?php echo json_encode($timelineItems, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
     const ticks = <?php echo json_encode($timelineTicks, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
     if (!items || !items.length) return;
@@ -690,6 +693,21 @@ echo $buffer;
     function escapeHtml(s){
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
     }
+    // Async refresh of live stats to avoid heavy COUNT(*) on render
+    try {
+        fetch('<?php echo $webRoot; ?>/ui/playthrough_stats.php', { credentials:'same-origin' })
+            .then(r => r.ok ? r.json() : null)
+            .then(j => {
+                if (!j) return;
+                const ev = document.getElementById('live-eventlog');
+                const og = document.getElementById('live-oghma');
+                const la = document.getElementById('live-last');
+                if (typeof j.eventlog === 'number' && ev) ev.textContent = String(j.eventlog);
+                if (typeof j.oghma === 'number' && og) og.textContent = String(j.oghma);
+                if (typeof j.last_skyrim_date === 'string' && la) la.textContent = j.last_skyrim_date || 'n/a';
+            })
+            .catch(()=>{});
+    } catch (_e) {}
 })();
 </script>
 

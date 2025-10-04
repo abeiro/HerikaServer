@@ -2,6 +2,7 @@
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'utils_game_timestamp.php');
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'logger.php');
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'playthrough_storage.php');
 
 /**
  * Dragon Break autosnapshot helper.
@@ -44,6 +45,9 @@ function dragon_break_ensure_meta_schema($adminConn) {
 			@pg_query($adminConn, "ALTER TABLE chim_meta.playthrough_blobs ALTER COLUMN dump_data TYPE TEXT USING convert_from(dump_data,'UTF8')");
 		}
 	}
+
+	// Ensure LOB storage support
+	ptm_ensure_lob_schema($adminConn);
 }
 
 /**
@@ -88,14 +92,6 @@ function dragon_break_create_snapshot($name, $notes) {
 		return 0;
 	}
 
-	$size = filesize($tmpFile);
-	$data = file_get_contents($tmpFile);
-	@unlink($tmpFile);
-	if ($data === false) {
-		Logger::error("DragonBreak: Could not read temporary dump file.");
-		return 0;
-	}
-
 	// Collect live metadata
 	$eventlogCount = 0; $oghmaCount = 0; $lastGamets = 0;
 	$r1 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.eventlog");
@@ -112,23 +108,24 @@ function dragon_break_create_snapshot($name, $notes) {
 	$playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
 	$gameName = 'Skyrim';
 
-	@pg_query($adminConn, 'BEGIN');
-	$res1 = @pg_query_params(
+	$cap = ptm_create_profile_with_lob(
 		$adminConn,
-		'INSERT INTO chim_meta.playthrough_profiles (name, size_bytes, storage_format, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets) VALUES ($1,$2,$3,$4,false,$5,$6,$7,$8,$9) RETURNING id',
-		[$finalName, (string)$size, 'plain_sql', $notes, $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets]
+		$finalName,
+		$notes,
+		false,
+		$playerName,
+		$gameName,
+		(int)$eventlogCount,
+		(int)$oghmaCount,
+		(int)$lastGamets,
+		$tmpFile
 	);
-	if ($res1 && ($row = pg_fetch_assoc($res1))) {
-		$pid = intval($row['id']);
-		$res2 = @pg_query_params($adminConn, 'INSERT INTO chim_meta.playthrough_blobs (profile_id, dump_data) VALUES ($1,$2)', [$pid, $data]);
-		if ($res2) {
-			@pg_query($adminConn, 'COMMIT');
-			Logger::info("DragonBreak: Snapshot created with id {$pid} and name '{$name}'");
-			return $pid;
-		}
+	@unlink($tmpFile);
+	if ($cap['success']) {
+		Logger::info("DragonBreak: Snapshot created with id {$cap['id']} and name '{$finalName}'");
+		return (int)$cap['id'];
 	}
-	@pg_query($adminConn, 'ROLLBACK');
-	Logger::error("DragonBreak: Failed to store snapshot data: " . @pg_last_error($adminConn));
+	Logger::error("DragonBreak: Failed to store snapshot data: " . $cap['error']);
 	return 0;
 }
 
