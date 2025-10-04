@@ -233,8 +233,6 @@ echo '<div class="container">
       <h3 class="qs-note text-center mb-4">If you want to make more advanced changes before playing go to the Configuration tab above.</h3>
     </div>';
 
-echo '<div class="container"><h2 class="qs-section-title">Basics</h2></div>';
-
 // API Keys section (OpenRouter only here; Deepgram rendered under STT)
 try { $openrouterRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='openrouter' LIMIT 1"); } catch (Throwable $_e) { $openrouterRow = []; }
 $openrouterKey = isset($openrouterRow["api_key"]) ? $openrouterRow["api_key"] : "";
