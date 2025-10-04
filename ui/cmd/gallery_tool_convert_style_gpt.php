@@ -39,7 +39,7 @@
         $url = "https://api.openai.com/v1/images/edits";
 
         $headers = [
-            "Authorization: Bearer " . $api_keys,
+            "Authorization: Bearer " . $api_key,
         ];
 
     // Read file contents into memory
