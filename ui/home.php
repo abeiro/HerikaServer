@@ -101,6 +101,21 @@ class sql {
 
 $db = new sql();
 
+// Load PLAYER_NAME from database (preferred) with fallback to global/conf.php
+// This ensures dashboard always shows the current in-game player name
+$PLAYER_NAME_DB = isset($GLOBALS['PLAYER_NAME']) ? (string)$GLOBALS['PLAYER_NAME'] : 'Player';
+try {
+    $resPlayer = pg_query($conn, "SELECT value FROM {$schema}.conf_opts WHERE id='PLAYER_NAME' LIMIT 1");
+    if ($resPlayer && pg_num_rows($resPlayer) > 0) {
+        $rowPlayer = pg_fetch_assoc($resPlayer);
+        if ($rowPlayer && isset($rowPlayer['value']) && $rowPlayer['value'] !== '') {
+            $PLAYER_NAME_DB = (string)$rowPlayer['value'];
+        }
+    }
+} catch (Throwable $_) {
+    // Fallback to existing $GLOBALS['PLAYER_NAME'] on any error
+}
+
 /* Check for database updates only in index.php with no parms*/
 if (sizeof($_GET)==0) {
     require_once(__DIR__."/../debug/db_updates.php");
@@ -906,7 +921,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <tr><th>Stats</th><th>Value</th></tr>
                             <tr>
                                 <td>Player Name</td>
-                                <td>" . htmlspecialchars($PLAYER_NAME) . "</td>
+                                <td>" . htmlspecialchars($PLAYER_NAME_DB) . "</td>
                             </tr>
                             <tr>
                                 <td>Last Played (UTC)</td>

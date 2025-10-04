@@ -1000,6 +1000,14 @@ if ($shouldFetchEvents) {
                 }
                 ?>
             </div>
+            <?php if (isset($_GET['person'])): ?>
+            <div style="max-width: 400px; margin: 12px auto 0; display: flex; justify-content: center;">
+                <a class="pdf-export-btn" target="_blank" title="Open as book (print to PDF)" href="<?php echo $webRoot; ?>/ui/diary_book.php?person=<?php echo urlencode(urldecode($_GET['person'])); ?>">
+                    <span>📄</span>
+                    <span>Open The Diary of <?php echo htmlspecialchars(urldecode($_GET['person'])); ?></span>
+                </a>
+            </div>
+            <?php endif; ?>
             <script>
             function filterPeople(searchText) {
                 const peopleItems = document.querySelectorAll('.people-item');

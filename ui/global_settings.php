@@ -271,7 +271,6 @@ function icon_for_field(string $flatName): string {
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
     'General' => [
-        [ 'name' => 'PLAYER_NAME', 'type' => 'text' ],
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'PLAYER_BIOS', 'type' => 'longstring' ],
         [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
@@ -655,6 +654,8 @@ function current_value(string $flatName, array $currentConf) {
                                 $current = current_value($fname, $currentConf);
                                 $label = pretty_label($fname);
                                 $help = $gsDesc($fname);
+                                $isReadonly = isset($confSchema[$fname]['readonly']) && $confSchema[$fname]['readonly'] === true;
+                                $readonlyAttr = $isReadonly ? 'readonly' : '';
                             ?>
                             <div class="provider-card">
                                 <div class="provider-head">
@@ -664,7 +665,7 @@ function current_value(string $flatName, array $currentConf) {
                                         <?php if ($ftype === 'boolean'): ?>
                                             <div class="provider-toggle">
                                                 <input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
-                                                <input type="checkbox" value="true" name="<?php echo htmlspecialchars($fname); ?>" <?php echo ($current ? 'checked' : ''); ?> style="width:auto;">
+                                                <input type="checkbox" value="true" name="<?php echo htmlspecialchars($fname); ?>" <?php echo ($current ? 'checked' : ''); ?> <?php echo $isReadonly ? 'disabled' : ''; ?> style="width:auto;">
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -674,32 +675,32 @@ function current_value(string $flatName, array $currentConf) {
                                         <!-- Boolean rendered in header next to title -->
                                     <?php elseif ($ftype === 'integer'): ?>
                                         <?php $min = isset($f['min']) ? (int)$f['min'] : null; $max = isset($f['max']) ? (int)$f['max'] : null; ?>
-                                        <input type="number" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo ($min!==null?('min="'.$min.'"'):''); ?> <?php echo ($max!==null?('max="'.$max.'"'):''); ?> step="1">
+                                        <input type="number" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo ($min!==null?('min="'.$min.'"'):''); ?> <?php echo ($max!==null?('max="'.$max.'"'):''); ?> step="1" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($ftype === 'number'): ?>
-                                        <input type="number" step="0.01" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                                        <input type="number" step="0.01" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($ftype === 'longstring'): ?>
-                                        <textarea name="<?php echo htmlspecialchars($fname); ?>" rows="4"><?php echo htmlspecialchars((string)$current); ?></textarea>
+                                        <textarea name="<?php echo htmlspecialchars($fname); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars((string)$current); ?></textarea>
                                     <?php elseif ($ftype === 'url'): ?>
-                                        <input type="url" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                                        <input type="url" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($ftype === 'apikey'): ?>
-                                        <input type="password" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" placeholder="Paste API key">
+                                        <input type="password" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" placeholder="Paste API key" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($ftype === 'select'): ?>
                                         <?php $values = $f['values'] ?? []; ?>
-                                        <select name="<?php echo htmlspecialchars($fname); ?>">
+                                        <select name="<?php echo htmlspecialchars($fname); ?>" <?php echo $isReadonly ? 'disabled' : ''; ?>>
                                             <?php foreach ($values as $opt): ?>
                                                 <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$current===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                     <?php elseif (strpos($ftype, 'foreign:') === 0): ?>
                                         <?php $rows = $foreignOptions[$fname] ?? []; ?>
-                                        <select name="<?php echo htmlspecialchars($fname); ?>">
+                                        <select name="<?php echo htmlspecialchars($fname); ?>" <?php echo $isReadonly ? 'disabled' : ''; ?>>
                                             <?php foreach ($rows as $row): ?>
                                                 <?php $idCol = explode(':', $ftype)[2]; $labelCol = explode(':', $ftype)[3]; ?>
                                                 <option value="<?php echo htmlspecialchars($row[$idCol]); ?>" <?php echo ((string)$current===(string)$row[$idCol]?'selected':''); ?>><?php echo htmlspecialchars($row[$labelCol]); ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                     <?php else: ?>
-                                        <input type="text" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                                        <input type="text" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo $readonlyAttr; ?>>
                                     <?php endif; ?>
                                 </div>
                                 <?php if (!empty($help)): ?>

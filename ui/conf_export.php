@@ -5,12 +5,30 @@ $config_dir = '../conf/';
 // Primary configuration file
 $main_conf_file = $config_dir . 'conf.php';
 
-// Attempt to read and parse the main conf.php for $PLAYER_NAME
+// Get PLAYER_NAME from database (preferred) or conf.php (fallback)
 $PLAYER_EXPORT = 'Configuration'; // default fallback
-if (file_exists($main_conf_file)) {
-    $config_content = file_get_contents($main_conf_file);
-    if (preg_match('/\$PLAYER_NAME\s*=\s*\'(.*?)\';/', $config_content, $matches)) {
-        $PLAYER_EXPORT = $matches[1];
+
+// Try database first
+try {
+    $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+    @require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+    if (isset($GLOBALS["DBDRIVER"])) {
+        @require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
+        if (class_exists('sql')) {
+            $db = new sql();
+            $playerNameRow = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+            if ($playerNameRow && !empty($playerNameRow['value'])) {
+                $PLAYER_EXPORT = $playerNameRow['value'];
+            }
+        }
+    }
+} catch (Throwable $e) {
+    // Fallback to reading from conf.php file if database fails
+    if (file_exists($main_conf_file)) {
+        $config_content = file_get_contents($main_conf_file);
+        if (preg_match('/\$PLAYER_NAME\s*=\s*\'(.*?)\';/', $config_content, $matches)) {
+            $PLAYER_EXPORT = $matches[1];
+        }
     }
 }
 

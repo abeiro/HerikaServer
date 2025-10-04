@@ -73,6 +73,10 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             ];
             Logger::info("DIARY_NEARBY: Using default profile for $npcName");
         }
+
+        // Always enforce PLAYER_NAME from database-synced global, overriding any stale value in profiles
+        // Ensures all '#PLAYER_NAME#' replacements resolve to current in-game name
+        $NPC_CONF["PLAYER_NAME"] = $GLOBALS["PLAYER_NAME"];
         
         // Use centralized function from data_functions.php
         $dynamicBio = buildDynamicBiography($NPC_CONF);
