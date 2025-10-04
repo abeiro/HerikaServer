@@ -535,7 +535,7 @@ restore AS (
     FROM core_npc_master_history h
     JOIN deleted d ON h.npc_id = d.id
     WHERE h.gamets_last_updated < $timestamp OR h.gamets_last_updated IS NULL
-    ORDER BY h.npc_id, h.gamets_last_updated DESC NULLS LAST
+    ORDER BY h.npc_id, h.gamets_last_updated DESC NULLS LAST,h.created DESC
 )
 INSERT INTO core_npc_master (
     id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,

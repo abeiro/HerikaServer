@@ -226,6 +226,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
         } else {
             $_POST["md5"]=md5($_POST["npc_name"]);
             $ok = $npc->update($id, $_POST);
+            $npc->backupNpcById($id);// We also make a backup of manually edited NPCs, so when loading a save, will load this record
             if ($ok === false) {
                 echo json_encode(["ok"=>false, "error"=>($npc->getLastError() ?? 'Update failed')]);
             } else {

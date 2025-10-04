@@ -256,6 +256,9 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			//error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ");
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			
+			$textString.=PHP_EOL.print_r($options,true);
+			$textString.=PHP_EOL.print_r($http_response_header,true);
+			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n$FFMPEG_FILTER\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
 			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in xtts-fast-api call";
 
