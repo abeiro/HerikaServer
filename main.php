@@ -125,6 +125,12 @@ $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 // Database Connection
 $db = new sql();
 
+// Load PLAYER_NAME from database if available (overrides conf.php)
+$playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+    $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+}
+
 require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 
 
@@ -834,6 +840,26 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
             terminate();
         }
     }
+    // Update player name from infoplayer event
+    if ($gameRequest[0] == 'infoplayer') {
+        // infoplayer format: level:{},name:"{}",race:"{}",gender:"{}"
+        if (preg_match('/name:"([^"]+)"/', $gameRequest[3], $matches)) {
+            $playerNameFromGame = $matches[1];
+            if (!empty($playerNameFromGame) && $playerNameFromGame !== $GLOBALS["PLAYER_NAME"]) {
+                $GLOBALS["PLAYER_NAME"] = $playerNameFromGame;
+                // Persist to database for future requests
+                $db->upsertRowOnConflict(
+                    'conf_opts',
+                    array(
+                        'id' => 'PLAYER_NAME',
+                        'value' => $db->escape($playerNameFromGame)
+                    ),
+                    'id'
+                );
+                Logger::info("Updated PLAYER_NAME from game: {$playerNameFromGame}");
+            }
+        }
+    }
     if (in_array($gameRequest[0],['backgroundaction'])) {
         logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
         require_once($GLOBALS["ENGINE_PATH"]."/processor/background_event.php");
@@ -844,6 +870,24 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
 
 // Check if the gameRequest matches specific types
 if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
+    // Update player name from playerinfo event  
+    // playerinfo format: level:{},name:"{}",race:"{}"
+    if (isset($gameRequest[3]) && preg_match('/name:"([^"]+)"/', $gameRequest[3], $matches)) {
+        $playerNameFromGame = $matches[1];
+        if (!empty($playerNameFromGame) && $playerNameFromGame !== $GLOBALS["PLAYER_NAME"]) {
+            $GLOBALS["PLAYER_NAME"] = $playerNameFromGame;
+            // Persist to database for future requests
+            $db->upsertRowOnConflict(
+                'conf_opts',
+                array(
+                    'id' => 'PLAYER_NAME',
+                    'value' => $db->escape($playerNameFromGame)
+                ),
+                'id'
+            );
+            Logger::info("Updated PLAYER_NAME from game: {$playerNameFromGame}");
+        }
+    }
     if (!$GLOBALS["NARRATOR_WELCOME"]) {
         logEvent($gameRequest);
         terminate();

@@ -1,5 +1,5 @@
 {
-  "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"Your current character name.","_title":"Biography Management"},
+  "PLAYER_NAME": {"userlvl":"basic","type":"string","description":"<strong>This is automatically set from your game character.</strong> The player name is retrieved from Skyrim when you load a save or start a new game. This field cannot be manually edited.","readonly":true,"_title":"Biography Management"},
   "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change."},
   "AUTOMATIC_DATABASE_BACKUPS": {"userlvl":"basic","type":"boolean","scope":"global","description":"Automatically create database backups every time the server starts up. Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached."},
   "LOCK_PROFILE": {"userlvl":"basic","type":"boolean","description":"When enabled, this profile will be skipped when using 'Copy to All Profiles' functionality. It will also not be deleted when you Delete All Character Profiles. Can not be toggled for the default profile."},

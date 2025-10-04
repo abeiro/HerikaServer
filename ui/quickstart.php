@@ -110,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         foreach ($allPairs as $k => $v) {
             $full = explode('@', $k);
             $plain = strtr($k, ['@' => ' ']);
+            if ($plain === 'PLAYER_NAME') continue;
             $type = $confSchemaFlat[$plain]['type'] ?? 'string';
             if (is_array($v)) $value = json_encode($v, true);
             else if ($type === 'number') { if ($v === '') continue; else $value = "" . addcslashes($v, "'") . ""; }
@@ -209,7 +210,6 @@ $currentConfTitles = conf_loader_load_titles();
 
 // Filter the configurations you want to display in the Quickstart Menu
 $quickstartKeys = [
-    "PLAYER_NAME",
     "TTSFUNCTION",
     "STTFUNCTION"
 ];
@@ -233,21 +233,7 @@ echo '<div class="container">
       <h3 class="qs-note text-center mb-4">If you want to make more advanced changes before playing go to the Configuration tab above.</h3>
     </div>';
 
-// Render PLAYER_NAME first if present
 echo '<div class="container"><h2 class="qs-section-title">Basics</h2></div>';
-if (isset($quickstartConf['PLAYER_NAME'])) {
-    $parms = $quickstartConf['PLAYER_NAME'];
-    $fieldName = strtr('PLAYER_NAME', array(' ' => '@'));
-    $fieldValue = !is_array($parms['currentValue']) ? htmlspecialchars(stripslashes($parms['currentValue'])) : '';
-    echo "<div class='form-group'>";
-    echo "<label for='$fieldName'>" . htmlspecialchars('PLAYER_NAME') . "</label>";
-    echo "<input type='text' class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' value=\"$fieldValue\">";
-    if (isset($parms['description']) && !empty($parms['description'])) {
-        echo "<small class='form-text'>" . $parms['description'] . "</small>";
-    }
-    echo "</div>";
-    unset($quickstartConf['PLAYER_NAME']);
-}
 
 // API Keys section (OpenRouter only here; Deepgram rendered under STT)
 try { $openrouterRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='openrouter' LIMIT 1"); } catch (Throwable $_e) { $openrouterRow = []; }
