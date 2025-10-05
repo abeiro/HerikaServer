@@ -641,7 +641,8 @@ if (isset($_GET['bio_detail'])) {
     header('Content-Type: application/json');
     $name = trim((string)($_GET['name'] ?? ''));
     if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
-    $esc = $GLOBALS['db']->escape($name);
+    $codename=npcNameToCodename($name);
+    $esc = $GLOBALS['db']->escape($codename);
     // Case-insensitive exact match on npc_name to tolerate capitalization differences
     $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where lower(npc_name) = lower('{$esc}') limit 1");
     if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
