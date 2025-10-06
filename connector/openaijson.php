@@ -121,7 +121,7 @@ class openaijson
                 $i_pos = stripos($s_model, "azure-o3");
             // OpenAI model names
             if ($i_pos === false) { 
-                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
+                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") ||  ($s_model == "gpt-5-nano") ||
                     ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
                     (strpos($s_model, "o4-mini") == 0)) {
                     $i_pos = 1;
@@ -172,7 +172,7 @@ class openaijson
         $this->_model = isset($customParms["model"]) ? $customParms["model"] : $this->_model;
         
         $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
-        //$this->_is_openai = $this->isOpenAIModel($this->_model);
+        $this->_is_openai = $this->isOpenAIModel($this->_model);
 
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
@@ -439,7 +439,8 @@ class openaijson
                 parsed  - Separates reasoning into a dedicated field while keeping the response concise.
                 raw     - Includes reasoning within <think> tags in the content.
                 hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
-                $data['reasoning_format'] = "hidden";  
+                if (!$this->_is_openai)
+                    $data['reasoning_format'] = "hidden";  
             }
             //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
         
@@ -459,9 +460,15 @@ class openaijson
             } 
 
             if (($this->_is_reasoning) && (!$this->_is_mistral_ai) && (!$this->_is_cohere_ai)) { // there is no rule accepted by all providers
-                $data["chat_format"]="tidy"; 
+                if (!$this->_is_openai) {
+                    $data["chat_format"]="tidy"; 
+                    
+                } else {
+                    unset($data["top_p"]);
+                }
                 $data["reasoning_effort"] = "low";
-                $data['reasoning_format'] = "hidden";
+                if (!$this->_is_openai)
+                    $data['reasoning_format'] = "hidden";
                 if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
                     $data["enable_thinking"] = false;
             }
@@ -863,7 +870,8 @@ class openaijson
                 parsed  - Separates reasoning into a dedicated field while keeping the response concise.
                 raw     - Includes reasoning within <think> tags in the content.
                 hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
-                $data['reasoning_format'] = "hidden";  
+                if (!$this->_is_openai)
+                    $data['reasoning_format'] = "hidden";  
             }
             //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
         
@@ -883,9 +891,13 @@ class openaijson
             } 
 
             if (($this->_is_reasoning) && (!$this->_is_mistral_ai) && (!$this->_is_cohere_ai)) { // there is no rule accepted by all providers
-                $data["chat_format"]="tidy"; 
+                if (!$this->_is_openai)
+                    $data["chat_format"]="tidy"; 
+
                 $data["reasoning_effort"] = "low";
-                $data['reasoning_format'] = "hidden";
+                if (!$this->_is_openai)
+                    $data['reasoning_format'] = "hidden";
+
                 if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
                     $data["enable_thinking"] = false;
             }

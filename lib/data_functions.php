@@ -53,14 +53,20 @@ function ReplacePlayerNamePlaceholder($s_input) {
 function DataDequeue()
 {
     global $db;
-    //$results = $db->query("select  A.*,ROWID FROM  responselog a  order by ROWID asc");
-    $results = $db->fetchAll("select  A.*,ROWID FROM  responselog a WHERE sent=0 order by ROWID asc");
+    // Use atomic UPDATE...RETURNING to prevent race conditions where multiple concurrent
+    // requests could fetch the same dialogue before it's marked as sent
+    $results = $db->fetchAll(
+        "UPDATE responselog 
+         SET sent=1 
+         WHERE rowid IN (
+             SELECT rowid FROM responselog WHERE sent=0 ORDER BY rowid ASC
+         )
+         RETURNING *, rowid"
+    );
+    
     $finalData = array();
     foreach ($results as $row) {
         $finalData[] = $row;
-    }
-    if (sizeof($finalData) > 0) {
-        $db->query("update responselog set sent=1 where sent=0 and 1=1");
     }
 
     return $finalData;

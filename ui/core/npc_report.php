@@ -105,7 +105,7 @@ if ($npcData) {
     $prompt = [];
     $head[] = ['role' => 'system', 'content' => "You are a character assistant. Carefully read the evolution of the character’s personality and write a report."];
     $prompt[] = ['role' => 'user', 'content' => implode("\n=====\n",$reportSource)];
-    $prompt[] = ['role' => 'user', 'content' => "Write a reporting showing {$npcName} evolution"];
+    $prompt[] = ['role' => 'user', 'content' => "Write a report showing {$npcName}’s evolution"];
     
     $contextData = array_merge($head, $prompt);
 

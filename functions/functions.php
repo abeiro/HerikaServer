@@ -41,6 +41,34 @@ $ENABLED_FUNCTIONS_LOCAL=[
 
 $GLOBALS["ENABLED_FUNCTIONS"]=$ENABLED_FUNCTIONS_LOCAL;
 
+// Ensure PLAYER_NAME is defined before use in string templates below.
+// Prefer database (conf_opts) value; fallback to existing global or 'Player'.
+if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
+    $safePlayerName = 'Player';
+    try {
+        $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+        @include_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+        if (isset($GLOBALS["DBDRIVER"]) && $GLOBALS["DBDRIVER"] !== '') {
+            $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
+            if (!class_exists('sql') && file_exists($dbClassFile)) {
+                require_once($dbClassFile);
+            }
+            if (class_exists('sql')) {
+                $db_local = new sql();
+                if (method_exists($db_local, 'fetchOne')) {
+                    $row = $db_local->fetchOne("select value from conf_opts where id='PLAYER_NAME'");
+                    if (is_array($row) && isset($row['value']) && $row['value'] !== '') {
+                        $safePlayerName = (string)$row['value'];
+                    }
+                }
+            }
+        }
+    } catch (Throwable $_) {
+        // ignore and use fallback
+    }
+    $GLOBALS["PLAYER_NAME"] = $safePlayerName;
+}
+
 // We must use internal keys here.
 
 $F_TRANSLATIONS_LOCAL["Inspect"]="Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
@@ -69,7 +97,7 @@ $F_TRANSLATIONS_LOCAL["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explici
 $F_TRANSLATIONS_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
 $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
-$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]} (property listener) once {$GLOBALS["PLAYER_NAME"]} is agree";
+$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";

@@ -1,5 +1,33 @@
 <?php
 
+$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+
+// Ensure PLAYER_NAME is defined before using in prompt strings
+if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
+    $safePlayerName = 'Player';
+    try {
+        @include_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+        if (isset($GLOBALS["DBDRIVER"]) && $GLOBALS["DBDRIVER"] !== '') {
+            $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
+            if (!class_exists('sql') && file_exists($dbClassFile)) {
+                require_once($dbClassFile);
+            }
+            if (class_exists('sql')) {
+                $db_local = new sql();
+                if (method_exists($db_local, 'fetchOne')) {
+                    $row = $db_local->fetchOne("select value from conf_opts where id='PLAYER_NAME'");
+                    if (is_array($row) && isset($row['value']) && $row['value'] !== '') {
+                        $safePlayerName = (string)$row['value'];
+                    }
+                }
+            }
+        }
+    } catch (Throwable $_) {
+        // Ignore and use fallback
+    }
+    $GLOBALS["PLAYER_NAME"] = $safePlayerName;
+}
+
 $COMMAND_PROMPT = "Don't write narrations.";
 
 // Database Prompt (Command Prompt)

@@ -58,5 +58,24 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
 // Initialize automatic backup system (after profiles are loaded)
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "automatic_backup.php");
 
+// Load PLAYER_NAME from database if available (overrides conf.php)
+// This ensures UI pages always show the current player name from the game
+try {
+    if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
+        $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+        if (!class_exists('sql') && file_exists($dbClassFile)) {
+            require_once($dbClassFile);
+        }
+        if (class_exists('sql')) {
+            $db_player = new sql();
+            $playerNameFromDb = $db_player->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+            if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+                $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+            }
+        }
+    }
+} catch (Throwable $e) {
+    // Silently fail and use conf.php value if database query fails
+}
 
     

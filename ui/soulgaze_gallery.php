@@ -250,9 +250,14 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         })
         .then(response => response.json())
         .then(data => {
-            console.log('Success:', data);
-            close()
-            window.location.reload();
+            if (data.status=="success") {
+                console.log('Success:', data);
+                close()
+                window.location.reload();
+            } else {
+                alert(data.message)
+                close()
+            }
             // Handle the response data here
         })
         .catch((error) => {

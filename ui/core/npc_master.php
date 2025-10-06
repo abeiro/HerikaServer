@@ -226,6 +226,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
         } else {
             $_POST["md5"]=md5($_POST["npc_name"]);
             $ok = $npc->update($id, $_POST);
+            $npc->backupNpcById($id);// We also make a backup of manually edited NPCs, so when loading a save, will load this record
             if ($ok === false) {
                 echo json_encode(["ok"=>false, "error"=>($npc->getLastError() ?? 'Update failed')]);
             } else {
@@ -640,7 +641,8 @@ if (isset($_GET['bio_detail'])) {
     header('Content-Type: application/json');
     $name = trim((string)($_GET['name'] ?? ''));
     if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
-    $esc = $GLOBALS['db']->escape($name);
+    $codename=npcNameToCodename($name);
+    $esc = $GLOBALS['db']->escape($codename);
     // Case-insensitive exact match on npc_name to tolerate capitalization differences
     $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where lower(npc_name) = lower('{$esc}') limit 1");
     if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
@@ -1173,13 +1175,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div class="form-item span-2">
             <label for="metadata">Metadata (JSON)</label>
             <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
-            <small class="hint">Advanced: large or structured data blocks consumed by integrations.</small>
-            <div id="metadata"></div>
-        </div>
-
-        <div class="form-item span-2">
-            <label for="metadata">Metadata (JSON)</label>
-            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
             <small class="hint">General NPC metadata used by systems.</small>
             <div id="metadata"></div>
         </div>
@@ -1223,11 +1218,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 } catch(_e){}
 
                 if (form.metadata!=undefined) {
-                  const content2 = jsonEditor.get()
+                  const content = jsonEditor.get()
 
                   try {
-                    form.metadata.value=JSON.stringify(content2.json, null, 0)
-                    console.log("JSON editor values copied to form")
+                    form.metadata.value=JSON.stringify(content.json, null, 0)
+                    console.log("JSON editor values copied to form:",content.json)
                   } catch (idontcare) {}
         
                   // allow empty metadata without confirmation

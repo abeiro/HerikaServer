@@ -199,7 +199,7 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "instruction"=>[ 
-        "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "cue"=>["(Instruccion: {$gameRequest[3]}) {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["El Narrador: {$gameRequest[3]}"],
     ],
 );

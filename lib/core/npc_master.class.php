@@ -467,10 +467,12 @@ class NpcMaster {
         if (!is_numeric($timestamp)) {
             throw new InvalidArgumentException("Invalid timestamp value.");
         }
-    
+
+        $startTime=time();
         // Fetch all current NPCs
         $npcs = $this->getAll();
-    
+        error_log("[NPC BACKUP] ".date('Y-m-d H:i:s'));
+
         foreach ($npcs as $npc) {
             // Remove original ID
             $npc_id = $npc['id'];
@@ -484,9 +486,80 @@ class NpcMaster {
             // Insert into history
             $this->db->insert('core_npc_master_history', $npc);
         }
-    
+        error_log("[NPC BACKUP] ".date('Y-m-d H:i:s'). ", NPCs backup made in ".(time()-$startTime)." secs ");
         return true;
     }
+
+     public function restoreNPC($timestamp) {
+        // Validate the timestamp (ensure it's a float or numeric format, as per your schema)
+        if (!is_numeric($timestamp)) {
+            throw new InvalidArgumentException("Invalid timestamp value.");
+        }
+        $startTime=time();
+        $query=
+"WITH deleted AS (
+    DELETE FROM core_npc_master
+    WHERE npc_name<>'The Narrator'
+    RETURNING id
+),
+restore AS (
+    SELECT DISTINCT ON (h.npc_id)
+        h.npc_id AS id,
+        h.npc_name,
+        h.npc_favorite,
+        h.lock_profile,
+        h.prompt_head,
+        h.npc_static_bio,
+        h.oghma_knowledge_tags,
+        h.emote_moods,
+        h.personality,
+        h.relationships,
+        h.occupation,
+        h.skills,
+        h.speechstyle,
+        h.goals,
+        h.voiceid,
+        h.metadata,
+        h.gender,
+        h.race,
+        h.refid,
+        h.profile_id,
+        h.dynamic_profile,
+        h.extended_data,
+        h.md5,
+        h.gamets_last_updated,
+        h.core,
+        h.base,
+        h.tags,
+        h.appearance
+    FROM core_npc_master_history h
+    JOIN deleted d ON h.npc_id = d.id
+    WHERE h.gamets_last_updated < $timestamp OR h.gamets_last_updated IS NULL
+    ORDER BY h.npc_id, h.gamets_last_updated DESC NULLS LAST,h.created DESC
+)
+INSERT INTO core_npc_master (
+    id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
+    oghma_knowledge_tags, emote_moods, personality, relationships,
+    occupation, skills, speechstyle, goals, voiceid, metadata,
+    gender, race, refid, profile_id, dynamic_profile, extended_data,
+    md5, gamets_last_updated, core, base, tags, appearance
+)
+SELECT
+    id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
+    oghma_knowledge_tags, emote_moods, personality, relationships,
+    occupation, skills, speechstyle, goals, voiceid, metadata,
+    gender, race, refid, profile_id, dynamic_profile, extended_data,
+    md5, gamets_last_updated, core, base, tags, appearance
+FROM restore
+";
+        
+        error_log("[NPC RESTORE] using gamets: $timestamp.. ".date('Y-m-d H:i:s'));
+        $GLOBALS["db"]->query($query);
+
+        error_log("[NPC RESTORE] ".date('Y-m-d H:i:s'). ", NPCs restore made in ".(time()-$startTime)." secs ");
+        return true;
+    }
+
 }
 
 ?>
