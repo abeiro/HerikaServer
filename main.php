@@ -519,7 +519,7 @@ if (!$currentNpcData) {
         $newNpcData=array_merge($newNpcData,$ingameDataRef??[]);
         $defProfile=$profileMgr->getDefaultNarrator();
         $newNpcData["profile_id"]=$defProfile["id"];
-        $newNpcData["voiceid"]="malenord";
+        $newNpcData["voiceid"]= $newNpcData["voiceid"] ?: "malenord"; //migrate || default it
         if ($newNpcData) {
             $npcMaster->updateByArray($newNpcData);
         }
