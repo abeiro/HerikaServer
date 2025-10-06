@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 date_default_timezone_set('Europe/Madrid');
 
 $GLOBALS["AVOID_TTS_CACHE"]=true;
-$GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
+$GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try to provide a bogus example.
 
 // Cooldown for some actions
 $COOLDOWNMAP=[];
@@ -1423,7 +1423,8 @@ if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "T
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
     // When chatnf_book (make the AI to read a book), context will only be the book data.
-    $contextDataFull = DataGetLastReadedBook();
+    $contextDataFull = array_merge($contextDataFull, DataGetLastReadedBook());
+    //DataGetLastReadedBook();
 }
 
 

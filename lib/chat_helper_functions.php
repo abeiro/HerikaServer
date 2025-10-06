@@ -1439,11 +1439,13 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
         } else {
-           Logger::trace("Memory discarded by scoring");
+           Logger::trace("[MEMORY] Memory discarded by scoring");
+           error_log("[MEMORY] Memory discarded by scoring");
            return "";
         }
     } else {
-        Logger::trace("Memory not found");
+        Logger::trace("[MEMORY] Memory not found");
+        error_log("[MEMORY] Memory not found");
         return "";
     }
     
@@ -1464,6 +1466,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
         $output = preg_replace($pattern, $replacement, $memory);
         $memory = $s_prefix . $output;
         Logger::trace("Final memory <".substr($memory,0,25)."...>");
+        error_log("Final memory <".substr($memory,0,25)."...>");
 
     }
     

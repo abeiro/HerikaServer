@@ -2301,7 +2301,11 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
             error_log("[DataSearchMemoryByVector start] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
             $TEST_TEXT=internalDumbTranslator($TEST_TEXT);
             
-            $keywords=minimeExtract($TEST_TEXT,true);// Only to check if memory is needed
+            if (isset($GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) && $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) {
+                $keywords=json_encode(["is_memory_recall"=>true]);
+            } else {
+                $keywords=minimeExtract($TEST_TEXT,true);// Only to check if memory is needed
+            }
 
             error_log("[DataSearchMemoryByVector end] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
             $reponse=json_decode($keywords,true);

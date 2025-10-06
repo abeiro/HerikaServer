@@ -464,8 +464,13 @@ class openaijson
                     $data["chat_format"]="tidy"; 
                     
                 } else {
-                    unset($data["top_p"]);
+                    if ((stripos($this->_url, "api.openai.com") > 0 )) {
+                        if (stripos($this->_model, "gpt-5") !== false ) {
+                            unset($data["top_p"]);
+                        }
+                    }
                 }
+
                 $data["reasoning_effort"] = "low";
                 if (!$this->_is_openai)
                     $data['reasoning_format'] = "hidden";
