@@ -322,13 +322,10 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
     try {
         $characterDynamicProfile = $npcData["dynamic_profile"] ?? $GLOBALS["DYNAMIC_PROFILE"] ?? false;
 
-        // when dynamic profile fields are added to db profiles swap these lines for original default logic
-        // $characterDynamicProfileFields = $npcData["dynamic_profile_fields"] ?? $GLOBALS["DYNAMIC_PROFILE_FIELDS"] ?? ["personality", "relationships"];
+        // restores logic now that DYNAMIC_PROFILE_FIELDS is in npcData
         $characterDynamicProfileFields = $npcData["DYNAMIC_PROFILE_FIELDS"] ??
-            $GLOBALS["DYN_FIELDS_OVERRIDE"][$npcName] ??
-            $GLOBALS["DYN_FIELDS_OVERRIDE_DEFAULTS"] ??
             $GLOBALS["DYNAMIC_PROFILE_FIELDS"] ?? // use default conf.php settings
-            ["personality", "relationships", "occupation", "skills", "speechstyle", "goals"];
+            ["personality", "relationships"]; //fallback
 
         // Check if DYNAMIC_PROFILE is enabled for this NPC
         if (!$characterDynamicProfile) {

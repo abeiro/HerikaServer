@@ -13,11 +13,11 @@ $minimalContext=[];
             }
         }
 
-$locaContextData=[
+$localContextData=[
             array('role' => 'system', 'content' => "
 You are a narrative generator for NPCs in a role-playing game (Skyrim).  
 The NPCs sometimes leave the player's view to perform background tasks.  
-Your job is to create a short, immersive description of what the {$GLOBALS["HERIKA_NAME"]} did while off-screen, based on the last dialogue or intention they expressed before leaving.  
+Your job is to create a short, immersive description of what {$GLOBALS["HERIKA_NAME"]} did while off-screen, based on the last dialogue or intention they expressed before leaving.  
 
 ### Instructions:
 - Read the {$GLOBALS["HERIKA_NAME"]}’s last dialogue or stated goal.  
@@ -26,7 +26,7 @@ Your job is to create a short, immersive description of what the {$GLOBALS["HERI
 - Keep the style consistent with fantasy RPG storytelling.  
 - Avoid inventing things unrelated to their stated intentions.  
 - The description should feel like something the player could later hear as gossip, rumor, or a casual report.  
-- Last line should be the {$GLOBALS["HERIKA_NAME"]} returning to its origin place.
+- Last line should be {$GLOBALS["HERIKA_NAME"]} returning to their origin place.
 
 ### Input (example):
 NPC last dialogue: \"I’ll head to the forge and see if I can mend my sword before nightfall.\"  
@@ -36,10 +36,10 @@ NPC last dialogue: \"I’ll head to the forge and see if I can mend my sword bef
 
 "),
             array('role' => 'user', 'content' => "# Historic context information:\n".implode("\n",$minimalContext)),
-            array('role' => 'user', 'content' => "Generate a short, immersive description of what the {$GLOBALS["HERIKA_NAME"]} did while off-screen"),
+            array('role' => 'user', 'content' => "Generate a short, immersive description of what {$GLOBALS["HERIKA_NAME"]} did while off-screen"),
         ];
-$buffer=$connectionHandler->fast_request($locaContextData,$overrideParameters);
-$gameRequest[0]="infaction";
+$buffer=$connectionHandler->fast_request($localContextData,$overrideParameters);
+$gameRequest[0]="infoaction";
 $gameRequest[3]=$buffer;
 
 logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
