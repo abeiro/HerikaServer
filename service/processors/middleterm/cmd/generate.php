@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 $startTime = microtime(true);
 
@@ -47,10 +47,10 @@ foreach (array_reverse($contextDataFull) as $entry) {
     }
 }
 
-$head[] = ['role' => 'system', 'content' => "You're an AI assistant. Examine this memory logbook from a story in the Skyrim universe."];
+/*$head[] = ['role' => 'system', 'content' => "You're an AI assistant. Examine this memory logbook from a story in the Skyrim universe."];
 
 $request = "
-Read the context history, paying attention to character names,  and fill the following info.
+Read the context history, paying attention to character names, and fill the following info.
 
 **Context History Summary:**
 
@@ -75,14 +75,35 @@ Read the context history, paying attention to character names and notable events
 
 - **Current Quest Progression and background:**
 
-";
+";*/
+
+$head[] = [
+    'role' => 'system',
+    'content' =>
+        "You are a long-term narrative continuity summarizer for an improvised Skyrim universe chronicle.\n".
+        "- Always read ALL provided materials.\n".
+        "- Treat any **Previous Context History Summary** as the canonical prior unless anything in the new Context History explicitly supersedes it.\n".
+        "- Maintain in-universe tone and correct chronology. Do not invent facts outside the supplied context."
+];
+
+$request =
+    "Main character in this logbook is {$GLOBALS['HERIKA_NAME']}.\n".
+    "Task: Read **Context History** (newest session) and, if present, the **Previous Context History Summary** (prior canon). ".
+    "Integrate them to produce an updated broad narrative strokes summary that preserves continuity. Summary sections:\n\n".
+
+    "- **Notable Events in Chronological Order:**\n".
+    "  - Provide ~10 bullet points from earliest to latest, reflecting the whole story so far.\n".
+    "  - Prefer facts already established in the previous summary; only revise if the new context clearly changes them.\n\n".
+
+    "- **Current Quest Progression and background:**\n".
+    "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n";
 
 if (!empty($previous))
-    $prompt[] = ['role' => 'user', 'content' => "# Previous Context History Summary:\n$previous"];    
+    $prompt[] = ['role' => 'user', 'content' => "# Previous Context History Summary:\n$previous"];
 
 $prompt[] = ['role' => 'user', 'content' => "# Context History\n$history\n$task"];
 $prompt[] = ['role' => 'user', 'content' => $request];
-$prompt[] = ['role' => 'assistant', 'content' => "### Notable Events in Chronological Order"];
+$prompt[] = ['role' => 'user', 'content' => "Begin your answer with `### Notable Events in Chronological Order` and complete sections as instructed."];
 
 $contextData = array_merge($head, $prompt);
 
