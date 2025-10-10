@@ -42,6 +42,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
         <div class="cp-actions">
             <a href="<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php" target="_blank" class="btn-base btn-primary" title="Generate AIAgent.ini file for the mod file.">Create Custom AIAgent.ini</a>
             <a href="<?php echo $webRoot; ?>/ui/core/migrate_profiles.php" class="btn-base btn-primary" title="Migrate all legacy conf_*.php profiles to the database and archive them.">⚙️ Migrate Legacy Profiles</a>
+            <a href="<?php echo $webRoot; ?>/ui/conf_wizard.php" class="btn-base btn-primary" title="Open the configuration wizard to edit profiles and settings.">(Legacy) Config Wizard</a>
         </div>
     </div>
     <div class="tab-buttons">

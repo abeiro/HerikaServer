@@ -856,7 +856,7 @@ echo str_repeat("</fieldset>", $lvl2);
 echo '</form>';
 
 echo "<div style='position:fixed;top:70px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px; z-index: 100000; max-width:300px; max-height:80vh; overflow-y:auto;'>
-<span><strong>Quick Access for <span style='color:yellow'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br><span style='font-size:11px'>You must click save before using 'Copy to All Profiles'</span><br/><span style='font-size:7px'>".
+<span><strong>Quick Access for <span style='color:yellow'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br><span style='font-size:11px'>THIS MENU IS NO LONGER USED FOR CONFIGURATION OF CHIM. YOU CAN JUST USE THIS MENU TO HELP SEE PREVIOUS SETTINGS FOR MIGRATION.'</span><br/><span style='font-size:7px'>".
     basename($_SESSION["PROFILE"])
 ."</span></strong></span><ul>";
 
