@@ -33,7 +33,7 @@ $contextDataFull=$GLOBALS["db"]->fetchAll("SELECT summary as content,gamets_trun
 // $task=DataGetCurrentTask();
 
 if (sizeof($contextDataFull)==0 ||sizeof($contextDataFull)<10 ) {
-    error_log("No memories to summarize\n");
+    Logger::info("\tNo memories to summarize for $selectedNpc");
     return;
 }
 

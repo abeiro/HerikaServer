@@ -2,6 +2,7 @@
 
 class Logger {
     private const DEFAULT_LOG = '/var/www/html/HerikaServer/log/chim.log';
+    private static $CUSTOM_LOG;
     private const LOG_LEVELS = [
         'trace' => 1,
         'debug' => 2,
@@ -15,6 +16,16 @@ class Logger {
 
     // timestamp format (default = ISO 8601)
     private static $_timestampFormat = 'Y-m-d\TH:i:sP';
+
+    // Set custom log file path
+    public static function setCustomLog($logFile) {
+        self::$CUSTOM_LOG = $logFile;
+    }
+
+    // Unset custom log file path
+    public static function unsetCustomLog() {
+        self::$CUSTOM_LOG = null;
+    }
 
     // Ex: Logger::setLevel("warn") to suppress trace, debug, and info messages
     public static function setLevel($level) {
@@ -41,6 +52,12 @@ class Logger {
 
         $timestamp = self::$_timestampFormat ? "[".date(self::$_timestampFormat)."] " : "";
         $logEntry = "{$timestamp}[{$level}] {$message}\n";
+        
+
+        if ($logFile == self::DEFAULT_LOG && isset(self::$CUSTOM_LOG) && !empty(self::$CUSTOM_LOG)) {
+            $logFile=self::$CUSTOM_LOG;
+        }
+
         error_log($logEntry, 3, $logFile);
 
         // also write to apache error log
@@ -107,6 +124,16 @@ class Logger {
 
         // return false to allow PHP's default error handler to run as well
         return false;
+    }
+
+    // Delete log file if its size is greater than 25Mb
+    public static function deleteLogIfTooLarge($logFile = null, $maxSize = 26214400) {
+        if ($logFile === null) {
+            $logFile = isset(self::$CUSTOM_LOG) && !empty(self::$CUSTOM_LOG) ? self::$CUSTOM_LOG : self::DEFAULT_LOG;
+        }
+        if (file_exists($logFile) && filesize($logFile) > $maxSize) {
+            unlink($logFile);
+        }
     }
 }
 
