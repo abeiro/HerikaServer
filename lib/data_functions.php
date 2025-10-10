@@ -260,12 +260,13 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $followersString = "";
     }
 
-    $lastDialog[] = array('role' => 'user', 'content' => "# ADVENTURING PARTY
-     $followersString are together as an **adventuring party**, acting as close companions.
-     - The others **can know each other**, but they are **not part** of $followersString’s group.
-     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.',
-    ");
-
+	if ($followersString!=$GLOBALS["PLAYER_NAME"] && !empty($followersString)) {
+	    $lastDialog[] = array('role' => 'user', 'content' => "# ADVENTURING PARTY
+	     $followersString are together as an **adventuring party**, acting as close companions.
+	     - The others **can know each other**, but they are **not part** of $followersString’s group.
+	     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.',
+	    ");
+	}
     $arr_poi = DataPosibleLocationsToGo();
     if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
         $lastDialog[] = array('role' => 'user', 'content' => "# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi)));
