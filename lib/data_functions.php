@@ -801,7 +801,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             
         } else if ($row["subtype"]=="ITEM") {
             if ($focusOnChat) {
-                if (strpos($rowData,"{$GLOBALS["HERIKA_NAME"]}")===false) // This NPC's item transaction conserved
+                if (strpos($rowData,"{$GLOBALS["HERIKA_NAME"]}")===false) // This NPC's item transactions conserved
                     continue;
             }
             $speaker = "narratorci";
@@ -892,6 +892,7 @@ New setting: $currentLocation
     }
 
  
+    file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($lastDialogFull,true));
 
     // Remove memory logs, only leave last one.
     $lastDialogFullOnlyLastMemory=[];
@@ -914,7 +915,6 @@ New setting: $currentLocation
     $lastDialogFull=array_reverse($lastDialogFullOnlyLastMemory);
     // En of memory logs cleaning
 
-    file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($lastDialogFull,true));
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($query,true),FILE_APPEND);
     
     return $lastDialogFull;
@@ -1550,7 +1550,7 @@ function DataGetCurrentTask()
     }
 
     $data = "";
-    $results = $db->fetchAll("SElECT distinct description as description,gamets FROM currentmission where sess<>'ephemeral' order by gamets desc");
+    $results = $db->fetchAll("SElECT distinct description as description,gamets FROM currentmission where sess<>'ephemeral' and gamets>$hourThreshold order by gamets desc");
     if (!empty($results)) {
         $data = "\n\n#Current Plans\n";
         $n = 0;
@@ -1762,46 +1762,7 @@ function PackIntoSummary($onlyMissingDiary=false)
         Logger::info("Diary insert done");
     }
 
-    $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
-    $people=$db->fetchAll("SELECT distinct split_part(data, '@', 1) as npc from eventlog where type='addnpc'");
-    $addednpc=[];
-    foreach ($people as $p)
-        $addednpc[]=$p["npc"];
-
     
-    foreach ( $db->fetchAll("select * from memory_summary where companions is null ") as $row) {
-        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog where gamets>{$row["gamets_truncated"]}-$pfi and gamets<={$row["gamets_truncated"]}+$pfi");
-        error_log("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog where gamets>{$row["gamets_truncated"]}-$pfi and gamets<={$row["gamets_truncated"]}+$pfi");
-        $npcs=[];
-        $npcInMemory=[];
-        foreach ($people as $p) {
-            if ($p["people"]) {
-                $rowNpc=explode("|",$p["people"]);
-                foreach ($rowNpc as $npc) {
-                    $npc = preg_replace('/\([^)]*\)/', '', $npc);
-                    if (trim($npc))
-                        if (isset($npcs[trim($npc)]))
-                            $npcs[trim($npc)]++;
-                        else
-                            $npcs[trim($npc)]=1;
-                }
-                
-            }
-        }
-      
-        
-        
-        foreach($npcs as $name=>$n_occurences) {
-            if (in_array($name,$addednpc) && $n_occurences>5) {
-                $npcInMemory[]=$name;
-
-            }
-
-        }
-        $peopleFmt=$db->escape(implode(",",$npcInMemory));
-
-        $db->query("update memory_summary set companions='$peopleFmt' where rowid={$row["rowid"]}");
-    }
     return $maxRow;
 }
 
@@ -2275,10 +2236,14 @@ function DataSearchMemory($rawstring,$npcfilter) {
 }
 
 
-function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
+function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$timeThreshold=0) {
     
         $localStartTime=microtime(true);
-        Logger::info("Using DataSearchMemoryByVector");
+        Logger::info("Using DataSearchMemoryByVector $rawstring,$npcfilter,$useContextKw=false,$timeThreshold=0");
+        
+        if (!$timeThreshold)
+            $timeThreshold=0;
+        
         $result=[];
         if (is_array($rawstring)) {
             $kwStringAny=implode(" ",$rawstring);
@@ -2302,7 +2267,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
             $TEST_TEXT=internalDumbTranslator($TEST_TEXT);
             
             if (isset($GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) && $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) {
-                $keywords=json_encode(["is_memory_recall"=>true]);
+                error_log("[DataSearchMemoryByVector ] PATCH_BYPASS_MINIME_EXTRACT");
+                $keywords=json_encode(["is_memory_recall"=>"Yes"]);
             } else {
                 $keywords=minimeExtract($TEST_TEXT,true);// Only to check if memory is needed
             }
@@ -2310,7 +2276,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
             error_log("[DataSearchMemoryByVector end] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
             $reponse=json_decode($keywords,true);
             
-            //print_r($reponse);
+            error_log("[DataSearchMemoryByVector end] minimeExtract : " .print_r($reponse,true));
+
             
             if (isset($reponse["is_memory_recall"]) && $reponse["is_memory_recall"]=="No") {
                 $GLOBALS["db"]->insert(
@@ -2382,7 +2349,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
             $pattern = '/\(talking to [^()]+\)/i';
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
-            $keywords=strtr($TEST_TEXT,["."=>" ",","=>" "]);
+            $keywords=strtr($TEST_TEXT,["."=>" ",","=>" ","'"=>" "]);
             $kw=[];
             
             //print_r($keywords);
@@ -2475,9 +2442,10 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
             $finalQuery="
                 SELECT summary, gamets_truncated,
                         embedding <-> $vectorString as distance,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_any_fts,
                          ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
-                         (embedding <-> $vectorString) - ts_rank(native_vec, to_tsquery('$kwStringAny')) AS mixed_distance
+                         (embedding <-> $vectorString) - ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll'))
+                          AS mixed_distance
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
                     and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
@@ -2486,17 +2454,22 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false) {
                 ";
 
              $finalQuery="
-                SELECT rowid,summary, gamets_truncated,
+                SELECT rowid,gamets_truncated,
                         embedding <-> $vectorString as distance,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
-                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
-                         (embedding <-> $vectorString) - ts_rank(native_vec, to_tsquery('$kwStringAny')) AS mixed_distance
+                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts_raw,
+                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts_raw,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
+                         (embedding <-> $vectorString) - (ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) ) AS mixed_distance,
+                         summary
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
                     and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    and (gamets_truncated<$timeThreshold or $timeThreshold=0)
+                    
                     ORDER BY 
                         round((embedding <-> $vectorString)::numeric, 2) ASC,
-                        ts_rank(native_vec, to_tsquery('$kwStringAny')) DESC
+                        (ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll'))) DESC
                     LIMIT 50 OFFSET 0
                 ";    
             $memory=$GLOBALS["db"]->fetchAll($finalQuery);
@@ -3997,6 +3970,22 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             $EQUIPMENT_ADD = "\n\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts);
         }
     }
+
+     // Add NPC's inventory
+    if (isset($metaData["inventory"]) && is_array($metaData["inventory"])) {
+       
+        $equipmentParts=[];
+        foreach ($metaData["inventory"] as $item) {
+            if ($item["name"]!='<Missing Name>') {
+                $equipmentParts[]="{$item["count"]} {$item["name"]}";
+            }
+            
+        }
+        
+        if (!empty($equipmentParts)) {
+            $INVENTORY_ADD = "\n\n#Current Inventory:\n" . implode(",", $equipmentParts);
+        }
+    }
     
 	// Add current condition (qualitative HP/MP/SP based on percent, with richer descriptors)
 	if (isset($metaData["stats"]) && is_array($metaData["stats"])) {
@@ -4083,6 +4072,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             if ($fieldName=="HERIKA_APPEARANCE") {
                 $dynamicBio.="$EQUIPMENT_ADD";
                 $dynamicBio.="$TARGET_EQUIPMENT_ADD";
+                $dynamicBio.="$INVENTORY_ADD";
                 $dynamicBio.="$STATS_ADD";
             }
         }

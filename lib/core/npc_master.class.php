@@ -395,7 +395,7 @@ class NpcMaster {
             foreach ($metadata as $key => $value) {
                 if (!empty($value)) {
                     $GLOBALS[$key] = $value;
-                    error_log("[CORE] NPC  GLOBALS[$key] = ".print_r($value,true));
+                    //error_log("[CORE] NPC  GLOBALS[$key] = ".print_r($value,true));
                 }
 
             }

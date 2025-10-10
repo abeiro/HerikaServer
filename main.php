@@ -12,7 +12,7 @@ date_default_timezone_set('Europe/Madrid');
 
 $GLOBALS["AVOID_TTS_CACHE"]=true;
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try to provide a bogus example.
-
+$GLOBALS["MEMORY_THRESHOLD_MODIFIER"]=0;    // POST MEMORY
 // Cooldown for some actions
 $COOLDOWNMAP=[];
 
@@ -1490,6 +1490,11 @@ if ($gameRequest[0] == "funcret") {
     // $contextData will be populated
 
     require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."funcret.php");
+
+
+} elseif ((strpos($gameRequest[0], "chatnf_book")!==false)) {
+
+    $contextData = array_merge($head, ($contextDataFull));
 
 
 } elseif ((strpos($gameRequest[0], "chatnf")!==false)) {

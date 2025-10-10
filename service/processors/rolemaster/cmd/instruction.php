@@ -90,7 +90,7 @@ user request: actor \"a\" leaves the place
   "instruction": "actor b should say goodbye to b",
   "action": "JustTalk",
   "target": "Actor a",
-  "scene_note": ""
+  "scene_note": "Is a sad moment, generally speaking."
 }
 ]
 }
@@ -102,7 +102,7 @@ user request: actor \"a\" leaves the place
   "instruction": "actor a should ask actor b for a few coins, claiming they desperately need a drink.",
   "action": "Talk",
   "target": "actor b",
-  "scene_note": "actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away."
+  "scene_note": "actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away. Other actors watch this two guys with curiosity"
  }
 ]
 }
@@ -133,8 +133,8 @@ In addition, follow these general scene rules as a game director:
  * Do not resolve everything neatly—keep room for ongoing tension or future continuation.
  * You must always provide dialogue instructions for the character, as every request requires a dialogue response.
  * Here are a list of actions that can be used: \n  ** ".implode("\n  ** ", $fnames)."\n  ** JustTalk 
- * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.
- * If scene is getting boring, add a plot twist
+ * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality. Other actors can see this to properly react.
+ * If scene is getting boring/repetitive, add a plot twist
 ");
         
         

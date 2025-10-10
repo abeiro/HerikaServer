@@ -1397,14 +1397,17 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
        $npc=""; 
     }
 
+    $timeThreshold=round($gameRequest[2]-(getGametsLimitFor($npc)/0.0000024),0)-1;
+
+    error_log("[DataSearchMemoryByVector] Using timeThreshold $timeThreshold");
     $contextKeywords  = implode(" ", lastKeyWordsContext(5,$npc));
 
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
         $localStartTime = microtime(true);
         error_log("[DataSearchMemoryByVector calling]  : " . (microtime(true) - $localStartTime) . " seconds");
-        $res = DataSearchMemoryByVector($gameRequest[3], $npc, true);
+        $res = DataSearchMemoryByVector($gameRequest[3], $npc, true,$timeThreshold);
         error_log("[DataSearchMemoryByVector called 1]  : " . (microtime(true) - $localStartTime) . " seconds");
-        $res2 = DataSearchMemoryByVector($gameRequest[3], $npc);
+        $res2 = DataSearchMemoryByVector($gameRequest[3], $npc,false,$timeThreshold);
         error_log("[DataSearchMemoryByVector called 2]  : " . (microtime(true) - $localStartTime) . " seconds");
 
         if (isset($res[0]) && isset($res2[0])) {
@@ -1422,11 +1425,11 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     if (isset($memories[0])) {
         Logger::trace(print_r($memories[0],true));
 
-        if (($memories[0]["rank_any"]==$memories[0]["rank_all"])&&($memories[0]["rank_any"]>0.25)) {
+        if (($memories[0]["rank_any"]==$memories[0]["rank_all"])&&($memories[0]["rank_any"]> (0.25+$GLOBALS["MEMORY_THRESHOLD_MODIFIER"]) )) {
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)>0.25) {
+        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)> (0.25+ $GLOBALS["MEMORY_THRESHOLD_MODIFIER"])) {
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
@@ -1434,7 +1437,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else if (($memories[0]["rank_any"]>0.50) && isset($memories[0]["mixed_distance"])) {// Search by mixed vector/fts .
+        } else if (($memories[0]["rank_any"]> (0.50 + $GLOBALS["MEMORY_THRESHOLD_MODIFIER"])) && isset($memories[0]["mixed_distance"])) {// Search by mixed vector/fts .
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
@@ -1458,7 +1461,8 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             $s_prefix = "{$daysAgo} days ago, on {$sk_date} ... ";
         } else {
             $s_prefix = "{$hoursAgo} hours ago ... ";
-            Logger::trace("Discaring memory because recent ($hoursAgo} hours ago ... )");
+            Logger::trace("Discarding memory because recent ($hoursAgo} hours ago ... )"); ////DataSearchMemoryByVector filter  by gamets, this should happend if using it
+            error_log("[MEMORY] Discarding memory because recent ($hoursAgo} hours ago");
             return "";// Do not offer memory if its recent
         }
         $pattern = '/#Tags:.*/';
@@ -1469,7 +1473,7 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
         error_log("Final memory <".substr($memory,0,25)."...>");
 
     }
-    
+    error_log("[MEMORY] Returning memory");
     return ($memory);
 }
 

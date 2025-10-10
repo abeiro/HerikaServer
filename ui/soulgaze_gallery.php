@@ -45,10 +45,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; padding:20px; }
     .lightbox .inner { position:relative; max-width:95vw; max-height:92vh;min-width: 1024px;margin-left: auto;margin-right: auto;text-align: center;background-color: black; }
     .lightbox img { max-width:95vw; max-height:92vh; display:block; border:1px solid #4a4a4a; border-radius:8px; background:#111; margin-left: auto;margin-right: auto;}
-    .lightbox .tools { position:absolute; top:8px; right:8px; display:flex; gap:6px; }
-    .lightbox .tools a, .lightbox .tools button { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; text-decoration:none; font-weight:700; }
+    .lightbox .tools { position:absolute; top:8px; right:8px; display:flex; gap:6px;z-index:10 }
+    .lightbox .tools a, .lightbox .tools button { font-size:14px;padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; text-decoration:none; font-weight:700; }
     .lightbox .tools a:hover, .lightbox .tools button:hover { background:#3a3a3a; }
+    video {object-fit: scale-down; max-height: 480px;}
     body {min-height:auto}
+    .vthumb {position: relative;display: inline-block;}
+ 
 </style>
 <?php
 
@@ -116,7 +119,7 @@ if ($rootFs && is_dir($rootFs)) {
         foreach ($it as $fi) {
             if (!$fi->isFile()) continue;
             $ext = strtolower(pathinfo($fi->getFilename(), PATHINFO_EXTENSION));
-            if (!in_array($ext, ['jpg','jpeg','png'], true)) continue;
+            if (!in_array($ext, ['jpg','jpeg','png','mp4'], true)) continue;
             $absPath = $fi->getPathname();
             $rel = substr($absPath, strlen($rootFs) + 1);
             $rel = str_replace('\\', '/', $rel);
@@ -126,7 +129,8 @@ if ($rootFs && is_dir($rootFs)) {
                 'url' => $url,
                 'rel' => $rel,
                 'mtime' => $fi->getMTime(),
-                'size' => $fi->getSize()
+                'size' => $fi->getSize(),
+                'type' =>$ext
             ];
         }
     } catch (Throwable $e) {
@@ -155,7 +159,11 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         <div class="grid">
             <?php foreach ($images as $img): $n = $img['name']; $u = $img['url']; ?>
                 <div class="card" data-url="<?php echo htmlspecialchars($u); ?>">
-                    <img class="thumb" src="<?php echo htmlspecialchars($u); ?>" alt="<?php echo htmlspecialchars($n); ?>" loading="lazy">
+                    <?php if ($img['type']=="mp4") {?>
+                    <video class="vthumb thumb" controls src="<?php echo htmlspecialchars($u); ?>" alt="<?php echo htmlspecialchars($n); ?>" loading="lazy" ></video>
+                    <?php } else {?>
+                    <img class="thumb" src="<?php echo htmlspecialchars($u); ?>" alt="<?php echo htmlspecialchars($n); ?>" loading="lazy" />
+                    <?php } ?>
                     <div class="info">
                         <div class="name" title="<?php echo htmlspecialchars($img['rel']); ?>"><?php echo htmlspecialchars($n); ?></div>
                         <div class="actions">
@@ -177,13 +185,15 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         <div class="tools">
             <a id="lb_open" href="#" target="_blank" rel="noopener">Open</a>
             <a id="lb_dl" href="#" download>Download</a>
-            <a id="lb_reimage1" href="#" title="Will send image to gptimage to create a reimagined version">GPT Reimagine</a>
-            <a id="lb_reimage2" href="#" title="Will send image to replicate to create a reimagined version,needs a replicate API key">Replicate Reimagine</a>
-            <a id="lb_reimage3" href="#" title="Will send image to OpenRouter to create a reimagined version,needs a OpenRouter API key">OR-Gemini Reimagine</a>
+            <a id="lb_reimage1" href="#" title="Will send image to GPTImage to create a reimagined version, needs an OpenAI API kei">GPT Reimagine ($)</a>
+            <a id="lb_reimage2" href="#" title="Will send image to Replicate to create a reimagined version,needs a Replicate API key">Replicate Reimagine ($)</a>
+            <a id="lb_reimage3" href="#" title="Will send image to OpenRouter to create a reimagined version,needs a OpenRouter API key">OR-Gemini Reimagine ($)</a>
+            <a id="lb_reimage4" href="#" title="Will send image to Replicate to create a short video (7secs),needs a Replicate API key">Replicate animate ($)</a>
             <button id="lb_close" type="button">Close</button>
             <button id="lb_del" type="button">Delete</button>
         </div>
         <img id="lb_img" src="" alt="preview">
+        <video id="lb_video" src="" alt="preview" controls></video>
     </div>
     
     
@@ -193,12 +203,14 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
 (function(){
   const lb = document.getElementById('lightbox');
   const lbImg = document.getElementById('lb_img');
+  const lbVideo = document.getElementById('lb_video');
   const lbOpen = document.getElementById('lb_open');
   const lbDl = document.getElementById('lb_dl');
   const lbClose = document.getElementById('lb_close');
   const lb_reimage1 = document.getElementById('lb_reimage1');
   const lb_reimage2 = document.getElementById('lb_reimage2');
   const lb_reimage3 = document.getElementById('lb_reimage3');
+  const lb_reimage4 = document.getElementById('lb_reimage4');
   const lb_del = document.getElementById('lb_del');
   function showProcessing() {
     processingMessage = document.createElement('div');
@@ -218,8 +230,29 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
     processingMessage.innerHTML=''
   }
   var processingMessage;
-  function open(url){ if (!lb) return; lbImg.src=url; lbOpen.href=url; lbDl.href=url; lb.style.display='flex'; document.body.style.overflow='hidden'; }
-  function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribute('src'); document.body.style.overflow='auto'; }
+function open(url) {
+  if (!lb) return;
+
+  const isVideo = url.endsWith('.mp4'); // You can extend this to support more video types if needed
+
+  if (isVideo) {
+    lbImg.src = '';        // Clear image source
+    lbVideo.src = url;     // Set video source
+    lbVideo.style.display = 'inline-block';
+    lbImg.style.display = 'none';
+  } else {
+    lbImg.src = url;       // Set image source
+    lbVideo.src = '';      // Clear video source
+    lbVideo.style.display = 'none';
+    lbImg.style.display = 'block';
+  }
+
+  lbOpen.href = url;
+  lbDl.href = url;
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribute('src'); document.body.style.overflow='auto'; }
   document.addEventListener('click', function(e){
     const card = e.target && e.target.closest && e.target.closest('.card');
     if (!card) return;
@@ -306,6 +339,27 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         .catch((error) => {
             console.error('Error:', error);
         });
+     } else if (e.target === lb_reimage4) {
+        showProcessing();
+
+        fetch('cmd/gallery_tool_animate_replicate.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            close()
+            // Reload the current document to reflect changes
+            window.location.reload();
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
      } else if (e.target === lb_del) {
         if (confirm('Sure thing?. No recycle bin here')) {
             showProcessing();
@@ -334,6 +388,20 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
 
     
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') close(); });
+
+  document.querySelectorAll('.vthumb').forEach(video => {
+    video.addEventListener('mouseenter', () => {
+      video.play().catch(e => {
+        console.warn('Autoplay prevented:', e);
+      });
+    });
+
+    video.addEventListener('mouseleave', () => {
+      video.pause();
+      video.currentTime = 0; // Optional: reset to start
+    });
+  });
+
 })();
 </script>
 

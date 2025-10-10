@@ -46,7 +46,27 @@ if ($method === 'POST') {
         default       => 'application/octet-stream'
     };
 
-// Leer archivo y codificar en base64
+
+    $refid = null;
+    $gender = null;
+    $race = null;
+    $hints = '';
+
+    // Check if filename matches the pattern: 8 hex characters + extension (e.g., 0001C1A4.jpg)
+    $filename = pathinfo($source, PATHINFO_FILENAME);
+    if (preg_match('/^[0-9A-F]{8}$/i', $filename)) {
+        $refid = strtoupper($filename); // Normalize to uppercase if needed
+
+        $npcData = $db->fetchOne("SELECT gender, race FROM core_npc_master WHERE refid = '$refid'");
+
+        if ($npcData) {
+            $gender = $npcData['gender'];
+            $race = $npcData['race'];
+            $hints = "Hint: The person in the picture is a $gender $race";
+        }
+    }
+
+    // Leer archivo y codificar en base64
     $base64 = base64_encode(file_get_contents($source));
 
 // Crear Data URI
@@ -55,7 +75,7 @@ if ($method === 'POST') {
 
     $payload = json_encode([
         "input" => [
-            "prompt"                 => "Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving  details like tattos, eye color, hair style, hair color, clothing, make-up and environment.",
+            "prompt"                 => "Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving  details like tattos, skin color, eye color, hair style, hair color, clothing, make-up and environment. $hints",
             "input_image"            => $sourceImageData,
             "output_format"          => "png",
             "num_inference_steps"    => 30,
