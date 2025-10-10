@@ -369,7 +369,7 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
                 headers: {
                 'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ source: lbImg.src })
+                body: JSON.stringify({ source: lbImg.src,sourceVid: lbVideo?lbVideo.src:null })
             })
             .then(response => response.json())
             .then(data => {
