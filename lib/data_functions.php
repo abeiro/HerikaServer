@@ -2076,7 +2076,7 @@ function DirectConversationsWith($actor, $speaker="")
     
     $listenerprmt=$db->escape($actor);
     $gametsLimit=round(($GLOBALS["gameRequest"][2]??0)-(getGametsLimitFor($actor)/0.0000024),0);
-    $lastLoc=$db->fetchAll("SELECT count(*) as N FROM speech WHERE (speaker='$speakerprmt' and listener='$listenerprmt') OR (listener='$speakerprmt' and speaker='$listenerprmt') and gamets<");  
+    $lastLoc=$db->fetchAll("SELECT count(*) as N FROM speech WHERE (speaker='$speakerprmt' and listener='$listenerprmt') OR (listener='$speakerprmt' and speaker='$listenerprmt') and gamets<$gametsLimit");  
     
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         Logger::warn("DirectConversationsWith: zero interactions {$speakerprmt} - {$listenerprmt} ");
