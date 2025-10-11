@@ -203,6 +203,14 @@ class sql
             return "";
     }
 
+    public function escapeLiteral($string)
+    {
+        if ($string)
+            return pg_escape_literal(self::$link,$string);
+        else
+            return "";
+    }
+
     public function updateRow($table, $data, $where)
     {
         $setClauses = [];

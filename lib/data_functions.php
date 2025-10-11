@@ -263,9 +263,9 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
 	if ($followersString!=$GLOBALS["PLAYER_NAME"] && !empty($followersString)) {
 	    $lastDialog[] = array('role' => 'user', 'content' => "# ADVENTURING PARTY
 	     $followersString are together as an **adventuring party**, acting as close companions.
-	     - The others **can know each other**, but they are **not part** of $followersString’s group.
-	     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.',
-	    ");
+	     - The others **can know each other**, but they are **not part** of {$followersString}’s group.
+	     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.
+	     ");
 	}
     $arr_poi = DataPosibleLocationsToGo();
     if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
@@ -2076,7 +2076,7 @@ function DirectConversationsWith($actor, $speaker="")
     
     $listenerprmt=$db->escape($actor);
     $gametsLimit=round(($GLOBALS["gameRequest"][2]??0)-(getGametsLimitFor($actor)/0.0000024),0);
-    $lastLoc=$db->fetchAll("SELECT count(*) as N FROM speech WHERE (speaker='$speakerprmt' and listener='$listenerprmt') OR (listener='$speakerprmt' and speaker='$listenerprmt') and gamets<$gametsLimit");  
+    $lastLoc=$db->fetchAll("SELECT count(*) as N FROM speech WHERE (speaker='$speakerprmt' and listener='$listenerprmt') OR (listener='$speakerprmt' and speaker='$listenerprmt') and gamets<$gametsLimit");
     
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         Logger::warn("DirectConversationsWith: zero interactions {$speakerprmt} - {$listenerprmt} ");
@@ -4066,15 +4066,15 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             
             // Add skills right after HERIKA_SKILLS section
             if ($fieldName=="HERIKA_SKILLS") {
-                $dynamicBio.="$SKILLS_ADD";
+                $dynamicBio.=$SKILLS_ADD ?? "";
             }
             
             // Add equipment right after HERIKA_APPEARANCE section
             if ($fieldName=="HERIKA_APPEARANCE") {
-                $dynamicBio.="$EQUIPMENT_ADD";
-                $dynamicBio.="$TARGET_EQUIPMENT_ADD";
-                $dynamicBio.="$INVENTORY_ADD";
-                $dynamicBio.="$STATS_ADD";
+                $dynamicBio.=$EQUIPMENT_ADD ?? "";
+                $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
+                $dynamicBio.=$INVENTORY_ADD ?? "";
+                $dynamicBio.=$STATS_ADD ?? "";
             }
         }
     }
