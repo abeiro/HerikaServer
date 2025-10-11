@@ -110,7 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         foreach ($allPairs as $k => $v) {
             $full = explode('@', $k);
             $plain = strtr($k, ['@' => ' ']);
-            if ($plain === 'PLAYER_NAME') continue;
             $type = $confSchemaFlat[$plain]['type'] ?? 'string';
             if (is_array($v)) $value = json_encode($v, true);
             else if ($type === 'number') { if ($v === '') continue; else $value = "" . addcslashes($v, "'") . ""; }
@@ -232,6 +231,16 @@ echo '<div class="container">
       <h2 class="qs-subtitle text-center mb-4">Only to be used for the initial setup!</h2>
       <h3 class="qs-note text-center mb-4">If you want to make more advanced changes before playing go to the Configuration tab above.</h3>
     </div>';
+
+// PLAYER_NAME at top
+$playerNameVal = isset($currentConf['PLAYER_NAME']['currentValue']) ? (string)$currentConf['PLAYER_NAME']['currentValue'] : '';
+echo '<div class="container">
+        <div class="form-group">
+            <label for="PLAYER_NAME">Player Name</label>
+            <input type="text" class="form-control" id="PLAYER_NAME" name="PLAYER_NAME" value="' . htmlspecialchars($playerNameVal) . '">
+            <small class="form-text">This is your in-game character name. Usually set automatically when you load a save.</small>
+        </div>
+      </div>';
 
 // API Keys section (OpenRouter only here; Deepgram rendered under STT)
 try { $openrouterRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='openrouter' LIMIT 1"); } catch (Throwable $_e) { $openrouterRow = []; }
