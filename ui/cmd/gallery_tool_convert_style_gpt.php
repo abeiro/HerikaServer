@@ -42,6 +42,25 @@
             "Authorization: Bearer " . $api_key,
         ];
 
+        $refid = null;
+        $gender = null;
+        $race = null;
+        $hints = '';
+
+        // Check if filename matches the pattern: 8 hex characters + extension (e.g., 0001C1A4.jpg)
+        $filename = pathinfo($jsonDataInput["source"], PATHINFO_FILENAME);
+        if (preg_match('/^[0-9A-F]{8}$/i', $filename)) {
+            $refid = strtoupper($filename); // Normalize to uppercase if needed
+
+            $npcData = $db->fetchOne("SELECT gender, race FROM core_npc_master WHERE refid = '$refid'");
+
+            if ($npcData) {
+                $gender = $npcData['gender'];
+                $race = $npcData['race'];
+                $hints = "Hint: The person in the picture is a $gender $race";
+            }
+        }
+        
     // Read file contents into memory
         $source = file_get_contents($jsonDataInput["source"]);
         $extra="";
@@ -49,9 +68,11 @@
         $fields = [
             "image[0]"       => new CURLStringFile($source, "source.png", "image/png"),
             "model"          => "gpt-image-1",
-            "input_fidelity" => "low",
-            "prompt"         => "Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving concepts like tattos, eye color, hair style, hair color, clothing, make-up and environment. $extra",
+            "input_fidelity" => "high",
+            "prompt"         => "Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving concepts like tattos, eye color, hair style, hair color, clothing, make-up and environment. $extra. $hints",
         ];
+
+        error_log(print_r($fields["prompt"],true));
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);

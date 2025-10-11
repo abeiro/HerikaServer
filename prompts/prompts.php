@@ -9,8 +9,8 @@ $PROMPTS=array(
         ],
     // Database Prompt (Book)
     "book"=>[
-        "cue"=>["(Note that despite their poor memory, {$GLOBALS["HERIKA_NAME"]} is capable of remembering entire books)"],
-        "player_request"=>["{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["HERIKA_NAME"]}, summarize this book shortly: "]  //requirement
+        "cue"=>["({$GLOBALS["HERIKA_NAME"]} reads the book ) {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["HERIKA_NAME"]}, check this book: "]  //requirement
         
     ],
     // Database Prompt (Combat End)

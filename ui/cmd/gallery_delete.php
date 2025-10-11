@@ -26,13 +26,32 @@ if ($method === 'POST') {
     $path = $parsedUrl['path'];
     $pathParts = explode('/', trim($path, '/'));
     $lastFolder = $pathParts[count($pathParts) - 2]; // Get the second last part of the path
+    
     if ($lastFolder=="gallery")
         $filename  = "$enginePath/data/pictures/gallery/" .basename($source);
     else if ($lastFolder=="uploads")
         $filename  = "$enginePath/data/pictures/gallery/uploads/" .basename($source);
 
-    unlink($filename);
+    error_log("Will delete $filename");
+    if ($filename)
+        unlink($filename);
     
+
+    $source = $jsonDataInput["sourceVid"];
+    $parsedUrl = parse_url($source);
+    $path = $parsedUrl['path'];
+    $pathParts = explode('/', trim($path, '/'));
+    $lastFolder = $pathParts[count($pathParts) - 2]; // Get the second last part of the path
+    
+    if ($lastFolder=="gallery")
+        $filename  = "$enginePath/data/pictures/gallery/" .basename($source);
+    else if ($lastFolder=="uploads")
+        $filename  = "$enginePath/data/pictures/gallery/uploads/" .basename($source);
+
+    error_log("Will delete $filename");
+    if ($filename)
+        unlink($filename);
+
     die(json_encode(["status" => "success"]));
 
 }

@@ -24,13 +24,18 @@ if ($GLOBALS["MINIME_T5"]) {
 if ($GLOBALS["MINIME_T5"]) {
     if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
         if (sizeof($memoryInjectionCtx)==0) {
-            // In case main memory search didnt eturn resutls because minime activated and user is nt directly asking a question
+            // In case main memory search didnt return resutls because minime activated and user is nt directly asking a question
+            error_log("[POST MEMORY SEARCH]");
             $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]=true;
+            
+            $GLOBALS["MEMORY_THRESHOLD_MODIFIER"]=0.5;
             $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
             if ($memoryInjection) {
+                
                 $gameRequestCopy=$gameRequest;
                 $gameRequestCopy[0]="infoaction";
                 $gameRequestCopy[3]="#MEMORY: {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection]";
+                error_log("[POST MEMORY SEARCH], memory found ($memoryInjection)");
                 logEvent($gameRequestCopy,$GLOBALS["HERIKA_NAME"]);// Memory log only avaibale to current NPC.
             }
             

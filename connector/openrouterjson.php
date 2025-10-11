@@ -164,7 +164,7 @@ class openrouterjson
             }
             $b_res = (!($i_pos === false));
         }
-        error_log("[OPENROUTER] is openai model: $b_res");
+        // error_log("[OPENROUTER] is openai model: $b_res");
         return $b_res;
     }
    
@@ -1277,7 +1277,7 @@ class openrouterjson
                             'url'=>$this->_url
                         ));
                 }
-                log_msg("Error in openrouter request '$url':$json_response", 3);
+                error_log("Error in openrouter request '$url':$json_response", 3);
                 return "";
                 
             }

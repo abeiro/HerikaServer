@@ -271,6 +271,7 @@ function icon_for_field(string $flatName): string {
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
     'General' => [
+        [ 'name' => 'PLAYER_NAME', 'type' => 'string' ],
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'PLAYER_BIOS', 'type' => 'longstring' ],
         [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],

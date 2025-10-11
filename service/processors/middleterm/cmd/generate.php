@@ -33,7 +33,7 @@ $contextDataFull=$GLOBALS["db"]->fetchAll("SELECT summary as content,gamets_trun
 // $task=DataGetCurrentTask();
 
 if (sizeof($contextDataFull)==0 ||sizeof($contextDataFull)<10 ) {
-    error_log("No memories to summarize\n");
+    Logger::info("\tNo memories to summarize for $selectedNpc");
     return;
 }
 
@@ -96,7 +96,10 @@ $request =
     "  - Prefer facts already established in the previous summary; only revise if the new context clearly changes them.\n\n".
 
     "- **Current Quest Progression and background:**\n".
-    "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n";
+    "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n". 
+    "When generating entries, ensure that {$GLOBALS['HERIKA_NAME']} — the protagonist — is actively present in the scene. ". 
+    "Any narrative content that occurs before {$GLOBALS['HERIKA_NAME']}'s arrival or outside {$GLOBALS['HERIKA_NAME']}'s perspective should be omitted, ".
+    "reflect only events {$GLOBALS['HERIKA_NAME']} directly witness or participate in\n";
 
 if (!empty($previous))
     $prompt[] = ['role' => 'user', 'content' => "# Previous Context History Summary:\n$previous"];

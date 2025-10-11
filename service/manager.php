@@ -7,11 +7,15 @@ $GLOBALS["ENGINE_ROOT"] = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 error_reporting(E_ALL);
 echo "[MANAGER] START".PHP_EOL;
 
+
 require_once("{$GLOBALS["ENGINE_ROOT"]}/service/lib/core_utils.php");
 require_once("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
 require_once("{$GLOBALS["ENGINE_ROOT"]}/lib/logger.php");
 
-Logger::info("Run started / ".date("Y-m-d H:i:s"));
+Logger::setCustomLog($GLOBALS["ENGINE_ROOT"]."log/manager.log");
+Logger::deleteLogIfTooLarge($GLOBALS["ENGINE_ROOT"]."log/manager.log");
+
+Logger::info("[SERVICE MANAGER] Run started / ".date("Y-m-d H:i:s"));
 
 requireFilesRecursivelyByPattern($GLOBALS["ENGINE_ROOT"]."/service/processors/", '/^entrypoint\.php$/');
 
