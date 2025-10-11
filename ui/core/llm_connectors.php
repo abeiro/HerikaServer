@@ -172,7 +172,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         window.consolidation = function(){ return true; };
     }
     
-    // Check if we're in an iframe (embedded in core profiles)
+    // Check if we're in an iframe (embedded in profiles)
     const isInIframe = (()=>{ try { return window.parent && window.parent !== window; } catch(_){ return true; } })();
     // Expose for inline handler check
     window.isInIframe = isInIframe;

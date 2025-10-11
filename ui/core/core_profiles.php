@@ -30,7 +30,7 @@ $webRoot = rtrim($webRoot, '/');
 
 // Site chrome
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
-$TITLE = "👤 CHIM - Core Profiles";
+$TITLE = "👤 CHIM - Profiles";
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 ?>
@@ -147,7 +147,7 @@ h1.api-title {
         <span class="message"></span>
     </div>
 
-    <h1 class="api-title">Core Profiles</h1>
+    <h1 class="api-title">Profiles</h1>
 
 <?php
 $GLOBALS["db"]=new sql();
