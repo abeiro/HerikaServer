@@ -54,7 +54,7 @@ error_reporting(E_ALL);
 $embedding = $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"];
 
 //Run the Compact Command
-$commandcompact = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php compact noembed';
+$commandcompact = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php compact';
 $commandcompact = shell_exec($commandcompact);
 echo '<link rel="stylesheet" type="text/css" href="../css/main.css">';
 echo "<title> CHIM - Compact Memories</title>";
@@ -65,7 +65,7 @@ echo "<h1>Compact Memories</h1>";
 echo "<pre class='command-output'>$commandcompact</pre>";
 
 //Run the Sync Command
-$commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php sync';
+$commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php resync';
 $outputsync = shell_exec($commandsync);
     echo "<br>";
     echo "<h1>Memory Sync for TXT2VEC</h1>";
