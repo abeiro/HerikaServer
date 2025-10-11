@@ -438,29 +438,30 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                 } else {
                     $GLOBALS["COMMAND_PROMPT"] = "";
                     $gameRequest               = ["summary"];
-                    $CLFORMAT                  = "#Summary: {summary of events and dialogues}\\r\\n#Tags: {list of relevant twitter-like hashtags, include location names, enemies names, other NPC names}";
+                    $CLFORMAT                  = "#Summary: {summary of events and dialogues}\n\n#Tags: {list of relevant twitter-like hashtags, include location names, enemies names, other NPC names}";
                     if (isset($GLOBALS["CORE_LANG"])) {
                         if ($GLOBALS["CORE_LANG"] == "es") {
-                            $CLFORMAT .= " GENERA EL CONTENIDO Y LOS TAGS EN ESPAÑOL";
+                            $CLFORMAT .= "\n\nGENERA EL CONTENIDO Y LOS TAGS EN ESPAÑOL";
                         }
                     }
                     // Database Prompt (Memory Compaction)
+                    $companionsLine = !empty($row["companions"]) ? "{$row["companions"]} are nearby characters.\n" : "";
+
                     $prompt   = [];
                     $prompt[] = ['role' => 'system',
                         'content'           => "This is a playthrough in Skyrim.
 {$GLOBALS["PLAYER_NAME"]} is the player.
-{$row["companions"]} are nearby characters.
-
+{$companionsLine}
 You must write a memory summary from the narrator's point of view by analyzing the chat history. Focus only on roleplay elements: character behavior, feelings, relationships, decisions, dialogue, and locations relevant to the story. Ignore any references to game engine mechanics, menus, stats, or system messages.
 Pay close attention to details that could influence a character's behavior or emotions, as well as tag names and locations. Include quotes from character dialogue in the summary if they are relevant to understanding actions, motivations, or relationships
 
 Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 "];
-                    $prompt[] = ['role' => 'user', 'content' => "#PREVIOUS MEMORY (for reference only)#\\n{$prevMemory["summary"]}\\n#END OF PREVIOUS MEMORY#\\n"];
+                    $prompt[] = ['role' => 'user', 'content' => "#PREVIOUS MEMORY (for reference only)#\n{$prevMemory["summary"]}\n#END OF PREVIOUS MEMORY#"];
 
-                    $prompt[] = ['role' => 'user', 'content' => "#CHAT HISTORY#\\n{$row["packed_message"]}\\n#END OF CHAT HISTORY#\\n"];
+                    $prompt[] = ['role' => 'user', 'content' => "#CHAT HISTORY#\n{$row["packed_message"]}\n#END OF CHAT HISTORY#"];
                     $prompt[] = ['role' => 'user',
-                        'content'           => "Read #CHAT HISTORY# and write a extensive memory record about events and conversations. Use this format:\\n$CLFORMAT"];
+                        'content'           => "Read #CHAT HISTORY# and write a extensive memory record about events and conversations. Use this format:\n$CLFORMAT"];
 
                     $GLOBALS["FORCE_MAX_TOKENS"] = $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
 
