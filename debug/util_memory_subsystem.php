@@ -456,8 +456,10 @@ Pay close attention to details that could influence a character's behavior or em
 
 Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 "];
-                    $prompt[] = ['role' => 'user', 'content' => "#PREVIOUS MEMORY (for reference only)#\\n{$prevMemory["summary"]}\\n#END OF PREVIOUS MEMORY#\\n"];
 
+                    if (!empty($prevMemory["summary"])) {
+                        $prompt[] = ['role' => 'user', 'content' => "#PREVIOUS MEMORY (for reference only)#\\n{$prevMemory["summary"]}\\n#END OF PREVIOUS MEMORY#\\n"];
+                    }
                     $prompt[] = ['role' => 'user', 'content' => "#CHAT HISTORY#\\n{$row["packed_message"]}\\n#END OF CHAT HISTORY#\\n"];
                     $prompt[] = ['role' => 'user',
                         'content'           => "Read #CHAT HISTORY# and write a extensive memory record about events and conversations. Use this format:\\n$CLFORMAT"];

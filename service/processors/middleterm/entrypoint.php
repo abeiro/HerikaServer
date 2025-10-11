@@ -45,8 +45,11 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     if (($maxRow-$lastMemory)>($pfi)) {
         error_log("[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ");
 
-        Logger::info(shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 &"),$GLOBALS["CUSTOM_LOG_FILE"]);
-        
+        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 &");
+        if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+            Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+        }
+
     } else {
         
         error_log("[SUMMARY] Skiping memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ");

@@ -1377,7 +1377,7 @@ function getGametsLimitFor($actor) {
 
 
 
-function offerMemory($gameRequest, $DIALOGUE_TARGET)
+function offerMemory($gameRequest)
 {
     global $db;
     
