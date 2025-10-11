@@ -435,7 +435,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_import_rule"])
 if (isset($_GET["create_blank"])) {
     try {
         $defaultMeta = json_encode([
-            'rpg_comments'=>['levelup','sleep','lockpick'],
+            'RPG_COMMENTS'=>['levelup','sleep','lockpick'],
             'DYNAMIC_PROFILE_FIELDS'=>['relationships','goals']
         ], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label, metadata) VALUES ('New Profile', '".pg_escape_string($defaultMeta)."') RETURNING id");
@@ -827,7 +827,7 @@ $ittById = $byId($ittRows);
                     $tmp = json_decode($editItem["metadata"], true);
                     if (is_array($tmp)) $metaObj = $tmp;
                 }
-                $arr = $metaObj['rpg_comments'] ?? [];
+                $arr = $metaObj['RPG_COMMENTS'] ?? [];
                 if (is_array($arr)) { $rpgSelected = array_values(array_map('strval', $arr)); }
             } catch (Throwable $_e) { $rpgSelected = []; }
             // Resolve current selected Dynamic Profile Fields from metadata
@@ -874,10 +874,10 @@ $ittById = $byId($ittRows);
             </div>
             <div class="provider-body grid">
                 <div style="grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:10px;">
-                    <input type="hidden" name="meta_vis[rpg_comments][]" value="">
+                    <input type="hidden" name="meta_vis[RPG_COMMENTS][]" value="">
                     <?php foreach ($__rpgOptions as $opt): $val=(string)$opt; $checked = in_array($val, $rpgSelected, true) ? ' checked' : ''; ?>
                         <label style="display:inline-flex; align-items:center; gap:6px; background:#1f2a36; border:1px solid #33485f; padding:6px 10px; border-radius:8px;">
-                            <input type="checkbox" name="meta_vis[rpg_comments][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
+                            <input type="checkbox" name="meta_vis[RPG_COMMENTS][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
                             <span><?= htmlspecialchars($val) ?></span>
                         </label>
                     <?php endforeach; ?>
