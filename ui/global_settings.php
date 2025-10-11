@@ -280,6 +280,9 @@ $gsSections = [
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
     ],
+    'Diary' => [
+        [ 'name' => 'AUTO_DIARY', 'type' => 'boolean' ],
+    ],
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],

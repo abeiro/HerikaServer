@@ -108,7 +108,7 @@ $localSchemaOverrides = [
 
 // Visual keys to expose (can be expanded easily)
 $visualKeys = [
-  "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","AUTO_DIARY","BORED_EVENT",
+  "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","BORED_EVENT",
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN",
   "OGHMA_INFINIUM","AUTO_DIARY_WAIT","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
@@ -119,7 +119,7 @@ $visualKeys = [
 $visualGroups = [
   'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
-  'Diary' => ["AUTO_DIARY","DIARY_PROMPT","DIARY_COOLDOWN","AUTO_DIARY_WAIT"],
+  'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN","AUTO_DIARY_WAIT"],
   'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
@@ -343,6 +343,8 @@ function consolidation() {
     // Remove any visual keys from JSON editor content to avoid duplication (only on core_profiles page)
     if (SHOW_VISUAL) {
         VISUAL_KEYS.forEach(k => { if (k in base) delete base[k] })
+        // Ensure AUTO_DIARY is not stored in profile metadata (global-only)
+        if ('AUTO_DIARY' in base) delete base['AUTO_DIARY']
     }
 
     // Collect visual fields (explicitly iterate over known keys to capture false for checkboxes)
