@@ -19,13 +19,48 @@ class AutomaticBackup {
             mkdir($this->backupDir, 0755, true);
             Logger::info("Created automatic backup directory: " . $this->backupDir);
         }
+
+        // Ensure chim_meta.settings exists and load retention count if available
+        try {
+            $db = $this->getDatabaseConnection();
+            if ($db) {
+                // Create schema/table if missing
+                $db->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+                $db->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+                $rows = $db->fetchAll("SELECT value FROM chim_meta.settings WHERE key = 'AUTOMATIC_BACKUP_MAX_COUNT'");
+                $row = is_array($rows) && count($rows) > 0 ? $rows[0] : null;
+                if ($row && isset($row['value'])) {
+                    $v = intval($row['value']);
+                    if ($v > 0 && $v < 100) { $this->maxBackups = $v; }
+                }
+            }
+        } catch (Exception $e) {
+            // ignore, keep default
+        }
     }
     
     /**
      * Check if automatic backups are enabled
      */
     public function isEnabled() {
-        // Check if the setting exists and is enabled
+        // Prefer conf_opts override if present
+        try {
+            $db = $this->getDatabaseConnection();
+            if ($db) {
+                // Ensure settings table exists
+                $db->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+                $db->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+                $rows = $db->fetchAll("SELECT value FROM chim_meta.settings WHERE key = 'AUTOMATIC_DATABASE_BACKUPS'");
+                $row = is_array($rows) && count($rows) > 0 ? $rows[0] : null;
+                if ($row && isset($row['value'])) {
+                    $val = strtolower(trim((string)$row['value']));
+                    return ($val === 'true' || $val === '1' || $val === 'yes' || $val === 'on');
+                }
+            }
+        } catch (Exception $e) {
+            // fall through
+        }
+        // Fallback to global
         if (isset($GLOBALS['AUTOMATIC_DATABASE_BACKUPS'])) {
             return $GLOBALS['AUTOMATIC_DATABASE_BACKUPS'] === true || $GLOBALS['AUTOMATIC_DATABASE_BACKUPS'] === "true";
         }
@@ -63,8 +98,8 @@ class AutomaticBackup {
             
             Logger::info("Authentication setup complete");
             
-            // Execute pg_dump with direct file output to avoid memory issues
-            $command = "HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost > " . escapeshellarg($filepath) . " 2>&1";
+            // Execute pg_dump with direct file output; exclude environment-local settings
+            $command = "HOME=/tmp pg_dump -d dwemer -U dwemer -h localhost -T chim_meta.settings > " . escapeshellarg($filepath) . " 2>&1";
             $result = shell_exec($command);
             
             // pg_dump writes directly to file, so we don't need to handle output in memory
@@ -125,6 +160,19 @@ class AutomaticBackup {
      * Clean up old backups, keeping only the newest maxBackups
      */
     private function cleanupOldBackups() {
+        // Refresh maxBackups from conf_opts in case it changed at runtime
+        try {
+            $db = $this->getDatabaseConnection();
+            if ($db) {
+                $rows = $db->fetchAll("SELECT value FROM chim_meta.settings WHERE key = 'AUTOMATIC_BACKUP_MAX_COUNT'");
+                $row = is_array($rows) && count($rows) > 0 ? $rows[0] : null;
+                if ($row && isset($row['value'])) {
+                    $v = intval($row['value']);
+                    if ($v > 0 && $v < 100) { $this->maxBackups = $v; }
+                }
+            }
+        } catch (Exception $e) {}
+
         $backups = $this->getBackups();
         
         if (count($backups) > $this->maxBackups) {
@@ -214,14 +262,10 @@ class AutomaticBackup {
             $timestamp = date('Y-m-d H:i:s');
             
             // Update the backup timestamp for reference (not used for backup decisions)
-            $db->upsertRowOnConflict(
-                "conf_opts",
-                array(
-                    "id"    => "AUTOMATIC_BACKUP_LAST_TIMESTAMP",
-                    "value" => $timestamp
-                ),
-                'id'
-            );
+            // Ensure table exists then upsert timestamp
+            $db->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+            $db->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+            $db->upsertRowOnConflict('chim_meta.settings', ['key'=>'AUTOMATIC_BACKUP_LAST_TIMESTAMP','value'=>$timestamp], 'key');
             
             Logger::info("Updated last backup timestamp to: {$timestamp}");
             

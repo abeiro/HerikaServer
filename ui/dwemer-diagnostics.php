@@ -279,10 +279,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          6. Continue making queries until you have gathered all relevant information
                          7. ALWAYS provide a final analysis that combines insights from all queries
                          
-                         For NPCs and characters:
-                         - Location information is stored in the npc_pers column
-                         - Personal details and background are in npc_pers
-                         - Current state and dynamic information in npc_dynamic
+                         For NPCs and characters (bio schema):
+                         - Core summary/personality is in core/personality (use COALESCE)
+                         - Background is in npc_static_bio
+                         - Use combined_bio_templates and COALESCE(personality, core) for compatibility
 
                          For Context and events:
                          - eventlog table contains all context for everything that has happended ingame.
@@ -298,16 +298,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                          Example format for multiple queries:
                          ```sql
-                         -- First query to get basic count
-                         SELECT COUNT(*) as total FROM npc_templates WHERE npc_pers LIKE '%Whiterun%';
+                         -- First query to get basic count (bio schema)
+                         SELECT COUNT(*) as total 
+                         FROM combined_bio_templates 
+                         WHERE COALESCE(personality, core, '') ILIKE '%Whiterun%';
                          ```
                          Initial findings: There are X NPCs from Whiterun.
                          
                          ```sql
-                         -- Second query to get details about these NPCs
-                         SELECT npc_name, npc_pers 
-                         FROM npc_templates 
-                         WHERE npc_pers LIKE '%Whiterun%';
+                         -- Second query to get details about these NPCs (bio schema with shim)
+                         SELECT npc_name, COALESCE(personality, core) AS personality_or_core
+                         FROM combined_bio_templates 
+                         WHERE COALESCE(personality, core, '') ILIKE '%Whiterun%';
                          ```
                          Additional findings: Here are the specific NPCs and their roles...
                          
@@ -627,7 +629,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         display: flex;
         gap: 20px;
         height: calc(100vh - 100px);
-        padding: 160px 10px 0 10px; /* Added back top padding */
+        padding: 80px 10px 0 10px; /* Added back top padding */
         width: 95%;
         margin-left: auto;
         margin-right: auto;
@@ -1260,10 +1262,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'memory': 'Basic memory entries.',
         'memory_summary': 'Summarized memory entries.',
         'npc_profile_backup': 'Backup of NPC profiles.',
-        'npc_templates': 'Vanilla CHIM NPC templates. Gets overwritten by custom templates.',
-        'npc_templates_custom': 'User-modified NPC templates with custom attributes and behaviors.',
-        'npc_templates_trl': 'Translation-specific NPC templates for different language versions.',
-        'npc_templates_v2': 'Not activly used, is transfered over to npc_templates during updates.',
+        'npc_templates': 'LEGACY: Vanilla CHIM NPC templates (pre-bio schema).',
+        'npc_templates_custom': 'LEGACY: User-modified NPC templates (pre-bio schema).',
+        'npc_templates_trl': 'LEGACY: Translation-specific NPC templates.',
+        'npc_templates_v2': 'LEGACY: Staging table, migrated into npc_templates during updates.',
+        'bio_templates': 'Base NPC bios (vanilla).',
+        'bio_templates_custom': 'Custom NPC bios (overrides).',
+        'combined_bio_templates': 'View combining base and custom bios. Prefer this for reads.',
         'oghma': 'Knowledge base containing game lore, quest information, and world data that gets injected into prompts using RAG/Minime-T5.',
         'questlog': 'Comprehensive log of every quest and stage you have completed.',
         'quests': 'Current active quests in your quest journal.',

@@ -12,9 +12,9 @@ $TITLE = "📙CHIM - Oghma Infinium";
 ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -624,7 +624,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <style>
     /* Override main container styles */
     main {
-        padding-top: 160px; /* Space for navbar */
+        padding-top: 20px; /* Top padding */
         padding-bottom: 40px; /* Reduced space for footer */
         padding-left: 10%;
         padding-right: 10%;
@@ -896,7 +896,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         top: auto !important;
         left: auto !important;
         transform: none !important;
-        margin: 160px auto 40px auto !important;
+        margin: 80px auto 40px auto !important;
         max-width: 800px !important;
         width: 90% !important;
     }
@@ -1153,6 +1153,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 </style>
+
+<?php if ($isEmbed): ?>
+<style>
+    /* Embedded in hub: remove extra top padding since navbar is hidden */
+    main { padding-top: 20px; }
+</style>
+<?php endif; ?>
 
 <main>
     <div id="toast" class="toast-notification">

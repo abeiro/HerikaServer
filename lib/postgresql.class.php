@@ -13,6 +13,8 @@ class sql
         if (!self::$link) {
             die("Error in connection: " . pg_last_error());
         }
+        // Ensure consistent schema resolution across sessions
+        pg_query(self::$link, "SET search_path TO public");
     }
 
     public function __destruct()
@@ -136,12 +138,15 @@ class sql
         return "";
     }
 
-    public function fetchAll($q)
+    public function fetchAll($q,$log=false)
     {
         $startTime = microtime(true);
         $result = pg_query(self::$link, $q);
         $endTime = microtime(true);
 
+        if ($log) {
+            error_log($q);
+        }
         $elapsedTime = $endTime - $startTime;
         if ($elapsedTime > $this->queryTimeThreshold) {
             Logger::error("FetchAll query execution time exceeded threshold: {$elapsedTime} seconds.");
@@ -194,6 +199,14 @@ class sql
     {
         if ($string)
             return pg_escape_string(self::$link,$string);
+        else
+            return "";
+    }
+
+    public function escapeLiteral($string)
+    {
+        if ($string)
+            return pg_escape_literal(self::$link,$string);
         else
             return "";
     }

@@ -26,6 +26,16 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 
+$GLOBALS["ENGINE_PATH"]=$enginePath;
+
+$db = new sql();
+
+require_once $enginePath . "lib/core/npc_master.class.php";
+require_once $enginePath . "lib/core/api_badge.class.php";
+require_once $enginePath . "lib/core/core_profiles.class.php";
+require_once $enginePath . "lib/core/llm_connector.class.php";
+require_once $enginePath . "lib/core/tts_connector.class.php";
+
 requireFilesRecursively($enginePath . "ext" . DIRECTORY_SEPARATOR, "globals.php");
 
 if (isset($_SESSION["PROFILE"])) {
@@ -42,7 +52,7 @@ if (isset($_POST["customstring"]) && $_POST["customstring"]) {
     $testString = $_POST["customstring"];
 }
 
-$db = new sql();
+
 
 require_once($enginePath . "prompt.includes.php");
 
@@ -94,7 +104,7 @@ if (Translation::isTextEnabled()) {
 <style>
     /* Override main container styles */
     main {
-        padding-top: 160px; /* Space for navbar */
+        padding-top: 80px; /* Space for navbar */
         padding-bottom: 40px; /* Reduced space for footer */
         padding-left: 10px;
     }

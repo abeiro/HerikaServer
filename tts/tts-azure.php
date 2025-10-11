@@ -14,7 +14,16 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash)
     
     $region = $GLOBALS["TTS"]["AZURE"]["region"];
     $AccessTokenUri = "https://" . $region . ".api.cognitive.microsoft.com/sts/v1.0/issueToken";
-    $apiKey = $GLOBALS["TTS"]["AZURE"]["API_KEY"];
+    $apiKey = trim($GLOBALS["TTS"]["AZURE"]["API_KEY"] ?? '');
+    // Prefer API Badge 'Azure' if schema key is empty
+    if ($apiKey === '') {
+        try {
+            if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) require_once($localPath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+            if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) $GLOBALS["db"] = new sql();
+            $row = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='azure' LIMIT 1");
+            if (is_array($row) && !empty($row['api_key'])) $apiKey = trim($row['api_key']);
+        } catch (Throwable $_e) {}
+    }
 
     if (empty(trim($mood)))
         $mood = "default";

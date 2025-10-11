@@ -293,48 +293,59 @@ function getEndOfSentencePunctuation() {
 
 function unmoodSentence($sentence) {
     global $forceMood;
-    
-    if (isset($GLOBALS["strip_emotes_from_output"]) && $GLOBALS["strip_emotes_from_output"] == true) {
-        $GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"]=true;
+
+    $output = $sentence;
+
+    // Determine whether to process asterisks:
+    // - strip_emotes_from_output (if set) overrides
+    // - otherwise fall back to REMOVE_ASTERISKS_FROM_OUTPUT
+    if (array_key_exists('strip_emotes_from_output', $GLOBALS)) {
+        $processAsterisks = (bool)$GLOBALS['strip_emotes_from_output'];
+    } else {
+        $processAsterisks = !empty($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']);
     }
 
-    if (isset($GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"]) && $GLOBALS["REMOVE_ASTERISKS_FROM_OUTPUT"] == true) {
-        // Check to see if the LLM responded with the entire message in **'s.
-        if (str_starts_with($sentence, "*") && str_ends_with($sentence, "*")) {
-            $output = ltrim($sentence, "*");
-            $output = rtrim($sentence, "*");
-        }
-        else {
-            $output = preg_replace('/\*([^*]+)\*/', '', $sentence); // Remove text bewteen * *
+    if ($processAsterisks) {
+        // If the entire message is wrapped in asterisks, strip them from both ends
+        if (str_starts_with($output, '*') && str_ends_with($output, '*')) {
+            $output = trim($output, '*'); // correct trimming of leading/trailing asterisks
+        } else {
+            // Remove text between single-pair asterisks
+            $output = preg_replace('/\*([^*]+)\*/', '', $output);
         }
     }
+    // is this the users intention if they set REMOVE_ASTERISKS false?
     else {
-        $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence); // Remove text bewteen * * if two or more words inside
+        // Remove text bewteen * * if two or more words inside
+        $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence);
     }
-    $sentence=$output;
-    $output = strtr($sentence,[
-                    "*Smirks*"=>"","*smirks*"=>"",
-                    "*winks*"=>"","*wink*"=>"","*smirk*"=>"","*gasps*"=>"","*chuckles*"=>"","*giggles*"=>"","*Giggles*"=>"","*laughs*"=>"",
-                    "*gasp*"=>"","*moans*"=>"","*whispers*"=>"","*moan*"=>"","#SpeechStyle"=>"","#SpeechStyle:"=>"",
-                    "*pant*"=>"",
-                    "*cough*"=>"",
-                    "*hiccup*"=>"",
-                    "*whimper*"=>""
-                    ]
-                    ); // Manual cases
 
-    
-    $cleaned = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove #ACTIONS .... (Gemini seems prone to doing this)
-    $output = preg_replace('/#[A-Za-z]+/', '', $cleaned);       // Remove #<text> .... (Gemini seems prone to doing this)
+    // Remove common emote tokens wrapped in asterisks (user intention?)
+    $output = strtr($output, [
+        "*Smirks*" => "", "*smirks*" => "",
+        "*winks*" => "", "*wink*" => "", "*smirk*" => "", "*gasps*" => "", "*chuckles*" => "", "*giggles*" => "", "*Giggles*" => "", "*laughs*" => "",
+        "*gasp*" => "", "*moans*" => "", "*whispers*" => "", "*moan*" => "",
+        "*pant*" => "", "*cough*" => "", "*hiccup*" => "", "*whimper*" => ""
+    ]);
 
-    $cleaned=$output;
-    $sentence = preg_replace('/"/', '', $cleaned); // Remove "
+    // Non-asterisk-related cleanup always applies
+    $output = strtr($output, [
+        "#SpeechStyle" => "",
+        "#SpeechStyle:" => ""
+    ]);
 
-    preg_match_all('/\((.*?)\)/', $sentence, $matches); // Unused?
+    $output = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove "#ACTIONS ..."
+    $output = preg_replace('/#[A-Za-z]+/', '', $output);       // Remove "#<text>"
 
-    $responseTextUnmooded = trim(preg_replace('/\((.*?)\)/', '', $sentence));
+    // Remove quotes
+    $output = preg_replace('/"/', '', $output);
 
-    if (stripos($responseTextUnmooded, "whispering:") !== false) { // Very very nasty, but solves lots of isses. We must keep log clean.
+    // Remove parenthesized content and trim the result
+    $output = preg_replace('/\((.*?)\)/i', '', $output);
+    $responseTextUnmooded = trim($output);
+
+    // Handle whispering mood marker
+    if (stripos($responseTextUnmooded, "whispering:") !== false) {
         $responseTextUnmooded = str_ireplace("whispering:", "", $responseTextUnmooded);
         $forceMood = "whispering";
     }
@@ -636,6 +647,14 @@ function returnLines($lines,$writeOutput=true)
 
                     $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=strtr($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"],["Dragonborn"=>$GLOBALS["PLAYER_NAME"]]);
 
+                    $npcList=DataBeingsInCloseRange();
+                    $npcs=explode("|",$npcList);
+                    if (is_array($npcs) && !in_array($GLOBALS["SCRIPTLINE_LISTENER"],$npcs)) {
+                        Logger::info("Listener {$GLOBALS["SCRIPTLINE_LISTENER"]} not around, forcing player: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}  {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+                        $GLOBALS["SCRIPTLINE_LISTENER"]=$GLOBALS["PLAYER_NAME"];
+
+                    }
+
                     Logger::info("Applying listenerFix2: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}  {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
                     //$GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[ $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]]);
                     // $GLOBALS["SCRIPTLINE_LISTENER"] = trim($listenerFix2[array_rand($listenerFix2)]); // Random
@@ -743,7 +762,7 @@ function logMemory($speaker, $listener, $message, $momentum, $gamets,$event,$ts)
                 'listener' => $listener,
                 'message' => $message,
                 'gamets' => $gamets,
-                'session' => "pending",
+                'session' => $momentum,
                 'momentum'=>$momentum,
                 'event'=>$event,
                 'ts'=>$ts
@@ -808,7 +827,7 @@ function lastSpeech($npcname)
     
     
     $speaker=$db->escape($npcname);
-    $pj=$GLOBALS["PLAYER_NAME"];
+    $pj=$db->escape($GLOBALS["PLAYER_NAME"]);
     $lastRecords = $db->fetchAll("SELECT * from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) order by rowid desc LIMIT 5 OFFSET 0");
     $buffer="";
     foreach (array_reverse($lastRecords) as $record) {
@@ -828,7 +847,7 @@ function lastKeyWordsContext($n, $npcname='')
     
     $m=$n+1;
     $speaker=$db->escape($npcname);
-    $pj=$GLOBALS["PLAYER_NAME"];
+    $pj=$db->escape($GLOBALS["PLAYER_NAME"]);
 
     if (isset($gameRequest[2]))
         $whileago=round($gameRequest[2] - (2/ 0.0000024));
@@ -1358,9 +1377,12 @@ function getGametsLimitFor($actor) {
 
 
 
-function offerMemory($gameRequest, $DIALOGUE_TARGET)
+function offerMemory($gameRequest)
 {
     global $db;
+    
+    $startTime=microtime(true);
+
     if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && !$GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"] ) {
         Logger::debug("MEMORY_EMBEDDING disabled");
         return "";
@@ -1375,10 +1397,26 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
        $npc=""; 
     }
 
+    $timeThreshold=round($gameRequest[2]-(getGametsLimitFor($npc)/0.0000024),0)-1;
+
+    error_log("[DataSearchMemoryByVector] Using timeThreshold $timeThreshold");
     $contextKeywords  = implode(" ", lastKeyWordsContext(5,$npc));
 
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
-        $memories=DataSearchMemoryByVector($gameRequest[3],$npc);
+        $localStartTime = microtime(true);
+        error_log("[DataSearchMemoryByVector calling]  : " . (microtime(true) - $localStartTime) . " seconds");
+        $res = DataSearchMemoryByVector($gameRequest[3], $npc, true,$timeThreshold);
+        error_log("[DataSearchMemoryByVector called 1]  : " . (microtime(true) - $localStartTime) . " seconds");
+        $res2 = DataSearchMemoryByVector($gameRequest[3], $npc,false,$timeThreshold);
+        error_log("[DataSearchMemoryByVector called 2]  : " . (microtime(true) - $localStartTime) . " seconds");
+
+        if (isset($res[0]) && isset($res2[0])) {
+            $resFinal = ($res[0]['rank_any'] >= $res2[0]['rank_any']) ? $res : $res2;
+        } else {
+            $resFinal = isset($res[0]['rank_any']) ? $res : (isset($res2[0]['rank_any']) ? $res2 : []);
+        }
+        $memories = $resFinal;
+        
     } else {
         $memories=DataSearchMemory($gameRequest[3],$npc);
     }
@@ -1387,11 +1425,11 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
     if (isset($memories[0])) {
         Logger::trace(print_r($memories[0],true));
 
-        if (($memories[0]["rank_any"]==$memories[0]["rank_all"])&&($memories[0]["rank_any"]>0.25)) {
+        if (($memories[0]["rank_any"]==$memories[0]["rank_all"])&&($memories[0]["rank_any"]> (0.25+$GLOBALS["MEMORY_THRESHOLD_MODIFIER"]) )) {
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
-        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)>0.25) {
+        } else if ((($memories[0]["rank_all"]+$memories[0]["rank_any"])/2)> (0.25+ $GLOBALS["MEMORY_THRESHOLD_MODIFIER"])) {
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
@@ -1399,12 +1437,18 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             
             $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
             
+        } else if (($memories[0]["rank_any"]> (0.50 + $GLOBALS["MEMORY_THRESHOLD_MODIFIER"])) && isset($memories[0]["mixed_distance"])) {// Search by mixed vector/fts .
+            
+            $memory=(isset($memories[0]["summary"])?$memories[0]["summary"]:"");
+            
         } else {
-           Logger::trace("Memory discarded by scoring");
+           Logger::trace("[MEMORY] Memory discarded by scoring");
+           error_log("[MEMORY] Memory discarded by scoring");
            return "";
         }
     } else {
-        Logger::trace("Memory not found");
+        Logger::trace("[MEMORY] Memory not found");
+        error_log("[MEMORY] Memory not found");
         return "";
     }
     
@@ -1417,7 +1461,8 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
             $s_prefix = "{$daysAgo} days ago, on {$sk_date} ... ";
         } else {
             $s_prefix = "{$hoursAgo} hours ago ... ";
-            Logger::trace("Discaring memory because recent ($hoursAgo} hours ago ... )");
+            Logger::trace("Discarding memory because recent ($hoursAgo} hours ago ... )"); ////DataSearchMemoryByVector filter  by gamets, this should happend if using it
+            error_log("[MEMORY] Discarding memory because recent ($hoursAgo} hours ago");
             return "";// Do not offer memory if its recent
         }
         $pattern = '/#Tags:.*/';
@@ -1425,9 +1470,10 @@ function offerMemory($gameRequest, $DIALOGUE_TARGET)
         $output = preg_replace($pattern, $replacement, $memory);
         $memory = $s_prefix . $output;
         Logger::trace("Final memory <".substr($memory,0,25)."...>");
+        error_log("Final memory <".substr($memory,0,25)."...>");
 
     }
-    
+    error_log("[MEMORY] Returning memory");
     return ($memory);
 }
 

@@ -113,6 +113,27 @@ echo '<style>
     width: 100%;
 }
 
+/* Fixed navbar height */
+.chim-navbar {
+    height: 64px;
+}
+.chim-navbar .container-fluid > * {
+    align-items: center;
+}
+.chim-navbar .navbar-brand,
+.chim-navbar .navbar-center button.navbar-brand {
+    padding: 0;
+    line-height: 1;
+}
+
+/* Hide inline nav links to keep single-line navbar */
+.navbar-left,
+.navbar-right,
+.chim-navbar .nav-item.mx-2,
+.chim-navbar .nav-item.dropdown.mx-2 {
+    display: none !important;
+}
+
 .server-version-info {
     display: flex;
     align-items: center;
@@ -221,30 +242,138 @@ echo '<style>
 }
 </style>';
 
+// Determine whether to show the secondary status navbar
+$currentPageName = basename($_SERVER['PHP_SELF'] ?? '');
+$SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_wizard.php']);
+
+// Server version and dev-build detection
+// Note: Keep raw version string here; if it contains 'dev', we'll switch logo and hide the text suffix
+$serverVersionRaw = '2.0.0 dev';
+$isDevBuild = (stripos($serverVersionRaw, 'dev') !== false);
+$serverVersionDisplay = trim(str_ireplace('dev', '', $serverVersionRaw));
+$serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
+
 ?>
 <div class="chim-navbar-wrapper">
     <nav class="navbar navbar-expand-lg chim-navbar">
         <div class="container-fluid mx-1">
-            <!-- Server Version Info - Far Left -->
-            <div class="server-version-info">
-                Server: 1.3.5.3b<br>
-                Plugin: <?php echo $pluginVersionDisplay; ?>
-            </div>
+            
             
             <div class="navbar-content-wrapper">
                 <!-- Left Navigation -->
-                <ul class="navbar-nav navbar-left">
+                
+
+                <!-- Center Logo -->
+                <div class="navbar-center dropdown">
+                    <button class="navbar-brand Title btn btn-link p-0 dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" data-bs-display="static" aria-expanded="false" title="Open menu" style="text-decoration: none;">
+                        <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
+                        <img src="<?php echo $webRoot; ?>/ui/images/<?php echo htmlspecialchars($serverLogoFile, ENT_QUOTES, 'UTF-8'); ?>" alt="CHIM Server" style="vertical-align:bottom;"/> 
+                    </button>
+                    <ul class="dropdown-menu brand-menu">
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/home.php">Home</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php">Configuration Hub</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/control_panel.php">Control Panel</a></li>
+                    </ul>
+                </div>
+
+                
+                
+                <!-- <ul class="navbar-nav navbar-right">
                 <li class="nav-item dropdown mx-2">
-                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a>
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
+                <ul class="dropdown-menu">
+                    <li><h6 class="dropdown-header">Connection Tests</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests.php">Current LLM/AI Connection Test</a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/tts-test.php">Current TTS Connection Test</a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/stt-test.php">Current STT Connection Test</a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/itt-test.php">Current ITT Connection Test</a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Logs & Cache</h6></li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php">Server Logs</a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/dwemer-diagnostics.php">Dwemer AI Diagnostics</a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Database Controls</h6></li> <li>
+                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Complete database management - backup, restore, maintenance, and pgAdmin access.">
+                        Database Manager
+                    </a>
+                    </li>
+                                         <li><hr class="dropdown-divider"></li>
+                     <li><h6 class="dropdown-header">Debugging</h6></li>
+                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>
+                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=audit_request' title="">Request Logs</a></li>
+
+                     <li><hr class="dropdown-divider"></li>
+                     <li><h6 class="dropdown-header">Utilities</h6></li>
+                     <li>
+                     <div style="
+                         display: flex; 
+                         justify-content: center; 
+                         align-items: center; 
+                         margin-top: 20px;">
+                         <button style="
+                             font-weight: bold;
+                             font-family: 'Futura CondensedLight', Arial, sans-serif;
+                             border: 1px solid;
+                             transition: background-color 0.3s, color 0.3s;
+                             border-radius: 4px;
+                             text-align: center;
+                             text-decoration: none;
+                             background-color: #ffc107;
+                             color: black;
+                             padding: 6px 12px;
+                             font-size: 14px;
+                             cursor: pointer;
+                         " 
+                         onmouseover="this.style.backgroundColor='#e6ac00';"
+                         onmouseout="this.style.backgroundColor='#ffc107';"
+                         onclick="window.open('<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php', '_blank')" 
+                         title="Generate AIAgent.ini file for the mod file.">
+                             <strong>Create Custom AIAgent.ini Mod<br>(Install with mod manager, override AIAgent mod folder)</strong>
+                         </button>
+                     </div>
+                     </li>
+                     <li>
+                     <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
+                     </li>-->
+                </ul> 
                 </li>
-
-
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Configuration</a>
+            <?php 
+            // menu extension - last list element
+            $plug_file = BASE_PATH . DIRECTORY_SEPARATOR . "ui" . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar_custom.php";
+            if (file_exists($plug_file)) 
+                include($plug_file); 
+            ?>                       
+                </ul>
+            </div>
+            
+            <li class="nav-item dropdown mx-2">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">(Old)Configuration</a>
                     <ul class="dropdown-menu">
 
                         
                         <li><h6 class="dropdown-header">Configuration Tools</h6></li>
+                        <li>
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php" title="Unified configuration hub with tabs.">
+                            Config Hub
+                        </a>
+                        </li>
                         <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/conf_wizard.php">Configuration Wizard</a>
                         </li>
@@ -322,135 +451,14 @@ echo '<style>
                     </ul>
                 </li>
                 </ul>
-
-                <!-- Center Logo -->
-                <div class="navbar-center">
-                    <a class="navbar-brand Title" href="<?php echo $webRoot; ?>/ui/home.php" title="Go to Home Page" style="text-decoration: none;">
-                        <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
-                        <img src="<?php echo $webRoot; ?>/ui/images/serverlogo.png" alt="CHIM Server" style="vertical-align:bottom;"/> 
-                    </a>
-                </div>
-
-                <!-- Right Navigation -->
-                <ul class="navbar-nav navbar-right">
-                <li class="nav-item dropdown mx-2">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Troubleshooting</a>
-                <ul class="dropdown-menu">
-                    <!-- Connection Tests -->
-                    <li><h6 class="dropdown-header">Connection Tests</h6></li>
-                    <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests.php">Current LLM/AI Connection Test</a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/tts-test.php">Current TTS Connection Test</a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/stt-test.php">Current STT Connection Test</a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/itt-test.php">Current ITT Connection Test</a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <!-- Logs & Cache -->
-                    <li><h6 class="dropdown-header">Logs & Cache</h6></li>
-                    <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/tests/apache2err.php">Server Logs</a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/dwemer-diagnostics.php">Dwemer AI Diagnostics</a>
-                    </li>
-                    <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/soundcache/" target="_blank">Audio & Image Cache</a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header">Database Controls</h6></li>
-                    <li>
-                    <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/import_db.php" title="Complete database management - backup, restore, maintenance, and pgAdmin access.">
-                        Database Manager
-                    </a>
-                    </li>
-                                         <li><hr class="dropdown-divider"></li>
-                     <li><h6 class="dropdown-header">Debugging</h6></li>
-                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>
-                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=audit_request' title="">Request Logs</a></li>
-
-                     <li><hr class="dropdown-divider"></li>
-                     <li><h6 class="dropdown-header">Utilities</h6></li>
-                     <li>
-                     <div style="
-                         display: flex; 
-                         justify-content: center; 
-                         align-items: center; 
-                         margin-top: 20px;">
-                         <button style="
-                             font-weight: bold;
-                             font-family: 'Futura CondensedLight', Arial, sans-serif;
-                             border: 1px solid;
-                             transition: background-color 0.3s, color 0.3s;
-                             border-radius: 4px;
-                             text-align: center;
-                             text-decoration: none;
-                             background-color: #ffc107;
-                             color: black;
-                             padding: 6px 12px;
-                             font-size: 14px;
-                             cursor: pointer;
-                         " 
-                         onmouseover="this.style.backgroundColor='#e6ac00';"
-                         onmouseout="this.style.backgroundColor='#ffc107';"
-                         onclick="window.open('<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php', '_blank')" 
-                         title="Generate AIAgent.ini file for the mod file.">
-                             <strong>Create Custom AIAgent.ini Mod<br>(Install with mod manager, override AIAgent mod folder)</strong>
-                         </button>
-                     </div>
-                     </li>
-                     <!--<li>
-                     <a class="dropdown-item" href="updater.php" target="_blank">Update Server</a>
-                     </li>-->
-                </ul>
-                </li>
-
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Immersion</a>
-                    <ul class="dropdown-menu">
-                        <li><h6 class="dropdown-header">Immersion Tools</h6></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/diarylog.php">CHIM Diaries</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/adventurelog.php">Adventure Log</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/chat-testing.php">Chat Testing</a></li>
-                        <!--<li><a class="dropdown-item" href="addons/scriptwriter" target="_blank">Script Writer</a></li>-->
-                        <!--<li><a class="dropdown-item" href="addons/background" target="_blank">Background Story Generator</a></li>-->
-                    </ul>
-                </li>
-
-                <li class="nav-item dropdown mx-2">
-                    <a class="nav-link" href="<?php echo $webRoot; ?>/ui/index.php?plugins_show=true">Server Plugins</a>
-                </li>
-
-            <?php 
-            // menu extension - last list element
-            $plug_file = BASE_PATH . DIRECTORY_SEPARATOR . "ui" . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar_custom.php";
-            if (file_exists($plug_file)) 
-                include($plug_file); 
-            ?>                       
-                </ul>
-            </div>
             
-            <!-- Social Media Links - Far Right -->
-            <div class="social-links">
-                <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
-                    <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube">
-                </a>
-                <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
-                    <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord">
-                </a>
-                <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
-                    <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon">
-                </a>
-            </div>
+            
         </div>
 
 
         </nav>
+
+        
 
 <?php
 // Start the session if not already started
@@ -571,9 +579,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </head>
     <body>
         <!-- Trigger Link to Open Overlay -->
+        <?php if ($SHOW_STATUS_NAV): ?>
         <button id="profileSelectorBtn" class="btn-npcprofile" onclick="event.preventDefault(); document.getElementById('overlay').style.display = 'block'; document.body.classList.add('overlay-active');">
             <?php echo isset($GLOBALS["CURRENT_PROFILE_CHAR"]) ? htmlspecialchars($GLOBALS["CURRENT_PROFILE_CHAR"], ENT_QUOTES, 'UTF-8') : 'Select Profile'; ?>
         </button>
+        <?php endif; ?>
         <!-- The Overlay -->
         <div id="overlay" class="overlay" style="display: none;">
             <!-- Overlay Content -->
@@ -679,6 +689,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </script>
     </body>
 </html>
+            <?php if ($SHOW_STATUS_NAV): ?>
+            <div class="chim-status-nav">
+            <div class="chim-status-container">
             <div style="display: inline-block; font-size: 10px; height: 40px; padding-right: 10px; vertical-align: top;">
             <span style="margin-right: 5px; font-size: 14px; vertical-align: middle; font-weight: bold">Configuration Depth</span>
             
@@ -739,6 +752,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ?>
     </div>
     </div>
+    </div>
+            <?php endif; ?>
 
     </nav>
 </div>

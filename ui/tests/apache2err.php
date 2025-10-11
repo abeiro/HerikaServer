@@ -18,12 +18,56 @@ $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password
 
 $TITLE = "🌲 CHIM Server Logs";
 
+// Auto-trim logs setting (chim_meta.settings)
+$autoTrimEnabled = true; // default enabled
+
+// Handle toggle request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_auto_trim_logs') {
+    try {
+        // Ensure chim_meta.settings exists
+        @pg_query($conn, "CREATE SCHEMA IF NOT EXISTS chim_meta");
+        @pg_query($conn, "CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+
+        // Read current value
+        $res = @pg_query($conn, "SELECT value FROM chim_meta.settings WHERE key='AUTO_TRIM_LOGS_ENABLED' LIMIT 1");
+        $val = 'true';
+        if ($res && pg_num_rows($res) > 0) {
+            $row = pg_fetch_assoc($res);
+            $current = strtolower(trim((string)$row['value']));
+            $val = in_array($current, ['true','1','yes','on']) ? 'false' : 'true';
+        }
+        // Upsert
+        @pg_query($conn, "INSERT INTO chim_meta.settings(key,value) VALUES ('AUTO_TRIM_LOGS_ENABLED', '".$val."') ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value");
+    } catch (Throwable $e) { /* ignore */ }
+    // Redirect back (PRG)
+    header('Location: '.$_SERVER['PHP_SELF']);
+    exit;
+}
+
+// Read current value (default true if missing)
+try {
+    @pg_query($conn, "CREATE SCHEMA IF NOT EXISTS chim_meta");
+    @pg_query($conn, "CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+    $res = @pg_query($conn, "SELECT value FROM chim_meta.settings WHERE key='AUTO_TRIM_LOGS_ENABLED' LIMIT 1");
+    if ($res && pg_num_rows($res) > 0) {
+        $row = pg_fetch_assoc($res);
+        $autoTrimEnabled = in_array(strtolower(trim((string)$row['value'])), ['true','1','yes','on']);
+    } else {
+        // Persist default true
+        @pg_query($conn, "INSERT INTO chim_meta.settings(key,value) VALUES ('AUTO_TRIM_LOGS_ENABLED','true') ON CONFLICT (key) DO NOTHING");
+        $autoTrimEnabled = true;
+    }
+} catch (Throwable $e) { /* ignore */ }
+
 ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+$isEmbedded = (isset($_GET['embed']) && $_GET['embed']);
+if (!$isEmbedded) {
+    include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+}
 
 $logPath = __DIR__ . '/../../log/';
 $distroLogPath = $logPath . 'apache_error.log';
@@ -34,6 +78,9 @@ $pluginOutputPath = $logPath . 'ouput_to_plugin.log';
 $sttLogPath = $logPath . 'stt.log';
 $visionLogPath = $logPath . 'vision.log';
 $debugStreamLogPath = $logPath . 'debugstream.log';
+$llmContextFastPath = $logPath . 'context_sent_to_llm_fast.log';
+$monitorLogPath = $logPath . 'monitor.log';
+$serviceLogPath = $logPath . 'service.log';
 
 // Function to get the last N lines of a file
 function tail($filepath, $lines = 2000) {
@@ -529,27 +576,43 @@ function createLogsZip() {
         return false;
     }
 
-    // Send the file to the browser
-    header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="' . $zipName . '"');
-    header('Content-Length: ' . filesize($zipPath));
-    header('Pragma: public');
-    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-    header('Expires: 0');
-
-    // Clear any previous output
-    if (ob_get_level()) {
-        ob_end_clean();
+    // Ensure no output buffering or compression corrupts the binary download
+    @set_time_limit(0);
+    if (function_exists('ini_get') && ini_get('zlib.output_compression')) {
+        @ini_set('zlib.output_compression', 'Off');
+    }
+    if (function_exists('apache_setenv')) {
+        @apache_setenv('no-gzip', '1');
+    }
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
     }
 
-    // Read file in chunks to handle large files
+    // Send the file to the browser with robust headers
+    header('Content-Description: File Transfer');
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $zipName . '"');
+    header('Content-Transfer-Encoding: binary');
+    header('Content-Length: ' . filesize($zipPath));
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
+    // Stream file in chunks to handle large files
     if ($fp = fopen($zipPath, 'rb')) {
         while (!feof($fp)) {
-            echo fread($fp, 8192);
-            flush();
+            $buffer = fread($fp, 8192);
+            if ($buffer === false) { break; }
+            echo $buffer;
         }
         fclose($fp);
-        unlink($zipPath); // Delete the temporary zip file
+        // Ensure output is sent immediately
+        if (function_exists('fastcgi_finish_request')) {
+            @fastcgi_finish_request();
+        } else {
+            @flush();
+        }
+        @unlink($zipPath); // Delete the temporary zip file
         return true;
     }
 
@@ -574,7 +637,7 @@ if (isset($_GET['download_logs'])) {
     <style>
         /* Override main container styles */
         main {
-            padding-top: 160px;
+            padding-top: <?php echo $isEmbedded? '20' : '160'; ?>px;
             padding-bottom: 40px;
             padding-left: 10px;
             padding-right: 10px;
@@ -584,14 +647,7 @@ if (isset($_GET['download_logs'])) {
         }
         
         /* Override footer styles */
-        footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            height: 20px;
-            background: #031633;
-            z-index: 100;
-        }
+        footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
 
         /* Updated color scheme for a more mellow dark theme */
         body {
@@ -1266,6 +1322,15 @@ if (isset($_GET['download_logs'])) {
 <div class="indent5">
     <div class="title-container">
         <h1>🌲 CHIM Server Logs</h1>
+        <form method="post" style="margin-left: 10px; display:inline;">
+            <input type="hidden" name="action" value="toggle_auto_trim_logs">
+            <button class="refresh-button" type="submit" title="Toggle auto-trim logs on server startup (keeps last 10,000 lines)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;">
+                    <path d="M8 3a5 5 0 1 0 0 10A5 5 0 0 0 8 3zm0-2a7 7 0 1 1 0 14A7 7 0 0 1 8 1z"/>
+                </svg>
+                Auto-trim: <?php echo $autoTrimEnabled ? 'On' : 'Off'; ?>
+            </button>
+        </form>
         <button class="refresh-button" id="refreshLogs">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 3a5 5 0 0 0-5 5H1l3.5 3.5L8 8H6a2 2 0 1 1 2 2v2a4 4 0 1 0-4-4H2a6 6 0 1 1 6 6v-2a4 4 0 0 0 0-8z"/>
@@ -1319,6 +1384,17 @@ if (isset($_GET['download_logs'])) {
 
         <div class="log-section">
             <?php
+            // Display LLM context fast log
+            if (file_exists($llmContextFastPath) && is_readable($llmContextFastPath)) {
+                readLLMContextLog($llmContextFastPath, "LLM Context Fast (context_sent_to_llm_fast.log)");
+            } else {
+                echo '<p class="error-message">Log file not found or not readable at: ' . htmlspecialchars($llmContextFastPath) . '</p>';
+            }
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
             // Display plugin output log
             readRegularLog($pluginOutputPath, "Plugin Output (ouput_to_plugin.log)");
             ?>
@@ -1333,8 +1409,22 @@ if (isset($_GET['download_logs'])) {
 
         <div class="log-section">
             <?php
+            // Display Monitor log
+            readRegularLog($monitorLogPath, "Monitor Log (monitor.log)");
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
             // Display Vision log
             readRegularLog($visionLogPath, "Vision Log (vision.log)");
+            ?>
+        </div>
+
+        <div class="log-section">
+            <?php
+            // Display Service log
+            readRegularLog($serviceLogPath, "Service Log (service.log)");
             ?>
         </div>
 
@@ -1453,6 +1543,50 @@ if (isset($_GET['download_logs'])) {
     </div>
 </div>
 
+<div id="LLMContextFastcontextsenttollmfastlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">LLM Context Fast Log</h2>
+            <button class="close-modal" onclick="closeModal('LLMContextFastcontextsenttollmfastlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in LLM Context Fast Log..." data-target="LLMContextFastcontextsenttollmfastlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="LLMContextFastcontextsenttollmfastlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="MonitorLogmonitorlogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Monitor Log</h2>
+            <button class="close-modal" onclick="closeModal('MonitorLogmonitorlogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Monitor Log..." data-target="MonitorLogmonitorlogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="MonitorLogmonitorlogModalContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="ServiceLogservicelogModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Service Log</h2>
+            <button class="close-modal" onclick="closeModal('ServiceLogservicelogModal')">&times;</button>
+        </div>
+        <div class="modal-search-container">
+            <input type="text" class="modal-search-input" placeholder="Search in Service Log..." data-target="ServiceLogservicelogModalContent">
+        </div>
+        <div class="modal-body">
+            <div id="ServiceLogservicelogModalContent"></div>
+        </div>
+    </div>
+</div>
 <div id="PluginOutputouputtopluginlogModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">

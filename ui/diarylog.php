@@ -26,6 +26,7 @@ $webRoot = rtrim($webRoot, '/');
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "📔CHIM Diaries";
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -455,10 +456,44 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <!-- Ensure main.css is loaded after any reboot.css -->
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/diary_adventure.css">
+<style>
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .page-header h1 {
+        margin-bottom: 10px;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .page-header h3 {
+        margin: 0;
+    }
+    <?php if ($isEmbed): ?>
+    main { padding-top: 20px; }
+    <?php endif; ?>
+    @media (max-width: 480px) {
+        .page-header h1 { font-size: 1.6em; }
+    }
+</style>
+<?php if ($isEmbed): ?>
+<style>
+    /* Embedded in container: reduce top padding since navbar is hidden */
+    main { padding-top: 20px; }
+</style>
+<?php endif; ?>
 <?php
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 // Determine the month and year to display
 $month = isset($_GET['month']) ? sanitize_int($_GET['month'], date('n')) : date('n');
@@ -615,8 +650,8 @@ if ($allDatesResult) {
                 $eventMonth = intval(date('m', $ts_time));
                 $eventYear = intval(ltrim(date('Y', $ts_time), '0'));
                 
-                error_log("Debug - Event found: Month={$eventMonth}, Year={$eventYear}, Day={$eventDay}");
-                error_log("Debug - Looking for: Month={$month}, Year={$year}");
+                //error_log("Debug - Event found: Month={$eventMonth}, Year={$eventYear}, Day={$eventDay}");
+                //error_log("Debug - Looking for: Month={$month}, Year={$year}");
                 
                 if ($eventMonth == $month && $eventYear == $year) {
                     error_log("Debug - Adding event for day {$eventDay}");
@@ -716,7 +751,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                         // Compare Tamrielic dates
                         $eventDay = isset($eventDate['day']) ? $eventDate['day'] : null;
                         if ($eventDay == $dayCount) {
-                            error_log("Debug - Found event for day {$dayCount}");
+                            //error_log("Debug - Found event for day {$dayCount}");
                             $hasEvents = true;
                             $eventCount++;
                         }
@@ -730,7 +765,7 @@ function renderCalendar($month, $year, $allEventDates, $useTamrielicTime, $tamri
                             if ($eventDateStr === $dateStr) {
                                 $hasEvents = true;
                                 $eventCount++;
-                                error_log("Debug - Found event for date {$dateStr}");
+                                //error_log("Debug - Found event for date {$dateStr}");
                             }
                         }
                     }
@@ -858,12 +893,13 @@ if ($shouldFetchEvents) {
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
-    <title>📝CHIM Diary Log</title>
+    <title>📝Diary Log</title>
 </head>
 <body>
     <main class="container">
-        <h1>📝CHIM Diary Log</h1>
-        <h3>This is directly connected to the Event Log. It's just a nicer way to view it.</h3>
+        <div class="page-header">
+            <h1>📝Diary Log</h1>
+        </div>
 
         <?php
         function renderHeader() {
@@ -964,6 +1000,14 @@ if ($shouldFetchEvents) {
                 }
                 ?>
             </div>
+            <?php if (isset($_GET['person'])): ?>
+            <div style="max-width: 400px; margin: 12px auto 0; display: flex; justify-content: center;">
+                <a class="pdf-export-btn" target="_blank" title="Open as book (print to PDF)" href="<?php echo $webRoot; ?>/ui/diary_book.php?person=<?php echo urlencode(urldecode($_GET['person'])); ?>">
+                    <span>📄</span>
+                    <span>Open The Diary of <?php echo htmlspecialchars(urldecode($_GET['person'])); ?></span>
+                </a>
+            </div>
+            <?php endif; ?>
             <script>
             function filterPeople(searchText) {
                 const peopleItems = document.querySelectorAll('.people-item');
@@ -1073,11 +1117,11 @@ if ($shouldFetchEvents) {
             </tr>
             <?php
             if (isset($_GET['filter']) && $_GET['filter'] === 'people' && isset($_GET['person'])) {
-                error_log("Filtering by person: " . urldecode($_GET['person']));
+                //error_log("Filtering by person: " . urldecode($_GET['person']));
                 
                 // Get entries for the selected person
                 $entries = getEntriesByPerson($conn, $schema, urldecode($_GET['person']));
-                error_log("Retrieved entries: " . print_r($entries, true));
+                //error_log("Retrieved entries: " . print_r($entries, true));
                 
                 if (!empty($entries)) {
                     // Sort entries by localts in descending order
@@ -1088,7 +1132,7 @@ if ($shouldFetchEvents) {
                     foreach ($entries as $row) {
                         $processed_row = process_diary_row($row, false);
                         if ($processed_row === null) {
-                            error_log("Skipping null processed row");
+                            //error_log("Skipping null processed row");
                             continue;
                         }
 
@@ -1124,7 +1168,7 @@ if ($shouldFetchEvents) {
                               </tr>";
                     }
                 } else {
-                    error_log("No entries found for person");
+                    //error_log("No entries found for person");
                     echo "<tr><td colspan='5' style='text-align: center; padding: 20px;'>No diary entries found for this person.</td></tr>";
                 }
             } elseif ($shouldFetchEvents && $result) {

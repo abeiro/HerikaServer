@@ -1,17 +1,38 @@
 <?php
+require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
+require_once($GLOBALS["ENGINE_PATH"]."/lib/utils_game_timestamp.php");
+require_once($GLOBALS["ENGINE_PATH"]."/lib/playthrough_snapshot.php");
 
 $MUST_END=false;
 
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
+
+// Moved Dynamic Updates functions here
+require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
+
+
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
     // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
+    // Moved Dynamic Updates functions here
     if ($gameRequest[2] == "10000000") {
         Logger::warn("Ignoring init with a gamets of 10000000.");
         $MUST_END=true;
         return;
     }
     $now=time();
+
+    // Dragon Break autosnapshot: detect large rollback and snapshot before pruning
+    try {
+        $prevGamets = DataLastKnownGameTS();
+        $incomingGamets = intval($gameRequest[2]);
+        $snapshotId = dragon_break_snapshot_if_needed($prevGamets, $incomingGamets);
+        if ($snapshotId > 0) {
+            Logger::info("DragonBreak: Created snapshot id {$snapshotId} prior to rollback prune");
+        }
+    } catch (Exception $e) {
+        Logger::warn("DragonBreak: Snapshot attempt failed: ".$e->getMessage());
+    }
     $db->delete("eventlog", "gamets>={$gameRequest[2]}  ");
     $db->delete("eventlog", "localts>$now ");
     //$db->delete("eventlog", "type='playerinfo'");
@@ -93,6 +114,10 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         closedir($handle);
     }
     
+    /* Restore NPCs state */
+      
+    $npcMaster=new NpcMaster();
+    $npcMaster->restoreNPC($gameRequest[2]);
     Logger::trace("POST INIT PROCESSING ".(time()-$now));
     $MUST_END=true;
 
@@ -244,6 +269,223 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
 
 
+} elseif ($gameRequest[0] == "updateequipment") {
+    // Live equipment update from TESEquipEvent
+    $updateData = explode("@",$gameRequest[3]);
+    
+    if (!empty($updateData[0])) {
+        $npcName = $updateData[0];
+        
+        // Parse equipment (8 slots)
+        $equipment = [
+            'helmet' => isset($updateData[1]) ? $updateData[1] : '',
+            'armor' => isset($updateData[2]) ? $updateData[2] : '',
+            'boots' => isset($updateData[3]) ? $updateData[3] : '',
+            'gloves' => isset($updateData[4]) ? $updateData[4] : '',
+            'amulet' => isset($updateData[5]) ? $updateData[5] : '',
+            'ring' => isset($updateData[6]) ? $updateData[6] : '',
+            'left_hand' => isset($updateData[7]) ? $updateData[7] : '',
+            'right_hand' => isset($updateData[8]) ? $updateData[8] : ''
+        ];
+        
+        // Get current NPC
+        $currentNpcData = $npcMaster->getByName($npcName);
+        
+        if ($currentNpcData) {
+            // Get existing metadata
+            $meta = [];
+            if (!empty($currentNpcData['metadata'])) {
+                $meta = json_decode($currentNpcData['metadata'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            
+            // Update equipment section
+            $meta['equipment'] = $equipment;
+            
+            // Save back to database
+            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
+            $npcMaster->updateByArray($currentNpcData);
+            
+            Logger::info("Updated equipment for {$npcName}");
+        }
+    }
+    $MUST_END=true;
+
+
+} elseif ($gameRequest[0] == "updateinventory") {
+    // Live inventory update from TESContainerChangedEvent
+    Logger::info("RECEIVED updateinventory command: ".$gameRequest[3]);
+    
+    $updateData = explode("@",$gameRequest[3]);
+    
+    if (!empty($updateData[0])) {
+        $npcName = $updateData[0];
+        $inventoryRaw = isset($updateData[1]) ? $updateData[1] : '';
+        
+        Logger::info("Processing inventory for NPC: {$npcName}, Raw data length: ".strlen($inventoryRaw));
+        
+        // Parse inventory (format: ItemName::Count~ItemName2::Count2~...)
+        $inventory = [];
+        if (!empty($inventoryRaw)) {
+            $items = explode("~", $inventoryRaw); 
+            Logger::info("Found ".count($items)." items to process");
+            
+            foreach ($items as $itemData) {
+                $parts = explode("::", $itemData);
+                if (count($parts) === 2) {
+                    $itemName = $parts[0];
+                    $count = intval($parts[1]);
+                    if (!empty($itemName) && $count > 0) {
+                        $inventory[] = [
+                            'name' => $itemName,
+                            'count' => $count
+                        ];
+                    }
+                }
+            }
+        }
+        
+        Logger::info("Parsed ".count($inventory)." valid inventory items");
+        
+        if (count($inventory) > 0) {
+            Logger::info("Sample items: ".$inventory[0]['name']." x".$inventory[0]['count']);
+        }
+        
+        // Get current NPC
+        $currentNpcData = $npcMaster->getByName($npcName);
+        
+        if ($currentNpcData) {
+            Logger::info("Found NPC in database: {$npcName}, NPC ID: ".$currentNpcData['id']);
+            
+            // Get existing metadata
+            $meta = [];
+            if (!empty($currentNpcData['metadata'])) {
+                $meta = json_decode($currentNpcData['metadata'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            
+            Logger::info("Existing metadata keys: ".implode(", ", array_keys($meta)));
+            
+            // Update inventory section
+            $meta['inventory'] = $inventory;
+            $meta['inventory_updated'] = time();
+            
+            Logger::info("Setting inventory with ".count($inventory)." items, timestamp: ".$meta['inventory_updated']);
+            
+            // Save back to database
+            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
+            $updateResult = $npcMaster->updateByArray($currentNpcData);
+            
+            Logger::info("Database update result: ".var_export($updateResult, true));
+            
+            // Verify the update by reading it back
+            $verifyNpc = $npcMaster->getByName($npcName);
+            if ($verifyNpc && !empty($verifyNpc['metadata'])) {
+                $verifyMeta = json_decode($verifyNpc['metadata'], true);
+                if (isset($verifyMeta['inventory'])) {
+                    Logger::info("VERIFICATION: Inventory in database has ".count($verifyMeta['inventory'])." items");
+                } else {
+                    Logger::error("VERIFICATION: Inventory NOT FOUND in metadata after update!");
+                }
+            }
+            
+            Logger::info("Updated inventory for {$npcName} (".count($inventory)." items) - SUCCESS");
+        } else {
+            Logger::warn("NPC not found in database: {$npcName}");
+        }
+    } else {
+        Logger::warn("updateinventory: No NPC name in data");
+    }
+    $MUST_END=true;
+
+} elseif ($gameRequest[0] == "updateskills") {
+    // Live skills update (periodic, every 5 minutes)
+    $updateData = explode("@",$gameRequest[3]);
+    
+    if (!empty($updateData[0])) {
+        $npcName = $updateData[0];
+        
+        // Skills array (18 Skyrim skills)
+        $skills = [
+            'archery' => isset($updateData[1]) ? floatval($updateData[1]) : 0,
+            'block' => isset($updateData[2]) ? floatval($updateData[2]) : 0,
+            'onehanded' => isset($updateData[3]) ? floatval($updateData[3]) : 0,
+            'twohanded' => isset($updateData[4]) ? floatval($updateData[4]) : 0,
+            'conjuration' => isset($updateData[5]) ? floatval($updateData[5]) : 0,
+            'destruction' => isset($updateData[6]) ? floatval($updateData[6]) : 0,
+            'illusion' => isset($updateData[7]) ? floatval($updateData[7]) : 0,
+            'restoration' => isset($updateData[8]) ? floatval($updateData[8]) : 0,
+            'alteration' => isset($updateData[9]) ? floatval($updateData[9]) : 0,
+            'enchanting' => isset($updateData[10]) ? floatval($updateData[10]) : 0,
+            'smithing' => isset($updateData[11]) ? floatval($updateData[11]) : 0,
+            'heavyarmor' => isset($updateData[12]) ? floatval($updateData[12]) : 0,
+            'lightarmor' => isset($updateData[13]) ? floatval($updateData[13]) : 0,
+            'pickpocket' => isset($updateData[14]) ? floatval($updateData[14]) : 0,
+            'lockpicking' => isset($updateData[15]) ? floatval($updateData[15]) : 0,
+            'sneak' => isset($updateData[16]) ? floatval($updateData[16]) : 0,
+            'alchemy' => isset($updateData[17]) ? floatval($updateData[17]) : 0,
+            'speechcraft' => isset($updateData[18]) ? floatval($updateData[18]) : 0
+        ];
+        
+        $currentNpcData = $npcMaster->getByName($npcName);
+        if ($currentNpcData) {
+            $meta = [];
+            if (!empty($currentNpcData['metadata'])) {
+                $meta = json_decode($currentNpcData['metadata'], true);
+                if (!is_array($meta)) { $meta = []; }
+            }
+            
+            $meta['skills'] = $skills;
+            
+            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
+            $npcMaster->updateByArray($currentNpcData);
+            
+            Logger::info("Updated skills for {$npcName}");
+        }
+    }
+    $MUST_END=true;
+
+} elseif ($gameRequest[0] == "updatestats") {
+    // Live stats update (combat-aware, every 3s in combat or on hit)
+    $updateData = explode("@",$gameRequest[3]);
+    
+    if (!empty($updateData[0])) {
+        $npcName = $updateData[0];
+        
+        // Stats (level, health, magicka, stamina with current/max)
+        $stats = [
+            'level' => isset($updateData[1]) ? intval($updateData[1]) : 1,
+            'health' => isset($updateData[2]) ? floatval($updateData[2]) : 0,
+            'health_max' => isset($updateData[3]) ? floatval($updateData[3]) : 0,
+            'magicka' => isset($updateData[4]) ? floatval($updateData[4]) : 0,
+            'magicka_max' => isset($updateData[5]) ? floatval($updateData[5]) : 0,
+            'stamina' => isset($updateData[6]) ? floatval($updateData[6]) : 0,
+            'stamina_max' => isset($updateData[7]) ? floatval($updateData[7]) : 0
+        ];
+        
+        $currentNpcData = $npcMaster->getByName($npcName);
+        if ($currentNpcData) {
+            $meta = [];
+            if (!empty($currentNpcData['metadata'])) {
+                $meta = json_decode($currentNpcData['metadata'], true);
+                if (!is_array($meta)) { $meta = []; }
+            }
+            
+            $meta['stats'] = $stats;
+            $meta['stats_updated'] = time();  // Track last stats update
+            
+            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
+            $npcMaster->updateByArray($currentNpcData);
+            
+            Logger::info("Updated stats for {$npcName} (HP:{$stats['health']}/{$stats['health_max']}, MP:{$stats['magicka']}/{$stats['magicka_max']}, SP:{$stats['stamina']}/{$stats['stamina_max']})");
+        }
+    }
+    $MUST_END=true;
+
 }  elseif ($gameRequest[0] == "_questreset") {
     error_reporting(E_ALL);
     $db->delete("quests", "1=1");
@@ -284,7 +526,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         array(
             'ts' => $gameRequest[1],
             'gamets' => $gameRequest[2],
-            'title' => $gameRequest[3],
+            'title' => substr($gameRequest[3],1),   // Initial strange "p" at the beginning.
             'sess' => 'pending',
             'localts' => time()
         )
@@ -420,6 +662,18 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "playerdied") {
     
     
+    // Dragon Break autosnapshot: detect large rollback and snapshot before pruning
+    try {
+        $prevGamets = DataLastKnownGameTS();
+        $incomingGamets = intval($gameRequest[2]);
+        $snapshotId = dragon_break_snapshot_if_needed($prevGamets, $incomingGamets);
+        if ($snapshotId > 0) {
+            Logger::info("DragonBreak: Created snapshot id {$snapshotId} prior to death rollback prune");
+        }
+    } catch (Exception $e) {
+        Logger::warn("DragonBreak: Snapshot attempt (playerdied) failed: ".$e->getMessage());
+    }
+
     $lastSaveHistory=$db->fetchAll("select gamets from eventlog where type='infosave' order by ts desc limit 1 offset 0");
     if (isset($lastSaveHistory[0]["ts"])) {
         $lastSave=$lastSaveHistory[0]["ts"];
@@ -465,6 +719,22 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     // logEvent($gameRequest);
 
     $vars=explode("@",$gameRequest[3]);
+    if ($vars[0]=="chim_context_mode") {
+        $cRw=$db->fetchOne("select value from conf_opts where id='{$vars[0]}'");
+        $vars[1]=(isset($cRw["value"])&&$cRw["value"]=="1")?"0":"1";
+        $GLOBALS["db"]->insert(
+            'responselog',
+                array(
+                    'localts' => time(),
+                    'sent' => 0,
+                    'actor' => "rolemaster",
+                    'text' => '',
+                    'action' => "rolecommand|DebugNotification@Focus on Chat mode ".($vars[1]?"enabled":"disabled"),
+                    'tag' => ""
+                )
+            );
+    }
+
     $db->upsertRowOnConflict(
         'conf_opts',
         array(
@@ -475,6 +745,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     );
     
     
+    $MUST_END=true;
+    
+} elseif (strpos($gameRequest[0], "infosave")===0) {    // user saves. lets backup all NPC state.
+
+    error_log("[INFOSAVE] Backup all profiles");
+    
+    $npcMaster=new NpcMaster();
+    $npcMaster->backupAllNpcs($gameRequest[2]);
     $MUST_END=true;
     
 } elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever requests
@@ -502,8 +780,124 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (!profile_exists($localName))
         AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
 
+    
     createProfile($localName,[],false,$baseProfile);
     audit_log("comm.php addnpc $localName");
+
+    // Update new data
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByName($localName);
+    if ($currentNpcData) {
+        $currentNpcData["base"]=$splitNameBase[1];
+        $currentNpcData["gender"]=$splitNameBase[2];
+        $currentNpcData["race"]=$splitNameBase[3];
+        $currentNpcData["refid"]=$splitNameBase[4];
+        
+
+        $meta=$npcMaster->getMetadata($currentNpcData);
+        // NPC skills
+        $meta["skills"]["archery"]=$splitNameBase[5];
+        $meta["skills"]["block"]=$splitNameBase[6];
+        $meta["skills"]["onehanded"]=$splitNameBase[7];
+        $meta["skills"]["twohanded"]=$splitNameBase[8];
+        $meta["skills"]["conjuration"]=$splitNameBase[9];
+        $meta["skills"]["destruction"]=$splitNameBase[10];
+        $meta["skills"]["restoration"]=$splitNameBase[11];
+        $meta["skills"]["alteration"]=$splitNameBase[12];
+        $meta["skills"]["illusion"]=$splitNameBase[13];
+        $meta["skills"]["heavyarmor"]=$splitNameBase[14];
+        $meta["skills"]["lightarmor"]=$splitNameBase[15];
+        $meta["skills"]["lockpicking"]=$splitNameBase[16];
+        $meta["skills"]["pickpocket"]=$splitNameBase[17];
+        $meta["skills"]["sneak"]=$splitNameBase[18];
+        $meta["skills"]["speech"]=$splitNameBase[19];
+        $meta["skills"]["smithing"]=$splitNameBase[20];
+        $meta["skills"]["alchemy"]=$splitNameBase[21];
+        $meta["skills"]["enchanting"]=$splitNameBase[22];
+        
+        // NPC equipment (8 slots from Skyrim)
+        $meta["equipment"]["helmet"]=isset($splitNameBase[23]) ? $splitNameBase[23] : '';
+        $meta["equipment"]["armor"]=isset($splitNameBase[24]) ? $splitNameBase[24] : '';
+        $meta["equipment"]["boots"]=isset($splitNameBase[25]) ? $splitNameBase[25] : '';
+        $meta["equipment"]["gloves"]=isset($splitNameBase[26]) ? $splitNameBase[26] : '';
+        $meta["equipment"]["amulet"]=isset($splitNameBase[27]) ? $splitNameBase[27] : '';
+        $meta["equipment"]["ring"]=isset($splitNameBase[28]) ? $splitNameBase[28] : '';
+        $meta["equipment"]["left_hand"]=isset($splitNameBase[29]) ? $splitNameBase[29] : '';
+        $meta["equipment"]["right_hand"]=isset($splitNameBase[30]) ? $splitNameBase[30] : '';
+        
+        // NPC stats (core attributes)
+        $meta["stats"]["level"]=isset($splitNameBase[31]) ? intval($splitNameBase[31]) : 1;
+        $meta["stats"]["health"]=isset($splitNameBase[32]) ? floatval($splitNameBase[32]) : 0;
+        $meta["stats"]["health_max"]=isset($splitNameBase[33]) ? floatval($splitNameBase[33]) : 0;
+        $meta["stats"]["magicka"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
+        $meta["stats"]["magicka_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
+        $meta["stats"]["stamina"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
+        $meta["stats"]["stamina_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
+
+        $meta["mods"]=isset($splitNameBase[38]) ?explode("#",$splitNameBase[38]):null;
+
+       
+        // Importing rules
+        $npcName = $GLOBALS["db"]->escape($localName);
+        $npcRace = $GLOBALS["db"]->escape($currentNpcData["race"]);
+        $npcGender = $GLOBALS["db"]->escape($currentNpcData["gender"]);
+        $npcBase = $GLOBALS["db"]->escape($currentNpcData["base"]);
+        $npcMods = $meta["mods"]; 
+
+        if (is_array($npcMods)) {
+            $modsArray = "ARRAY['" . implode("','", array_map([$GLOBALS["db"], 'escape'], $npcMods)) . "']";
+        } else {
+            $modsArray = "ARRAY['']";
+        }
+
+        $sql = "
+            SELECT *
+            FROM import_rules r
+            WHERE r.enabled = TRUE
+            AND (r.match_name IS NULL OR '$npcName' ~ r.match_name)
+            AND (r.match_race IS NULL OR '$npcRace' ~ r.match_race)
+            AND (r.match_gender IS NULL OR '$npcGender' = r.match_gender)
+            AND (r.match_base IS NULL OR '$npcBase' ~ r.match_base)
+            AND (r.match_mods IS NULL OR r.match_mods <@ $modsArray)
+            ORDER BY r.priority DESC
+        ";
+
+
+        $rules = $db->fetchAll($sql);
+        error_log("[ADDNPC IMPORTING RULES] Matching rules for $npcName: ".sizeof($rules));
+        foreach ($rules as $rule) {
+
+
+            if (!empty($rule["profile"])) {
+                $currentNpcData["profile_id"] = (int)$rule["profile"];
+                error_log("[ADDNPC IMPORTING RULES] Matching rule for $npcName: Profile {$rule["profile"]}");
+
+            }
+
+
+            if (!empty($rule["action"])) {
+                $actions = json_decode($rule["action"], true);
+                if (is_array($actions)) {
+                    foreach ($actions as $key=>$value) {
+                        error_log("[ADDNPC IMPORTING RULES] Matching rules for $npcName: {$key}:".print_r($value,true));
+                        // ejemplo: guardar en $currentNpcData["properties"]
+                        if ($key=="metadata")
+                            $meta=array_merge($meta,$value);
+                        else
+                            $currentNpcData[$key] = $value;
+                    
+                    }
+                }
+            }
+        }
+
+        $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
+
+        $npcMaster->updateByArray($currentNpcData);
+        
+        
+    }
+
     $MUST_END=true;
     
     
@@ -550,28 +944,15 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
         
         // Check if profile exists for this NPC
-        $profilePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf_" . md5($npcName) . ".php";
-        if (!file_exists($profilePath)) {
+        $npcMaster=new NpcMaster();
+        $npcData=$npcMaster->getByName($npcName);
+        if (!$npcData) {
             continue;
         }
         
-        // Load the NPC's profile to check if DYNAMIC_PROFILE is enabled
-        // Save current DYNAMIC_PROFILE state to avoid contamination
-        $originalDynamicProfile = isset($DYNAMIC_PROFILE) ? $DYNAMIC_PROFILE : null;
-        
-        // Include the profile - this will set variables in current scope
-        include($profilePath);
-        
         // Check if DYNAMIC_PROFILE is enabled for this NPC
-        $isDynamicEnabled = (isset($DYNAMIC_PROFILE) && $DYNAMIC_PROFILE);
-        
-        // Restore original state if it existed
-        if ($originalDynamicProfile !== null) {
-            $DYNAMIC_PROFILE = $originalDynamicProfile;
-        } else {
-            unset($DYNAMIC_PROFILE);
-        }
-        
+        $isDynamicEnabled = $npcData["dynamic_profile"] ?? $GLOBALS["DYNAMIC_PROFILE"] ?? false;
+
         if ($isDynamicEnabled) {
             $enabledNPCs[] = $npcName;
         }
@@ -756,17 +1137,28 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 		// Use the global DYNAMIC_PROMPT
         $updateProfilePrompt = $GLOBALS["DYNAMIC_PROMPT"];
 		// Database Prompt (Dynamic Profile Head)    
-		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue and then update the dynamic character profile based on the information provided. ", ];
+		$head[]   = ["role"	=> "system", "content"	=> "You are an assistant. Analyze this dialogue for {$GLOBALS["HERIKA_NAME"]} and then update the profile for {$GLOBALS["HERIKA_NAME"]} based on the information provided. " ];
 		$prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
 		// Use centralized function from data_functions.php
-		$currentDynamicProfile = buildDynamicProfileDisplay();
-        
-		$prompt[] = ["role" => "user", "content" => "Current character profile you are updating:\n" . "Character name:\n"  . $GLOBALS["HERIKA_NAME"] . "\nCharacter static biography:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $currentDynamicProfile];
+		// Log the dynamic profile update event
+        $gameRequest[0] = 'updateprofile';
+        logEvent($gameRequest);
+        // Re-fetch the dynamic profile after logging
+        $currentDynamicProfile = buildDynamicProfileDisplay();
+        $prompt[] = ["role" => "user", "content" => "Character to update:"  . $GLOBALS["HERIKA_NAME"] . "\nCharacter biography information:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $currentDynamicProfile];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
         $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-        $GLOBALS["FORCE_MAX_TOKENS"]=1500;
-		$connectionHandler->open($contextData, ["max_tokens"=>1500]);
+        // Prefer connector-configured max_tokens for diary; then legacy memory; else default
+        $maxTokens = null;
+        if (isset($GLOBALS["CONNECTOR"][DMgetCurrentModel()]["max_tokens"])) {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["max_tokens"];
+        } elseif (isset($GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"])) {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];
+        } else {
+            $maxTokens = 2048;
+        }
+        $connectionHandler->open($contextData, ["MAX_TOKENS"=>$maxTokens]);
 		$buffer      = "";
 		$totalBuffer = "";
 		$breakFlag   = false;
@@ -847,8 +1239,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 if (!mb_check_encoding($dynamicContent, 'UTF-8')) {
                     $dynamicContent = mb_convert_encoding($dynamicContent, 'UTF-8', 'UTF-8'); // Fix encoding
                 }
-                if (strlen($dynamicContent) > 5000) {
-                    $dynamicContent = substr($dynamicContent, 0, 5000) . '... [truncated]'; // Limit length
+                if (strlen($dynamicContent) > 50000) {
+                    $dynamicContent = substr($dynamicContent, 0, 50000) . '... [truncated]'; // Limit length
                 }
                 $dynamicContent = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $dynamicContent); // Escape PHP tags
                 
@@ -952,1035 +1344,35 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-}
+} elseif (strpos($gameRequest[0], "core_profile_assign")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+    
+    logEvent($gameRequest);
 
-// Function to process diary entries for all nearby NPCs (triggered by C++ with 400 unit range)
-function processNearbyDiary($gameRequest, $eventType) {
-    global $db;
-    
-    // Note: The C++ code handles the 400 unit range filtering and sends individual diary requests
-    // This function processes the diary_nearby event type but won't actually be called for bulk processing
-    // Individual diary requests will come through the normal diary handler
-    
-    Logger::info("DIARY_NEARBY: diary_nearby event received - C++ will handle individual NPCs within 400 units");
-    
-    // Just log that the nearby diary was triggered
-    echo "The Narrator|rolecommand|DebugNotification@Checking for nearby NPCs within 400 units..." . PHP_EOL;
-}
-
-// Function to generate diary entry for a nearby NPC (similar to followers but for any NPC)
-function generateNearbyDiary($npcName, $gameRequest, $eventType) {
-    global $db;
-    
-    // Check if we have the diary connector configured
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
-        Logger::info("DIARY_NEARBY: No diary connector configured for $npcName");
-        return false;
-    }
-    
-    // Temporarily switch context to this NPC
-    $originalHerikaName = $GLOBALS["HERIKA_NAME"];
-    $GLOBALS["HERIKA_NAME"] = $npcName;
-    
-    try {
-        // Load NPC's profile if it exists
-        $profileLoaded = false;
-        $originalHerikaData = [];
-        $NPC_CONF = [];
+    if (isset($_GET["profile"])) {
+        $npcMaster=new NpcMaster();
+        $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
         
-        // Try to load profile data for this NPC
-        if (function_exists('getConfFileFor')) {
-            $confFile = getConfFileFor($npcName);
-            if (!empty($confFile) && file_exists($confFile)) {
-                // Save original values for all extended fields
-                $originalHerikaData = [
-                    'HERIKA_PERS' => isset($GLOBALS["HERIKA_PERS"]) ? $GLOBALS["HERIKA_PERS"] : '',
-                    'HERIKA_BACKGROUND' => isset($GLOBALS["HERIKA_BACKGROUND"]) ? $GLOBALS["HERIKA_BACKGROUND"] : '',
-                    'HERIKA_PERSONALITY' => isset($GLOBALS["HERIKA_PERSONALITY"]) ? $GLOBALS["HERIKA_PERSONALITY"] : '',
-                    'HERIKA_APPEARANCE' => isset($GLOBALS["HERIKA_APPEARANCE"]) ? $GLOBALS["HERIKA_APPEARANCE"] : '',
-                    'HERIKA_RELATIONSHIPS' => isset($GLOBALS["HERIKA_RELATIONSHIPS"]) ? $GLOBALS["HERIKA_RELATIONSHIPS"] : '',
-                    'HERIKA_OCCUPATION' => isset($GLOBALS["HERIKA_OCCUPATION"]) ? $GLOBALS["HERIKA_OCCUPATION"] : '',
-                    'HERIKA_SKILLS' => isset($GLOBALS["HERIKA_SKILLS"]) ? $GLOBALS["HERIKA_SKILLS"] : '',
-                    'HERIKA_SPEECHSTYLE' => isset($GLOBALS["HERIKA_SPEECHSTYLE"]) ? $GLOBALS["HERIKA_SPEECHSTYLE"] : '',
-                    'HERIKA_GOALS' => isset($GLOBALS["HERIKA_GOALS"]) ? $GLOBALS["HERIKA_GOALS"] : '',
-                    'HERIKA_DYNAMIC' => isset($GLOBALS["HERIKA_DYNAMIC"]) ? $GLOBALS["HERIKA_DYNAMIC"] : ''
-                ];
-                
-                // Load NPC's profile
-                $NPC_CONF = extract_assignments($confFile);
-                $profileLoaded = true;
-                Logger::info("DIARY_NEARBY: Loaded profile for $npcName");
-            }
-        }
-        
-        if (!$profileLoaded) {
-            // Use default NPC personality if no specific profile exists
-            $NPC_CONF = [
-                "HERIKA_NAME" => $npcName,
-                "PLAYER_NAME" => $GLOBALS["PLAYER_NAME"],
-                "HERIKA_PERS" => "An NPC in the world of Skyrim.",
-                "HERIKA_DYNAMIC" => "Currently encountered by " . $GLOBALS["PLAYER_NAME"] . ".",
-                "PROMPT_HEAD" => isset($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "You are an NPC in the world of Skyrim.",
-                "COMMAND_PROMPT" => isset($GLOBALS["COMMAND_PROMPT"]) ? $GLOBALS["COMMAND_PROMPT"] : "",
-                "CONTEXT_HISTORY" => isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25,
-                "CONTEXT_HISTORY_DIARY" => isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0,
-                "CONNECTORS_DIARY" => $GLOBALS["CONNECTORS_DIARY"]
-            ];
-            Logger::info("DIARY_NEARBY: Using default profile for $npcName");
-        }
-        
-        // Use centralized function from data_functions.php
-        $dynamicBio = buildDynamicBiography($NPC_CONF);
-        
-        $head = [
-            ["role" => "system", "content" => strtr(
-                $NPC_CONF["PROMPT_HEAD"] . "\n" . $NPC_CONF["HERIKA_PERS"] . $dynamicBio . "\n" . $NPC_CONF["COMMAND_PROMPT"],
-                ["#PLAYER_NAME#" => $NPC_CONF["PLAYER_NAME"]]
-            )]
-        ];
-        
-        // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
-        if (isset($NPC_CONF["CONTEXT_HISTORY_DIARY"]) && $NPC_CONF["CONTEXT_HISTORY_DIARY"] > 0) {
-            $lastNDataForContext = $NPC_CONF["CONTEXT_HISTORY_DIARY"] + 0;
+        if (is_array($currentNpcData)) {
+            $currentNpcData["profile_id"]=$gameRequest[3];
+            $npcMaster->updateByArray($currentNpcData);
+            
         } else {
-            $lastNDataForContext = (isset($NPC_CONF["CONTEXT_HISTORY"])) ? ($NPC_CONF["CONTEXT_HISTORY"] + 0) : 25;
+            error_log("[CORE SYSTEM] No valid NPC found {$_GET["profile"]}");
         }
-
-        $sqlfilter = " and type<>'prechat'";
-        $contextDataHistoric = DataLastDataExpandedFor("{$NPC_CONF["HERIKA_NAME"]}", $lastNDataForContext * -1, $sqlfilter);
-        $historyData = "";
-        foreach ($contextDataHistoric as $element) {
-            $historyData .= trim("{$element["content"]}") . PHP_EOL . PHP_EOL;
-        }
-
-        // Build user prompt for diary generation (like regular diary)
-        $prompt = [];
-        if (!empty($contextDataHistoric)) {
-            $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
-        }
-
-        $diaryPrompt = strtr($GLOBALS["DIARY_PROMPT"], ['{$GLOBALS["HERIKA_NAME"]}'=>$npcName,'{$GLOBALS["PLAYER_NAME"]}'=>$NPC_CONF["PLAYER_NAME"]]);
-        $prompt[] = ["role" => "user", "content" => $diaryPrompt];
-
-        $contextData = array_merge($head, $prompt);
-        
-        // Set the request type for diary so connector knows to use diary grammar
-        $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
-        $GLOBALS["gameRequest"] = [0 => "diary", 1 => time(), 2 => $gameRequest[2], 3 => "Auto diary for " . $npcName];
-        
-        // Generate diary entry using LLM
-        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$NPC_CONF["CONNECTORS_DIARY"]}.php");
-        
-        $connectionHandler = new $NPC_CONF["CONNECTORS_DIARY"];
-        $maxTokens = isset($GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"]) 
-            ? $GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"] 
-            : 1500;
-            
-        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
-        
-        $buffer = "";
-        $totalBuffer = "";
-        $breakFlag = false;
-        
-        while (true) {
-            if ($breakFlag) {
-                break;
-            }
-            
-            if ($connectionHandler->isDone()) {
-                $breakFlag = true;
-            }
-            
-            $buffer .= $connectionHandler->process();
-            $totalBuffer .= $buffer;
-        }
-        
-        $connectionHandler->close();
-        
-        // Restore original gameRequest after diary generation
-        if ($originalGameRequest !== null) {
-            $GLOBALS["gameRequest"] = $originalGameRequest;
-        } else {
-            unset($GLOBALS["gameRequest"]);
-        }
-        
-        if (!empty(trim($buffer))) {
-            // Save diary entry to database
-            $topic = DataLastKnowDate();
-            $location = DataLastKnownLocation();
-            
-            $db->insert(
-                'diarylog',
-                array(
-                    'ts' => $gameRequest[1],
-                    'gamets' => $gameRequest[2],
-                    'topic' => $topic . " (Nearby diary: $eventType)",
-                    'content' => trim($buffer),
-                    'tags' => "Nearby-diary,$eventType",
-                    'people' => $npcName,
-                    'location' => $location,
-                    'sess' => 'pending',
-                    'localts' => time()
-                )
-            );
-            
-            // Log memory
-            if (function_exists('logMemory')) {
-                logMemory($npcName, $npcName, trim($buffer), time(), $gameRequest[2], 'nearby_diary', $gameRequest[1]);
-            }
-            
-            return true;
-        }
-        
-    } catch (Exception $e) {
-        Logger::error("DIARY_NEARBY: Error generating diary for $npcName: " . $e->getMessage());
-    } finally {
-        // Restore original context
-        $GLOBALS["HERIKA_NAME"] = $originalHerikaName;
-        
-        // Restore original profile data if we loaded an NPC profile
-        if (!empty($originalHerikaData)) {
-            $GLOBALS["HERIKA_PERS"] = $originalHerikaData['HERIKA_PERS'];
-            $GLOBALS["HERIKA_BACKGROUND"] = $originalHerikaData['HERIKA_BACKGROUND'];
-            $GLOBALS["HERIKA_PERSONALITY"] = $originalHerikaData['HERIKA_PERSONALITY'];
-            $GLOBALS["HERIKA_APPEARANCE"] = $originalHerikaData['HERIKA_APPEARANCE'];
-            $GLOBALS["HERIKA_RELATIONSHIPS"] = $originalHerikaData['HERIKA_RELATIONSHIPS'];
-            $GLOBALS["HERIKA_OCCUPATION"] = $originalHerikaData['HERIKA_OCCUPATION'];
-            $GLOBALS["HERIKA_SKILLS"] = $originalHerikaData['HERIKA_SKILLS'];
-            $GLOBALS["HERIKA_SPEECHSTYLE"] = $originalHerikaData['HERIKA_SPEECHSTYLE'];
-            $GLOBALS["HERIKA_GOALS"] = $originalHerikaData['HERIKA_GOALS'];
-            $GLOBALS["HERIKA_DYNAMIC"] = $originalHerikaData['HERIKA_DYNAMIC'];
-        }
+    } else {
+        error_log("[CORE SYSTEM] No valid profile specified");
     }
     
-    return false;
-}
-
-// Function to process AUTO_DIARY for all current followers
-function processAutoDiary($gameRequest, $eventType) {
-    global $db;
+    $MUST_END=true;
     
-    // Get current party data
-    $partyConf = DataGetCurrentPartyConf();
-    if (empty($partyConf)) {
-        Logger::info("AUTO_DIARY: No current party data found");
-        return;
-    }
     
-    Logger::debug("AUTO_DIARY: Raw party data: " . $partyConf);
+} elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
-    // Parse party data
-    $currentParty = json_decode($partyConf, true);
-    if (!is_array($currentParty) || empty($currentParty)) {
-        Logger::info("AUTO_DIARY: Failed to parse party data or party is empty. Data was: " . $partyConf);
-        return;
-    }
+    logEvent($gameRequest);
     
-    $processedCount = 0;
-    $generatedCount = 0;
-    $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
+    $MUST_END=true;
     
-    Logger::info("AUTO_DIARY: Processing $eventType event for " . count($currentParty) . " followers");
     
-    foreach ($currentParty as $followerName => $followerData) {
-        if (empty($followerName) || !isset($followerData["name"])) {
-            continue;
-        }
-        
-        $processedCount++;
-        
-        // Check diary cooldown for this specific follower
-        $npcName = preg_replace('/[^a-zA-Z0-9_]/', '_', $followerName);
-        $cooldownKey = "DIARY_LAST_TIMESTAMP_" . $npcName;
-        
-        $diaryRecord = $db->fetchAll("SELECT value FROM conf_opts WHERE id='" . $db->escape($cooldownKey) . "'");
-        
-        if (!empty($diaryRecord)) {
-            $lastTrigger = (int) $diaryRecord[0]['value'];
-            $timeElapsed = time() - $lastTrigger;
+} 
 
-            if ($timeElapsed < $diaryCooldownPeriod) {
-                Logger::info("AUTO_DIARY: Skipping $followerName (cooldown active: " . ($diaryCooldownPeriod - $timeElapsed) . " seconds remaining)");
-                continue;
-            }
-        }
-        
-        // Update cooldown timestamp for this follower
-        $db->upsertRowOnConflict(
-            'conf_opts',
-            array(
-                'id' => $cooldownKey,
-                'value' => time()
-            ),
-            "id"
-        );
-        
-        // Generate diary entry for this follower
-        if (generateFollowerDiary($followerName, $gameRequest, $eventType)) {
-            $generatedCount++;
-            Logger::info("AUTO_DIARY: Generated diary entry for $followerName");
-        } else {
-            Logger::info("AUTO_DIARY: Failed to generate diary entry for $followerName");
-        }
-    }
-    
-}
-
-// Function to process a single NPC's dynamic profile
-function processSingleDynamicProfile($npcName, $gameRequest) {
-    global $db;
-
-    // deps
-    if (!function_exists('DataSpeechJournal') || !function_exists('buildDynamicProfileDisplay')) {
-        require_once(__DIR__ . "/../lib/data_functions.php");
-    }
-
-    // skip narrator
-    if ($npcName === "The Narrator") {
-        Logger::debug("processSingleDynamicProfile: Skipping The Narrator");
-        return false;
-    }
-
-    // paths
-    $confDir     = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR;
-    $profilePath = $confDir . "conf_" . md5($npcName) . ".php";
-    $mainConf    = $confDir . "conf.php";
-
-    if (!file_exists($profilePath)) {
-        Logger::debug("processSingleDynamicProfile: No profile found for $npcName");
-        return false;
-    }
-
-    // helper: include a conf in isolation and return UPPERCASE vars as array
-    $extractConf = static function (string $file): array {
-        if (!file_exists($file)) return [];
-        return (static function ($f) {
-            include $f;
-            $vars = get_defined_vars();
-            unset($vars['f']); // local param
-            $cfg = [];
-            foreach ($vars as $k => $v) {
-                if ($k === 'GLOBALS') continue;
-                if (preg_match('/^[A-Z][A-Z0-9_]*$/', $k)) {
-                    $cfg[$k] = $v;
-                }
-            }
-            return $cfg;
-        })($file);
-    };
-
-    // snapshot current globals
-    $originalGlobals = $GLOBALS;
-    try {
-        // load defaults, then override with character profile (except prompt keys)
-        $defaults  = $extractConf($mainConf);
-        $overrides = $extractConf($profilePath);
-
-        // never allow profile to override these global prompt keys
-        $promptKeys = [
-            'DYNAMIC_PROMPT_PERSONALITY',
-            'DYNAMIC_PROMPT_RELATIONSHIPS',
-            'DYNAMIC_PROMPT_OCCUPATION',
-            'DYNAMIC_PROMPT_SKILLS',
-            'DYNAMIC_PROMPT_SPEECHSTYLE',
-            'DYNAMIC_PROMPT_GOALS',
-        ];
-
-        $merged = $defaults;
-        foreach ($overrides as $k => $v) {
-            if (in_array($k, $promptKeys, true)) continue; // keep defaults for global prompts
-            // only override keys explicitly set in profile
-            $merged[$k] = $v;
-        }
-
-        // apply merged config to $GLOBALS
-        foreach ($merged as $k => $v) {
-            $GLOBALS[$k] = $v;
-        }
-
-        // feature gate
-        if (empty($GLOBALS['DYNAMIC_PROFILE'])) {
-            Logger::debug("processSingleDynamicProfile: DYNAMIC_PROFILE disabled for $npcName");
-            return false;
-        }
-
-        // diary connector
-        if (empty($GLOBALS['CONNECTORS_DIARY']) ||
-            !file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS['CONNECTORS_DIARY']}.php")) {
-            Logger::debug("processSingleDynamicProfile: No diary connector configured for $npcName");
-            return false;
-        }
-
-        // fields to update (profile overrides defaults if set)
-        $fieldsToUpdate = (!empty($GLOBALS['DYNAMIC_PROFILE_FIELDS']) && is_array($GLOBALS['DYNAMIC_PROFILE_FIELDS']))
-            ? $GLOBALS['DYNAMIC_PROFILE_FIELDS']
-            : ['personality', 'relationships'];
-
-        // history
-        $historyData = getDynamicProfileHistoryData($npcName);
-
-        // update fields
-        $updatedFields = [];
-        $successCount = 0;
-
-        foreach ($fieldsToUpdate as $field) {
-            $result = updateDynamicProfileField($npcName, $field, $historyData);
-
-            if ($field === 'skills') {
-                $skillsData = getInGameSkillDataFor($npcName);
-                $result .= "\n$skillsData";
-            }
-
-            if ($result !== false) {
-                $updatedFields[$field] = $result;
-                $successCount++;
-            }
-        }
-
-        if ($successCount > 0) {
-            $ok = saveDynamicProfileUpdates($npcName, $updatedFields, $db);
-            if ($ok) {
-                Logger::info(
-                    "processSingleDynamicProfile: Successfully updated $successCount fields for $npcName: " .
-                    implode(', ', array_keys($updatedFields))
-                );
-                return true;
-            }
-        }
-    } catch (Exception $e) {
-        Logger::error("processSingleDynamicProfile: Error processing $npcName: " . $e->getMessage());
-        return false;
-    } finally {
-        // hard-restore globals
-        foreach (array_keys($GLOBALS) as $k) {
-            if (!array_key_exists($k, $originalGlobals)) {
-                unset($GLOBALS[$k]);
-            }
-        }
-        foreach ($originalGlobals as $k => $v) {
-            $GLOBALS[$k] = $v;
-        }
-    }
-
-    return false;
-}
-
-// Function to generate diary entry for a specific follower
-function generateFollowerDiary($followerName, $gameRequest, $eventType) {
-    global $db;
-    
-    // Check if we have the diary connector configured
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
-        Logger::info("AUTO_DIARY: No diary connector configured for $followerName");
-        return false;
-    }
-    
-    // Temporarily switch context to this follower
-    $originalHerikaName = $GLOBALS["HERIKA_NAME"];
-    $GLOBALS["HERIKA_NAME"] = $followerName;
-    
-    try {
-        // Load follower's profile if it exists
-        $profileLoaded = false;
-        $originalHerikaData = [];
-        $FOLLOWER_CONF = [];
-        
-        // Try to load profile data for this follower
-        if (function_exists('getConfFileFor')) {
-            $confFile = getConfFileFor($followerName);
-            if (!empty($confFile) && file_exists($confFile)) {
-                // Save original values for all extended fields
-                $originalHerikaData = [
-                    'HERIKA_PERS' => isset($GLOBALS["HERIKA_PERS"]) ? $GLOBALS["HERIKA_PERS"] : '',
-                    'HERIKA_BACKGROUND' => isset($GLOBALS["HERIKA_BACKGROUND"]) ? $GLOBALS["HERIKA_BACKGROUND"] : '',
-                    'HERIKA_PERSONALITY' => isset($GLOBALS["HERIKA_PERSONALITY"]) ? $GLOBALS["HERIKA_PERSONALITY"] : '',
-                    'HERIKA_APPEARANCE' => isset($GLOBALS["HERIKA_APPEARANCE"]) ? $GLOBALS["HERIKA_APPEARANCE"] : '',
-                    'HERIKA_RELATIONSHIPS' => isset($GLOBALS["HERIKA_RELATIONSHIPS"]) ? $GLOBALS["HERIKA_RELATIONSHIPS"] : '',
-                    'HERIKA_OCCUPATION' => isset($GLOBALS["HERIKA_OCCUPATION"]) ? $GLOBALS["HERIKA_OCCUPATION"] : '',
-                    'HERIKA_SKILLS' => isset($GLOBALS["HERIKA_SKILLS"]) ? $GLOBALS["HERIKA_SKILLS"] : '',
-                    'HERIKA_SPEECHSTYLE' => isset($GLOBALS["HERIKA_SPEECHSTYLE"]) ? $GLOBALS["HERIKA_SPEECHSTYLE"] : '',
-                    'HERIKA_GOALS' => isset($GLOBALS["HERIKA_GOALS"]) ? $GLOBALS["HERIKA_GOALS"] : '',
-                    'HERIKA_DYNAMIC' => isset($GLOBALS["HERIKA_DYNAMIC"]) ? $GLOBALS["HERIKA_DYNAMIC"] : ''
-                ];
-                
-                // Load follower's profile
-                $FOLLOWER_CONF = extract_assignments($confFile);
-                $profileLoaded = true;
-                Logger::info("AUTO_DIARY: Loaded profile for $followerName");
-            }
-        }
-        
-        if (!$profileLoaded) {
-            // Create default follower configuration array if no specific profile exists
-            $FOLLOWER_CONF = [
-                "HERIKA_NAME" => $followerName,
-                "PLAYER_NAME" => $GLOBALS["PLAYER_NAME"],
-                "HERIKA_PERS" => "A loyal companion and follower of " . $GLOBALS["PLAYER_NAME"] . ".",
-                "HERIKA_BACKGROUND" => "A trusted companion who has joined " . $GLOBALS["PLAYER_NAME"] . " on their adventures through Skyrim.",
-                "HERIKA_PERSONALITY" => "Loyal, brave, and dependable. Shows dedication to their companions and faces challenges with determination.",
-                "HERIKA_APPEARANCE" => "A capable-looking adventurer equipped for the dangers of Skyrim.",
-                "HERIKA_RELATIONSHIPS" => "Close companion and trusted ally of " . $GLOBALS["PLAYER_NAME"] . ". Values friendship and loyalty above all else.",
-                "HERIKA_OCCUPATION" => "Adventurer and companion, skilled in combat and survival.",
-                "HERIKA_SKILLS" => "Proficient in combat, survival skills, and supporting allies in dangerous situations.",
-                "HERIKA_SPEECHSTYLE" => "Speaks with loyalty and respect, often showing concern for companions' wellbeing.",
-                "HERIKA_GOALS" => "To support " . $GLOBALS["PLAYER_NAME"] . " in their adventures and protect innocent people from harm.",
-                "PROMPT_HEAD" => isset($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "You are a companion in the world of Skyrim.",
-                "COMMAND_PROMPT" => isset($GLOBALS["COMMAND_PROMPT"]) ? $GLOBALS["COMMAND_PROMPT"] : "",
-                "CONTEXT_HISTORY" => isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25,
-                "CONTEXT_HISTORY_DIARY" => isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0,
-                "CONNECTORS_DIARY" => $GLOBALS["CONNECTORS_DIARY"],
-                "CONNECTOR" => isset($GLOBALS["CONNECTOR"]) ? $GLOBALS["CONNECTOR"] : []
-            ];
-            Logger::info("AUTO_DIARY: Using default configuration for $followerName");
-        } else {
-            // Ensure required fields exist in loaded configuration with fallbacks
-            if (!isset($FOLLOWER_CONF["HERIKA_NAME"])) {
-                $FOLLOWER_CONF["HERIKA_NAME"] = $followerName;
-            }
-            if (!isset($FOLLOWER_CONF["PLAYER_NAME"])) {
-                $FOLLOWER_CONF["PLAYER_NAME"] = $GLOBALS["PLAYER_NAME"];
-            }
-            if (!isset($FOLLOWER_CONF["CONNECTORS_DIARY"])) {
-                $FOLLOWER_CONF["CONNECTORS_DIARY"] = $GLOBALS["CONNECTORS_DIARY"];
-            }
-            if (!isset($FOLLOWER_CONF["CONNECTOR"])) {
-                $FOLLOWER_CONF["CONNECTOR"] = isset($GLOBALS["CONNECTOR"]) ? $GLOBALS["CONNECTOR"] : [];
-            }
-            if (!isset($FOLLOWER_CONF["CONTEXT_HISTORY"])) {
-                $FOLLOWER_CONF["CONTEXT_HISTORY"] = isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25;
-            }
-            if (!isset($FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"])) {
-                $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"] = isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0;
-            }
-            // Ensure extended profile fields have fallbacks if they don't exist
-            if (!isset($FOLLOWER_CONF["HERIKA_BACKGROUND"])) {
-                $FOLLOWER_CONF["HERIKA_BACKGROUND"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_PERSONALITY"])) {
-                $FOLLOWER_CONF["HERIKA_PERSONALITY"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_APPEARANCE"])) {
-                $FOLLOWER_CONF["HERIKA_APPEARANCE"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_RELATIONSHIPS"])) {
-                $FOLLOWER_CONF["HERIKA_RELATIONSHIPS"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_OCCUPATION"])) {
-                $FOLLOWER_CONF["HERIKA_OCCUPATION"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_SKILLS"])) {
-                $FOLLOWER_CONF["HERIKA_SKILLS"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_SPEECHSTYLE"])) {
-                $FOLLOWER_CONF["HERIKA_SPEECHSTYLE"] = "";
-            }
-            if (!isset($FOLLOWER_CONF["HERIKA_GOALS"])) {
-                $FOLLOWER_CONF["HERIKA_GOALS"] = "";
-            }
-        }
-        
-        // Use the same prompt system as regular diary entries
-        // Build standard system prompt like main.php does
-        
-        // Use centralized function from data_functions.php
-        $dynamicBio = buildDynamicBiography($FOLLOWER_CONF);
-        
-        $head = [
-            ["role" => "system", "content" => strtr(
-                $FOLLOWER_CONF["PROMPT_HEAD"] . "\n" . $FOLLOWER_CONF["HERIKA_PERS"] . $dynamicBio . "\n" . $FOLLOWER_CONF["COMMAND_PROMPT"],
-                ["#PLAYER_NAME#" => $FOLLOWER_CONF["PLAYER_NAME"]]
-            )]
-        ];
-        
-        // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
-        if (isset($FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"]) && $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"] > 0) {
-            $lastNDataForContext = $FOLLOWER_CONF["CONTEXT_HISTORY_DIARY"]+0;
-        } else {
-            $lastNDataForContext = (isset($FOLLOWER_CONF["CONTEXT_HISTORY"])) ? ($FOLLOWER_CONF["CONTEXT_HISTORY"]+0) : 25;
-        }
-
-        $sqlfilter=" and type<>'prechat'";
-        $contextDataHistoric = DataLastDataExpandedFor("{$FOLLOWER_CONF["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
-        $historyData="";
-        foreach ($contextDataHistoric as $element) {
-        
-            $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
-            
-        }
-
-
-        // Build user prompt for diary generation (like regular diary)
-       
-        if (!empty($contextDataHistoric)) {
-            $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
-        }
-
-        $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$followerName,'{$GLOBALS["PLAYER_NAME"]}'=>$FOLLOWER_CONF["PLAYER_NAME"]]);
-
-        $prompt[] = 
-            ["role" => "user", "content" => $diaryPrompt
-            ]
-        ;
-        
-
-        $contextData = array_merge($head, $prompt);
-        
-        // Set the request type for diary so connector knows to use diary grammar
-        $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
-        $GLOBALS["gameRequest"] = [0 => "diary", 1 => time(), 2 => $gameRequest[2], 3 => "Auto diary for " . $followerName];
-        
-        // Generate diary entry using LLM
-        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$FOLLOWER_CONF["CONNECTORS_DIARY"]}.php");
-        
-        $connectionHandler = new $FOLLOWER_CONF["CONNECTORS_DIARY"];
-        $maxTokens = isset($FOLLOWER_CONF["CONNECTOR"][$FOLLOWER_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"]) 
-            ? $FOLLOWER_CONF["CONNECTOR"][$FOLLOWER_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"] 
-            : 1500;
-            
-        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
-        
-        $buffer = "";
-        $totalBuffer = "";
-        $breakFlag = false;
-        
-        while (true) {
-            if ($breakFlag) {
-                break;
-            }
-            
-            if ($connectionHandler->isDone()) {
-                $breakFlag = true;
-            }
-            
-            $buffer .= $connectionHandler->process();
-            $totalBuffer .= $buffer;
-        }
-        
-        $connectionHandler->close();
-        
-        // Restore original gameRequest after diary generation
-        if ($originalGameRequest !== null) {
-            $GLOBALS["gameRequest"] = $originalGameRequest;
-        } else {
-            unset($GLOBALS["gameRequest"]);
-        }
-        
-        if (!empty(trim($buffer))) {
-            // Save diary entry to database
-            $topic = DataLastKnowDate();
-            $location = DataLastKnownLocation();
-            
-            $db->insert(
-                'diarylog',
-                array(
-                    'ts' => $gameRequest[1],
-                    'gamets' => $gameRequest[2],
-                    'topic' => $topic . " (Auto-diary: $eventType)",
-                    'content' => trim($buffer),
-                    'tags' => "Auto-diary,$eventType",
-                    'people' => $followerName,
-                    'location' => $location,
-                    'sess' => 'pending',
-                    'localts' => time()
-                )
-            );
-            
-            // Log memory
-            if (function_exists('logMemory')) {
-                logMemory($followerName, $followerName, trim($buffer), time(), $gameRequest[2], 'auto_diary', $gameRequest[1]);
-            }
-            
-            // Send notification to plugin for this follower (same format as manual diary)
-            echo $followerName."|rolecommand|DebugNotification@Diary Entry Written for ".$followerName.PHP_EOL;
-            @ob_flush();
-            @flush();
-            
-            return true;
-        }
-        
-    } catch (Exception $e) {
-        Logger::error("AUTO_DIARY: Error generating diary for $followerName: " . $e->getMessage());
-    } finally {
-        // Restore original context
-        $GLOBALS["HERIKA_NAME"] = $originalHerikaName;
-        
-        // Restore original profile data if we loaded a follower profile
-        if (!empty($originalHerikaData)) {
-            $GLOBALS["HERIKA_PERS"] = $originalHerikaData['HERIKA_PERS'];
-            $GLOBALS["HERIKA_BACKGROUND"] = $originalHerikaData['HERIKA_BACKGROUND'];
-            $GLOBALS["HERIKA_PERSONALITY"] = $originalHerikaData['HERIKA_PERSONALITY'];
-            $GLOBALS["HERIKA_APPEARANCE"] = $originalHerikaData['HERIKA_APPEARANCE'];
-            $GLOBALS["HERIKA_RELATIONSHIPS"] = $originalHerikaData['HERIKA_RELATIONSHIPS'];
-            $GLOBALS["HERIKA_OCCUPATION"] = $originalHerikaData['HERIKA_OCCUPATION'];
-            $GLOBALS["HERIKA_SKILLS"] = $originalHerikaData['HERIKA_SKILLS'];
-            $GLOBALS["HERIKA_SPEECHSTYLE"] = $originalHerikaData['HERIKA_SPEECHSTYLE'];
-            $GLOBALS["HERIKA_GOALS"] = $originalHerikaData['HERIKA_GOALS'];
-            $GLOBALS["HERIKA_DYNAMIC"] = $originalHerikaData['HERIKA_DYNAMIC'];
-        }
-    }
-    
-    return false;
-}
-
-function getDynamicProfileHistoryData($npcName) {
-    $historyData = "";
-    $lastPlace = "";
-    $lastListener = "";
-    $lastDateTime = "";
-    
-    // Determine how much context history to use for dynamic profiles
-    $dynamicProfileContextHistory = 50; // Default value
-    if (isset($GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"]) && $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"] > 0) {
-        $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY_DYNAMIC_PROFILE"];
-    } elseif (isset($GLOBALS["CONTEXT_HISTORY"]) && $GLOBALS["CONTEXT_HISTORY"] > 0) {
-        $dynamicProfileContextHistory = $GLOBALS["CONTEXT_HISTORY"];
-    }
-    
-    foreach (json_decode(DataSpeechJournal($npcName, $dynamicProfileContextHistory), true) as $element) {
-        if ($element["listener"] == "The Narrator") {
-            continue;
-        }
-        if ($lastListener != $element["listener"]) {
-            $listener = " (talking to {$element["listener"]})";
-            $lastListener = $element["listener"];
-        } else {
-            $listener = "";
-        }
-        
-        if ($lastPlace != $element["location"]) {
-            $place = " (at {$element["location"]})";
-            $lastPlace = $element["location"];
-        } else {
-            $place = "";
-        }
-
-        if ($lastDateTime != substr($element["sk_date"], 0, 15)) {
-            $date = substr($element["sk_date"], 0, 10);
-            $time = substr($element["sk_date"], 11);
-            $dateTime = "(on date {$date} at {$time})";
-            $lastDateTime = substr($element["sk_date"], 0, 15); 
-        } else {
-            $dateTime = "";
-        }
-        
-        $historyData .= trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place $dateTime").PHP_EOL;
-    }
-    
-    return $historyData;
-}
-
-function updateDynamicProfileField($npcName, $field, $historyData) {
-    // Map field names to their corresponding HERIKA variables and prompts
-    $fieldMapping = [
-        'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY'],
-                    'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS'],
-        'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION'],
-        'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS'],
-        'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE'],
-        'goals' => ['var' => 'HERIKA_GOALS', 'prompt' => 'DYNAMIC_PROMPT_GOALS']
-    ];
-    
-    if (!isset($fieldMapping[$field])) {
-        Logger::warning("updateDynamicProfileField: Unknown field '$field' for $npcName");
-        return false;
-    }
-    
-    $varName = $fieldMapping[$field]['var'];
-    $promptName = $fieldMapping[$field]['prompt'];
-    
-    // Get current field value
-    $currentValue = isset($GLOBALS[$varName]) ? $GLOBALS[$varName] : '';
-    
-    // Get field-specific prompt
-    $updatePrompt = isset($GLOBALS[$promptName]) ? $GLOBALS[$promptName] : '';
-    if (empty($updatePrompt)) {
-        Logger::warning("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
-        return false;
-    }
-    
-    try {
-        // Collect other profile fields for context (excluding the current field)
-        $profileContext = [];
-        $profileFields = [
-            'HERIKA_PERS' => 'Basic Summary',
-            'HERIKA_BACKGROUND' => 'Background',
-            'HERIKA_PERSONALITY' => 'Personality Traits',
-            'HERIKA_APPEARANCE' => 'Physical Appearance',
-            'HERIKA_RELATIONSHIPS' => 'Relationships',
-            'HERIKA_OCCUPATION' => 'Occupation & Role',
-            'HERIKA_SKILLS' => 'Skills & Abilities',
-            'HERIKA_SPEECHSTYLE' => 'Speech Style',
-            'HERIKA_GOALS' => 'Goals & Aspirations'
-        ];
-
-        // Remove the current field from context
-        unset($profileFields[$varName]);
-
-        foreach ($profileFields as $fieldName => $fieldLabel) {
-            if (isset($GLOBALS[$fieldName]) && !empty(trim($GLOBALS[$fieldName]))) {
-                $profileContext[] = "**{$fieldLabel}**: " . trim($GLOBALS[$fieldName]);
-            }
-        }
-
-        $profileContextString = !empty($profileContext) ? "\n\n* Current Character Profile:\n" . implode("\n\n", $profileContext) : '';
-        
-        // Build prompt for this specific field
-        $head = [
-            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the " . ucfirst($field) . " for the character named '$npcName'. Focus mostly on information about $npcName and mostly ignore details about other characters mentioned in the dialogue."]
-        ];
-        
-        $prompt = [
-            ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . ReplacePlayerNamePlaceholder($profileContextString)],
-            ["role" => "user", "content" => "Character name: " . $npcName . "\nCurrent " . ucfirst($field) . ":\n" . ReplacePlayerNamePlaceholder($currentValue)],
-            ["role" => "user", "content" => ReplacePlayerNamePlaceholder($updatePrompt)]
-        ];
-        
-        $contextData = array_merge($head, $prompt);
-
-        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS['CONNECTORS_DIARY']}.php");
-        $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-        
-        // Get max tokens for this connector
-        $maxTokens = 800; // Default for field updates
-        switch($GLOBALS["CONNECTORS_DIARY"]) {
-            case "openrouter":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "openai":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "google_openaijson":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "koboldcpp":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-        }
-        
-        $connectionHandler->open($contextData, ["max_tokens" => $maxTokens]);
-        
-        $buffer = "";
-        $breakFlag = false;
-        
-        while (true) {
-            if ($breakFlag) {
-                break;
-            }
-            
-            if ($connectionHandler->isDone()) {
-                $breakFlag = true;
-            }
-            
-            $buffer .= $connectionHandler->process();
-        }
-        
-        $connectionHandler->close();
-        
-        // Clean up the response
-        $buffer = trim($buffer);
-        
-        if (!empty($buffer)) {
-            Logger::debug("updateDynamicProfileField: Updated $field for $npcName");
-            return $buffer;
-        } else {
-            Logger::info("updateDynamicProfileField: Empty response for field '$field' for $npcName");
-            return false;
-        }
-        
-    } catch (Exception $e) {
-        Logger::error("updateDynamicProfileField: Error updating field '$field' for $npcName: " . $e->getMessage());
-        return false;
-    }
-}
-
-function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
-    $newConfFile = md5($npcName);
-    $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-    $configFile = $path . "conf" . DIRECTORY_SEPARATOR . "conf_$newConfFile.php";
-    
-    if (!file_exists($configFile)) {
-        Logger::error("saveDynamicProfileUpdates: Config file not found for $npcName");
-        return false;
-    }
-    
-    try {
-        // Create backup
-        copy($configFile, $path . "conf" . DIRECTORY_SEPARATOR . ".conf_{$newConfFile}_" . time() . ".php");
-        
-        $backup = file_get_contents($configFile);
-        $backupFmtd = $db->escape($backup);
-        
-        $db->insert(
-            'npc_profile_backup',
-            array(
-                'name' => $db->escape($npcName),
-                'data' => $backupFmtd
-            )
-        );
-        
-        // Read current file content
-        $content = file_get_contents($configFile);
-        $currentConfContent=extract_assignments($configFile);
-        
-        // Map field names to their corresponding HERIKA variables
-        $fieldMapping = [
-            'personality' => 'HERIKA_PERSONALITY',
-            'relationships' => 'HERIKA_RELATIONSHIPS',
-            'occupation' => 'HERIKA_OCCUPATION',
-            'skills' => 'HERIKA_SKILLS',
-            'speechstyle' => 'HERIKA_SPEECHSTYLE',
-            'goals' => 'HERIKA_GOALS'
-        ];
-        
-        // Update each field in the file
-        foreach ($updatedFields as $field => $newValue) {
-            if (!isset($fieldMapping[$field])) {
-                continue;
-            }
-            
-            // Sanitize AI-generated content to prevent PHP syntax errors
-            if (is_string($newValue)) {
-                $newValue = str_replace("\0", '', $newValue); // Remove null bytes
-                $newValue = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $newValue); // Remove control chars
-                if (!mb_check_encoding($newValue, 'UTF-8')) {
-                    $newValue = mb_convert_encoding($newValue, 'UTF-8', 'UTF-8'); // Fix encoding
-                }
-                if (strlen($newValue) > 5000) {
-                    $newValue = substr($newValue, 0, 5000) . '... [truncated]'; // Limit length
-                }
-                $newValue = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $newValue); // Escape PHP tags
-                
-                // Additional sanitization for var_export compatibility
-                $newValue = str_replace('\\', '\\\\', $newValue); // Escape backslashes
-                $newValue = str_replace("\r\n", "\n", $newValue); // Normalize line endings
-                $newValue = str_replace("\r", "\n", $newValue); // Convert Mac line endings
-                $newValue = preg_replace('/\n{3,}/', "\n\n", $newValue); // Limit consecutive newlines
-            }
-            
-            $currentConfContent[$fieldMapping[$field]]=$newValue;
-            
-            /*
-            $varName = $fieldMapping[$field];
-            $escapedValue = var_export($newValue, true);
-            
-            // Check if variable already exists in file
-            $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
-            
-            if (preg_match($pattern, $content)) {
-                // Update existing variable
-                $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
-            } else {
-                // Add new variable before the closing 
-                $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
-            }
-            */
-        }
-        
-        // Write updated content back to file
-        //file_put_contents($configFile, $content, LOCK_EX);
-        write_php_assignments($currentConfContent,$configFile);
-        
-        
-        Logger::info("saveDynamicProfileUpdates: Successfully saved updates for $npcName");
-        return true;
-        
-    } catch (Exception $e) {
-        Logger::error("saveDynamicProfileUpdates: Error saving updates for $npcName: " . $e->getMessage());
-        return false;
-    }
-}
-
-function triggerImmediateProfileProcessing() {
-    global $db;
-    
-    // Ensure required dependencies are loaded
-    if (!function_exists('DataSpeechJournal')) {
-        require_once(__DIR__ . "/../lib/data_functions.php");
-    }
-    if (!function_exists('buildDynamicProfileDisplay')) {
-        require_once(__DIR__ . "/../lib/model_dynmodel.php");
-    }
-    
-    // Check if there are any queue entries to process
-    $queueResults = $db->fetchAll("SELECT id, value FROM conf_opts WHERE id LIKE 'dynamic_profiles_queue_%' ORDER BY id LIMIT 5");
-    
-    if (empty($queueResults)) {
-        Logger::debug("triggerImmediateProfileProcessing: No queue entries found");
-        return;
-    }
-    
-    Logger::info("triggerImmediateProfileProcessing: Processing " . count($queueResults) . " queue entries immediately");
-    
-    // Check if already processing (lock exists)
-    $lockId = 'dynamic_profiles_lock';
-    $lockResult = $db->fetchAll("SELECT value FROM conf_opts WHERE id = '$lockId'");
-    
-    if (!empty($lockResult)) {
-        $lockTime = intval($lockResult[0]['value']);
-        // If lock is recent (less than 30 seconds), skip immediate processing
-        if (time() - $lockTime < 30) {
-            Logger::debug("triggerImmediateProfileProcessing: Processing already in progress, skipping");
-            return;
-        } else {
-            // Remove stale lock
-            $db->delete("conf_opts", "id = '$lockId'");
-        }
-    }
-    
-    // Create processing lock
-    $db->upsertRowOnConflict('conf_opts', array('id' => $lockId, 'value' => time()), 'id');
-    
-    try {
-        $processedJobs = 0;
-        $totalNPCs = 0;
-        
-        foreach ($queueResults as $queueRow) {
-            $queueId = $queueRow['id'];
-            $queueJson = $queueRow['value'];
-            
-            // Delete this queue entry immediately
-            $db->delete("conf_opts", "id = '" . $db->escape($queueId) . "'");
-            
-            $queueData = json_decode($queueJson, true);
-            if (!$queueData || !isset($queueData['npcs']) || !isset($queueData['gameRequest'])) {
-                Logger::error("triggerImmediateProfileProcessing: Invalid queue data for $queueId");
-                continue;
-            }
-
-            $npcs = $queueData['npcs'];
-            $gameRequest = $queueData['gameRequest'];
-            
-            Logger::info("triggerImmediateProfileProcessing: Processing " . count($npcs) . " NPCs");
-
-            $successCount = 0;
-            foreach ($npcs as $npcName) {
-                try {
-                    if (processSingleDynamicProfile($npcName, $gameRequest)) {
-                        $successCount++;
-                        Logger::debug("triggerImmediateProfileProcessing: Updated profile for $npcName");
-                    }
-                } catch (Exception $e) {
-                    Logger::error("triggerImmediateProfileProcessing: Error processing $npcName: " . $e->getMessage());
-                }
-            }
-
-            Logger::info("triggerImmediateProfileProcessing: Completed job - updated $successCount of " . count($npcs) . " profiles");
-            $processedJobs++;
-            $totalNPCs += count($npcs);
-        }
-
-        if ($processedJobs > 0) {
-            Logger::info("triggerImmediateProfileProcessing: Total processed: $processedJobs jobs, $totalNPCs NPCs");
-        }
-
-    } catch (Exception $e) {
-        Logger::error("triggerImmediateProfileProcessing: Fatal error: " . $e->getMessage());
-    } finally {
-        // Always remove lock
-        $db->delete("conf_opts", "id = '$lockId'");
-    }
-}
+?>

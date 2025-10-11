@@ -11,7 +11,7 @@
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
 // Database Prompt (Dialogue)
-$TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." . 
+$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." . 
 " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
 " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
 " {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
@@ -24,10 +24,10 @@ $TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a ca
 // (a funcrec event comes, which just write  something into context. )
 // Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
 //
-$TEMPLATE_DIALOG=" {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
+$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
 " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
 " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
-" {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
+"";
 
 // To keep the original one
 // $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
@@ -50,7 +50,7 @@ if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) && $GLOBALS["FEAT
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $TEMPLATE_ACTION="call a function to control {$GLOBALS["HERIKA_NAME"]} or";
-    $TEMPLATE_ACTION=".USE TOOL CALLING.";    // WIP
+    $TEMPLATE_ACTION="(Check #ACTIONS section to choose an appropiate action for this character if needed)";    // WIP
 } else {
     $TEMPLATE_ACTION="";
 }

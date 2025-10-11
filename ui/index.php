@@ -33,19 +33,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <style>
     /* Override main container styles */
     main {
-        padding-top: 160px; /* Space for navbar */
+        padding-top: <?php echo ((isset($_GET['embed']) && $_GET['embed'])) ? '20' : '160'; ?>px; /* Space for navbar */
         padding-bottom: 40px; /* Reduced space for footer */
         padding-left: 10px;
     }
     
     /* Override footer styles */
     footer {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        height: 20px; /* Reduced footer height */
-        background: #031633;
-        z-index: 100
+        <?php if (isset($_GET['embed']) && $_GET['embed']) { echo 'display:none;'; } else { echo 'position: fixed; bottom: 0; width: 100%; height: 20px; background: #031633; z-index: 100;'; } ?>
     }
 
     /* Additional index-specific styles */
@@ -121,6 +116,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <?php
 
 $hide_navbar = ((isset($_GET["navbar"])) && ($_GET["navbar"] == "hidden"));
+if (isset($_GET['embed']) && $_GET['embed']) { $hide_navbar = true; }
 if (!$hide_navbar) { 
     include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 }
@@ -137,6 +133,21 @@ if (sizeof($_GET)==0) {
     require_once(__DIR__."/../debug/db_updates.php");
     require_once(__DIR__."/../debug/npc_removal.php");
     
+    // helper daemon
+    $port = 12345;
+    $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
+
+    if (!$connection) {
+        $startScript = __DIR__ . "/../service/start.sh";
+        if (file_exists($startScript) && is_executable($startScript)) {
+            error_log("[HELPER] Launching Helper Service");
+            shell_exec($startScript . " > /dev/null 2>&1 &");
+        }
+    } else {
+        error_log("[HELPER] Helper Service already");
+        fclose($connection);
+    }
+
     // Initialize automatic backup system now that database is ready
     if (function_exists('deferredAutomaticBackupInit')) {
         deferredAutomaticBackupInit();
@@ -904,7 +915,7 @@ if (isset($_POST["animation"])) {
         }
 
         $results = $db->fetchAll(
-            "SELECT created_at, request, result, url, rowid 
+            "SELECT created_at, request, result, usage, url, rowid 
              FROM audit_request 
              ORDER BY created_at DESC 
              LIMIT $limit OFFSET $offset"
@@ -914,6 +925,7 @@ if (isset($_POST["animation"])) {
             'created_at' => 'Time (UTC)',
             'request' => 'Request',
             'result' => 'Result',
+            'usage' => 'Usage',
             'rowid' => 'Row ID',
             'url' => 'URL'
         ];
@@ -939,6 +951,11 @@ if (isset($_POST["animation"])) {
                     // Format result with color coding - green for OK, red for others
                     $resultColor = (strtoupper(trim($value)) === 'OK') ? '#4CAF50' : '#f44336';
                     $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content" style="color: ' . $resultColor . '; font-weight: bold;">' . nl2br(htmlspecialchars($value)) . '</div>';
+                } else if ($key === 'usage') {
+                    // Render compact JSON preview
+                    $jsonText = is_string($value) ? $value : json_encode($value);
+                    $preview = htmlspecialchars(substr($jsonText, 0, 400)) . (strlen($jsonText) > 400 ? '...' : '');
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . $preview . '</div>';
                 } else if ($key === 'url') {
                     // Format URL column
                     $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);

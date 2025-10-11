@@ -1,5 +1,14 @@
 <?php 
-$TEMPLATE_DIALOG="genera las siguientes lineas de dialogo para {$GLOBALS["HERIKA_NAME"]}. Evita narraciones.";
+//$TEMPLATE_DIALOG="genera las siguientes lineas de dialogo para {$GLOBALS["HERIKA_NAME"]}. Evita narraciones y repeticiones.";
+error_log("[LANGUAGE] Using ".__FILE__." prompts");
+
+$TEMPLATE_DIALOG="Instrucción: Escribe la siguiente línea de diálogo de {$GLOBALS["HERIKA_NAME"]}." . 
+" Evita narraciones, sé original, creativo, informado, usa tus propios pensamientos. " . 
+" Revisa el historial de diálogo para centrarte en el tema de la conversación y evitar repetir frases y expresiones de líneas de diálogo anteriores." . 
+"";
+
+$COMMAND_PROMPT_ENFORCE_ACTIONS_LANG="(Si {$GLOBALS["HERIKA_NAME"]} sólamente habla, usa la acción \"Talk\". Si otra acciones es contextualmente apropiada, úsala incluso si tienes dudas.)";
+
 
 $PROMPTS=array(
     "location"=>[
@@ -86,7 +95,7 @@ $PROMPTS=array(
 
     "inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} responde a {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            "$TEMPLATE_ACTION. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
         ]
     ],
     "inputtext_s"=>[
@@ -122,13 +131,14 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("lockpick", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "afterattack"=>[
-        "cue"=>["(interpreta como {$GLOBALS["HERIKA_NAME"]}, grita una frase de combate EN MAYÚSCULAS) {$GLOBALS["TEMPLATE_DIALOG"]}"]
+        "cue"=>["(interpreta como {$GLOBALS["HERIKA_NAME"]}, grita una frase de combate EN MAYÚSCULAS) {$GLOBALS["TEMPLATE_DIALOG"]}"] 
     ],
     "chatnf"=>[ 
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"]
     ],
     "rechat"=>[ 
         "cue"=>[
+                /*
                 "({$GLOBALS['HERIKA_NAME']} interviene en la conversación, hablando con el último orador.) {$GLOBALS["TEMPLATE_DIALOG"]}",
                 "({$GLOBALS['HERIKA_NAME']} participa en la conversación, hablando con el último orador.) {$GLOBALS["TEMPLATE_DIALOG"]}",
                 "({$GLOBALS['HERIKA_NAME']} sigue la conversación.) {$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -139,7 +149,10 @@ $PROMPTS=array(
                 "({$GLOBALS['HERIKA_NAME']} comparte una opinión con el último orador.) {$GLOBALS["TEMPLATE_DIALOG"]}",
                 "({$GLOBALS['HERIKA_NAME']} responde pensativamente al último orador.) {$GLOBALS["TEMPLATE_DIALOG"]}",
                 "({$GLOBALS['HERIKA_NAME']} hace una pregunta al último orador.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-                "({$GLOBALS['HERIKA_NAME']} da retroalimentación sobre la conversación.) {$GLOBALS["TEMPLATE_DIALOG"]}"
+                "({$GLOBALS['HERIKA_NAME']} da retroalimentación sobre la conversación.) {$GLOBALS["TEMPLATE_DIALOG"]}",*/
+                "Turno de diálogo/acción para {$GLOBALS['HERIKA_NAME']}. Considera solo una respuesta y/o acción que involucre a un tercer actor, sin repetir tu respuesta para cada actor. Mantén el tema actual o cámbialo. {$GLOBALS["TEMPLATE_DIALOG"]}",
+                "Turno de diálogo/acción para {$GLOBALS['HERIKA_NAME']}. Considera una respuesta y/o acción, mantén el tema actual o cámbialo. {$GLOBALS["TEMPLATE_DIALOG"]}",
+                "Turno de diálogo/acción para {$GLOBALS['HERIKA_NAME']}. Enfoca el discurso y/o acción solo en un actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
     ],
     "diary"=>[ 
@@ -186,7 +199,7 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "instruction"=>[ 
-        "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "cue"=>["(Instruccion: {$gameRequest[3]}) {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["El Narrador: {$gameRequest[3]}"],
     ],
 );

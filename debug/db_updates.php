@@ -18,6 +18,26 @@ $checkVersion = function($tablename) {
         return intval($existsColumn[0]["version"]);
 };
 
+$checkTableExists = function($tablename) {
+    global $db;
+    $query = "
+    
+        SELECT 1 as exists
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+          AND table_name = '$tablename'
+    
+    ";
+
+    $result = $db->fetchAll($query);
+
+    if (sizeof($result) == 0) {
+        return -1;
+    }
+
+    return ($result[0]["exists"] == "1")?1:-1;
+};
+
 $updateVersion = function($tablename,$version) {
     global $db;
     $db->execQuery("INSERT INTO public.database_versioning SELECT '$tablename',$version where not exists (SELECT 1 from public.database_versioning where tablename='$tablename')");
@@ -27,8 +47,123 @@ $updateVersion = function($tablename,$version) {
 
 /////////////////////////
 
-// Must
+// Ensure base schema and extensions exist for fresh installs
+$db->execQuery('CREATE SCHEMA IF NOT EXISTS public');
+$db->execQuery("SET search_path TO public");
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS vector');
+$db->execQuery('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+
+// Ensure database_versioning exists before version checks
+try {
+    $exists = $db->fetchAll("SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='database_versioning'");
+    if (!$exists) {
+        $db->execQuery(file_get_contents(__DIR__."/../data/database_versioning.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+} catch (Exception $e) {
+    Logger::warn("database_versioning bootstrap: ".$e->getMessage());
+}
+
+// Bootstrap critical core tables early to avoid UI queries failing during initial load
+try {
+    if ($checkTableExists("core_api_badge") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+    if ($checkTableExists("core_itt_connector") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+    if ($checkTableExists("core_tts_connector") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+    if ($checkTableExists("core_llm_connector") == -1) {
+        // ensure api_badge for FK first
+        if ($checkTableExists("core_api_badge") == -1) {
+            $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+            $db->execQuery("SET search_path TO public");
+        }
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+if ($checkTableExists("core_profiles") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
+    $db->execQuery("SET search_path TO public");
+}
+    if ($checkTableExists("core_npc_master") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+} catch (Exception $e) {
+    Logger::warn("Bootstrap core tables: " . $e->getMessage());
+}
+
+$__seed_narrator_done = false;
+try {
+    // Seed default Narrator (ID = 1) only on truly fresh installs
+    // Conditions: table exists AND is empty
+    if ($checkTableExists("core_npc_master") == 1) {
+        $cntRows = $db->fetchAll("SELECT COUNT(*) AS c FROM public.core_npc_master");
+        if ($cntRows && intval($cntRows[0]["c"]) === 0) {
+            Logger::info("Seeding core_npc_master with ID 1 'The Narrator' (fresh install)");
+            $db->execQuery(
+                "INSERT INTO public.core_npc_master (
+                    id,
+                    npc_name,
+                    profile_id,
+                    npc_favorite,
+                    lock_profile,
+                    core,
+                    npc_static_bio,
+                    oghma_knowledge_tags,
+                    personality,
+                    occupation,
+                    speechstyle,
+                    goals,
+                    md5,
+                    voiceid,
+                    metadata,
+                    gender,
+                    extended_data,
+                    tags
+                ) VALUES (
+                    1,
+                    'The Narrator',
+                    1,
+                    1,
+                    1,
+                    '".$db->escapeLiteral("The Narrator is a male voice within the player's mind. His job is to help the player as they navigate the world of Tamriel. Provide unique insight and descriptions of what is going on in the world.")."',
+                    '".$db->escapeLiteral("A guiding voice that describes the world, events, and transitions. He is not a character, but a voice within the player's mind.")."',
+                    'knowall',
+                    'Detached, descriptive, witty, helpful.',
+                    'Narrator',
+                    '',
+                    '',
+                    md5('The Narrator'),
+                    'TheNarrator',
+                    '{}'::jsonb,
+                    'male',
+                    '{}'::jsonb,
+                    'system'
+                )"
+            );
+            $__seed_narrator_done = true;
+            // Optional safety: make sure id sequence remains valid
+            try { $db->execQuery("SELECT setval('public.npc_master_id_seq', GREATEST((SELECT MAX(id) FROM public.core_npc_master), 1), true)"); } catch (Exception $e2) {}
+        }
+    }
+} catch (Exception $e) {
+    Logger::warn("Narrator seed skipped: ".$e->getMessage());
+}
+
+// Defensive repair: ensure The Narrator exists and is bound to profile 1
+try {
+    $db->execQuery("UPDATE public.core_npc_master SET profile_id = 1 WHERE npc_name = 'The Narrator' AND (profile_id IS NULL OR profile_id <> 1)");
+    $db->execQuery("UPDATE public.core_profiles SET default_npc = '1', default_narrator = '1' WHERE id = 1 AND (default_npc IS NULL OR default_npc = '' OR default_narrator IS NULL OR default_narrator = '')");
+} catch (Exception $e) {
+    Logger::warn("Narrator/profile binding repair skipped: ".$e->getMessage());
+}
 
 $query = "
     SELECT column_name 
@@ -384,6 +519,7 @@ if (!$existsColumn[0]["column_name"]) {
 
 // <<<<<<< personalities-plugin
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
+$db->execQuery("SET search_path TO public");
 require_once("$path/add_json_personalities.php");
 
 
@@ -1049,10 +1185,10 @@ if ($checkVersion("dynamic_bio")<20250710001) {
         
         foreach ($prompts as $prompt) {
             $escapedPrompt = $db->escape($prompt);
-            $db->execQuery("INSERT INTO dynamic_bio (prompt) 
+            $db->execQuery("INSERT INTO public.dynamic_bio (prompt) 
                 SELECT '".$escapedPrompt."' 
                 WHERE NOT EXISTS (
-                    SELECT 1 FROM dynamic_bio WHERE prompt = '".$escapedPrompt."'
+                    SELECT 1 FROM public.dynamic_bio WHERE prompt = '".$escapedPrompt."'
                 )");
         }
     
@@ -1075,7 +1211,8 @@ if ($checkVersion("dynamic_bio")<20250710001) {
         ");
         
         if (empty($columnCheck)) {
-            $db->execQuery("ALTER TABLE public.oghma ADD COLUMN \"vector384\" vector(384)");
+            $db->execQuery("CREATE EXTENSION IF NOT EXISTS vector;");
+            $db->execQuery("ALTER TABLE public.oghma ADD COLUMN \"vector384\" public.vector(384)");
             Logger::info("Added vector384 column to oghma table");
         } else {
             Logger::info("vector384 column already exists, skipping...");
@@ -1109,6 +1246,7 @@ if ($checkVersion("rolemaster")<20250528001) {
     $updateVersion("rolemaster",20250528001);
     Logger::info("Applied patch rolemaster 20250528001");
 }
+
 
 if ($checkVersion("audit_request")<20250616001) {
     Logger::debug(" try patch: audit_request 20250616001");
@@ -1144,7 +1282,7 @@ if ($checkVersion("db_maintenance")<20250528002) {
     $$; 
     ");
 
-    $db->execQuery("SELECT sql_exec2('ALTER TABLE \"'||pgc.relname||'\" SET (autovacuum_enabled = on, toast.autovacuum_enabled = on) '||';')
+    $db->execQuery("SELECT public.sql_exec2('ALTER TABLE '||quote_ident(pgn.nspname)||'.'||quote_ident(pgc.relname)||' SET (autovacuum_enabled = on, toast.autovacuum_enabled = on);')
         FROM pg_catalog.pg_class pgc
         LEFT JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
         WHERE (pgc.relkind ='r')
@@ -1265,40 +1403,82 @@ if ($checkVersion("npc_templates")<20250619001) {
     try {
         $sqlFile = __DIR__."/../data/npc_templates_20250618001.sql";
         if (file_exists($sqlFile)) {
-            // Create temporary table for new data
+            // Create temporary table for new data (define columns explicitly to avoid dependency on base table)
             $db->execQuery("DROP TABLE IF EXISTS npc_templates_new");
-            $db->execQuery("CREATE TEMP TABLE npc_templates_new AS SELECT * FROM npc_templates WHERE 1=0");
+    $db->execQuery("CREATE TEMP TABLE npc_templates_new (
+                npc_name character varying(128) PRIMARY KEY,
+                npc_pers text NOT NULL,
+                npc_misc text,
+                npc_dynamic text,
+                melotts_voiceid text,
+                xtts_voiceid text,
+                xvasynth_voiceid text,
+                npc_background text,
+                npc_personality text,
+                npc_appearance text,
+                npc_relationships text,
+                npc_occupation text,
+                npc_skills text,
+                npc_speechstyle text,
+                npc_goals text
+            )");
             
-            // Load new data, handling the SQL file properly
+            // Load new data into temp table
             $newDataSql = file_get_contents($sqlFile);
             // Replace table references to use temp table
             $newDataSql = str_replace('INSERT INTO public.npc_templates', 'INSERT INTO npc_templates_new', $newDataSql);
             $newDataSql = str_replace('INSERT INTO npc_templates', 'INSERT INTO npc_templates_new', $newDataSql);
+            $newDataSql = str_replace('npc_templates_new_new', 'npc_templates_new', $newDataSql);
             
+            // Defensive: ensure base tables exist before upsert
+            $db->execQuery("CREATE TABLE IF NOT EXISTS public.npc_templates (
+                npc_name character varying(128) PRIMARY KEY,
+                npc_pers text NOT NULL,
+                npc_misc text,
+                npc_dynamic text,
+                melotts_voiceid text,
+                xtts_voiceid text,
+                xvasynth_voiceid text,
+                npc_background text,
+                npc_personality text,
+                npc_appearance text,
+                npc_relationships text,
+                npc_occupation text,
+                npc_skills text,
+                npc_speechstyle text,
+                npc_goals text
+            )");
             $db->execQuery($newDataSql);
             
-            // Upsert from temp table to main table
-            $db->execQuery("
-                INSERT INTO npc_templates 
-                SELECT * FROM npc_templates_new 
-                ON CONFLICT (npc_name) DO UPDATE SET
-                    npc_pers = EXCLUDED.npc_pers,
-                    npc_dynamic = EXCLUDED.npc_dynamic,
-                    npc_misc = EXCLUDED.npc_misc,
-                    melotts_voiceid = EXCLUDED.melotts_voiceid,
-                    xtts_voiceid = EXCLUDED.xtts_voiceid,
-                    xvasynth_voiceid = EXCLUDED.xvasynth_voiceid,
-                    npc_background = EXCLUDED.npc_background,
-                    npc_personality = EXCLUDED.npc_personality,
-                    npc_appearance = EXCLUDED.npc_appearance,
-                    npc_relationships = EXCLUDED.npc_relationships,
-                    npc_occupation = EXCLUDED.npc_occupation,
-                    npc_skills = EXCLUDED.npc_skills,
-                    npc_speechstyle = EXCLUDED.npc_speechstyle,
-                    npc_goals = EXCLUDED.npc_goals
-            ");
+            // Upsert from temp table to main table with explicit column list
+            $db->execQuery("INSERT INTO public.npc_templates (
+                npc_name, npc_pers, npc_misc, npc_dynamic,
+                melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
+                npc_background, npc_personality, npc_appearance, npc_relationships,
+                npc_occupation, npc_skills, npc_speechstyle, npc_goals
+            )
+            SELECT 
+                npc_name, npc_pers, npc_misc, npc_dynamic,
+                melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
+                npc_background, npc_personality, npc_appearance, npc_relationships,
+                npc_occupation, npc_skills, npc_speechstyle, npc_goals
+            FROM npc_templates_new
+            ON CONFLICT (npc_name) DO UPDATE SET
+                npc_pers = EXCLUDED.npc_pers,
+                npc_dynamic = EXCLUDED.npc_dynamic,
+                npc_misc = EXCLUDED.npc_misc,
+                melotts_voiceid = EXCLUDED.melotts_voiceid,
+                xtts_voiceid = EXCLUDED.xtts_voiceid,
+                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid,
+                npc_background = EXCLUDED.npc_background,
+                npc_personality = EXCLUDED.npc_personality,
+                npc_appearance = EXCLUDED.npc_appearance,
+                npc_relationships = EXCLUDED.npc_relationships,
+                npc_occupation = EXCLUDED.npc_occupation,
+                npc_skills = EXCLUDED.npc_skills,
+                npc_speechstyle = EXCLUDED.npc_speechstyle,
+                npc_goals = EXCLUDED.npc_goals");
             
-            //$db->execQuery("DROP TABLE IF EXISTS npc_templates_new");
             Logger::info("NPC template data loaded/updated successfully");
         }
     } catch (Exception $e) {
@@ -1310,6 +1490,305 @@ if ($checkVersion("npc_templates")<20250619001) {
     Logger::info("Applied consolidated NPC templates extended profile update 20250619001");
     echo '<script>alert("NPC Templates have been updated with extended profile fields!");</script>';
 }
+
+if ($checkTableExists("core_api_badge") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+    $db->execQuery("SET search_path TO public");
+} else
+    Logger::info(__FILE__." core_api_badge exists");
+
+
+if ($checkTableExists("core_itt_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
+    $db->execQuery("SET search_path TO public");
+} else
+    Logger::info(__FILE__." core_itt_connector exists");
+
+if ($checkTableExists("core_llm_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
+    $db->execQuery("SET search_path TO public");
+} else
+    Logger::info(__FILE__." core_llm_connector exists");
+
+// Add 'service' column to core_llm_connector if missing
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'core_llm_connector' AND column_name = 'service'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn || !$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE "core_llm_connector" ADD COLUMN "service" text');
+    echo '<script>alert("A patch (add service column to core_llm_connector) has been applied to Database")</script>';
+}
+
+if ($checkTableExists("core_npc_master_history") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master_history.sql"));
+} else
+    Logger::info(__FILE__." core_npc_master_history exists");
+
+if ($checkTableExists("core_stt_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
+} else
+    Logger::info(__FILE__." core_stt_connector exists");
+
+
+if ($checkTableExists("core_tts_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
+    $db->execQuery("SET search_path TO public");
+} else
+    Logger::info(__FILE__." core_tts_connector exists");
+
+if ($checkTableExists("core_llm_connector") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
+} else
+    Logger::info(__FILE__." core_llm_connector exists");
+
+if ($checkTableExists("core_profiles") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
+    $db->execQuery("SET search_path TO public");
+} else
+    Logger::info(__FILE__." core_profiles exists");
+
+if ($checkTableExists("core_npc_master") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
+    $db->execQuery("SET search_path TO public");
+} else
+    Logger::info(__FILE__." core_npc_master exists");
+
+
+if ($checkTableExists("core_profiles") > 0 && $checkVersion("core_profiles") < 20250904005) {
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles_2.sql"));
+    $db->execQuery("SET search_path TO public");
+    // ensure slot column exists for existing installs
+    $db->execQuery('ALTER TABLE public.core_profiles ADD COLUMN IF NOT EXISTS "slot" integer');
+    // set default profile slot to 1 if missing
+    $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
+    $updateVersion("core_profiles",20250904005);
+    Logger::info("Applied core_profiles 20250904005 (added slot, set default slot=1)");
+} else {
+    Logger::info(__FILE__." core_profiles up-to-date");
+}
+
+// Ensure core_profiles.slot exists even if version was previously bumped
+try {
+    $colCheck = $db->fetchAll("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='core_profiles' AND column_name='slot'");
+    if (!$colCheck || !isset($colCheck[0]["column_name"])) {
+        Logger::warn("core_profiles.slot missing; adding column now");
+        $db->execQuery('ALTER TABLE public.core_profiles ADD COLUMN "slot" integer');
+        $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
+        if ($checkVersion("core_profiles") < 20250904006) {
+            $updateVersion("core_profiles",20250904006);
+        }
+        Logger::info("Added core_profiles.slot and set default profile slot=1");
+    } else {
+        // Column exists; still ensure default profile set to 1
+        $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
+    }
+} catch (Exception $e) {
+    Logger::error("Error ensuring core_profiles.slot: ".$e->getMessage());
+}
+
+// Enforce uniqueness of core_profiles.slot (1-4), allowing NULLs
+try {
+    $idx = $db->fetchAll("SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='core_profiles' AND indexname='core_profiles_slot_unique_idx'");
+    if (!$idx || !isset($idx[0]["indexname"])) {
+        // Clear duplicates: keep the lowest id per slot, set others to NULL
+        $db->execQuery("WITH d AS (
+            SELECT id, slot, ROW_NUMBER() OVER (PARTITION BY slot ORDER BY id) AS rn
+            FROM public.core_profiles WHERE slot IS NOT NULL
+        )
+        UPDATE public.core_profiles p SET slot = NULL
+        FROM d WHERE p.id = d.id AND d.rn > 1");
+        // Create unique partial index
+    $db->execQuery("CREATE UNIQUE INDEX IF NOT EXISTS core_profiles_slot_unique_idx ON public.core_profiles (slot) WHERE slot IS NOT NULL");
+    $db->execQuery("SET search_path TO public");
+        // Ensure default profile has slot 1
+        $db->execQuery("UPDATE public.core_profiles SET slot = 1 WHERE id = 1 AND (slot IS NULL OR slot = 0)");
+        if ($checkVersion("core_profiles") < 20250904007) {
+            $updateVersion("core_profiles",20250904007);
+        }
+        Logger::info("Enforced unique slot on core_profiles and set default slot=1");
+    }
+} catch (Exception $e) {
+    Logger::error("Error enforcing unique slot index: ".$e->getMessage());
+}
+
+// Final repair pass: ensure critical core tables exist even if versions were bumped earlier
+try {
+    $coreTables = [
+        ["name"=>"core_api_badge",   "file"=>__DIR__."/../lib/core/database_schema/core_api_badge.sql"],
+        ["name"=>"core_llm_connector","file"=>__DIR__."/../lib/core/database_schema/core_llm_connector.sql"],
+        ["name"=>"core_tts_connector","file"=>__DIR__."/../lib/core/database_schema/core_tts_connector.sql"],
+        ["name"=>"core_stt_connector","file"=>__DIR__."/../lib/core/database_schema/core_stt_connector.sql"],
+        ["name"=>"core_profiles",     "file"=>__DIR__."/../lib/core/database_schema/core_profiles.sql"],
+        ["name"=>"core_npc_master",   "file"=>__DIR__."/../lib/core/database_schema/core_npc_master.sql"]
+    ];
+    foreach ($coreTables as $t) {
+        if ($checkTableExists($t["name"]) == -1) {
+            Logger::warn("Repair: creating missing table ".$t["name"]);
+            $db->execQuery(file_get_contents($t["file"]));
+        }
+    }
+} catch (Exception $e) {
+    Logger::error("Final repair pass failed: ".$e->getMessage());
+}
+
+//----------------------------------------------------
+// Bio templates: new tables and combined view
+// Version 20250913001
+//----------------------------------------------------
+
+if ($checkVersion("bio_templates")<20250913001) {
+    Logger::debug("Applying bio_templates 20250913001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.bio_templates (
+            npc_name character varying(128) NOT NULL PRIMARY KEY,
+            oghma_knowledge_tags text,
+            core text,
+            npc_static_bio text,
+            appearance text,
+            personality text,
+            relationships text,
+            occupation text,
+            skills text,
+            speechstyle text,
+            goals text,
+            voiceid text,
+            gender text,
+            race text,
+            refid text
+        );
+    ");
+    $updateVersion("bio_templates",20250913001);
+    Logger::info("Applied patch bio_templates 20250913001");
+}
+
+if ($checkVersion("bio_templates_custom")<20250913001) {
+    Logger::debug("Applying bio_templates_custom 20250913001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.bio_templates_custom (
+            npc_name character varying(128) NOT NULL PRIMARY KEY,
+            oghma_knowledge_tags text,
+            core text,
+            npc_static_bio text,
+            appearance text,
+            personality text,
+            relationships text,
+            occupation text,
+            skills text,
+            speechstyle text,
+            goals text,
+            voiceid text,
+            gender text,
+            race text,
+            refid text
+        );
+    ");
+    $updateVersion("bio_templates_custom",20250913001);
+    Logger::info("Applied patch bio_templates_custom 20250913001");
+}
+
+// Seed base bio templates from SQL file (run once)
+if ($checkVersion("bio_templates_seed")<20250913001) {
+    try {
+        $sqlFile = __DIR__ . "/../data/bio_templates_20250913.sql";
+        if (file_exists($sqlFile)) {
+            $sqlContent = file_get_contents($sqlFile);
+            if ($sqlContent !== false && strlen($sqlContent) > 0) {
+                $db->execQuery($sqlContent);
+                $updateVersion("bio_templates_seed", 20250913001);
+                Logger::info("Seeded bio_templates from bio_templates_20250913.sql");
+            } else {
+                Logger::warn("bio_templates seed file is empty: " . $sqlFile);
+            }
+        } else {
+            Logger::warn("bio_templates seed file not found: " . $sqlFile);
+        }
+    } catch (Exception $e) {
+        Logger::error("Error seeding bio_templates: " . $e->getMessage());
+    }
+}
+
+// Always (re)create combined view once base tables exist
+try {
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_bio_templates CASCADE;");
+    $db->execQuery("
+        CREATE VIEW public.combined_bio_templates AS
+        SELECT c.npc_name,
+               c.oghma_knowledge_tags,
+               c.core,
+               c.npc_static_bio,
+               c.appearance,
+               c.personality,
+               c.relationships,
+               c.occupation,
+               c.skills,
+               c.speechstyle,
+               c.goals,
+               c.voiceid,
+               c.gender,
+               c.race,
+               c.refid
+          FROM public.bio_templates_custom c
+        UNION ALL
+        SELECT b.npc_name,
+               b.oghma_knowledge_tags,
+               b.core,
+               b.npc_static_bio,
+               b.appearance,
+               b.personality,
+               b.relationships,
+               b.occupation,
+               b.skills,
+               b.speechstyle,
+               b.goals,
+               b.voiceid,
+               b.gender,
+               b.race,
+               b.refid
+          FROM (public.bio_templates b
+                LEFT JOIN public.bio_templates_custom c
+                  ON ((b.npc_name)::text = (c.npc_name)::text))
+         WHERE c.npc_name IS NULL;
+    ");
+    // Track the view version under the same version key
+    $updateVersion("combined_bio_templates",20250913001);
+    Logger::info("Created view combined_bio_templates 20250913001");
+} catch (Exception $e) {
+    Logger::error("Error creating combined_bio_templates view: " . $e->getMessage());
+}
+
+// Enforce DB-layer protection for The Narrator: prevent delete or rename
+try {
+    $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_delete() CASCADE");
+    $db->execQuery("CREATE OR REPLACE FUNCTION public.protect_narrator_delete() RETURNS trigger AS $$\nBEGIN\n    IF OLD.id = 1 OR OLD.npc_name = 'The Narrator' THEN\n        RAISE EXCEPTION 'Deletion of The Narrator is not allowed';\n    END IF;\n    RETURN OLD;\nEND;\n$$ LANGUAGE plpgsql;");
+    $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_delete ON public.core_npc_master");
+    $db->execQuery("CREATE TRIGGER trg_protect_narrator_delete BEFORE DELETE ON public.core_npc_master FOR EACH ROW EXECUTE FUNCTION public.protect_narrator_delete();");
+
+    $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_rename() CASCADE");
+    $db->execQuery("CREATE OR REPLACE FUNCTION public.protect_narrator_rename() RETURNS trigger AS $$\nBEGIN\n    IF (OLD.id = 1 OR OLD.npc_name = 'The Narrator') AND NEW.npc_name IS DISTINCT FROM OLD.npc_name THEN\n        RAISE EXCEPTION 'Renaming The Narrator is not allowed';\n    END IF;\n    RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;");
+    $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_rename ON public.core_npc_master");
+    $db->execQuery("CREATE TRIGGER trg_protect_narrator_rename BEFORE UPDATE OF npc_name ON public.core_npc_master FOR EACH ROW EXECUTE FUNCTION public.protect_narrator_rename();");
+} catch (Exception $e) {
+    Logger::warn("DB trigger setup for narrator protection failed or already present: ".$e->getMessage());
+}
+
+
+if ($checkTableExists("translations") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/translations_table.sql"));
+} else
+    Logger::info(__FILE__." translations exists");
+
+if ($checkTableExists("import_rules") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/import_rules.sql"));
+} else
+    Logger::info(__FILE__." import_rules exists");
+
+// Usage column
+$db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
+
 
 //----------------------------------------------------
 

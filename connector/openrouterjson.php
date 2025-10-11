@@ -26,6 +26,11 @@ class openrouterjson
     private $_is_reasoning;
     private $_is_openai;
     private $_model="";
+    private $_fallback_models;
+    private $_providers_sort;
+    private $_provider_quantizations;
+    private $_providers2ignore;
+    private $_provider_max_price;
     private $_url;
     private $_websearch=false;
     private $_websearch_text="";
@@ -48,6 +53,11 @@ class openrouterjson
         $this->_is_nanogpt_com=false;
         $this->_is_mistral_ai=false;
         $this->_model="";
+        $this->_fallback_models=null;
+        $this->_providers_sort="";
+        $this->_provider_quantizations=null;
+        $this->_providers2ignore=null;
+        $this->_provider_max_price=null;
         $this->_url="";
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
@@ -147,13 +157,14 @@ class openrouterjson
             // OpenAI model names
             if ($i_pos === false) { 
                 if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
-                    ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
-                    (strpos($s_model, "o4-mini") == 0)) {
+                    ($s_model == "o3") || (strpos($s_model, "o3-mini") === 0) || (strpos($s_model, "o3-pro") === 0) || 
+                    (strpos($s_model, "o4-mini") === 0)) {
                     $i_pos = 1;
                 }
             }
             $b_res = (!($i_pos === false));
         }
+        // error_log("[OPENROUTER] is openai model: $b_res");
         return $b_res;
     }
    
@@ -165,6 +176,32 @@ class openrouterjson
         $this->_remove_cot = (isset($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"])) ? $GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] : true;
 
         $default_model = 'meta-llama/llama-3.3-70b-instruct';
+
+        $s_fallback = trim($GLOBALS["CONNECTOR"][$this->name]["fallback_models"] ?? ""); //"google/gemini-2.0-flash-001,google/gemini-2.5-flash-lite,meta-llama/llama-4-scout"
+        if (strlen($s_fallback) > 1)
+            $this->_fallback_models = explode(",",$s_fallback); 
+
+        $this->_providers_sort = strtolower(trim($GLOBALS["CONNECTOR"][$this->name]["providers_sort"] ?? ""));
+
+        $s_providers2ignore = trim($GLOBALS["CONNECTOR"][$this->name]["providers_to_ignore"] ?? ""); //"Nebius AI Studio, Together, Infermatic";
+        if (strlen($s_providers2ignore) > 1)
+            $this->_providers2ignore = explode(",", $s_providers2ignore);
+        
+        $s_quantizations = trim($GLOBALS["CONNECTOR"][$this->name]["provider_quantizations"] ?? "");  //'fp8,fp16,bf16,fp32,unknown';
+        if (strlen($s_quantizations) > 1)
+            $this->_provider_quantizations = explode(",", $s_quantizations); 
+
+        $f_max_price_prompt = floatval($GLOBALS["CONNECTOR"][$this->name]["provider_max_price_input"] ?? 0.0); //0.50
+        $f_max_price_completition = floatval($GLOBALS["CONNECTOR"][$this->name]["provider_max_price_output"] ?? 0.0); //2.99
+        if ($f_max_price_completition < 0.001 )
+            $f_max_price_completition = 0.0;
+        if ($f_max_price_prompt < 0.001 )
+            $f_max_price_prompt = 0.0;
+        else {
+            if ($f_max_price_completition < 0.001 )
+                $f_max_price_completition = 9999.0;
+            $this->_provider_max_price = ['prompt' => $f_max_price_prompt, 'completion' => $f_max_price_completition];
+        }
 
         $this->_is_nanogpt_com = (stripos($this->_url, "nano-gpt.com") > 0 ); //https://nano-gpt.com/api/v1/chat/completions
         if ($this->_is_nanogpt_com) {    
@@ -228,7 +265,7 @@ class openrouterjson
             $prefix="";
         }
 
-        if (stripos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
+        if (isset($GLOBALS["HERIKA_SPEECHSTYLE"])&&!empty($GLOBALS["HERIKA_SPEECHSTYLE"])) {
             $speechReinforcement="Use #SpeechStyle.";
         } else
             $speechReinforcement="";
@@ -288,7 +325,7 @@ class openrouterjson
                 $contextDataCopy[]=$element;
                 
             } else {
-
+                
                 if ($lastrole=="assistant" && $lastrole!=$element["role"] && $element["role"]!="tool" ) {
                     $contextDataCopy[]=[
                         "role"=>"assistant",
@@ -299,7 +336,7 @@ class openrouterjson
                     $assistantRoleBuffer="";
                     $lastrole=$element["role"];
                 }
-
+                
                 if ($element["role"]=="system") {
                     
                     $pb["system"]=$element["content"]."\nThis is the script history for this story\n#CONTEXT_HISTORY\n";
@@ -532,7 +569,7 @@ class openrouterjson
                 ],
             'transforms'=>[]
         );
-         
+        
         if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
             if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
                 $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
@@ -552,7 +589,8 @@ class openrouterjson
         }  
 
         if ($this->_is_reasoning) { // add parameter to hide <think> content
-            $data["reasoning"] = array ('exclude' => true); // Use reasoning but don't include it in the response
+            $data["reasoning"] = array ('exclude' => true,'enabled'=>false); // Use reasoning but don't include it in the response
+            error_log("[OPENROUTER]  Excluding reasoning");
             //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
             //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
             //Logger::debug("reasoning " . $this->_model);
@@ -563,6 +601,8 @@ class openrouterjson
         
         if ($this->_is_openai) {
             // OpenAI models use max_completion_tokens
+            error_log("[OPENROUTER] Excluding reasoning this->_is_openai");
+
             $data['max_completion_tokens'] = $MAX_TOKENS;
             unset($data['max_tokens']); 
             if ($this->_is_reasoning) {
@@ -574,12 +614,35 @@ class openrouterjson
             unset($data["max_completion_tokens"]); 
             unset($data["max_tokens"]); 
         }
-       
+
         if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
             $providers=explode(",",$GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"]);
             $data["provider"]=["order"=>$providers];
+        } 
+
+        if (isset($this->_fallback_models) && (is_array($this->_fallback_models)) && (count($this->_fallback_models) > 0)) {
+            $data['models'] = $this->_fallback_models;
         }
-            
+
+
+        if (isset($this->_providers_sort) && (in_array($this->_providers_sort,['price','throughput','latency']))) {
+            $data['provider']['sort'] = $this->_providers_sort; 
+        }
+
+        if (isset($this->_providers2ignore) && (is_array($this->_providers2ignore)) && (count($this->_providers2ignore) > 0)) {
+            $data['provider']['ignore'] = $this->_providers2ignore; 
+        }
+
+        if (isset($this->_provider_quantizations) && (is_array($this->_provider_quantizations)) && (count($this->_provider_quantizations) > 0)) {
+            $data['provider']['quantizations'] = $this->_provider_quantizations; 
+        }
+
+        if (isset($this->_provider_max_price) && (is_array($this->_provider_max_price)) && (count($this->_provider_max_price) == 2)) {
+            $json_price = json_encode($this->_provider_max_price); 
+            if (isset($json_price))
+                $data['provider']['max_price'] = json_decode($json_price);
+        }
+        
         if ($this->_websearch) { // online search request 
 
             $sx = $this->_model;
@@ -642,6 +705,12 @@ class openrouterjson
                 $data[$k]=$v;
             }
         }        
+
+        if (stripos($data["model"], "openai/gpt-5-nano")===0) {
+            unset($data["temperature"]);
+            unset($data["top_p"]);
+        }
+
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
@@ -970,6 +1039,264 @@ class openrouterjson
         if ($this->_forcedClose)
             return true;
         return !$this->primary_handler || feof($this->primary_handler);
+    }
+
+    public function setDone()
+    {
+        $this->_forcedClose=true;
+        
+    }
+
+    public function fast_request($contextData, $customParms)
+    {
+        
+        $this->init_connector($customParms);
+        
+
+        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
+        if ($temperature < 0.0) $temperature = 0.0;
+        else if ($temperature > 2.0) $temperature = 2.0; 
+
+        $presence_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ? : 0.0);
+        if ($presence_penalty < -2.0) $presence_penalty = -2.0;
+        else if ($presence_penalty > 2.0) $presence_penalty = 2.0; 
+
+        $frequency_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ? : 0.0); 
+        if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
+        else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
+
+        $repetition_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ? : 0.0);
+        if ($repetition_penalty < 0.0) $repetition_penalty = 0.0;
+        else if ($repetition_penalty > 2.0) $repetition_penalty = 2.0; 
+
+        $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
+        if ($top_p > 1) $top_p = 1.0;
+        else if ($top_p < 0.0) $top_p = 0.0; 
+
+        $min_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ? : 0.0);
+        if ($min_p > 1) $min_p = 1.0;
+        else if ($min_p < 0.0) $min_p = 0.0; 
+
+        $top_a = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ? : 0.0);
+        if ($top_a > 1) $top_a = 1.0;
+        else if ($top_a < 0.0) $top_a = 0.0; 
+
+        $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
+        if ($top_k < 0) $top_k = 0; 
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($customParms["MAX_TOKENS"]);
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
+        
+        $data = array(
+            'model' => $this->_model,
+            'messages' => $contextData,
+            'stream' => false, 
+            'usage'=> ["include"=>true],
+            'max_tokens' => $MAX_TOKENS,
+            'temperature' => $temperature, 
+            'top_k' => $top_k,
+            'top_p' => $top_p, 
+            'min_p' => $min_p,
+            'top_a' => $top_a,
+            'presence_penalty' => $presence_penalty, 
+            'frequency_penalty' => $frequency_penalty, 
+            'repetition_penalty' => $repetition_penalty,
+            'stop'=>[
+                    'USER',
+                ],
+            'transforms'=>[]
+        );
+
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["stop"])&&sizeof($GLOBALS["CONNECTOR"][$this->name]["stop"])>0) {
+            $data["stop"]=$GLOBALS["CONNECTOR"][$this->name]["stop"];
+        }
+        // Override
+
+       
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            if ($customParms["MAX_TOKENS"]==0) {
+                unset($data["max_tokens"]);
+            } elseif ($customParms["MAX_TOKENS"]) {
+                $data["max_tokens"]=$customParms["MAX_TOKENS"];
+            }
+        }
+
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
+                unset($data["max_tokens"]);
+            } else {
+                $data["max_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
+
+            }
+        }
+        
+
+        // Mistral AI API does not support penalty params
+        if ($this->_is_mistral_ai) {
+            unset($data["presence_penalty"]); 
+            unset($data["frequency_penalty"]);
+        } 
+        
+        if ($this->_is_grok) { //Argument not supported on this model: stop
+            unset($data["stop"]); 
+        }  
+
+        if ($this->_is_reasoning) { // add parameter to hide <think> content
+            $data["reasoning"] = array ('exclude' => true,'enabled'=>false); // Use reasoning but don't include it in the response
+            //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
+            //Logger::debug("reasoning " . $this->_model);
+            if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
+                $data["enable_thinking"] = false;
+            }            
+        }
+        
+        if ($this->_is_openai) {
+            // OpenAI models use max_completion_tokens
+            $data['max_completion_tokens'] = $MAX_TOKENS;
+            unset($data['max_tokens']); 
+            if ($this->_is_reasoning) {
+                $data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
+            }
+        }
+
+        if ($MAX_TOKENS<1) {
+            $data["max_tokens"]+=0;
+
+            unset($data["max_completion_tokens"]); 
+            unset($data["max_tokens"]); 
+
+        }
+
+        if (!empty($GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"])) {
+            $providers=explode(",",$GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"]);
+            $data["provider"]=["order"=>$providers];
+        } 
+
+        if (isset($this->_fallback_models) && (is_array($this->_fallback_models)) && (count($this->_fallback_models) > 0)) {
+            $data['models'] = $this->_fallback_models;
+        }
+
+
+        if (isset($this->_providers_sort) && (in_array($this->_providers_sort,['price','throughput','latency']))) {
+            $data['provider']['sort'] = $this->_providers_sort; 
+        }
+
+        if (isset($this->_providers2ignore) && (is_array($this->_providers2ignore)) && (count($this->_providers2ignore) > 0)) {
+            $data['provider']['ignore'] = $this->_providers2ignore; 
+        }
+
+        if (isset($this->_provider_quantizations) && (is_array($this->_provider_quantizations)) && (count($this->_provider_quantizations) > 0)) {
+            $data['provider']['quantizations'] = $this->_provider_quantizations; 
+        }
+
+        if (isset($this->_provider_max_price) && (is_array($this->_provider_max_price)) && (count($this->_provider_max_price) == 2)) {
+            $json_price = json_encode($this->_provider_max_price); 
+            if (isset($json_price))
+                $data['provider']['max_price'] = json_decode($json_price);
+        }
+        
+        
+        foreach ($customParms as $parm=>$value) {
+            $data[$parm]=$value;
+        }
+        
+        $data["transforms"]=[];
+
+        $GLOBALS["DEBUG_DATA"]["full"]=($data);
+     
+        
+        $headers = array(
+            'Content-Type: application/json',
+            "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
+            "HTTP-Referer:  https://dwemerdynamics.com/",
+            "X-Title: Dwemer Dynamics"
+        );
+
+        $options = array(
+            'http' => array(
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers),
+                'content' => json_encode($data),
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+            )
+        );
+
+        $context = stream_context_create($options);
+        
+        file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
+
+        try {
+            $json_response = file_get_contents($this->_url, false, $context);
+            if ($json_response === false) {
+               $error = error_get_last();
+              error_log("Error fetching response from URL: " . $this->_url . ". Error: " . $error['message']);
+            }
+        } catch (Exception $e) {
+            error_log("Exception occurred while fetching response from URL: " . $this->_url . ". Exception: " . $e->getMessage());
+            $json_response = false;
+        }
+
+        
+        
+        file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+
+        if ($json_response) {
+            $text_response=json_decode($json_response,true);
+           
+            if (is_valid_array($text_response)) {
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($data),
+                            'result' => "Ok",
+                            'usage'=>json_encode($text_response["usage"]),
+                            'connector'=>$this->name,
+                            'url'=>$this->_url
+                        ));
+                }
+                return $text_response["choices"][0]["message"]["content"];    
+            }
+            else {
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($data),
+                            'result' => "ERROR|INVALID JSON RESPONSE",
+                            'connector'=>$this->name,
+                            'url'=>$this->_url
+                        ));
+                }
+                error_log("Error in openrouter request '$url':$json_response", 3);
+                return "";
+                
+            }
+            
+        } else {
+            if ($GLOBALS["db"]) {
+                $GLOBALS["db"]->insert(
+                'audit_request',
+                    array(
+                        'request' => json_encode($data),
+                        'result' => "ERROR|NO RESPONSE",
+                        'connector'=>$this->name,
+                        'url'=>$this->_url
+                    ));
+            }
+        }
+            
+
+
     }
 
 }

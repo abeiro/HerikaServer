@@ -1,357 +1,8 @@
 <?php 
-// Database Prompt (Quest Maker)
-$AIQUEST_TEMPLATE=<<<EOI
-You are a Skyrim quest creator. You can create quest using this tools
 
-* Initialization data.
-
-* Spawn Item (Spawn and item on a location, must describe item and give it a name)
-
- "spawnItem": {
-        "item": {
-          "name": "",
-          "type": "sword|armor|helmet|ring|amulet|book|note|axe|long sword|staff|great axe|bow",
-          "location": "nearby|major city",
-          "description": "description|content if book or note"
-        }
-      }
-      
-* Creates character (Spawn character on a location, must give it a name and a background and a speech style.
- Should be a NEW character name.  
- 
- Mandatory to  class (beggar|warrior|assassin|mage|farmer|soldier|merchant|noble) and race
- (Nord|Imperial|Argonian|RedGuard|Orc|Breton)  only from available choices.
-
-"createCharacter": {
-        "character": {
-          "name": "",
-          "gender": "",
-          "class":"beggar|warrior|assassin|mage|farmer|soldier|merchant|noble",
-          "race": "Nord|Imperial|Argonian|RedGuard|Orc|Breton",
-          "location": "location name|nearby",
-          "appearance": "",
-          "background": "",
-          "speechStyle": "",
-          "disposition": "defiant|submissive|friendly|serious|sad|aggressive|cheerful|distrustful|furious|drunk|high",
-        }
-      }
-
-* Create Topic (a secret info a character must reveal to player)
-
-"createTopic": {
-        "topic": {
-          "name": "",
-          "type": "Lore|Item|Location",
-          "item": ""
-          "giver": "(character name)",
-          "info": "",
-          "target":"char_ref"
-        }
-      }
-
-# Example
-
-
-* Workflow definition
-
-Issue actions to make the workflow of the quest. This actions will be stored on property "stages":
-
-Some stages are branched. we use parent_stage property to specify if a stage is a branch and should be executed if parent branch ends successfully or not (fails)
-
-"stages": [
-        { "id": "1", "label": "SpawnCharacter", "char_ref": 1 },
-        { "id": "2", "label": "MoveToPlayer", "char_ref": 1 ,"follow":true},
-        { "id": "3", "label": "TellTopicToPlayer", "char_ref": 1, "topic_ref": 2 },
-        { "id": "4", "label": "WaitForCoins", "char_ref": 1 },
-        { "id": "5", "label": "TellTopicToPlayer", "char_ref": 1, "topic_ref": 3 ,"parent_stage":4,"branch":1},
-        { "id": "6", "label": "CombatPlayer", "char_ref": 1 ,"parent_stage":4,"branch":2}
-    ],
-
-* SpawnCharacter (needs a char_ref)
-* SpawnItem (needs a item_ref, and optionally a char_ref if we want the item be spawned in NPC inventory. if item is a book or a note, description should hold the content)
-* MoveToPlayer (needs a char_ref) NPC will move to player. Set follow=true if NPC follows player
-* TellTopicToPlayer (needs char_ref and topic_ref) NPC must talk to player about a topic. if after a while NPC doesn't talk about the subject, will fail.
-* TellTopicToNPC (needs char_ref,topic_ref and destination_ref) NPC must talk to destination_ref NPC about a topic. if after a while NPC doesn't talk about the subject, will fail. 
-* WaitToItemBeRecovered (needs item_ref) Pauses quest execution until player finds an item
-* ToGoAway(needs a char_ref)
-* CombatPlayer(needs a char_ref) Only use if NPC is hostile or got furious
-* WaitForCoins(needs a char_ref and an amount) Pauses quest execution until player gives gold to an NPC
-* WaitToItemBeTraded (needs item_ref and char_ref) Pauses quest execution until player gives an item to an NPC (char_ref)
-
-# Example quest:
-
-{
-  "quest": "The Broken Amulet",
-  "final_target": "Collect the three fragmented pieces of the ancient amulet and return them to Thoren Red-Wolf, but beware of his true intentions.",
-  "initial_data": [
-    {
-      "createCharacter": {
-        "character": {
-          "name": "Thoren Red-Wolf",
-          "gender": "Male",
-          "class": "warrior",
-          "race": "Nord",
-          "location": "nearby",
-          "appearance": "Tall and rugged, with a long red beard and a wolf-pelt cloak. His eyes are amber, and his skin is weathered from years of battle.",
-          "background": "A seasoned Nord warrior, Thoren claims to have combed the wilds in search of the pieces of a legendary amulet that once granted its wearer unmatched power. He seeks the amulet, though his motives remain ambiguous, hiding a darker ambition for control and chaos.",
-          "speechStyle": "Gruff and straight-forward. His tone implies a hardened life among war and survival.",
-          "disposition": "distrustful"
-        }
-      },
-      "id": 1
-    },
-    {
-      "createCharacter": {
-        "character": {
-          "name": "Garlok Gro-Taghul",
-          "gender": "Male",
-          "class": "warrior",
-          "race": "Orc",
-          "location": "Whiterun",
-          "appearance": "A bulky Orc warrior with deep scars across his face, wearing heavy iron armor. His tusks are chipped and his eyes burn with battle-hardened resolve.",
-          "background": "Garlok is a seasoned mercenary who fought in numerous skirmishes. He picked up one of the amulet shards after slaying a mysterious spirit and now keeps it as a memento in Whiterun. He secretly owns Amulet Piece 1 (will sell for 10,000 gold). Garlok is fiercely proud of his combat prowess and considers himself one of the greatest fighters in Skyrim. If someone challenges his skills or insults his abilities, his temper flares uncontrollably, and he will resort to a duel to prove his dominance",
-          "speechStyle": "Blunt and to the point. He doesn’t mince words and prefers action over conversation.",
-          "disposition": "aggressive"
-        }
-      },
-      "id": 2
-    },
-    {
-      "createCharacter": {
-        "character": {
-          "name": "Serana Valeria",
-          "gender": "Female",
-          "class": "mage",
-          "race": "Breton",
-          "location": "Solitude",
-          "appearance": "A young, fair-skinned Breton mage with flowing black hair. She’s often seen wearing intricate robes adorned with magical symbols. Her eyes have an ethereal blue glow.",
-          "background": "Serana is a scholar of mystical artifacts and has been studying magical relics discovered in Solitude, one of which is a fragment of the ancient Broken Amulet. She owns Amulet Piece 2 (will sell for 10,000 gold). Serana is obsessed with riddles and claims to be the best riddle guesser in all of Tamriel. She cannot resist a riddle contest and will bet almost anything—including her most prized possessions—on her ability to solve even the trickiest enigmas. This obsession often leads her to underestimate her opponents and put herself at risk",
-          "speechStyle": "Eloquent and slightly mysterious, with an air of superiority. She often speaks in riddles or half-truths.",
-          "disposition": "serious"
-        }
-      },
-      "id": 3
-    },
-    {
-      "createCharacter": {
-        "character": {
-          "name": "Fahdon-Jal",
-          "gender": "Male",
-          "class": "assassin",
-          "race": "Argonian",
-          "location": "Riften",
-          "appearance": "A shadowy and lithe Argonian who moves like a serpent, wearing dark leathers and a hood. His green scales glisten under low light, and his yellow eyes seem to pierce through the darkness.",
-          "background": "Fahdon-Jal is a contract killer who found one of the amulet fragments while on a mission for the Thieves Guild in Riften. He keeps the fragment hidden and only reveals it for the right price. He secretly owns Amulet Piece 3 (will sell for 10,000 gold). Despite his deadly reputation, Fahdon-Jal has an irrational fear of chickens. The mere sight or sound of a chicken unsettles him, making him lose focus and composure, leaving him vulnerable to persuasion or distraction.",
-          "speechStyle": "Quiet, smooth, and cryptic, with an aura of stealth and suspicion. He rarely reveals much in conversations.",
-          "disposition": "distrustful"
-        }
-      },
-      "id": 4
-    },
-    {
-      "createItem": {
-        "item": {
-          "name": "Amulet Piece 1",
-          "type": "amulet",
-          "location": "Whiterun",
-          "description": "A jagged fragment of an ancient amulet, once part of a powerful artifact forged by the Tongues. It vibrates with a faint, pulsating energy.",
-          "char_ref": 2
-        }
-      },
-      "id": 1
-    },
-    {
-      "createItem": {
-        "item": {
-          "name": "Amulet Piece 2",
-          "type": "amulet",
-          "location": "Solitude",
-          "description": "A twisted shard from the same amulet, cool to the touch but humming with latent power. Strange symbols are etched on one side.",
-          "char_ref": 3
-        }
-      },
-      "id": 2
-    },
-    {
-      "createItem": {
-        "item": {
-          "name": "Amulet Piece 3",
-          "type": "amulet",
-          "location": "Riften",
-          "description": "The third and final piece of the amulet, slightly larger than the others. It feels heavier than it should, as though it’s straining to reconnect with the rest of the artifact.",
-          "char_ref": 4
-        }
-      },
-      "id": 3
-    },
-    {
-      "createTopic": {
-        "topic": {
-          "name": "The Tongues",
-          "type": "Lore",
-          "item": "",
-          "giver": "Thoren Red-Wolf",
-          "info": "The Tongues were ancient Nords with mastery over the Thu'um, the powerful Voice. With their shouts, they could level armies and move mountains. It was said that they forged artifacts of unimaginable power, but many were lost to time, including the amulet I seek.",
-          "target": "player"
-        }
-      },
-      "id": 4
-    },
-    {
-      "createTopic": {
-        "topic": {
-          "name": "Convincing the Player",
-          "type": "Lore",
-          "item": "",
-          "giver": "Thoren Red-Wolf",
-          "info": "I understand you might be hesitant—it sounds like a wild goose chase. But trust me, the power within that amulet is real. Imagine unlocking the secrets of the Tongues, wielding their power once again. Together, we can recover the fragments before it's too late.",
-          "target": "player"
-        }
-      },
-      "id": 5
-    },
-    {
-      "createTopic": {
-        "topic": {
-          "name": "The Broken Amulet",
-          "type": "Lore",
-          "item": "",
-          "giver": "Thoren Red-Wolf",
-          "info": "There once existed an amulet forged by the ancient Tongues - it was said to grant both ferocity in battle and mystical power. However, it broke into three pieces. To retrieve the fragments, I have learned their holders: Garlok Gro-Taghul in Whiterun, Serana Valeria in Solitude, and Fahdon-Jal in Riften. I cannot recover them alone and seek your aid to assemble the amulet. I will wait for you at #LOCATION#.",
-          "target": "player"
-        }
-      },
-      "id": 6
-    },
-    {
-      "createTopic": {
-        "topic": {
-          "name": "Thoren's True Motives",
-          "type": "Lore",
-          "item": "",
-          "giver": "Thoren Red-Wolf",
-          "info": "Upon returning all three amulet pieces, Thoren reveals his true intentions. He plans to use the amulet to bring chaos to Skyrim, driven by revenge for the wars that scarred his past. If the player refuses to give him the final piece, he will attack.",
-          "target": "player"
-        }
-      },
-      "id": 7
-    },
-    {
-      "createTopic": {
-        "topic": {
-          "name": "The Fragments Are Mine",
-          "type": "Lore",
-          "item": "",
-          "giver": "Thoren Red-Wolf",
-          "info": "I see you’ve found all three fragments. Give them to me now. Now i need to reforge them in a secret place. This is something i have to do on my own.",
-          "target": "player"
-        }
-      },
-      "id": 8
-    }
-  ],
-  "stages": [
-    {
-      "id": "1",
-      "label": "SpawnCharacter",
-      "char_ref": 1
-    },
-    {
-      "id": "2",
-      "label": "MoveToPlayer",
-      "char_ref": 1
-    },
-    {
-      "id": "3",
-      "label": "TellTopicToPlayer",
-      "char_ref": 1,
-      "topic_ref": 4
-    },
-    {
-      "id": "4",
-      "label": "TellTopicToPlayer",
-      "char_ref": 1,
-      "topic_ref": 5
-    },
-    {
-      "id": "5",
-      "label": "TellTopicToPlayer",
-      "char_ref": 1,
-      "topic_ref": 6
-    },
-    {
-      "id": "6",
-      "label": "SpawnCharacter",
-      "char_ref": 2
-    },
-    {
-      "id": "7",
-      "label": "WaitToItemBeRecovered",
-      "item_ref": 1
-    },
-    {
-      "id": "8",
-      "label": "SpawnCharacter",
-      "char_ref": 3
-    },
-    {
-      "id": "9",
-      "label": "WaitToItemBeRecovered",
-      "item_ref": 2
-    },
-    {
-      "id": "10",
-      "label": "SpawnCharacter",
-      "char_ref": 4
-    },
-    {
-      "id": "11",
-      "label": "WaitToItemBeRecovered",
-      "item_ref": 3
-    },
-    {
-      "id": "11.5",
-      "label": "TellTopicToPlayer",
-      "char_ref": 1,
-      "topic_ref": 8
-    },
-    {
-      "id": "12",
-      "label": "WaitToItemBeTraded",
-      "item_ref": [
-        1,
-        2,
-        3
-      ],
-      "char_ref": 1
-    },
-    {
-      "id": "13",
-      "label": "TellTopicToPlayer",
-      "char_ref": 1,
-      "topic_ref": 7,
-      "parent_stage": 12,
-      "branch": 1
-    },
-    {
-      "id": "14",
-      "label": "CombatPlayer",
-      "char_ref": 1,
-      "parent_stage": 12,
-      "branch": 2
-    },
-    {
-      "id": "15",
-      "label": "ToGoAway",
-      "char_ref": 1,
-      "parent_stage": 13,
-      "branch": 1
-    }
-  ],
-  "overview": "In 'The Broken Amulet', you encounter a Nord warrior named Thoren Red-Wolf, who requests your aid in retrieving the three pieces of an ancient, shattered amulet. The quest starts with Thoren educating you about the ancient Tongues and trying to convince you of the amulet's potential. These pieces are held by three individuals across Skyrim—Garlok Gro-Taghul in Whiterun, Serana Valeria in Solitude, and Fahdon-Jal in Riften. After assembling the amulet, Thoren reveals his nefarious motives. The player faces a moral decision: give Thoren the final piece or oppose him and fight."
-}
-EOI;
-
+define("TOPIC_COVERED",1);
+define("TOPIC_UNCOVERED",2);
+define("WILL_DO_LATER",3);
 
 $GLOBALS["masterDataLocations"]=[
     "helgen"=>[0x00055e4f],
@@ -381,6 +32,7 @@ $GLOBALS["item_types"]=[    // From AIAgent.esp
     "amulet"=>[0x2481e],
     "ring"=>[0x242b9],
     "note"=>[0],// Will be changed. Generic Note From AIAgent.esp
+    "book"=>[0],// Will be changed. Generic Note From AIAgent.esp
 ];
 
 $GLOBALS["npc_templates"]=[
@@ -533,13 +185,6 @@ $GLOBALS["npc_own_templates"]=[
 
 function checkHistory($npc) {
 
-    $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists($enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
-        return false;
-    }
-    
-    require_once $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
 
     $historyData="";
     $lastPlace="";
@@ -574,15 +219,18 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
 
     $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists($enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
-        return false;
-    }
+    $connector = new LLMConnector();
+    $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
+    $connector->setOldGlobals($currentConnectorData);
+
+
+
+
     if ((time()-$last_llm_call)<60) {
         Logger::info("Skipping askLLMForTopic: ".((time()-$last_llm_call)));
         return ["res"=>false,"missing"=>"skip"];
     }
 
-    require_once $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
 
     $historyData="";
     $lastPlace="";
@@ -620,45 +268,18 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
 
     $head[]   = ["role"	=> "system", "content"	=> "You are an assistant. You will analyze a dialogue and determine if a topic has been fully or partially covered. ", ];
     $prompt[] = ["role"	=> "user", "content"	=> "* Dialogue history:\n" .$historyData ];
-    $prompt[] = ["role"=> "user", "content"	=> "is this topic fully or partially covered in the dialogue history? \"$topic\".\n". 
+    $prompt[] = ["role"=> "user", "content"	=> "is this topic/intent fully or partially covered in the dialogue history? Topic/Intent:\"$topic\".\n". 
     "Answer yes,or give a score from 1 , (not covered) to 10 (fully covered), and then write a dialogue sentence as the speaker (hint) to provide the missing info. Use a JSON object to give reponse {\"score\":[0-9],\"hint\":\"\"}"];
     $contextData       = array_merge($head, $prompt);
 
-    print_r($contextData);
-    $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
-
-    $connectionHandler->open($contextData, ["max_tokens"=>500]);
-    $buffer      = "";
-    $totalBuffer = "";
-    $breakFlag   = false;
-    while (true) {
-        
-        if ($breakFlag) {
-            break;
-        }
-        
-        if ($connectionHandler->isDone()) {
-            $breakFlag = true;
-        }
-        
-        $buffer.= $connectionHandler->process();
-        $totalBuffer.= $buffer;
-        //$bugBuffer[]=$buffer;
-        
-        
-    }
-    $connectionHandler->close();
-
-    $actions = $connectionHandler->processActions();
-
-
+    $connectionHandler =$connector->getConnector($currentConnectorData);
+    $buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>2048]);
+    $parsedbuffer=__jpd_decode_lazy($buffer);
+    error_log(print_r($parsedbuffer,true));
     $res=false;
-    $originalBuffer=$buffer;
-    $parsedbuffer=json_decode($buffer,true);
-
     if (is_array($parsedbuffer)) {
-        $score=$parsedbuffer["score"];
-        $hint=$parsedbuffer["hint"];
+        $score=$parsedbuffer[0]["score"];
+        $hint=$parsedbuffer[0]["hint"];
         if ($score>=6)
             $res=true;
         $buffer=$hint;
@@ -682,10 +303,47 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
     }
 
     
-    Logger::debug($originalBuffer);
+    Logger::debug($buffer);
     
     //$res=true;
     return ["res"=>$res,"missing"=>$buffer];
+    
+}
+
+function simpleTopicCheck($npc,$topic) {
+
+    $lastListener="";
+    $lastPlace="";
+    $historyData="";
+
+    foreach (json_decode(DataSpeechJournal($npc,50),true) as $element) {
+    
+        if ($lastListener!=$element["listener"]) {
+            if ($element["listener"]!="The Narrator")
+                $listener=" (talking to {$element["listener"]})";
+            $lastListener=$element["listener"];
+        }
+        else
+            $listener="";
+
+        if ($lastPlace!=$element["location"]){
+            $place=" (at {$element["location"]})";
+            $lastPlace=$element["location"];
+        }
+        else
+            $place="";
+
+        if (strpos($element["speaker"],$npc)!==false)  // Only NPC lines
+            $historyData.=trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place").PHP_EOL;
+    
+    }
+
+    if (strpos($historyData,$topic)!== false) {
+      return true;
+    } else
+      return false;
+
+    
     
 }
 
@@ -808,6 +466,11 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
     ];
     
     $locations=$GLOBALS["masterDataLocations"];
+    $addedLocs=$GLOBALS["db"]->fetchAll("SELECT * FROM locations where name ilike '%".$GLOBALS["db"]->escape($location)."%' LIMIT 1");
+    if (sizeof($addedLocs)>0) {
+      $locations[$location][]=convertSignedToUnsignedHex($addedLocs[0]["formid"]);
+    }
+
 
     $parm5 = $masterDataTemplates["{$gender}_{$race}"][array_rand($masterDataTemplates["{$gender}_{$race}"])];
     $parm1 = $masterData["{$gender}_{$race}_{$class}"][array_rand($masterData["{$gender}_{$race}_{$class}"])];
@@ -855,10 +518,10 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
 
 }
 
-function CreateItem($basetype,$name,$location,$content) {
+function SkCreateItem($basetype,$name,$location,$content,$quest_id) {
 
     
-    echo "CreateItem($basetype,$name,$location,$content)";
+    //echo "CreateItem($basetype,$name,$location,$content)";
 
     $masterData=$GLOBALS["item_types"];
     
@@ -893,7 +556,7 @@ function CreateItem($basetype,$name,$location,$content) {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|spawnItem@$localItemName@$localItemType@$localItemPlace@{$GLOBALS["taskId"]}",
+            'action' => "rolecommand|spawnItem@$localItemName@$localItemType@$localItemPlace@$quest_id",
             //'action' => "rolecommand|spawnItem@The Necklace of the Gods@necklace@Helgen@1",
             'tag' => ""
         )
@@ -1086,4 +749,78 @@ function convertSignedToUnsignedHex($signedInt) {
     return  "0x" . dechex($unsignedInt) ;
 
 }
+
+function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
+{
+    $contextDataHistoric = checkHistory($character);
+    
+    if (simpleTopicCheck($character,$topic)) {
+        return TOPIC_COVERED;
+    }
+
+    // To avoid call LLM all times
+    if ((time()-$lastCall)< 90)  {
+        if ($GLOBALS["NPCS_ARE_NOT_TALKING"]==1) {
+          error_log("[SkTopicCheck]\t SHOULD DO LATER, but  NPCS_ARE_NOT_TALKING <$character>  <$retries> <$quest_id>, will call in ".((time()-$lastCall-90)));
+        } else {
+          error_log("[SkTopicCheck]\t WILL_DO_LATER <$character>  <$retries> <$quest_id>, will call in ".((time()-$lastCall-90)));
+          return WILL_DO_LATER;
+        }
+    }
+    
+    error_log("[SkTopicCheck]\t <$character>  <$retries> <$quest_id>");
+
+    if (($contextDataHistoric) >= 4) {
+        // But first, check if topic already has been covered
+        error_log("[SkTopicCheck]\tMaking LLM request: $lastCall, interval <".(time()-$lastCall).">");
+
+        $topiCall                      = askLLMForTopic($character, $topic, $lastCall);
+        
+        if ($topiCall["res"]) {
+           return TOPIC_COVERED;
+
+        } else {
+            // Make suggestion, topic not covered
+            $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic");
+            if ($topiCall["missing"]) {
+              $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: {$topiCall["missing"]}}");
+            }
+            $GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => "rolecommand|Suggestion@{$character}@$sugggestionText@$quest_id",
+                    'tag'     => "",
+                ]
+            );
+            error_log("[SkTopicCheck] Topic enforced <$topic> <{$character}>");
+            return TOPIC_UNCOVERED;
+        }
+    } else {
+        error_log("[SkTopicCheck]\tNot enough dialogue with NPC <$topic> <{$character}>");
+        // Not enough dialogue with NPC
+        if (($retries % 30)==0) {
+          // Make suggestion, dialogue is too small
+          $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: <$topic> (using its own words)");
+          $GLOBALS["db"]->insert(
+                  'responselog',
+                  [
+                      'localts' => time(),
+                      'sent'    => 0,
+                      'actor'   => "rolemaster",
+                      'text'    => "",
+                      'action'  => "rolecommand|Suggestion@{$character}@$sugggestionText@$quest_id",
+                      'tag'     => "",
+                  ]
+              );
+              error_log("[SkTopicCheck]\tTopic enforced <$topic> <{$character}>");
+         
+        }
+        return TOPIC_UNCOVERED;
+    }
+}
+
 ?>

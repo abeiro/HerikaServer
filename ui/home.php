@@ -26,7 +26,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "📊 Dwemer Dashboard";
+$TITLE = "Dwemer Dashboard";
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -55,6 +55,22 @@ class sql {
             $rows[] = $row;
         }
         return $rows;
+    }
+
+    public function fetchOne($query)
+    {
+        $result = pg_query($this->conn, $query);
+        if (!$result) {
+            return [];
+        }
+
+        $finalData = array();
+        while ($row = pg_fetch_assoc($result)) {
+            $finalData = $row;
+            break;
+        }
+
+        return $finalData;
     }
     
     public function execQuery($query) {
@@ -101,14 +117,34 @@ class sql {
 
 $db = new sql();
 
+// Load PLAYER_NAME from database (preferred) with fallback to global/conf.php
+// This ensures dashboard always shows the current in-game player name
+$PLAYER_NAME_DB = isset($GLOBALS['PLAYER_NAME']) ? (string)$GLOBALS['PLAYER_NAME'] : 'Player';
+try {
+    $resPlayer = pg_query($conn, "SELECT value FROM {$schema}.conf_opts WHERE id='PLAYER_NAME' LIMIT 1");
+    if ($resPlayer && pg_num_rows($resPlayer) > 0) {
+        $rowPlayer = pg_fetch_assoc($resPlayer);
+        if ($rowPlayer && isset($rowPlayer['value']) && $rowPlayer['value'] !== '') {
+            $PLAYER_NAME_DB = (string)$rowPlayer['value'];
+        }
+    }
+} catch (Throwable $_) {
+    // Fallback to existing $GLOBALS['PLAYER_NAME'] on any error
+}
+
 /* Check for database updates only in index.php with no parms*/
 if (sizeof($_GET)==0) {
     require_once(__DIR__."/../debug/db_updates.php");
     require_once(__DIR__."/../debug/npc_removal.php");
+    require_once(__DIR__."/../lib/log_trim.php");
     
     // Initialize automatic backup system now that database is ready
     if (function_exists('deferredAutomaticBackupInit')) {
         deferredAutomaticBackupInit();
+    }
+    // Initialize log trimming once DB is ready
+    if (function_exists('deferredLogTrimInit')) {
+        deferredLogTrimInit();
     }
 }
 /* END of check database for updates */
@@ -215,7 +251,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
-    <title>📊 Dwemer Dashboard</title>
+    <title>Dwemer Dashboard</title>
     <style>
         /* Dashboard specific styles */
         .dashboard-container {
@@ -686,34 +722,28 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
     </style>
 </head>
 <body>
+    <!-- Server/Plugin Versions and Social Links (moved from navbar) -->
+    <div class="container" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; margin-top:6px;">
+        <div class="server-version-info" style="color:#6c757d; font-size:0.9em; font-family: Arial, sans-serif;">
+            Server: <?php echo htmlspecialchars($serverVersionDisplay ?? '', ENT_QUOTES, 'UTF-8'); ?>
+            Plugin: <?php echo htmlspecialchars($pluginVersionDisplay ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?>
+        </div>
+        <div class="social-links" style="display:flex; align-items:center; gap:12px;">
+            <a href="https://www.youtube.com/@DwemerDynamics" target="_blank" class="social-link" title="Checkout our Youtube Channel">
+                <img src="<?php echo $webRoot; ?>/ui/images/youtube.png" alt="YouTube" style="width:20px;height:20px;">
+            </a>
+            <a href="https://discord.gg/NDn9qud2ug" target="_blank" class="social-link" title="Join us on Discord">
+                <img src="<?php echo $webRoot; ?>/ui/images/discord.png" alt="Discord" style="width:20px;height:20px;">
+            </a>
+            <a href="https://patreon.com/DwemerDynamics" target="_blank" class="social-link" title="Join our Patreon">
+                <img src="<?php echo $webRoot; ?>/ui/images/patreon.png" alt="Patreon" style="width:20px;height:20px;">
+            </a>
+        </div>
+    </div>
     <main class="container">
-        <h1>📊 Dwemer Dashboard</h1>
+        <h1>Dwemer Dashboard</h1>
 
         <div class="dashboard-buttons">
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/events-memories.php'" class="dashboard-btn">
-                <span class="btn-icon">📜</span> Events & Memories
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/conf_wizard.php'" class="dashboard-btn">
-                <span class="btn-icon">🧙</span> Configuration Wizard
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/npc_upload.php'" class="dashboard-btn">
-                <span class="btn-icon">🧑</span> NPC Biography Management
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/oghma_upload.php'" class="dashboard-btn">
-                <span class="btn-icon">📙</span> Oghma Management
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/diarylog.php'" class="dashboard-btn">
-                <span class="btn-icon">📖</span> Diaries
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/adventurelog.php'" class="dashboard-btn">
-                <span class="btn-icon">⚔</span> Adventure Log
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/index.php?plugins_show=true'" class="dashboard-btn">
-                <span class="btn-icon">🔌</span> Server Plugins
-            </button>
-            <button onclick="window.location.href='<?php echo $webRoot; ?>/ui/tests/apache2err.php'" class="dashboard-btn">
-                <span class="btn-icon">🌲</span> Server Logs
-            </button>
             <button onclick="window.open('https://dwemerdynamics.hostwiki.io/', '_blank')" class="dashboard-btn">
                 <span class="btn-icon">📚</span> CHIM Wiki
             </button>
@@ -785,6 +815,49 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     ) as table_exists"
                 );
                 
+                // Fetch current CHIM mode (default to STANDARD if not set)
+                $chimModeRow = fetch_widget_stats($conn, "
+                    SELECT value 
+                    FROM {$schema}.conf_opts 
+                    WHERE id = 'chim_mode' 
+                    LIMIT 1
+                ");
+                $chimMode = (!isset($chimModeRow['error']) && !empty($chimModeRow) && isset($chimModeRow[0]['value'])) ? $chimModeRow[0]['value'] : 'STANDARD';
+
+                // Fetch Focus on Chat mode
+                $chimContextModeRow = fetch_widget_stats($conn, "
+                    SELECT value 
+                    FROM {$schema}.conf_opts 
+                    WHERE id = 'chim_context_mode' 
+                    LIMIT 1
+                ");
+                $chimContextMode = (!isset($chimContextModeRow['error']) && !empty($chimContextModeRow) && isset($chimContextModeRow[0]['value']) && $chimContextModeRow[0]['value'])==1 ? 'ENABLED' : 'DISABLED';
+
+                // Fetch Current active model
+                $chimModelRow = fetch_widget_stats($conn, "
+                    SELECT value 
+                    FROM {$schema}.conf_opts 
+                    WHERE id = 'chim_profile_model' 
+                    LIMIT 1
+                ");
+                $chimModel = (!isset($chimModelRow['error']) && !empty($chimModelRow) && isset($chimModelRow[0]['value'])) ? $chimModelRow[0]['value'] : '1';
+                $chimModelLabelMap = [
+                    '1' => '🕹️ Standard',
+                    '2' => '🏃‍♀️‍➡️Fast',
+                    '3' => '💪 Powerful',
+                    '4' => '🧪 Experimental'
+                ];
+                $chimModelLabel = isset($chimModelLabelMap[(string)$chimModel]) ? $chimModelLabelMap[(string)$chimModel] : (string)$chimModel;
+
+
+                $port = 12345;
+                $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
+                if (!$connection) {
+                    $helperServiceRunning=false;
+                } else {
+                    $helperServiceRunning=true;
+                }
+
                 if (!isset($questsCheck['error']) && !empty($questsCheck) && isset($questsCheck[0]['table_exists']) && $questsCheck[0]['table_exists'] === 't') {
                     $questTable = fetch_widget_stats($conn, "
                         SELECT name as quest_name, briefing
@@ -864,7 +937,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <tr><th>Stats</th><th>Value</th></tr>
                             <tr>
                                 <td>Player Name</td>
-                                <td>" . htmlspecialchars($PLAYER_NAME) . "</td>
+                                <td>" . htmlspecialchars($PLAYER_NAME_DB) . "</td>
                             </tr>
                             <tr>
                                 <td>Last Played (UTC)</td>
@@ -873,6 +946,22 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <tr>
                                 <td>Current In-Game Time</td>
                                 <td>{$inGameTime}</td>
+                            </tr>
+                            <tr>
+                                <td>CHIM Mode</td>
+                                <td>" . htmlspecialchars($chimMode) . "</td>
+                            </tr>
+                            <tr>
+                                <td>CHIM Active Model</td>
+                                <td>" . htmlspecialchars($chimModelLabel) . "</td>
+                            </tr>
+                            <tr>
+                                <td>Focus Chat</td>
+                                <td>" . htmlspecialchars($chimContextMode) . "</td>
+                            </tr>
+                            <tr>
+                                <td>AI Quest Processor</td>
+                                <td>" . ($helperServiceRunning?"Running":"Not running") . "</td>
                             </tr>
                         </table>
                     </div>

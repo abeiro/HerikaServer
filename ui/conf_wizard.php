@@ -69,7 +69,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <style>
     /* Override main container styles */
     main {
-        padding-top: 160px; /* Space for navbar */
+        padding-top: 80px; /* Space for navbar */
         padding-bottom: 40px; /* Reduced space for footer */
         padding-left: 10px;
     }
@@ -566,124 +566,124 @@ foreach ($currentConf as $pname=>$parms) {
                 <span>{$parms["description"]}</span>
                 </p>" . PHP_EOL;
     
-    } else if ($pname === "BORED_EVENT") {
-        // BORED_EVENT: 0-100
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    name='$fieldName'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                    id='{$fieldName}_range'
-                    $FORCE_DISABLED>
-                
-                <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    style='width:60px;'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                    id='{$fieldName}_number'>
-                
-                <span>{$parms["description"]}</span>
-                </p>" . PHP_EOL;
-    
-    } else if ($pname === "CONTEXT_HISTORY") {
-        // CONTEXT_HISTORY: 0-100
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    name='$fieldName'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                    id='{$fieldName}_range'
-                    $FORCE_DISABLED>
-                
-                <input type='number' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    style='width:60px;'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                    id='{$fieldName}_number'>
-                
-                <span>{$parms["description"]}</span>
-                </p>" . PHP_EOL;
-    
-    } else if ($pname === "RECHAT_H") {
-        // RECHAT_H: 1-10
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    name='$fieldName'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                    id='{$fieldName}_range'
-                    $FORCE_DISABLED>
-                
-                <input type='number' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    style='width:60px;'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                    id='{$fieldName}_number'>
-                
-                <span>{$parms["description"]}</span>
-                </p>" . PHP_EOL;
-    
-    } else if ($pname === "DIARY_COOLDOWN") {
-        // DIARY_COOLDOWN: 10-1200
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='10' max='1200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    name='$fieldName'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                    id='{$fieldName}_range'
-                    $FORCE_DISABLED>
-                
-                <input type='number' min='10' max='1200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    style='width:80px;'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                    id='{$fieldName}_number'>
-                
-                <span>{$parms["description"]}</span>
-                </p>" . PHP_EOL;
-    
-    } else if ($pname === "CONTEXT_HISTORY_DIARY") {
-        // CONTEXT_HISTORY_DIARY: 0-400
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    name='$fieldName'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                    id='{$fieldName}_range'
-                    $FORCE_DISABLED>
-                
-                <input type='number' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    style='width:70px;'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                    id='{$fieldName}_number'>
-                
-                <span>{$parms["description"]}</span>
-                </p>" . PHP_EOL;
-    
-    } else if ($pname === "CONTEXT_HISTORY_DYNAMIC_PROFILE") {
-        // CONTEXT_HISTORY_DYNAMIC_PROFILE: 0-400
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='range' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    name='$fieldName'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
-                    id='{$fieldName}_range'
-                    $FORCE_DISABLED>
-                
-                <input type='number' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                    style='width:70px;'
-                    oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
-                    id='{$fieldName}_number'>
-                
-                <span>{$parms["description"]}</span>
-                </p>" . PHP_EOL;
-    
-    } else {
-        // Default integer handling
-        echo "<p class='conf-item'>
-                <label for='$fieldName'>$pname</label>
-                <input type='number' $FORCE_DISABLED inputmode='numeric' step='1' 
-                        value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
-                        name='$fieldName'>
-                <span>Integer: {$parms["description"]}</span>
-                </p>" . PHP_EOL;
-    }
+        } else if ($pname === "BORED_EVENT") {
+            // BORED_EVENT: 0-100
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='100' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:60px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        
+        } else if ($pname === "CONTEXT_HISTORY") {
+            // CONTEXT_HISTORY: 0-100
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:60px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        
+        } else if ($pname === "RECHAT_H") {
+            // RECHAT_H: 1-10
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='1' max='10' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:60px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        
+        } else if ($pname === "DIARY_COOLDOWN") {
+            // DIARY_COOLDOWN: 10-1200
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='10' max='1200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='10' max='1200' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:80px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        
+        } else if ($pname === "CONTEXT_HISTORY_DIARY") {
+            // CONTEXT_HISTORY_DIARY: 0-400
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:70px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        
+        } else if ($pname === "CONTEXT_HISTORY_DYNAMIC_PROFILE") {
+            // CONTEXT_HISTORY_DYNAMIC_PROFILE: 0-400
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='range' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        name='$fieldName'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"range\")'
+                        id='{$fieldName}_range'
+                        $FORCE_DISABLED>
+                    
+                    <input type='number' min='0' max='400' step='1' value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                        style='width:70px;'
+                        oninput='syncInputs(\"{$fieldName}_range\", \"{$fieldName}_number\", \"number\")'
+                        id='{$fieldName}_number'>
+                    
+                    <span>{$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        
+        } else {
+            // Default integer handling
+            echo "<p class='conf-item'>
+                    <label for='$fieldName'>$pname</label>
+                    <input type='number' $FORCE_DISABLED inputmode='numeric' step='1' 
+                            value='" . htmlspecialchars($parms["currentValue"], ENT_QUOTES) . "' 
+                            name='$fieldName'>
+                    <span>Integer: {$parms["description"]}</span>
+                    </p>" . PHP_EOL;
+        }
     
     } else if ($parms["type"] == "number") {
         // Extract the final parameter name segment
@@ -797,6 +797,24 @@ foreach ($currentConf as $pname=>$parms) {
         echo "<datalist id='choices$jsid'><option label=\"".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."\" value=\"".htmlspecialchars($parms["currentValue"],ENT_QUOTES)."\"></datalist><span>{$parms["description"]}</span>
         </p>".PHP_EOL;
 
+    } else if (strpos($parms["type"],"foreign")===0) {
+        $jsid=strtr($fieldName,["@"=>"_"]);
+        $origins=explode(":",$parms["type"]);
+        //core_llm_connector:id:label
+        if (!$GLOBALS["db"])
+            $GLOBALS["db"]=new sql();
+
+        $origin=$GLOBALS["db"]->fetchAll("select {$origins[2]},{$origins[3]} from {$origins[1]}");
+        
+        $buffer="";
+        foreach ($origin as $connectorEntry) {
+            $id=$connectorEntry[$origins[2]];
+            $label=$connectorEntry[$origins[3]];
+            $buffer.="<option value='$id' ".(($id==$parms["currentValue"])?"selected":"").">$label</option>";
+        }
+        echo "<p class='conf-item'><label for='$fieldName'>$pname</label><select $FORCE_DISABLED name='$fieldName'>$buffer</select><span> {$parms["description"]}</span></p>".PHP_EOL;
+
+
     } 
     
     // Initialize jsid if not set for the copy to profiles button
@@ -838,7 +856,7 @@ echo str_repeat("</fieldset>", $lvl2);
 echo '</form>';
 
 echo "<div style='position:fixed;top:70px;right:25px;background-color:black;font-size:1em;border:1px solid grey;margin:85px 5px;padding:5px; z-index: 100000; max-width:300px; max-height:80vh; overflow-y:auto;'>
-<span><strong>Quick Access for <span style='color:yellow'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br><span style='font-size:11px'>You must click save before using 'Copy to All Profiles'</span><br/><span style='font-size:7px'>".
+<span><strong>Quick Access for <span style='color:yellow'>{$GLOBALS["CURRENT_PROFILE_CHAR"]}</span><br><span style='font-size:11px'>THIS MENU IS NO LONGER USED FOR CONFIGURATION OF CHIM. YOU CAN JUST USE THIS MENU TO HELP SEE PREVIOUS SETTINGS FOR MIGRATION.'</span><br/><span style='font-size:7px'>".
     basename($_SESSION["PROFILE"])
 ."</span></strong></span><ul>";
 

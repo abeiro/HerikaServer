@@ -12,9 +12,12 @@ $TITLE = "⚙️ CHIM - AI Action Editor";
 ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
+if (!$isEmbed) {
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+}
 
 if (file_exists(__DIR__."/../functions/user_pref.json")) {
     $currentOnes=json_decode(file_get_contents(__DIR__."/../functions/user_pref.json"),true);
@@ -110,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Override main container styles */
     main {
-        padding-top: 160px; /* Space for navbar */
+        padding-top: 80px; /* Space for navbar */
         padding-bottom: 40px;
         padding-left: 10%;
         padding-right: 10%;
@@ -304,6 +307,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 </style>
 
+<?php if ($isEmbed): ?>
+<style>
+    /* Embedded in hub: remove extra top padding since navbar is hidden */
+    main { padding-top: 20px; }
+</style>
+<?php endif; ?>
+
 <main>
     <div id="toast" class="toast-notification">
         <span class="message"></span>
@@ -483,6 +493,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'GoToSleep' => 'Rest and sleep to recover'
                                     ];
                                     echo $descriptions[$func] ?? 'Player-specific function';
+                                    ?>
+                                </div>
+                            </label>
+                        </div>
+                    <?php 
+                        endif;
+                    endforeach; 
+                    ?>
+                </div>
+                <div class="function-category">
+                    <h3>📖 Plugin functions</h3>
+                    <?php
+                    
+                    foreach ($currentList as $func):
+                        if ((strpos($func,"ExtCmd")!==false) || (strpos($func,"WebCmd")!==false)):
+                    ?>
+                        <div class="function-item">
+                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
+                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
+                            <label for="func_<?= $func ?>">
+                                <?= htmlspecialchars($func) ?>
+                                <div class="function-description">
+                                    <?php
+                                    echo $GLOBALS["F_TRANSLATIONS"][$func] ?? 'Player-specific function';
                                     ?>
                                 </div>
                             </label>

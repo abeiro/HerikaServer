@@ -20,6 +20,16 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash)
         $voice = $GLOBALS["PATCH_OVERRIDE_VOICE"]; // Player voice
     }
 
+    // Normalize special narrator voice id
+    if (is_string($voice) && strtolower($voice) === 'thenarrator') {
+        $voice = 'malenord';
+    }
+
+    // Ensure voice has a prefix; default to sk_ if missing (e.g., malenord -> sk_malenord)
+    if (!preg_match('/^[A-Za-z]+_/', $voice)) {
+        $voice = 'sk_' . $voice;
+    }
+
     $lang = $GLOBALS["TTS"]["XVASYNTH"]["base_lang"];
     if (isset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]))
         $lang = $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];

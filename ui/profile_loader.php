@@ -19,7 +19,7 @@ require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.sample.php");	// Should 
 if (file_exists($rootPath."conf".DIRECTORY_SEPARATOR."conf.php"))
     require_once($rootPath."conf".DIRECTORY_SEPARATOR."conf.php");	// Should contain current ones
 
-require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR.'conf_loader.php');
 
 $configFilepath = realpath($configFilepath).DIRECTORY_SEPARATOR;
 
@@ -39,11 +39,11 @@ function compareFileModificationDate($a, $b) {
     return filemtime($b) - filemtime($a);
 }
 
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"]))
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-else
+// Ensure PROFILES is initialized and sort by modification date
+if (!isset($GLOBALS["PROFILES"]) || !is_array($GLOBALS["PROFILES"])) {
     $GLOBALS["PROFILES"] = [];
+}
+usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
 
 $GLOBALS["PROFILES"] = array_merge(["default"=>"$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
 
@@ -58,5 +58,24 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
 // Initialize automatic backup system (after profiles are loaded)
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "automatic_backup.php");
 
+// Load PLAYER_NAME from database if available (overrides conf.php)
+// This ensures UI pages always show the current player name from the game
+try {
+    if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
+        $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+        if (!class_exists('sql') && file_exists($dbClassFile)) {
+            require_once($dbClassFile);
+        }
+        if (class_exists('sql')) {
+            $db_player = new sql();
+            $playerNameFromDb = $db_player->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+            if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+                $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+            }
+        }
+    }
+} catch (Throwable $e) {
+    // Silently fail and use conf.php value if database query fails
+}
 
     

@@ -20,6 +20,31 @@ if ($GLOBALS["MINIME_T5"]) {
     }
 }
 
+// POST MEMORY
+if ($GLOBALS["MINIME_T5"]) {
+    if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
+        if (sizeof($memoryInjectionCtx)==0) {
+            // In case main memory search didnt return resutls because minime activated and user is nt directly asking a question
+            error_log("[POST MEMORY SEARCH]");
+            $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]=true;
+            
+            $GLOBALS["MEMORY_THRESHOLD_MODIFIER"]=0.5;
+            $memoryInjection=offerMemory($gameRequest);
+            if ($memoryInjection) {
+                
+                $gameRequestCopy=$gameRequest;
+                $gameRequestCopy[0]="infoaction";
+                $gameRequestCopy[3]="#MEMORY: {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection]";
+                error_log("[POST MEMORY SEARCH], memory found ($memoryInjection)");
+                logEvent($gameRequestCopy,$GLOBALS["HERIKA_NAME"]);// Memory log only avaibale to current NPC.
+            }
+            
+
+        }
+            
+    
+    }
+}
 
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
 $GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
@@ -35,7 +60,7 @@ foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as 
 
 require("$configFilepath/conf.php");
 
-if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) {
+if (($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"])&&(false)) {
     $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
 
     $maxRow=$results[0]["gamets_truncated"]+0;
@@ -44,15 +69,21 @@ if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) {
     
 
     if (($gameRequest[2]-$maxRow)>($pfi)) {
-        
+        error_log("[SUMMARY] memory creation gameRequest[2]-maxRow > pfi  ($gameRequest[2]-$maxRow)>($pfi) ");
+
         Logger::info(shell_exec("php ".__DIR__."/../debug/util_memory_subsystem.php compact noembed 2 &"));
         
     } else {
         
-        
+        error_log("[SUMMARY]  Skipping memory creation gameRequest[2]-maxRow > pfi  ($gameRequest[2]-$maxRow)>($pfi) ");
        
 
     }
+
+} else {
+        
+    error_log("[SUMMARY]  Skipping memory creation as  AUTO_CREATE_SUMMARYS  is {$GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]}");
+   
 
 }
 

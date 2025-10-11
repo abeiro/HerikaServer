@@ -121,7 +121,7 @@ class openaijson
                 $i_pos = stripos($s_model, "azure-o3");
             // OpenAI model names
             if ($i_pos === false) { 
-                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
+                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") ||  ($s_model == "gpt-5-nano") ||
                     ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
                     (strpos($s_model, "o4-mini") == 0)) {
                     $i_pos = 1;
@@ -172,7 +172,7 @@ class openaijson
         $this->_model = isset($customParms["model"]) ? $customParms["model"] : $this->_model;
         
         $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
-        //$this->_is_openai = $this->isOpenAIModel($this->_model);
+        $this->_is_openai = $this->isOpenAIModel($this->_model);
 
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
@@ -439,7 +439,8 @@ class openaijson
                 parsed  - Separates reasoning into a dedicated field while keeping the response concise.
                 raw     - Includes reasoning within <think> tags in the content.
                 hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
-                $data['reasoning_format'] = "hidden";  
+                if (!$this->_is_openai)
+                    $data['reasoning_format'] = "hidden";  
             }
             //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
         
@@ -459,9 +460,20 @@ class openaijson
             } 
 
             if (($this->_is_reasoning) && (!$this->_is_mistral_ai) && (!$this->_is_cohere_ai)) { // there is no rule accepted by all providers
-                $data["chat_format"]="tidy"; 
+                if (!$this->_is_openai) {
+                    $data["chat_format"]="tidy"; 
+                    
+                } else {
+                    if ((stripos($this->_url, "api.openai.com") > 0 )) {
+                        if (stripos($this->_model, "gpt-5") !== false ) {
+                            unset($data["top_p"]);
+                        }
+                    }
+                }
+
                 $data["reasoning_effort"] = "low";
-                $data['reasoning_format'] = "hidden";
+                if (!$this->_is_openai)
+                    $data['reasoning_format'] = "hidden";
                 if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
                     $data["enable_thinking"] = false;
             }
@@ -534,7 +546,7 @@ class openaijson
 
             if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
-                $error_message = "Request to openaijson connector failed: {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
+                $error_message = "Request to openaijson connector failed:{$this->_url} {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
@@ -844,6 +856,191 @@ class openaijson
     public function isDone()
     {
         return !$this->primary_handler || feof($this->primary_handler);
+    }
+
+    public function fast_request($contextData, $customParms)
+    {
+        
+        $this->init_connector($customParms);
+        
+
+        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+
+        if ($this->_is_groq_com) { // --- exception made for groq.com
+
+            if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
+
+            if ($this->_is_reasoning) { 
+            /*  a reasoning model need "reasoning_format" parameter: 
+                parsed  - Separates reasoning into a dedicated field while keeping the response concise.
+                raw     - Includes reasoning within <think> tags in the content.
+                hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
+                if (!$this->_is_openai)
+                    $data['reasoning_format'] = "hidden";  
+            }
+            //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
+        
+        } else { // --- normal flow (not groq)
+        
+            if ($this->_is_x_ai) {
+                unset($data["presence_penalty"]); 
+                unset($data["frequency_penalty"]);
+            } elseif ($this->_is_mistral_ai) {
+                //unset($data["presence_penalty"]); 
+                //unset($data["frequency_penalty"]);
+                unset($data["max_completion_tokens"]);
+                $data['max_tokens'] = $MAX_TOKENS;
+            } elseif ($this->_is_cohere_ai) {
+                unset($data["max_completion_tokens"]);
+                $data['max_tokens'] = $MAX_TOKENS;
+            } 
+
+            if (($this->_is_reasoning) && (!$this->_is_mistral_ai) && (!$this->_is_cohere_ai)) { // there is no rule accepted by all providers
+                if (!$this->_is_openai)
+                    $data["chat_format"]="tidy"; 
+
+                $data["reasoning_effort"] = "low";
+                if (!$this->_is_openai)
+                    $data['reasoning_format'] = "hidden";
+
+                if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
+                    $data["enable_thinking"] = false;
+            }
+
+        } // --- endif provider
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
+        if ($temperature < 0.0) $temperature = 0.0;
+        else if ($temperature > 2.0) $temperature = 2.0; 
+
+        $presence_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"]) ? : 0.0);
+        if ($presence_penalty < -2.0) $presence_penalty = -2.0;
+        else if ($presence_penalty > 2.0) $presence_penalty = 2.0; 
+
+        $frequency_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"]) ? : 0.0); 
+        if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
+        else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
+
+        $repetition_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ? : 0.0);
+        if ($repetition_penalty < 0.0) $repetition_penalty = 0.0;
+        else if ($repetition_penalty > 2.0) $repetition_penalty = 2.0; 
+
+        $top_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_p"]) ? : 1.0);
+        if ($top_p > 1) $top_p = 1.0;
+        else if ($top_p < 0.0) $top_p = 0.0; 
+
+        $min_p = floatval(($GLOBALS["CONNECTOR"][$this->name]["min_p"]) ? : 0.0);
+        if ($min_p > 1) $min_p = 1.0;
+        else if ($min_p < 0.0) $min_p = 0.0; 
+
+        $top_a = floatval(($GLOBALS["CONNECTOR"][$this->name]["top_a"]) ? : 0.0);
+        if ($top_a > 1) $top_a = 1.0;
+        else if ($top_a < 0.0) $top_a = 0.0; 
+
+        $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
+        if ($top_k < 0) $top_k = 0; 
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($customParms["MAX_TOKENS"]);
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
+        
+        $data = array(
+            'model' => $this->_model,
+            'messages' => $contextData,
+            'stream' => false, 
+            'max_completion_tokens' => $MAX_TOKENS,
+            'temperature' => $temperature, 
+        );
+
+
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["stop"])&&sizeof($GLOBALS["CONNECTOR"][$this->name]["stop"])>0) {
+            $data["stop"]=$GLOBALS["CONNECTOR"][$this->name]["stop"];
+        }
+        // Override
+
+       
+
+        if (isset($customParms["MAX_TOKENS"])) {
+            if ($customParms["MAX_TOKENS"]==0) {
+                unset($data["max_completion_tokens"]);
+            } elseif ($customParms["MAX_TOKENS"]) {
+                $data["max_completion_tokens"]=$customParms["MAX_TOKENS"];
+            }
+        }
+
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
+                unset($data["max_completion_tokens"]);
+            } else {
+                $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
+
+            }
+        }
+        
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+            }
+        }
+
+
+        foreach ($customParms as $parm=>$value) {
+            $data[$parm]=$value;
+        }
+        
+
+        $GLOBALS["DEBUG_DATA"]["full"]=($data);
+     
+        $data["max_completion_tokens"]+=0;
+        
+        $headers = array(
+            'Content-Type: application/json',
+            "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
+            "HTTP-Referer:  https://dwemerdynamics.com/",
+            "X-Title: Dwemer Dynamics"
+        );
+
+        $options = array(
+            'http' => array(
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers),
+                'content' => json_encode($data),
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+            )
+        );
+
+        $context = stream_context_create($options);
+        
+        file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
+
+        $json_response=file_get_contents($this->_url, false, $context);
+        file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+
+        if ($json_response) {
+            $text_response=json_decode($json_response,true);
+            if (is_valid_array($text_response)) {
+               
+                return $text_response["choices"][0]["message"]["content"];    
+            }
+            else {
+                log_msg("Error in openai request '$url':$json_response", 3);
+                return "";
+                
+            }
+            
+        }
+            
+
+
+    }
+
+    public function setDone()
+    {
+        $this->_forcedClose=true;
+        
     }
 
 }

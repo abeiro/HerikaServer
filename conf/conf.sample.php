@@ -16,7 +16,7 @@ $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically.
 $DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to prevent spam. If a diary hotkey is pressed within this time period, the request will be ignored.
 $DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
 $AUTO_DIARY=false; //Automatically create diary entries for all current followers when sleeping. Wait events are controlled by AUTO_DIARY_WAIT setting. Each follower respects their individual diary cooldown timer.
-$AUTO_DIARY_WAIT=true; //When AUTO_DIARY is enabled, this controls whether diary entries are created during wait events. If false, auto diary will only trigger on sleep events.
+$AUTO_DIARY_WAIT=false; //When AUTO_DIARY is enabled, this controls whether diary entries are created during wait events. If false, auto diary will only trigger on sleep events.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
@@ -30,6 +30,7 @@ $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random c
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
 $CONTEXT_HISTORY_DIARY="100"; //Amount of context history specifically for diary entries. Set to 0 to use regular CONTEXT_HISTORY value.
 $CONTEXT_HISTORY_DYNAMIC_PROFILE="50"; //Amount of context history specifically for dynamic profile updates. Set to 0 to use regular CONTEXT_HISTORY value.
+$CLEAN_CONTEXT_FOCUS_CHAT_HISTORY=25; //Amount of context history specifically for clean context focus chat. Set to 0 to use regular CONTEXT_HISTORY value.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=false; //Leave as is - read only
@@ -38,7 +39,7 @@ $MAX_WORDS_LIMIT=0; //Enforce a word limit for AI's responses. 0 = unlimited.
 $BOOK_EVENT_FULL=true; //Sends full contents of books to the AI
 $BOOK_EVENT_ALWAYS_NARRATOR=false; //Only The Narrator summarizes books.
 $NARRATOR_TALKS=true; //Enables the Narrator.
-$NARRATOR_WELCOME=true;
+$NARRATOR_WELCOME=false;
 $QUEST_COMMENT = false;
 $QUEST_COMMENT_CHANCE= "10%";
 $CURRENT_TASK=false; //Sends current plan/quest to the AI
@@ -81,6 +82,7 @@ $DYNAMIC_PROFILE_FIELDS = ["relationships", "goals"];
 $DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, update #HERIKA_NAME# personality traits. "
     . "Maintain all existing relevant personality traits and add new ones based on recent experiences. "
     . "Focus on behavioral changes, emotional growth/regression, new traits that emerged, and changes in confidence or outlook. "
+    . "Emphasize any past traumas or new traumas caused by the death of companions, allies, or other known characters, and how these events shape the character’s behavior and mindset. "
     . "Return ONLY the updated personality description in 3-5 sentences. Do not include any introductory text, meta-commentary, or phrases like 'Here is the updated personality' or 'The character's personality is'. "
     . "Start directly with the personality content.";
 
@@ -113,7 +115,7 @@ $DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update th
     . "Focus on new aspirations that emerged, modified existing goals due to circumstances, and updated long-term objectives. "
     . "Return ONLY a bulleted list using * Goal description as actionable aspiration format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated goals' or 'The character's goals are'. "
     . "Start directly with the first bullet point.";
-$DIARY_PROMPT = "Please write a short summary of {\$GLOBALS[\"PLAYER_NAME\"]} and {\$GLOBALS[\"HERIKA_NAME\"]}s last dialogues and events written above into {\$GLOBALS[\"HERIKA_NAME\"]}s diary . WRITE AS IF YOU WERE {\$GLOBALS[\"HERIKA_NAME\"]}. Start the diary entry with the current date and time.";
+$DIARY_PROMPT = "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#s last dialogues and events written above into #HERIKA_NAME#s diary . WRITE AS IF YOU WERE #HERIKA_NAME#. Start the diary entry with the current date and time.";
 
 // Dynamic profile utility button
 $dynamic_profile_b1 = false; // Utility button for updating all dynamic profile fields
@@ -126,19 +128,34 @@ $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude fro
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).
 $CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp","player2"]; //Creates diary entries and memories.
 
+// Core LLM connector defaults (IDs from core_llm_connector table)
+$CORE_CONNECTOR_DIRECTOR=1;
+$CORE_CONNECTOR_PLAYER=2;
+$CORE_CONNECTOR_SUMMARY=5;
+$CORE_CONNECTOR_MEDIUMTERM=5;
+$CORE_CONNECTOR_PROFILES=1;
+
+;
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.3-70b-instruct"; //LLM model.
-$CONNECTOR["openrouterjson"]["max_tokens"]='512'; //Maximum tokens to generate.
 $CONNECTOR["openrouterjson"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
+$CONNECTOR["openrouterjson"]["fallback_models"]=""; //comma separated models.
+$CONNECTOR["openrouterjson"]["PROVIDER"]=""; //use only this list of providers from OpenRouter
+$CONNECTOR["openrouterjson"]["providers_sort"]="default"; //Prioritize providers on selected attribute.
+$CONNECTOR["openrouterjson"]["providers_to_ignore"]=""; //list of providers to ignore
+$CONNECTOR["openrouterjson"]["provider_quantizations"]=""; //use only providers that have the quant. level
+$CONNECTOR["openrouterjson"]["provider_max_price_input"]=0.0; //use only providers that have lower input price
+$CONNECTOR["openrouterjson"]["provider_max_price_output"]=0.0; //use only providers that have lower output price
+$CONNECTOR["openrouterjson"]["max_tokens"]='1024'; //Maximum tokens to generate.
 $CONNECTOR["openrouterjson"]["temperature"]=0.6; //LLM parameter temperature.
 $CONNECTOR["openrouterjson"]["presence_penalty"]=0; //LLM parameter presence_penalty.
 $CONNECTOR["openrouterjson"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
-$CONNECTOR["openrouterjson"]["repetition_penalty"]=1.1;	//LLM parameter repetition_penalty.
+$CONNECTOR["openrouterjson"]["repetition_penalty"]=1;	//LLM parameter repetition_penalty.
 $CONNECTOR["openrouterjson"]["top_p"]=1; //LLM parameter top_p.
-$CONNECTOR["openrouterjson"]["top_k"]=40; //LLM parameter top_k.
 $CONNECTOR["openrouterjson"]["min_p"]=0; //LLM parameter min_p.
+$CONNECTOR["openrouterjson"]["top_k"]=0; //LLM parameter top_k.
 $CONNECTOR["openrouterjson"]["top_a"]=0; //LLM parameter top_a.
 $CONNECTOR["openrouterjson"]["ENFORCE_JSON"]=true; //Attempts to enforce JSON. Only valid for some models.
 $CONNECTOR["openrouterjson"]["PREFILL_JSON"]=false; //Prefill JSON, Only valid for some models.
@@ -154,15 +171,22 @@ $CONNECTOR["openrouterjson"]["get_parms9"] = false; // Utility button for high r
 //OpenRouter (Legacy)
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
 $CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.
-$CONNECTOR["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
 $CONNECTOR["openrouter"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
-$CONNECTOR["openrouter"]["temperature"]=0.9; //LLM parameter temperature.
+$CONNECTOR["openrouter"]["fallback_models"]=""; //comma separated models.
+$CONNECTOR["openrouter"]["PROVIDER"]=""; //select a list of providers from OpenRouter
+$CONNECTOR["openrouter"]["providers_sort"]="default"; //Prioritize providers on selected attribute.
+$CONNECTOR["openrouter"]["providers_to_ignore"]=""; //list of providers to ignore
+$CONNECTOR["openrouter"]["provider_quantizations"]=""; //use only providers that have the quant. level
+$CONNECTOR["openrouter"]["provider_max_price_input"]=0.0; //use only providers that have lower input price
+$CONNECTOR["openrouter"]["provider_max_price_output"]=0.0; //use only providers that have lower otput price
+$CONNECTOR["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
+$CONNECTOR["openrouter"]["temperature"]=0.6; //LLM parameter temperature.
 $CONNECTOR["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty.
 $CONNECTOR["openrouter"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
-$CONNECTOR["openrouter"]["repetition_penalty"]=0.9;	//LLM parameter repetition_penalty.
-$CONNECTOR["openrouter"]["top_k"]=0; //LLM parameter top_k.
+$CONNECTOR["openrouter"]["repetition_penalty"]=1;	//LLM parameter repetition_penalty.
 $CONNECTOR["openrouter"]["top_p"]=1; //LLM parameter top_p.
-$CONNECTOR["openrouter"]["min_p"]=0.1; //LLM parameter min_p.
+$CONNECTOR["openrouter"]["min_p"]=0; //LLM parameter min_p.
+$CONNECTOR["openrouter"]["top_k"]=0; //LLM parameter top_k.
 $CONNECTOR["openrouter"]["top_a"]=0; //LLM parameter top_a.
 $CONNECTOR["openrouter"]["MAX_TOKENS_MEMORY"]="1024"; //Maximum tokens to generate when summarizing.
 $CONNECTOR["openrouter"]["API_KEY"]=""; //API key.
@@ -177,8 +201,8 @@ $CONNECTOR["openaijson"]["url"]="https://api.openai.com/v1/chat/completions"; //
 $CONNECTOR["openaijson"]["model"]='gpt-4o-mini'; //LLM model.
 $CONNECTOR["openaijson"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openaijson"]["max_tokens"]='512'; //Maximum tokens to generate.
-$CONNECTOR["openaijson"]["temperature"]=1; //LLM parameter temperature.
-$CONNECTOR["openaijson"]["presence_penalty"]=1; //LLM parameter presence_penalty.
+$CONNECTOR["openaijson"]["temperature"]=0.6; //LLM parameter temperature.
+$CONNECTOR["openaijson"]["presence_penalty"]=0; //LLM parameter presence_penalty.
 $CONNECTOR["openaijson"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
 $CONNECTOR["openaijson"]["top_p"]=1; //LLM parameter top_p.
 $CONNECTOR["openaijson"]["API_KEY"]=""; //API key.
@@ -189,8 +213,8 @@ $CONNECTOR["openai"]["url"]="https://api.openai.com/v1/chat/completions";
 $CONNECTOR["openai"]["model"]='gpt-4o-mini'; //LLM model.
 $CONNECTOR["openai"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openai"]["max_tokens"]='1024'; //Maximum tokens to generate.
-$CONNECTOR["openai"]["temperature"]=1; //LLM parameter temperature.
-$CONNECTOR["openai"]["presence_penalty"]=1; //LLM parameter presence_penalty.
+$CONNECTOR["openai"]["temperature"]=0.6; //LLM parameter temperature.
+$CONNECTOR["openai"]["presence_penalty"]=0; //LLM parameter presence_penalty.
 $CONNECTOR["openai"]["frequency_penalty"]=0; //LLM parameter frequency_penalty.
 $CONNECTOR["openai"]["top_p"]=1; //LLM parameter top_p.
 $CONNECTOR["openai"]["API_KEY"]=""; //API key.
@@ -200,8 +224,8 @@ $CONNECTOR["player2json"]["url"]="http://localhost:4315/v1/chat/completions"; //
 //Google OpenAI JSON
 $CONNECTOR["google_openaijson"]["url"]="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"; //API endpoint.
 $CONNECTOR["google_openaijson"]["model"]='gemini-1.5-flash'; //LLM model.
-$CONNECTOR["google_openaijson"]["max_tokens"]='512'; //Maximum tokens to generate.
-$CONNECTOR["google_openaijson"]["temperature"]=1; //LLM parameter temperature.
+$CONNECTOR["google_openaijson"]["max_tokens"]='1024'; //Maximum tokens to generate.
+$CONNECTOR["google_openaijson"]["temperature"]=0.75; //LLM parameter temperature.
 $CONNECTOR["google_openaijson"]["top_p"]=0.95; //LLM parameter top_p.
 $CONNECTOR["google_openaijson"]["API_KEY"]=""; //API key.
 $CONNECTOR["google_openaijson"]["MAX_TOKENS_MEMORY"]="800"; //Maximum tokens to generate when summarizing.
@@ -399,8 +423,12 @@ $STT["AZURE"]["API_KEY"]=""; //API key.
 $STT["LOCALWHISPER"]["URL"]="http://127.0.0.1:9876/api/v0/transcribe"; //API endpoint.
 $STT["LOCALWHISPER"]["FORMFIELD"]="audio_file"; //(audio_file,file) Form field name.
 
+//Deepgram STT
+$STT["DEEPGRAM"]["LANG"]="en"; //Language.
+$STT["DEEPGRAM"]["MODEL"]="nova-3"; //Model to use.
+
 //[Image to Text (Soulgaze)]
-$ITTFUNCTION="none";
+$ITTFUNCTION="openrouter";
 //OpenAI
 $ITT["openai"]["url"]='https://api.openai.com/v1/chat/completions';	//OpenAI API endpoint.
 $ITT["openai"]["model"]='gpt-4o-mini'; //LLM model.
@@ -423,6 +451,14 @@ $ITT["google_openai"]["AI_VISION_PROMPT"]="Let's roleplay in the world of Skyrim
     . "Describe the environment, objects, and people you see at a fifth grade reading level. "
     . "Ignore video game HUD and UI elements in your description."; //Prompt to sent to the Vision AI.
 $ITT["google_openai"]["AI_PROMPT"]='#HERIKA_NPC1# describes what they are seeing'; //Prompt sent to the LLM.
+//OpenRouter
+$ITT["openrouter"]["url"]='https://openrouter.ai/api/v1/chat/completions'; //OpenRouter API endpoint.
+$ITT["openrouter"]["model"]='google/gemini-2.5-flash'; //LLM model.
+$ITT["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
+$ITT["openrouter"]["detail"]='low'; //(Low|high) fidelity image understanding.
+$ITT["openrouter"]["API_KEY"]=''; //OpenRouter API key.
+$ITT["openrouter"]["AI_VISION_PROMPT"]="Let's roleplay in the world of Skyrim. Describe this Skyrim image as if it is real life. Describe the environment, objects, and people you see at a fifth grade reading level. Ignore video game HUD and UI elements in your description."; //Prompt to send to the Vision API.
+$ITT["openrouter"]["AI_PROMPT"]='#HERIKA_NPC1# describes what they are seeing'; //Prompt sent to the LLM.
 //Azure
 $ITT["AZURE"]["ENDPOINT"]=""; //API endpoint.
 $ITT["AZURE"]["API_KEY"]=""; //API key.
@@ -436,11 +472,11 @@ $ITT["llamacpp"]["AI_PROMPT"]=''; //Prompt sent to the LLM.
 //Memory Settings
 $FEATURES["MEMORY_EMBEDDING"]["ENABLED"]=true; //Long term memory embedding.
 $FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8082'; //Text2Vec service
-$FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=false; //NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!
+$FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=true; //NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!
 
-$FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=10; //Time in minutes to delay before using a memory in a prompt.
+$FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=12; //Time in minutes to delay before using a memory in a prompt.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1; //Amount of memory records that will be injected into the prompt.
-$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=false; //Combines individual memory logs into larger ones at the cost of tokens.
+$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=true; //Combines individual memory logs into larger ones at the cost of tokens.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10; //Time frame used to pack summary data.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]=33; //0-100 - Minimal distance to offer memory.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66; //0-100 - Minimal distance to endorse memory.
@@ -460,3 +496,4 @@ $BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
 
 ?>
+

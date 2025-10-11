@@ -23,17 +23,22 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$lang = $GLOBALS["TTS"]["PIPERTTS"]["language"] ?? "EN";
 		*/
 		
-		$voice = $GLOBALS["TTS"]["FORCED_VOICE_DEV"] ?? $GLOBALS["TTS"]["PIPERTTS"]["voiceid"];
+        $voice = $GLOBALS["TTS"]["FORCED_VOICE_DEV"] ?? $GLOBALS["TTS"]["PIPERTTS"]["voiceid"];
 		if (empty($voice))
 			$voice = $GLOBALS["TTS"]["PIPERTTS"]["voiceid"] ?? "en_US-amy-low";
 
 		$speaker_name = trim($GLOBALS["TTS"]["PIPERTTS"]["speaker"] ?? "");
 		$speaker_id = intval($GLOBALS["TTS"]["PIPERTTS"]["speaker_id"] ?? 0);
 	
-		if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"])) {
+        if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"])) {
 			$voice = $GLOBALS["PATCH_OVERRIDE_VOICE"];
 			$speaker_id = intval($GLOBALS["PATCH_OVERRIDE_VOICE_ID"] ?? 0);
 		}
+
+        // Normalize special narrator voice id
+        if (is_string($voice) && strtolower($voice) === 'thenarrator') {
+            $voice = 'malenord';
+        }
 
 		$timescale = floatval($GLOBALS["TTS"]["PIPERTTS"]["length_scale"] ?? 1.0);
 		if ($timescale > 4.0)

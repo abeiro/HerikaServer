@@ -27,26 +27,22 @@
     // specify the available actions which will be made available in the context
     Function setActions() {
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+            // inject the prompt here with the actions (original flat format)
+            $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
-                //$data["tools"][]=["type"=>"function","function"=>$function];
-                if (!$function)
+                if (!$function) {
                     continue;
+                }
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
-                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"]) {
+                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"] || $function["name"]==$GLOBALS["F_NAMES"]["AttackHunt"]) {
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $GLOBALS["COMMAND_PROMPT"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
-                }/* else if ($function["name"]==$GLOBALS["F_NAMES"]["SetSpeed"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                    $GLOBALS["COMMAND_PROMPT"].="(run|fastwalk|jog|walk)";
-                }*/  else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
+                } else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
-                    
                 } else {
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
             }
-
             $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk";
             $GLOBALS["FUNC_LIST"][]="Talk";
             shuffle($GLOBALS["FUNC_LIST"]);
@@ -58,6 +54,16 @@
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
     
+        // Auto-detect language from TTS config if LLM_LANG not set
+        if (!isset($GLOBALS["LLM_LANG"]) && isset($GLOBALS["LANG_LLM_XTTS"]) && $GLOBALS["LANG_LLM_XTTS"]) {
+            if (isset($GLOBALS["TTS"]["XTTSFASTAPI"]["language"])) {
+                $GLOBALS["LLM_LANG"] = $GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
+            } elseif (isset($GLOBALS["TTS"]["MELOTTS"]["language"])) {
+                $ttsLang = strtolower($GLOBALS["TTS"]["MELOTTS"]["language"]);
+                $GLOBALS["LLM_LANG"] = $ttsLang;
+            }
+        }
+    
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
@@ -66,8 +72,8 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target actor| action's destination location name ",
-                    "lang"=>"en|es"
+                    "target"=>"action target actor|action destination location name",
+                    "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -76,7 +82,7 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target actor| action's destination location name "
+                    "target"=>"action target actor|action destination location name "
                 ];
             }
         } else {
@@ -86,8 +92,8 @@
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target actor| action's destination location name ",
-                    "lang"=>"en|es",
+                    "target"=>"action target actor|action destination location name",
+                    "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>"lines of dialogue"
                 ];
             } else {
@@ -96,7 +102,7 @@
                     "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action's target actor| action's destination location name ",
+                    "target"=>"action target actor|action destination location name",
                     "message"=>"lines of dialogue"
                 ];
             }
@@ -163,7 +169,7 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                            "description" => "action's target actor| action's destination location name "
+                            "description" => "action target actor| action destination location name"
                         )
                     ),
                     "required" => [
@@ -180,6 +186,29 @@
             )
         );
 
+        if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
+            if (isset($GLOBALS["LLM_LANG"])) {
+
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                    $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                        "lang" => array(
+                            "type" => "string",
+                            "description" => "Language to use. Must be {$GLOBALS["LLM_LANG"]}"
+                        )
+                    ));
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="lang";
+            } else {
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                    $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                        "lang" => array(
+                            "type" => "string",
+                            "description" => "Language to use"
+                        )
+                    ));
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="lang";    
+            }
+
+        }
         // request speaking tones from the LLM when using zonos TTS
         if (zonosIsActive()) {
             $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(

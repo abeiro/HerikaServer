@@ -295,6 +295,13 @@ main.container {
     margin: 8px 0;
 }
 
+.people-item-container {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin: 8px 0;
+}
+
 .people-item {
     width: 100%;
     padding: 12px 20px;
@@ -326,6 +333,34 @@ main.container {
     font-weight: bold;
 }
 
+.pdf-export-btn {
+    padding: 10px 18px;
+    background-color: rgb(212, 94, 0);
+    border: 2px solid rgb(172, 76, 0);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.pdf-export-btn:hover {
+    background-color: rgb(172, 76, 0);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.pdf-export-btn:active {
+    transform: scale(0.98);
+}
+
 /* Calendar Container */
 .calendar-container {
     transition: all 0.3s ease-in-out;
@@ -338,7 +373,7 @@ main.container {
 /* Modal Styles */
 .modal-container {
     position: fixed !important;
-    top: 160px !important;
+    top: 80px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     background-color: #3a3a3a;

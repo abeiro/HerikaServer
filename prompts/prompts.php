@@ -9,8 +9,8 @@ $PROMPTS=array(
         ],
     // Database Prompt (Book)
     "book"=>[
-        "cue"=>["(Note that despite their poor memory, {$GLOBALS["HERIKA_NAME"]} is capable of remembering entire books)"],
-        "player_request"=>["{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["HERIKA_NAME"]}, summarize this book shortly: "]  //requirement
+        "cue"=>["({$GLOBALS["HERIKA_NAME"]} reads the book ) {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]}: {$GLOBALS["HERIKA_NAME"]}, check this book: "]  //requirement
         
     ],
     // Database Prompt (Combat End)
@@ -91,6 +91,26 @@ $PROMPTS=array(
         //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
         ,"extra" => ["dontuse" => (rand(0, 99) >= intval($GLOBALS["BORED_EVENT"]))]
     ],
+    // Database Prompt (Combat Bark)
+    "combatbark"=>[
+        "cue"=>[
+            "({$GLOBALS["HERIKA_NAME"]} shouts a battle cry) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} taunts their enemy) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} yells a war cry) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} shouts encouragement to allies) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} curses at their foe) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} makes an intimidating threat) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} yells about their weapon striking true) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} shouts about the enemy's weakness) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} roars in fury) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} calls out enemy positions) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} shouts tactical advice) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} makes a vengeful declaration) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} yells about defending their allies) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} shouts about their honor in battle) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            "({$GLOBALS["HERIKA_NAME"]} makes a boastful combat comment) {$GLOBALS["TEMPLATE_DIALOG"]}"
+        ]
+    ],
     // Database Prompt (Good Morning)
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} comment about {$GLOBALS["PLAYER_NAME"]}s time asleep. {$GLOBALS["TEMPLATE_DIALOG"]}"],
@@ -120,9 +140,9 @@ $PROMPTS=array(
         "extra"=>[],
         "cue"=>[
             "default"=>"{$GLOBALS["HERIKA_NAME"]} talks to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "TakeASeat"=>"({$GLOBALS["HERIKA_NAME"]} talks about the location where they took a seat){$GLOBALS["TEMPLATE_DIALOG"]}",
+            "TakeASeat"=>"({$GLOBALS["HERIKA_NAME"]} talks, eg: talks about the location where they took a seat){$GLOBALS["TEMPLATE_DIALOG"]}",
             "GetDateTime"=>"({$GLOBALS["HERIKA_NAME"]} answers with the current date and time in short sentence){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} makes a comment about movement to the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
+            "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} talks, eg: makes a comment about movement to the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
             "CheckInventory"=>"({$GLOBALS["HERIKA_NAME"]} talks about inventory and backpack items){$GLOBALS["TEMPLATE_DIALOG"]}",
             "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected, short speech){$GLOBALS["TEMPLATE_DIALOG"]}",
             "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests they have read in the quest journal){$GLOBALS["TEMPLATE_DIALOG"]}",
@@ -136,11 +156,11 @@ $PROMPTS=array(
     // Database Prompt (Lockpicked)
     "lockpicked"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} comments about what they lockpicked {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} what they found) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} to share what they found) {$GLOBALS["TEMPLATE_DIALOG"]}"
+            "({$GLOBALS["HERIKA_NAME"]} comments about the lock picking event. Consider the context as it can be a door, a chest, etc. Also, consider the purpose, can be; stealing, looting, dungeon doors, etc. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            //"({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} what they found) {$GLOBALS["TEMPLATE_DIALOG"]}",
+            //"({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} to share what they found) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
-        "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has unlocked {$gameRequest[3]})"],
+        "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has picked a lock: {$gameRequest[3]})"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("lockpick", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     // Database Prompt (After Attack)
@@ -176,9 +196,12 @@ $PROMPTS=array(
             "({$GLOBALS['HERIKA_NAME']} subtly shifts the focus of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} speculates about potential outcomes of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS['HERIKA_NAME']} warns about possible risks tied to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",*/
-            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider only one answer and/or action involving a third actor, without repeating your answer for each actor. Keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer and/or action, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Focus speech and/or action only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
+            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)?"Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider only one answer and/or action involving a third actor, without repeating your answer for each actor. Keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}"
+                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Consider only one answer and/or action involving a third actor, without repeating your answer for each actor. Keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)?"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}"
+                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer , keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)?"Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Focus speech and/or action only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
+                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Focus speech only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
         
     ],

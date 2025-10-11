@@ -64,6 +64,10 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
     if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
         $voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
+
+    // Normalize special narrator voice id
+    if (is_string($voice) && strtolower($voice) === 'thenarrator')
+        $voice = 'malenord';
  
 
     $speed=$GLOBALS["TTS"]["MELOTTS"]["speed"]+0.01;

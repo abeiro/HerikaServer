@@ -133,14 +133,38 @@ if ($GLOBALS["MINIME_T5"]) {
                                 ts_rank(native_vector, to_tsquery('$locationCtxQuery')) *
                                     CASE WHEN native_vector @@ to_tsquery('$locationCtxQuery') THEN 2.0 ELSE 1.0 END +
                                 ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) *
-                                    CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END 
+                                    CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END +
+                                -- Strong boost for alias match in the topic column (commas/underscores normalized)
+                                ts_rank(
+                                    to_tsvector('simple',
+                                        regexp_replace(
+                                            replace(lower(topic), '_',' '),
+                                            ',', ' ', 'g'
+                                        )
+                                    ),
+                                    to_tsquery('$currentInputTopicQuery')
+                                ) *
+                                CASE WHEN
+                                    to_tsvector('simple',
+                                        regexp_replace(
+                                            replace(lower(topic), '_',' '),
+                                            ',', ' ', 'g'
+                                        )
+                                    ) @@ to_tsquery('$currentInputTopicQuery')
+                                THEN 20.0 ELSE 0.0 END 
                                 AS combined_rank
                             FROM oghma
                             WHERE
                                 native_vector @@ to_tsquery('$currentInputTopicQuery') OR
                                 native_vector @@ to_tsquery('$currentOghmaTopicQuery') OR
                                 native_vector @@ to_tsquery('$locationCtxQuery') OR
-                                native_vector @@ to_tsquery('$contextKeywordsQuery')
+                                native_vector @@ to_tsquery('$contextKeywordsQuery') OR
+                                to_tsvector('simple',
+                                    regexp_replace(
+                                        replace(lower(topic), '_',' '),
+                                        ',', ' ', 'g'
+                                    )
+                                ) @@ to_tsquery('$currentInputTopicQuery')
                             ORDER BY combined_rank DESC
                             LIMIT 1;
                         ";
@@ -188,7 +212,7 @@ if ($GLOBALS["MINIME_T5"]) {
 
                                 if ($advancedAllowed) {
                                     // The user can access advanced lore
-                                    $GLOBALS["OGHMA_HINT"] .= " \n# Lore Information (You have advanced knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}  \"{$topTopic["topic_desc"]}\"";
+                                    $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You have advanced knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}\n\"".trim($topTopic["topic_desc"])."\"";
                                 } else {
                                     // -----------------------------
                                     // 2) Check basic article
@@ -211,9 +235,9 @@ if ($GLOBALS["MINIME_T5"]) {
                                     }
 
                                     if ($basicAllowed) {
-                                        $GLOBALS["OGHMA_HINT"] .= " \n# Lore Information (You only have basic knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}  \"{$topTopic["topic_desc_basic"]}\"";
+                                        $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You only have basic knowledge on this subject, you can use it in your dialogue): {$topTopic["topic"]}\n\"".trim($topTopic["topic_desc_basic"])."\"";
                                     } else {
-                                        $GLOBALS["OGHMA_HINT"] .= " \nYou do not know ANYTHING about {$topTopic["topic"]}";
+                                        $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information\nYou do not know ANYTHING about {$topTopic["topic"]}";
                                     }
                                 }
                             } else {
@@ -290,6 +314,10 @@ if ($GLOBALS["MINIME_T5"]) {
                 );
             }
         }
+    } else {
+        error_log("[OGHMA] OGHMA_INFINIUM disabled: {$GLOBALS["OGHMA_INFINIUM"]}");
     }
+}  else {
+        error_log("[OGHMA]  MINIME_T5 disabled: {$GLOBALS["MINIME_T5"]}");
 }
 ?>

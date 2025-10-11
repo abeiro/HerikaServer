@@ -22,7 +22,7 @@ function stt($filePath)
         $keywords = lastKeyWordsNew(30);
         foreach ($keywords as $keyword)
             $url .= "&keyterm=" . urlencode($keyword) . "%3A1";
-        if (stripos(" multi, en, en-US, ", $stt_lang) === false) {
+        if (stripos(" multi, en, en-US, de, nl, sv, sv-SE, da, da-DK ", $stt_lang) === false) {
             $stt_lang = 'en';
         }
     } else if (strpos($stt_model, "whisper") === false) {   //WHISPER MODELS DONT SUPPORT KEYWORDS
@@ -37,12 +37,21 @@ function stt($filePath)
     // print_r($keywords);
     $ch = curl_init();
 
+    // Resolve API key: prefer STT conf, fallback to API Badge 'Deepgram'
+    $apiKey = trim($GLOBALS['STT']['DEEPGRAM']['API_KEY'] ?? '');
+    if ($apiKey === '') {
+        try {
+            $row = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='deepgram' LIMIT 1");
+            if (is_array($row) && !empty($row['api_key'])) $apiKey = $row['api_key'];
+        } catch (Throwable $_e) {}
+    }
+
     // Set cURL options
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $fileContent);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Authorization: Token ' . $GLOBALS['STT']['DEEPGRAM']['API_KEY'],
+        'Authorization: Token ' . $apiKey,
         'Content-Type: audio/wav'
     ));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

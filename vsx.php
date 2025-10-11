@@ -1,198 +1,183 @@
 <?php
 
-require_once("lib/utils.php");
+require_once "lib/utils.php";
 
 /* Voice Sample Extractor */
 
-
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
-require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($path . "lib".DIRECTORY_SEPARATOR."fuz_convert.php"); // API KEY must be there
-require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once $path . "conf" . DIRECTORY_SEPARATOR . "conf.php"; // API KEY must be there
+require_once $path . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+require_once $path . "lib" . DIRECTORY_SEPARATOR . "fuz_convert.php"; // API KEY must be there
+require_once $path . "lib" . DIRECTORY_SEPARATOR . "auditing.php";
+require_once $path . "lib" . DIRECTORY_SEPARATOR . "logger.php";
 
-function normalize_endpoint_url($url) {
+$db = new sql();
+$GLOBALS["ENGINE_PATH"]=$path;
+
+require_once $path . "lib/core/npc_master.class.php";
+require_once $path . "lib/core/api_badge.class.php";
+require_once $path . "lib/core/core_profiles.class.php";
+require_once $path . "lib/core/llm_connector.class.php";
+require_once $path . "lib/core/tts_connector.class.php";
+
+function normalize_endpoint_url($url)
+{
     // Remove trailing slashes
     $url = rtrim($url, '/');
     return $url;
 }
 
-$GLOBALS["AUDIT_RUNID_REQUEST"]="vsx";
+$GLOBALS["AUDIT_RUNID_REQUEST"] = "vsx";
 
 // Put info into DB asap
-$db=new sql();
-$voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"]; 
+$voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
 
 // Lock
-$semaphoreKey2 =abs(crc32(__FILE__));
-$semaphore = sem_get($semaphoreKey2);
-while (sem_acquire($semaphore,true)!=true)  {
+$semaphoreKey2 = abs(crc32(__FILE__));
+$semaphore     = sem_get($semaphoreKey2);
+while (sem_acquire($semaphore, true) != true) {
     usleep(10);
 }
 
-if ($voicelogic === 'voicetype') {
+if ($voicelogic === 'voicetype' || true) { // force 
 
     //db insert for name entry for data_functions.
     $codename = npcNameToCodename($_GET["codename"]);
-    
+
     $db->upsertRowTrx(
         'conf_opts',
-        array(
+        [
             'value' => $_GET["oname"],
-            "id"=>"Nametype/$codename"
-        ),
-        ["id"=>"Nametype/$codename"]
+            "id"    => "Nametype/$codename",
+        ],
+        ["id" => "Nametype/$codename"]
     );
 
-    // new logic so codename is set to voicetype so it generates voicetype sample
+                                                // new logic so codename is set to voicetype so it generates voicetype sample
     $voicetype = explode("\\", $_GET["oname"]); // Split the path
-    $codename = strtolower($voicetype[3]); // Use the 4th part of the path
-    // Delete and insert the database entry
+    $codename  = strtolower($voicetype[3]);     // Use the 4th part of the path
+                                                // Delete and insert the database entry
 
     $db->upsertRowTrx(
         'conf_opts',
-        array(
+        [
             'value' => $_GET["oname"],
-            "id"=>"Voicetype/$codename"
-        ),
-        ["id"=>"Voicetype/$codename"]
+            "id"    => "Voicetype/$codename",
+        ],
+        ["id" => "Voicetype/$codename"]
     );
+
+    $npcMaster      = new NpcMaster();
+    $currentNpcData = $npcMaster->getByName($_GET["codename"]);
+    if ($currentNpcData) {
+        if (empty($currentNpcData["voiceid"])) {
+            $currentNpcData["voiceid"] = $codename;
+            $currentNpcData            = $npcMaster->updateByArray($currentNpcData);
+        }
+    }
 
     $db->close();
 
-    // update voiceid in the conf file if it is still blank (because the npc was added before they spoke)
-    $replaceBlankVoiceID = function($ttsName, $voiceid, $confFilePath) {
-        $pattern = '/\$TTS\[\"'.$ttsName.'\"\]\[\"voiceid\"\]\s*=\s*(".*"|\'.*\');/';
-        $confContent = file_get_contents($confFilePath);
-        preg_match_all($pattern, $confContent, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
-
-        if (!empty($matches)) {
-            $lastMatch = end($matches);
-
-            // only replace if the last voiceid is blank
-            if ($lastMatch[1][0] == "''" || $lastMatch[1][0] == '""') {
-                $startPosition = $lastMatch[0][1];
-                $length = strlen($lastMatch[0][0]);
-                $replacement = "\$TTS[\"$ttsName\"][\"voiceid\"]='$voiceid';";
-                $updatedContent = substr_replace($confContent, $replacement, $startPosition, $length);
-                file_put_contents($confFilePath, $updatedContent);
-            }
-        }
-    };
-
-    $hashedname=md5($_GET["codename"]);
-    $confFilePath = __DIR__.DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR."conf_$hashedname.php";
-    if (file_exists($confFilePath)) {
-        $replaceBlankVoiceID("XTTSFASTAPI", $codename, $confFilePath);
-        $replaceBlankVoiceID("ZONOS_GRADIO", $codename, $confFilePath);
-    }
-
 } else {
-  $codename = npcNameToCodename($_GET["codename"]);
+    $codename = npcNameToCodename($_GET["codename"]);
     // Old name logic
-  
-  $db->upsertRowTrx(
-      'conf_opts',
-      array(
-          'value' => $_GET["oname"],
-          "id"=>"Voicetype/$codename"
-      ),
-      ["id"=>"Voicetype/$codename"]
 
-  );
-  $db->close();
+    $db->upsertRowTrx(
+        'conf_opts',
+        [
+            'value' => $_GET["oname"],
+            "id"    => "Voicetype/$codename",
+        ],
+        ["id" => "Voicetype/$codename"]
+
+    );
+    $db->close();
 }
 
 // Release lock, this is the time consuming part, we have the needed data into the database
 
 audit_log("vsx.php data available for $codename");
 
-if ($semaphore) 
+if ($semaphore) {
     sem_release($semaphore);
-
-if (strpos($_GET["oname"],".fuz"))  {
-    $ext="fuz";
-} else if (strpos($_GET["oname"],".xwm")) {
-    $ext="xwm";
-} else if (strpos($_GET["oname"],".wav")) {
-  $ext="wav";
 }
 
+if (strpos($_GET["oname"], ".fuz")) {
+    $ext = "fuz";
+} else if (strpos($_GET["oname"], ".xwm")) {
+    $ext = "xwm";
+} else if (strpos($_GET["oname"], ".wav")) {
+    $ext = "wav";
+}
 
+$already   = file_exists(normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . "/sample/$codename.wav");
+$finalName = __DIR__ . DIRECTORY_SEPARATOR . "soundcache/_vsx_" . md5($_FILES["file"]["tmp_name"]) . ".$ext";
+@copy($_FILES["file"]["tmp_name"], $finalName);
 
-$already=file_exists(normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])."/sample/$codename.wav");
-$finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_vsx_".md5($_FILES["file"]["tmp_name"]).".$ext";
-@copy($_FILES["file"]["tmp_name"] ,$finalName);
+if (! $already) {
 
+    if (file_exists($path . "data/voices/$codename.wav")) {
+        // File exists in HS data/voices. Dont't convert again
+        $finalFile = $path . "data/voices/$codename.wav";
 
+    } else {
 
-if (!$already) {
+        if (! $_FILES["file"]["tmp_name"]) {
+            die("VSX error, no data given");
+        }
 
-  if (file_exists($path."data/voices/$codename.wav")) {
-    // File exists in HS data/voices. Dont't convert again
-    $finalFile=$path."data/voices/$codename.wav";
+        if (filesize($_FILES["file"]["tmp_name"]) == 0) {
+            Logger::error("Empty file {$_FILES["file"]["tmp_name"]}");
+            die();
+        }
 
-  } else {
+        Logger::info("Received sample: {$_GET["oname"]}");
 
-    if (!$_FILES["file"]["tmp_name"])
-        die("VSX error, no data given");
+        if (strpos($_GET["oname"], ".fuz")) {
+            $finalFile = fuzToWav($finalName);
 
-    if (filesize($_FILES["file"]["tmp_name"])==0) {
-        Logger::error("Empty file {$_FILES["file"]["tmp_name"]}");
-        die();
+        } else if (strpos($_GET["oname"], ".xwm")) {
+
+            $finalFile = xwmToWav($finalName);
+
+        } else if (strpos($_GET["oname"], ".wav")) {
+
+            $finalFile = wavToWav($finalName);
+        }
     }
-
-    
-    Logger::info("Received sample: {$_GET["oname"]}");
-
-    if (strpos($_GET["oname"],".fuz")) {
-        $finalFile=fuzToWav($finalName);
-        
-    } else if (strpos($_GET["oname"],".xwm")) {
-
-        $finalFile=xwmToWav($finalName);
-
-      } else if (strpos($_GET["oname"],".wav")) {
-
-        $finalFile=wavToWav($finalName);
+    if (! isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || ! ($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])) {
+        die("Error");
     }
-  }
-  if (!isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || !($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) ) {
-    die("Error");
-  }
 
 } else {
-  Logger::info("Empty file {$_FILES["file"]["tmp_name"]} already exists at ".normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])."/sample/$codename.wav");
-  
+    Logger::info("Empty file {$_FILES["file"]["tmp_name"]} already exists at " . normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . "/sample/$codename.wav");
+
 }
 
-
 if ($already) {
-  die();
+    die();
 }
 
 // Lets store voice files
-@copy($finalFile,$path."data/voices/$codename.wav");
+@copy($finalFile, $path . "data/voices/$codename.wav");
 
-$url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]).'/upload_sample';
+$url  = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
 $curl = curl_init();
 
 // Set cURL options
-curl_setopt_array($curl, array(
-  CURLOPT_URL => $url,
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_POST => true,
-  CURLOPT_POSTFIELDS => array(
-    'wavFile' => new CURLFile($finalFile, 'audio/wav', "$codename.wav")
-  ),
-  CURLOPT_HTTPHEADER => array(
-    'Content-Type: multipart/form-data'
-  )
-));
+curl_setopt_array($curl, [
+    CURLOPT_URL            => $url,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => [
+        'wavFile' => new CURLFile($finalFile, 'audio/wav', "$codename.wav"),
+    ],
+    CURLOPT_HTTPHEADER     => [
+        'Content-Type: multipart/form-data',
+    ],
+]);
 
 // Execute cURL request and get response
 $response = curl_exec($curl);
 
 audit_log("vsx.php voice available for {$_GET["codename"]}");
-?>

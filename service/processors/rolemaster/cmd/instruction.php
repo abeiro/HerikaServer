@@ -2,18 +2,34 @@
 require_once(__DIR__ . '/../../../../lib/logger.php');
 
 
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/npc_master.class.php");
+require_once($GLOBALS["ENGINE_ROOT"]  . "lib/core/core_profiles.class.php");
+
+$GLOBALS["ENGINE_PATH"]=$GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
+
 $GLOBALS["active_profile"]=md5("The Narrator");
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
+$CONF_SAMPLE_VARS=extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
+
+$connector=new LLMConnector();
+$currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_DIRECTOR"]);
+$connectionHandler = $connector->getConnector($currentConnectorData);
+
+$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+$GLOBALS["CURRENT_CONNECTOR"]=$currentConnectorData["driver"];
+
+$connector->setOldGlobals($currentConnectorData);
 
 
-if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
-        logMsg("Choose a LLM model and connector. Used '{$GLOBALS["CURRENT_CONNECTOR"]}'",S_LOG_CRITICAL);
+if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
+        logMsg("Choose a LLM model and connector. Used connector: '{$GLOBALS["CORE_CONNECTOR_DIRECTOR"]}'",S_LOG_CRITICAL);
 
     } else {
         logMsg("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
-        require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 
         $contextDataHistoric = DataLastDataExpandedFor("", -50);    // Full context
         
@@ -74,7 +90,7 @@ user request: actor \"a\" leaves the place
   "instruction": "actor b should say goodbye to b",
   "action": "JustTalk",
   "target": "Actor a",
-  "scene_note": ""
+  "scene_note": "Is a sad moment, generally speaking."
 }
 ]
 }
@@ -86,7 +102,7 @@ user request: actor \"a\" leaves the place
   "instruction": "actor a should ask actor b for a few coins, claiming they desperately need a drink.",
   "action": "Talk",
   "target": "actor b",
-  "scene_note": "actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away."
+  "scene_note": "actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away. Other actors watch this two guys with curiosity"
  }
 ]
 }
@@ -117,8 +133,8 @@ In addition, follow these general scene rules as a game director:
  * Do not resolve everything neatly—keep room for ongoing tension or future continuation.
  * You must always provide dialogue instructions for the character, as every request requires a dialogue response.
  * Here are a list of actions that can be used: \n  ** ".implode("\n  ** ", $fnames)."\n  ** JustTalk 
- * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.
- * If scene is getting boring, add a plot twist
+ * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality. Other actors can see this to properly react.
+ * If scene is getting boring/repetitive, add a plot twist
 ");
         
         
@@ -140,7 +156,7 @@ In addition, follow these general scene rules as a game director:
             
         };
 
-        $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
+        
         // Force unset json schema
         $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;
 

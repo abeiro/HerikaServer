@@ -41,6 +41,34 @@ $ENABLED_FUNCTIONS_LOCAL=[
 
 $GLOBALS["ENABLED_FUNCTIONS"]=$ENABLED_FUNCTIONS_LOCAL;
 
+// Ensure PLAYER_NAME is defined before use in string templates below.
+// Prefer database (conf_opts) value; fallback to existing global or 'Player'.
+if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
+    $safePlayerName = 'Player';
+    try {
+        $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+        @include_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+        if (isset($GLOBALS["DBDRIVER"]) && $GLOBALS["DBDRIVER"] !== '') {
+            $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
+            if (!class_exists('sql') && file_exists($dbClassFile)) {
+                require_once($dbClassFile);
+            }
+            if (class_exists('sql')) {
+                $db_local = new sql();
+                if (method_exists($db_local, 'fetchOne')) {
+                    $row = $db_local->fetchOne("select value from conf_opts where id='PLAYER_NAME'");
+                    if (is_array($row) && isset($row['value']) && $row['value'] !== '') {
+                        $safePlayerName = (string)$row['value'];
+                    }
+                }
+            }
+        }
+    } catch (Throwable $_) {
+        // ignore and use fallback
+    }
+    $GLOBALS["PLAYER_NAME"] = $safePlayerName;
+}
+
 // We must use internal keys here.
 
 $F_TRANSLATIONS_LOCAL["Inspect"]="Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
@@ -69,7 +97,7 @@ $F_TRANSLATIONS_LOCAL["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explici
 $F_TRANSLATIONS_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
 $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
-$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]} (property listener) once {$GLOBALS["PLAYER_NAME"]} is agree";
+$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
@@ -79,7 +107,6 @@ $F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives item to a s
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
 
-$GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
 
 
 
@@ -118,7 +145,6 @@ $F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives items to 
 $F_RETURNMESSAGES_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_RETURNMESSAGES_LOCAL["UseSoulGaze"]="{$GLOBALS["HERIKA_NAME"]} used soulgaze";
 
-$GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
 
 
 
@@ -151,7 +177,7 @@ $F_NAMES_LOCAL["TravelTo"]="TravelTo";
 $F_NAMES_LOCAL["SearchMemory"]="TryToRemember";
 $F_NAMES_LOCAL["WaitHere"]="WaitHere";
 $F_NAMES_LOCAL["GiveItemToPlayer"]="GiveItemToPlayer";
-$F_NAMES_LOCAL["TakeGoldFromPlayer"]="ReceiveCoinsFromPlayer";
+$F_NAMES_LOCAL["TakeGoldFromPlayer"]="TakeMoneyFrom{$GLOBALS["PLAYER_NAME"]}";// Mmm
 $F_NAMES_LOCAL["FollowPlayer"]="FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"]="ComeCloser";
 $F_NAMES_LOCAL["Brawl"]="Fight";
@@ -162,12 +188,15 @@ $F_NAMES_LOCAL["GoToSleep"]="GoToSleep";
 $F_NAMES_LOCAL["UseSoulGaze"]="UseSoulGaze";
 
 
-$GLOBALS["F_NAMES"]=$F_NAMES_LOCAL;
 
 if (isset($GLOBALS["CORE_LANG"]))
-	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) 
+	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php")) {
 		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."functions.php");
+    }
     
+$GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
+$GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
+$GLOBALS["F_NAMES"]=$F_NAMES_LOCAL;
     
     
 $GLOBALS["FUNCTIONS"] = [
@@ -689,7 +718,10 @@ function getFunctionCodeName($key) {
 }
 
 function getFunctionTrlName($key) {
-    return $GLOBALS["F_NAMES"][$key];
+    if (isset($GLOBALS["F_NAMES"][$key] )&& !empty($GLOBALS["F_NAMES"][$key]))
+        return $GLOBALS["F_NAMES"][$key];
+    else
+        return $key;
     
 }
 
@@ -775,6 +807,8 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'Brawl',
         'GiveGoldTo',
         'GiveItemTo',
+        'GoToSleep',
+
     ];
 } else {
     $GLOBALS["ENABLED_FUNCTIONS"]=[
@@ -787,7 +821,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'Attack',
         'AttackHunt',
         'TravelTo',
-        //'Follow',
+        'Follow',
         'CheckInventory',
         'SheatheWeapon',
         'Relax',
@@ -797,7 +831,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'IncreaseWalkSpeed',
         'DecreaseWalkSpeed',
         'WaitHere',
-        'SetCurrentTask',
+        //'SetCurrentTask',
         'ComeCloser',
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
@@ -822,6 +856,8 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS[
     require(__DIR__.DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
 }
 
+
+
 if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
     require(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php");
 }
@@ -830,8 +866,14 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
 
 foreach ($GLOBALS["FUNCTIONS"] as $n=>$v)
     if (!in_array(getFunctionCodeName($v["name"]),$GLOBALS["ENABLED_FUNCTIONS"])) {
-            unset($GLOBALS["FUNCTIONS"][$n]);
+        error_log("[FUNCTION] Removing $n {$v["name"]}:".getFunctionCodeName($v["name"]));
+        unset($GLOBALS["FUNCTIONS"][$n]);
     }
+
+
+file_put_contents(__DIR__."/../log/bug_func.txt",print_r($GLOBALS["FUNCTIONS"],true));
+file_put_contents(__DIR__."/../log/bug_func.txt",print_r($GLOBALS["ENABLED_FUNCTIONS"],true),FILE_APPEND);
+file_put_contents(__DIR__."/../log/bug_func.txt",print_r($GLOBALS["ENABLED_FUNCTIONS"],true),FILE_APPEND);
 
 $GLOBALS["FUNCTIONS"]=array_values($GLOBALS["FUNCTIONS"]); //Get rid of array keys
 

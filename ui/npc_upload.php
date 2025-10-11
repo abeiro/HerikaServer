@@ -12,9 +12,10 @@ $TITLE = "📝CHIM - NPC Biography";
 ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
+// Navbar hidden on this page
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -46,67 +47,62 @@ if (!$conn) {
 //
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual'])) {
     $npc_name   = strtolower(trim($_POST['npc_name'] ?? ''));
-    $npc_pers   = $_POST['npc_pers'] ?? '';
-    $npc_dynamic = (isset($_POST['npc_dynamic']) && trim($_POST['npc_dynamic']) !== '')
-        ? trim($_POST['npc_dynamic'])
-        : null;
-    $npc_misc = (isset($_POST['npc_misc']) && trim($_POST['npc_misc']) !== '')
-        ? trim($_POST['npc_misc'])
-        : '';
-    $melotts_voiceid   = (!empty($_POST['melotts_voiceid']))   ? trim($_POST['melotts_voiceid'])   : null;
-    $xtts_voiceid      = (!empty($_POST['xtts_voiceid']))      ? trim($_POST['xtts_voiceid'])      : null;
-    $xvasynth_voiceid  = (!empty($_POST['xvasynth_voiceid']))  ? trim($_POST['xvasynth_voiceid'])  : null;
-    
-    // New extended profile fields
-    $npc_background    = (!empty($_POST['npc_background']))    ? trim($_POST['npc_background'])    : null;
-    $npc_personality   = (!empty($_POST['npc_personality']))   ? trim($_POST['npc_personality'])   : null;
-    $npc_appearance    = (!empty($_POST['npc_appearance']))    ? trim($_POST['npc_appearance'])    : null;
-    $npc_relationships = (!empty($_POST['npc_relationships'])) ? trim($_POST['npc_relationships']) : null;
-    $npc_occupation    = (!empty($_POST['npc_occupation']))    ? trim($_POST['npc_occupation'])    : null;
-    $npc_skills        = (!empty($_POST['npc_skills']))        ? trim($_POST['npc_skills'])        : null;
-    $npc_speechstyle   = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
-    $npc_goals         = (!empty($_POST['npc_goals']))         ? trim($_POST['npc_goals'])         : null;
+    $core       = $_POST['npc_pers'] ?? '';
+    $oghma_knowledge_tags = (isset($_POST['npc_misc']) && trim($_POST['npc_misc']) !== '') ? trim($_POST['npc_misc']) : '';
+    $voiceid    = (!empty($_POST['voiceid'])) ? trim($_POST['voiceid']) : null;
+    $gender     = (!empty($_POST['gender'])) ? trim($_POST['gender']) : null;
+    $race       = (!empty($_POST['race'])) ? trim($_POST['race']) : null;
+    $refid      = (!empty($_POST['refid'])) ? trim($_POST['refid']) : null;
 
-    if (!empty($npc_name) && !empty($npc_pers)) {
+    // Extended profile fields (bio schema)
+    $npc_static_bio   = (!empty($_POST['npc_background']))    ? trim($_POST['npc_background'])    : null;
+    $personality      = (!empty($_POST['npc_personality']))   ? trim($_POST['npc_personality'])   : null;
+    $appearance       = (!empty($_POST['npc_appearance']))    ? trim($_POST['npc_appearance'])    : null;
+    $relationships    = (!empty($_POST['npc_relationships'])) ? trim($_POST['npc_relationships']) : null;
+    $occupation       = (!empty($_POST['npc_occupation']))    ? trim($_POST['npc_occupation'])    : null;
+    $skills           = (!empty($_POST['npc_skills']))        ? trim($_POST['npc_skills'])        : null;
+    $speechstyle      = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
+    $goals            = (!empty($_POST['npc_goals']))         ? trim($_POST['npc_goals'])         : null;
+
+    if (!empty($npc_name) && !empty($core)) {
         $query = "
-            INSERT INTO {$schema}.npc_templates_custom
-                (npc_name, npc_dynamic, npc_pers, npc_misc, melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
-                 npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals)
+            INSERT INTO {$schema}.bio_templates_custom
+                (npc_name, core, oghma_knowledge_tags, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (npc_name)
             DO UPDATE SET
-                npc_dynamic = EXCLUDED.npc_dynamic,
-                npc_pers = EXCLUDED.npc_pers,
-                npc_misc = EXCLUDED.npc_misc,
-                melotts_voiceid = EXCLUDED.melotts_voiceid,
-                xtts_voiceid = EXCLUDED.xtts_voiceid,
-                xvasynth_voiceid = EXCLUDED.xvasynth_voiceid,
-                npc_background = EXCLUDED.npc_background,
-                npc_personality = EXCLUDED.npc_personality,
-                npc_appearance = EXCLUDED.npc_appearance,
-                npc_relationships = EXCLUDED.npc_relationships,
-                npc_occupation = EXCLUDED.npc_occupation,
-                npc_skills = EXCLUDED.npc_skills,
-                npc_speechstyle = EXCLUDED.npc_speechstyle,
-                npc_goals = EXCLUDED.npc_goals
+                core = EXCLUDED.core,
+                oghma_knowledge_tags = EXCLUDED.oghma_knowledge_tags,
+                npc_static_bio = EXCLUDED.npc_static_bio,
+                personality = EXCLUDED.personality,
+                appearance = EXCLUDED.appearance,
+                relationships = EXCLUDED.relationships,
+                occupation = EXCLUDED.occupation,
+                skills = EXCLUDED.skills,
+                speechstyle = EXCLUDED.speechstyle,
+                goals = EXCLUDED.goals,
+                voiceid = EXCLUDED.voiceid,
+                gender = EXCLUDED.gender,
+                race = EXCLUDED.race,
+                refid = EXCLUDED.refid
         ";
 
         $params = [
             $npc_name,
-            $npc_dynamic,
-            $npc_pers,
-            $npc_misc,
-            $melotts_voiceid,
-            $xtts_voiceid,
-            $xvasynth_voiceid,
-            $npc_background,
-            $npc_personality,
-            $npc_appearance,
-            $npc_relationships,
-            $npc_occupation,
-            $npc_skills,
-            $npc_speechstyle,
-            $npc_goals
+            $core,
+            $oghma_knowledge_tags,
+            $npc_static_bio,
+            $personality,
+            $appearance,
+            $relationships,
+            $occupation,
+            $skills,
+            $speechstyle,
+            $goals,
+            $voiceid,
+            $gender,
+            $race,
+            $refid
         ];
 
         $result = pg_query_params($conn, $query, $params);
@@ -117,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
             $message .= "<p>Error inserting/updating NPC data: " . pg_last_error($conn) . "</p>";
         }
     } else {
-        $message .= "<p>Please fill in all required fields: NPC Name and NPC Static Bio.</p>";
+        $message .= "<p>Please fill in all required fields: NPC Name and Summary Bio.</p>";
     }
 }
 
@@ -184,9 +180,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             }
                         }
 
-                        $npc_pers = '';
-                        if (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) {
-                            $npc_pers = trim($data[$headerMap['npc_pers']]);
+                        $core = '';
+                        if (isset($headerMap['core']) && isset($data[$headerMap['core']])) {
+                            $core = trim($data[$headerMap['core']]);
+                        } elseif (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) { // legacy
+                            $core = trim($data[$headerMap['npc_pers']]);
                         }
 
                         // npc_dynamic is optional
@@ -196,10 +194,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $npc_dynamic = ($temp !== '') ? $temp : null;
                         }
 
-                        // npc_misc is not used, but we can store it or default to ''
-                        $npc_misc = '';
-                        if (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) {
-                            $npc_misc = trim($data[$headerMap['npc_misc']]);
+                        $oghma_knowledge_tags = '';
+                        if (isset($headerMap['oghma_knowledge_tags']) && isset($data[$headerMap['oghma_knowledge_tags']])) {
+                            $oghma_knowledge_tags = trim($data[$headerMap['oghma_knowledge_tags']]);
+                        } elseif (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) { // legacy
+                            $oghma_knowledge_tags = trim($data[$headerMap['npc_misc']]);
                         }
 
                         // Voice IDs are optional, so store null if missing/empty
@@ -221,51 +220,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $xvasynth_voiceid = ($temp !== '') ? $temp : null;
                         }
 
-                        // New extended profile fields
+                        // New extended profile fields (prefer new headers; fallback to legacy npc_* headers)
                         $npc_background = null;
-                        if (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
+                        if (isset($headerMap['npc_static_bio']) && isset($data[$headerMap['npc_static_bio']])) {
+                            $temp = trim($data[$headerMap['npc_static_bio']]);
+                            $npc_background = ($temp !== '') ? $temp : null;
+                        } elseif (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
                             $temp = trim($data[$headerMap['npc_background']]);
                             $npc_background = ($temp !== '') ? $temp : null;
                         }
 
                         $npc_personality = null;
-                        if (isset($headerMap['npc_personality']) && isset($data[$headerMap['npc_personality']])) {
+                        if (isset($headerMap['personality']) && isset($data[$headerMap['personality']])) {
+                            $temp = trim($data[$headerMap['personality']]);
+                            $npc_personality = ($temp !== '') ? $temp : null;
+                        } elseif (isset($headerMap['npc_personality']) && isset($data[$headerMap['npc_personality']])) {
                             $temp = trim($data[$headerMap['npc_personality']]);
                             $npc_personality = ($temp !== '') ? $temp : null;
                         }
 
                         $npc_appearance = null;
-                        if (isset($headerMap['npc_appearance']) && isset($data[$headerMap['npc_appearance']])) {
+                        if (isset($headerMap['appearance']) && isset($data[$headerMap['appearance']])) {
+                            $temp = trim($data[$headerMap['appearance']]);
+                            $npc_appearance = ($temp !== '') ? $temp : null;
+                        } elseif (isset($headerMap['npc_appearance']) && isset($data[$headerMap['npc_appearance']])) {
                             $temp = trim($data[$headerMap['npc_appearance']]);
                             $npc_appearance = ($temp !== '') ? $temp : null;
                         }
 
                         $npc_relationships = null;
-                        if (isset($headerMap['npc_relationships']) && isset($data[$headerMap['npc_relationships']])) {
+                        if (isset($headerMap['relationships']) && isset($data[$headerMap['relationships']])) {
+                            $temp = trim($data[$headerMap['relationships']]);
+                            $npc_relationships = ($temp !== '') ? $temp : null;
+                        } elseif (isset($headerMap['npc_relationships']) && isset($data[$headerMap['npc_relationships']])) {
                             $temp = trim($data[$headerMap['npc_relationships']]);
                             $npc_relationships = ($temp !== '') ? $temp : null;
                         }
 
                         $npc_occupation = null;
-                        if (isset($headerMap['npc_occupation']) && isset($data[$headerMap['npc_occupation']])) {
+                        if (isset($headerMap['occupation']) && isset($data[$headerMap['occupation']])) {
+                            $temp = trim($data[$headerMap['occupation']]);
+                            $npc_occupation = ($temp !== '') ? $temp : null;
+                        } elseif (isset($headerMap['npc_occupation']) && isset($data[$headerMap['npc_occupation']])) {
                             $temp = trim($data[$headerMap['npc_occupation']]);
                             $npc_occupation = ($temp !== '') ? $temp : null;
                         }
 
                         $npc_skills = null;
-                        if (isset($headerMap['npc_skills']) && isset($data[$headerMap['npc_skills']])) {
+                        if (isset($headerMap['skills']) && isset($data[$headerMap['skills']])) {
+                            $temp = trim($data[$headerMap['skills']]);
+                            $npc_skills = ($temp !== '') ? $temp : null;
+                        } elseif (isset($headerMap['npc_skills']) && isset($data[$headerMap['npc_skills']])) {
                             $temp = trim($data[$headerMap['npc_skills']]);
                             $npc_skills = ($temp !== '') ? $temp : null;
                         }
 
                         $npc_speechstyle = null;
-                        if (isset($headerMap['npc_speechstyle']) && isset($data[$headerMap['npc_speechstyle']])) {
+                        if (isset($headerMap['speechstyle']) && isset($data[$headerMap['speechstyle']])) {
+                            $temp = trim($data[$headerMap['speechstyle']]);
+                            $npc_speechstyle = ($temp !== '') ? $temp : null;
+                        } elseif (isset($headerMap['npc_speechstyle']) && isset($data[$headerMap['npc_speechstyle']])) {
                             $temp = trim($data[$headerMap['npc_speechstyle']]);
                             $npc_speechstyle = ($temp !== '') ? $temp : null;
                         }
 
                         $npc_goals = null;
-                        if (isset($headerMap['npc_goals']) && isset($data[$headerMap['npc_goals']])) {
+                        if (isset($headerMap['goals']) && isset($data[$headerMap['goals']])) {
+                            $temp = trim($data[$headerMap['goals']]);
+                            $npc_goals = ($temp !== '') ? $temp : null;
+                        } elseif (isset($headerMap['npc_goals']) && isset($data[$headerMap['npc_goals']])) {
                             $temp = trim($data[$headerMap['npc_goals']]);
                             $npc_goals = ($temp !== '') ? $temp : null;
                         }
@@ -274,20 +297,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         // Convert to UTF-8 if not already
                         if ($encoding !== 'UTF-8') {
                             $npc_name           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
-                            $npc_pers           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_pers);
-                            $npc_dynamic        = ($npc_dynamic !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_dynamic)
-                                                    : null;
-                            $npc_misc           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_misc);
-                            $melotts_voiceid    = ($melotts_voiceid !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $melotts_voiceid)
-                                                    : null;
-                            $xtts_voiceid       = ($xtts_voiceid !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $xtts_voiceid)
-                                                    : null;
-                            $xvasynth_voiceid   = ($xvasynth_voiceid !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $xvasynth_voiceid)
-                                                    : null;
+                            $core               = iconv('Windows-1252', 'UTF-8//IGNORE', $core);
+                            $oghma_knowledge_tags = iconv('Windows-1252', 'UTF-8//IGNORE', $oghma_knowledge_tags);
+                            $voiceid            = ($voiceid !== null) ? iconv('Windows-1252', 'UTF-8//IGNORE', $voiceid) : null;
+                            $gender             = ($gender !== null) ? iconv('Windows-1252', 'UTF-8//IGNORE', $gender) : null;
+                            $race               = ($race !== null) ? iconv('Windows-1252', 'UTF-8//IGNORE', $race) : null;
+                            $refid              = ($refid !== null) ? iconv('Windows-1252', 'UTF-8//IGNORE', $refid) : null;
                             $npc_background     = ($npc_background !== null)
                                                     ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_background)
                                                     : null;
@@ -315,44 +330,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         }
 
                         // Skip if either required field is empty
-                        if (empty($npc_name) || empty($npc_pers)) {
-                            $message .= "<p>Skipping row with missing npc_name or npc_pers.</p>";
+                        if (empty($npc_name) || empty($core)) {
+                            $message .= "<p>Skipping row with missing npc_name or core.</p>";
                             continue;
                         }
 
-                        // Insert or Update
+                        // Insert or Update (bio schema)
                         $query = "
-                            INSERT INTO $schema.npc_templates_custom 
-                                (npc_name, npc_dynamic, npc_pers, npc_misc, 
-                                 melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
-                                 npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals)
+                            INSERT INTO $schema.bio_templates_custom 
+                                (npc_name, core, oghma_knowledge_tags, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid)
                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                             ON CONFLICT (npc_name)
                             DO UPDATE SET
-                                npc_dynamic       = EXCLUDED.npc_dynamic,
-                                npc_pers          = EXCLUDED.npc_pers,
-                                npc_misc          = EXCLUDED.npc_misc,
-                                melotts_voiceid   = EXCLUDED.melotts_voiceid,
-                                xtts_voiceid      = EXCLUDED.xtts_voiceid,
-                                xvasynth_voiceid  = EXCLUDED.xvasynth_voiceid,
-                                npc_background    = EXCLUDED.npc_background,
-                                npc_personality   = EXCLUDED.npc_personality,
-                                npc_appearance    = EXCLUDED.npc_appearance,
-                                npc_relationships = EXCLUDED.npc_relationships,
-                                npc_occupation    = EXCLUDED.npc_occupation,
-                                npc_skills        = EXCLUDED.npc_skills,
-                                npc_speechstyle   = EXCLUDED.npc_speechstyle,
-                                npc_goals         = EXCLUDED.npc_goals
+                                core = EXCLUDED.core,
+                                oghma_knowledge_tags = EXCLUDED.oghma_knowledge_tags,
+                                npc_static_bio = EXCLUDED.npc_static_bio,
+                                personality = EXCLUDED.personality,
+                                appearance = EXCLUDED.appearance,
+                                relationships = EXCLUDED.relationships,
+                                occupation = EXCLUDED.occupation,
+                                skills = EXCLUDED.skills,
+                                speechstyle = EXCLUDED.speechstyle,
+                                goals = EXCLUDED.goals,
+                                voiceid = EXCLUDED.voiceid,
+                                gender = EXCLUDED.gender,
+                                race = EXCLUDED.race,
+                                refid = EXCLUDED.refid
                         ";
+
+                        // Ensure optional meta variables are initialized
+                        if (!isset($voiceid)) { $voiceid = null; }
+                        if (!isset($gender)) { $gender = null; }
+                        if (!isset($race))   { $race = null; }
+                        if (!isset($refid))  { $refid = null; }
 
                         $params = [
                             $npc_name,
-                            $npc_dynamic,
-                            $npc_pers,
-                            $npc_misc,
-                            $melotts_voiceid,
-                            $xtts_voiceid,
-                            $xvasynth_voiceid,
+                            $core,
+                            $oghma_knowledge_tags,
                             $npc_background,
                             $npc_personality,
                             $npc_appearance,
@@ -360,7 +375,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $npc_occupation,
                             $npc_skills,
                             $npc_speechstyle,
-                            $npc_goals
+                            $npc_goals,
+                            $voiceid,
+                            $gender,
+                            $race,
+                            $refid
                         ];
 
                         $result = pg_query_params($conn, $query, $params);
@@ -370,17 +389,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         } else {
                             $error_msg = pg_last_error($conn);
                             $message .= "<p>Error processing row (npc_name: '$npc_name'): $error_msg</p>";
-                            
-                            // Add debugging info for character length issues
                             if (strpos($error_msg, 'value too long') !== false) {
                                 $message .= "<p style='color: #ff6464;'>Debug info for '$npc_name':</p>";
                                 $message .= "<p>- npc_name length: " . strlen($npc_name) . "</p>";
-                                $message .= "<p>- npc_pers length: " . strlen($npc_pers) . "</p>";
-                                if ($npc_dynamic) $message .= "<p>- npc_dynamic length: " . strlen($npc_dynamic) . "</p>";
-                                $message .= "<p>- npc_misc length: " . strlen($npc_misc) . "</p>";
-                                if ($melotts_voiceid) $message .= "<p>- melotts_voiceid length: " . strlen($melotts_voiceid) . "</p>";
-                                if ($xtts_voiceid) $message .= "<p>- xtts_voiceid length: " . strlen($xtts_voiceid) . "</p>";
-                                if ($xvasynth_voiceid) $message .= "<p>- xvasynth_voiceid length: " . strlen($xvasynth_voiceid) . "</p>";
+                                $message .= "<p>- core length: " . strlen($core) . "</p>";
+                                $message .= "<p>- oghma_knowledge_tags length: " . strlen($oghma_knowledge_tags) . "</p>";
                             }
                         }
                     } // end while
@@ -405,13 +418,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
 // ────────────────────────────────────────────────────────────────────
 //
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['truncate_npc'])) {
-    $truncateQuery = "TRUNCATE TABLE $schema.npc_templates_custom RESTART IDENTITY CASCADE";
+    $truncateQuery = "TRUNCATE TABLE $schema.bio_templates_custom RESTART IDENTITY CASCADE";
     $truncateResult = pg_query($conn, $truncateQuery);
 
     if ($truncateResult) {
-        $message .= "<p style='color: #ff6464; font-weight: bold;'>The npc_templates_custom table has been emptied successfully.</p>";
+        $message .= "<p style='color: #ff6464; font-weight: bold;'>The bio_templates_custom table has been emptied successfully.</p>";
     } else {
-        $message .= "<p>Error emptying npc_templates_custom table: " . pg_last_error($conn) . "</p>";
+        $message .= "<p>Error emptying bio_templates_custom table: " . pg_last_error($conn) . "</p>";
     }
 }
 
@@ -450,12 +463,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_custom_npcs') {
     // Query to get all custom NPC data
     $export_query = "
         SELECT 
-            npc_name, npc_dynamic, npc_pers, npc_misc, 
-            melotts_voiceid, xtts_voiceid, xvasynth_voiceid,
-            npc_background, npc_personality, npc_appearance, 
-            npc_relationships, npc_occupation, npc_skills, 
-            npc_speechstyle, npc_goals
-        FROM {$schema}.npc_templates_custom 
+            npc_name, core, oghma_knowledge_tags, 
+            npc_static_bio, personality, appearance, 
+            relationships, occupation, skills, 
+            speechstyle, goals, voiceid, gender, race, refid
+        FROM {$schema}.bio_templates_custom 
         ORDER BY npc_name ASC
     ";
     
@@ -479,11 +491,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_custom_npcs') {
         
         // Write CSV header
         $csv_headers = [
-            'npc_name', 'npc_dynamic', 'npc_pers', 'npc_misc',
-            'melotts_voiceid', 'xtts_voiceid', 'xvasynth_voiceid',
-            'npc_background', 'npc_personality', 'npc_appearance',
-            'npc_relationships', 'npc_occupation', 'npc_skills',
-            'npc_speechstyle', 'npc_goals'
+            'npc_name', 'core', 'oghma_knowledge_tags',
+            'npc_static_bio', 'personality', 'appearance',
+            'relationships', 'occupation', 'skills',
+            'speechstyle', 'goals', 'voiceid', 'gender', 'race', 'refid'
         ];
         fputcsv($output, $csv_headers);
         
@@ -491,20 +502,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_custom_npcs') {
         while ($row = pg_fetch_assoc($export_result)) {
             $csv_row = [
                 $row['npc_name'] ?? '',
-                $row['npc_dynamic'] ?? '',
-                $row['npc_pers'] ?? '',
-                $row['npc_misc'] ?? '',
-                $row['melotts_voiceid'] ?? '',
-                $row['xtts_voiceid'] ?? '',
-                $row['xvasynth_voiceid'] ?? '',
-                $row['npc_background'] ?? '',
-                $row['npc_personality'] ?? '',
-                $row['npc_appearance'] ?? '',
-                $row['npc_relationships'] ?? '',
-                $row['npc_occupation'] ?? '',
-                $row['npc_skills'] ?? '',
-                $row['npc_speechstyle'] ?? '',
-                $row['npc_goals'] ?? ''
+                $row['core'] ?? '',
+                $row['oghma_knowledge_tags'] ?? '',
+                $row['npc_static_bio'] ?? '',
+                $row['personality'] ?? '',
+                $row['appearance'] ?? '',
+                $row['relationships'] ?? '',
+                $row['occupation'] ?? '',
+                $row['skills'] ?? '',
+                $row['speechstyle'] ?? '',
+                $row['goals'] ?? '',
+                $row['voiceid'] ?? '',
+                $row['gender'] ?? '',
+                $row['race'] ?? '',
+                $row['refid'] ?? ''
             ];
             fputcsv($output, $csv_row);
         }
@@ -611,7 +622,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
     /* Override main container styles */
     main {
-        padding-top: 160px; /* Space for navbar */
+        padding-top: 80px; /* Space for navbar */
         padding-bottom: 40px; /* Reduced space for footer */
         padding-left: 10%;
         padding-right: 10%;
@@ -696,7 +707,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         top: auto !important;
         left: auto !important;
         transform: none !important;
-        margin: 160px auto 40px auto !important;
+        margin: 80px auto 40px auto !important;
         max-width: 800px !important;
         width: 90% !important;
     }
@@ -939,6 +950,13 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     }
 </style>
 
+<?php if ($isEmbed): ?>
+<style>
+    /* Embedded in hub: remove extra top padding since navbar is hidden */
+    main { padding-top: 20px; }
+</style>
+<?php endif; ?>
+
 <main>
     <div id="toast" class="toast-notification">
         <span class="message"></span>
@@ -960,7 +978,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         <div class="content-section">
             <h1>Batch Upload</h1>
             <form action="" method="post" enctype="multipart/form-data">
-            <h3><strong>Make sure that all names with spaces are replaced with underscores _ and all names are lowercase!</strong></h3>
+            <h3><strong>Please user underscores instead of spaces.</strong></h3>
             <h4>Example: Mjoll the Lioness becomes mjoll_the_lioness</h4>
                 <div>
                     <label for="csv_file">Select .csv file to upload:</label>
@@ -973,10 +991,10 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                     <a href="?action=export_custom_npcs" class="action-button" style="background: rgba(242, 124, 17, 0.8);">Export Custom NPCs</a>
                 </div>
                 <p>You can verify that NPC data has been uploaded successfully by going to 
-                <b>Server Actions -> Database Manager -> dwemer -> public -> npc_templates_custom</b>.</p>
-                <p>All uploaded biographies will be saved into the <code>npc_templates_custom</code> table. This overwrites any entries in the regular table.</p>
-                <p>Also you can check the merged table at 
-                <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_npc_templates</b>.</p>
+                <b>Server Actions -> Database Manager -> dwemer -> public -> bio_templates_custom</b>.</p>
+                <p>All uploaded biographies will be saved into the <code>bio_templates_custom</code> table. This overwrites any entries in the regular table.</p>
+                <p>Also you can check the merged view at 
+                <b>Server Actions -> Database Manager -> dwemer -> public -> Views (Top bar) -> combined_bio_templates</b>.</p>
                 <p><strong>Export Custom NPCs:</strong> Download all your custom NPC entries as a CSV file for backup or sharing purposes. The exported file will include all custom entries with their extended profiles and voice overrides.</p>
             </form>
             <form action="" method="post">
@@ -1008,7 +1026,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             // Filter by both letter and search term
             $query_combined = "
                 SELECT *
-                FROM {$schema}.combined_npc_templates
+                FROM {$schema}.combined_bio_templates
                 WHERE LOWER(npc_name) LIKE LOWER($1) 
                 AND LOWER(npc_name) LIKE LOWER($2)
                 ORDER BY npc_name ASC
@@ -1018,7 +1036,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             // Filter by letter only
             $query_combined = "
                 SELECT *
-                FROM {$schema}.combined_npc_templates
+                FROM {$schema}.combined_bio_templates
                 WHERE LOWER(npc_name) LIKE LOWER($1)
                 ORDER BY npc_name ASC
             ";
@@ -1029,7 +1047,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             // Filter by search term only
             $query_combined = "
                 SELECT *
-                FROM {$schema}.combined_npc_templates
+                FROM {$schema}.combined_bio_templates
                 WHERE LOWER(npc_name) LIKE LOWER($1)
                 ORDER BY npc_name ASC
             ";
@@ -1038,7 +1056,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             // No filters
             $query_combined = "
                 SELECT *
-                FROM {$schema}.combined_npc_templates
+                FROM {$schema}.combined_bio_templates
                 ORDER BY npc_name ASC
             ";
             $params_combined = [];
@@ -1052,7 +1070,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
     echo '<br>';
     // Wrap the NPC Templates Database section in a div for indentation
     echo '<div class="indent5" id="table">';
-    echo '<h1>NPC Templates Database</h1>';
+    echo '<h1>NPC Bio Templates Database</h1>';
     echo '<div class="action-container">';
     echo '<button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>';
     echo '<div class="search-container">';
@@ -1089,18 +1107,18 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         while ($row = pg_fetch_assoc($result_combined)) {
             echo '<tr>';
             echo '  <td>' . htmlspecialchars($row['npc_name'] ?? '') . '</td>';
-            echo '  <td style="max-width: 250px; word-wrap: break-word;">' . nl2br(htmlspecialchars(substr($row['npc_pers'] ?? '', 0, 200))) . (strlen($row['npc_pers'] ?? '') > 200 ? '...' : '') . '</td>';
+            echo '  <td style="max-width: 250px; word-wrap: break-word;">' . nl2br(htmlspecialchars(substr($row['core'] ?? '', 0, 200))) . (strlen($row['core'] ?? '') > 200 ? '...' : '') . '</td>';
             
             // Extended Profile summary
             $extendedFields = [
-                'Background' => $row['npc_background'] ?? '',
-                'Personality' => $row['npc_personality'] ?? '',
-                'Appearance' => $row['npc_appearance'] ?? '',
-                'Relationships' => $row['npc_relationships'] ?? '',
-                'Occupation' => $row['npc_occupation'] ?? '',
-                'Skills' => $row['npc_skills'] ?? '',
-                'Speech Style' => $row['npc_speechstyle'] ?? '',
-                'Goals' => $row['npc_goals'] ?? ''
+                'Appearance' => $row['appearance'] ?? '',
+                'Static' => $row['npc_static_bio'] ?? '',
+                'Personality' => $row['personality'] ?? '',
+                'Relationships' => $row['relationships'] ?? '',
+                'Occupation' => $row['occupation'] ?? '',
+                'Skills' => $row['skills'] ?? '',
+                'Speech Style' => $row['speechstyle'] ?? '',
+                'Goals' => $row['goals'] ?? ''
             ];
             // Count fields that have actual content (not just empty strings or whitespace)
             $extendedCount = count(array_filter($extendedFields, function($value) {
@@ -1116,9 +1134,10 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             
             // Voice Overrides summary
             $voiceFields = [
-                'MeloTTS' => $row['melotts_voiceid'] ?? '',
-                'XTTS' => $row['xtts_voiceid'] ?? '',
-                'xVASynth' => $row['xvasynth_voiceid'] ?? ''
+                'VoiceID' => $row['voiceid'] ?? '',
+                'Gender' => $row['gender'] ?? '',
+                'Race' => $row['race'] ?? '',
+                'RefID' => $row['refid'] ?? ''
             ];
             echo '  <td style="font-size: 0.85em; line-height: 1.4;">';
             foreach ($voiceFields as $type => $voice) {
@@ -1128,7 +1147,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             echo '</td>';
             
             // Oghma Tags (npc_misc) column
-            $oghmaTagsValue = $row['npc_misc'] ?? '';
+            $oghmaTagsValue = $row['oghma_knowledge_tags'] ?? '';
             echo '  <td style="font-size: 1.5em; line-height: 1.4;">';
             if (!empty(trim($oghmaTagsValue))) {
                 // Split by commas and display as badges/tags
@@ -1148,20 +1167,21 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             echo '<div class="button-group" style="display: flex; flex-direction: column; gap: 5px;">';
             $jsData = [
                 'npc_name' => $row['npc_name'],
-                'npc_pers' => $row['npc_pers'],
-                'npc_dynamic' => $row['npc_dynamic'] ?? '',
-                'npc_misc' => $row['npc_misc'] ?? '',
-                'melotts_voiceid' => $row['melotts_voiceid'] ?? '',
-                'xtts_voiceid' => $row['xtts_voiceid'] ?? '',
-                'xvasynth_voiceid' => $row['xvasynth_voiceid'] ?? '',
-                'npc_background' => $row['npc_background'] ?? '',
-                'npc_personality' => $row['npc_personality'] ?? '',
-                'npc_appearance' => $row['npc_appearance'] ?? '',
-                'npc_relationships' => $row['npc_relationships'] ?? '',
-                'npc_occupation' => $row['npc_occupation'] ?? '',
-                'npc_skills' => $row['npc_skills'] ?? '',
-                'npc_speechstyle' => $row['npc_speechstyle'] ?? '',
-                'npc_goals' => $row['npc_goals'] ?? ''
+                'npc_pers' => $row['core'],
+                'npc_dynamic' => '',
+                'npc_misc' => $row['oghma_knowledge_tags'] ?? '',
+                'voiceid' => $row['voiceid'] ?? '',
+                'gender' => $row['gender'] ?? '',
+                'race' => $row['race'] ?? '',
+                'refid' => $row['refid'] ?? '',
+                'npc_background' => $row['npc_static_bio'] ?? '',
+                'npc_personality' => $row['personality'] ?? '',
+                'npc_appearance' => $row['appearance'] ?? '',
+                'npc_relationships' => $row['relationships'] ?? '',
+                'npc_occupation' => $row['occupation'] ?? '',
+                'npc_skills' => $row['skills'] ?? '',
+                'npc_speechstyle' => $row['speechstyle'] ?? '',
+                'npc_goals' => $row['goals'] ?? ''
             ];
             echo '<button onclick="openEditModal(' . 
                 htmlspecialchars(str_replace(
@@ -1172,7 +1192,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 ')" class="action-button edit" style="font-size: 0.8em; padding: 4px 8px;">Edit</button>';
             echo '<button onclick="openOghmaModal(\'' . 
                 htmlspecialchars($row['npc_name'], ENT_QUOTES) . '\', \'' . 
-                htmlspecialchars($row['npc_misc'] ?? '', ENT_QUOTES) . 
+                htmlspecialchars($row['oghma_knowledge_tags'] ?? '', ENT_QUOTES) . 
                 '\')" class="action-button" style="background: rgba(242, 124, 17, 0.8); font-size: 0.8em; padding: 4px 8px;">Oghma</button>';
             echo '</div>';
             echo '</td>';
@@ -1208,45 +1228,38 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>NPC names cannot be changed after creation. If you need to change a name, create a new entry.</small>
                 <input type="text" name="npc_name" id="edit_npc_name" readonly style="background-color: #2a2a2a; cursor: not-allowed;" required>
 
-                <label for="edit_npc_pers">NPC Summary Bio:</label>
-                <small>Basic core NPC Summary Bio.</small>
-                <textarea name="npc_pers" id="edit_npc_pers" rows="8" required></textarea>
-
-                <!-- Hidden: NPC Dynamic Bio field -->
-                <div style="display: none;">
-                    <label for="edit_npc_dynamic">NPC Dynamic Bio:</label>
-                    <small>Optional: Dynamic personality traits.</small>
-                    <textarea name="npc_dynamic" id="edit_npc_dynamic" rows="8"></textarea>
-                </div>
-
-                <label for="edit_npc_misc">NPC Misc (Oghma Tags):</label>
+                <label for="edit_npc_misc">Oghma Tags:</label>
                 <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="edit_npc_misc">
+
+                <label for="edit_npc_pers">Core:</label>
+                <small>1-2 sentences about the character.</small>
+                <textarea name="npc_pers" id="edit_npc_pers" rows="3" required></textarea>
 
                 <!-- Extended Profile Fields -->
                 <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Extended Profile</h3>
                 
-                <label for="edit_npc_background">Background:</label>
+                <label for="edit_npc_background">Static (Details):</label>
                 <small>Detailed history, origins, and past experiences that shaped this character.</small>
                 <textarea name="npc_background" id="edit_npc_background" rows="4"></textarea>
-
-                <label for="edit_npc_personality">Personality:</label>
-                <small>Detailed character traits, behavioral patterns, and psychological characteristics.</small>
-                <textarea name="npc_personality" id="edit_npc_personality" rows="4"></textarea>
 
                 <label for="edit_npc_appearance">Appearance:</label>
                 <small>Detailed description of physical features and distinguishing characteristics.</small>
                 <textarea name="npc_appearance" id="edit_npc_appearance" rows="4"></textarea>
 
+                <label for="edit_npc_personality">Personality:</label>
+                <small>Detailed character traits, behavioral patterns, and psychological characteristics.</small>
+                <textarea name="npc_personality" id="edit_npc_personality" rows="4"></textarea>
+
                 <label for="edit_npc_relationships">Relationships:</label>
                 <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
                 <textarea name="npc_relationships" id="edit_npc_relationships" rows="4"></textarea>
 
-                <label for="edit_npc_occupation">Occupation & Role:</label>
+                <label for="edit_npc_occupation">Occupation:</label>
                 <small>Current job, profession, duties, and position in society or organizations.</small>
                 <textarea name="npc_occupation" id="edit_npc_occupation" rows="3"></textarea>
 
-                <label for="edit_npc_skills">Skills & Abilities:</label>
+                <label for="edit_npc_skills">Skills:</label>
                 <small>Special talents, combat abilities, magical knowledge, and areas of expertise.</small>
                 <textarea name="npc_skills" id="edit_npc_skills" rows="3"></textarea>
 
@@ -1254,24 +1267,28 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>How this character speaks, including vocabulary, accent, mannerisms, and communication patterns.</small>
                 <textarea name="npc_speechstyle" id="edit_npc_speechstyle" rows="3"></textarea>
 
-                <label for="edit_npc_goals">Goals & Aspirations:</label>
+                <label for="edit_npc_goals">Goals:</label>
                 <small>Long-term objectives, personal ambitions, and life goals</small>
                 <textarea name="npc_goals" id="edit_npc_goals" rows="3"></textarea>
 
-                <!-- Voice Overrides Section -->
-                <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Voice Overrides</h3>
+                <!-- Voice & Meta Section -->
+                <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Voice & Meta</h3>
 
-                <label for="edit_melotts_voiceid">Melotts Voice ID:</label>
-                <small>Optional: Custom voice override for Melotts.</small>
-                <input type="text" name="melotts_voiceid" id="edit_melotts_voiceid">
+                <label for="edit_voiceid">Voice ID:</label>
+                <small>Optional: Unified voice identifier.</small>
+                <input type="text" name="voiceid" id="edit_voiceid">
 
-                <label for="edit_xtts_voiceid">XTTS Voice ID:</label>
-                <small>Optional: Custom voice override for XTTS.</small>
-                <input type="text" name="xtts_voiceid" id="edit_xtts_voiceid">
+                <label for="edit_gender">Gender:</label>
+                <small>Optional: Gender for reference.</small>
+                <input type="text" name="gender" id="edit_gender">
 
-                <label for="edit_xvasynth_voiceid">xVASynth Voice ID:</label>
-                <small>Optional: Custom voice override for xVASynth.</small>
-                <input type="text" name="xvasynth_voiceid" id="edit_xvasynth_voiceid">
+                <label for="edit_race">Race:</label>
+                <small>Optional: Race for reference.</small>
+                <input type="text" name="race" id="edit_race">
+
+                <label for="edit_refid">RefID:</label>
+                <small>Optional: In-game reference ID.</small>
+                <input type="text" name="refid" id="edit_refid">
 
                 <div class="modal-footer">
                     <button type="submit" name="submit_individual" value="1" class="btn-save">Save Changes</button>
@@ -1292,38 +1309,35 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <input type="hidden" name="submit_individual" value="1">
 
                 <label for="new_npc_name">NPC Name:</label>
-                <small>Make sure name is lowercase with underscores instead of spaces.</small>
+                <small>Please use underscores instead of spaces.</small>
                 <input type="text" name="npc_name" id="new_npc_name" required>
 
-                <label for="new_npc_pers">NPC Summary Bio:</label>
-                <small>Basic core NPC Summary Bio.</small> 
-                <textarea name="npc_pers" id="new_npc_pers" rows="8" required></textarea>
-
-                <!-- Hidden: NPC Dynamic Bio field -->
-                <div style="display: none;">
-                    <label for="new_npc_dynamic">NPC Dynamic Bio:</label>
-                    <small>Optional: Dynamic personality traits.</small>
-                    <textarea name="npc_dynamic" id="new_npc_dynamic" rows="8"></textarea>
-                </div>
-
-                <label for="new_npc_misc">NPC Misc (Oghma Tags):</label>
+                <label for="new_npc_misc">Oghma Tags:</label>
                 <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="new_npc_misc">
+
+                <label for="new_npc_pers">Core:</label>
+                <small>1-2 sentences about the character.</small> 
+                <textarea name="npc_pers" id="new_npc_pers" rows="3" required></textarea>
+
+                <!-- Removed legacy dynamic bio field -->
+
+                
 
                 <!-- Extended Profile Fields -->
                 <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Extended Profile</h3>
                 
-                <label for="new_npc_background">Background:</label>
+                <label for="new_npc_background">Static (Details):</label>
                 <small>Detailed history, origins, and past experiences that shaped this character.</small>
                 <textarea name="npc_background" id="new_npc_background" rows="4"></textarea>
-
-                <label for="new_npc_personality">Personality:</label>
-                <small>Detailed character traits, behavioral patterns, and psychological characteristics.</small>
-                <textarea name="npc_personality" id="new_npc_personality" rows="4"></textarea>
 
                 <label for="new_npc_appearance">Appearance:</label>
                 <small>Detailed description of physical features and distinguishing characteristics.</small>
                 <textarea name="npc_appearance" id="new_npc_appearance" rows="4"></textarea>
+
+                <label for="new_npc_personality">Personality:</label>
+                <small>Detailed character traits, behavioral patterns, and psychological characteristics.</small>
+                <textarea name="npc_personality" id="new_npc_personality" rows="4"></textarea>
 
                 <label for="new_npc_relationships">Relationships:</label>
                 <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
@@ -1345,20 +1359,24 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>Long-term objectives, personal ambitions, and life goals</small>
                 <textarea name="npc_goals" id="new_npc_goals" rows="3"></textarea>
 
-                <!-- Voice Overrides Section -->
-                <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Voice Overrides</h3>
+                <!-- Voice & Meta Section -->
+                <h3 style="color: rgb(242, 124, 17); margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #444;">Voice & Meta</h3>
 
-                <label for="new_melotts_voiceid">Melotts Voice ID:</label>
-                <small>Optional: Custom voice override for Melotts.</small>
-                <input type="text" name="melotts_voiceid" id="new_melotts_voiceid">
+                <label for="new_voiceid">Voice ID:</label>
+                <small>Optional: Unified voice identifier.</small>
+                <input type="text" name="voiceid" id="new_voiceid">
 
-                <label for="new_xtts_voiceid">XTTS Voice ID:</label>
-                <small>Optional: Custom voice override for XTTS.</small>
-                <input type="text" name="xtts_voiceid" id="new_xtts_voiceid">
+                <label for="new_gender">Gender:</label>
+                <small>Optional: Gender for reference.</small>
+                <input type="text" name="gender" id="new_gender">
 
-                <label for="new_xvasynth_voiceid">xVASynth Voice ID:</label>
-                <small>Optional: Custom voice override for xVASynth.</small>
-                <input type="text" name="xvasynth_voiceid" id="new_xvasynth_voiceid">
+                <label for="new_race">Race:</label>
+                <small>Optional: Race for reference.</small>
+                <input type="text" name="race" id="new_race">
+
+                <label for="new_refid">RefID:</label>
+                <small>Optional: In-game reference ID.</small>
+                <input type="text" name="refid" id="new_refid">
 
                 <div class="modal-footer">
                     <button type="submit" name="submit_individual" value="1" class="btn-save">Save</button>
@@ -1379,7 +1397,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             <div class="extended-profile-grid" style="display: grid; gap: 20px;">
                 
                 <div class="profile-field">
-                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Background</h4>
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Static</h4>
                     <div id="profile-background" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
                 </div>
 
@@ -1527,7 +1545,8 @@ function openEditModal(data) {
         document.getElementById("edit_npc_name_original").value = decodeHTML(data.npc_name);
         document.getElementById("edit_npc_name").value = decodeHTML(data.npc_name);
         document.getElementById("edit_npc_pers").value = decodeHTML(data.npc_pers);
-        document.getElementById("edit_npc_dynamic").value = decodeHTML(data.npc_dynamic);
+        const dynEl = document.getElementById("edit_npc_dynamic");
+        if (dynEl) { dynEl.value = decodeHTML(data.npc_dynamic); }
         document.getElementById("edit_npc_misc").value = decodeHTML(data.npc_misc);
         
         // Extended profile fields
@@ -1540,10 +1559,11 @@ function openEditModal(data) {
         document.getElementById("edit_npc_speechstyle").value = decodeHTML(data.npc_speechstyle || '');
         document.getElementById("edit_npc_goals").value = decodeHTML(data.npc_goals || '');
         
-        // Voice overrides
-        document.getElementById("edit_melotts_voiceid").value = decodeHTML(data.melotts_voiceid);
-        document.getElementById("edit_xtts_voiceid").value = decodeHTML(data.xtts_voiceid);
-        document.getElementById("edit_xvasynth_voiceid").value = decodeHTML(data.xvasynth_voiceid);
+        // Voice & Meta
+        const vEl = document.getElementById("edit_voiceid"); if (vEl) vEl.value = decodeHTML(data.voiceid || '');
+        const gEl = document.getElementById("edit_gender"); if (gEl) gEl.value = decodeHTML(data.gender || '');
+        const rEl = document.getElementById("edit_race"); if (rEl) rEl.value = decodeHTML(data.race || '');
+        const refEl = document.getElementById("edit_refid"); if (refEl) refEl.value = decodeHTML(data.refid || '');
         
         document.getElementById("editModal").style.display = "block";
         document.body.style.overflow = "hidden";
@@ -1575,7 +1595,7 @@ function showExtendedProfile(npcName, profileData) {
         
         // Populate each field, showing "Not specified" for empty fields
         const fields = {
-            'Background': 'profile-background',
+            'Static': 'profile-background',
             'Personality': 'profile-personality', 
             'Appearance': 'profile-appearance',
             'Relationships': 'profile-relationships',

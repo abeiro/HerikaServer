@@ -5,6 +5,12 @@
     font-weight: normal;
     font-style: normal;
 }
+@font-face {
+    font-family: 'MagicCards';
+    src: url('font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
 
 /* Define the scrolling animation */
 @keyframes scrollBackground {
@@ -118,6 +124,51 @@ body.auto-refresh .chim-status-nav {
     padding: 8px 0;
     margin: 0;
     border-radius: 6px;
+}
+
+/* Brand dropdown under logo */
+.brand-menu {
+    font-family: 'MagicCards', sans-serif;
+    letter-spacing: 1.2px;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 8px 0;
+    min-width: 260px;
+}
+.brand-menu .dropdown-item {
+    font-family: 'MagicCards', sans-serif !important;
+    font-weight: 700;
+    font-size: 18px;
+    padding: 10px 16px;
+    color: #ffffff;
+    letter-spacing: 1.6px;
+    word-spacing: 6px;
+    line-height: 1.25;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.brand-menu,
+.brand-menu * {
+    font-family: 'MagicCards', sans-serif !important;
+    font-weight: 700 !important;
+}
+.chim-navbar-wrapper .brand-menu .dropdown-item,
+.dropdown-menu.brand-menu .dropdown-item {
+    font-family: 'MagicCards', sans-serif !important;
+    font-weight: 700 !important;
+}
+.brand-menu .dropdown-item:hover {
+    background-color: rgba(2, 42, 106, 0.85);
+}
+
+/* Center the brand menu under the logo at all widths */
+.navbar-center.dropdown {
+    position: relative;
+}
+.navbar-center .brand-menu {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
 }
 
 .dropdown-header {
@@ -434,7 +485,7 @@ body.overlay-active {
 
 /* Add padding to body to prevent content from hiding under fixed navbar */
 body {
-    padding-top: 160px;
+    padding-top: 80px;
 }
 
 /* Responsive Design */

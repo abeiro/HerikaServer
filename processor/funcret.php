@@ -11,7 +11,9 @@
 	$functionLocaleName=getFunctionTrlName($returnFunction[1]);
 	
 	$functionCodeName=$functionLocaleName;
-
+	
+	$functionCodeName=$returnFunction[1];
+	
 	$useFunctionsAgain = false;
 	
 	$forceAttackingText = false;
@@ -19,6 +21,8 @@
 	if (isset($returnFunction[2])) {
 		// Patch. 
 		$returnFunction[2]=trim($returnFunction[2]);
+ 
+		error_log("[CHIM] Checking <$functionCodeName> <{$returnFunction[1]}>");
 
 		if ($functionCodeName == "GetTopicInfo") {
 			$argName = "topic";
@@ -117,19 +121,40 @@
 			die();
 
 		} else {
-			
+			error_log("[CHIM] Checking <$functionCodeName> in external declarations");
+
 			if (isset($GLOBALS["FUNCRET"][$functionCodeName])) {
 				
+				$reflection = new ReflectionFunction($GLOBALS["FUNCRET"][$functionCodeName]);
+				// Get number of required parameters
+				$required = $reflection->getNumberOfRequiredParameters();
+				if ($required==1)
 					$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName],["gameRequest"=>$gameRequest]);
-					
-					if (isset($frResponse["argName"]))
-						$argName = $frResponse["argName"];
-					if (isset($frResponse["request"]))
-						$request = $frResponse["request"];
-					if (isset($frResponse["useFunctionsAgain"]))
-						$useFunctionsAgain = $frResponse["useFunctionsAgain"];
+				else
+					$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName],[]);
+
 				
 				
+				if (isset($frResponse["argName"]))
+					$argName = $frResponse["argName"];
+				if (isset($frResponse["request"]))
+					$request = $frResponse["request"];
+				if (isset($frResponse["useFunctionsAgain"]))
+					$useFunctionsAgain = $frResponse["useFunctionsAgain"];
+				
+				
+			} else if (isset($GLOBALS["FUNCRET"][$returnFunction[1]])) {	// Patch, search also by codename
+				
+				$frResponse=call_user_func_array($GLOBALS["FUNCRET"][$returnFunction[1]],[]);
+				
+				if (isset($frResponse["argName"]))
+					$argName = $frResponse["argName"];
+				if (isset($frResponse["request"]))
+					$request = $frResponse["request"];
+				if (isset($frResponse["useFunctionsAgain"]))
+					$useFunctionsAgain = $frResponse["useFunctionsAgain"];
+			
+			
 			} else
 				$argName = "target";
 

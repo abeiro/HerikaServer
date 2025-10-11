@@ -120,7 +120,7 @@ function conf_loader_list_api_keys() {
 
 	$confS=json_decode(file_get_contents($localPath."apikey.json"),true);
 
-	return array_keys[$confS];
+	return array_keys($confS);
 }
 
 

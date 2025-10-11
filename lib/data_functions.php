@@ -53,14 +53,20 @@ function ReplacePlayerNamePlaceholder($s_input) {
 function DataDequeue()
 {
     global $db;
-    //$results = $db->query("select  A.*,ROWID FROM  responselog a  order by ROWID asc");
-    $results = $db->fetchAll("select  A.*,ROWID FROM  responselog a WHERE sent=0 order by ROWID asc");
+    // Use atomic UPDATE...RETURNING to prevent race conditions where multiple concurrent
+    // requests could fetch the same dialogue before it's marked as sent
+    $results = $db->fetchAll(
+        "UPDATE responselog 
+         SET sent=1 
+         WHERE rowid IN (
+             SELECT rowid FROM responselog WHERE sent=0 ORDER BY rowid ASC
+         )
+         RETURNING *, rowid"
+    );
+    
     $finalData = array();
     foreach ($results as $row) {
         $finalData[] = $row;
-    }
-    if (sizeof($finalData) > 0) {
-        $db->query("update responselog set sent=1 where sent=0 and 1=1");
     }
 
     return $finalData;
@@ -182,13 +188,16 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 
                 $actorName = preg_replace("/\s*\(.*?\)\s*/", "", $actor);
                 $codename = npcNameToCodename($actorName);
-                // Here we need the new npc profiles table, to put relevant info of each character in scene
-                $npcknowledge=$GLOBALS["db"]->fetchAll("SELECT COALESCE(NULLIF(trim(npc_dynamic), ''), npc_misc) as npc_dynamic
-                 FROM combined_npc_templates where npc_name='$codename' and 1=2");// Disabled ATM
-                if (isset($npcknowledge[0]))
-                    $actorDetailedListWithProfile[]="$actor:".trim($npcknowledge[0]["npc_dynamic"]." $ittext");
+                $npcMaster=new NpcMaster();
+                $currentNpcData=$npcMaster->getByName($actorName);
+
+                
+                if (isset($currentNpcData["core"]) && !empty($currentNpcData["core"])) {
+                    $actorDetailedListWithProfile[]=trim("{$currentNpcData["core"]} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
+                }
                 else
                     $actorDetailedListWithProfile[]="$ittext";
+                
             }
         }
         $actorDetailedListWithProfileSanitized=[];
@@ -211,26 +220,65 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
 
         if ($followername==$GLOBALS["PLAYER_NAME"]) {
             $followers[]="$followername (roleplayed by player)";
-        } else 
-            $followers[]="$followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+
+        } else {
+            if (isset($followerdata["core"]))
+                $followers[]="{$followerdata["core"]} level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+            else
+                $followers[]="$followername, level {$followerdata["level"]},{$followerdata["gender"]} {$followerdata["race"]}".(($followerdata["isVampire"]=="yes")?", is vampire":"");
+            
+            $followersV2[]=$followername;
+
+        }
+            
     }
 
     $followers[]="{$GLOBALS["PLAYER_NAME"]}";
+    $followersV2[]=$GLOBALS["PLAYER_NAME"];
 
     $lastDialog[] = array('role' => 'user', 'content' => "# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange");
     
+    /*
     if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"])
         $lastDialog[] = array('role' => 'user', 'content' => "# PARTY STATUS\n## ". (implode("\n## ",$followers)));
     else 
         $lastDialog[] = array('role' => 'user', 'content' => "# YOU'RE NOT PART OF THE GROUP FORMED BY\n## ". (implode("\n## ",$followers)));
 
-    $lastDialog[] = array('role' => 'user', 'content' => "# POIs \n## ". (implode("\n## ",DataPosibleLocationsToGo())));
+    $arr_poi = DataPosibleLocationsToGo();
+    if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
+        $lastDialog[] = array('role' => 'user', 'content' => "# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi)));
+    }
+    */
+    if (!empty($followersV2)) {
+        $lastFollower = array_pop($followersV2);
+        if (!empty($followersV2)) {
+            $followersString = implode(", ", $followersV2) . " and " . $lastFollower;
+        } else {
+            $followersString = $lastFollower;
+        }
+    } else {
+        $followersString = "";
+    }
+
+	if ($followersString!=$GLOBALS["PLAYER_NAME"] && !empty($followersString)) {
+	    $lastDialog[] = array('role' => 'user', 'content' => "# ADVENTURING PARTY
+	     $followersString are together as an **adventuring party**, acting as close companions.
+	     - The others **can know each other**, but they are **not part** of {$followersString}’s group.
+	     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.
+	     ");
+	}
+    $arr_poi = DataPosibleLocationsToGo();
+    if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
+        $lastDialog[] = array('role' => 'user', 'content' => "# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi)));
+    }
+    
+    
  
     // Rolemaster notes
     
     $timeCut=time();
-    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scene_note' and localts+ttl>$timeCut order by localts asc");
-    if (is_array($rolemasterNotes)) {
+    $rolemasterNotes=$GLOBALS["db"]->fetchAll("SELECT data FROM rolemaster where type='scenenote' and localts+ttl>$timeCut order by localts asc");
+    if (is_array($rolemasterNotes) && !empty($rolemasterNotes)) {
         $notes=[];
         foreach ($rolemasterNotes as $note)
             $notes[]= $note["data"];
@@ -242,6 +290,30 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     return $lastDialog;
 
 }
+
+function DataLocationsAround($current_location = "") {
+    global $db;
+
+    $s_res = "";
+
+    if (strlen($current_location) > 0) {
+        $s_loc = $db->escape(strtolower(trim($current_location))); 
+        $s_sql = "SELECT data FROM eventlog WHERE (type in ('infoloc')) AND (data ILIKE '(Context location: {$s_loc}%') ORDER BY gamets DESC, ts DESC LIMIT 1";
+    } else {
+        $s_sql = "SELECT data FROM eventlog WHERE (type in ('infoloc')) AND (data ILIKE '(Context location:%') ORDER BY gamets DESC, ts DESC LIMIT 1";
+    }
+    $results = $db->fetchAll($s_sql);
+    foreach ($results as $row) {
+        $re = '/(to go:)(.+),,/';
+        preg_match($re, $row["data"], $matches, PREG_OFFSET_CAPTURE, 0);
+        if (isset($matches[2][0])) {
+            $s_res .= $matches[2][0];
+        }
+        break;
+    }
+    
+    return $s_res;
+} 
 
 function DataPosibleLocationsToGo()
 {
@@ -265,7 +337,7 @@ function DataPosibleLocationsToGo()
     }
 
     //print_r($matches);
-
+    // ? this part with 'Herika can see this beings in range:' seems outdated 
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
     WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
     $lastData = "";
@@ -567,6 +639,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     $query="select  
     case 
+      when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
       when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'CONTEXTI'
       when a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
@@ -582,6 +655,9 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='waitstop' then 'CONTEXTI' 
       when type='spellcast' then 'CONTEXTI' 
       when type='npcspellcast' then 'CONTEXTI' 
+      when type='info_timeforward' then 'TIMELAPSE' 
+      when type='backgroundaction' then 'CONTEXTI' 
+      when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
@@ -590,7 +666,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive'
     ".(($actorEscaped)?" 
-    and (people like '|%$actorEscaped%|' or people like '$actorEscaped') ":"")." 
+    and (people like '|%$actorEscaped%|' or people like '$actorEscaped' or type='info_timeforward') ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
     " order by gamets desc,ts desc,rowid desc LIMIT $nRecordsLimit OFFSET 0";  
@@ -619,7 +695,12 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $beingsPresent=null;
     $lastlocation="";
     $lastGameTs=0;
-    foreach ($orderedData as $row) {
+    $memoryLogToRemove=[];
+
+    $focusOnChat=$GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"];
+
+
+    foreach ($orderedData as $n=>$row) {
         $rowData = $row["data"];
         
         if ($rowData==="The Narrator:") // Hunt empty rows
@@ -673,7 +754,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ($row["type"]=="vision") {
             $speaker = "user";
             
-        }  else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
+        } else if ($row["subtype"]=="MEMORY") {
+            $speaker = "memory";
+            
+        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
             $speaker = "assistant";
             
         } 
@@ -684,47 +768,88 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $speaker = "narratorchat";
             
         } else if ($row["subtype"]=="BACKDIAG") {
+            if ($focusOnChat)
+                continue;
             $speaker = "backgroundchat";
             
         } else if ($row["subtype"]=="BOOKEVT") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="CONTEXTI") {
+            if (strpos($rowData,"should not be visible")!==false)
+                continue;
+            if ($focusOnChat) {
+                if (strpos($rowData," uses ")!==false) 
+                    continue;
+                if (strpos($rowData," casts ")!==false) 
+                    continue;
+                if (strpos($rowData," engages combat ")!==false) 
+                    continue;
+                if (strpos($rowData," has defeated ")!==false) 
+                    continue;
+                if (strpos($rowData," activates ")!==false) 
+                    continue;
+            }
+                
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="QUEST") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="ITEM") {
+            if ($focusOnChat) {
+                if (strpos($rowData,"{$GLOBALS["HERIKA_NAME"]}")===false) // This NPC's item transactions conserved
+                    continue;
+            }
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_WORD") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_LVL") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_SPAWN") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_SHOUT") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_DEATH") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
             
         } else if ($row["subtype"]=="RPG_DEFEAT") {
+            if ($focusOnChat)
+                continue;
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
+            
+        } else if ($row["subtype"]=="TIMELAPSE") {
+            $rowData = strtoupper($rowData);
+            
+        }  else if ($row["subtype"]=="PLUGIN") {
+            $speaker = $row["type"];
             
         } else {
             
             $speaker = "npc";
             
         }
-
-    
 
         if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(true)) {
             
@@ -736,7 +861,11 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
                 
                 if ($timeGapInHours>36) {
                     $timeGapInDays=round($timeGapInHours/24,1);
-                    $lastDialogFull[] = array('role' => "narratorci", 'content' => "NOTE: THERE IS BIG TIME JUMP HERE OF ABOUT $timeGapInDays days. Current location is $currentLocation)  ");
+                    $lastDialogFull[] = array('role' => "narratorci", 'content' => "!!! IMPORTANT CONTEXT !!!
+A MAJOR TIME JUMP HAS OCCURRED.
+Elapsed time since last interaction: ~$timeGapInDays days
+New setting: $currentLocation
+!!! END CONTEXT !!! ");
                 }
                 $lastGameTs=$row["gamets"];
             }
@@ -763,7 +892,30 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     }
 
+ 
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($lastDialogFull,true));
+
+    // Remove memory logs, only leave last one.
+    $lastDialogFullOnlyLastMemory=[];
+    $localFlag=0;
+    foreach (array_reverse($lastDialogFull) as $element) {
+        if ($element["role"]=="memory") {
+            if ($localFlag==0) {
+                $element["role"]="narratorci";
+                $lastDialogFullOnlyLastMemory[]=$element;
+                $localFlag++;
+            } else {
+                $localFlag++;
+            }
+        } else {
+            $lastDialogFullOnlyLastMemory[]=$element;
+        }
+    }
+
+    error_log("[buildHistoricContext] $localFlag memories removed");
+    $lastDialogFull=array_reverse($lastDialogFullOnlyLastMemory);
+    // En of memory logs cleaning
+
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($query,true),FILE_APPEND);
     
     return $lastDialogFull;
@@ -807,8 +959,10 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
 
                 }
                 $lastDialogFullCopy[] = ["role"=>"assistant","content"=>trim($compactedBuffer)];
-                $bufferHerika=[];
+
             }
+            $bufferHerika=[];
+            $compactedBuffer="";
             $lastDialogFullCopy[]=$line;
         } 
 
@@ -848,7 +1002,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
     foreach ($lastDialogFullCopy as $n => $line) {
         $speaker=$line["role"];
         
-        if ($speaker=="npc") { // Tricky npc could be any char
+        if ($speaker=="npc") { // Tricky, npc could be any char
             preg_match('/^([^:]+):/', $line["content"], $matches);
             // Output the extracted name
             $speakerNPC=$matches[1] ?? "";
@@ -981,21 +1135,35 @@ function replaceRoles($lastDialogFull,$actor,$lastNelements) {
 
 
 
-
+    error_log("[CHIM] Using effective context limit of : $lastNelements");
     $orderedData = array_slice($lastDialogFull, $lastNelements);
 
     file_put_contents(__DIR__."/../log/context_for_$actor.txt",print_r($orderedData,true));
-    return $orderedData;
+    $GLOBALS["CONTEXT_BUILDING_DATA"]=$orderedData;
+    requireFilesRecursively(__DIR__."/../ext/","context_building.php");
+
+    file_put_contents(__DIR__."/../log/context_for_{$actor}_ext.txt",print_r($GLOBALS["CONTEXT_BUILDING_DATA"],true));
+
+    return $GLOBALS["CONTEXT_BUILDING_DATA"];
 
 }
 
 function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 {
 
+    $localStartTime=microtime(true);
+
     $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
+    //error_log("[buildHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+
+
     $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
+
+    //error_log("[compactHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
+    //error_log("[replaceRoles] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
     // Cases of self rechat
     if ((sizeof($ctx3)>3)&&(($GLOBALS["gameRequest"][3] ?? "")=="rechat")) {
@@ -1033,6 +1201,8 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
 
         }
     }
+
+    //error_log("[DataLastDataExpandedFor end] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
     return $ctx3;
 
@@ -1375,76 +1545,55 @@ function DataGetCurrentTask()
     $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission where sess='ephemeral' and gamets>$hourThreshold order by gamets desc");
     error_log("SElECT  distinct description as description,gamets FROM currentmission where sess='ephemeral' and gamets>$hourThreshold order by gamets desc");
 
-    if (!$results) {
-        $results=[];
-    } else {
-        return $results[0]["description"];
-
+    if (!empty($results)) {
+        // couldnt find usages of ephemeral quests so didnt modify this apart from new lines
+        return "\n{$results[0]["description"]}\n";
     }
 
     $data = "";
-
-    $n = 0;
-    foreach ($results as $row) {
-
-        if ($n == 0) {
-            $data = "Current plan: {$row["description"]}.";
-        } elseif ($n == 1) {
-            $data .= "Previous plan: {$row["description"]}.";
-        } else {
-            break;
+    $results = $db->fetchAll("SElECT distinct description as description,gamets FROM currentmission where sess<>'ephemeral' and gamets>$hourThreshold order by gamets desc");
+    if (!empty($results)) {
+        $data = "\n\n#Current Plans\n";
+        $n = 0;
+        foreach ($results as $row) {
+            if ($n == 0) {
+                $data .= "  • Current: {$row["description"]}\n";
+            } elseif ($n == 1) {
+                $data .= "  • Previous: {$row["description"]}\n";
+            } else {
+                break;
+            }
+            $n++;
         }
-        $n++;
     }
 
-    $results = $db->fetchAll("SElECT  distinct description as description,gamets FROM currentmission where sess<>'ephemeral' order by gamets desc");
-    if (!$results) {
-        $results=[];
-    }
-
-    $data = "";
-
-    $n = 0;
-    foreach ($results as $row) {
-
-        if ($n == 0) {
-            $data = "Current plan: {$row["description"]}.";
-        } elseif ($n == 1) {
-            $data .= "Previous plan: {$row["description"]}.";
-        } else {
-            break;
-        }
-        $n++;
-    }
-
+    // quests are an unordered list (because of how the aiagent plugin works - delete current, bulk update)
+    // we would need to get clever with ignoring _questreset or expiring untouched quests, and using upserts on _quest
+    // quests, and making "current" if _questdata updates after initial insert
+    // for now lets just list all active quests rather than saying Current: xxx Previous: yyy
     $results = $db->fetchAll("SElECT  distinct name,briefing as description,gamets FROM quests order by gamets desc");
     if (!$results) {
         Logger::info("No quests ".__FILE__);
         return $data;
     }
-    
-    if (sizeof($results)>2) {
-        Logger::info("Too much quests ".__FILE__);
-        return $data;
-    }
 
-    //$data = "";
+    // dont think we need to limit it now since we dont require exactly two to format Current: xxx Previous: yyy
+//    if (sizeof($results)>2) {
+//        Logger::info("Too much quests ".__FILE__);
+//        return $data;
+//    }
 
-    $n = 0;
+    $data .= "\n\n#Active Quests\n";
     foreach ($results as $row) {
-
-        if ($n == 0) {
-            $data .= "Current quest: {$row["name"]}/{$row["description"]}.";
-        } elseif ($n == 1) {
-            $data .= "Previous quest: {$row["name"]}/{$row["description"]}.";
+        $questDesc = trim($row["description"]);
+        if (!empty($questDesc)) {
+            $data .= "  • {$row["name"]}: $questDesc\n";
         } else {
-            break;
+            $data .= "  • {$row["name"]}\n";
         }
-        $n++;
     }
-    
-    return $data;
 
+    return $data;
 }
 
 
@@ -1566,67 +1715,55 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
 }
 
 
-function PackIntoSummary()
+function PackIntoSummary($onlyMissingDiary=false)
 {
 
     global $db;
 
-    $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
+    if ($onlyMissingDiary) {
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
+        select gamets,1,message,message,'diary',uid,speaker
+        from memory
+        where event in ('diary','auto_diary')
+        and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary'))");
 
-    $maxRow=$results[0]["gamets_truncated"]+0;
+        $maxRow=0;
 
-    $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
+        Logger::info("Missing diary insert done");
 
-    $results = $db->query("insert into memory_summary select * from ( 
-                                select max(gamets) as gamets_truncated,count(*) as n,
-                                STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
-                                NULL as summary,'dialogue' as classifier,max(uid) as uid
-                                from memory_v
-                                where 
-                                message not like 'Dear Diary%'
-                                group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
-                              ) as T where gamets_truncated>$maxRow
-                            ");
-    
-    Logger::info("Main insert done");
-    //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
-    
-    $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-                                select gamets,1,message,message,'diary',uid,speaker
-                                from memory
-                                where event='diary'
-                                and gamets>$maxRow
-                            ");
+    } else {
+        $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
 
-    Logger::info("Diary insert done");
+        $maxRow=$results[0]["gamets_truncated"]+0;
 
-    
-    $people=$db->fetchAll("SELECT distinct split_part(data, '@', 1) as npc from eventlog where type='addnpc'");
-    $addednpc=[];
-    foreach ($people as $p)
-        $addednpc[]=$p["npc"];
+        $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
 
-    
-    foreach ( $db->fetchAll("select * from memory_summary where companions is null ") as $row) {
-        $people=$db->fetchAll("SELECT case when party='[]' then people else COALESCE(people,party) end  as people FROM eventlog order by abs(gamets-{$row["gamets_truncated"]}) asc LIMIT 1 OFFSET 0");
-
-        preg_match_all("/[A-Za-z' \-]+/", $people[0]["people"], $matches);
-        // $matches[0] will contain the list of names
+        $results = $db->query("insert into memory_summary select * from ( 
+                                    select max(gamets) as gamets_truncated,count(*) as n,
+                                    STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
+                                    NULL as summary,'dialogue' as classifier,max(uid) as uid
+                                    from memory_v
+                                    where 
+                                    message not like 'Dear Diary%'
+                                    group by round(gamets/$pfi ,0)  HAVING count(*)>9 order by round(gamets/$pfi ,0) ASC
+                                ) as T where gamets_truncated>$maxRow 
+                                ");
         
-        $names = array_map('trim', $matches[0]);
+        Logger::info("Main insert done");
+        //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
         
-        $npcInMemory=[];
-        foreach($names as $name) {
-            if (in_array($name,$addednpc)) {
-                $npcInMemory[]=$name;
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
+                                    select gamets,1,message,message,'diary',uid,speaker
+                                    from memory
+                                    where event='diary'
+                                    and gamets>$maxRow
+                                ");
 
-            }
-
-        }
-        $peopleFmt=$db->escape(implode(",",$npcInMemory));
-
-        $db->query("update memory_summary set companions='$peopleFmt' where rowid={$row["rowid"]}");
+                                
+        Logger::info("Diary insert done");
     }
+
+    
     return $maxRow;
 }
 
@@ -1728,8 +1865,14 @@ function DataGetCurrentPartyConf() {
         
         $finalparty=[];
         foreach ($guys as $guy) {
-            if (isset($guy["name"]))
+            if (isset($guy["name"])) {
                 $finalparty[$guy["name"]]=$guy;
+                $npcMaster=new NpcMaster();
+                $currentNpcData=$npcMaster->getByName($guy["name"]);
+                if (isset($currentNpcData["core"])&&!empty($currentNpcData["core"]))
+                    $finalparty[$guy["name"]]["core"]=$currentNpcData["core"];
+
+            }
         }
     
         return json_encode($finalparty);
@@ -1753,10 +1896,10 @@ function DataBeingsInRange()
     $beingsArrayNew=[];
     $beingsArrayNew[]="{$GLOBALS["PLAYER_NAME"]}";  // Add player to beings in range
     foreach ($beingsArray as $k=>$v) {
-        if (strpos($v,")")===false) 
+        if (strpos($v,"(")===false) 
             if (strpos($v,"Horse")!==0) 
                 if (strpos($v,"Chicken")!==0) 
-                    $beingsArrayNew[]=$v;
+                    $beingsArrayNew[]=strtr($v,[")"=>""]);
             
         
     }
@@ -1880,6 +2023,7 @@ function FindClosestNPCName($actorName)
 
     $lastLoc = $db->fetchAll("SELECT a.data as people FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc) == 0) {
+        error_log("Note: no FindClosestNPCName data");
         return "";
     }
 
@@ -1931,8 +2075,8 @@ function DirectConversationsWith($actor, $speaker="")
         $speakerprmt=$db->escape($speaker);
     
     $listenerprmt=$db->escape($actor);
-    
-    $lastLoc=$db->fetchAll("SELECT count(*) as N FROM speech WHERE (speaker='$speakerprmt' and listener='$listenerprmt') OR (listener='$speakerprmt' and speaker='$listenerprmt') ");  
+    $gametsLimit=round(($GLOBALS["gameRequest"][2]??0)-(getGametsLimitFor($actor)/0.0000024),0);
+    $lastLoc=$db->fetchAll("SELECT count(*) as N FROM speech WHERE (speaker='$speakerprmt' and listener='$listenerprmt') OR (listener='$speakerprmt' and speaker='$listenerprmt') and gamets<$gametsLimit");
     
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         Logger::warn("DirectConversationsWith: zero interactions {$speakerprmt} - {$listenerprmt} ");
@@ -2070,7 +2214,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
 
         ORDER BY rank_all DESC, rank_any DESC;
-        ");
+        ",true);
             
         if (!isset($memory[0]))
             $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
@@ -2093,30 +2237,162 @@ function DataSearchMemory($rawstring,$npcfilter) {
 }
 
 
-function DataSearchMemoryByVector($rawstring,$npcfilter) {
+function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$timeThreshold=0) {
     
-  
-        Logger::info("Using DataSearchMemoryByVector");
-        $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+        $localStartTime=microtime(true);
+        Logger::info("Using DataSearchMemoryByVector $rawstring,$npcfilter,$useContextKw=false,$timeThreshold=0");
+        
+        if (!$timeThreshold)
+            $timeThreshold=0;
+        
+        $result=[];
+        if (is_array($rawstring)) {
+            $kwStringAny=implode(" ",$rawstring);
+            $kwStringAll=implode(" ",$rawstring);
+        
+        } else if ($GLOBALS["MINIME_T5"]) {
+            // MiniMe keyword extraction
+            Logger::info("Using minime-t5 context");
+            error_log("[DataSearchMemoryByVector] Using minime-t5 context");
+            $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+            $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-        $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
-        $replacement = "";
-        $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
-                    
-        $pattern = '/\(talking to [^()]+\)/i';
-        $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+            $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
+            $replacement = "";
+            $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
+                        
+            $pattern = '/\(talking to [^()]+\)/i';
+            $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
-        if (empty($npcfilter)) {
-            $npcfilter=$GLOBALS["HERIKA_NAME"];
+            error_log("[DataSearchMemoryByVector start] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
+            $TEST_TEXT=internalDumbTranslator($TEST_TEXT);
+            
+            if (isset($GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) && $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) {
+                error_log("[DataSearchMemoryByVector ] PATCH_BYPASS_MINIME_EXTRACT");
+                $keywords=json_encode(["is_memory_recall"=>"Yes"]);
+            } else {
+                $keywords=minimeExtract($TEST_TEXT,true);// Only to check if memory is needed
+            }
+
+            error_log("[DataSearchMemoryByVector end] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
+            $reponse=json_decode($keywords,true);
+            
+            error_log("[DataSearchMemoryByVector end] minimeExtract : " .print_r($reponse,true));
+
+            
+            if (isset($reponse["is_memory_recall"]) && $reponse["is_memory_recall"]=="No") {
+                $GLOBALS["db"]->insert(
+                    'audit_memory',
+                    array(
+                        'input' => $TEST_TEXT,
+                        'keywords' =>'minibot declined',
+                        'rank_any'=> -1,
+                        'rank_all'=>-1,
+                        'memory'=>'',
+                        'time'=>$reponse["elapsed_time"]
+                    )
+                );
+                return null;
+
+            }/* else  if (isset($reponse["is_memory_recall"])) {
+            
+                if (isset($reponse["version"]) && $reponse["version"]==2) {
+                    $altKeywords=explode(" ",lastNames(15,["inputtext"]));
+                    $altKeywords=[];
+                    $keywords=explode(" ",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
+                    $result = array_unique($keywords);
+
+                } else {
+                    $altKeywords=explode(" ",lastNames(15,["inputtext"]));
+                    $altKeywords=[];
+                    $keywords=explode("|",strtr($reponse["generated_tags"],["remember"=>"","Remember"=>""]));
+                    array_merge($keywords,$altKeywords);
+                    $kw=[];
+                
+                    foreach ($keywords as $tag) {
+                        if (strlen($tag)<4)
+                            continue;
+
+                        
+                        $lkwPre="";
+                        foreach (explode(" ",$tag) as $stag) {
+                            $lkwPre.=ucfirst($stag);
+                        }
+                        
+                        //$lkw=hashtagify($tag);    
+                        $lkw="$lkwPre";
+                        
+                        if ($lkw) {
+                            $kw=array_merge($kw,explode(" ",$lkw));
+                        }
+                    }
+                    $result = array_unique($kw);
+
+                   
+                }
+                Logger::debug("CONTEXT SEARCH KEYWORDS FROM MINIME: ".print_r($result,true));
+            }*/
+            
+        } else {
+            error_log("[DataSearchMemoryByVector] Minime-Disabled. what to do here?");
+            return null;
         }
 
-        $contextKeywords  = implode(" ", lastKeyWordsContext(5, $npcfilter));
+        if (sizeof($result)<1) {
+            Logger::info("Using dumb context");
+            $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
+            $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
 
-        
+            $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
+            $replacement = "";
+            $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
+                        
+            $pattern = '/\(talking to [^()]+\)/i';
+            $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
+
+            $keywords=strtr($TEST_TEXT,["."=>" ",","=>" ","'"=>" "]);
+            $kw=[];
+            
+            //print_r($keywords);
+
+            foreach (explode(" ",$keywords) as $tag) {
+                if (strlen($tag)<4)
+                    continue;
+                $lkw=$tag;
+                if ($lkw) {
+                    $kw=array_merge($kw,explode(" ",$lkw));
+                }
+            }
+            $result = array_unique($kw);
+
+            foreach ($result as $r) {
+                $resultEn[]=internalDumbTranslator($r);
+            }
+
+            $kwStringAny=implode(" | ",$resultEn);
+            $kwStringAll=implode(" & ",$resultEn);
+
+            Logger::debug("CONTEXT SEARCH KEYWORDS FROM DUMB: ".print_r($resultEn,true));
+            error_log("CONTEXT SEARCH KEYWORDS FROM DUMB: <".implode("><",$resultEn).">");
+        }
+
+       
+        if (empty($npcfilter)) {
+            $npcfilter=$GLOBALS["HERIKA_NAME"];
+        } else {
+            if ($useContextKw)
+                $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
+        }
+
+        $contextKeywords  = implode(" ", $result);
+        $contextKeywords=strtr(internalDumbTranslator($contextKeywords),["remember"=>"","Remember"=>"","do you remember"=>""]);
+
+
         $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+
         $data = [
-            'text' => $TEST_TEXT." ".$contextKeywords   // We add previous keywords
+            
+            'text' => $contextKeywords   
         ];
 
         // Convert to JSON
@@ -2132,7 +2408,10 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
 
         // Create context and send the request
         $context  = stream_context_create($options);
+        
+        error_log("[DataSearchMemoryByVector Embedding start] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
         $response = file_get_contents($url, false, $context);
+        error_log("[DataSearchMemoryByVector Embedding end] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
         // Output the response
         if ($response === false) {
@@ -2142,57 +2421,99 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
 
         }
 
-        $keywords=hashtagifySentences($TEST_TEXT);
-        $kw=[];
-        
-        //print_r($keywords);
+        $result = explode(" ",$contextKeywords);
 
-        foreach (explode(" ",$keywords) as $tag) {
-            if (strlen($tag)<4)
+        $resultNormalized=[];
+        foreach ($result as $word) {
+            if (strlen($word)<3)
                 continue;
-            $lkw=hashtagify(strtr($tag,["remember"=>"","Remember"=>""]));    
-            if ($lkw) {
-                $kw=array_merge($kw,explode(" ",$lkw));
-            }
+            if (!empty($word))
+                $resultNormalized[]=$word;
         }
-        $result = array_unique($kw);
 
-        $kwStringAny=implode(" | ",$result);
-        $kwStringAll=implode(" & ",$result);
-
+        
+        $kwStringAny=implode(" | ",$resultNormalized);
+        $kwStringAll=implode(" & ",$resultNormalized);
+        error_log("[DataSearchMemoryByVector] Generated Tags: $kwStringAny" );
         $vector=json_decode($response,true);
+
         if (is_array($vector) && isset($vector["embedding"])) {
             $vectorString="'[".implode(",",$vector["embedding"])."]'";
    
-            $memory=$GLOBALS["db"]->fetchAll("
+            $finalQuery="
                 SELECT summary, gamets_truncated,
+                        embedding <-> $vectorString as distance,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
+                         (embedding <-> $vectorString) - ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll'))
+                          AS mixed_distance
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    ORDER BY (embedding <-> $vectorString)
+                    LIMIT 5 OFFSET 0
+                ";
+
+             $finalQuery="
+                SELECT rowid,gamets_truncated,
+                        embedding <-> $vectorString as distance,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts_raw,
+                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts_raw,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
+                         (embedding <-> $vectorString) - (ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) ) AS mixed_distance,
+                         summary
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    and (gamets_truncated<$timeThreshold or $timeThreshold=0)
+                    
+                    ORDER BY 
+                        round((embedding <-> $vectorString)::numeric, 2) ASC,
+                        (ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll'))) DESC
+                    LIMIT 50 OFFSET 0
+                ";    
+            $memory=$GLOBALS["db"]->fetchAll($finalQuery);
+            //error_log($finalQuery);
+            $singleMemory = null;
+            $maxRankAny = -INF;
+
+            foreach ($memory as $entry) {
+                if (isset($entry['rank_any_fts']) && $entry['rank_any_fts'] > $maxRankAny) {
+                    $maxRankAny = $entry['rank_any_fts'];
+                    $singleMemory = $entry;
+                }
+            }
+         
+            if (!isset($singleMemory)) {
+                $singleMemory=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
+                $singleMemory["distance"]=1.4;
+            }
+            else {
+                 $singleMemory['rank_any']=(($singleMemory["rank_any_fts"])+($singleMemory["rank_all_fts"])/2);
+                 $singleMemory['rank_all']=($singleMemory["rank_all_fts"]);
+            }
+            
+            /*error_log("
+                 SELECT summary, gamets_truncated,
                         embedding <-> $vectorString as distance,
                          ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
                          ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
                     and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
-                    ORDER BY embedding <-> $vectorString
+                    ORDER BY (embedding <-> $vectorString)-ts_rank(native_vec, to_tsquery('$kwStringAny')) 
                     LIMIT 5 OFFSET 0
-                ");
-                    
-            if (!isset($memory[0])) {
-                $memory[0]=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
-                $memory[0]["distance"]=1.4;
-            }
-            else {
-                 $memory[0]['rank_any']=(1.40-$memory[0]["distance"]);
-                 $memory[0]['rank_all']=(1.40-$memory[0]["distance"]);
-            }
-            
+                ");*/
+
             $GLOBALS["db"]->insert(
                     'audit_memory',
                     array(
                         'input' => $TEST_TEXT,
                         'keywords' =>'text2vec search / (input plus "'.$contextKeywords.'"',
-                        'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
-                        'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
-                        'memory'=>$memory[0]["summary"],
+                        'rank_any'=> (1.40-$singleMemory["mixed_distance"]),// Try to mimic FTS query rank
+                        'rank_all'=> (1.40-$singleMemory["distance"]),// Try to mimic FTS query rank
+                        'memory'=>$singleMemory["summary"],
                         'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
                     )
                 );
@@ -2202,7 +2523,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter) {
         }
             
     
-    return $memory;
+    return [$singleMemory];
     
 }
 
@@ -2362,17 +2683,118 @@ function call_llm() {
     global $overrideParameters, $request;
     
     $outputWasValid = true;
-    $connectionHandler = new $GLOBALS["CURRENT_CONNECTOR"];
-    $connectionHandler->open($contextData,$overrideParameters);
+    
 
-    /* *****
-    Player TTS
-
-    Player TTS. We overwrite some confs an then restore them.
-    */
-    if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
-        require(__DIR__."/../processor/player_tts.php");
+    if (isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
+        $connector=new LLMConnector();
+        $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
+        error_log("[CORE SYSTEM] Using new profile system {$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["driver"]}/{$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["model"]}");
+    } else {
+        error_log("No connector defined");
+        Logger::error("No connector defined");
+        terminate();
     }
+
+    if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
+
+         /* *****
+        Player TTS
+
+        Player TTS. We overwrite some confs an then restore them.
+        */
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
+            require(__DIR__."/../processor/player_tts.php");
+        }
+        $currentConnectorData=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
+        error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
+
+
+        $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
+
+        error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
+
+        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+            require_once($GLOBALS["ENGINE_PATH"]."/functions".DIRECTORY_SEPARATOR."json_response.php");
+            $GLOBALS["COMMAND_PROMPT"]="";
+
+            setActions();
+        } else {
+            $GLOBALS["FUNC_LIST"][]="Talk";
+            $GLOBALS["COMMAND_PROMPT"]="";
+
+        }
+
+        $jsonformat= json_encode(["character"=>$GLOBALS["HERIKA_NAME"],
+        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+        "message"=>"lines of dialogue",
+        "mood"=>"One of :".implode("|",explode(",",$GLOBALS["EMOTEMOODS"])),
+        "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
+        "target"=>"action target actor|action destination location name",
+        "lang"=>"language used, (es|en|fr|...)"]);
+
+
+        $minimalContextData = array_slice($contextData, -5);
+        $minimalContext=[];
+        foreach ($minimalContextData as $ele) {
+            if (strpos($ele["content"],"#MEMORY")===false) {
+                $minimalContext[]="{$ele["content"]}";
+            }
+        }
+        array_pop($minimalContext);
+
+        $minimalContext[]="$buffer";// Add whole generated content.
+
+        $buffer=preg_replace('/\([^)]*\)/', '', $buffer);//Remove text between space.
+        $contextData2=[
+            array('role' => 'system', 'content' => "Create a JSON object with this format: $jsonformat , using a 'Generated dialogue line' as source. "),
+            array('role' => 'user', 'content' => "* Available actions:\n".$GLOBALS["COMMAND_PROMPT"]),
+            array('role' => 'user', 'content' => "* Historic context information:\n".implode("\n",$minimalContext)),
+            array('role' => 'user', 'content' => "* Generated dialogue line: <$buffer>"),
+            array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' , and ONLY the  '* Generated dialogue line' section, to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
+        ];
+
+        $connector=new LLMConnector();
+        $currentConnectorData=$connector->getById($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"]); // Asuming primary id
+
+
+
+        $connector->setOldGlobals($currentConnectorData);
+
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+
+        $buffer2=$connectionHandler->fast_request($contextData2,[]);
+        unset($GLOBALS["_JSON_BUFFER"]);
+        $finalRes=__jpd_decode_lazy($buffer2);
+        file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", $buffer2, FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", print_r($finalRes,true), FILE_APPEND);
+        unset($GLOBALS["_JSON_BUFFER"]);
+        $fakeObject["choices"][0]=[
+            "index"=>0,
+            "delta"=>["role"=>"assistant","content"=>json_encode($finalRes)]
+        ];
+
+        $connectionHandler->primary_handler=fopen("php://memory", "r+");// Total hack, we're emulating streaming mode.
+        $fakedStream='data: '.json_encode($fakeObject);
+        fwrite($connectionHandler->primary_handler,$fakedStream);
+        rewind($connectionHandler->primary_handler);
+
+        error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}" );
+
+    } else {
+
+        $connectionHandler->open($contextData,$overrideParameters);
+            /* *****
+        Player TTS
+
+        Player TTS. We overwrite some confs an then restore them.
+        */
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
+            require(__DIR__."/../processor/player_tts.php");
+        }
+    }
+
+
+
 
 
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
@@ -2884,11 +3306,52 @@ function DataRetrieveFirstTimeMet($s_player_name, $s_npc_name) {
 	return $s_res;
 }
 
+function GetFirstTimeMetMemory($s_player_name, $s_npc_name) {
+    global $db;
+    $i_res = 0;
+
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
+		$s_player = $db->escape($s_player_name);
+		$s_npc = $db->escape($s_npc_name);
+
+        //$crt_gamets = intval(DataLastKnownGameTS());
+
+		$db_rec = $db->fetchAll("SELECT speaker,listener,
+			message,gamets,momentum,rowid  
+			FROM memory 
+			WHERE event = 'first_met' AND gamets > 0 AND
+			((speaker = '{$s_player}' AND listener = '$s_npc') OR
+			(listener = '{$s_player}' AND speaker = '$s_npc'))
+			ORDER BY rowid ASC LIMIT 1; ");
+            
+        $b_found_memory = (is_array($db_rec) && sizeof($db_rec)>0); 
+        
+        if ($b_found_memory) { 
+			$i_res = intval($db_rec[0]['gamets'] ?? 0);
+		}
+
+	}
+	return $i_res;
+}
+
+function GetFirstTimeMet($s_player_name, $s_npc_name) {
+    $i_res = 0;
+
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
+        
+        $i_res = GetFirstTimeMetMemory($s_player_name, $s_npc_name); 
+
+        if ($i_res <= 0) { // check conversations
+            $i_res = GetFirstInteraction($s_player_name, $s_npc_name); 
+		}
+	}
+	return $i_res;
+}
 
 function GetLastInteraction($s_player_name, $s_npc_name) {
     global $db;
 	$i_res = 0;
-	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0)) {
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
 		$s_player = $db->escape($s_player_name);
 		$s_npc = $db->escape($s_npc_name);
 		$db_rec = $db->fetchAll("SELECT gamets FROM speech 
@@ -2902,6 +3365,7 @@ function GetLastInteraction($s_player_name, $s_npc_name) {
 	}
 	return $i_res;
 }
+
 
 function GetFirstInteraction($s_player_name, $s_npc_name) {
     global $db;
@@ -3085,6 +3549,12 @@ function GetAnimationHex($mood)
         $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=0.65';
         return "DrunkStart";
         
+    } else if ($mood=="sober") {
+
+        Logger::info("Resetting mood drunk.");
+        
+        return "DrunkStop";
+        
     } else if ($mood=="high") {
         // No animation :(
         $GLOBALS["TTS_FFMPEG_FILTERS"]["tempo"]='atempo=1.45';
@@ -3190,92 +3660,45 @@ function profile_exists($npcname) {
     return file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
 }
 
-function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile='') {
-   
-    global $db; 
+function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '')
+{
+    // This should be done at NpcMaster::createProfile
+    global $db;
 
-    if ($npcname=="The Narrator")   // Refuse to add Narrator
+    if ($npcname == "The Narrator")   // Refuse to add Narrator [review this]
         return;
 
-    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-    $newConfFile=md5($npcname);
+    $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+    $newConfFile = md5($npcname);
 
     $codename = npcNameToCodename($npcname);
     $baseprofileName = npcNameToCodename($baseprofile);
-    
-   
 
-    if (!file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php") || $overwrite) {
-        
-        //error_log("Overwritting conf");
+    $npcMaster = new NpcMaster();
+    $currentNpcData = $npcMaster->getByName($npcname);
+
+    $EMPTY_PROFILE=false;
+
+    if (!$currentNpcData || $overwrite ) {
+        error_log("Creating/overwriting:$overwrite  profile for $npcname");
         //sleep (1);
-        $cn=$db->escape("Voicetype/$codename");
-        $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
-        $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
-        if ($voicetypeString) {
-            $voicetype=explode("\\",$voicetypeString);
-        }
-    
-        $xttsid=$db->fetchAll("SELECT xtts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
-        $melottsid=$db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
-        $xvasnythid=$db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
-
-        // Do customizations here
-        $newFile=$path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php";
-        copy($path . "conf".DIRECTORY_SEPARATOR."conf.php",$newFile);
-        
-        chmod($newFile,0777);
-        $file_lines = file($newFile);
-
-        for ($i = count($file_lines) - 1; $i >= 0; $i--) {
-            // If the line is not empty, break the loop // Will remove first entry 
-            if (trim($file_lines[$i]) !== '') {
-                unset($file_lines[$i]);
-                break;
-            }
-            unset($file_lines[$i]);
-        }
-        
-
         if (empty($GLOBALS["CORE_LANG"])) {
-            $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
-            $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
-            $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
-            // Query for new HERIKA fields
-            $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
+            $npcTemlate = $db->fetchAll("SELECT core FROM combined_bio_templates where npc_name='$codename'");
+            // Query for new HERIKA fields (bio tables)
+            $npcNewFields = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates where npc_name='$codename'");
         } else {
             Logger::info("Using npc_templates_trl, name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
-            $npcTemlate=$db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
+            $npcTemlate = $db->fetchAll("SELECT npc_pers FROM npc_templates_trl where name_trl='$codename' and lang='{$GLOBALS["CORE_LANG"]}'");
             if (!isset($npcTemlate[0])) {
                 Logger::info("No trl found, using standard template");
-                $npcTemlate=$db->fetchAll("SELECT npc_pers FROM combined_npc_templates where npc_name='$codename'");
-                $npcdynamic=$db->fetchAll("SELECT npc_dynamic FROM combined_npc_templates where npc_name='$codename'");
-                $npcknowledge=$db->fetchAll("SELECT npc_misc FROM combined_npc_templates where npc_name='$codename'");
-                // Query for new HERIKA fields
-                $npcNewFields=$db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates where npc_name='$codename'");
+                $npcTemlate = $db->fetchAll("SELECT core FROM combined_bio_templates where npc_name='$codename'");
+                // Query for new HERIKA fields (bio tables)
+                $npcNewFields = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates where npc_name='$codename'");
             } else {
                 // For translated templates, set empty new fields for now
                 $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
             }
         }
-                
-        $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
-        //use the Nametype conf opts to latch onto the character name while still being able to pull the correct voicetype[3]
-        if ($voicelogic === "voicetype") {
-            $codename = npcNameToCodename($npcname);
-            $cn=$db->escape("Nametype/$codename");
-            $vtype=$db->fetchAll("select value from conf_opts where id='$cn'");
-            $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
-            if ($voicetypeString) {
-                $voicetype=explode("\\",$voicetypeString);
-            }
-        }
-
-        // 1. Save the file lines
-        file_put_contents($newFile, implode('', $file_lines));
-        // 2. Save the original $npcname to HERIKA_NAME
-        file_put_contents($newFile, '$HERIKA_NAME=\''.addslashes(trim($npcname)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        
 
         // 3. Extract the bracketed portion and convert it to the "stripped" version
         //    e.g. Bofesar [Whiterun Guard] -> whiterun_guard
@@ -3285,166 +3708,163 @@ function createProfile($npcname,$FORCE_PARMS=[],$overwrite=false,$baseprofile=''
             $bracketMatch = strtolower($bracketMatch);
             $bracketMatch = str_replace(' ', '_', $bracketMatch);
         }
-        
+
         // Original logic for pulling from database
         if (isset($npcTemlate[0]) && is_array($npcTemlate[0])) {
+                error_log("Creating from template ");
 
-            file_put_contents($newFile, '$HERIKA_PERS=\''.addslashes(trim($npcTemlate[0]["npc_pers"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-            file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($npcdynamic[0]["npc_dynamic"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-            file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\'' . addslashes(implode(', ', array_unique(array_merge(array_filter(array_map('trim', explode(',', $npcknowledge[0]["npc_misc"] ?? ''))), [$codename])))) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
-            
-            // Add new HERIKA fields if available
-            if (isset($npcNewFields[0]) && is_array($npcNewFields[0])) {
-                $newFields = [
-                    'HERIKA_BACKGROUND' => $npcNewFields[0]["npc_background"] ?? '',
-                    'HERIKA_PERSONALITY' => $npcNewFields[0]["npc_personality"] ?? '',
-                    'HERIKA_APPEARANCE' => $npcNewFields[0]["npc_appearance"] ?? '',
-                    'HERIKA_RELATIONSHIPS' => $npcNewFields[0]["npc_relationships"] ?? '',
-                                'HERIKA_OCCUPATION' => $npcNewFields[0]["npc_occupation"] ?? '',
-            'HERIKA_SKILLS' => $npcNewFields[0]["npc_skills"] ?? '',
-            'HERIKA_SPEECHSTYLE' => $npcNewFields[0]["npc_speechstyle"] ?? '',
-            'HERIKA_GOALS' => $npcNewFields[0]["npc_goals"] ?? ''
-                ];
-                
-                foreach ($newFields as $fieldName => $fieldValue) {
-                    if (!empty(trim($fieldValue))) {
-                        file_put_contents($newFile, '$'.$fieldName.'=\''.addslashes(trim($fieldValue)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-                    }
-                }
+            // Build core from template core (or npc_pers in translated case)
+            $coreFull = '';
+            if (array_key_exists('core', $npcTemlate[0])) {
+                $coreFull = trim((string)$npcTemlate[0]['core']);
+            } elseif (array_key_exists('npc_pers', $npcTemlate[0])) {
+                $coreFull = trim((string)$npcTemlate[0]['npc_pers']);
             }
+            if ($coreFull === '') {
+                // Fallback: minimal core
+                $coreFull = trim($npcname);
+            }
+
+            $npcMaster->create([
+
+                    "npc_name" => $npcname,
+                    'npc_static_bio' => $npcNewFields[0]["npc_static_bio"] ?? '',
+                    'personality' => $npcNewFields[0]["personality"] ?? '',
+                    'core' => $coreFull,
+                    'relationships' => $npcNewFields[0]["relationships"] ?? '',
+                    'occupation' => $npcNewFields[0]["occupation"] ?? '',
+                    'appearance' => $npcNewFields[0]["appearance"] ?? '',
+                    'skills' => $npcNewFields[0]["skills"] ?? '',
+                    'speechstyle' => $npcNewFields[0]["speechstyle"] ?? '',
+                    'goals' => $npcNewFields[0]["goals"] ?? '',
+                    'oghma_knowledge_tags' => $npcNewFields[0]["oghma_knowledge_tags"] ?? ''
+
+                ]
+            );
+
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
-            // 4. Query #2: Try bracket-stripped match only if Query #1 was empty
-            $npcTemlate2 = $db->fetchAll("SELECT npc_pers 
-                                        FROM combined_npc_templates
-                                        WHERE npc_name='".$db->escape($bracketMatch)."'");
+            
+            // Query for new HERIKA fields for bracket match (bio tables)
+            $npcNewFields2 = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates WHERE npc_name='" . $db->escape($bracketMatch) . "'");
+            $npcCore2 = $db->fetchAll("SELECT core FROM combined_bio_templates WHERE npc_name='" . $db->escape($bracketMatch) . "'");
 
-            $npcknowledge2 = $db->fetchAll("SELECT npc_misc
-                                        FROM combined_npc_templates
-                                        WHERE npc_name='".$db->escape($bracketMatch)."'");
-
-            // Query for new HERIKA fields for bracket match
-            $npcNewFields2 = $db->fetchAll("SELECT npc_background, npc_personality, npc_appearance, npc_relationships, npc_occupation, npc_skills, npc_speechstyle, npc_goals FROM combined_npc_templates WHERE npc_name='".$db->escape($bracketMatch)."'");
-
-            if (!empty($npcTemlate2[0])) {
-                // Found a row by bracket match
-                file_put_contents($newFile,'$HERIKA_PERS=\''.addslashes(trim($npcTemlate2[0]["npc_pers"])).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-                $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
-                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-                file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes(trim($npcknowledge2[0]["npc_misc"])).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);  
-                
-                // Add new HERIKA fields if available for bracket match
-                if (isset($npcNewFields2[0]) && is_array($npcNewFields2[0])) {
-                    $newFields = [
-                        'HERIKA_BACKGROUND' => $npcNewFields2[0]["npc_background"] ?? '',
-                        'HERIKA_PERSONALITY' => $npcNewFields2[0]["npc_personality"] ?? '',
-                        'HERIKA_APPEARANCE' => $npcNewFields2[0]["npc_appearance"] ?? '',
-                        'HERIKA_RELATIONSHIPS' => $npcNewFields2[0]["npc_relationships"] ?? '',
-                        'HERIKA_OCCUPATION' => $npcNewFields2[0]["npc_occupation"] ?? '',
-                        'HERIKA_SKILLS' => $npcNewFields2[0]["npc_skills"] ?? '',
-                        'HERIKA_SPEECHSTYLE' => $npcNewFields2[0]["npc_speechstyle"] ?? '',
-                        'HERIKA_GOALS' => $npcNewFields2[0]["npc_goals"] ?? ''
-                    ];
-                    
-                    foreach ($newFields as $fieldName => $fieldValue) {
-                        if (!empty(trim($fieldValue))) {
-                            file_put_contents($newFile, '$'.$fieldName.'=\''.addslashes(trim($fieldValue)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-                        }
-                    }
+            if (!empty($npcNewFields2[0])) {
+                error_log("Creating from template bracketMatch");
+                // Build core from template core
+                $coreFull2 = '';
+                if (!empty($npcCore2[0]) && array_key_exists('core', $npcCore2[0])) {
+                    $coreFull2 = trim((string)$npcCore2[0]['core']);
                 }
+                if ($coreFull2 === '') { $coreFull2 = trim($npcname); }
+
+                $npcMaster->create([
+                        "npc_name" => $npcname,
+                        'npc_static_bio' => $npcNewFields2[0]["npc_static_bio"] ?? '',
+                        'personality' => $npcNewFields2[0]["personality"] ?? '',
+                        'core' => $coreFull2,
+                        'relationships' => $npcNewFields2[0]["relationships"] ?? '',
+                        'occupation' => $npcNewFields2[0]["occupation"] ?? '',
+                        'appearance' => $npcNewFields2[0]["appearance"] ?? '',
+                        'skills' => $npcNewFields2[0]["skills"] ?? '',
+                        'speechstyle' => $npcNewFields2[0]["speechstyle"] ?? '',
+                        'goals' => $npcNewFields2[0]["goals"] ?? '',
+                        'oghma_knowledge_tags' => $npcNewFields2[0]["oghma_knowledge_tags"] ?? ''
+                    ]
+                );
             } else {
-                // Fallback if neither query found anything
-                file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-                $prompt = $db->fetchAll("SELECT prompt FROM dynamic_bio ORDER BY RANDOM() LIMIT 1")[0]['prompt'];
-                file_put_contents($newFile, '$HERIKA_DYNAMIC=\''.addslashes(trim($prompt)).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+                error_log("Creating initial empty profile");
+                $npcMaster->create([
+                        "npc_name" => $npcname
+                    ]
+                );
             }
-
         } else {
-            // 5. Fallback if no bracket or no match found
-            file_put_contents($newFile,'$HERIKA_PERS=\'Roleplay as '.addslashes($npcname).'\';'.PHP_EOL,FILE_APPEND | LOCK_EX);
-            file_put_contents($newFile, '$OGHMA_KNOWLEDGE=\''.addslashes($codename).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        }
-
-            
-        foreach ($FORCE_PARMS as $p=>$v) {
-            file_put_contents($newFile, '$'.$p.'=\''.addslashes($v).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        }
-
-        // XTTS voiceid override from table. if fails then xtts voicelogic pick
-        $voiceid = isset($voicetype) && sizeof($voicetype) >= 4 ? $voicetype[3] : "";
-        if (!$voiceid && (
-            (empty($xttsid[0]['xtts_voiceid']) && $voicelogic === "voicetype") ||
-            empty($melottsid[0]['melotts_voiceid']) ||
-            empty($xvasynthid[0]['xvasynth_voiceid']))
-        ) {
-            Logger::warn("Could not find voiceid for {$npcname} while creating the profile. Setting to blank.");
-        }
-
-        if (!empty($xttsid[0]['xtts_voiceid'])) {
-            file_put_contents(
-                $newFile,
-                '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $xttsid[0]['xtts_voiceid'] . '\';' . PHP_EOL,
-                FILE_APPEND | LOCK_EX
+            error_log("Creating initial empty profile");
+            $npcMaster->create([
+                    "npc_name" => $npcname
+                ]
             );
-        } else {
-            if ($voicelogic === "voicetype") {
-                file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
-                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . strtolower($voiceid) . '\';' . PHP_EOL, FILE_APPEND | LOCK_EX);
-            } else {
-                file_put_contents($newFile, '$TTS["XTTSFASTAPI"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
-                file_put_contents($newFile, '$TTS["ZONOS_GRADIO"]["voiceid"]=\'' . $codename . '\';' . PHP_EOL, flags: FILE_APPEND | LOCK_EX);
+            $EMPTY_PROFILE=true;
+            $newData = $npcMaster->GetByName($npcname);
+            
+
+        }
+
+        // Voice
+        //TODO i dont think these ids are used to set the voice in this code - not sure i follow it [needs review]
+        // $voiceRow = $db->fetchAll("SELECT voiceid FROM combined_bio_templates WHERE npc_name='$codename'");
+        // $melottsid = $db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+        // $xvasynthid = $db->fetchAll("SELECT xvasynth_voiceid	 FROM combined_npc_templates WHERE npc_name='$codename'");
+
+        // $cn = $db->escape("Voicetype/$codename");
+        // $vtype = $db->fetchAll("select value from conf_opts where id='$cn'");
+        // $voicetypeString = (isOk($vtype)) ? $vtype[0]["value"] : null;
+        // if ($voicetypeString) {
+            // $voicetype = explode("\\", $voicetypeString);
+        // } else {
+        //     $voicetype = null;
+        // }
+
+        // $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
+        //use the Nametype conf opts to latch onto the character name while still being able to pull the correct voicetype[3]
+        // if ($voicelogic === "voicetype") {
+            //$codename = npcNameToCodename($npcname);
+            //$cn = $db->escape("Nametype/$codename");
+            //$vtype = $db->fetchAll("select value from conf_opts where id='$cn'");
+            //$voicetypeString = (isOk($vtype)) ? $vtype[0]["value"] : null;
+            //if ($voicetypeString) {
+                //$voicetype = explode("\\", $voicetypeString);
+            //}
+        //}
+        // Legacy per-engine voice ids (deprecated in favor of unified voiceid)
+        // $melottsid = $db->fetchAll("SELECT melotts_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+        // $xvasynthid = $db->fetchAll("SELECT xvasynth_voiceid FROM combined_npc_templates WHERE npc_name='$codename'");
+
+        // Populate voiceid for core_npc_master using XTTS-style logic with template fallback
+        $voiceid = "";
+
+        // 1) Prefer explicit template voiceid if present
+        if (isset($npcNewFields) && isset($npcNewFields[0]["voiceid"]) && !empty($npcNewFields[0]["voiceid"])) {
+            $voiceid = trim($npcNewFields[0]["voiceid"]);
+        } else if (isset($npcNewFields2) && isset($npcNewFields2[0]["voiceid"]) && !empty($npcNewFields2[0]["voiceid"])) {
+            $voiceid = trim($npcNewFields2[0]["voiceid"]);
+        }
+
+        // 2) Else derive from conf_opts Nametype/Voicetype path (old XTTS behavior)
+        if (empty($voiceid)) {
+            $codename = npcNameToCodename($npcname);
+            $cnVoicetype = $db->escape("Voicetype/$codename");
+            $cnNametype  = $db->escape("Nametype/$codename");
+
+            $row = $db->fetchAll("select value from conf_opts where id='$cnVoicetype' limit 1");
+            if (!is_array($row) || sizeof($row) == 0) {
+                $row = $db->fetchAll("select value from conf_opts where id='$cnNametype' limit 1");
+            }
+
+            if (is_array($row) && sizeof($row) > 0 && isset($row[0]["value"])) {
+                $parts = explode("\\", $row[0]["value"]);
+                if (sizeof($parts) >= 4 && !empty($parts[3])) {
+                    $voiceid = strtolower($parts[3]);
+                }
             }
         }
-        // MeloTTS voiceid override from table, if fails then generated normally.
-        if (!empty($melottsid[0]['melotts_voiceid'])) {
-            // Use the melotts_voiceid value
-            file_put_contents($newFile,'$TTS["MELOTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
-        } else {
-            file_put_contents($newFile, '$TTS["MELOTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
+
+        // 3) Assign (may remain empty if nothing found)
+        $currentData = $npcMaster->GetByName($npcname);
+        $currentData["voiceid"] = $voiceid;
+
+        $currentData['metadata'] = json_encode([]);
+        $currentData['extended_data'] = json_encode(["chim_core_migrated" => 2]);
+        $currentData['profile_id'] = 1; // Default profile
+        $currentData['md5'] = md5($currentData["npc_name"]);
+
+        if ($EMPTY_PROFILE) {
+            error_log("[CREATEPROFILE] Created initial empty profile");
         }
 
-        // PiperTTS voiceid - uses same voice IDs as MeloTTS
-        if (!empty($melottsid[0]['melotts_voiceid'])) {
-            // Use the melotts_voiceid value for PiperTTS as well
-            file_put_contents($newFile,'$TTS["PIPERTTS"]["voiceid"]=\'' . strtolower($melottsid[0]['melotts_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
-        } else {
-            file_put_contents($newFile, '$TTS["PIPERTTS"]["voiceid"]=\''.strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        }
-
-        //xvansynth logic from override table
-        if (!empty($xvasynthid[0]['xvasynth_voiceid'])) {
-
-            file_put_contents($newFile,'$TTS["XVASYNTH"]["model"]=\'' . strtolower($xvasnythid[0]['xvasynth_voiceid']) . '\';' . PHP_EOL,FILE_APPEND | LOCK_EX);
-        }
-        else {
-            file_put_contents($newFile, '$TTS["XVASYNTH"]["model"]=\'sk_' . strtolower($voiceid).'\';'.PHP_EOL, FILE_APPEND | LOCK_EX);
-        }
-
-
-        file_put_contents($newFile, '?>'.PHP_EOL, FILE_APPEND | LOCK_EX);
-
-        $currentModelFilePath = $path."data/CurrentModel_".md5($npcname).".json";
-        Logger::info(DMgetDefaultModelFile()." ".$currentModelFilePath);
-        copy(DMgetDefaultModelFile(),$currentModelFilePath);
-        shell_exec("chmod 0775 {$currentModelFilePath}");
-        
-         // Character Map file
-        if (file_exists($path . "conf".DIRECTORY_SEPARATOR."character_map.json")) {
-            
-            $characterMap=json_decode(file_get_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json"),true);
-            if (!$characterMap)
-                $characterMap=[];
-
-            Logger::info("Loading character map: ".sizeof($characterMap));
-        }
-
-
-        $characterMap[md5($npcname)]=$npcname;
-        file_put_contents($path . "conf".DIRECTORY_SEPARATOR."character_map.json",json_encode($characterMap));
-        
+        $npcMaster->updateByArray($currentData);
     }
-
-   
 }
 
 function getConfFileFor($npcname) {
@@ -3467,7 +3887,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     
     // List of new HERIKA fields to include
     $herikaFields = [
-        'HERIKA_BACKGROUND' => 'Background',
+        'HERIKA_BACKGROUND' => 'Basic Summary',
         'HERIKA_PERSONALITY' => 'Personality', 
         'HERIKA_APPEARANCE' => 'Appearance',
         'HERIKA_RELATIONSHIPS' => 'Relationships',
@@ -3476,13 +3896,191 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         'HERIKA_SPEECHSTYLE' => 'SpeechStyle',
         'HERIKA_GOALS' => 'Goals'
     ];
+    $SKILLS_ADD="";
+    $EQUIPMENT_ADD="";
+    $TARGET_EQUIPMENT_ADD="";
+    $STATS_ADD="";
     
-    foreach ($herikaFields as $fieldName => $label) {
-        if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
-            $dynamicBio .= "\n\n#$label\n" . trim($FOLLOWER_CONF[$fieldName]);
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
+    $metaData=$npcMaster->getMetaData($currentNpcData);
+    
+    if (isset($metaData["skills"])) {
+        // Convert numeric skills to descriptive levels, grouped by category
+        $skillCategories = [
+            'Combat' => ['archery', 'block', 'onehanded', 'twohanded', 'heavyarmor', 'lightarmor'],
+            'Magic' => ['conjuration', 'destruction', 'illusion', 'restoration', 'alteration', 'enchanting'],
+            'Stealth' => ['sneak', 'pickpocket', 'lockpicking', 'speechcraft'],
+            'Crafting' => ['smithing', 'alchemy']
+        ];
+        
+        $formattedSkills = "\n\nSkill Proficiencies:";
+        
+        foreach ($skillCategories as $category => $skillNames) {
+            $categorySkills = [];
+            foreach ($skillNames as $skillName) {
+                if (isset($metaData["skills"][$skillName])) {
+                    $skillValue = $metaData["skills"][$skillName];
+                    $level = '';
+                    if ($skillValue >= 100) {
+                        $level = 'Master';
+                    } elseif ($skillValue >= 75) {
+                        $level = 'Expert';
+                    } elseif ($skillValue >= 50) {
+                        $level = 'Adept';
+                    } elseif ($skillValue >= 25) {
+                        $level = 'Apprentice';
+                    } else {
+                        $level = 'Novice';
+                    }
+                    
+                    // Always show skills, including Novice
+                    $categorySkills[] = ucfirst($skillName) . " (" . $level . ")";
+                }
+            }
+            
+            if (!empty($categorySkills)) {
+                $formattedSkills .= "\n  • {$category}: " . implode(", ", $categorySkills);
+            }
+        }
+        
+        $SKILLS_ADD = $formattedSkills;
+    } 
+    
+    // Add NPC's own equipment
+    if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
+        $equipmentParts = [];
+        $slots = [
+            'helmet' => 'Helmet',
+            'armor' => 'Armor', 
+            'boots' => 'Boots',
+            'gloves' => 'Gloves',
+            'amulet' => 'Amulet',
+            'ring' => 'Ring',
+            'left_hand' => 'Left Hand',
+            'right_hand' => 'Right Hand'
+        ];
+        
+        foreach ($slots as $slot => $label) {
+            if (!empty($metaData["equipment"][$slot])) {
+                $equipmentParts[] = "  • {$label}: {$metaData["equipment"][$slot]}";
+            }
+        }
+        
+        if (!empty($equipmentParts)) {
+            $EQUIPMENT_ADD = "\n\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts);
+        }
+    }
+
+     // Add NPC's inventory
+    if (isset($metaData["inventory"]) && is_array($metaData["inventory"])) {
+       
+        $equipmentParts=[];
+        foreach ($metaData["inventory"] as $item) {
+            if ($item["name"]!='<Missing Name>') {
+                $equipmentParts[]="{$item["count"]} {$item["name"]}";
+            }
+            
+        }
+        
+        if (!empty($equipmentParts)) {
+            $INVENTORY_ADD = "\n\n#Current Inventory:\n" . implode(",", $equipmentParts);
         }
     }
     
+	// Add current condition (qualitative HP/MP/SP based on percent, with richer descriptors)
+	if (isset($metaData["stats"]) && is_array($metaData["stats"])) {
+		$s = $metaData["stats"];
+		$describe = function(string $kind, float $cur, float $max): string {
+			if ($max <= 0) return "Unknown";
+			$pct = ($cur < 0 ? 0.0 : ($cur > $max ? $max : $cur)) / $max * 100.0;
+			if ($kind === 'health') {
+				if ($pct >= 75.0) return "Near full health";           // 100–75
+				if ($pct >= 50.0) return "Wounded";                    // 74–50
+				if ($pct >= 25.0) return "Badly wounded";              // 50–25
+				return "On the brink of collapse";                      // 24–0
+			}
+			if ($kind === 'magicka') {
+				if ($pct >= 75.0) return "Magicka reserves strong";
+				if ($pct >= 50.0) return "Magicka reserves middling";
+				if ($pct >= 25.0) return "Magicka reserves low";
+				return "Magicka nearly drained";
+			}
+			// stamina
+			if ($pct >= 75.0) return "Well‑rested";
+			if ($pct >= 50.0) return "Winded";
+			if ($pct >= 25.0) return "Exhausted";
+			return "Spent";
+		};
+		$h = $describe('health', (float)($s['health'] ?? 0), (float)($s['health_max'] ?? 0));
+		$m = $describe('magicka', (float)($s['magicka'] ?? 0), (float)($s['magicka_max'] ?? 0));
+		$st = $describe('stamina', (float)($s['stamina'] ?? 0), (float)($s['stamina_max'] ?? 0));
+		if ($h !== 'Unknown' || $m !== 'Unknown' || $st !== 'Unknown') {
+			$lines = [];
+			if ($h !== 'Unknown') { $lines[] = "  • Health: {$h}"; }
+			if ($m !== 'Unknown') { $lines[] = "  • Magicka: {$m}"; }
+			if ($st !== 'Unknown') { $lines[] = "  • Stamina: {$st}"; }
+			if (!empty($lines)) {
+				$STATS_ADD = "\n\n#Current Condition\n" . implode("\n", $lines);
+			}
+		}
+	}
+    
+    // Add dialogue target's equipment (if DIALOGUE_TARGET is set)
+    if (isset($GLOBALS["DIALOGUE_TARGET"]) && !empty($GLOBALS["DIALOGUE_TARGET"])) {
+        $targetName = $GLOBALS["DIALOGUE_TARGET"];
+        $targetNpcData = $npcMaster->getByName($targetName);
+        
+        if ($targetNpcData) {
+            $targetMetaData = $npcMaster->getMetaData($targetNpcData);
+            
+            if (isset($targetMetaData["equipment"]) && is_array($targetMetaData["equipment"])) {
+                $targetEquipmentParts = [];
+                $slots = [
+                    'helmet' => 'Helmet',
+                    'armor' => 'Armor',
+                    'boots' => 'Boots', 
+                    'gloves' => 'Gloves',
+                    'amulet' => 'Amulet',
+                    'ring' => 'Ring',
+                    'left_hand' => 'Left Hand',
+                    'right_hand' => 'Right Hand'
+                ];
+                
+                foreach ($slots as $slot => $label) {
+                    if (!empty($targetMetaData["equipment"][$slot])) {
+                        $targetEquipmentParts[] = "  • {$label}: {$targetMetaData["equipment"][$slot]}";
+                    }
+                }
+                
+                if (!empty($targetEquipmentParts)) {
+                    $TARGET_EQUIPMENT_ADD = "\n\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentParts);
+                }
+            }
+        }
+    }
+
+    foreach ($herikaFields as $fieldName => $label) {
+        if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
+            $dynamicBio .= "\n\n#$label\n" . trim($FOLLOWER_CONF[$fieldName]);
+            
+            // Add skills right after HERIKA_SKILLS section
+            if ($fieldName=="HERIKA_SKILLS") {
+                $dynamicBio.=$SKILLS_ADD ?? "";
+            }
+            
+            // Add equipment right after HERIKA_APPEARANCE section
+            if ($fieldName=="HERIKA_APPEARANCE") {
+                $dynamicBio.=$EQUIPMENT_ADD ?? "";
+                $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
+                $dynamicBio.=$INVENTORY_ADD ?? "";
+                $dynamicBio.=$STATS_ADD ?? "";
+            }
+        }
+    }
+    
+    
+
     // Fall back to HERIKA_DYNAMIC if no new fields are set
     if (empty(trim($dynamicBio)) && isset($FOLLOWER_CONF["HERIKA_DYNAMIC"]) && !empty(trim($FOLLOWER_CONF["HERIKA_DYNAMIC"]))) {
         $dynamicBio = $FOLLOWER_CONF["HERIKA_DYNAMIC"];
@@ -3703,8 +4301,8 @@ function write_php_assignments(array $assignments, string $filePath): bool {
                 if (!mb_check_encoding($cleaned, 'UTF-8')) {
                     $cleaned = mb_convert_encoding($cleaned, 'UTF-8', 'UTF-8'); // Fix encoding
                 }
-                if (strlen($cleaned) > 10000) {
-                    $cleaned = substr($cleaned, 0, 10000) . '... [truncated]'; // Limit length
+                if (strlen($cleaned) > 100000) {
+                    $cleaned = substr($cleaned, 0, 100000) . '... [truncated]'; // Limit length
                 }
                 $cleaned = str_replace(['<?php', '<?', '?>'], ['&lt;?php', '&lt;?', '?&gt;'], $cleaned); // Escape PHP tags
                 
@@ -3732,9 +4330,9 @@ function write_php_assignments(array $assignments, string $filePath): bool {
     return file_put_contents($filePath, $output, LOCK_EX);
 }
 
-function getInGameSkillDataFor($npcnName) {
+function getInGameSkillDataFor($npcName) {
 
-    $npcEscapedName=$GLOBALS["db"]->escape($npcnName);
+    $npcEscapedName=$GLOBALS["db"]->escape($npcName);
     $query="
 WITH npc_spells AS (
   SELECT
@@ -3821,8 +4419,8 @@ function safe_var_export($value, $return = true) {
         $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
         
         // Limit length to prevent extremely long strings
-        if (strlen($value) > 10000) {
-            $value = substr($value, 0, 10000) . '... [truncated]';
+        if (strlen($value) > 100000) {
+            $value = substr($value, 0, 100000) . '... [truncated]';
         }
         
         // Ensure balanced quotes and backslashes don't break escaping
@@ -3914,5 +4512,47 @@ function safe_update_php_variable($filePath, $varName, $value) {
     }
     
     return ["success" => true, "message" => "Variable $varName updated successfully"];
+}
+
+
+/**
+ * Retrieves base data for an NPC from the event log based on the NPC's name.
+ *
+ * This function queries the database for the most recent log entry of type 'addnpc'
+ * that matches the given NPC name. It extracts and returns the NPC's gender, race,
+ * and reference ID from the log data. If the NPC name is empty, no matching data is found,
+ * or the data is insufficient, the function returns null.
+ *
+ * @param string $npcname The name of the NPC to retrieve data for.
+ * @return array|null An associative array containing 'gender', 'race', and 'refid' keys,
+ *                    or null if no valid data is found.
+ */
+function getBaseDataForNpcFromLog($npcname) {
+    if (empty($npcname)) {
+        error_log("getBaseDataForNpcFromLog: NPC name is empty.");
+        return null;
+    }
+
+    $npcNameEscaped = $GLOBALS["db"]->escape($npcname);
+    $result = $GLOBALS["db"]->fetchOne("SELECT data FROM eventlog WHERE type='addnpc' AND data LIKE '$npcNameEscaped%' ORDER BY rowid DESC LIMIT 1");
+
+    if (!$result || !isset($result["data"])) {
+        error_log("getBaseDataForNpcFromLog: No data found for NPC '$npcname'.");
+        return null;
+    }
+
+    $splitNameBase = explode("@", $result["data"]);
+    if (count($splitNameBase) < 5) {
+        error_log("getBaseDataForNpcFromLog: Insufficient data for NPC '$npcname'. Data: " . print_r($result["data"], true));
+        return null;
+    }
+
+    $currentNpcData = [
+        "gender" => $splitNameBase[2],
+        "race" => $splitNameBase[3],
+        "refid" => $splitNameBase[4]
+    ];
+
+    return $currentNpcData;
 }
 ?>

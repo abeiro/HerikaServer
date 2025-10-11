@@ -1,5 +1,8 @@
 <?php
 
+error_log("THIS FILE SHOULD NOT BE INCLUDE!!!");
+return;
+
 /*
 curl -X 'POST' \
   'http://127.0.0.1:8000/add' \
@@ -85,7 +88,7 @@ function countMemories()
 }
 
 
-function storeMemory($embeddings, $text, $id, $category='past dialogues' ,$forceCompanions="")
+function storeMemoryOld($embeddings, $text, $id, $category='past dialogues' ,$forceCompanions="")
 {
 
 	global $VECTORDB_URL, $VECTORDB_URL_COLLECTION,$db;
@@ -117,6 +120,12 @@ function storeMemory($embeddings, $text, $id, $category='past dialogues' ,$force
 		
 	}
 	
+	preg_match_all('/#\w[\w\d_]*/u', $embeddings, $matches);
+
+	// $matches[0] contains all hashtags
+	$hashtags = $matches[0];
+	$hashtagsEsc=$db->escape(implode(",",$hashtags));
+
 	if ($category=="diary") {
 		$filteredArray=[$forceCompanions];
 		
@@ -136,11 +145,11 @@ function storeMemory($embeddings, $text, $id, $category='past dialogues' ,$force
 	}
 	
 	if (sizeof($vector)=="384") {
-		$db->update("memory_summary","embedding='$response',companions='$peopleS'","rowid=$id");
+		$db->update("memory_summary","embedding='$response',companions='$peopleS',tags='$hashtagsEsc'","rowid=$id");
 		error_log("Using 384 dim vectors".PHP_EOL);
 	}
 	else if (sizeof($vector)=="768") {
-		$db->update("memory_summary","embedding768='$response',companions='$peopleS'","rowid=$id");
+		$db->update("memory_summary","embedding768='$response',companions='$peopleS',tags='$hashtagsEsc'","rowid=$id");
 		error_log("Using 768 dim vectors".PHP_EOL);
 	}
 	else {

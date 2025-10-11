@@ -117,18 +117,14 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 } else if ($gameRequest[0] == "diary") {
 	// Use configurable DIARY_PROMPT or fallback to default
 	$diaryPrompt = isset($GLOBALS["DIARY_PROMPT"]) && !empty($GLOBALS["DIARY_PROMPT"]) 
-		? strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$GLOBALS["HERIKA_NAME"],'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"]])
+		? strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$GLOBALS["HERIKA_NAME"],'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],'#HERIKA_NAME#'=>$GLOBALS["HERIKA_NAME"],'#PLAYER_NAME#'=>$GLOBALS["PLAYER_NAME"]])
 		: "Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}.";
 	
 	// Add current game date/time context to the prompt
 	$diaryPrompt = "Current date and time: {$sk_date}. " . $diaryPrompt;
 	
 	$request = $diaryPrompt;
-
-	if (isset($GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"])) {
-		$GLOBALS["FORCE_MAX_TOKENS"]=$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];
-	}
-
+	
 	logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["HERIKA_NAME"],
         "(Important note: Something important happened here for {$GLOBALS["PLAYER_NAME"]} on {$sk_date}. You should use the tag #PlotRelevantEvent)",
         $momentum, $gameRequest[2],'diary_intent',$gameRequest[1]);

@@ -1,5 +1,6 @@
 <?php
 session_start();
+ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
@@ -10,9 +11,6 @@ $TITLE = "🖼️CHIM - ITT Test - CHIM Server";
 ob_start();
 
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
-
-$debugPaneLink = false;
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
@@ -25,13 +23,32 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 
 $db=new sql();
+$GLOBALS['db'] = $db;
 
-require_once($enginePath . "itt" . DIRECTORY_SEPARATOR . "itt-{$GLOBALS['ITTFUNCTION']}.php");
+// Load driver file only if valid; fallback to openrouter for preview
+$activeItt = (string)($GLOBALS['ITTFUNCTION'] ?? '');
+if ($activeItt === '' || strtolower($activeItt) === 'none') {
+    $activeItt = 'openrouter';
+}
+$driverPath = $enginePath . "itt" . DIRECTORY_SEPARATOR . "itt-{$activeItt}.php";
+if (file_exists($driverPath)) {
+    require_once($driverPath);
+}
 
 $start_time = time();
 
 $sampleImagePath = '../../debug/data/sample.jpg';
-$description = itt("$enginePath/debug/data/sample.jpg", '');
+$driverFile = $driverPath;
+$description = '';
+try {
+    if ($activeItt === '' || !file_exists($driverFile)) {
+        $description = '';
+    } else {
+        $description = itt("$enginePath/debug/data/sample.jpg", '');
+    }
+} catch (Throwable $e) {
+    $description = "Error: ".$e->getMessage();
+}
 $end_time = time();
 
 ?>
@@ -42,22 +59,9 @@ $end_time = time();
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
     <link rel="stylesheet" href="../css/main.css">
     <style>
-        /* Override main container styles */
-        main {
-            padding-top: 160px; /* Space for navbar */
-            padding-bottom: 40px; /* Reduced space for footer */
-            padding-left: 10px;
-        }
-        
-        /* Override footer styles */
-        footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            height: 20px; /* Reduced footer height */
-            background: #031633;
-            z-index: 100;
-        }
+        /* Modal-friendly spacing (no navbar) */
+        main { padding: 20px 10px 20px 10px; }
+        footer { display: none; }
 
         /* Updated CSS for Dark Grey Background Theme */
         body {
@@ -159,6 +163,8 @@ $end_time = time();
 <main>
 <div class="indent5">
     <h1>🖼️CHIM Image-to-Text Test</h1>
+    <div class="status"><span class="label">Active ITT:</span> <span class="ok"><?php echo htmlspecialchars($activeItt ?: 'none'); ?></span></div>
+    <div class="status"><span class="label">Driver file:</span> <span class="ok"><?php echo htmlspecialchars($driverFile); ?></span></div>
 
     <div class="section clearfix">
         <div class="image-container">
@@ -169,7 +175,7 @@ $end_time = time();
         <div class="description-container">
             <h3>ITT Output</h3>
             <div class="response">
-                <?php echo nl2br(htmlspecialchars($description)); ?>
+                <?php echo ($description !== '') ? nl2br(htmlspecialchars($description)) : '<span class="error">No output (check API key, model, or server logs)</span>'; ?>
             </div>
         </div>
     </div>
