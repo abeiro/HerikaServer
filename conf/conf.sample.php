@@ -474,7 +474,7 @@ $FEATURES["MEMORY_EMBEDDING"]["ENABLED"]=true; //Long term memory embedding.
 $FEATURES["MEMORY_EMBEDDING"]["TXTAI_URL"]='http://127.0.0.1:8082'; //Text2Vec service
 $FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=true; //NOT FUNCTIONAL CURRENTLY. JUST LEAVE AS IS!
 
-$FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=10; //Time in minutes to delay before using a memory in a prompt.
+$FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=12; //Time in minutes to delay before using a memory in a prompt.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1; //Amount of memory records that will be injected into the prompt.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=true; //Combines individual memory logs into larger ones at the cost of tokens.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10; //Time frame used to pack summary data.
@@ -496,3 +496,4 @@ $BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
 
 ?>
+
