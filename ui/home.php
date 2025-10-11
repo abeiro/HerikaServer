@@ -56,6 +56,22 @@ class sql {
         }
         return $rows;
     }
+
+    public function fetchOne($query)
+    {
+        $result = pg_query($this->conn, $query);
+        if (!$result) {
+            return [];
+        }
+
+        $finalData = array();
+        while ($row = pg_fetch_assoc($result)) {
+            $finalData = $row;
+            break;
+        }
+
+        return $finalData;
+    }
     
     public function execQuery($query) {
         return pg_query($this->conn, $query);

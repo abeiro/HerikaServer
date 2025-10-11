@@ -184,7 +184,7 @@ class CoreProfile {
         $metadata = json_decode($currentProfileData['metadata'] ?? '{}', true);
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
-                if (!empty($value)) {
+                if (!empty($value)||is_array($value)) {
                     $GLOBALS[$key] = $value;
                     error_log("[CORE] PROFILE  GLOBALS[$key] = ".print_r($value,true));
                 }

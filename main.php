@@ -655,9 +655,11 @@ if (isset($_GET["profile"])) {
             $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
-            
-            error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} profile: {$currentProfileData["label"]}");
-            error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]}");
+
+            $debugLang = $GLOBALS["LLM_LANG"] ?? "unset";
+            $debugOverrideTtsLang = $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] ?? "unset";
+            error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$debugLang} profile: {$currentProfileData["label"]}");
+            error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$debugLang} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$debugOverrideTtsLang}");
         }
     }
     
@@ -1183,7 +1185,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"]) ) {
 
-    $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+    $memoryInjection=offerMemory($gameRequest);
     //Logger::info("Memory injection:".json_encode($memoryInjection));
 
     if (!empty($memoryInjection)) {

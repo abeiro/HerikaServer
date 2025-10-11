@@ -29,7 +29,7 @@ if ($GLOBALS["MINIME_T5"]) {
             $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]=true;
             
             $GLOBALS["MEMORY_THRESHOLD_MODIFIER"]=0.5;
-            $memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+            $memoryInjection=offerMemory($gameRequest);
             if ($memoryInjection) {
                 
                 $gameRequestCopy=$gameRequest;

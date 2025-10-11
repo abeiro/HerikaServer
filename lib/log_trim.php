@@ -50,10 +50,14 @@ function initializeLogTrimming($maxLines = 10000) {
             'chim.log',
             'output_from_llm.log',
             'context_sent_to_llm.log',
-            'ouput_to_plugin.log',
+            'context_sent_to_llm_fast.log',
+            'output_to_plugin.log',
             'stt.log',
             'vision.log',
-            'debugstream.log'
+            'debugStream.log',
+            'service.log',
+            'monitor.log',
+            'manager.log'
         ];
 
         $trimCount = 0;
