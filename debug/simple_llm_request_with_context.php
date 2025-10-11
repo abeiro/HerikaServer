@@ -92,7 +92,7 @@ $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 
 
-$memoryInjection=offerMemory($gameRequest, $DIALOGUE_TARGET);
+$memoryInjection=offerMemory($gameRequest);
 if (!empty($memoryInjection)) {
     
     //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
