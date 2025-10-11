@@ -53,7 +53,7 @@ foreach ($rawTags as $tagcol) {
         }
 }
 foreach ($terms as $term) {
-    echo "-".convertToHashtag($term)."\\n";
+    echo "-".convertToHashtag($term)."\n";
 }
 
 

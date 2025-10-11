@@ -1450,11 +1450,11 @@ if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle
     $middle_term_memory = end($extended_data["middle_term_memory"]);
     $dynamicBiography.="\n\n#Past events\n{$middle_term_memory}";
 
-} 
-    
+}
 
-if (isset($GLOBALS["OGHMA_HINT"]) && $GLOBALS["OGHMA_HINT"]) {
-    
+
+if (!empty($GLOBALS["OGHMA_HINT"])) {
+
     $head[] = array('role' => 'system', 'content' =>  
         strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#Knowledge\n" . $GLOBALS["OGHMA_HINT"]."\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
