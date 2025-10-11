@@ -1745,8 +1745,8 @@ function PackIntoSummary($onlyMissingDiary=false)
                                     from memory_v
                                     where 
                                     message not like 'Dear Diary%'
-                                    group by round(gamets/$pfi ,0)  order by round(gamets/$pfi ,0) ASC
-                                ) as T where gamets_truncated>$maxRow
+                                    group by round(gamets/$pfi ,0)  HAVING count(*)>9 order by round(gamets/$pfi ,0) ASC
+                                ) as T where gamets_truncated>$maxRow 
                                 ");
         
         Logger::info("Main insert done");
