@@ -218,6 +218,25 @@ function pretty_label(string $flatName): string {
         $last2 = str_replace('_', ' ', strtolower(trim($last)));
         return ucwords($last2);
     }
+    // Translation: simplify labels for settings and DeepL
+    if (strpos($flatName, 'TRANSLATION@settings@') === 0) {
+        $parts = explode('@', $flatName);
+        $last = end($parts) ?: $flatName;
+        $last2 = str_replace('_', ' ', strtolower(trim($last)));
+        return ucwords($last2);
+    }
+    if (strpos($flatName, 'TRANSLATION@DeepL@') === 0) {
+        $parts = explode('@', $flatName);
+        $last = end($parts) ?: $flatName;
+        $lastLower = strtolower(trim($last));
+        if ($lastLower === 'url') return 'Endpoint URL';
+        if ($lastLower === 'api_key') return 'API Key';
+        $last2 = str_replace('_', ' ', $lastLower);
+        return ucwords($last2);
+    }
+    if ($flatName === 'TRANSLATION_FUNCTION') {
+        return 'Provider';
+    }
     // Custom display names for connectors (UI-only)
     $connectorLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
@@ -315,6 +334,20 @@ $gsSections = [
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_A', 'type' => 'number' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_B', 'type' => 'number' ]
+    ],
+    'Translation' => [
+        [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none','DeepL'] ],
+        [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@settings@translate_text', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@settings@save_translated_text', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@settings@translate_player_audio', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@settings@save_translated_player_text', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@DeepL@source_language', 'type' => 'string' ],
+        [ 'name' => 'TRANSLATION@DeepL@target_language', 'type' => 'string' ],
+        [ 'name' => 'TRANSLATION@DeepL@url', 'type' => 'url' ],
+        [ 'name' => 'TRANSLATION@DeepL@player_source_language', 'type' => 'string' ],
+        [ 'name' => 'TRANSLATION@DeepL@player_target_language', 'type' => 'string' ],
+        
     ]
 ];
 

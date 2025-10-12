@@ -150,7 +150,8 @@ $presetMap = [
     'azure'       => 'Azure',
     'elevenlabs'  => 'ElevenLabs',
     'replicate'   => 'Replicate',
-    'nano-gpt'    => 'Nano-GPT'
+    'nano-gpt'    => 'Nano-GPT',
+    'deepl'       => 'DeepL'
 ];
 
 // Provider key/dashboard links
@@ -162,7 +163,8 @@ $providerLinks = [
     'azure' => 'https://ai.azure.com/',
     'elevenlabs' => 'https://elevenlabs.io/app/settings/api-keys',
     'replicate' => 'https://replicate.com/account/api-tokens',
-    'nano-gpt' => 'https://nano-gpt.com/'
+    'nano-gpt' => 'https://nano-gpt.com/',
+    'deepl' => 'https://www.deepl.com/en/pro-api'
 ];
 
 // Subtext bullet points per provider
@@ -175,6 +177,7 @@ $providerSubtext = [
     'elevenlabs' => ['TTS'],
     'replicate' => ['Soulgaze Gallery Processor'],
     'nano-gpt' => ['LLM'],
+    'deepl' => ['Translation'],
 ];
 
 // Reserved labels (both slugs and pretty names), used to keep presets distinct from customs

@@ -248,7 +248,7 @@ $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_
 
 // Server version and dev-build detection
 // Note: Keep raw version string here; if it contains 'dev', we'll switch logo and hide the text suffix
-$serverVersionRaw = '2.0.0 dev';
+$serverVersionRaw = '2.0.1 dev';
 $isDevBuild = (stripos($serverVersionRaw, 'dev') !== false);
 $serverVersionDisplay = trim(str_ireplace('dev', '', $serverVersionRaw));
 $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
