@@ -37,14 +37,16 @@ if (!$conn) {
 }
 
 // Create database wrapper class for db_updates.php
+//TODO why is this here, whats wrong with importing the postgresql.class.php [needs review]
+// while it is here its imperative the function interface is synchronised with the postgresql.class.php
 class sql {
     private $conn;
-    
+
     public function __construct() {
         global $conn;
         $this->conn = $conn;
     }
-    
+
     public function fetchAll($query) {
         $result = pg_query($this->conn, $query);
         if (!$result) {
@@ -72,7 +74,7 @@ class sql {
 
         return $finalData;
     }
-    
+
     public function execQuery($query) {
         return pg_query($this->conn, $query);
     }
@@ -81,16 +83,20 @@ class sql {
         return pg_escape_string($this->conn, $str);
     }
 
+    public function escapeLiteral($str) {
+        return pg_escape_literal($this->conn, $str);
+    }
+
     public function upsertRowOnConflict($tableName, $data, $conflictTarget) {
         // Prepare the column names for the INSERT statement.
         $columns = implode(', ', array_keys($data));
-    
+
         // Take care of escaping here instead of requiring it before every upsert call
         $values = array_map(function($value) {
             return pg_escape_literal($this->conn, $value);
         }, array_values($data));
         $valuesString = implode(', ', $values);
-    
+
         // EXCLUDED refers to the row that was attempted to be inserted.
         // This loop constructs "column = EXCLUDED.column" for each column in the data.
         $updateStatements = [];
@@ -98,19 +104,19 @@ class sql {
             $updateStatements[] = "$column = EXCLUDED.$column";
         }
         $updateString = implode(', ', $updateStatements);
-    
+
         // ON CONFLICT ... DO UPDATE is effectively an upsert
         // If the constraint in $conflictTarget is violated during the insert, an update will be done instead
         $sqlquery = "INSERT INTO $tableName ($columns) VALUES ($valuesString) " .
-                    "ON CONFLICT ($conflictTarget) DO UPDATE SET $updateString;";
-    
+            "ON CONFLICT ($conflictTarget) DO UPDATE SET $updateString;";
+
         $result = pg_query($this->conn, $sqlquery);
-    
+
         if (!$result) {
             error_log("Database error: " . pg_last_error($this->conn));
             return false; // Indicate failure
         }
-    
+
         return true; // Indicate success
     }
 }
