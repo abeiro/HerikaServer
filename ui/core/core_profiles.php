@@ -256,7 +256,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
 
         $allowed = [
-            'label','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id'
+            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id'
         ];
         $data = [];
         foreach ($allowed as $k) {
