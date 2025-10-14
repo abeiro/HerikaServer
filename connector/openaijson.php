@@ -479,6 +479,13 @@ class openaijson
             }
 
         } // --- endif provider
+
+        // OpenAI safeguard: remove unsupported top_p for gpt-5 models regardless of reasoning flag
+        if ($this->_is_openai) {
+            if ((stripos($this->_url, "api.openai.com") !== false) && (stripos($this->_model, "gpt-5") !== false)) {
+                unset($data["top_p"]);
+            }
+        }
             
         if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
             $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
