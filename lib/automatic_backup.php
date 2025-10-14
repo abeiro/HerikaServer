@@ -223,22 +223,44 @@ class AutomaticBackup {
     }
     
     /**
-     * Check if we should create a backup on server restart
-     * Always creates a backup when the server starts up
+     * Decide if an automatic backup should be created.
+     * To avoid generating many backups on consecutive requests right after startup,
+     * we enforce a short cooldown based on the last successful backup timestamp
+     * and the latest backup file in the backup directory.
      */
     public function shouldCreateBackup() {
+        // Cooldown window (seconds). Only one auto-backup allowed within this window.
+        $cooldownSeconds = 600; // 10 minutes
+
         try {
-            // Try to get a working database connection
-            $db = $this->getDatabaseConnection();
-            if (!$db) {
-                Logger::warn("No database connection available for backup check - assuming backup needed");
-                return true;
+            // 1) If a recent auto backup file already exists, skip
+            $backups = $this->getBackups();
+            if (!empty($backups)) {
+                $latest = $backups[0];
+                if (isset($latest['date']) && (time() - (int)$latest['date'] < $cooldownSeconds)) {
+                    Logger::info("Skipping automatic backup: recent backup exists within cooldown window");
+                    return false;
+                }
             }
-            
-            // Always create a backup on server restart
-            Logger::info("Server restart detected - backup needed");
+
+            // 2) Also check persisted timestamp in DB (if available)
+            $db = $this->getDatabaseConnection();
+            if ($db) {
+                $db->execQuery("CREATE SCHEMA IF NOT EXISTS chim_meta");
+                $db->execQuery("CREATE TABLE IF NOT EXISTS chim_meta.settings (key TEXT PRIMARY KEY, value TEXT)");
+                $row = $db->fetchOne("SELECT value FROM chim_meta.settings WHERE key='AUTOMATIC_BACKUP_LAST_TIMESTAMP'");
+                if (is_array($row) && isset($row['value'])) {
+                    $last = strtotime((string)$row['value']);
+                    if ($last !== false && (time() - $last) < $cooldownSeconds) {
+                        Logger::info("Skipping automatic backup: last backup timestamp within cooldown window");
+                        return false;
+                    }
+                }
+            }
+
+            // 3) No recent backup detected: allow backup creation
             return true;
-            
+
         } catch (Exception $e) {
             Logger::warn("Error checking backup requirement: " . $e->getMessage());
             // If we can't check, err on the side of creating a backup
