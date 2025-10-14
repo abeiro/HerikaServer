@@ -7,11 +7,6 @@ $MUST_END=false;
 
 $gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
 
-
-// Moved Dynamic Updates functions here
-require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
-
-
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
     // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
     // Moved Dynamic Updates functions here

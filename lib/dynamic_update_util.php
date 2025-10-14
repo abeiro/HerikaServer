@@ -649,7 +649,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
 
         foreach ($profileFields as $fieldName => $fieldLabel) {
             if (!empty(trim($npcData[$fieldName]))) {
-                $profileContext[] = "**{$fieldLabel}**: " . trim($GLOBALS[$fieldName]);
+                $profileContext[] = "**{$fieldLabel}**: " . trim($npcData[$fieldName]);
             }
         }
 
