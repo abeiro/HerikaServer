@@ -97,9 +97,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
     $gameRequest = [ 'tts_quick_test', time(), time(), '' ];
     $selLower = strtolower($selectedFunction);
     if ($ttsTestVoice !== '') {
+        // User specified a test voice - override configured voice
         $GLOBALS["PATCH_OVERRIDE_VOICE"] = $ttsTestVoice;
     } else {
-        if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator'; else $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
+        // Only set default voices for providers that need them; let 11labs/openai/azure/deepgram use configured voice
+        if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
+        else if (in_array($selLower, ['melotts','piper-tts','xvasynth'], true)) $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
     }
     try {
         $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;

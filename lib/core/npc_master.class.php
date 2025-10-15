@@ -386,6 +386,11 @@ class NpcMaster {
             $GLOBALS['TTS']['XVASYNTH']['model'] = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['PIPERTTS']['voiceid'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['ELEVEN_LABS']['voice_id'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['AZURE']['voice'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['KOKORO']['voiceid'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['openai']['voice'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['deepgram']['model'] = $currentNpcData['voiceid'];
 
         }
 
