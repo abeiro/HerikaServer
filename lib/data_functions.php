@@ -5,6 +5,7 @@ require_once(__DIR__."/utils.php");
 
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/model_dynmodel.php");
+require_once(__DIR__."/core/npc_master.class.php");
 
 
 function ChangeHerikaName($new_name="") {
