@@ -119,6 +119,38 @@ class sql {
 
         return true; // Indicate success
     }
+
+    public function insert($table, $data) {
+        // Build parameterized INSERT using positional placeholders
+        $columns = implode(', ', array_keys($data));
+        $placeholders = [];
+        $i = 0;
+        foreach ($data as $_ => $__ ) {
+            $placeholders[] = '$' . (++$i);
+        }
+        $placeholderList = implode(', ', $placeholders);
+
+        $query = "INSERT INTO $table ($columns) VALUES ($placeholderList)";
+        $params = array_values($data);
+
+        $result = pg_query_params($this->conn, $query, $params);
+        if (!$result) {
+            error_log("Database error: " . pg_last_error($this->conn));
+            return false;
+        }
+        return true;
+    }
+
+    public function update($table, $set, $where = "FALSE") {
+        // Execute a simple UPDATE with provided SET and WHERE clauses
+        $query = "UPDATE $table SET $set WHERE $where";
+        $result = pg_query($this->conn, $query);
+        if (!$result) {
+            error_log("Database error: " . pg_last_error($this->conn));
+            return false;
+        }
+        return true;
+    }
 }
 
 $db = new sql();
