@@ -944,15 +944,20 @@ class openrouterjson
     }
 
     // Method to close the data processing operation
-    public function close()
+    public function close($callName='')
     {
         if ($this->primary_handler) {
             fclose($this->primary_handler);
         }
-        
+        // Use callName just for logging purposes.
+        if (empty($callName))
+            $callName=$this->name;
+        else
+            $callName=$this->name."/".$callName;
+
         $json_response=$this->_lastStreamedObject;
 
-         if ($json_response) {
+        if ($json_response) {
                 if ($GLOBALS["db"]) {
                     $GLOBALS["db"]->insert(
                     'audit_request',
@@ -960,7 +965,7 @@ class openrouterjson
                             'request' => json_encode($this->_dataSent),
                             'result' => "Ok",
                             'usage'=>json_encode($json_response["usage"]),
-                            'connector'=>$this->name,
+                            'connector'=>$callName,
                             'url'=>$this->_url
                         ));
                 }
@@ -1081,11 +1086,16 @@ class openrouterjson
         
     }
 
-    public function fast_request($contextData, $customParms)
+    public function fast_request($contextData, $customParms,$callName='')
     {
         
         $this->init_connector($customParms);
         
+        if (empty($callName))
+            $callName=$this->name;
+        else
+            $callName=$this->name."/".$callName;
+
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
 

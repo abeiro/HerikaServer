@@ -1346,10 +1346,12 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (isset($_GET["profile"])) {
         $npcMaster=new NpcMaster();
         $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
-        
+        $profileMgr=new CoreProfile();
+        $profileData=$profileMgr->getBySlot($gameRequest[3]);
         if (is_array($currentNpcData)) {
-            $currentNpcData["profile_id"]=$gameRequest[3];
+            $currentNpcData["profile_id"]=$profileData["id"];
             $npcMaster->updateByArray($currentNpcData);
+            error_log("[CORE SYSTEM] <{$currentNpcData["npc_name"]}> asigned to slot <{$profileData["label"]}>");
             
         } else {
             error_log("[CORE SYSTEM] No valid NPC found {$_GET["profile"]}");

@@ -356,7 +356,7 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         
         foreach ($fieldsToUpdate as $field) {
             error_log("[processSingleDynamicProfile] Updating $npcName $field");
-            
+
             $result = updateDynamicProfileField($npcName, $field, $historyData);
 
             if ($field=="skills") {
@@ -498,7 +498,7 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
 
     $overrideParameters["MAX_TOKENS"] = $maxTokens;
     $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
-    $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
+    $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,"diary");
 
     // Restore previous FORCE_MAX_TOKENS if it existed
     if ($hadForce) { $GLOBALS['FORCE_MAX_TOKENS'] = $prevForce; }
@@ -701,9 +701,9 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
                 break;
         }
         
-        $buffer=$connectionHandler->fast_request($contextData, ["max_tokens" => $maxTokens]);
+        $buffer=$connectionHandler->fast_request($contextData, ["max_tokens" => $maxTokens],"profile");
         
-        $connectionHandler->close();
+        //$connectionHandler->close();
         
         // Clean up the response
         $buffer = trim($buffer);

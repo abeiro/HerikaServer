@@ -501,6 +501,8 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     }
 }
 
+
+
 // Profile selection and migration The Narrator
 
 $npcMaster=new NpcMaster();
@@ -678,6 +680,8 @@ if (isset($_GET["profile"])) {
     $GLOBALS["USING_DEFAULT_PROFILE"]=true;
 }
 
+
+
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
     // Empty request
     if (empty($gameRequest[3]) || trim($gameRequest[3])=="{$GLOBALS["PLAYER_NAME"]}:") {
@@ -689,6 +693,23 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     
 }
 
+
+$GLOBALS["CHEAT_MODE"]=true;
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["CHEAT_MODE"]) && $GLOBALS["CHEAT_MODE"]) {
+    // Use preg_replace to remove the name and colon before the dialogue
+    if (isset($_GET["profile"])) {
+        $cleaned_player_dialogue = addcslashes(preg_replace('/^[^:]+:/', '', $gameRequest[3]),'"');
+        $newSpeech=strtr($cleaned_player_dialogue,["#"=>""]);
+        error_log($cleaned_player_dialogue);
+        if (strpos($gameRequest[3],"#")===0 || strpos($cleaned_player_dialogue,"#")===0 ) {
+            // If player speech starts with #
+            $gameRequest[0]="cheatmode";
+            $gameRequest[3]="<$newSpeech>";
+            $GLOBALS["FUNCTIONS_ARE_ENABLED"]=true;
+
+        }
+    }
+}
 
 /* *****
 Player TTS
@@ -953,7 +974,7 @@ if (in_array($gameRequest[0],["combatbark"])) {
 
 
 // Only allow functions when explicit request
-if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","welcome"])) {
+if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","welcome","cheatmode"])) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
@@ -1108,7 +1129,7 @@ if (in_array($gameRequest[0],["inputtext_s"])) {    // I stealth and targetet fo
 }
 
 /// LOG INTO DB. Will use this later.
-if ($gameRequest[0] != "diary") {
+if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     $db->insert(
         'eventlog',
         array(
@@ -1492,6 +1513,13 @@ if ($gameRequest[0] == "funcret") {
     // $contextData will be populated
 
     require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."funcret.php");
+
+
+} else if ($gameRequest[0] == "cheatmode") {
+
+    $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
+    $contextData = array_merge($head, ($contextDataFull), $prompt);
+
 
 
 } elseif ((strpos($gameRequest[0], "chatnf_book")!==false)) {
