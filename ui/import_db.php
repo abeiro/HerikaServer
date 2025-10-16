@@ -301,6 +301,80 @@ if (isset($_GET['action']) && $_GET['action'] === 'restore_auto' && isset($_GET[
     }
 }
 
+// Handle import from server-side file
+if (isset($_POST['action']) && $_POST['action'] === 'import_from_server' && isset($_POST['server_file'])) {
+    $serverFile = $_POST['server_file'];
+    $uploadsDir = __DIR__ . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'manualbackup' . DIRECTORY_SEPARATOR;
+    $fullPath = realpath($uploadsDir . basename($serverFile));
+    
+    // Security: ensure file is within uploads directory and has .sql extension
+    if ($fullPath && strpos($fullPath, realpath($uploadsDir)) === 0 && pathinfo($fullPath, PATHINFO_EXTENSION) === 'sql' && file_exists($fullPath)) {
+        // Connect to the database
+        $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
+        
+        if (!$conn) {
+            $message .= "<p><strong>Error:</strong> Failed to connect to database: " . pg_last_error() . "</p>";
+        } else {
+            // Drop and recreate database schemas and extensions
+            $Q = array();
+            $Q[] = "DROP SCHEMA IF EXISTS $schema CASCADE";
+            $Q[] = "DROP SCHEMA IF EXISTS chim_meta CASCADE";
+            $Q[] = "DROP EXTENSION IF EXISTS vector CASCADE";
+            $Q[] = "DROP EXTENSION IF EXISTS pg_trgm CASCADE";
+            $Q[] = "CREATE SCHEMA $schema";
+            $Q[] = "CREATE SCHEMA chim_meta";
+            $Q[] = "CREATE EXTENSION vector";
+            $Q[] = "CREATE EXTENSION IF NOT EXISTS pg_trgm";
+
+            $errorOccurred = false;
+
+            foreach ($Q as $QS) {
+                $r = pg_query($conn, $QS);
+                if (!$r) {
+                    $message .= "<p>Error executing query: " . pg_last_error($conn) . "</p>";
+                    $errorOccurred = true;
+                    break;
+                } else {
+                    $message .= "<p>$QS executed successfully.</p>";
+                }
+            }
+
+            if (!$errorOccurred) {
+                // Command to import SQL file using psql
+                $psqlCommand = "PGPASSWORD=" . escapeshellarg($password) . " psql -h " . escapeshellarg($host) . " -p " . escapeshellarg($port) . " -U " . escapeshellarg($username) . " -d " . escapeshellarg($dbname) . " -f " . escapeshellarg($fullPath);
+
+                // Execute psql command
+                $output = [];
+                $returnVar = 0;
+                exec($psqlCommand, $output, $returnVar);
+
+                if ($returnVar !== 0) {
+                    $message .= "<p><strong>Error:</strong> Failed to import SQL file.</p>";
+                    $message .= '<pre>' . htmlspecialchars(implode("\n", $output)) . '</pre>';
+                } else {
+                    // Success - redirect with message
+                    echo "<script type='text/javascript'>\n".
+                         "  try {\n".
+                         "    const msg = 'Database restored successfully from server file.';\n".
+                         "    if (window.top && window.top !== window) {\n".
+                         "      window.top.postMessage({type:'toast', message: msg}, '*');\n".
+                         "      setTimeout(function(){ window.top.location.href = '".$webRoot."/ui/home.php'; }, 1200);\n".
+                         "    } else {\n".
+                         "      alert(msg);\n".
+                         "      setTimeout(function(){ window.location.href = '".$webRoot."/ui/home.php'; }, 1200);\n".
+                         "    }\n".
+                         "  } catch(e) { window.location.href = '".$webRoot."/ui/home.php'; }\n".
+                         "</script>";
+                    exit;
+                }
+            }
+            pg_close($conn);
+        }
+    } else {
+        $message = "<p><strong>Error:</strong> Invalid file selected or file does not exist.</p>";
+    }
+}
+
 // Handle backup database request
 if (isset($_GET['action']) && $_GET['action'] === 'backup') {
     try {
@@ -645,9 +719,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .backup-item:hover {
             background-color: #1f1f1f;
         }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: #f8f9fa;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(138, 155, 182, 0.3);
+            border-top: 6px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .loading-subtext {
+            font-size: 14px;
+            color: #ccc;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+
+        .loading-bar-container {
+            width: 400px;
+            height: 6px;
+            background-color: rgba(138, 155, 182, 0.3);
+            border-radius: 3px;
+            margin: 20px auto 10px;
+            overflow: hidden;
+        }
+
+        .loading-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            animation: progress 2s ease-in-out infinite;
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="importLoadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Importing Database...</div>
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+            <div class="loading-subtext">
+                This may take several minutes for large databases.<br>
+                Please do not close or refresh this page.
+            </div>
+        </div>
+    </div>
 <?php if ($isEmbed): ?>
 <style> main { padding-top: 20px; } </style>
 <?php endif; ?>
@@ -657,11 +818,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     
     <!-- Main Grid Container -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; min-height: 220px;">
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; align-items: stretch;">
         
         <!-- Database Manager Section -->
-        <div class="message" style="background-color: #2c3440; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
+        <div class="message" style="background-color: #2c3440; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+            <div style="flex-grow: 1;">
                 <h3>🗄️ Database Access</h3>
                 <p>Access the pgAdmin database manager for advanced database management.</p>
                 <p><strong>Login:</strong> username = dwemer & password = dwemer</p>
@@ -674,11 +835,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <!-- Backup Section -->
-        <div class="message" style="background-color: #374151; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
+        <div class="message" style="background-color: #374151; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+            <div style="flex-grow: 1;">
                 <h3>📦 Manual Backup</h3>
                 <p>Create a backup of your current database. This will generate an SQL file you can download.</p>
-                <p style="color: #ccc; font-size: 14px; margin-top: auto;">Creates a one-time downloadable backup file.</p>
+                <p style="color: #ccc; font-size: 14px;">Creates a one-time downloadable backup file.</p>
             </div>
             <div style="margin-top: auto;">
                 <a href="?action=backup" class="button" style="background-color: #176529; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; text-align: center;">
@@ -688,8 +849,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <!-- Maintenance Section -->
-        <div class="message" style="background-color: #2d3748; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
+        <div class="message" style="background-color: #2d3748; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+            <div style="flex-grow: 1;">
                 <h3>🔧 Database Maintenance</h3>
                 <p>Optimize and clean your database. This will compact the database and reclaim unused space.</p>
                 <p><strong>⚠️ Important:</strong> Make sure Skyrim is stopped before running maintenance.</p>
@@ -703,8 +864,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <!-- Factory Reset Section -->
-        <div class="message" style="background-color: #481f1f; border: 1px solid #dc3545; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
+        <div class="message" style="background-color: #481f1f; border: 1px solid #dc3545; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+            <div style="flex-grow: 1;">
                 <h3>💥 Factory Reset Database</h3>
                 <p>Completely wipe and reinstall the entire database to the default configuration.</p>
                 <p><strong>⚠️ DANGER:</strong> This will permanently delete data including events, diaries, and memories.</p>
@@ -743,10 +904,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (is_array($rowMax) && isset($rowMax['value'])) { $v=intval($rowMax['value']); if ($v>0) $currentMax=$v; }
     } catch (Throwable $e) {}
     ?>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; align-items: start;">
         
         <!-- Left Column: Automatic Backups -->
-        <div class="message" style="background-color: #3a2d48; border: 1px solid #4a4a4a;">
+        <div class="message" style="background-color: #3a2d48; border: 1px solid #4a4a4a; height: 100%;">
             <h3>🤖 Automatic Backup System</h3>
             <p>System-generated backups created automatically every time the server starts up. Keeps a maximum of <?php echo (int)$currentMax; ?> backups, automatically deleting the oldest when the limit is reached.</p>
             
@@ -833,56 +994,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
         </div>
 
-        <!-- Right Column: Manual Database Restore -->
-        <div class="message" style="background-color: #283344; border: 1px solid #4a4a4a;">
-            <h3>📥 Manual Database Restore</h3>
-            <p>Upload an SQL backup file to restore your database. This will completely replace your current database with the uploaded backup.</p>
+        <!-- Right Column: Server-Side File Import -->
+        <div class="message" style="background-color: #283344; border: 1px solid #4a4a4a; height: 100%;">
+            <h3>💾 Restore Manual Backup</h3>
+            <p>Restore manual backup files from the server filesystem.</p>
             
-            <div style="background-color: rgba(166, 53, 63, 0.1); border: 1px solid rgba(166, 53, 63, 0.9); border-radius: 8px; padding: 15px; margin: 15px 0;">
-                <h4 style="color: #dc3545; margin: 0 0 10px 0;">⚠️ Important Warning</h4>
-                <ul style="color: #f8f9fa; margin: 0; padding-left: 20px;">
-                    <li>This will <strong>completely replace</strong> your current database</li>
-                    <li>All current data will be <strong>permanently lost</strong></li>
-                    <li>Make sure to create a backup before proceeding</li>
-                    <li>Only upload trusted SQL files</li>
-                </ul>
+            <div style="background-color: rgba(23, 101, 41, 0.1); border: 1px solid #176529; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                <h4 style="color: #4ade80; margin: 0 0 10px 0;">Instructions</h4>
+                <ol style="color: #f8f9fa; margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>Click [Open Server Folder] in CHIM.exe</li>
+                    <li>Navigate to: ui/data/manualbackup</li>
+                    <li>Copy your <code style="background-color: #000; padding: 2px 6px; border-radius: 3px;">.sql</code> backup file there</li>
+                    <li>Refresh the page and select it from the list below and click Import. It may take a while to import so please don't refresh the page.</li>
+                </ol>
+                <p style="margin: 10px 0 0 0; font-size: 13px; color: #ccc;">This bypasses PHP upload limits and handles files of any size.</p>
             </div>
             
-            <form id="uploadForm" action="" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
-                <label for="sql_file" style="color: #f8f9fa; font-weight: bold; display: block; margin-bottom: 8px;">Select SQL file to upload:</label>
-                <input type="file" name="sql_file" id="sql_file" accept=".sql" required 
-                       style="margin: 10px 0; padding: 12px; background-color: #4a4a4a; color: #f8f9fa; border: 1px solid #555555; border-radius: 4px; width: 100%;">
-                
-                <input type="submit" class="button" value="🚀 Upload and Restore Database" 
-                       style="background-color: rgb(1 53 166 / 90%); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; font-size: 16px;">
-            </form>
+            <?php
+            // Scan for SQL files in the manual backup directory
+            $uploadsDir = __DIR__ . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'manualbackup' . DIRECTORY_SEPARATOR;
+            if (!file_exists($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
+            }
+            $sqlFiles = glob($uploadsDir . '*.sql');
+            ?>
             
-            <div id="uploadProgress" style="display: none; margin-top: 15px; background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 15px; border-radius: 8px;">
-                <h4 style="color: #eaee05; margin: 0 0 10px 0;">🔄 Upload Progress</h4>
-                <div style="background-color: #1a1a1a; border-radius: 10px; padding: 4px; margin: 10px 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);">
-                    <div id="progressBar" style="
-                        background: linear-gradient(90deg, #007bff 0%, #0056b3 100%); 
-                        height: 25px; 
-                        border-radius: 8px; 
-                        width: 0%; 
-                        transition: width 0.3s ease;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 12px;
-                        box-shadow: 0 2px 4px rgba(0,123,255,0.3);
-                    ">
-                        <span id="progressPercent">0%</span>
-                    </div>
+            <?php if (!empty($sqlFiles)): ?>
+                <form id="importForm" method="post" onsubmit="return handleImportSubmit(event);">
+                    <input type="hidden" name="action" value="import_from_server">
+                    <label for="server_file" style="color: #f8f9fa; font-weight: bold; display: block; margin-bottom: 8px;">Available SQL files on server:</label>
+                    <select name="server_file" id="server_file" required style="width: 100%; padding: 10px; background-color: #4a4a4a; color: #f8f9fa; border: 1px solid #555555; border-radius: 4px; margin: 10px 0;">
+                        <?php foreach ($sqlFiles as $sqlFile): 
+                            $filename = basename($sqlFile);
+                            $filesize = filesize($sqlFile);
+                            $formattedSize = formatFileSize($filesize);
+                        ?>
+                            <option value="<?php echo htmlspecialchars($filename); ?>">
+                                <?php echo htmlspecialchars($filename); ?> (<?php echo $formattedSize; ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <input type="submit" class="button" value="🚀 Import from Server" 
+                           style="background-color: #176529; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; font-size: 16px;">
+                </form>
+            <?php else: ?>
+                <div style="text-align: center; padding: 20px; background-color: #2c2c2c; border: 1px dashed #4a4a4a; border-radius: 8px; margin: 15px 0;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">📁</div>
+                    <p style="margin: 0; color: #ccc;">No SQL files found in manual backup directory.</p>
+                    <small style="color: #888; display: block; margin-top: 5px;">Place .sql files in ui/data/manualbackup folder to import them.</small>
                 </div>
-                <p id="progressText" style="text-align: center; margin: 10px 0; font-weight: bold; color: #f8f9fa;">Preparing upload...</p>
-                <div id="progressDetails" style="text-align: center; font-size: 12px; color: #ccc; margin: 5px 0;"></div>
-            </div>
+            <?php endif; ?>
         </div>
         
     </div>
+    
     <?php
     if (!empty($message)) {
         echo '<div class="message">';
@@ -891,5 +1056,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     ?>
 </div>
+
+<script>
+function handleImportSubmit(event) {
+    // Show confirmation dialog
+    const confirmed = confirm('⚠️ RESTORE DATABASE\n\nThis will COMPLETELY REPLACE your current database with the selected backup.\n\n❌ All current data will be lost!\n✅ Database will be restored to backup state\n\nAre you absolutely sure?');
+    
+    if (confirmed) {
+        // Show loading overlay
+        document.getElementById('importLoadingOverlay').classList.add('active');
+        return true; // Allow form submission
+    }
+    
+    return false; // Cancel form submission
+}
+</script>
+
 </body>
 </html>
