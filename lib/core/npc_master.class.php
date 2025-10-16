@@ -452,7 +452,7 @@ class NpcMaster {
         if (!$npc) {
             return false; // NPC not found
         }
-    
+        error_log("[NPC BACKUP] Backup of {$npc["npc_name"]} ".print_r($npc,true));
         // Remove the original 'id' field, since the history table likely has its own auto-increment ID
         unset($npc['id']);
     
@@ -472,7 +472,9 @@ class NpcMaster {
         if (!is_numeric($timestamp)) {
             throw new InvalidArgumentException("Invalid timestamp value.");
         }
-
+        
+        date_default_timezone_set('UTC');
+        
         $startTime=time();
         // Fetch all current NPCs
         $npcs = $this->getAll();
