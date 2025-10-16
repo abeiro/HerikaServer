@@ -14,6 +14,10 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     if ($apiKey === '') $apiKey = $GLOBALS["TTS"]["deepgram"]["API_KEY"];
 
     $voiceModel = isset($GLOBALS["TTS"]["deepgram"]["model"]) ? $GLOBALS["TTS"]["deepgram"]["model"] : "aura-2-thalia-en";
+    // Allow voice override for player TTS or per-NPC voice
+    if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]) && !empty($GLOBALS["PATCH_OVERRIDE_VOICE"])) {
+        $voiceModel = $GLOBALS["PATCH_OVERRIDE_VOICE"];
+    }
     $bitRate = isset($GLOBALS["TTS"]["deepgram"]["bitrate"]) ? $GLOBALS["TTS"]["deepgram"]["bitrate"] : 24000;
     $encoding = "linear16";
 

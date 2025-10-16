@@ -23,20 +23,25 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 		$url = $GLOBALS["TTS"]["openai"]["endpoint"]; //"https://api.openai.com/v1/audio/speech";
 
-		// Request headers
-		$headers = array(
-			"Authorization: Bearer $apiKey",
-			'Content-Type: application/json'
-		);
+	// Request headers
+	$headers = array(
+		"Authorization: Bearer $apiKey",
+		'Content-Type: application/json'
+	);
+	
+	// Determine voice to use
+	$voice = $GLOBALS["TTS"]["openai"]["voice"];
+	if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]) && !empty($GLOBALS["PATCH_OVERRIDE_VOICE"])) {
+		$voice = $GLOBALS["PATCH_OVERRIDE_VOICE"];
+	}
 		
-			
-		// Request data
-		$data = array(
-			'input' => "$textString",
-			'model' => $GLOBALS["TTS"]["openai"]["model_id"],
-			'voice' => $GLOBALS["TTS"]["openai"]["voice"],
-			'style' => $GLOBALS["TTS"]["openai"]["style"]+0
-			);
+	// Request data
+	$data = array(
+		'input' => "$textString",
+		'model' => $GLOBALS["TTS"]["openai"]["model_id"],
+		'voice' => $voice,
+		'style' => $GLOBALS["TTS"]["openai"]["style"]+0
+		);
 		
 		// add instructions if using gpt-4o-mini-tts
 		if ($GLOBALS["TTS"]["openai"]["model_id"] == "gpt-4o-mini-tts") {

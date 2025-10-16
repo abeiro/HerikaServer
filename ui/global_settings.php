@@ -97,9 +97,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
     $gameRequest = [ 'tts_quick_test', time(), time(), '' ];
     $selLower = strtolower($selectedFunction);
     if ($ttsTestVoice !== '') {
+        // User specified a test voice - override configured voice
         $GLOBALS["PATCH_OVERRIDE_VOICE"] = $ttsTestVoice;
     } else {
-        if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator'; else $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
+        // Only set default voices for providers that need them; let 11labs/openai/azure/deepgram use configured voice
+        if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
+        else if (in_array($selLower, ['melotts','piper-tts','xvasynth'], true)) $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
     }
     try {
         $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]=true;
@@ -218,6 +221,25 @@ function pretty_label(string $flatName): string {
         $last2 = str_replace('_', ' ', strtolower(trim($last)));
         return ucwords($last2);
     }
+    // Translation: simplify labels for settings and DeepL
+    if (strpos($flatName, 'TRANSLATION@settings@') === 0) {
+        $parts = explode('@', $flatName);
+        $last = end($parts) ?: $flatName;
+        $last2 = str_replace('_', ' ', strtolower(trim($last)));
+        return ucwords($last2);
+    }
+    if (strpos($flatName, 'TRANSLATION@DeepL@') === 0) {
+        $parts = explode('@', $flatName);
+        $last = end($parts) ?: $flatName;
+        $lastLower = strtolower(trim($last));
+        if ($lastLower === 'url') return 'Endpoint URL';
+        if ($lastLower === 'api_key') return 'API Key';
+        $last2 = str_replace('_', ' ', $lastLower);
+        return ucwords($last2);
+    }
+    if ($flatName === 'TRANSLATION_FUNCTION') {
+        return 'Provider';
+    }
     // Custom display names for connectors (UI-only)
     $connectorLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
@@ -315,6 +337,20 @@ $gsSections = [
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_A', 'type' => 'number' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_B', 'type' => 'number' ]
+    ],
+    'Translation' => [
+        [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none','DeepL'] ],
+        [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@settings@translate_text', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@settings@save_translated_text', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@settings@translate_player_audio', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@settings@save_translated_player_text', 'type' => 'boolean' ],
+        [ 'name' => 'TRANSLATION@DeepL@source_language', 'type' => 'string' ],
+        [ 'name' => 'TRANSLATION@DeepL@target_language', 'type' => 'string' ],
+        [ 'name' => 'TRANSLATION@DeepL@url', 'type' => 'url' ],
+        [ 'name' => 'TRANSLATION@DeepL@player_source_language', 'type' => 'string' ],
+        [ 'name' => 'TRANSLATION@DeepL@player_target_language', 'type' => 'string' ],
+        
     ]
 ];
 

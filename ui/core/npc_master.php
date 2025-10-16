@@ -386,6 +386,10 @@ $q = trim($_GET['q'] ?? '');
 $alpha = strtolower($_GET['alpha'] ?? 'asc');
 if (!in_array($alpha, ['asc','desc'], true)) { $alpha = 'asc'; }
 $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']) : '';
+// New: checkbox filters
+$favOnly = (isset($_GET['fav']) && $_GET['fav'] === '1');
+$dynOnly = (isset($_GET['dyn']) && $_GET['dyn'] === '1');
+$mtmOnly = (isset($_GET['mtm']) && $_GET['mtm'] === '1');
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_profiles ORDER BY label ASC");
@@ -422,6 +426,17 @@ if ($q !== ''){
 if ($profileIdFilter !== ''){
     $where .= " and profile_id = ".intval($profileIdFilter);
 }
+// Apply favorites/dynamic/middle-term filters when checked
+if ($favOnly) {
+    $where .= " and coalesce(npc_favorite,0)=1";
+}
+if ($dynOnly) {
+    $where .= " and coalesce(dynamic_profile,0)=1";
+}
+if ($mtmOnly) {
+    // Robust match on JSON/text; tolerates whitespace and works for json/jsonb
+    $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*1'";
+}
 
 // Default: favorites first, then alphabetical by name
 // Ensure The Narrator is always first, then favorites, then alpha
@@ -447,6 +462,14 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     ?>
     <div class="pagination">
       <div class="filter-inline">
+        <div class="npc-filter-dropdown" style="position:relative;">
+          <button type="button" id="npc_filter_btn" class="btn" style="margin-right:6px;">Filters ▾</button>
+          <div id="npc_filter_menu" class="npc-filter-menu" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
+          </div>
+        </div>
         <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
         <select id="npc_profile_filter" title="Filter by profile">
           <option value="">All Profiles</option>
@@ -1365,9 +1388,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .filter-inline { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .filter-inline input[type="text"] { padding:4px 8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; height:28px; }
 .filter-inline select { padding:4px 8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; height:28px; }
+.filter-inline .btn { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; }
+.filter-inline .btn:hover { background:#3a3a3a; }
 </style>
 <div class="pagination">
   <div class="filter-inline">
+    <div class="npc-filter-dropdown" style="position:relative;">
+      <button type="button" id="npc_filter_btn_top" class="btn" style="margin-right:6px;">Filters ▾</button>
+      <div id="npc_filter_menu_top" class="npc-filter-menu" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
+        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav_top" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
+        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn_top" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
+        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm_top" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
+      </div>
+    </div>
     <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
     <select id="npc_profile_filter" title="Filter by profile">
       <option value="">All Profiles</option>
@@ -1994,6 +2027,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     if (si) params.set('q', si.value || '');
     const pf = document.getElementById('npc_profile_filter');
     if (pf) params.set('profile_id', pf.value || '');
+    // Collect checkbox filters (prefer top bar if present else bottom)
+    try {
+      const fav = (document.getElementById('npc_filter_fav_top')||document.getElementById('npc_filter_fav'));
+      const dyn = (document.getElementById('npc_filter_dyn_top')||document.getElementById('npc_filter_dyn'));
+      const mtm = (document.getElementById('npc_filter_mtm_top')||document.getElementById('npc_filter_mtm'));
+      params.set('fav', fav && fav.checked ? '1' : '');
+      params.set('dyn', dyn && dyn.checked ? '1' : '');
+      params.set('mtm', mtm && mtm.checked ? '1' : '');
+    } catch(_e){}
     params.set('alpha', 'asc');
     if (page) params.set('page', String(page));
     params.set('list','1');
@@ -2018,6 +2060,20 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           openModal('npc_master.php?edit='+encodeURIComponent(id)+'&partial=1');
         });
       });
+      // Rebind filter dropdowns in refreshed DOM
+      (function(){
+        function bindDropdown(btnId, menuId){
+          const btn = document.getElementById(btnId);
+          const menu = document.getElementById(menuId);
+          if (!btn || !menu) return;
+          btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); menu.style.display = (menu.style.display==='none'||menu.style.display==='') ? 'block' : 'none'; });
+          document.addEventListener('click', function(){ if (menu.style.display==='block') menu.style.display='none'; });
+          menu.addEventListener('click', function(e){ e.stopPropagation(); });
+          menu.querySelectorAll('input[type="checkbox"]').forEach(cb=> cb.addEventListener('change', function(){ refreshList(1); }));
+        }
+        bindDropdown('npc_filter_btn_top','npc_filter_menu_top');
+        bindDropdown('npc_filter_btn','npc_filter_menu');
+      })();
       document.querySelectorAll('[data-favorite-id]').forEach(btn=>{
         btn.addEventListener('click', async function(e){
           e.preventDefault(); const id = this.getAttribute('data-favorite-id');
@@ -2079,6 +2135,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     a.addEventListener('click', function(e){ e.preventDefault(); const m = this.href.match(/page=(\d+)/); const p = m?parseInt(m[1],10):1; refreshList(p); });
   });
   // Toggle buttons
+  // Filter dropdown toggles
+  (function(){
+    function bindDropdown(btnId, menuId){
+      const btn = document.getElementById(btnId);
+      const menu = document.getElementById(menuId);
+      if (!btn || !menu) return;
+      btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); menu.style.display = (menu.style.display==='none'||menu.style.display==='') ? 'block' : 'none'; });
+      document.addEventListener('click', function(){ if (menu.style.display==='block') menu.style.display='none'; });
+      menu.addEventListener('click', function(e){ e.stopPropagation(); });
+      // When any checkbox changes, refetch
+      menu.querySelectorAll('input[type="checkbox"]').forEach(cb=> cb.addEventListener('change', function(){ refreshList(1); }));
+    }
+    bindDropdown('npc_filter_btn_top','npc_filter_menu_top');
+    bindDropdown('npc_filter_btn','npc_filter_menu');
+  })();
   document.querySelectorAll('[data-favorite-id]').forEach(btn=>{
     btn.addEventListener('click', async function(e){
       e.preventDefault();

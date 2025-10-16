@@ -117,7 +117,7 @@ if ($method === 'POST') {
         $hint = "Character in this video should {$argv[3]}. NSFW actions allowed.";
     } else {
         $hint = "Combine elements from the image (like characters or animals) to describe their actions,
-such as running or waving, or mundane things like arranging hair, checking weapons... .Control intensity and speed with adjectives like \"quickly\" or \"slowly.\"";
+such as running or waving, or mundane things like arranging hair, clothes, or even sensual expressions if image is sensual explicit, or  checking weapons... .Control intensity and speed with adjectives like \"quickly\" or \"slowly.\"";
     }
 
     $describe_payload = [

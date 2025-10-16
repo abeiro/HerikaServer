@@ -41,6 +41,7 @@ class openrouterjson
     private $_output_buffer; 
     private $_timeout;
     private $_is_grok;
+    private $_lastStreamedObject;
     
     public function __construct()
     {
@@ -723,6 +724,8 @@ class openrouterjson
             "X-Title: Dwemer Dynamics"
         );
 
+        $data["usage"]=["include"=>true];
+
         $timeout = max(intval(($GLOBALS["HTTP_TIMEOUT"]) ?? 30), $this->_timeout);
         $options = array(
             'http' => array(
@@ -775,6 +778,8 @@ class openrouterjson
                 $this->primary_handler=false;
                 return null;
             } else  {
+                // Will do later
+                /*
                 if ($GLOBALS["db"]) {
                     $GLOBALS["db"]->insert(
                     'audit_request',
@@ -785,6 +790,7 @@ class openrouterjson
                         'url'=>$this->_url
                     ));
                 }
+                */
             }
         }
 
@@ -877,7 +883,7 @@ class openrouterjson
 
             $totalBuffer.=$data["choices"][0]["delta"]["content"];
 
-
+            $this->_lastStreamedObject=$data;
         }
         
         if (isset($GLOBALS["PATCH"]["PREAPPEND"])) {
@@ -938,12 +944,45 @@ class openrouterjson
     }
 
     // Method to close the data processing operation
-    public function close()
+    public function close($callName='')
     {
         if ($this->primary_handler) {
             fclose($this->primary_handler);
         }
-        
+        // Use callName just for logging purposes.
+        if (empty($callName))
+            $callName=$this->name;
+        else
+            $callName=$this->name."/".$callName;
+
+        $json_response=$this->_lastStreamedObject;
+
+        if ($json_response) {
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($this->_dataSent),
+                            'result' => "Ok",
+                            'usage'=>json_encode($json_response["usage"]),
+                            'connector'=>$callName,
+                            'url'=>$this->_url
+                        ));
+                }
+                
+        }
+        else {
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($this->_dataSent),
+                            'result' => "ERROR|INVALID JSON RESPONSE",
+                            'connector'=>$this->name,
+                            'url'=>$this->_url
+                        ));
+                }
+        }
         // Write the buffer to the log file without timestamp separators
         file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
         file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
@@ -1047,11 +1086,16 @@ class openrouterjson
         
     }
 
-    public function fast_request($contextData, $customParms)
+    public function fast_request($contextData, $customParms,$callName='')
     {
         
         $this->init_connector($customParms);
         
+        if (empty($callName))
+            $callName=$this->name;
+        else
+            $callName=$this->name."/".$callName;
+
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
 
@@ -1295,8 +1339,6 @@ class openrouterjson
             }
         }
             
-
-
     }
 
 }

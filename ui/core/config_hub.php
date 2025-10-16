@@ -49,11 +49,11 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div class="tab-buttons">
             <button class="tab-button active" data-tab="npc">🌟CHIM NPCs</button>
             <button class="tab-button" data-tab="globals">🌐Global Settings</button>
-            <button class="tab-button" data-tab="profiles">🏗️Profiles</button>
-            <button class="tab-button" data-tab="llm">🔌LLM Connectors</button>
+            <button class="tab-button" data-tab="profiles">🗃️Profiles</button>
+            <button class="tab-button" data-tab="llm">🧠LLM Connectors</button>
             <button class="tab-button" data-tab="keys">🔑API Keys</button>
             <button class="tab-button" data-tab="oghma">🐙Oghma Infinium</button>
-            <button class="tab-button" data-tab="npcbio">📚NPC Biographies</button>
+            <button class="tab-button" data-tab="npcbio">🪪NPC Biographies</button>
             <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
             <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
             <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
@@ -143,17 +143,21 @@ main { padding: 80px 10px 10px; height: 100vh; }
 (function(){
     const buttons = document.querySelectorAll('.tab-button');
     const tabs = document.querySelectorAll('.tab-content');
+    function reloadIframe(container){
+        const iframe = container.querySelector('iframe');
+        if (!iframe) return;
+        const base = iframe.getAttribute('data-src') || iframe.getAttribute('src');
+        if (!base) return;
+        const u = new URL(base, window.location.origin);
+        u.searchParams.set('_', String(Date.now()));
+        iframe.src = u.toString();
+    }
     function activate(id){
         buttons.forEach(b=>{ b.classList.toggle('active', b.dataset.tab===id); });
         tabs.forEach(t=>{
             const on = (t.id===id);
             t.classList.toggle('active', on);
-            if (on){
-                const iframe = t.querySelector('iframe[data-src]');
-                if (iframe && (!iframe.src || iframe.src==='about:blank')){
-                    iframe.src = iframe.getAttribute('data-src');
-                }
-            }
+            if (on) reloadIframe(t);
         });
         const url = new URL(window.location);
         url.searchParams.set('tab', id);

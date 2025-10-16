@@ -248,7 +248,7 @@ $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_
 
 // Server version and dev-build detection
 // Note: Keep raw version string here; if it contains 'dev', we'll switch logo and hide the text suffix
-$serverVersionRaw = '2.0.0';
+$serverVersionRaw = '2.0.1';
 $isDevBuild = (stripos($serverVersionRaw, 'dev') !== false);
 $serverVersionDisplay = trim(str_ireplace('dev', '', $serverVersionRaw));
 $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
@@ -272,7 +272,7 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                     <ul class="dropdown-menu brand-menu">
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/home.php">Home</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php">Configuration Hub</a></li>
+                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php">Configuration</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/control_panel.php">Control Panel</a></li>
                     </ul>

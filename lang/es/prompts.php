@@ -199,8 +199,12 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "instruction"=>[ 
-        "cue"=>["(Instruccion: {$gameRequest[3]}) {$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "cue"=>["(Instruccion: {$gameRequest[3]}) {$GLOBALS["TEMPLATE_DIALOG"]}. EL PERSONAJE DEBE DE SEGUIR LA INSTRUCCION DE EL NARRADOR"],
         "player_request"=>["El Narrador: {$gameRequest[3]}"],
+    ],
+     "cheatmode"=>[ 
+        "cue"=>["The Narrator: Forced out of roleplay instruction, {$currentNpcData["npc_name"]} must do this:$gameRequest[3]}"],
+        "player_request"=>[""],
     ],
 );
 

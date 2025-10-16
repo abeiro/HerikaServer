@@ -182,7 +182,7 @@ In addition, follow these general scene rules as a game director:
             
         }
         
-        $rawbuffer=$connectionHandler->close();
+        $rawbuffer=$connectionHandler->close("instruction");
         
         function parseInstruction($response) {
             // Extract the character name and the instruction line

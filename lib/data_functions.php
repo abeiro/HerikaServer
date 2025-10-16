@@ -5,6 +5,7 @@ require_once(__DIR__."/utils.php");
 
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/model_dynmodel.php");
+require_once(__DIR__."/core/npc_master.class.php");
 
 
 function ChangeHerikaName($new_name="") {
@@ -2365,8 +2366,13 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             }
             $result = array_unique($kw);
 
+            $resultEn=[];
             foreach ($result as $r) {
                 $resultEn[]=internalDumbTranslator($r);
+            }
+
+            if (!sizeof($resultEn)<1) {
+                $resultEn=$result;
             }
 
             $kwStringAny=implode(" | ",$resultEn);
@@ -2709,7 +2715,7 @@ function call_llm() {
         error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
 
 
-        $buffer=$connectionHandler->fast_request($contextData,$overrideParameters);
+        $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
 
         error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
 
@@ -2762,7 +2768,7 @@ function call_llm() {
 
         $connectionHandler = $connector->getConnector($currentConnectorData);
 
-        $buffer2=$connectionHandler->fast_request($contextData2,[]);
+        $buffer2=$connectionHandler->fast_request($contextData2,[],'formatter');
         unset($GLOBALS["_JSON_BUFFER"]);
         $finalRes=__jpd_decode_lazy($buffer2);
         file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", $buffer2, FILE_APPEND);
@@ -3222,7 +3228,7 @@ function call_llm() {
 
         }
     }
-    $connectionHandler->close();
+    $connectionHandler->close('standard');
     //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE
 
 

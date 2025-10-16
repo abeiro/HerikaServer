@@ -88,6 +88,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
         margin-bottom: 15px;
         font-size: 1.4em;
     }
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 15px;
+    }
+    .section-header h2 {
+        margin: 0;
+    }
     .full-width-section { grid-column: 1 / -1; }
     @media (max-width: 900px) {
         main { padding-left: 5%; padding-right: 5%; }
@@ -150,7 +159,8 @@ $presetMap = [
     'azure'       => 'Azure',
     'elevenlabs'  => 'ElevenLabs',
     'replicate'   => 'Replicate',
-    'nano-gpt'    => 'Nano-GPT'
+    'nano-gpt'    => 'Nano-GPT',
+    'deepl'       => 'DeepL'
 ];
 
 // Provider key/dashboard links
@@ -162,7 +172,8 @@ $providerLinks = [
     'azure' => 'https://ai.azure.com/',
     'elevenlabs' => 'https://elevenlabs.io/app/settings/api-keys',
     'replicate' => 'https://replicate.com/account/api-tokens',
-    'nano-gpt' => 'https://nano-gpt.com/'
+    'nano-gpt' => 'https://nano-gpt.com/',
+    'deepl' => 'https://www.deepl.com/en/pro-api'
 ];
 
 // Subtext bullet points per provider
@@ -175,6 +186,7 @@ $providerSubtext = [
     'elevenlabs' => ['TTS'],
     'replicate' => ['Soulgaze Gallery Processor'],
     'nano-gpt' => ['LLM'],
+    'deepl' => ['Translation'],
 ];
 
 // Reserved labels (both slugs and pretty names), used to keep presets distinct from customs
@@ -324,7 +336,10 @@ $customRows = array_filter($data, function($row) use ($presetMap) {
 
 <div class="content-grid">
     <div class="content-section full-width-section">
-        <h2>Preset Keys (Saves Automatically)</h2>
+        <div class="section-header">
+            <h2>Preset Keys (Saves Automatically)</h2>
+            <button type="submit" name="save_all" value="1" class="button btn-save">Save Keys</button>
+        </div>
         <div class="provider-grid">
             <?php foreach ($presetRows as $slug => $row): ?>
                 <div class="provider-card">

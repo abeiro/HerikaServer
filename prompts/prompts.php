@@ -261,13 +261,17 @@ $PROMPTS=array(
     ],
     // Database Prompt (Instruction)
     "instruction"=>[ 
-        "cue"=>["{$gameRequest[3]} write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
+        "cue"=>["{$gameRequest[3]} write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations. CHARACTER MUST FOLLOW NARRATOR INSTRUCTION"],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
     // Database Prompt (Welcome)
     "welcome"=>[ 
         "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
+    ],
+    "cheatmode"=>[ 
+        "cue"=>["The Narrator: Forced out of roleplay instruction, {$currentNpcData["npc_name"]} must do this:$gameRequest[3]}"],
+        "player_request"=>[""],
     ],
 );
 

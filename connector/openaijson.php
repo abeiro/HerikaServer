@@ -33,6 +33,7 @@ class openaijson
     private $_output_buffer; 
     private $_timeout;
     public $_extractedbuffer;
+    private $_lastStreamedObject;
 
     public function __construct()
     {
@@ -427,9 +428,13 @@ class openaijson
             'top_p' => $top_p, 
             'presence_penalty' => $presence_penalty, 
             'frequency_penalty' => $frequency_penalty, 
+            'response_format'=>["type"=>"json_object"],
             'response_format'=>["type"=>"json_object"]
         );
 
+        if ($this->_is_streaming) {
+            $data["stream_options"]["include_usage"]=true;
+        }
         if ($this->_is_groq_com) { // --- exception made for groq.com
 
             if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
@@ -479,6 +484,13 @@ class openaijson
             }
 
         } // --- endif provider
+
+        // OpenAI safeguard: remove unsupported top_p for gpt-5 models regardless of reasoning flag
+        if ($this->_is_openai) {
+            if ((stripos($this->_url, "api.openai.com") !== false) && (stripos($this->_model, "gpt-5") !== false)) {
+                unset($data["top_p"]);
+            }
+        }
             
         if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
             $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
@@ -564,7 +576,7 @@ class openaijson
                 $this->primary_handler=false;
                 return null;
             } else  {
-                if ($GLOBALS["db"]) {
+                /*if ($GLOBALS["db"]) {
                     $GLOBALS["db"]->insert(
                     'audit_request',
                     array(
@@ -573,7 +585,8 @@ class openaijson
                         'connector'=>$this->name,
                         'url'=>$this->_url
                     ));
-                }
+                }*/
+                //Will do later    
 
             }
         }
@@ -673,6 +686,7 @@ class openaijson
 
             $data=json_decode($line, true);
 
+
             if (isset($data["choices"][0]["message"]["content"])) {
                 $msg = trim($data["choices"][0]["message"]["content"]); 
                 if (strlen($msg) > 0) {
@@ -682,7 +696,10 @@ class openaijson
                 }
                 $totalBuffer .= $msg;
             }
-     
+
+            if (isset($data["usage"])) 
+                $this->_lastStreamedObject=$data;     
+
         } else { // --- normal streaming flow 
 
             $data=json_decode(substr($line, 6), true);
@@ -697,7 +714,10 @@ class openaijson
                     }
                 }
                 $totalBuffer.=$data["choices"][0]["delta"]["content"];
+
             }
+            if (isset($data["usage"])) 
+                $this->_lastStreamedObject=$data;
         } // --- endif is_streaming 
 
         // process any remaining reasoning content on stream completion
@@ -759,7 +779,7 @@ class openaijson
     }
 
     // Method to close the data processing operation
-    public function close()
+    public function close($callName='')
     {
         
         // process any remaining content in the reasoning buffer before closing
@@ -774,7 +794,42 @@ class openaijson
         if ($this->primary_handler) {
             fclose($this->primary_handler);
         }
+
+        if (empty($callName))
+            $callName=$this->name;
+        else
+            $callName=$this->name."/".$callName;
+
         
+        $json_response=$this->_lastStreamedObject;
+
+        if ($json_response) {
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($this->_dataSent),
+                            'result' => "Ok",
+                            'usage'=>json_encode($json_response["usage"]),
+                            'connector'=>$callName,
+                            'url'=>$this->_url
+                        ));
+                }
+                
+        }
+        else {
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($this->_dataSent),
+                            'result' => "ERROR|INVALID JSON RESPONSE",
+                            'connector'=>$this->name,
+                            'url'=>$this->_url
+                        ));
+                }
+        }
+
         // Write the buffer to the log file without timestamp separators
         file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
         file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
@@ -858,11 +913,15 @@ class openaijson
         return !$this->primary_handler || feof($this->primary_handler);
     }
 
-    public function fast_request($contextData, $customParms)
+    public function fast_request($contextData, $customParms,$callName='')
     {
         
         $this->init_connector($customParms);
         
+        if (empty($callName))
+            $callName=$this->name;
+        else
+            $callName=$this->name."/".$callName;
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
 

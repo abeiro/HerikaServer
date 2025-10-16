@@ -190,14 +190,26 @@ if ($GLOBALS["MINIME_T5"]) {
                                     // Empty => no restriction
                                     $advancedAllowed = true;
                                 } else {
-                                    // Convert advanced classes to array
+                                    // Convert advanced classes to array and separate anti-categories
                                     $advClassesArr   = array_map('trim', explode(',', $advClassesStr));
                                     $advClassesArr   = array_filter($advClassesArr);
 
-                                    // Intersect with user's known classes
-                                    $hasAdvancedKnowledge = array_intersect($advClassesArr, $oghmaKnowledgeArray);
-                                    if (!empty($hasAdvancedKnowledge)) {
-                                        $advancedAllowed = true;
+                                    // Separate positive and negative (anti) categories
+                                    $positiveClasses = array_filter($advClassesArr, fn($c) => !str_starts_with($c, '!'));
+                                    $antiClasses = array_map(fn($c) => substr($c, 1), array_filter($advClassesArr, fn($c) => str_starts_with($c, '!')));
+
+                                    // First check if any anti-categories match (these deny access)
+                                    $hasAntiMatch = !empty(array_intersect($antiClasses, $oghmaKnowledgeArray));
+                                    
+                                    if ($hasAntiMatch) {
+                                        // Anti-category matched, deny access
+                                        $advancedAllowed = false;
+                                    } else {
+                                        // No anti-match, check positive categories
+                                        $hasAdvancedKnowledge = array_intersect($positiveClasses, $oghmaKnowledgeArray);
+                                        if (!empty($hasAdvancedKnowledge)) {
+                                            $advancedAllowed = true;
+                                        }
                                     }
                                 }
 
@@ -223,14 +235,26 @@ if ($GLOBALS["MINIME_T5"]) {
                                         // Empty => no restriction
                                         $basicAllowed = true;
                                     } else {
-                                        // Convert basic classes to array
+                                        // Convert basic classes to array and separate anti-categories
                                         $basicClassesArr = array_map('trim', explode(',', $basicClassesStr));
                                         $basicClassesArr = array_filter($basicClassesArr);
 
-                                        // Intersect with user's known classes
-                                        $hasBasicKnowledge = array_intersect($basicClassesArr, $oghmaKnowledgeArray);
-                                        if (!empty($hasBasicKnowledge)) {
-                                            $basicAllowed = true;
+                                        // Separate positive and negative (anti) categories
+                                        $positiveClasses = array_filter($basicClassesArr, fn($c) => !str_starts_with($c, '!'));
+                                        $antiClasses = array_map(fn($c) => substr($c, 1), array_filter($basicClassesArr, fn($c) => str_starts_with($c, '!')));
+
+                                        // First check if any anti-categories match (these deny access)
+                                        $hasAntiMatch = !empty(array_intersect($antiClasses, $oghmaKnowledgeArray));
+                                        
+                                        if ($hasAntiMatch) {
+                                            // Anti-category matched, deny access
+                                            $basicAllowed = false;
+                                        } else {
+                                            // No anti-match, check positive categories
+                                            $hasBasicKnowledge = array_intersect($positiveClasses, $oghmaKnowledgeArray);
+                                            if (!empty($hasBasicKnowledge)) {
+                                                $basicAllowed = true;
+                                            }
                                         }
                                     }
 

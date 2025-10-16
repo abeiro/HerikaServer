@@ -111,10 +111,23 @@ class Translation {
         $jsonData = json_encode($data);
     
         // Create headers
+        // Resolve API key via API Badge (preferred). Fallback to config for backward compatibility.
+        $deeplKey = '';
+        try {
+            if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+                if (isset($GLOBALS['DBDRIVER'])) { @require_once($GLOBALS['ENGINE_PATH'] . 'lib' . DIRECTORY_SEPARATOR . $GLOBALS['DBDRIVER'] . '.class.php'); }
+                $GLOBALS['db'] = new sql();
+            }
+            $row = $GLOBALS['db']->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='deepl' LIMIT 1");
+            if (is_array($row) && isset($row['api_key'])) { $deeplKey = (string)$row['api_key']; }
+        } catch (Throwable $_e) { $deeplKey = ''; }
+        if ($deeplKey === '' && isset($GLOBALS['TRANSLATION']['DeepL']['API_KEY'])) {
+            $deeplKey = (string)$GLOBALS['TRANSLATION']['DeepL']['API_KEY'];
+        }
         $options = [
             'http' => [
                 'header' => [
-                    'Authorization: DeepL-Auth-Key ' . $GLOBALS["TRANSLATION"]["DeepL"]["API_KEY"],
+                    'Authorization: DeepL-Auth-Key ' . $deeplKey,
                     'Content-Type: application/json',
                 ],
                 'method' => 'POST',

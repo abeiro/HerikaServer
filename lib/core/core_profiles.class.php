@@ -81,6 +81,12 @@ class CoreProfile {
         return $GLOBALS["db"]->fetchOne($query);
     }
 
+    public function getBySlot($slot) {
+        $slot = intval($slot);
+        $query = "SELECT * FROM {$this->table} WHERE slot = {$slot} LIMIT 1";
+        return $GLOBALS["db"]->fetchOne($query);
+    }
+
     public function getById($id) {
         return $this->readOne($id);
     }

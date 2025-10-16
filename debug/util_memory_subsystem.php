@@ -465,7 +465,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 
                     $GLOBALS["FORCE_MAX_TOKENS"] = $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
 
-                    $buffer = $connectionHandler->fast_request($prompt, []);
+                    $buffer = $connectionHandler->fast_request($prompt, [],"summary");
 
                     $TEST_TEXT = strtr($buffer, ["**" => ""]); // Use the final buffer
 
