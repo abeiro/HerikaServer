@@ -43,8 +43,6 @@ if ($GLOBALS["MINIME_T5"]) {
             $oghmaKnowledgeArray = array_map('trim', explode(',', $oghmaKnowledgeString));
             $oghmaKnowledgeArray = array_filter($oghmaKnowledgeArray);
             $oghmaKnowledgeArray[] = $GLOBALS["HERIKA_NAME"];
-            // Normalize all knowledge entries to lowercase for case-insensitive matching
-            $oghmaKnowledgeArray = array_map('strtolower', $oghmaKnowledgeArray);
 
             // Helper function to convert a string to tsquery format
             $prepareTsQuery = function ($string, $operator = '|') {
@@ -196,9 +194,9 @@ if ($GLOBALS["MINIME_T5"]) {
                                     $advClassesArr   = array_map('trim', explode(',', $advClassesStr));
                                     $advClassesArr   = array_filter($advClassesArr);
 
-                                    // Separate positive and negative (anti) categories (normalize to lowercase)
-                                    $positiveClasses = array_map('strtolower', array_filter($advClassesArr, fn($c) => !str_starts_with($c, '!')));
-                                    $antiClasses = array_map(fn($c) => strtolower(substr($c, 1)), array_filter($advClassesArr, fn($c) => str_starts_with($c, '!')));
+                                    // Separate positive and negative (anti) categories
+                                    $positiveClasses = array_filter($advClassesArr, fn($c) => !str_starts_with($c, '!'));
+                                    $antiClasses = array_map(fn($c) => substr($c, 1), array_filter($advClassesArr, fn($c) => str_starts_with($c, '!')));
 
                                     // First check if any anti-categories match (these deny access)
                                     $hasAntiMatch = !empty(array_intersect($antiClasses, $oghmaKnowledgeArray));
@@ -241,9 +239,9 @@ if ($GLOBALS["MINIME_T5"]) {
                                         $basicClassesArr = array_map('trim', explode(',', $basicClassesStr));
                                         $basicClassesArr = array_filter($basicClassesArr);
 
-                                        // Separate positive and negative (anti) categories (normalize to lowercase)
-                                        $positiveClasses = array_map('strtolower', array_filter($basicClassesArr, fn($c) => !str_starts_with($c, '!')));
-                                        $antiClasses = array_map(fn($c) => strtolower(substr($c, 1)), array_filter($basicClassesArr, fn($c) => str_starts_with($c, '!')));
+                                        // Separate positive and negative (anti) categories
+                                        $positiveClasses = array_filter($basicClassesArr, fn($c) => !str_starts_with($c, '!'));
+                                        $antiClasses = array_map(fn($c) => substr($c, 1), array_filter($basicClassesArr, fn($c) => str_starts_with($c, '!')));
 
                                         // First check if any anti-categories match (these deny access)
                                         $hasAntiMatch = !empty(array_intersect($antiClasses, $oghmaKnowledgeArray));
