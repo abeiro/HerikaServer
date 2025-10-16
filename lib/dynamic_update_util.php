@@ -355,6 +355,8 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         $successCount = 0;
         
         foreach ($fieldsToUpdate as $field) {
+            error_log("[processSingleDynamicProfile] Updating $npcName $field");
+            
             $result = updateDynamicProfileField($npcName, $field, $historyData);
 
             if ($field=="skills") {

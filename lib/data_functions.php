@@ -2366,8 +2366,13 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             }
             $result = array_unique($kw);
 
+            $resultEn=[];
             foreach ($result as $r) {
                 $resultEn[]=internalDumbTranslator($r);
+            }
+
+            if (!sizeof($resultEn)<1) {
+                $resultEn=$result;
             }
 
             $kwStringAny=implode(" | ",$resultEn);

@@ -964,7 +964,7 @@ class openrouterjson
                             'url'=>$this->_url
                         ));
                 }
-                return $text_response["choices"][0]["message"]["content"];    
+                
         }
         else {
                 if ($GLOBALS["db"]) {
@@ -977,7 +977,6 @@ class openrouterjson
                             'url'=>$this->_url
                         ));
                 }
-            error_log("Error in openrouter request '$url':$json_response", 3);
         }
         // Write the buffer to the log file without timestamp separators
         file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
@@ -1330,8 +1329,6 @@ class openrouterjson
             }
         }
             
-
-
     }
 
 }
