@@ -192,6 +192,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
             if (is_array($v)) {
                 $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null && strtolower((string)$x) !== 'keepmechecked'; }));
             }
+            // Skip scalar values that are empty (indicates deletion)
+            if (!is_array($v) && ($v === '' || $v === null)) {
+                continue;
+            }
             $base[$k] = $v;
         }
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
@@ -223,6 +227,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         foreach ((array)$_POST['meta_vis'] as $k=>$v) {
             if (is_array($v)) {
                 $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null && strtolower((string)$x) !== 'keepmechecked'; }));
+            }
+            // Skip scalar values that are empty (indicates deletion)
+            if (!is_array($v) && ($v === '' || $v === null)) {
+                continue;
             }
             $base[$k] = $v;
         }
@@ -886,6 +894,7 @@ $ittById = $byId($ittRows);
             </div>
         </div>
         <?php endif; ?>
+        
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_meta_settings" class="btn-save">Save Profile Settings</button>
@@ -893,6 +902,48 @@ $ittById = $byId($ittRows);
             <button type="button" id="btn_back_to_top" class="btn-primary" title="Scroll to top">↑ Back to top</button>
         </div>
     </div>
+    
+    <!-- Global Settings Overrides -->
+    <div class="provider-card" style="margin-bottom:8px;">
+        <div class="provider-head">
+            <div class="provider-title">
+                <div class="provider-icon">🌐</div>
+                <div>Global Settings Overrides</div>
+            </div>
+        </div>
+        <div class="provider-body" style="display:block;">
+            <small style="color:#9fb1c9; display:block; margin-bottom:8px;">Override global settings for this profile. Changes here take precedence over global configurations.</small>
+            <?php
+            // Configure override editor for Profile mode
+            $currentProfileOverrides = [];
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $globalSettingKeys = ['TTSFUNCTION'];
+                        foreach ($globalSettingKeys as $key) {
+                            if (isset($metaData[$key])) {
+                                $currentProfileOverrides[$key] = $metaData[$key];
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                $currentProfileOverrides = [];
+            }
+            $overrideEditorConfig = [
+                'mode' => 'profile',
+                'fieldName' => 'metadata',
+                'allowedSettings' => ['TTSFUNCTION'],
+                'reservedKeys' => [],
+                'currentData' => $currentProfileOverrides,
+                'systemFields' => [],
+            ];
+            include(__DIR__."/tmpl/override_editor.php");
+            ?>
+        </div>
+    </div>
+    
     <!-- JSON Editor (second chunk) in collapsible -->
     <details id="metadata_section" class="collapsible">
         <summary class="collapsible-header">Metadata (Advanced JSON)</summary>
@@ -934,6 +985,13 @@ $ittById = $byId($ittRows);
             // Surface connector save failure but continue to save profile data as well
             try { if (typeof showToast === 'function') showToast('Connector save failed: ' + e.message, true); } catch(_){ }
         }
+
+        // Sync profile global overrides to metadata
+        try {
+            if (typeof window.syncProfileGlobalOverrides === 'function') {
+                window.syncProfileGlobalOverrides();
+            }
+        } catch(_e) { console.error('Failed to sync profile global overrides:', _e); }
 
         const fd = new FormData(form);
         const hasId = !!(form.querySelector('input[name="id"]') && form.querySelector('input[name="id"]').value);

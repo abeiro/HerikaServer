@@ -406,6 +406,40 @@ class NpcMaster {
             }
         }
 
+        // Apply extended_data overrides (highest precedence - NPC level)
+        // Reserved keys are excluded (middle_term_memory, middle_term_enabled, chim_core_migrated)
+        $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'chim_core_migrated'];
+        $extendedData = json_decode($currentNpcData['extended_data'] ?? '{}', true);
+        if (is_array($extendedData)) {
+            foreach ($extendedData as $key => $value) {
+                // Skip reserved system keys
+                if (in_array($key, $reservedKeys, true)) {
+                    continue;
+                }
+                // Apply override to GLOBALS
+                // Handle nested keys (space-separated): "TTS MELOTTS voiceid" -> $GLOBALS['TTS']['MELOTTS']['voiceid']
+                if (!empty($value) || is_numeric($value) || is_bool($value)) {
+                    $parts = explode(' ', $key);
+                    if (count($parts) === 1) {
+                        // Simple key
+                        $GLOBALS[$key] = $value;
+                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[$key] = ".print_r($value,true));
+                    } else if (count($parts) === 2) {
+                        // Nested 2 levels: TTS MELOTTS
+                        if (!isset($GLOBALS[$parts[0]])) $GLOBALS[$parts[0]] = [];
+                        $GLOBALS[$parts[0]][$parts[1]] = $value;
+                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}] = ".print_r($value,true));
+                    } else if (count($parts) === 3) {
+                        // Nested 3 levels: TTS MELOTTS voiceid
+                        if (!isset($GLOBALS[$parts[0]])) $GLOBALS[$parts[0]] = [];
+                        if (!isset($GLOBALS[$parts[0]][$parts[1]])) $GLOBALS[$parts[0]][$parts[1]] = [];
+                        $GLOBALS[$parts[0]][$parts[1]][$parts[2]] = $value;
+                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}][{$parts[2]}] = ".print_r($value,true));
+                    }
+                }
+            }
+        }
+
         
     }
 

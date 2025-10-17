@@ -1,4 +1,10 @@
 <?php
+/**
+ * Safe Biography CSV Import Handler
+ * Handles CSV data from game plugin or web upload
+ * Supports UTF-8 (with/without BOM), UTF-16LE/BE, Windows-1252
+ * Auto-detects delimiters: comma, semicolon, tab
+ */
 
 Logger::info("Processing biography CSV data upload");
 
@@ -14,142 +20,166 @@ $processedCount = 0;
 $errorCount = 0;
 
 try {
-    // Create a temporary file to properly parse complex CSV data
-    $tempFile = tempnam(sys_get_temp_dir(), 'biography_import_');
-    file_put_contents($tempFile, $csvData);
+    // Step 1: Detect and normalize encoding to UTF-8
+    $detectedEncoding = 'UTF-8';
     
-    $handle = fopen($tempFile, 'r');
-    if ($handle === false) {
-        Logger::error("Biography Import: Could not open temporary CSV file");
+    // Check for UTF-16 (presence of NUL bytes)
+    if (strpos($csvData, "\x00") !== false) {
+        $bom = substr($csvData, 0, 2);
+        if ($bom === "\xFF\xFE") {
+            $csvData = mb_convert_encoding(substr($csvData, 2), 'UTF-8', 'UTF-16LE');
+            $detectedEncoding = 'UTF-16LE';
+        } elseif ($bom === "\xFE\xFF") {
+            $csvData = mb_convert_encoding(substr($csvData, 2), 'UTF-8', 'UTF-16BE');
+            $detectedEncoding = 'UTF-16BE';
+        } else {
+            $csvData = mb_convert_encoding($csvData, 'UTF-8', 'UTF-16');
+            $detectedEncoding = 'UTF-16';
+        }
+    }
+    
+    // Strip UTF-8 BOM if present
+    if (substr($csvData, 0, 3) === "\xEF\xBB\xBF") {
+        $csvData = substr($csvData, 3);
+        $detectedEncoding = 'UTF-8 with BOM';
+    }
+    
+    // If not valid UTF-8, try Windows-1252
+    if (!mb_check_encoding($csvData, 'UTF-8')) {
+        $csvData = mb_convert_encoding($csvData, 'UTF-8', 'Windows-1252');
+        $detectedEncoding = 'Windows-1252';
+    }
+    
+    Logger::info("Biography Import: Detected encoding: $detectedEncoding");
+    
+    // Step 2: Split into lines
+    $lines = preg_split('/\r\n|\r|\n/', $csvData);
+    if (empty($lines) || count($lines) < 2) {
+        Logger::error("Biography Import: CSV appears empty or has no data rows");
         die("X-CUSTOM-CLOSE");
     }
     
-    // Read and process header
-    $header = fgetcsv($handle, 0, ',', '"', '"');
-    if ($header === false || empty($header)) {
-        Logger::error("Biography Import: Invalid CSV header");
-        fclose($handle);
-        unlink($tempFile);
+    // Step 3: Detect delimiter from first few lines
+    $firstLine = $lines[0];
+    $delimiter = ',';
+    
+    // Count delimiters in first line
+    $delimiterCounts = [
+        ',' => substr_count($firstLine, ','),
+        ';' => substr_count($firstLine, ';'),
+        "\t" => substr_count($firstLine, "\t")
+    ];
+    
+    // If all counts are 0, check the second line too
+    $maxCount = max($delimiterCounts);
+    if ($maxCount === 0 && isset($lines[1])) {
+        $secondLine = $lines[1];
+        $delimiterCounts[','] += substr_count($secondLine, ',');
+        $delimiterCounts[';'] += substr_count($secondLine, ';');
+        $delimiterCounts["\t"] += substr_count($secondLine, "\t");
+    }
+    
+    arsort($delimiterCounts);
+    $delimiter = array_key_first($delimiterCounts);
+    $delimiterName = ($delimiter === "\t") ? 'TAB' : $delimiter;
+    Logger::info("Biography Import: Detected delimiter: $delimiterName (counts: comma={$delimiterCounts[',']}, semicolon={$delimiterCounts[';']}, tab={$delimiterCounts["\t"]})");
+    
+    // Step 4: Parse header row
+    $header = str_getcsv($firstLine, $delimiter, '"');
+    if (!$header || empty($header)) {
+        Logger::error("Biography Import: Could not parse header row");
         die("X-CUSTOM-CLOSE");
     }
     
-    // Normalize header labels and create header map
+    // Step 5: Normalize headers and build map
     $headerMap = [];
     foreach ($header as $i => $colName) {
-        $normalized = strtolower(trim($colName));
-        $headerMap[$normalized] = $i;
+        $colNameSafe = is_string($colName) ? $colName : '';
+        // Clean up: strip BOM, NBSP, ZWNBSP, normalize whitespace
+        $colNameSafe = preg_replace('/[\x{FEFF}\x{FFFE}\x{00A0}]/u', ' ', $colNameSafe);
+        $colNameSafe = preg_replace('/\s+/', ' ', $colNameSafe);
+        $normalized = strtolower(trim($colNameSafe));
+        if ($normalized !== '') {
+            $headerMap[$normalized] = $i;
+        }
     }
     
-    // Process each data row
-    while (($data = fgetcsv($handle, 0, ',', '"', '"')) !== false) {
-        if (empty($data) || count($data) < 2) {
-            continue; // Skip empty or invalid rows
+    // Step 6: Validate required headers
+    $requiredHeaders = ['npc_name', 'core'];
+    $missingHeaders = array_diff($requiredHeaders, array_keys($headerMap));
+    if (!empty($missingHeaders)) {
+        Logger::error("Biography Import: Missing required headers: " . implode(', ', $missingHeaders));
+        die("X-CUSTOM-CLOSE");
+    }
+    
+    // Step 7: Process data rows
+    for ($lineIdx = 1; $lineIdx < count($lines); $lineIdx++) {
+        $lineContent = $lines[$lineIdx];
+        
+        // Skip empty lines
+        if (trim($lineContent) === '') {
+            continue;
         }
+        
+        // Parse CSV line
+        $data = str_getcsv($lineContent, $delimiter, '"');
+        if (!$data || empty($data)) {
+            continue;
+        }
+        
+        // Skip duplicate header rows
+        if (isset($data[0], $data[1])) {
+            if (strtolower(trim($data[0])) === 'npc_name' && strtolower(trim($data[1])) === 'core') {
+                continue;
+            }
+        }
+        
+        // Helper function to safely extract values
+        $getValue = function($key) use ($headerMap, $data) {
+            if (isset($headerMap[$key]) && isset($data[$headerMap[$key]])) {
+                $temp = trim((string)$data[$headerMap[$key]]);
+                return ($temp !== '') ? $temp : null;
+            }
+            return null;
+        };
         
         // Extract required fields
-        $npc_name = '';
-        if (isset($headerMap['npc_name']) && isset($data[$headerMap['npc_name']])) {
-            $npc_name = strtolower(trim($data[$headerMap['npc_name']]));
-        }
+        $npc_name = isset($headerMap['npc_name']) && isset($data[$headerMap['npc_name']]) 
+            ? strtolower(trim((string)$data[$headerMap['npc_name']])) 
+            : '';
         
-        $core = '';
-        if (isset($headerMap['core']) && isset($data[$headerMap['core']])) {
-            $core = trim($data[$headerMap['core']]);
-        } elseif (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) { // legacy
-            $core = trim($data[$headerMap['npc_pers']]);
-        }
+        // Support both 'core' and legacy 'npc_pers'
+        $core = $getValue('core') ?? $getValue('npc_pers') ?? '';
         
-        // Extract optional fields
-        $npc_dynamic = null;
-        if (isset($headerMap['npc_dynamic']) && isset($data[$headerMap['npc_dynamic']])) {
-            $temp = trim($data[$headerMap['npc_dynamic']]);
-            $npc_dynamic = ($temp !== '') ? $temp : null;
-        }
-        
-        $oghma_knowledge_tags = '';
-        if (isset($headerMap['oghma_knowledge_tags']) && isset($data[$headerMap['oghma_knowledge_tags']])) {
-            $oghma_knowledge_tags = trim($data[$headerMap['oghma_knowledge_tags']]);
-        } elseif (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) { // legacy
-            $oghma_knowledge_tags = trim($data[$headerMap['npc_misc']]);
-        }
-        
-        $melotts_voiceid = null;
-        if (isset($headerMap['melotts_voiceid']) && isset($data[$headerMap['melotts_voiceid']])) {
-            $temp = trim($data[$headerMap['melotts_voiceid']]);
-            $melotts_voiceid = ($temp !== '') ? $temp : null;
-        }
-        
-        $xtts_voiceid = null;
-        if (isset($headerMap['xtts_voiceid']) && isset($data[$headerMap['xtts_voiceid']])) {
-            $temp = trim($data[$headerMap['xtts_voiceid']]);
-            $xtts_voiceid = ($temp !== '') ? $temp : null;
-        }
-        
-        $xvasynth_voiceid = null;
-        if (isset($headerMap['xvasynth_voiceid']) && isset($data[$headerMap['xvasynth_voiceid']])) {
-            $temp = trim($data[$headerMap['xvasynth_voiceid']]);
-            $xvasynth_voiceid = ($temp !== '') ? $temp : null;
-        }
-
-        // Extract extended biography fields
-        $npc_static_bio = null;
-        if (isset($headerMap['npc_static_bio']) && isset($data[$headerMap['npc_static_bio']])) {
-            $temp = trim($data[$headerMap['npc_static_bio']]);
-            $npc_static_bio = ($temp !== '') ? $temp : null;
-        } elseif (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) { // legacy
-            $temp = trim($data[$headerMap['npc_background']]);
-            $npc_static_bio = ($temp !== '') ? $temp : null;
-        }
-        
-        $npc_personality = null;
-        if (isset($headerMap['npc_personality']) && isset($data[$headerMap['npc_personality']])) {
-            $temp = trim($data[$headerMap['npc_personality']]);
-            $npc_personality = ($temp !== '') ? $temp : null;
-        }
-        
-        $npc_appearance = null;
-        if (isset($headerMap['npc_appearance']) && isset($data[$headerMap['npc_appearance']])) {
-            $temp = trim($data[$headerMap['npc_appearance']]);
-            $npc_appearance = ($temp !== '') ? $temp : null;
-        }
-        
-        $npc_relationships = null;
-        if (isset($headerMap['npc_relationships']) && isset($data[$headerMap['npc_relationships']])) {
-            $temp = trim($data[$headerMap['npc_relationships']]);
-            $npc_relationships = ($temp !== '') ? $temp : null;
-        }
-        
-        $npc_occupation = null;
-        if (isset($headerMap['npc_occupation']) && isset($data[$headerMap['npc_occupation']])) {
-            $temp = trim($data[$headerMap['npc_occupation']]);
-            $npc_occupation = ($temp !== '') ? $temp : null;
-        }
-        
-        $npc_skills = null;
-        if (isset($headerMap['npc_skills']) && isset($data[$headerMap['npc_skills']])) {
-            $temp = trim($data[$headerMap['npc_skills']]);
-            $npc_skills = ($temp !== '') ? $temp : null;
-        }
-        
-        $npc_speechstyle = null;
-        if (isset($headerMap['npc_speechstyle']) && isset($data[$headerMap['npc_speechstyle']])) {
-            $temp = trim($data[$headerMap['npc_speechstyle']]);
-            $npc_speechstyle = ($temp !== '') ? $temp : null;
-        }
-        
-        $npc_goals = null;
-        if (isset($headerMap['npc_goals']) && isset($data[$headerMap['npc_goals']])) {
-            $temp = trim($data[$headerMap['npc_goals']]);
-            $npc_goals = ($temp !== '') ? $temp : null;
-        }
-        
-        // Skip if required fields are missing
+        // Skip if required fields are empty
         if (empty($npc_name) || empty($core)) {
             Logger::warn("Biography Import: Skipping row with missing npc_name or core");
             $errorCount++;
             continue;
         }
-
+        
+        // Truncate npc_name to 128 characters
+        if (strlen($npc_name) > 128) {
+            $npc_name = substr($npc_name, 0, 128);
+        }
+        
+        // Extract optional fields (support both new and legacy headers)
+        $oghma_knowledge_tags = $getValue('oghma_knowledge_tags') ?? $getValue('npc_misc') ?? '';
+        $voiceid = $getValue('voiceid');
+        $gender = $getValue('gender');
+        $race = $getValue('race');
+        $refid = $getValue('refid');
+        
+        // Extended profile fields (support both new and legacy npc_* prefixed headers)
+        $npc_static_bio = $getValue('npc_static_bio') ?? $getValue('npc_background');
+        $personality = $getValue('personality') ?? $getValue('npc_personality');
+        $appearance = $getValue('appearance') ?? $getValue('npc_appearance');
+        $relationships = $getValue('relationships') ?? $getValue('npc_relationships');
+        $occupation = $getValue('occupation') ?? $getValue('npc_occupation');
+        $skills = $getValue('skills') ?? $getValue('npc_skills');
+        $speechstyle = $getValue('speechstyle') ?? $getValue('npc_speechstyle');
+        $goals = $getValue('goals') ?? $getValue('npc_goals');
+        
         // Insert or update record using upsertRowOnConflict
         try {
             $db->upsertRowOnConflict(
@@ -159,13 +189,17 @@ try {
                     'core' => $core,
                     'oghma_knowledge_tags' => $oghma_knowledge_tags,
                     'npc_static_bio' => $npc_static_bio,
-                    'personality' => $npc_personality,
-                    'appearance' => $npc_appearance,
-                    'relationships' => $npc_relationships,
-                    'occupation' => $npc_occupation,
-                    'skills' => $npc_skills,
-                    'speechstyle' => $npc_speechstyle,
-                    'goals' => $npc_goals
+                    'personality' => $personality,
+                    'appearance' => $appearance,
+                    'relationships' => $relationships,
+                    'occupation' => $occupation,
+                    'skills' => $skills,
+                    'speechstyle' => $speechstyle,
+                    'goals' => $goals,
+                    'voiceid' => $voiceid,
+                    'gender' => $gender,
+                    'race' => $race,
+                    'refid' => $refid
                 ),
                 'npc_name'
             );
@@ -177,17 +211,11 @@ try {
         }
     }
     
-    fclose($handle);
-    unlink($tempFile);
-    
     Logger::info("Biography Import: Processing complete. $processedCount records processed, $errorCount errors");
+    Logger::info("Biography Import: Encoding: $detectedEncoding, Delimiter: $delimiterName");
     
 } catch (Exception $e) {
     Logger::error("Biography Import: Fatal error processing CSV: " . $e->getMessage());
-    // Clean up temp file if it exists
-    if (isset($tempFile) && file_exists($tempFile)) {
-        unlink($tempFile);
-    }
 }
 
 ?>
