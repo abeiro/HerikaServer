@@ -486,7 +486,7 @@ class NpcMaster {
         if (!$npc) {
             return false; // NPC not found
         }
-        error_log("[NPC BACKUP] Backup of {$npc["npc_name"]} ".print_r($npc,true));
+        //error_log("[NPC BACKUP] Backup of {$npc["npc_name"]} ".print_r($npc,true));
         // Remove the original 'id' field, since the history table likely has its own auto-increment ID
         unset($npc['id']);
     
@@ -517,6 +517,10 @@ class NpcMaster {
         foreach ($npcs as $npc) {
             // Remove original ID
             $npc_id = $npc['id'];
+            $npc['gamets_last_updated'] = $timestamp;
+
+            $this->update($npc_id,$npc);
+
             unset($npc['id']);
     
             // Set the reference and override timestamps
@@ -575,7 +579,7 @@ restore AS (
         h.appearance
     FROM core_npc_master_history h
     JOIN deleted d ON h.npc_id = d.id
-    WHERE h.gamets_last_updated < $timestamp OR h.gamets_last_updated IS NULL
+    WHERE h.gamets_last_updated <= $timestamp OR h.gamets_last_updated IS NULL
     ORDER BY h.npc_id, h.gamets_last_updated DESC NULLS LAST,h.created DESC
 )
 INSERT INTO core_npc_master (

@@ -745,7 +745,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 } elseif (strpos($gameRequest[0], "infosave")===0) {    // user saves. lets backup all NPC state.
 
     error_log("[INFOSAVE] Backup all profiles");
-    
+    logEvent($gameRequest);
+
     $npcMaster=new NpcMaster();
     $npcMaster->backupAllNpcs($gameRequest[2]);
     $MUST_END=true;

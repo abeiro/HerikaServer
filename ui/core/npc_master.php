@@ -16,6 +16,7 @@ require_once("{$enginePath}/lib/core/npc_master.class.php");
 
 $CONF_SAMPLE_VARS=extract_assignments("$enginePath/conf/conf.php");
 
+
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from below file
 include(__DIR__."/tmpl/ui_utils.php");
@@ -57,6 +58,9 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 <?php
 $GLOBALS["db"] = new sql();
 $npc = new NpcMaster();
+
+$lastInfoRow=$GLOBALS["db"]->fetchOne("select max(gamets) as gamets from eventlog where type='infosave'");
+$LAST_INFOSAVE_EVENT=$lastInfoRow["gamets"];
 
 // Helper: resolve race icon web path if file exists
 if (!function_exists('race_icon_web_path')) {
@@ -530,6 +534,14 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <?php if ($raceIcon !== ''): ?>
                         <img class="npc-race-art" src="<?= htmlspecialchars($raceIcon) ?>" alt="Race icon" />
                     <?php endif; ?>
+                </div>
+                <div class="npc-right-warn">
+                    <?php 
+                    if ($row["gamets_last_updated"]> $LAST_INFOSAVE_EVENT) {
+                        echo "<span title='This NPC is out of sync, this means current NPC sheet has been modified after last save. If you edit this NPC, changes will be lost if you reload a previous savegame. '>⚠️</span>";
+                    }
+
+                    ?>
                 </div>
             </div>
         </div>
