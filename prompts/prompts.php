@@ -223,7 +223,7 @@ $PROMPTS=array(
     "im_alive"=> [
         "cue"=> ["{$GLOBALS["HERIKA_NAME"]} talks about they are feeling more real. Write {$GLOBALS["HERIKA_NAME"]} dialogue. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=> ["The Narrator: {$GLOBALS["HERIKA_NAME"]} feels a sudden shock...and feels more real"],
-        "extra"=> (!empty($GLOBALS["ALIVE_MESSAGE"]) && $GLOBALS["ALIVE_MESSAGE"]) ? [] : ["dontuse" => true]
+        "extra"=> ["dontuse" => true] // Hardcoded disabled - ALIVE_MESSAGE permanently disabled
     ],
     // Database Prompt (Start Game)
     "playerinfo"=>[ 
