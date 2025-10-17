@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
 
 //
 // ────────────────────────────────────────────────────────────────────
-//   CSV UPLOAD
+//   CSV UPLOAD - Safe Biography Import (same logic as biography_import.php)
 // ────────────────────────────────────────────────────────────────────
 //
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
@@ -135,210 +135,137 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
         $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
 
         if (in_array($fileExtension, $allowedfileExtensions)) {
-            // Try to detect file encoding
-            $encoding = mb_detect_encoding(file_get_contents($fileTmpPath), 'UTF-8', true);
-
-            if (($handle = fopen($fileTmpPath, 'r')) !== false) {
-                //
-                // ──────────────────────────────────────────────────────────────────
-                //   Read header row to map columns
-                // ──────────────────────────────────────────────────────────────────
-                //
-                $header = fgetcsv($handle, 1000, ',');
-                if (!$header) {
-                    $message .= '<p>Could not read the header row from the CSV.</p>';
-                    fclose($handle);
+            // Process CSV using the same logic as biography_import.php
+            $processedCount = 0;
+            $errorCount = 0;
+            
+            try {
+                // Step 1: Read the entire file
+                $csvData = @file_get_contents($fileTmpPath);
+                if ($csvData === false) {
+                    $message .= '<p style="color:#ff6464;">Error reading the uploaded CSV file.</p>';
                 } else {
-                    // Normalize header labels (lowercase, trim, etc.)
-                    $headerMap = [];
-                    foreach ($header as $i => $colName) {
-                        $normalized = strtolower(trim($colName));
-                        $headerMap[$normalized] = $i;
+                    // Step 2: Detect and normalize encoding to UTF-8
+                    $detectedEncoding = 'UTF-8';
+                    
+                    // Check for UTF-16 (presence of NUL bytes)
+                    if (strpos($csvData, "\x00") !== false) {
+                        $bom = substr($csvData, 0, 2);
+                        if ($bom === "\xFF\xFE") {
+                            $csvData = mb_convert_encoding(substr($csvData, 2), 'UTF-8', 'UTF-16LE');
+                            $detectedEncoding = 'UTF-16LE with BOM';
+                        } elseif ($bom === "\xFE\xFF") {
+                            $csvData = mb_convert_encoding(substr($csvData, 2), 'UTF-8', 'UTF-16BE');
+                            $detectedEncoding = 'UTF-16BE with BOM';
+                        } else {
+                            $csvData = mb_convert_encoding($csvData, 'UTF-8', 'UTF-16');
+                            $detectedEncoding = 'UTF-16';
+                        }
                     }
+                    
+                    // Strip UTF-8 BOM if present
+                    if (substr($csvData, 0, 3) === "\xEF\xBB\xBF") {
+                        $csvData = substr($csvData, 3);
+                        $detectedEncoding = 'UTF-8 with BOM';
+                    }
+                    
+                    // If not valid UTF-8, try Windows-1252
+                    if (!mb_check_encoding($csvData, 'UTF-8')) {
+                        $csvData = mb_convert_encoding($csvData, 'UTF-8', 'Windows-1252');
+                        $detectedEncoding = 'Windows-1252';
+                    }
+                    
+                    // Step 3: Parse CSV using stream (handles multi-line fields properly)
+                    $stream = fopen('php://memory', 'r+');
+                    fwrite($stream, $csvData);
+                    rewind($stream);
+                    
+                    // Auto-detect delimiter from first non-empty line
+                    $delimiter = ',';
+                    $tempPos = ftell($stream);
+                    while (($line = fgets($stream)) !== false) {
+                        if (trim($line) !== '') {
+                            $delimiterCounts = [
+                                ',' => substr_count($line, ','),
+                                ';' => substr_count($line, ';'),
+                                "\t" => substr_count($line, "\t")
+                            ];
+                            arsort($delimiterCounts);
+                            $delimiter = array_key_first($delimiterCounts);
+                            break;
+                        }
+                    }
+                    rewind($stream);
+                    $delimiterName = ($delimiter === "\t") ? 'TAB' : $delimiter;
+                    
+                    if (feof($stream) && $tempPos === ftell($stream)) {
+                        $message .= '<p style="color:#ff6464;">CSV file appears to be empty.</p>';
+                        fclose($stream);
+                    } else {
+                        // Step 4: Process all rows flexibly (no header validation needed)
+                        $errors = [];
+                        
+                        while (($data = fgetcsv($stream, 0, $delimiter, '"', '\\')) !== false) {
+                            // Skip empty rows
+                            if (empty($data) || (count($data) === 1 && trim((string)($data[0] ?? '')) === '')) {
+                                continue;
+                            }
+                            
+                            // Skip header rows (any row where first cell is "npc_name")
+                            if (count($data) >= 1 && strtolower(trim((string)($data[0] ?? ''))) === 'npc_name') {
+                                continue;
+                            }
+                            
+                            // Must have at least 2 columns
+                            if (count($data) < 2) {
+                                continue;
+                            }
+                            
+                            // Extract fields by position (flexible - works with or without headers)
+                            $npc_name = isset($data[0]) ? strtolower(trim((string)$data[0])) : '';
+                            $core = isset($data[1]) ? trim((string)$data[1]) : '';
+                            
+                            // Skip if required fields are empty
+                            if (empty($npc_name) || empty($core)) {
+                                continue;
+                            }
 
-                    // Check relevant columns by name
-                    //
-                    // * npc_name (required)
-                    // * npc_dynamic (optional)
-                    // * npc_pers (required)
-                    // * npc_misc (optional if you want to skip it, set it to "")
-                    // * melotts_voiceid, xtts_voiceid, xvasynth_voiceid (optional)
-                    // * Extended profile fields (all optional):
-                    //   - npc_background, npc_personality, npc_appearance, npc_relationships
-                    //   - npc_occupation, npc_skills, npc_speechstyle, npc_goals
-                    //
-
-                    $rowCount = 0;
-                    while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                        // Use null or empty string if column does not exist or row data is missing
-                        $npc_name = '';
-                        if (isset($headerMap['npc_name']) && isset($data[$headerMap['npc_name']])) {
-                            $npc_name = strtolower(trim($data[$headerMap['npc_name']]));
-                            // Truncate npc_name to 128 characters to fit database constraint
+                            // Truncate npc_name to 128 characters
                             if (strlen($npc_name) > 128) {
                                 $npc_name = substr($npc_name, 0, 128);
                             }
-                        }
-
-                        $core = '';
-                        if (isset($headerMap['core']) && isset($data[$headerMap['core']])) {
-                            $core = trim($data[$headerMap['core']]);
-                        } elseif (isset($headerMap['npc_pers']) && isset($data[$headerMap['npc_pers']])) { // legacy
-                            $core = trim($data[$headerMap['npc_pers']]);
-                        }
-
-                        // npc_dynamic is optional
-                        $npc_dynamic = null;
-                        if (isset($headerMap['npc_dynamic']) && isset($data[$headerMap['npc_dynamic']])) {
-                            $temp = trim($data[$headerMap['npc_dynamic']]);
-                            $npc_dynamic = ($temp !== '') ? $temp : null;
-                        }
-
-                        $oghma_knowledge_tags = '';
-                        if (isset($headerMap['oghma_knowledge_tags']) && isset($data[$headerMap['oghma_knowledge_tags']])) {
-                            $oghma_knowledge_tags = trim($data[$headerMap['oghma_knowledge_tags']]);
-                        } elseif (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) { // legacy
-                            $oghma_knowledge_tags = trim($data[$headerMap['npc_misc']]);
-                        }
-
-                        // Voice IDs are optional, so store null if missing/empty
-                        $melotts_voiceid = null;
-                        if (isset($headerMap['melotts_voiceid']) && isset($data[$headerMap['melotts_voiceid']])) {
-                            $temp = trim($data[$headerMap['melotts_voiceid']]);
-                            $melotts_voiceid = ($temp !== '') ? $temp : null;
-                        }
-
-                        $xtts_voiceid = null;
-                        if (isset($headerMap['xtts_voiceid']) && isset($data[$headerMap['xtts_voiceid']])) {
-                            $temp = trim($data[$headerMap['xtts_voiceid']]);
-                            $xtts_voiceid = ($temp !== '') ? $temp : null;
-                        }
-
-                        $xvasynth_voiceid = null;
-                        if (isset($headerMap['xvasynth_voiceid']) && isset($data[$headerMap['xvasynth_voiceid']])) {
-                            $temp = trim($data[$headerMap['xvasynth_voiceid']]);
-                            $xvasynth_voiceid = ($temp !== '') ? $temp : null;
-                        }
-
-                        // New extended profile fields (prefer new headers; fallback to legacy npc_* headers)
-                        $npc_background = null;
-                        if (isset($headerMap['npc_static_bio']) && isset($data[$headerMap['npc_static_bio']])) {
-                            $temp = trim($data[$headerMap['npc_static_bio']]);
-                            $npc_background = ($temp !== '') ? $temp : null;
-                        } elseif (isset($headerMap['npc_background']) && isset($data[$headerMap['npc_background']])) {
-                            $temp = trim($data[$headerMap['npc_background']]);
-                            $npc_background = ($temp !== '') ? $temp : null;
-                        }
-
-                        $npc_personality = null;
-                        if (isset($headerMap['personality']) && isset($data[$headerMap['personality']])) {
-                            $temp = trim($data[$headerMap['personality']]);
-                            $npc_personality = ($temp !== '') ? $temp : null;
-                        } elseif (isset($headerMap['npc_personality']) && isset($data[$headerMap['npc_personality']])) {
-                            $temp = trim($data[$headerMap['npc_personality']]);
-                            $npc_personality = ($temp !== '') ? $temp : null;
-                        }
-
-                        $npc_appearance = null;
-                        if (isset($headerMap['appearance']) && isset($data[$headerMap['appearance']])) {
-                            $temp = trim($data[$headerMap['appearance']]);
-                            $npc_appearance = ($temp !== '') ? $temp : null;
-                        } elseif (isset($headerMap['npc_appearance']) && isset($data[$headerMap['npc_appearance']])) {
-                            $temp = trim($data[$headerMap['npc_appearance']]);
-                            $npc_appearance = ($temp !== '') ? $temp : null;
-                        }
-
-                        $npc_relationships = null;
-                        if (isset($headerMap['relationships']) && isset($data[$headerMap['relationships']])) {
-                            $temp = trim($data[$headerMap['relationships']]);
-                            $npc_relationships = ($temp !== '') ? $temp : null;
-                        } elseif (isset($headerMap['npc_relationships']) && isset($data[$headerMap['npc_relationships']])) {
-                            $temp = trim($data[$headerMap['npc_relationships']]);
-                            $npc_relationships = ($temp !== '') ? $temp : null;
-                        }
-
-                        $npc_occupation = null;
-                        if (isset($headerMap['occupation']) && isset($data[$headerMap['occupation']])) {
-                            $temp = trim($data[$headerMap['occupation']]);
-                            $npc_occupation = ($temp !== '') ? $temp : null;
-                        } elseif (isset($headerMap['npc_occupation']) && isset($data[$headerMap['npc_occupation']])) {
-                            $temp = trim($data[$headerMap['npc_occupation']]);
-                            $npc_occupation = ($temp !== '') ? $temp : null;
-                        }
-
-                        $npc_skills = null;
-                        if (isset($headerMap['skills']) && isset($data[$headerMap['skills']])) {
-                            $temp = trim($data[$headerMap['skills']]);
-                            $npc_skills = ($temp !== '') ? $temp : null;
-                        } elseif (isset($headerMap['npc_skills']) && isset($data[$headerMap['npc_skills']])) {
-                            $temp = trim($data[$headerMap['npc_skills']]);
-                            $npc_skills = ($temp !== '') ? $temp : null;
-                        }
-
-                        $npc_speechstyle = null;
-                        if (isset($headerMap['speechstyle']) && isset($data[$headerMap['speechstyle']])) {
-                            $temp = trim($data[$headerMap['speechstyle']]);
-                            $npc_speechstyle = ($temp !== '') ? $temp : null;
-                        } elseif (isset($headerMap['npc_speechstyle']) && isset($data[$headerMap['npc_speechstyle']])) {
-                            $temp = trim($data[$headerMap['npc_speechstyle']]);
-                            $npc_speechstyle = ($temp !== '') ? $temp : null;
-                        }
-
-                        $npc_goals = null;
-                        if (isset($headerMap['goals']) && isset($data[$headerMap['goals']])) {
-                            $temp = trim($data[$headerMap['goals']]);
-                            $npc_goals = ($temp !== '') ? $temp : null;
-                        } elseif (isset($headerMap['npc_goals']) && isset($data[$headerMap['npc_goals']])) {
-                            $temp = trim($data[$headerMap['npc_goals']]);
-                            $npc_goals = ($temp !== '') ? $temp : null;
-                        }
-
-
-                        // Convert to UTF-8 if not already
-                        if ($encoding !== 'UTF-8') {
-                            $npc_name           = iconv('Windows-1252', 'UTF-8//IGNORE', $npc_name);
-                            $core               = iconv('Windows-1252', 'UTF-8//IGNORE', $core);
-                            $oghma_knowledge_tags = iconv('Windows-1252', 'UTF-8//IGNORE', $oghma_knowledge_tags);
-                            $voiceid            = ($voiceid !== null) ? iconv('Windows-1252', 'UTF-8//IGNORE', $voiceid) : null;
-                            $gender             = ($gender !== null) ? iconv('Windows-1252', 'UTF-8//IGNORE', $gender) : null;
-                            $race               = ($race !== null) ? iconv('Windows-1252', 'UTF-8//IGNORE', $race) : null;
-                            $refid              = ($refid !== null) ? iconv('Windows-1252', 'UTF-8//IGNORE', $refid) : null;
-                            $npc_background     = ($npc_background !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_background)
-                                                    : null;
-                            $npc_personality    = ($npc_personality !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_personality)
-                                                    : null;
-                            $npc_appearance     = ($npc_appearance !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_appearance)
-                                                    : null;
-                            $npc_relationships  = ($npc_relationships !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_relationships)
-                                                    : null;
-                            $npc_occupation     = ($npc_occupation !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_occupation)
-                                                    : null;
-                            $npc_skills         = ($npc_skills !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_skills)
-                                                    : null;
-                            $npc_speechstyle    = ($npc_speechstyle !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_speechstyle)
-                                                    : null;
-                            $npc_goals          = ($npc_goals !== null)
-                                                    ? iconv('Windows-1252', 'UTF-8//IGNORE', $npc_goals)
-                                                    : null;
-                        }
-
-                        // Skip if either required field is empty
-                        if (empty($npc_name) || empty($core)) {
-                            $message .= "<p>Skipping row with missing npc_name or core.</p>";
-                            continue;
-                        }
-
-                        // Insert or Update (bio schema)
+                            
+                            // Extract fields by position (based on example_bios_format.csv column order)
+                            // Order: npc_name, core, oghma_knowledge_tags, npc_static_bio, personality, 
+                            //        appearance, relationships, occupation, skills, speechstyle, goals, 
+                            //        voiceid, gender, race, refid
+                            $getValue = function($index) use ($data) {
+                                if (isset($data[$index])) {
+                                    $temp = trim((string)$data[$index]);
+                                    return ($temp !== '') ? $temp : null;
+                                }
+                                return null;
+                            };
+                            
+                            $oghma_knowledge_tags = $getValue(2) ?? '';
+                            $npc_static_bio = $getValue(3);
+                            $personality = $getValue(4);
+                            $appearance = $getValue(5);
+                            $relationships = $getValue(6);
+                            $occupation = $getValue(7);
+                            $skills = $getValue(8);
+                            $speechstyle = $getValue(9);
+                            $goals = $getValue(10);
+                            $voiceid = $getValue(11);
+                            $gender = $getValue(12);
+                            $race = $getValue(13);
+                            $refid = $getValue(14);
+                                    
+                            // Insert into database
                         $query = "
                             INSERT INTO $schema.bio_templates_custom 
-                                (npc_name, core, oghma_knowledge_tags, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid)
+                                    (npc_name, core, oghma_knowledge_tags, npc_static_bio, personality, appearance, 
+                                     relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid)
                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                             ON CONFLICT (npc_name)
                             DO UPDATE SET
@@ -358,24 +285,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 refid = EXCLUDED.refid
                         ";
 
-                        // Ensure optional meta variables are initialized
-                        if (!isset($voiceid)) { $voiceid = null; }
-                        if (!isset($gender)) { $gender = null; }
-                        if (!isset($race))   { $race = null; }
-                        if (!isset($refid))  { $refid = null; }
-
                         $params = [
                             $npc_name,
                             $core,
                             $oghma_knowledge_tags,
-                            $npc_background,
-                            $npc_personality,
-                            $npc_appearance,
-                            $npc_relationships,
-                            $npc_occupation,
-                            $npc_skills,
-                            $npc_speechstyle,
-                            $npc_goals,
+                                $npc_static_bio,
+                                $personality,
+                                $appearance,
+                                $relationships,
+                                $occupation,
+                                $skills,
+                                $speechstyle,
+                                $goals,
                             $voiceid,
                             $gender,
                             $race,
@@ -385,24 +306,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         $result = pg_query_params($conn, $query, $params);
 
                         if ($result) {
-                            $rowCount++;
+                                $processedCount++;
                         } else {
-                            $error_msg = pg_last_error($conn);
-                            $message .= "<p>Error processing row (npc_name: '$npc_name'): $error_msg</p>";
-                            if (strpos($error_msg, 'value too long') !== false) {
-                                $message .= "<p style='color: #ff6464;'>Debug info for '$npc_name':</p>";
-                                $message .= "<p>- npc_name length: " . strlen($npc_name) . "</p>";
-                                $message .= "<p>- core length: " . strlen($core) . "</p>";
-                                $message .= "<p>- oghma_knowledge_tags length: " . strlen($oghma_knowledge_tags) . "</p>";
+                                $errors[] = "NPC '$npc_name': " . pg_last_error($conn);
+                                $errorCount++;
                             }
                         }
-                    } // end while
-
-                    fclose($handle);
-                    $message .= "<p>$rowCount records inserted or updated successfully from the CSV file.</p>";
+                        
+                        // Close the stream
+                        fclose($stream);
+                        
+                        // Build success message
+                        if ($processedCount > 0) {
+                            $toastMessage = "✓ Successfully imported $processedCount NPC record" . ($processedCount > 1 ? 's' : '');
+                            if ($errorCount > 0) {
+                                $toastMessage .= " ($errorCount error" . ($errorCount > 1 ? 's' : '') . ")";
+                            }
+                        } else {
+                            $toastMessage = "⚠️ No NPC records were imported";
+                        }
+                        
+                        $message .= '<div class="form-container" style="margin-top:10px; border:2px solid #4ade80;">'
+                            . '<h3 style="color:#4ade80;">✓ CSV Import Successful</h3>'
+                            . '<p><strong>' . $processedCount . '</strong> NPC records imported successfully.</p>'
+                            . '<p style="font-size:0.9em; color:#888;">Encoding: ' . htmlspecialchars($detectedEncoding) 
+                            . ' | Delimiter: ' . htmlspecialchars($delimiterName) . '</p>';
+                        
+                        if (!empty($errors)) {
+                            $message .= '<details style="margin-top:10px;"><summary style="cursor:pointer; color:#ff6464;">⚠️ ' 
+                                . count($errors) . ' errors occurred</summary>'
+                                . '<pre style="white-space:pre-wrap; background:#1f1f1f; padding:10px; border-radius:4px; margin-top:10px;">'
+                                . htmlspecialchars(implode("\n", $errors))
+                                . '</pre></details>';
+                        }
+                        
+                        $message .= '</div>';
+                    }
                 }
-            } else {
-                $message .= '<p>Error opening the CSV file.</p>';
+            } catch (Exception $e) {
+                $message .= '<p style="color:#ff6464;">Fatal error processing CSV: ' . htmlspecialchars($e->getMessage()) . '</p>';
             }
         } else {
             $message .= '<p>Upload failed. Allowed file types: ' . implode(',', $allowedfileExtensions) . '</p>';
@@ -1857,10 +1799,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Update PHP message handling
-<?php if (!empty($message)): ?>
+// Show toast notification for CSV uploads
+<?php if (!empty($toastMessage)): ?>
 document.addEventListener('DOMContentLoaded', function() {
-    showToast(<?php echo json_encode(strip_tags($message)); ?>);
+    showToast(<?php echo json_encode($toastMessage); ?>);
 });
 <?php endif; ?>
 
