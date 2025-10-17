@@ -1,28 +1,27 @@
 <?php 
+
 $GLOBALS["ENGINE_ROOT"] = __DIR__.DIRECTORY_SEPARATOR;
+$GLOBALS["ENGINE_PATH"] = $GLOBALS["ENGINE_ROOT"];
 $enginePath = $GLOBALS["ENGINE_ROOT"];
-$GLOBALS["ENGINE_PATH"] = __DIR__.DIRECTORY_SEPARATOR;
 
-
-require_once("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
-require_once("{$GLOBALS["ENGINE_ROOT"]}/lib/logger.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "conf/conf.php");
+require_once($enginePath . "lib/logger.php");
+require_once($enginePath . "lib/model_dynmodel.php");
+require_once($enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+$GLOBALS["db"]=new sql();
+require_once($enginePath . "prompts/command_prompt.php");
+require_once($enginePath . "lib/chat_helper_functions.php");
+require_once($enginePath . "lib/data_functions.php");
 require_once($enginePath . "lib/rolemaster_helpers.php");
 
-
 // New profile system
-require_once($path . "lib/core/api_badge.class.php");
-require_once($path . "lib/core/llm_connector.class.php");
-require_once($path . "lib/core/tts_connector.class.php");
-require_once($path . "lib/core/npc_master.class.php");
-require_once($path . "lib/core/core_profiles.class.php");
+require_once($enginePath . "lib/core/api_badge.class.php");
+require_once($enginePath . "lib/core/llm_connector.class.php");
+require_once($enginePath . "lib/core/tts_connector.class.php");
+require_once($enginePath . "lib/core/npc_master.class.php");
+require_once($enginePath . "lib/core/core_profiles.class.php");
 
-$GLOBALS["db"]=new sql();
-
+SaveOriginalHerikaName(); 
 $GLOBALS["HERIKA_NAME"]="(actor)";
 
 // Initialize function parameters before requiring functions.php
@@ -216,6 +215,5 @@ $sysprompt
 
 Logger::info("Successfully logged instruction command to responselog");
 
-    
-   
+  
 ?>

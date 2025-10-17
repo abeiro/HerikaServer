@@ -17,17 +17,20 @@ $GLOBALS["MEMORY_THRESHOLD_MODIFIER"]=0;    // POST MEMORY
 $COOLDOWNMAP=[];
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php"); 
-requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
+$GLOBALS["ENGINE_PATH"]=$path;
+
+require($path . "conf/conf.php");
+require_once($path . "lib/auditing.php");
+require_once($path . "lib/model_dynmodel.php");
+require_once($path . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+$GLOBALS["db"] = new sql();
+require_once($path . "lib/minimet5_service.php");
+require_once($path . "lib/data_functions.php");
+require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/memory_helper_vectordb.php");
+require_once($path . "lib/utils_game_timestamp.php");
+require_once($path . "lib/logger.php"); 
+requireFilesRecursively(__DIR__."/ext/","globals.php");
 
 // New profile system
 require_once($path . "lib/core/api_badge.class.php");
@@ -36,18 +39,15 @@ require_once($path . "lib/core/tts_connector.class.php");
 require_once($path . "lib/core/npc_master.class.php");
 require_once($path . "lib/core/core_profiles.class.php");
 
-$GLOBALS["ENGINE_PATH"]=$path;
-
 // PARSE GET RESPONSE into $gameRequest
 $cooldownPeriod = 600;
-
 
 
 if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     // You can run this script directly with php: main.php "Player text"
     $GLOBALS["db"] = new sql();
 
-    $latsRid=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0");
+    $latsRid=$db->fetchAll("select * from eventlog order by rowid desc LIMIT 1 OFFSET 0");
     $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$latsRid[0]["rowid"]}");
     $res[0]["ts"]=$res[0]["ts"]+1;
     $res[0]["gamets"]=$res[0]["gamets"]+1;
@@ -73,12 +73,9 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 }
 
 
-
-
 if (!isset($FUNCTIONS_ARE_ENABLED)) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
-
 
 
 while (!getenv('PHPUNIT_TEST') && ob_get_length() && ob_end_clean())	;
@@ -97,7 +94,6 @@ $alreadysent = array();
 $overrideParameters=array();
 
 $ERROR_TRIGGERED=false;
-
 
 $LAST_ROLE="user";
 
@@ -728,7 +724,7 @@ $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
 
 // End of profile selection
 
-// This is the correct place, after arse $gameRequest and before starting to do substituions
+// This is the correct place, after parsing $gameRequest and before starting to do substitutions
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
 
@@ -1310,6 +1306,7 @@ $COOLDOWNMAP["WaitHere"]=300/0.00864;
 $COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
 $COOLDOWNMAP["InspectSurroundings"]=100/0.00864;
 $COOLDOWNMAP["Inspect"]=300/0.00864;
+$COOLDOWNMAP["Relax"]=180/0.00864;
 
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -1357,7 +1354,7 @@ if (isset($GLOBALS["is_rolemastered"])) {
     }
 } 
 
-// MINIME_T5 STUFF, command assiastant
+// MINIME_T5 STUFF, command assistant
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
@@ -1387,7 +1384,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                         )
                     );
                     Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
-                    //$memoryInjectionCtx=[]; // Disable memorie when command.
+                    //$memoryInjectionCtx=[]; // Disable memories when command.
                     $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
                     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
                 } 

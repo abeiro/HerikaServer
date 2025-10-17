@@ -74,7 +74,7 @@ function xtts_fastapi_settings($settings,$resetAfter=false) {
 	
 	if ($result === FALSE) {
 		// Handle error
-		Logger::error("Error occurred.".__FILE__);
+		Logger::error("Error occurred. ".__FILE__." ".__LINE__." ".__FUNCTION__);
 	} else {
 		;//ok
 	}
@@ -170,7 +170,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		// Hook. Last time transformations, custom settings for XTTS...
 		if (isset($GLOBALS["HOOKS"]) && isset($GLOBALS["HOOKS"]["XTTS_TEXTMODIFIER"]) && is_array($GLOBALS["HOOKS"]["XTTS_TEXTMODIFIER"])) {
 			foreach ($GLOBALS["HOOKS"]["XTTS_TEXTMODIFIER"] as $hook) {
-				Logger::info("Calling hook.".__FILE__);
+				Logger::info("Calling hook.".__FILE__." ".__LINE__." ".__FUNCTION__);
 				$newString=call_user_func($hook,$newString);
 	
 			}
@@ -203,7 +203,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 		if ($response === FALSE) {
 			// Handle error
-			Logger::error("Error occurred.".__FILE__);
+			Logger::error("Error occurred. ".__FILE__." ".__LINE__." ".__FUNCTION__);
 			
 			// Lets try to use standard scheme:
 			$codename = str_replace(" ", "_", mb_strtolower($GLOBALS["HERIKA_NAME"], 'UTF-8'));
@@ -253,7 +253,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$startTimeTrans = microtime(true);
 			//shell_exec("ffmpeg -y -i $oname  -af \"adelay=150|150,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-25dB,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-40dB,areverse,speechnorm=e=3:r=0.0001:l=1:p=0.75\" $fname 2>/dev/null >/dev/null");
 			shell_exec("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname 2>/dev/null >/dev/null");
-			//error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ");
+			//error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ".__FILE__." ".__LINE__." ".__FUNCTION__);
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			
 			$textString.=PHP_EOL.print_r($options,true);
