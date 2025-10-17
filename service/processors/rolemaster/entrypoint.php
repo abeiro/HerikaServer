@@ -13,11 +13,12 @@ $GLOBALS["TASKS"]["rolemaster"]["fn"]=function() {
     if (isset($GLOBALS["CORE_LANG"]))
         $GLOBALS["CORE_LANG"]='';
 
-    require($enginePath . "conf" .DIRECTORY_SEPARATOR."conf.php");
-    require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-    require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");
-    require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-    require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+    require($enginePath . "conf/conf.php");
+    require_once($enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+    if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
+    require_once($enginePath . "prompts/command_prompt.php");
+    require_once($enginePath . "lib/chat_helper_functions.php");
+    require_once($enginePath . "lib/data_functions.php");
     require_once($enginePath . "lib/rolemaster_helpers.php");
 
     
@@ -32,16 +33,22 @@ $GLOBALS["TASKS"]["rolemaster"]["fn"]=function() {
     $GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;
 
     $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
-    $GLOBALS["db"]=new sql();
-    
 
+
+    if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
     if (!$GLOBALS["db"]) {
         throw new Exception("Database connection established, but an error occurred during initialization.");
     }
-    // Some functions need this setted */
-    $res=$GLOBALS["db"]->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog order by gamets desc limit 1 offset 0");
-    $GLOBALS["gameRequest"]=["inputtext"];
-    $GLOBALS["gameRequest"][2]=$res[0]["gamets"]+1;
+
+    // Some functions need this setted 
+    //$res=$GLOBALS["db"]->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog order by gamets desc limit 1 offset 0");
+    $res=$GLOBALS["db"]->fetchAll("SELECT max(gamets)+1 as gamets, max(ts)+1 as ts FROM eventlog "); // without order is faster, pgsql can use a better exec plan
+    if ($res) {
+        $GLOBALS["gameRequest"]=["inputtext"];
+        $GLOBALS["gameRequest"][2]=$res[0]["gamets"]+1;
+    } else {
+        Logger::error("Empty recordset. ".__FILE__." ".__LINE__." ".__FUNCTION__);
+    }
 
     if (isset($GLOBALS["argv"][2])) {
         if ($GLOBALS["argv"][2]=="instruction") {

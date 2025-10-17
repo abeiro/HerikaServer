@@ -37,6 +37,8 @@
 //      (Whatever is typed/said is injected into event log as an roleplay instruction expecting response)
 //      Just store player speech on eventlog and follow the standard flow.
 
+if (!isset($db)) $db = new sql();
+
 $EXECUTION_MODE_=$db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
 $EXECUTION_MODE=isset($EXECUTION_MODE_["value"])?$EXECUTION_MODE_["value"]:"STANDARD";
 

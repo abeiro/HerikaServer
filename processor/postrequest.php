@@ -63,28 +63,27 @@ require("$configFilepath/conf.php");
 if (($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"])&&(false)) {
     $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
 
-    $maxRow=$results[0]["gamets_truncated"]+0;
+    $maxRow = intval($results[0]["gamets_truncated"]);
     
-    $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
+    $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
     
-
     if (($gameRequest[2]-$maxRow)>($pfi)) {
-        error_log("[SUMMARY] memory creation gameRequest[2]-maxRow > pfi  ($gameRequest[2]-$maxRow)>($pfi) ");
+        error_log("[SUMMARY] memory creation gameRequest[2]-maxRow > pfi  ($gameRequest[2]-$maxRow)>($pfi) "); // debug
 
         Logger::info(shell_exec("php ".__DIR__."/../debug/util_memory_subsystem.php compact noembed 2 &"));
         
     } else {
         
         error_log("[SUMMARY]  Skipping memory creation gameRequest[2]-maxRow > pfi  ($gameRequest[2]-$maxRow)>($pfi) ");
-       
-
-    }
-
-} else {
         
+        
+    }
+    
+} else {
+    
     error_log("[SUMMARY]  Skipping memory creation as  AUTO_CREATE_SUMMARYS  is {$GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]}");
-   
 
+    
 }
 
 

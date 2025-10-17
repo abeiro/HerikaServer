@@ -2,31 +2,32 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 $GLOBALS["ENGINE_ROOT"] = $enginePath;
 $GLOBALS["ENGINE_PATH"] = $GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
 
-$enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+require_once $enginePath . "conf/conf.php";
 
 if (! isset($GLOBALS["DBDRIVER"])) {
     $GLOBALS["DBDRIVER"] = "postgresql";
 }
 
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "memory_helper_vectordb.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "minimet5_service.php";
+require_once $enginePath . "lib/logger.php";
+require_once $enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
+if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); } 
+require_once $enginePath . "lib/model_dynmodel.php";
+require_once $enginePath . "lib/chat_helper_functions.php";
+require_once $enginePath . "lib/memory_helper_vectordb.php";
+require_once $enginePath . "lib/data_functions.php";
+require_once $enginePath . "lib/minimet5_service.php";
 
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php";
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php";
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/tts_connector.class.php";
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/npc_master.class.php";
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/core_profiles.class.php";
+require_once $enginePath . "lib/core/api_badge.class.php";
+require_once $enginePath . "lib/core/llm_connector.class.php";
+require_once $enginePath . "lib/core/tts_connector.class.php";
+require_once $enginePath . "lib/core/npc_master.class.php";
+require_once $enginePath . "lib/core/core_profiles.class.php";
 
 
 function resyncMemorySummaries($db, $forceAll = false) {

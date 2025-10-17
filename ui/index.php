@@ -138,13 +138,17 @@ if (sizeof($_GET)==0) {
     $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
 
     if (!$connection) {
+        error_log("[HELPER] connection attempt: $errstr. Starting service.");
         $startScript = __DIR__ . "/../service/start.sh";
         if (file_exists($startScript) && is_executable($startScript)) {
-            error_log("[HELPER] Launching Helper Service");
-            shell_exec($startScript . " > /dev/null 2>&1 &");
+            error_log("[HELPER] Launching Helper Service. $startScript ");
+            $s_exec = shell_exec($startScript . " > /dev/null 2>&1 &") ?? "no return code";
+            error_log("[HELPER] Helper Service started: $s_exec ");
+        } else {
+            error_log("[HELPER] ERROR, Helper Service script missing or wrong permissions: $startScript ");
         }
     } else {
-        error_log("[HELPER] Helper Service already");
+        error_log("[HELPER] Helper Service already started. Closing.");
         fclose($connection);
     }
 

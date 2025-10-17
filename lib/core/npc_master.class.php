@@ -6,6 +6,7 @@ class NpcMaster {
 
     public static function profileExists($npcName, $checkLegacyFile = false) {
         // Access global DB instance
+        if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
         $db = $GLOBALS["db"];
         $escaped = $db->escape($npcName);
         $query = "SELECT 1 FROM core_npc_master WHERE npc_name = '{$escaped}' LIMIT 1";
