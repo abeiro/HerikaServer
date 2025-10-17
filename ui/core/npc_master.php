@@ -1203,10 +1203,33 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <div class="form-item span-2">
-            <label for="extended_data">Extended Data (JSON)</label>
+            <label for="extended_data">Setting Overrides</label>
+            <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
+            <?php
+            // Configure override editor for NPC mode
+            $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'chim_core_migrated'];
+            $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
+            $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
+            $currentOverrides = [];
+            $systemFields = [];
+            foreach ($extendedDataObj as $key => $value) {
+                if (in_array($key, $reservedKeys, true)) {
+                    $systemFields[$key] = $value;
+                } else {
+                    $currentOverrides[$key] = $value;
+                }
+            }
+            $overrideEditorConfig = [
+                'mode' => 'npc',
+                'fieldName' => 'extended_data',
+                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','AUTO_DIARY_WAIT','OGHMA_INFINIUM','OGHMA_AMOUNT','MINIME_T5','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','HERIKA_ANIMATIONS','LANG_LLM_XTTS'],
+                'reservedKeys' => $reservedKeys,
+                'currentData' => $currentOverrides,
+                'systemFields' => $systemFields,
+            ];
+            include(__DIR__."/tmpl/override_editor.php");
+            ?>
             <textarea name="extended_data" style="display:none"><?= htmlspecialchars($editItem["extended_data"] ?? "") ?></textarea>
-            <small class="hint">Advanced: large or structured data blocks consumed by integrations.</small>
-            <div id="extended_data"></div>
         </div>
     </div>
 
@@ -1218,17 +1241,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             if (!save) return;
             save.addEventListener('click', async function(){
                 let form = save.closest('form');
-                // Needed to actually update json data. Was done before at consolidation()
-                if (form.extended_data!=undefined) {
-                  const content2 = jsonEditor2.get()
-
-                  try {
-                    form.extended_data.value=JSON.stringify(content2.json, null, 0)
-                    console.log("JSON editor values copied to form")
-                  } catch (idontcare) {}
-        
-                  // allow empty extended_data without confirmation
-                }
+                
+                // Sync extended data overrides from visual UI
+                try {
+                  if (typeof window.syncExtendedDataOverrides === 'function') {
+                    window.syncExtendedDataOverrides();
+                  }
+                } catch(_e) { console.error('Failed to sync extended data overrides:', _e); }
+                
                 // Sync middle_term_enabled checkbox into extended JSON
                 try {
                   const mtm = form.querySelector('#middle_term_enabled');
