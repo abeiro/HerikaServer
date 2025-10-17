@@ -22,7 +22,7 @@ $GLOBALS["TASKS"]["rolemaster"]["fn"]=function() {
 
     
     SaveOriginalHerikaName(); 
-    $GLOBALS["HERIKA_NAME"]="<actor>";
+    $GLOBALS["HERIKA_NAME"]="(actor)";
     
     require($enginePath . "functions/functions.php");
 
