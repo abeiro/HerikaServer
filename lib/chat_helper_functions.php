@@ -52,7 +52,13 @@ function cleanResponse($rawResponse)
     $rawResponse = preg_replace($pattern, $replacement, $rawResponse);
 
     // Any bracket { or }]
-    $rawResponse = strtr($rawResponse, array("{" => "", "}" => ""));
+    //$rawResponse = strtr($rawResponse, array("{" => "", "}" => ""));
+    
+    // clean { , fix ellipsis and unicode punctuation etc
+    $rawResponse = str_replace(
+        ["\0", "‐", "‑", " — ",  "—",  "‘", "’", "‚", "‛", "。。。", "…",   "{", "}" ],  //, " U.S.A. ", " U.S. " ],
+        [''  , "-", "-", " - ", " - ", "'", "'", "'", "'", "...", "...", "",  ""  ], //,  " USA ",    " US "    ],
+        $rawResponse);
 
     if (strpos($rawResponse, "(Context location") !== false || strpos($rawResponse, "(Context new location") !== false) {
         $rawResponseSplited = explode(":", $rawResponse);
@@ -107,21 +113,28 @@ function cleanResponse($rawResponse)
         $sentenceX
     );
 
-    return $sentenceX;
+    return $sentenceXX;
 }
 
-function findDotPosition($string)
-{
+function findDotPosition($s_string) {
     
-    $lastChar = substr($string, -1);
+    $lastChar = substr($s_string, -1);
 
-    if ($lastChar === '.')  // Dont eval on .. wait till next tokens
+    if ($lastChar === ".")  // Dont eval on .. wait till next tokens
         return false;
     
-    $dotPosition = strrpos($string, ".");
-
-    if ($dotPosition !== false && strpos($string, ".", $dotPosition + 1) === false && substr($string, $dotPosition - 3, 3) !== "...") {
+    $dotPosition = strrpos($s_string, "."); // last dot in string
+    
+    /* // old version
+    if (($dotPosition !== false) && (strpos($s_string, ".", $dotPosition + 1) === false) && (substr($s_string, $dotPosition - 3, 3) !== "...")) {
         return $dotPosition;
+    } */
+    
+    if ($dotPosition !== false) {// found last dot
+        // check for ...
+        if (substr($s_string, ($dotPosition - 1), 1) !== ".") { 
+            return $dotPosition;
+        }
     }
 
     return false;
@@ -132,9 +145,22 @@ function br2nl($string)
     return preg_replace('/[\r\n]+/', '', preg_replace('/\<br(\s*)?\/?\>/i', "", $string));
 }
 
+function split_at_end_of_sentence($paragraph) {
+    // split at dot, ellipsis, !, ? etc
+    $sentences = [];
+
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！ 
+    //$splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\p{P}]?[\s+]?/u"; //  This regex is eating ellipsis: /(?<=[.?!。？！])[\p{P}]?[\s+]?/u
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";  // This should preserve ellipsis:   //   /(?<=[.?!。？！])(?!\.)[\p{P}]?[\s+]?/u
+    
+    $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
+
+    return $sentences;
+}
+
 function split_sentences($paragraph)
 {
-    $paragraph=strtr($paragraph, array('\n'=>".","\n"=>"."));
+    $paragraph=strtr($paragraph, array(" \n\n"=>".", " \n"=>".", "\n\n"=>".", '\n'=>".", "\n"=>".")); // do also for double nl
 
     if (strlen($paragraph)<=MAXIMUM_SENTENCE_SIZE) {
         return [$paragraph];
@@ -142,9 +168,14 @@ function split_sentences($paragraph)
     
     $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
 
+    /* 
+    //this sequence ignore ellipsis (split with dot instead of ellipsis and split at wrong limit); is used also in split_sentences_stream
     $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/');
-    $splitSentenceRegex = "/[^\n" . $eosPunc . "]+[" . $eosPunc . "]/u";
-    $sentences = preg_split($splitSentenceRegex, $paragraphNcr, PREG_SPLIT_NO_EMPTY);
+    $splitSentenceRegex = "/[^\n" . $eosPunc . "]+[" . $eosPunc . "]/u"; // /[^\n.?!。？！]+[.?!。？！]/u 
+    $sentences = preg_split($splitSentenceRegex, $paragraphNcr, PREG_SPLIT_NO_EMPTY); // !!! third parameter missing (limit) and now is PREG_SPLIT_NO_EMPTY = 1 
+    */ 
+    
+    $sentences =  split_at_end_of_sentence($paragraph);
 
     // remove matched strings from the original paragraph in case the end of the paragraph didn't end with punctuation
     foreach ($sentences as $sentence) {
@@ -165,6 +196,98 @@ function split_sentences($paragraph)
     return $sentences;
 }
 
+function split_sentences_stream($paragraph)
+{
+
+    if (strlen($paragraph)<=MAXIMUM_SENTENCE_SIZE) {
+        return [$paragraph];
+    }
+
+    /*
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！ 
+    //$splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\p{P}]?[\s+]?/u"; //  This regex is eating ellipsis: /(?<=[.?!。？！])[\p{P}]?[\s+]?/u
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";  // This should preserve ellipsis:   //   /(?<=[.?!。？！])(?!\.)[\p{P}]?[\s+]?/u
+    $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
+    */
+    
+    $sentences =  split_at_end_of_sentence($paragraph);
+    
+    /*
+    $b_show = strpos($paragraph,'...') !== false;    
+    if ($b_show) {
+      error_log("split 1: {$paragraph} -exec trace" ); //debug xmd 
+      error_log("split 2: ".implode("|", $sentences) . " -exec trace" ); //debug xmd 
+    }
+    */
+
+    // remove matched strings from the original paragraph in case the end of the paragraph didn't end with punctuation
+    foreach ($sentences as $sentence) {
+        $position = strpos($paragraph, $sentence);
+        if ($position !== false) {
+            $paragraph = substr_replace($paragraph, '', $position, strlen($sentence));
+        }
+    }
+
+    // clean the remaining paragraph after matched parts were removed
+    $paragraph=trim($paragraph);
+    $paragraph=preg_replace('/^[\p{P}|\s]+/u', '', $paragraph);
+
+    if ($paragraph) {
+        $sentences[]=$paragraph;
+    }
+
+    $splitSentences = [];
+    $currentSentence = '';
+
+    foreach ($sentences as $sentence) {
+        $currentSentence .= ' ' . $sentence;
+        if (strlen($currentSentence) > MAXIMUM_SENTENCE_SIZE) {
+            $splitSentences[] = trim($currentSentence);
+            $currentSentence = '';
+        } elseif (strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE && strlen($currentSentence) <= MAXIMUM_SENTENCE_SIZE) {
+            $splitSentences[] = trim($currentSentence);
+            $currentSentence = '';
+        }
+    }
+
+    if (!empty($currentSentence)) {
+        $splitSentences[] = trim($currentSentence);
+    }
+
+    //error_log("<$paragraph> => ".implode("|", $splitSentences)); //debug xmd aici e defect deja
+    return $splitSentences;
+}
+
+function getEndOfSentencePunctuation() {
+    $en='.?!';
+    $cjk='。？！';
+
+    return $en.$cjk;
+}
+
+function remove_between($marker, $s_input) {
+    $s_res = $s_input;
+    
+    $i_mk_len = strlen($marker);
+    if ($i_mk_len > 0) {
+        $i_str_len = strlen($s_input);
+        if ($i_str_len > (2 * $i_mk_len)) {
+            $p_first = strpos($s_input, $marker);
+            if (!($p_first === false)) {
+                $p_last = strrpos($s_input, $marker);
+                if ((!($p_first === false)) && ($p_last > $p_first)) {
+                    $s1 = substr($s_input, 0, $p_start);
+                    $s2 = substr($s_input, $p_last);
+                    $s_res = $s1 . $s2;
+                }
+            }
+            
+        }
+    }
+    return $s_res;
+}
+
+    
 function checkOAIComplains($responseTextUnmooded)
 {
 
@@ -235,61 +358,6 @@ function checkOAIComplains($responseTextUnmooded)
     return $scoring;
 }
 
-
-function split_sentences_stream($paragraph)
-{
-    if (strlen($paragraph)<=MAXIMUM_SENTENCE_SIZE) {
-        return [$paragraph];
-    }
-
-    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/');
-    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\p{P}]?[\s+]?/u";
-    $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
-
-    // remove matched strings from the original paragraph in case the end of the paragraph didn't end with punctuation
-    foreach ($sentences as $sentence) {
-        $position = strpos($paragraph, $sentence);
-        if ($position !== false) {
-            $paragraph = substr_replace($paragraph, '', $position, strlen($sentence));
-        }
-    }
-
-    // clean the remaining paragraph after matched parts were removed
-    $paragraph=trim($paragraph);
-    $paragraph=preg_replace('/^[\p{P}|\s]+/u', '', $paragraph);
-
-    if ($paragraph) {
-        $sentences[]=$paragraph;
-    }
-
-    $splitSentences = [];
-    $currentSentence = '';
-
-    foreach ($sentences as $sentence) {
-        $currentSentence .= ' ' . $sentence;
-        if (strlen($currentSentence) > MAXIMUM_SENTENCE_SIZE) {
-            $splitSentences[] = trim($currentSentence);
-            $currentSentence = '';
-        } elseif (strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE && strlen($currentSentence) <= MAXIMUM_SENTENCE_SIZE) {
-            $splitSentences[] = trim($currentSentence);
-            $currentSentence = '';
-        }
-    }
-
-    if (!empty($currentSentence)) {
-        $splitSentences[] = trim($currentSentence);
-    }
-
-    // error_log("<$paragraph> => ".implode("|", $splitSentences));
-    return $splitSentences;
-}
-
-function getEndOfSentencePunctuation() {
-    $en='.?!';
-    $cjk='。？！';
-
-    return $en.$cjk;
-}
 
 function unmoodSentence($sentence) {
     global $forceMood;
@@ -656,8 +724,8 @@ function returnLines($lines,$writeOutput=true)
 
                     $npcList=DataBeingsInCloseRange();
                     $npcs=explode("|",$npcList);
-                    if (is_array($npcs) && !in_array($GLOBALS["SCRIPTLINE_LISTENER"],$npcs)) {
-                        Logger::info("Listener {$GLOBALS["SCRIPTLINE_LISTENER"]} not around, forcing player: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}  {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+                    if (is_array($npcs) && (!in_array($GLOBALS["SCRIPTLINE_LISTENER"],$npcs))) {
+                        Logger::info("Listener {$GLOBALS["SCRIPTLINE_LISTENER"]} not around, forcing player: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]} {$npcList} ");
                         $GLOBALS["SCRIPTLINE_LISTENER"]=$GLOBALS["PLAYER_NAME"];
 
                     }
@@ -705,7 +773,9 @@ function returnLines($lines,$writeOutput=true)
                 }
 
                 file_put_contents(__DIR__."/../log/output_to_plugin.log",$GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"], FILE_APPEND | LOCK_EX);
-
+                
+                //if (file_exists('/var/www/html/HerikaServer/lib/chat_helper_functions_custom_debug.php')) 
+                //    include('/var/www/html/HerikaServer/lib/chat_helper_functions_custom_debug.php');                // debug 
             }
             else
                 echo "{$outBuffer["actor"]}|{$outBuffer["action"]}|$responseForSubtitles\r\n";
@@ -1648,22 +1718,28 @@ function logEvent($dataArray,$forcePeople='')
 
 function selectRandomInArray($arraySource)
 {
+    $s_res = "";
 
-    if (!isset($arraySource)||!is_array($arraySource))
-        return "";
+    if (!isset($arraySource)||!is_array($arraySource)) {
+        Logger::warn("chat_helper_functions selectRandomInArray: undefined array! ");
+        return $s_res;
+    }
     
     $n=sizeof($arraySource);
     
     if ($n>0) {
         if ($n==1) {
-            return strtr($arraySource[0],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
-            //return $arraySource[0];
+            $s_res = strtr($arraySource[0],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
+        } else {
+            $s_res = strtr($arraySource[rand(0, $n-1)],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
         }
-        return strtr($arraySource[rand(0, $n-1)],["#HERIKA_NPC1#"=>$GLOBALS["HERIKA_NAME"]]);
-        //return $arraySource[rand(0, $n-1)];
+        if (strlen(trim($s_res)) < 3) {
+            Logger::warn("chat_helper_functions selectRandomInArray: wrong content - $s_res ");
+        }
+        return $s_res;
     } else {
         Logger::warn("chat_helper_functions selectRandomInArray: Empty array! ");
-        return "";
+        return $s_res;
     }
 }
 

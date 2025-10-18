@@ -28,6 +28,7 @@
     Function setActions() {
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             // inject the prompt here with the actions (original flat format)
+            $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>";
             $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 if (!$function) {
@@ -43,7 +44,7 @@
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
             }
-            $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk";
+            $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk\n</available_actions_list>";
             $GLOBALS["FUNC_LIST"][]="Talk";
             shuffle($GLOBALS["FUNC_LIST"]);
         }
@@ -51,7 +52,7 @@
 
     // specify the json object that will be requested from the LLM (via prompt, not enforced)
     Function setResponseTemplate() {
-        $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
+        $moods=explode(",",trim($GLOBALS["EMOTEMOODS"] ?? ""));
         shuffle($moods);
     
         // Auto-detect language from TTS config if LLM_LANG not set

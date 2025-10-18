@@ -19,16 +19,19 @@ class openaijson
     private $_stopProc;
     private $_is_groq_com;
     private $_is_nanogpt_com;
+    private $_is_openai_com;
     private $_is_x_ai;
     private $_is_mistral_ai;
     private $_is_cohere_ai;
+    private $_is_cerebras_ai;
     private $_is_streaming;
     private $_is_reasoning;
     private $_is_grok;
-    private $_is_openai;
+    private $_is_openai_model;
     private $_model;
     private $_url;
     private $_remove_cot;
+    private $_disable_reasoning;
     private $_cot_tag_base;
     private $_output_buffer; 
     private $_timeout;
@@ -43,16 +46,19 @@ class openaijson
         $this->_extractedbuffer="";
         $this->_is_groq_com=false;
         $this->_is_nanogpt_com=false;
+        $this->_is_openai_com; //api.openai.com
         $this->_is_x_ai=false;
         $this->_is_mistral_ai=false;
         $this->_is_cohere_ai=false;
+        $this->_is_cerebras_ai=false;
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
         $this->_is_grok=false;
-        $this->_is_openai=false;
+        $this->_is_openai_model=false;
         $this->_model="";
         $this->_url="";
         $this->_remove_cot=true;
+        $this->_disable_reasoning=false;
         $this->_cot_tag_base="think";
         $this->_output_buffer="";
         $this->_timeout=30;
@@ -101,8 +107,22 @@ class openaijson
                 $i_pos = stripos($s_model, "o3-mini");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "o3-pro");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "gpt-oss-120b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "gpt-oss-20b");
+            if ($i_pos === false) {
+                $i_pos = stripos($s_model, "gpt-5");
+                if ($i_pos !== false) { //found gpt-5 model, need to check if is gpt-5-chat, chat is not a reasoning model, need to be excluded
+                    $n_pos = stripos($s_model, "gpt-5-chat");
+                    if ($n_pos !== false)  
+                        $i_pos = false;
+                }
+            }
+
             $b_res = (!($i_pos === false));
         }
+        error_log("[OPENAI] is reasoning $s_model / $i_pos ". ($b_res ? "Y" : "N") ); //debug
         return $b_res;
     }
 
@@ -111,6 +131,12 @@ class openaijson
         if (strlen($s_model) > 0) {
             // OpenRouter models
             $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "gpt-5");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "gpt-oss-120b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "gpt-oss-20b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "openai/o3");
             if ($i_pos === false) 
@@ -122,14 +148,15 @@ class openaijson
                 $i_pos = stripos($s_model, "azure-o3");
             // OpenAI model names
             if ($i_pos === false) { 
-                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") ||  ($s_model == "gpt-5-nano") ||
-                    ($s_model == "o3") || (strpos($s_model, "o3-mini") == 0) || (strpos($s_model, "o3-pro") == 0) || 
-                    (strpos($s_model, "o4-mini") == 0)) {
-                    $i_pos = 1;
+                if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") ||  ($s_model == "gpt-5-nano") || 
+                    ($s_model == "o3") || (strpos($s_model, "o3-mini") === 0) || (strpos($s_model, "o3-pro") === 0) || 
+                    (strpos($s_model, "o4-mini") === 0)) {
+                    $i_pos = 9;
                 }
             }
             $b_res = (!($i_pos === false));
         }
+        error_log("[OPENAI] is openai $s_model / $i_pos ". ($b_res ? "Y" : "N") ); //debug
         return $b_res;
     }
 
@@ -138,34 +165,33 @@ class openaijson
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
 
-        $this->_remove_cot = (isset($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"])) ? $GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] : true;
+        $this->_remove_cot = ($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] ?? true);
+        $this->_disable_reasoning = ($GLOBALS["CONNECTOR"][$this->name]["disable_model_reasoning"] ?? false);
 
-        $default_model = 'gpt-4o-mini';
+        $default_model = 'gpt-5-nano';
 
         $this->_is_groq_com = (stripos($this->_url, "groq.com") > 0 ); // https://api.groq.com/openai/v1/chat/completions
         if ($this->_is_groq_com) {
             $default_model = 'meta-llama/llama-4-scout-17b-16e-instruct';
             $this->_is_streaming = false; // groq can't do JSON with streaming
             $this->_remove_cot = false; // no need to clean output, reasoning models on groq won't output CoT if parameter reasoning_format = hidden
-        } else {
-            $this->_is_nanogpt_com = (stripos($this->_url, "nano-gpt.com") > 0 ); //https://nano-gpt.com/api/v1/chat/completions
-            if ($this->_is_nanogpt_com) {    
-                $default_model = 'meta-llama/llama-4-scout';
-            } else {
-                $this->_is_x_ai = (stripos($this->_url, "x.ai") > 0 ); // https://api.x.ai/v1/chat/completions
-                if ($this->_is_x_ai) {    
-                    $default_model = 'grok-3-mini-beta';
-                } else {
-                    $this->_is_mistral_ai = (stripos($this->_url, "mistral.ai") > 0 ); //https://api.mistral.ai/v1/chat/completions
-                    if ($this->_is_mistral_ai) {
-                        $default_model = 'mistral-small-latest';
-                    } else { 
-                        $this->_is_cohere_ai = (stripos($this->_url, "cohere.ai") > 0 ); //https://api.cohere.ai/compatibility/v1/chat/completions
-                        if ($this->_is_cohere_ai)    
-                            $default_model = 'command-r-08-2024';
-                    }
-                }
-            }
+        } elseif (stripos($this->_url, "api.openai.com") > 0 ) {
+            $this->_is_openai_com = true;
+            $default_model = 'gpt-5-nano';            
+        } elseif (stripos($this->_url, "nano-gpt.com") > 0 ) { //https://nano-gpt.com/api/v1/chat/completions
+            $this->_is_nanogpt_com = true; 
+            $default_model = 'meta-llama/llama-4-scout';
+        } elseif (stripos($this->_url, "api.x.ai") > 0 ) { // https://api.x.ai/v1/chat/completions
+            $this->_is_x_ai = true; 
+            $default_model = 'grok-3-mini-beta';
+        } elseif (stripos($this->_url, "mistral.ai") > 0 ) { //https://api.mistral.ai/v1/chat/completions
+            $this->_is_mistral_ai = true; 
+            $default_model = 'mistral-small-latest';
+        } elseif (stripos($this->_url, "cohere.ai") > 0 ) { //https://api.cohere.ai/compatibility/v1/chat/completions
+            $this->_is_cohere_ai = true; 
+            $default_model = 'command-r-08-2024';
+        } elseif (stripos($this->_url, "cerebras.ai") > 0 ) {  //api.cerebras.ai
+            $this->_is_cerebras_ai = true;
         }
 
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
@@ -173,7 +199,7 @@ class openaijson
         $this->_model = isset($customParms["model"]) ? $customParms["model"] : $this->_model;
         
         $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
-        $this->_is_openai = $this->isOpenAIModel($this->_model);
+        $this->_is_openai_model = $this->isOpenAIModel($this->_model);
 
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
@@ -206,7 +232,7 @@ class openaijson
                     }
                 }
             }
-        }
+        } 
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
         
@@ -215,25 +241,21 @@ class openaijson
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         } else {
             $prefix="";
-            //$prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
         }
         
-        if (stripos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false) {
+        $b_speech_style = (
+            (isset($GLOBALS["HERIKA_SPEECHSTYLE"]) && (!empty($GLOBALS["HERIKA_SPEECHSTYLE"]))) || 
+            (stripos($GLOBALS["HERIKA_PERS"],"#SpeechStyle")!==false)
+        );
+        if ($b_speech_style) {
             $speechReinforcement="Check reference #SpeechStyle.";
         } else
             $speechReinforcement="";
-
-        if ($this->_is_groq_com) { // --- exception made for groq.com - JSON need pretty print
-            $contextData[]=[
-                'role' => 'user',
-                'content' => "{$prefix}. $speechReinforcement \nUse only this JSON object to give your answer and do not send any other characters outside of this JSON structure: \n".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) 
-            ];
-        } else {
-            $contextData[]=[
-                'role' => 'user',
-                'content' => "{$prefix}. $speechReinforcement \nUse only this JSON object to give your answer and do not send any other characters outside of this JSON structure: \n".json_encode($GLOBALS["responseTemplate"])
-            ];
-        }
+        
+        $contextData[]=[
+            'role' => 'user',
+            'content' => "{$prefix}. $speechReinforcement \nUse only this JSON object to give your answer and do not send any other characters outside of this JSON structure: \n".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) // groq.com and others ask for pretty printed JSON
+        ];
     
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
@@ -244,17 +266,19 @@ class openaijson
         $pb["system"]=""; 
         
         $contextDataOrig=array_values($contextData);
+        $n_last_context = count($contextDataOrig) - 1;
         $lastrole="";
         $assistantRoleBuffer="";
+        
         foreach ($contextDataOrig as $n=>$element) {
             
             if (!is_array($element)) {
                 Logger::debug("Warning: $n=>$element was not an array");
                 continue;
-
+                
             }
 
-            if ($n>=(sizeof($contextDataOrig)-1) && $element["role"]!="tool") {
+            if (($n >= $n_last_context) && ($element["role"] != "tool")) {
                 // Last element
                 $pb["user"].=$element["content"];
                 $contextDataCopy[]=$element;
@@ -265,7 +289,8 @@ class openaijson
                     $contextDataCopy[]=[
                         "role"=>"assistant",
                         "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"$lastTargetBuffer\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($assistantRoleBuffer)."\"}"
-                        
+                        // no json version:
+                        //"content" => "{$GLOBALS["HERIKA_NAME"]}: ".trim($assistantRoleBuffer)
                     ];
                     $lastTargetBuffer="";
                     $assistantRoleBuffer="";
@@ -288,7 +313,7 @@ class openaijson
                     
                 } else if ($element["role"]=="assistant") {
                     $assistantAppearedInhistory=true;
-                    $dialogueTarget=extractDialogueTarget($element["content"]) ?? "none"; // moved here to be available in tool_calls
+                    $dialogueTarget=extractDialogueTarget($element["content"]) ?? []; // moved here to be available in tool_calls
                     if (isset($element["tool_calls"])) {
                         $pb["system"].="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]}";
                         $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$element["tool_calls"][0]["function"]["name"]} {$element["tool_calls"][0]["function"]["arguments"]}, #RESULT#";
@@ -316,26 +341,16 @@ class openaijson
                         if (is_array($alreadyJs)) {
                             $contextDataCopy[]=[
                                     "role"=>"assistant",
-                                    "content"=>json_encode($alreadyJs)
+                                    "content"=>json_encode($alreadyJs) 
+                                    //"content" => implode(' ', $alreadyJs) // no json 
                                 ];
-                            
                         } else {
                             //error_log("#### ".$element["content"]);
                             $pb["system"].=$element["content"]."\n";
                             //$dialogueTarget=extractDialogueTarget($element["content"]); // moved up
-                            // Trying to provide examples
-                            if (true) {
-                                $assistantRoleBuffer.=$dialogueTarget["cleanedString"];                                
-                                $lastTargetBuffer=$dialogueTarget["target"];
-                                unset($contextData[$n]);
-                            } else {
-                                
-                                $contextData[$n]=[
-                                        "role"=>"assistant",
-                                        "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($dialogueTarget["cleanedString"])."\"}"
-                                        
-                                    ];
-                            }
+                            $assistantRoleBuffer.=$dialogueTarget["cleanedString"];                                
+                            $lastTargetBuffer=$dialogueTarget["target"];
+                            unset($contextData[$n]);
                         }
                     }
                     
@@ -377,7 +392,7 @@ class openaijson
         }
         
         $contextData=$contextDataCopy;
-        
+
         // Compact and remove context elements with empty content
         $contextDataCopy=[];
         foreach ($contextData as $n=>$element) {
@@ -388,7 +403,7 @@ class openaijson
         
         if ((isset($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"])) && ($GLOBALS["CONNECTOR"][$this->name]["PREFILL_JSON"])) {
             $GLOBALS["PATCH"]["PREAPPEND"]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\",";
-            $contextDataCopy[]= ["role"=>"assistant","content"=>$GLOBALS["PATCH"]["PREAPPEND"]];
+            $contextDataCopy[]=["role"=>"assistant","content"=>$GLOBALS["PATCH"]["PREAPPEND"]];
         }
         
         $contextData=$contextDataCopy;
@@ -428,70 +443,101 @@ class openaijson
             'top_p' => $top_p, 
             'presence_penalty' => $presence_penalty, 
             'frequency_penalty' => $frequency_penalty, 
-            'response_format'=>["type"=>"json_object"],
             'response_format'=>["type"=>"json_object"]
         );
 
-        if ($this->_is_streaming) {
-            $data["stream_options"]["include_usage"]=true;
-        }
-        if ($this->_is_groq_com) { // --- exception made for groq.com
+        if ($this->_is_openai_com) {
+            // OpenAI safeguard: remove unsupported top_p for gpt-5 models regardless of reasoning flag
+
+            /* api.openai.com:
+            "reasoning": {"effort": "medium"},
+            reasoning.effort parameter guides the model on how many reasoning tokens to generate before creating a response to the prompt.
+            Specify low, medium, or high for this parameter, where low favors speed and economical token usage, and high favors more complete reasoning. The default value is medium, which is a balance between speed and reasoning accuracy.
+
+            undocumented parameters rules:
+            reasoning models do not accept top_p, temperature and other parameters
+            top_p raise an error if not 1
+            temperature raise an error if not 1
+            other are ignored ??
+            */
+            //if (stripos($this->_model, "gpt-5") !== false) {
+            //    unset($data["top_p"]);
+            //}
+
+            //unset($data['top_p']); // gpt-5-chat can handle temp and top_p
+
+            if ($this->_is_reasoning) {
+                unset($data['top_p']); 
+                unset($data['temperature']);
+                unset($data['presence_penalty']); 
+                unset($data['frequency_penalty']);
+
+                unset($data['enable_thinking']);
+                unset($data['chat_format']); 
+                unset($data['reasoning_effort']);
+                unset($data['reasoning_format']);
+                unset($data['include_reasoning']);
+
+                unset($data['reasoning']); 
+                //$data['reasoning'] = array('effort' => 'low'); 
+            }
+        } elseif ($this->_is_groq_com) { // --- exception made for groq.com
 
             if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
 
             if ($this->_is_reasoning) { 
-            /*  a reasoning model need "reasoning_format" parameter: 
+            /*  groq.com: 
+                a reasoning model need "reasoning_format" parameter: 
                 parsed  - Separates reasoning into a dedicated field while keeping the response concise.
-                raw     - Includes reasoning within <think> tags in the content.
-                hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
-                if (!$this->_is_openai)
+                raw     - Includes reasoning within <think> tags in the content. (conflict with json - error 400)
+                hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! 
+
+                reasoning_effort parameter controls the level of effort the model will put into reasoning. This is only supported by GPT-OSS 20B and GPT-OSS 120B.
+                reasoning_effort: 
+                low	Low effort reasoning. The model will use a small number of reasoning tokens.
+                medium	Medium effort reasoning. The model will use a moderate number of reasoning tokens. (default)
+                high	High effort reasoning. The model will use a large number of reasoning tokens.                
+                */
+                if ($this->_is_openai_model) {
+                    $data['include_reasoning'] = false;
+                    if ($this->_disable_reasoning)
+                        $data['reasoning_effort'] = "low";
+                    //else
+                    //    $data['reasoning_effort'] = "high";
+                } else {
                     $data['reasoning_format'] = "hidden";  
+                }
             }
             //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
         
-        } else { // --- normal flow (not groq)
-        
-            if ($this->_is_x_ai) {
-                unset($data["presence_penalty"]); 
-                unset($data["frequency_penalty"]);
-            } elseif ($this->_is_mistral_ai) {
-                //unset($data["presence_penalty"]); 
-                //unset($data["frequency_penalty"]);
-                unset($data["max_completion_tokens"]);
-                $data['max_tokens'] = $MAX_TOKENS;
-            } elseif ($this->_is_cohere_ai) {
-                unset($data["max_completion_tokens"]);
-                $data['max_tokens'] = $MAX_TOKENS;
-            } 
+        } elseif ($this->_is_x_ai) {
+            unset($data["presence_penalty"]); 
+            unset($data["frequency_penalty"]);
+        } elseif ($this->_is_mistral_ai) {
+            //unset($data["presence_penalty"]); 
+            //unset($data["frequency_penalty"]);
+            unset($data["max_completion_tokens"]);
+            $data['max_tokens'] = $MAX_TOKENS;
+        } elseif ($this->_is_cohere_ai) {
+            unset($data["max_completion_tokens"]);
+            $data['max_tokens'] = $MAX_TOKENS;
+        } else {
+            if ($this->_is_reasoning) { 
+                if ($this->_disable_reasoning)
+                    $data["reasoning"] = array ('exclude' => true, 'enabled' => false); // exclude = true - Use reasoning but don't include it in the response; enabled = false - do not use reasoning
+                else
+                    $data["reasoning"] = array ('exclude' => true, 'enabled' => true); 
 
-            if (($this->_is_reasoning) && (!$this->_is_mistral_ai) && (!$this->_is_cohere_ai)) { // there is no rule accepted by all providers
-                if (!$this->_is_openai) {
-                    $data["chat_format"]="tidy"; 
-                    
-                } else {
-                    if ((stripos($this->_url, "api.openai.com") > 0 )) {
-                        if (stripos($this->_model, "gpt-5") !== false ) {
-                            unset($data["top_p"]);
-                        }
-                    }
-                }
-
+                $data["chat_format"]="tidy"; 
                 $data["reasoning_effort"] = "low";
-                if (!$this->_is_openai)
+                if (!$this->_is_openai_model)
                     $data['reasoning_format'] = "hidden";
-                if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
+                if (!(stripos($this->_model, "qwen3-") === false)) //is qwen3
                     $data["enable_thinking"] = false;
             }
 
         } // --- endif provider
-
-        // OpenAI safeguard: remove unsupported top_p for gpt-5 models regardless of reasoning flag
-        if ($this->_is_openai) {
-            if ((stripos($this->_url, "api.openai.com") !== false) && (stripos($this->_model, "gpt-5") !== false)) {
-                unset($data["top_p"]);
-            }
-        }
-            
+        
         if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
             $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
         }
@@ -507,9 +553,6 @@ class openaijson
             }
         }
 
-        /* foreach ($customParms as $k=>$v) {
-            $data[$k]=$v;
-        } */
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
@@ -554,11 +597,11 @@ class openaijson
             $response_info = stream_get_meta_data($this->primary_handler);
             $status_line = $response_info['wrapper_data'][0];
             preg_match('/\d{3}/', $status_line, $matches); // get three digits (200, 300, 404, etc)
-            $status_code = isset($matches[0]) ? intval($matches[0]) : null;
+            $status_code = isset($matches[0]) ? intval($matches[0]) : 0;
 
             if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
-                $error_message = "Request to openaijson connector failed:{$this->_url} {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
+                $error_message = "Request to openaijson connector failed: {$this->_url} {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
@@ -586,7 +629,7 @@ class openaijson
                         'url'=>$this->_url
                     ));
                 }*/
-                //Will do later    
+                //Will do later   
 
             }
         }
@@ -714,7 +757,7 @@ class openaijson
                     }
                 }
                 $totalBuffer.=$data["choices"][0]["delta"]["content"];
-
+                
             }
             if (isset($data["usage"])) 
                 $this->_lastStreamedObject=$data;
@@ -829,10 +872,10 @@ class openaijson
                         ));
                 }
         }
-
+        
         // Write the buffer to the log file without timestamp separators
-        file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
-        file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
+        file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n"."\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
+        //file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
 
         return $this->_buffer;
         
@@ -923,50 +966,8 @@ class openaijson
         else
             $callName=$this->name."/".$callName;
 
-        $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);
+        $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 512));
 
-        if ($this->_is_groq_com) { // --- exception made for groq.com
-
-            if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
-
-            if ($this->_is_reasoning) { 
-            /*  a reasoning model need "reasoning_format" parameter: 
-                parsed  - Separates reasoning into a dedicated field while keeping the response concise.
-                raw     - Includes reasoning within <think> tags in the content.
-                hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! */
-                if (!$this->_is_openai)
-                    $data['reasoning_format'] = "hidden";  
-            }
-            //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
-        
-        } else { // --- normal flow (not groq)
-        
-            if ($this->_is_x_ai) {
-                unset($data["presence_penalty"]); 
-                unset($data["frequency_penalty"]);
-            } elseif ($this->_is_mistral_ai) {
-                //unset($data["presence_penalty"]); 
-                //unset($data["frequency_penalty"]);
-                unset($data["max_completion_tokens"]);
-                $data['max_tokens'] = $MAX_TOKENS;
-            } elseif ($this->_is_cohere_ai) {
-                unset($data["max_completion_tokens"]);
-                $data['max_tokens'] = $MAX_TOKENS;
-            } 
-
-            if (($this->_is_reasoning) && (!$this->_is_mistral_ai) && (!$this->_is_cohere_ai)) { // there is no rule accepted by all providers
-                if (!$this->_is_openai)
-                    $data["chat_format"]="tidy"; 
-
-                $data["reasoning_effort"] = "low";
-                if (!$this->_is_openai)
-                    $data['reasoning_format'] = "hidden";
-
-                if (!(stripos($this->_model, "qwen3-") === false)) //qwen3
-                    $data["enable_thinking"] = false;
-            }
-
-        } // --- endif provider
         $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
         if ($temperature < 0.0) $temperature = 0.0;
         else if ($temperature > 2.0) $temperature = 2.0; 
@@ -979,7 +980,7 @@ class openaijson
         if ($frequency_penalty < -2.0) $frequency_penalty = -2.0;
         else if ($frequency_penalty > 2.0) $frequency_penalty = 2.0; 
 
-        $repetition_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ? : 0.0);
+        $repetition_penalty = floatval(($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"]) ? : 1.0);
         if ($repetition_penalty < 0.0) $repetition_penalty = 0.0;
         else if ($repetition_penalty > 2.0) $repetition_penalty = 2.0; 
 
@@ -998,6 +999,7 @@ class openaijson
         $top_k = intval(($GLOBALS["CONNECTOR"][$this->name]["top_k"]) ? : 0);
         if ($top_k < 0) $top_k = 0; 
 
+
         if (isset($customParms["MAX_TOKENS"])) {
             $MAX_TOKENS=intval($customParms["MAX_TOKENS"]);
             unset($customParms["MAX_TOKENS"]);
@@ -1005,40 +1007,119 @@ class openaijson
         if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
             $MAX_TOKENS=intval($GLOBALS["FORCE_MAX_TOKENS"]);
         }
-        
+
         $data = array(
             'model' => $this->_model,
             'messages' => $contextData,
             'stream' => false, 
             'max_completion_tokens' => $MAX_TOKENS,
             'temperature' => $temperature, 
+            'top_p' => $top_p, 
+            'presence_penalty' => $presence_penalty, 
+            'frequency_penalty' => $frequency_penalty
         );
 
+        if ($this->_is_openai_com) {
+            // OpenAI safeguard: remove unsupported top_p for gpt-5 models regardless of reasoning flag
+
+            /* api.openai.com:
+            "reasoning": {"effort": "medium"},
+            reasoning.effort parameter guides the model on how many reasoning tokens to generate before creating a response to the prompt.
+            Specify low, medium, or high for this parameter, where low favors speed and economical token usage, and high favors more complete reasoning. The default value is medium, which is a balance between speed and reasoning accuracy.
+
+            undocumented parameters rules:
+            reasoning models do not accept top_p, temperature and other parameters
+            top_p raise an error if not 1
+            temperature raise an error if not 1
+            other are ignored ??
+            */
+            //if (stripos($this->_model, "gpt-5") !== false) {
+            //    unset($data["top_p"]);
+            //}
+
+            //unset($data["top_p"]); // gpt-5-chat use temp and top_p
+
+            if ($this->_is_reasoning) {
+                unset($data["top_p"]); 
+                unset($data["temperature"]);
+
+                unset($data['enable_thinking']);
+                unset($data['chat_format']); 
+                unset($data['reasoning_effort']);
+                unset($data['reasoning_format']);
+                unset($data['include_reasoning']);
+
+                unset($data['reasoning']); 
+                //$data['reasoning'] = array('effort' => 'low'); 
+            }
+        } elseif ($this->_is_groq_com) { // --- exception made for groq.com
+
+            if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
+
+            if ($this->_is_reasoning) { 
+            /*  groq.com: 
+                a reasoning model need "reasoning_format" parameter: 
+                parsed  - Separates reasoning into a dedicated field while keeping the response concise.
+                raw     - Includes reasoning within <think> tags in the content. (conflict with json - error 400)
+                hidden  - Returns only the final answer for maximum efficiency. ! <think> tag is generated and only hidden, tokens are counted ! 
+
+                reasoning_effort parameter controls the level of effort the model will put into reasoning. This is only supported by GPT-OSS 20B and GPT-OSS 120B.
+                reasoning_effort: 
+                low	Low effort reasoning. The model will use a small number of reasoning tokens.
+                medium	Medium effort reasoning. The model will use a moderate number of reasoning tokens. (default)
+                high	High effort reasoning. The model will use a large number of reasoning tokens.                
+                */
+                if ($this->_is_openai_model) {
+                    $data['include_reasoning'] = false;
+                    if ($this->_disable_reasoning)
+                        $data['reasoning_effort'] = "low";
+                    //else
+                    //    $data['reasoning_effort'] = "high";
+                } else {
+                    $data['reasoning_format'] = "hidden";  
+                }
+            }
+            //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
+        
+        } elseif ($this->_is_x_ai) {
+            unset($data["presence_penalty"]); 
+            unset($data["frequency_penalty"]);
+        } elseif ($this->_is_mistral_ai) {
+            //unset($data["presence_penalty"]); 
+            //unset($data["frequency_penalty"]);
+            unset($data["max_completion_tokens"]);
+            $data['max_tokens'] = $MAX_TOKENS;
+        } elseif ($this->_is_cohere_ai) {
+            unset($data["max_completion_tokens"]);
+            $data['max_tokens'] = $MAX_TOKENS;
+        } else {
+            if ($this->_is_reasoning) { 
+                if ($this->_disable_reasoning)
+                    $data["reasoning"] = array ('exclude' => true, 'enabled' => false); // exclude = true - Use reasoning but don't include it in the response; enabled = false - do not use reasoning
+                else
+                    $data["reasoning"] = array ('exclude' => true, 'enabled' => true); 
+
+                $data["chat_format"]="tidy"; 
+                $data["reasoning_effort"] = "low";
+                if (!$this->_is_openai_model)
+                    $data['reasoning_format'] = "hidden";
+                if (!(stripos($this->_model, "qwen3-") === false)) //is qwen3
+                    $data["enable_thinking"] = false;
+            }
+
+        } // --- endif provider
+
+        
 
         if (isset($GLOBALS["CONNECTOR"][$this->name]["stop"])&&sizeof($GLOBALS["CONNECTOR"][$this->name]["stop"])>0) {
             $data["stop"]=$GLOBALS["CONNECTOR"][$this->name]["stop"];
         }
-        // Override
 
-       
-
-        if (isset($customParms["MAX_TOKENS"])) {
-            if ($customParms["MAX_TOKENS"]==0) {
-                unset($data["max_completion_tokens"]);
-            } elseif ($customParms["MAX_TOKENS"]) {
-                $data["max_completion_tokens"]=$customParms["MAX_TOKENS"];
-            }
+        if ($MAX_TOKENS<1) {
+            unset($data["max_completion_tokens"]); 
+            unset($data["max_tokens"]); 
         }
 
-        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
-            if ($GLOBALS["FORCE_MAX_TOKENS"]==0) {
-                unset($data["max_completion_tokens"]);
-            } else {
-                $data["max_completion_tokens"]=$GLOBALS["FORCE_MAX_TOKENS"];
-
-            }
-        }
-        
         if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;
@@ -1046,28 +1127,22 @@ class openaijson
         }
 
 
-        foreach ($customParms as $parm=>$value) {
-            $data[$parm]=$value;
-        }
-        
-
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
      
-        $data["max_completion_tokens"]+=0;
-        
         $headers = array(
             'Content-Type: application/json',
             "Authorization: Bearer {$GLOBALS["CONNECTOR"][$this->name]["API_KEY"]}",
             "HTTP-Referer:  https://dwemerdynamics.com/",
             "X-Title: Dwemer Dynamics"
         );
-
+        
+        $timeout = max(intval(($GLOBALS["HTTP_TIMEOUT"]) ?? 30), $this->_timeout);
         $options = array(
             'http' => array(
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+                'timeout' => $timeout
             )
         );
 
@@ -1081,19 +1156,13 @@ class openaijson
         if ($json_response) {
             $text_response=json_decode($json_response,true);
             if (is_valid_array($text_response)) {
-               
                 return $text_response["choices"][0]["message"]["content"];    
             }
             else {
                 log_msg("Error in openai request '$url':$json_response", 3);
                 return "";
-                
             }
-            
         }
-            
-
-
     }
 
     public function setDone()

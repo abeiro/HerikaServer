@@ -4,6 +4,7 @@ $enginePath = __DIR__ . "/../../";
 require_once($enginePath . "conf/conf.php");
 require_once($enginePath . "lib/model_dynmodel.php");
 require_once($enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
 require_once($enginePath . "lib/chat_helper_functions.php");
 require_once($enginePath . "lib/data_functions.php");
 require_once($enginePath . "lib/logger.php");

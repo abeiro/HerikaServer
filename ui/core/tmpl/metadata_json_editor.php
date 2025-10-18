@@ -94,7 +94,7 @@ $localSchemaOverrides = [
     ],
     'ENFORCE_ACTIONS_PROMPT' => [
         'type' => 'boolean',
-        'description' => 'Eencourage AI NPCs to use actions more often.',
+        'description' => 'Encourage AI NPCs to use actions more often.',
     ],
     'REMOVE_ASTERISKS_FROM_OUTPUT' => [
         'type' => 'boolean',

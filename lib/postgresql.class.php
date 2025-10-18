@@ -5,18 +5,63 @@ class sql
 {
     private static $link = null;
     private $queryTimeThreshold = 0.5; // Time threshold in seconds
-
+    private $connString = "host=localhost dbname=dwemer user=dwemer password=dwemer connect_timeout=90"; 
+    private $debug_level = 3; // 0 = quiet .. 3=use timer .. 5 = verbose
+    
     public function __construct()
     {
-        $connString = "host=localhost dbname=dwemer user=dwemer password=dwemer";
-        self::$link = pg_connect($connString);
-        if (!self::$link) {
-            die("Error in connection: " . pg_last_error());
+        //$connString = "host=localhost dbname=dwemer user=dwemer password=dwemer connect_timeout=15";
+        self::$link = pg_connect($this->connString);
+
+        if (!isset(self::$link)) {
+            Logger::error("SQL: connection init failed. " . $this->extract_caller() );
+            die("SQL: Error in connection.");
         }
+
+        $stat = pg_connection_status(self::$link);
+        if ((!isset($stat)) || ($stat !== PGSQL_CONNECTION_OK)) {
+            Logger::error("SQL: connection init FAILED [$stat] " . $this->extract_caller() );
+            die("SQL: Error in connection.");
+        }         
+        
         // Ensure consistent schema resolution across sessions
         pg_query(self::$link, "SET search_path TO public");
+        if ($this->debug_level > 4)
+            Logger::debug("SQL: connected $stat to ". pg_host(self::$link) ."/". pg_dbname(self::$link) . " " . $this->extract_caller() . $this->GetLastError() );
     }
 
+    private function re_connect() { //check connection availability and reconnect if connection expired
+        $b_ok = true;
+
+        if (!isset(self::$link)) { // connection not inited or closed
+            if ($this->debug_level > 3)
+                Logger::debug("SQL: disconnected, retry. " . $this->GetLastError() . $this->extract_caller() );
+            $b_ok = false;
+        } else { // connection inited, check if is OK to use
+            $stat = pg_connection_status(self::$link);
+            if ((!isset($stat)) || ($stat !== PGSQL_CONNECTION_OK)) {
+                $b_ok = false;
+                if ($this->debug_level > 3)
+                    Logger::error("SQL: connection not OK, retry. code={$stat}. " . $this->extract_caller() );
+            }         
+        }
+        
+        if (!$b_ok) { //reconnect
+            self::$link = pg_connect($this->connString);
+
+            if (!isset(self::$link)) {
+                Logger::error("SQL: connection retry failed! " . $this->extract_caller() );
+                die("SQL: Error in connection.");
+            }
+
+            $stat = pg_connection_status(self::$link);
+            if ((!isset($stat)) || ($stat !== PGSQL_CONNECTION_OK)) {
+                Logger::error("SQL: connection retry FAILED with code={$stat}. " . $this->extract_caller() );
+                die("SQL: bad connection.");
+            }         
+        }
+    }
+    
     public function __destruct()
     {
         $this->close();
@@ -25,19 +70,63 @@ class sql
     public function close()
     {
         if (self::$link) {
+            if ($this->debug_level > 4)
+                Logger::debug("SQL: close connection to ". pg_host(self::$link) ."/". pg_dbname(self::$link) . " " . $this->extract_caller() );
             pg_close(self::$link);
             self::$link = null;
-        }
+        } else
+            if ($this->debug_level > 4)
+                Logger::debug("SQL: close connection [null]. " . $this->extract_caller() . $this->GetLastError() );
     }
 
+    private function set_debug_level($debug_lvl = 0) { // set debug level, 0=quiet 5=max verbosity, 0 doesn't suppress errors
+        $this->debug_level = $debug_lvl;
+    }
+    
+    private function extract_caller() { // format back trace output
+        $s_res = "";
+        if ($this->debug_level > 0) {
+            $arr_bkt = debug_backtrace(5);
+            if (isset($arr_bkt) && (count($arr_bkt)> 0)) {
+                $s_res .= " stack: ";
+                for ($i = 1; $i <= 4; $i++) {
+                    $s_file = $arr_bkt[$i]['file'] ?? '';
+                    $s_line = $arr_bkt[$i]['line'] ?? '';
+                    $s_func = $arr_bkt[$i]['function'] ?? '';
+                    $s_class = $arr_bkt[$i]['class'] ?? '';
+                    $s_arg = $arr_bkt[$i]['args'][0] ?? '';
+                    $sx = $s_file.$s_line.$s_func;
+                    if (strlen($sx) > 0) {
+                        if ($s_line > '')
+                            $s_line = "[$s_line]";
+                        if ($s_func > '')
+                            $s_func = "s_func";
+                        if ($s_class > '')
+                            $s_class = "$s_class::";
+                        if ($s_arg > '')
+                            $s_arg = "($s_arg)";
+                        else 
+                            $s_arg = "()";
+                        $s_res .= "#{$i} {$s_file} {$s_line} {$s_class}{$s_func}{$s_arg}. ";
+                    }
+                }
+            }
+        }
+        return $s_res;
+    }
+    
     public function GetLastError()
     {
-        return pg_last_error(self::$link);
+        if (self::$link)     
+            return pg_last_error(self::$link)." ";
+        else 
+            return "SQL: connection not initialized. ";
     }
 
     public function insert($table, $data)
     {
         $startTime = microtime(true);
+        $this->re_connect();
         $i=0;
         $columns = implode(', ', array_keys($data));
         foreach (array_keys($data) as $d) {
@@ -48,25 +137,27 @@ class sql
         $query = "INSERT INTO $table ($columns) VALUES ($values)";
         $params = array_values($data);
         $result = pg_query_params(self::$link, $query, $params);
-        $endTime = microtime(true);
-
-        $elapsedTime = $endTime - $startTime;
-        if ($elapsedTime > $this->queryTimeThreshold) {
-            Logger::error("Insert query execution time exceeded threshold: {$elapsedTime} seconds.");
+        if ($this->debug_level > 2) {
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: Insert query execution time exceeded threshold {$elapsedTime} seconds. {$query} ". $this->extract_caller() );
+            }
         }
-
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error("SQL: Insert query failed {$query} " . $this->GetLastError() . $this->extract_caller() );
         }
     }
 
     public function query($query)
     {
+        $this->re_connect();
         return pg_query(self::$link, $query);
     }
 
     public function delete($table, $where = "FALSE")
     {
+        $this->re_connect();
         $query = "DELETE FROM $table WHERE $where";
         pg_query(self::$link, $query);
     }
@@ -74,6 +165,7 @@ class sql
     public function truncate($table, $restart = false, $cascade = false)
     {
         if ($table > "") {
+            $this->re_connect();
             $query = "TRUNCATE {$table}";
             if ($restart) 
                 $query .= " RESTART IDENTITY";
@@ -81,39 +173,43 @@ class sql
                 $query .= " CASCADE";
             pg_query(self::$link, $query);
         } else
-            Logger::warn("SQL::truncate empty parameter [table] ");
+            Logger::warn("SQL: truncate empty parameter [table] " . $this->extract_caller() );
     }
 
     public function update($table, $set, $where = "FALSE")
     {
         $startTime = microtime(true);
+        $this->re_connect();
         $query = "UPDATE $table SET $set WHERE $where";
         $result = pg_query(self::$link, $query);
-        $endTime = microtime(true);
 
-        $elapsedTime = $endTime - $startTime;
-        if ($elapsedTime > $this->queryTimeThreshold) {
-            Logger::error("Update query execution time exceeded threshold: {$elapsedTime} seconds.");
+        if ($this->debug_level > 2) {
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: update query execution time exceeded threshold: {$elapsedTime} seconds. {$query} ");
+            }
         }
-
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error("SQL: update query failed {$query} " . $this->GetLastError() . $this->extract_caller() );
         }
     }
 
     public function execQuery($sqlquery)
     {
         $startTime = microtime(true);
+        $this->re_connect();
         $result = pg_query(self::$link, $sqlquery);
-        $endTime = microtime(true);
 
-        $elapsedTime = $endTime - $startTime;
-        if ($elapsedTime > $this->queryTimeThreshold) {
-            Logger::error("Query execution time exceeded threshold: {$elapsedTime} seconds.");
+        if ($this->debug_level > 2) {
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: query execution time exceeded threshold: {$elapsedTime} seconds. {$sqlquery} ");
+            }
         }
-
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error("SQL: execute query failed {$sqlquery} " . $this->GetLastError() . $this->extract_caller() );
         }
 
         return $result;
@@ -122,17 +218,19 @@ class sql
     public function execQueryVerbose($sqlquery)
     {
         $startTime = microtime(true);
+        $this->re_connect();
         $result = pg_query(self::$link, $sqlquery);
-        $endTime = microtime(true);
 
-        $elapsedTime = $endTime - $startTime;
-        if ($elapsedTime > $this->queryTimeThreshold) {
-            Logger::error("Query execution time exceeded threshold: {$elapsedTime} seconds.");
+        if ($this->debug_level > 2) {
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::error("Query execution time exceeded threshold: {$elapsedTime} seconds. {$sqlquery} ");
+            }
         }
-
         if (!$result) {
-            $res = pg_last_error(self::$link);
-            Logger::error($res . print_r(debug_backtrace(), true));
+            $res = $this->GetLastError();
+            Logger::error("SQL: execute query failed {$sqlquery} " . $res . $this->extract_caller() );
             return $res; 
         }
         return "";
@@ -141,19 +239,24 @@ class sql
     public function fetchAll($q,$log=false)
     {
         $startTime = microtime(true);
+        $this->re_connect();
         $result = pg_query(self::$link, $q);
-        $endTime = microtime(true);
 
+        if ($this->debug_level > 2) {
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: FetchAll execution time exceeded threshold: {$elapsedTime} seconds. '{$q}' ");
+            }
+        }
+        
         if ($log) {
-            error_log($q);
-        }
-        $elapsedTime = $endTime - $startTime;
-        if ($elapsedTime > $this->queryTimeThreshold) {
-            Logger::error("FetchAll query execution time exceeded threshold: {$elapsedTime} seconds.");
+            if ($this->debug_level > 0)
+                error_log($q);
         }
 
-        if (!$result) {
-            Logger::error(pg_last_error(self::$link));
+        if (!isset($result)) {
+            Logger::error("SQL: FetchAll failed '{$q}' " . $this->GetLastError() . $this->extract_caller() );
             return [];
         }
 
@@ -168,16 +271,18 @@ class sql
     public function fetchOne($q)
     {
         $startTime = microtime(true);
+        $this->re_connect();
         $result = pg_query(self::$link, $q);
-        $endTime = microtime(true);
 
-        $elapsedTime = $endTime - $startTime;
-        if ($elapsedTime > $this->queryTimeThreshold) {
-            Logger::error("FetchOne query execution time exceeded threshold: {$elapsedTime} seconds.");
+        if ($this->debug_level > 2) {
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::error("SQL: FetchOne query execution time exceeded threshold: {$elapsedTime} seconds. {$q} ");
+            }
         }
-
         if (!$result) {
-            Logger::error(pg_last_error(self::$link));
+            Logger::error("SQL: FetchOne failed {$q} " . $this->GetLastError() . $this->extract_caller() );
             return [];
         }
 
@@ -192,22 +297,25 @@ class sql
 
     public function fetchArray($res)
     {
+        $this->re_connect();
         return pg_fetch_array($res);
     }
  
     public function escape($string)
     {
-        if ($string)
+        if ($string) {
+            $this->re_connect();
             return pg_escape_string(self::$link,$string);
-        else
+        } else
             return "";
     }
 
     public function escapeLiteral($string)
     {
-        if ($string)
+        if ($string) {
+            $this->re_connect();
             return pg_escape_literal(self::$link,$string);
-        else
+        } else
             return "";
     }
 
@@ -225,66 +333,68 @@ class sql
         $set = implode(', ', $setClauses);
 
         $query = "UPDATE $table SET $set WHERE $where";
-        
+        $this->re_connect();
         $result = pg_query_params(self::$link, $query, $params);
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error("SQL: updateRow failed {$query} " .$this->GetLastError() . $this->extract_caller() );
         }
     }
 
-        public function upsertRow($table, $data, $where) {
-            // Check if the row exists
-            $checkQuery = "SELECT 1 FROM $table WHERE $where LIMIT 1";
-            $checkResult = pg_query(self::$link, $checkQuery);
+    public function upsertRow($table, $data, $where) {
+        // Check if the row exists
+        $this->re_connect();
+        $checkQuery = "SELECT 1 FROM $table WHERE $where LIMIT 1";
+        $checkResult = pg_query(self::$link, $checkQuery);
 
-            if (!$checkResult) {
-                Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
-                return false;
+        if (!$checkResult) {
+            Logger::error("SQL: upsertRow failed {$checkQuery} " . $this->GetLastError() . $this->extract_caller() );
+            return false;
+        }
+
+        if (pg_num_rows($checkResult) > 0) {
+            // Row exists, perform an update
+            $setClauses = [];
+            $params = [];
+            $i = 0;
+
+            foreach ($data as $column => $value) {
+                $setClauses[] = "$column = $" . (++$i);
+                $params[] = $value;
             }
 
-            if (pg_num_rows($checkResult) > 0) {
-                // Row exists, perform an update
-                $setClauses = [];
-                $params = [];
-                $i = 0;
+            $set = implode(', ', $setClauses);
+            $query = "UPDATE $table SET $set WHERE $where";
+        } else {
+            // Row does not exist, perform an insert
+            $columns = array_keys($data);
+            $placeholders = [];
+            $params = [];
+            $i = 0;
 
-                foreach ($data as $column => $value) {
-                    $setClauses[] = "$column = $" . (++$i);
-                    $params[] = $value;
-                }
-
-                $set = implode(', ', $setClauses);
-                $query = "UPDATE $table SET $set WHERE $where";
-            } else {
-                // Row does not exist, perform an insert
-                $columns = array_keys($data);
-                $placeholders = [];
-                $params = [];
-                $i = 0;
-
-                foreach ($data as $value) {
-                    $placeholders[] = '$' . (++$i);
-                    $params[] = $value;
-                }
-
-                $columnList = implode(', ', $columns);
-                $placeholderList = implode(', ', $placeholders);
-
-                $query = "INSERT INTO $table ($columnList) VALUES ($placeholderList)";
+            foreach ($data as $value) {
+                $placeholders[] = '$' . (++$i);
+                $params[] = $value;
             }
 
-            // Execute the query
-            $result = pg_query_params(self::$link, $query, $params);
-            if (!$result) {
-                Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
-                return false;
-            }
+            $columnList = implode(', ', $columns);
+            $placeholderList = implode(', ', $placeholders);
 
-            return true;
+            $query = "INSERT INTO $table ($columnList) VALUES ($placeholderList)";
+        }
+
+        // Execute the query
+        $result = pg_query_params(self::$link, $query, $params);
+        if (!$result) {
+            Logger::error("SQL: upsertRow failed {$query} " . $this->GetLastError() . $this->extract_caller() );
+            return false;
+        }
+
+        return true;
     }
 
     public function upsertRowTrx($table, $data, $whereCondition) {
         // Start a transaction
+        $this->re_connect();
         pg_query(self::$link, "BEGIN");
     
         try {
@@ -306,7 +416,7 @@ class sql
             $checkResult = pg_query_params(self::$link, $checkQuery, $whereParams);
     
             if (!$checkResult) {
-                throw new Exception(pg_last_error(self::$link));
+                throw new Exception("SQL: upsertRowTrx failed {$checkQuery} " . this->GetLastError() . $this->extract_caller() );
             }
     
             if (pg_num_rows($checkResult) > 0) {
@@ -321,7 +431,7 @@ class sql
                 }
     
                 if (empty($setClauses)) {
-                    throw new Exception("No updatable fields provided.");
+                    throw new Exception("SQL: upsertRowTrx failed, no update-able fields provided. " . $this->extract_caller() );
                 }
     
                 $setSql = implode(', ', $setClauses);
@@ -351,7 +461,7 @@ class sql
             // Execute the query
             $result = pg_query_params(self::$link, $query, $params);
             if (!$result) {
-                throw new Exception(pg_last_error(self::$link));
+                throw new Exception("SQL: upsertRowTrx failed {$query} " . this->GetLastError() . $this->extract_caller() );
             }
     
             // Commit transaction
@@ -361,7 +471,7 @@ class sql
         } catch (Exception $e) {
             // Rollback on error
             pg_query(self::$link, "ROLLBACK");
-            Logger::error($e->getMessage() . print_r(debug_backtrace(), true));
+            Logger::error("SQL: upsertRowTrx failed {$query} " . $e->getMessage() . $this->extract_caller() );
             return false;
         }
     }
@@ -369,8 +479,11 @@ class sql
     // an upsert that completes in one query. Good for simple cases when a constraint can be used
     public function upsertRowOnConflict($tableName, $data, $conflictTarget) {
         // Prepare the column names for the INSERT statement.
+
         $columns = implode(', ', array_keys($data));
     
+        $this->re_connect();
+
         // Take care of escaping here instead of requiring it before every upsert call
         $values = array_map(function($value) {
             return pg_escape_literal(self::$link, $value);
@@ -393,7 +506,7 @@ class sql
         $result = pg_query(self::$link, $sqlquery);
     
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error("SQL: upsertRowOnConflict failed {$sqlquery} " . this->GetLastError() . $this->extract_caller() );
             return false; // Indicate failure
         }
     
@@ -406,7 +519,10 @@ class sql
      * __construct(): Establishes a database connection using pg_connect.
      * __destruct(): Closes the database connection when the object is destroyed.
      * close(): Closes the database connection.
+     * re_connect(): check connection availability and reconnect if connection expired
      * GetLastError(): Returns the last error message from the database.
+     * set_debug_level($debug_lvl = 0): set debug level, 0=quiet 5=max verbosity, doesn't suppress errors
+     * extract_caller() // format back trace output     
      * insert($table, $data): Inserts data into a specified table.
      * query($query): Executes a raw SQL query.
      * delete($table, $where = "FALSE"): Deletes rows from a table based on a WHERE clause.
