@@ -12,6 +12,7 @@ $webRoot = rtrim($webRoot, '/');
 define('BASE_PATH', dirname(__DIR__));
 define('CONFIG_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'conf');
 define('LIB_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'lib');
+define('LOG_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'log');
 
 $configFilepath = CONFIG_PATH . DIRECTORY_SEPARATOR;
 
@@ -122,6 +123,7 @@ if (!$hide_navbar) {
 }
 
 // Remove redundant profile loading code here and go straight to lib loading
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."logger.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."misc_ui_functions.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."chat_helper_functions.php");
@@ -152,10 +154,26 @@ if (sizeof($_GET)==0) {
         fclose($connection);
     }
 
+    // manage CHIM log files 
+    $s_path = LOG_PATH . DIRECTORY_SEPARATOR ;
+    $s_files = glob($s_path . '*.txt');
+    foreach ($s_files as $file) {
+        if (is_file($file)) {
+            unlink($file);
+        }
+    }    
+    $s_files = glob($s_path . '*.log');
+    foreach ($s_files as $file) {
+        if (is_file($file)) {
+            Logger::deleteLogIfTooLarge($file);
+        }
+    }    
+    
     // Initialize automatic backup system now that database is ready
     if (function_exists('deferredAutomaticBackupInit')) {
         deferredAutomaticBackupInit();
     }
+    
 }
 /* END of check database for updates */
 
