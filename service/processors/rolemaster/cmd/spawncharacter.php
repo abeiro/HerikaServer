@@ -1,15 +1,35 @@
 <?php 
 require_once(__DIR__ . '/../../../../lib/logger.php');
 
+
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/npc_master.class.php");
+require_once($GLOBALS["ENGINE_ROOT"]  . "lib/core/core_profiles.class.php");
+
+$GLOBALS["ENGINE_PATH"]=$GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
+
+$GLOBALS["active_profile"]=md5("The Narrator");
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
+$GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
+
+$CONF_SAMPLE_VARS=extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
+
+$connector=new LLMConnector();
+$currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_DIRECTOR"]);
+$connectionHandler = $connector->getConnector($currentConnectorData);
+
+$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+$GLOBALS["CURRENT_CONNECTOR"]=$currentConnectorData["driver"];
+
+$connector->setOldGlobals($currentConnectorData);
 
 
-if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php"))) {
-        logMsg("Choose a LLM model and connector. Used '{$GLOBALS["CURRENT_CONNECTOR"]}'",S_LOG_CRITICAL);
+if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
+        logMsg("Choose a LLM model and connector. Used connector: '{$GLOBALS["CORE_CONNECTOR_DIRECTOR"]}'",S_LOG_CRITICAL);
 
     } else {
         logMsg("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
-        require($enginePath."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CURRENT_CONNECTOR"]}.php");
 
         $contextDataHistoric = DataLastDataExpandedFor("", -50);    // Full context
         
@@ -156,19 +176,7 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
             
             // This should be on new npc profile table
             $codename = npcNameToCodename($response["name"]);
-            $GLOBALS["db"]->insert(
-                'bio_templates_custom',
-                array(
-                    'npc_name' => $codename,
-                    'core' => "{$response["name"]} ({$response["race"]} {$response["gender"]})",
-                    'npc_static_bio' => "{$response["background"]}",
-                    'personality' => "{$response["traits"]}",
-                    'appearance' => "{$response["appearance"]}",
-                    'speechstyle' => "{$response["speechStyle"]}",
-                    'goals' => "{$response["goal"]}",
-                    'oghma_knowledge_tags' => 'rolemastered'
-                )
-            );
+           
 
             $GLOBALS["db"]->insert(
                 'responselog',

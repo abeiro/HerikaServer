@@ -728,7 +728,37 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     'tag' => ""
                 )
             );
+    } else if ($vars[0]=="chim_renamenpc") {
+    // Convert signed to unsigned using bitwise AND
+    $unsignedInt = ($vars[3]+0) & 0xFFFFFFFF;
+    // Represent as 8-digit zero-padded hex with 0x prefix
+    $unsignedIntHex = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+        
+    $npcMaster=new NpcMaster();
+    $oldNpcData=$npcMaster->getByName($vars[1]);
+    $newNpcData=$npcMaster->getByName($vars[2]);
+    
+    if (!$newNpcData) {
+        createProfile($vars[2]);
+        $newNpcData=$npcMaster->getByName($vars[2]);
     }
+
+    $npcMaster->renameNPC($vars[1],$vars[2]);
+
+        $db->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => 'rolecommand|RenameNPC@'.$unsignedIntHex.'@'.$db->escape($vars[2]),
+                'tag'     => '',
+            ]
+        );
+         
+    }
+    
 
     $db->upsertRowOnConflict(
         'conf_opts',
@@ -773,16 +803,37 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if ($localName==$baseProfile)
         $baseProfile="";
 
-    if (!profile_exists($localName))
-        AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
+   
 
     
-    createProfile($localName,[],false,$baseProfile);
+    $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
     audit_log("comm.php addnpc $localName");
+
+     if ($retVal==1)
+        AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
+
 
     // Update new data
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($localName);
+    
+    if (isset($splitNameBase[4]) && $retVal==1) {
+        $currentNpcDataAlt=$npcMaster->getByRefId($splitNameBase[4]);
+        if ($currentNpcDataAlt && $currentNpcDataAlt["npc_name"]!=$currentNpcData["npc_name"] ) {
+            // Seems an NPC has changed name.
+            // It's disabled, but could be useful fot the Bujold quest e.g
+            // But seems bandit spawn are reusing refids
+            error_log("[ADDNPC] detected name change refid:{$splitNameBase[4]} {$currentNpcDataAlt["npc_name"]}!={$currentNpcData["npc_name"]}");
+            
+            if (false) {
+                $newId=$currentNpcData["id"];
+                $newName=$currentNpcData["npc_name"];
+
+                $npcMaster->renameNPC($oldName,$newName);
+            }      
+        }
+    }
+
     if ($currentNpcData) {
         $currentNpcData["base"]=$splitNameBase[1];
         $currentNpcData["gender"]=$splitNameBase[2];

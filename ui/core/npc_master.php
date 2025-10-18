@@ -537,7 +537,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                 </div>
                 <div class="npc-right-warn">
                     <?php 
-                    if ($row["gamets_last_updated"]> $LAST_INFOSAVE_EVENT) {
+                    if ($row["gamets_last_updated"] != $LAST_INFOSAVE_EVENT) {
                         echo "<span title='This NPC is out of sync, this means current NPC sheet has been modified after last save. If you edit this NPC, changes will be lost if you reload a previous savegame. '>⚠️</span>";
                     }
 

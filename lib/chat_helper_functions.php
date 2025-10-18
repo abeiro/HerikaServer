@@ -301,11 +301,17 @@ function unmoodSentence($sentence) {
     // - otherwise fall back to REMOVE_ASTERISKS_FROM_OUTPUT
     if (array_key_exists('strip_emotes_from_output', $GLOBALS)) {
         $processAsterisks = (bool)$GLOBALS['strip_emotes_from_output'];
-    } else {
-        $processAsterisks = !empty($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']);
+    } 
+    
+    if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
+        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT is setted to <{$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']}>" );
+        $processAsterisks=$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'];
     }
+    
 
-    if ($processAsterisks) {
+    if ($processAsterisks === true ) {
+        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT FULL is active! $sentence <{$GLOBALS['strip_emotes_from_output']}> <{$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']}>" );
+
         // If the entire message is wrapped in asterisks, strip them from both ends
         if (str_starts_with($output, '*') && str_ends_with($output, '*')) {
             $output = trim($output, '*'); // correct trimming of leading/trailing asterisks
@@ -317,6 +323,7 @@ function unmoodSentence($sentence) {
     // is this the users intention if they set REMOVE_ASTERISKS false?
     else {
         // Remove text bewteen * * if two or more words inside
+        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT PARTIAL is active! $sentence" );
         $output = preg_replace('/\*(\w+\s+\w+.*?)\*/', '', $sentence);
     }
 

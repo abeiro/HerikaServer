@@ -1,15 +1,17 @@
 <?php
 
-class NpcMaster {
+class NpcMaster
+{
     private $table = "core_npc_master";
     private $db;
 
-    public static function profileExists($npcName, $checkLegacyFile = false) {
+    public static function profileExists($npcName, $checkLegacyFile = false)
+    {
         // Access global DB instance
-        $db = $GLOBALS["db"];
+        $db      = $GLOBALS["db"];
         $escaped = $db->escape($npcName);
-        $query = "SELECT 1 FROM core_npc_master WHERE npc_name = '{$escaped}' LIMIT 1";
-        $result = $db->fetchOne($query);
+        $query   = "SELECT 1 FROM core_npc_master WHERE npc_name = '{$escaped}' LIMIT 1";
+        $result  = $db->fetchOne($query);
 
         if ($result) {
             return true; // Found in database
@@ -18,12 +20,14 @@ class NpcMaster {
         return false;
     }
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->db = $GLOBALS["db"];
     }
 
     // Create (Insert)
-    public function create($data) {
+    public function create($data)
+    {
         $fields = [
             "npc_name",
             "npc_favorite",
@@ -51,7 +55,7 @@ class NpcMaster {
             "gamets_last_updated",
             "base",
             "core",
-            "tags"
+            "tags",
         ];
 
         foreach ($data as $k => $v) {
@@ -59,41 +63,53 @@ class NpcMaster {
                 $data[$k] = null;
             }
         }
-        $data["md5"]=md5($data["npc_name"]);
-        $filtered = array_intersect_key($data, array_flip($fields));
+        $data["md5"] = md5($data["npc_name"]);
+        $filtered    = array_intersect_key($data, array_flip($fields));
         return $this->db->insert($this->table, $filtered);
     }
 
     // Read NPC by ID
-    public function getById($id) {
-        $id = (int)$id;
+    public function getById($id)
+    {
+        $id    = (int) $id;
         $query = "SELECT * FROM {$this->table} WHERE id = $id LIMIT 1";
         return $this->db->fetchOne($query);
     }
 
     // Read NPC by unique name
-    public function getByName($npcName) {
+    public function getByName($npcName)
+    {
         $escaped = $this->escape($npcName);
-        $query = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' LIMIT 1";
+        $query   = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' LIMIT 1";
         return $this->db->fetchOne($query);
     }
 
-     // Read NPC by md5
-     public function getByMD5($npcName) {
+    // Read NPC by md5
+    public function getByMD5($npcName)
+    {
         $escaped = $this->escape($npcName);
-        $query = "SELECT * FROM {$this->table} WHERE md5 = '{$escaped}' LIMIT 1";
+        $query   = "SELECT * FROM {$this->table} WHERE md5 = '{$escaped}' LIMIT 1";
         return $this->db->fetchOne($query);
     }
 
+    // Read NPC by md5
+    public function getByRefId($npcName)
+    {
+        $escaped = $this->escape($npcName);
+        $query   = "SELECT * FROM {$this->table} WHERE refid = '{$escaped}' order by 	gamets_last_updated	desc nulls last LIMIT 1";
+        return $this->db->fetchOne($query);
+    }
 
     // Read all NPCs (optional WHERE)
-    public function getAll($where = "TRUE") {
+    public function getAll($where = "TRUE")
+    {
         $query = "SELECT * FROM {$this->table} WHERE $where";
         return $this->db->fetchAll($query);
     }
 
     // Update NPC by ID
-    public function update($id, $data) {
+    public function update($id, $data)
+    {
         $fields = [
             "npc_name",
             "npc_favorite",
@@ -121,10 +137,10 @@ class NpcMaster {
             "gamets_last_updated",
             "base",
             "core",
-            "tags"
+            "tags",
         ];
 
-        $id = (int)$id;
+        $id    = (int) $id;
         $where = "id = $id";
 
         // Prevent renaming The Narrator
@@ -141,29 +157,30 @@ class NpcMaster {
             }
         }
 
-        $id = intval($id);
-        $where = "id = {$id}";
+        $id       = intval($id);
+        $where    = "id = {$id}";
         $filtered = array_intersect_key($data, array_flip($fields));
         return $GLOBALS["db"]->updateRow($this->table, $filtered, $where);
-       
+
     }
 
     // Update NPC using an array (id key required)
-    public function updateByArray($data) {
-        if (!isset($data['id'])) {
+    public function updateByArray($data)
+    {
+        if (! isset($data['id'])) {
             return false;
         }
 
-        $id = (int)$data['id'];
+        $id = (int) $data['id'];
         unset($data['id']); // Remove 'id' from the data array to avoid updating it
 
-        
-        return $this->update($id,$data);
+        return $this->update($id, $data);
     }
 
     // Delete NPC by ID
-    public function delete($id) {
-        $id = (int)$id;
+    public function delete($id)
+    {
+        $id    = (int) $id;
         $where = "id = $id";
         // Disallow deleting The Narrator profile (by id or name)
         $row = $this->getById($id);
@@ -174,22 +191,26 @@ class NpcMaster {
     }
 
     // Truncate table (dangerous!)
-    public function truncate($restart = false, $cascade = false) {
+    public function truncate($restart = false, $cascade = false)
+    {
         return $this->db->truncate($this->table, $restart, $cascade);
     }
 
     // Upsert using ON CONFLICT
-    public function upsert($data, $conflictTarget) {
+    public function upsert($data, $conflictTarget)
+    {
         return $this->db->upsertRowOnConflict($this->table, $data, $conflictTarget);
     }
 
     // Escape strings for raw queries
-    public function escape($str) {
+    public function escape($str)
+    {
         return $this->db->escape($str);
     }
 
     // Convert NPC name to codename
-    public function npcNameToCodename($npcName) {
+    public function npcNameToCodename($npcName)
+    {
         $codename = mb_convert_encoding($npcName, 'UTF-8', mb_detect_encoding($npcName));
         // Use multibyte lowercase so accented capitals (e.g., É) convert correctly
         $codename = mb_strtolower(trim($codename), 'UTF-8');
@@ -199,18 +220,19 @@ class NpcMaster {
         return $codename;
     }
 
-    public function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '') {
+    public function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '')
+    {
         if ($npcname === "The Narrator") {
             return; // refuse narrator
         }
 
-        $codename = $this->npcNameToCodename($npcname);
+        $codename        = $this->npcNameToCodename($npcname);
         $baseprofileName = $this->npcNameToCodename($baseprofile);
 
         // Check if NPC already exists in DB
         $existing = $this->getByName($npcname);
 
-        if ($existing && !$overwrite) {
+        if ($existing && ! $overwrite) {
             // Profile exists, and no overwrite requested — bail
             return;
         }
@@ -231,8 +253,8 @@ class NpcMaster {
 
         // Compose the row data to insert/update
         $rowData = array_merge($templateRow, $voiceData, [
-            'npc_name' => $npcname,
-            'npc_codename' => $codename
+            'npc_name'     => $npcname,
+            'npc_codename' => $codename,
         ]);
 
         // Insert or update into DB
@@ -246,8 +268,9 @@ class NpcMaster {
         Logger::info("NPC profile created/updated for '{$npcname}' in DB.");
     }
 
-    private function fetchTemplateRow($codename) {
-        $lang = $GLOBALS["CORE_LANG"] ?? '';
+    private function fetchTemplateRow($codename)
+    {
+        $lang    = $GLOBALS["CORE_LANG"] ?? '';
         $escCode = $this->db->escape($codename);
         if ($lang) {
             $escLang = $this->db->escape($lang);
@@ -255,77 +278,118 @@ class NpcMaster {
             $templateRow = $this->db->fetchOne("SELECT npc_pers FROM npc_templates_trl WHERE lower(name_trl) = lower('{$escCode}') AND lang = '{$escLang}'");
         }
 
-        if (!$templateRow) {
+        if (! $templateRow) {
             $templateRow = $this->db->fetchOne(
                 "SELECT core, oghma_knowledge_tags as npc_misc, npc_static_bio as npc_background, personality as npc_personality, appearance as npc_appearance, relationships as npc_relationships, occupation as npc_occupation, skills as npc_skills, speechstyle as npc_speechstyle, goals as npc_goals FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')"
             );
         }
 
-        
         return $templateRow ?: [
-            'core' => 'Roleplay as ' . $codename,
-            'npc_misc' => $codename,
-            'npc_background' => '',
-            'npc_personality' => '',
-            'npc_appearance' => '',
+            'core'              => 'Roleplay as ' . $codename,
+            'npc_misc'          => $codename,
+            'npc_background'    => '',
+            'npc_personality'   => '',
+            'npc_appearance'    => '',
             'npc_relationships' => '',
-            'npc_occupation' => '',
-            'npc_skills' => '',
-            'npc_speechstyle' => '',
-            'npc_goals' => ''
+            'npc_occupation'    => '',
+            'npc_skills'        => '',
+            'npc_speechstyle'   => '',
+            'npc_goals'         => '',
         ];
     }
 
-    private function composeKnowledgeString($misc, $codename) {
+    private function composeKnowledgeString($misc, $codename)
+    {
         $miscParts = array_unique(array_filter(array_map('trim', explode(',', $misc))));
-        if (!in_array($codename, $miscParts)) {
+        if (! in_array($codename, $miscParts)) {
             $miscParts[] = $codename;
         }
         return implode(', ', $miscParts);
     }
 
-    private function fetchVoiceData($codename) {
-        $escCode = $this->db->escape($codename);
-        $voiceRow = $this->db->fetchOne("SELECT voiceid FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')");
+    private function fetchVoiceData($codename)
+    {
+        $escCode         = $this->db->escape($codename);
+        $voiceRow        = $this->db->fetchOne("SELECT voiceid FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')");
         $voicetypeString = $this->fetchVoicetype($codename);
 
         return array_merge($voiceRow ?: [], ['voicetype' => $voicetypeString]);
     }
 
-    private function fetchVoicetype($codename) {
-        $cn = $this->db->escape("Voicetype/$codename");
+    private function fetchVoicetype($codename)
+    {
+        $cn        = $this->db->escape("Voicetype/$codename");
         $vtypeRows = $this->db->fetchAll("SELECT value FROM conf_opts WHERE lower(id) = lower('$cn')");
         return $vtypeRows[0]['value'] ?? '';
     }
 
-    public function migrateFromOldProfile($currentNpcData,$OLD_GLOBALS_ARRAY) {
+    public function migrateFromOldProfile($currentNpcData, $OLD_GLOBALS_ARRAY)
+    {
 
-        $currentNpcData['npc_favorite'] = 0; // Default
-        $currentNpcData['lock_profile'] = isset($OLD_GLOBALS_ARRAY['LOCK_PROFILE']) ? ($OLD_GLOBALS_ARRAY['LOCK_PROFILE'] ? 1 : 0) : 0;
+        $currentNpcData['npc_favorite']    = 0; // Default
+        $currentNpcData['lock_profile']    = isset($OLD_GLOBALS_ARRAY['LOCK_PROFILE']) ? ($OLD_GLOBALS_ARRAY['LOCK_PROFILE'] ? 1 : 0) : 0;
         $currentNpcData['dynamic_profile'] = isset($OLD_GLOBALS_ARRAY['DYNAMIC_PROFILE']) ? ($OLD_GLOBALS_ARRAY['DYNAMIC_PROFILE'] ? 1 : 0) : 0;
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERS'])) $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_PERS'];
-        if (isset($OLD_GLOBALS_ARRAY['PROMPT_HEAD'])) $currentNpcData['prompt_head'] = $OLD_GLOBALS_ARRAY['PROMPT_HEAD'];
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'])) $currentNpcData['npc_static_bio'] .= $OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'];
-        if (isset($OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'])) $currentNpcData['oghma_knowledge_tags'] = $OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'];
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'])) $currentNpcData['relationships'] = $OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'];
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'])) $currentNpcData['occupation'] = $OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'];
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_APPEARANCE'])) $currentNpcData['appearance'] = $OLD_GLOBALS_ARRAY['HERIKA_APPEARANCE'];
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_SKILLS'])) $currentNpcData['skills'] = $OLD_GLOBALS_ARRAY['HERIKA_SKILLS'];
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'])) $currentNpcData['speechstyle'] = $OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'];
-        if (isset($OLD_GLOBALS_ARRAY['EMOTEMOODS'])) $currentNpcData['emote_moods'] = $OLD_GLOBALS_ARRAY['EMOTEMOODS'];
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_GOALS'])) $currentNpcData['goals'] = $OLD_GLOBALS_ARRAY['HERIKA_GOALS'];
-        if (isset($OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'])) $currentNpcData['voiceid'] = $OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'];
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERS'])) {
+            $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_PERS'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['PROMPT_HEAD'])) {
+            $currentNpcData['prompt_head'] = $OLD_GLOBALS_ARRAY['PROMPT_HEAD'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'])) {
+            $currentNpcData['npc_static_bio'] .= $OLD_GLOBALS_ARRAY['HERIKA_BACKGROUND'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'])) {
+            $currentNpcData['oghma_knowledge_tags'] = $OLD_GLOBALS_ARRAY['OGHMA_KNOWLEDGE'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) {
+            $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'])) {
+            $currentNpcData['relationships'] = $OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'])) {
+            $currentNpcData['occupation'] = $OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_APPEARANCE'])) {
+            $currentNpcData['appearance'] = $OLD_GLOBALS_ARRAY['HERIKA_APPEARANCE'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_SKILLS'])) {
+            $currentNpcData['skills'] = $OLD_GLOBALS_ARRAY['HERIKA_SKILLS'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'])) {
+            $currentNpcData['speechstyle'] = $OLD_GLOBALS_ARRAY['HERIKA_SPEECHSTYLE'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['EMOTEMOODS'])) {
+            $currentNpcData['emote_moods'] = $OLD_GLOBALS_ARRAY['EMOTEMOODS'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['HERIKA_GOALS'])) {
+            $currentNpcData['goals'] = $OLD_GLOBALS_ARRAY['HERIKA_GOALS'];
+        }
+
+        if (isset($OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'])) {
+            $currentNpcData['voiceid'] = $OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'];
+        }
 
         /*
         foreach ($OLD_GLOBALS_ARRAY as $k=>$v) {
             if (!is_array($v)) {
                 if (in_array($k,[
                  "DIARY_COOLDOWN", "AUTO_DIARY", "AUTO_DIARY_WAIT", "MINIME_T5",
-                 "OGHMA_INFINIUM", "OGHMA_AMOUNT", "RECHAT_H", "RECHAT_P", "RECHAT_ALLOW_ACTIONS", "BORED_EVENT", 
+                 "OGHMA_INFINIUM", "OGHMA_AMOUNT", "RECHAT_H", "RECHAT_P", "RECHAT_ALLOW_ACTIONS", "BORED_EVENT",
                  "BORED_EVENT_SERVERSIDE", "CONTEXT_HISTORY", "CONTEXT_HISTORY_DIARY", "CONTEXT_HISTORY_DYNAMIC_PROFILE",
-                 "ALIVE_MESSAGE", "TIME_AWARENESS", "QUEST_COMMENT", "QUEST_COMMENT_CHANCE", "CURRENT_TASK", 
-                 "HERIKA_ANIMATIONS", "CORE_LANG", "LANG_LLM_XTTS", "MAX_WORDS_LIMIT", 
+                 "ALIVE_MESSAGE", "TIME_AWARENESS", "QUEST_COMMENT", "QUEST_COMMENT_CHANCE", "CURRENT_TASK",
+                 "HERIKA_ANIMATIONS", "CORE_LANG", "LANG_LLM_XTTS", "MAX_WORDS_LIMIT",
                  "REMOVE_ASTERISKS_FROM_OUTPUT", "ENFORCE_ACTIONS_PROMPT", "DIARY_PROMPT"]))
                     if (!empty($v))
                         $overrides[$k]=$v;
@@ -335,62 +399,106 @@ class NpcMaster {
         if (empty($currentNpcData['personality']) && isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) {
             $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
         }
-        $currentNpcData['metadata'] = json_encode($overrides);
-        $currentNpcData['extended_data'] = json_encode(["chim_core_migrated"=>1]);
-        $currentNpcData['gender'] = null; // Optional: you might use HERIKA_PERSONALITY/gender logic
-        $currentNpcData['race'] = null; // Optional: no race found
-        $currentNpcData['refid'] = null; // Optional: no race found
-        $currentNpcData['base'] = null; // Optional: no race found
-        // Prefer HERIKA_PERS for core; fallback to HERIKA_NAME if core not set
-        if (!isset($currentNpcData['core']) || $currentNpcData['core'] === '') {
+        $currentNpcData['metadata']      = json_encode($overrides);
+        $currentNpcData['extended_data'] = json_encode(["chim_core_migrated" => 1]);
+        $currentNpcData['gender']        = null; // Optional: you might use HERIKA_PERSONALITY/gender logic
+        $currentNpcData['race']          = null; // Optional: no race found
+        $currentNpcData['refid']         = null; // Optional: no race found
+        $currentNpcData['base']          = null; // Optional: no race found
+                                                 // Prefer HERIKA_PERS for core; fallback to HERIKA_NAME if core not set
+        if (! isset($currentNpcData['core']) || $currentNpcData['core'] === '') {
             if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERS']) && $OLD_GLOBALS_ARRAY['HERIKA_PERS'] !== '') {
                 $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_PERS'];
             } else if (isset($OLD_GLOBALS_ARRAY['HERIKA_NAME']) && $OLD_GLOBALS_ARRAY['HERIKA_NAME'] !== '') {
                 $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_NAME'];
             }
         }
-        $currentNpcData['profile_id'] = 1; // Default profile
-        $currentNpcData['md5'] = md5($currentNpcData["npc_name"]); // Default profile
+        $currentNpcData['profile_id'] = 1;                                // Default profile
+        $currentNpcData['md5']        = md5($currentNpcData["npc_name"]); // Default profile
 
         return $currentNpcData;
 
     }
 
-    public function setOldGlobalsFromCurrentNpcData($currentNpcData) {
-        
-        if (isset($currentNpcData['npc_name'])) $GLOBALS['HERIKA_NAME'] = $currentNpcData['npc_name'];
-        if (isset($currentNpcData['lock_profile'])) $GLOBALS['LOCK_PROFILE'] = $currentNpcData['lock_profile'] ? true : false;
-        if (isset($currentNpcData['dynamic_profile'])) $GLOBALS['DYNAMIC_PROFILE'] = $currentNpcData['dynamic_profile'] ? true : false;
-        if (isset($currentNpcData['prompt_head'])) $GLOBALS['PROMPT_HEAD'] = $currentNpcData['prompt_head'];
-        if (isset($currentNpcData['npc_static_bio'])) $GLOBALS['HERIKA_BACKGROUND'] = $currentNpcData['npc_static_bio'];
-        if (isset($currentNpcData['oghma_knowledge_tags'])) $GLOBALS['OGHMA_KNOWLEDGE'] = $currentNpcData['oghma_knowledge_tags'];
-        if (isset($currentNpcData['personality'])) $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'];
-        if (isset($currentNpcData['relationships'])) $GLOBALS['HERIKA_RELATIONSHIPS'] = $currentNpcData['relationships'];
-        if (isset($currentNpcData['occupation'])) $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'];
-        if (isset($currentNpcData['appearance'])) $GLOBALS['HERIKA_APPEARANCE'] = $currentNpcData['appearance'];
-        if (isset($currentNpcData['skills'])) $GLOBALS['HERIKA_SKILLS'] = $currentNpcData['skills'];
-        if (isset($currentNpcData['speechstyle'])) $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'];
-        if (isset($currentNpcData['emote_moods']) && !empty(trim($currentNpcData['emote_moods']))) $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'];
-        if (isset($currentNpcData['goals'])) $GLOBALS['HERIKA_GOALS'] = $currentNpcData['goals'];
-        if (isset($currentNpcData['core']))
+    public function setOldGlobalsFromCurrentNpcData($currentNpcData)
+    {
+
+        if (isset($currentNpcData['npc_name'])) {
+            $GLOBALS['HERIKA_NAME'] = $currentNpcData['npc_name'];
+        }
+
+        if (isset($currentNpcData['lock_profile'])) {
+            $GLOBALS['LOCK_PROFILE'] = $currentNpcData['lock_profile'] ? true : false;
+        }
+
+        if (isset($currentNpcData['dynamic_profile'])) {
+            $GLOBALS['DYNAMIC_PROFILE'] = $currentNpcData['dynamic_profile'] ? true : false;
+        }
+
+        if (isset($currentNpcData['prompt_head'])) {
+            $GLOBALS['PROMPT_HEAD'] = $currentNpcData['prompt_head'];
+        }
+
+        if (isset($currentNpcData['npc_static_bio'])) {
+            $GLOBALS['HERIKA_BACKGROUND'] = $currentNpcData['npc_static_bio'];
+        }
+
+        if (isset($currentNpcData['oghma_knowledge_tags'])) {
+            $GLOBALS['OGHMA_KNOWLEDGE'] = $currentNpcData['oghma_knowledge_tags'];
+        }
+
+        if (isset($currentNpcData['personality'])) {
+            $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'];
+        }
+
+        if (isset($currentNpcData['relationships'])) {
+            $GLOBALS['HERIKA_RELATIONSHIPS'] = $currentNpcData['relationships'];
+        }
+
+        if (isset($currentNpcData['occupation'])) {
+            $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'];
+        }
+
+        if (isset($currentNpcData['appearance'])) {
+            $GLOBALS['HERIKA_APPEARANCE'] = $currentNpcData['appearance'];
+        }
+
+        if (isset($currentNpcData['skills'])) {
+            $GLOBALS['HERIKA_SKILLS'] = $currentNpcData['skills'];
+        }
+
+        if (isset($currentNpcData['speechstyle'])) {
+            $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'];
+        }
+
+        if (isset($currentNpcData['emote_moods']) && ! empty(trim($currentNpcData['emote_moods']))) {
+            $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'];
+        }
+
+        if (isset($currentNpcData['goals'])) {
+            $GLOBALS['HERIKA_GOALS'] = $currentNpcData['goals'];
+        }
+
+        if (isset($currentNpcData['core'])) {
             $GLOBALS['HERIKA_PERS'] = "Roleplay as {$currentNpcData['core']}";
-        else
+        } else {
             $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}";
+        }
 
         // Check this
         if (isset($currentNpcData['voiceid']) && $currentNpcData['voiceid']) {
-            
-            $GLOBALS['TTS']['XTTSFASTAPI']['voiceid'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['MELOTTS']['voiceid'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['MIMIC3']['voice'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['XVASYNTH']['model'] = $currentNpcData['voiceid'];
+
+            $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['MELOTTS']['voiceid']      = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['MIMIC3']['voice']         = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['XVASYNTH']['model']       = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['PIPERTTS']['voiceid'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['PIPERTTS']['voiceid']     = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['ELEVEN_LABS']['voice_id'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['AZURE']['voice'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['KOKORO']['voiceid'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['openai']['voice'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['deepgram']['model'] = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['AZURE']['voice']          = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['KOKORO']['voiceid']       = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['openai']['voice']         = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['deepgram']['model']       = $currentNpcData['voiceid'];
 
         }
 
@@ -398,7 +506,7 @@ class NpcMaster {
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
-                if (!empty($value)) {
+                if (! empty($value)) {
                     $GLOBALS[$key] = $value;
                     //error_log("[CORE] NPC  GLOBALS[$key] = ".print_r($value,true));
                 }
@@ -418,131 +526,146 @@ class NpcMaster {
                 }
                 // Apply override to GLOBALS
                 // Handle nested keys (space-separated): "TTS MELOTTS voiceid" -> $GLOBALS['TTS']['MELOTTS']['voiceid']
-                if (!empty($value) || is_numeric($value) || is_bool($value)) {
+                if (! empty($value) || is_numeric($value) || is_bool($value)) {
                     $parts = explode(' ', $key);
                     if (count($parts) === 1) {
                         // Simple key
                         $GLOBALS[$key] = $value;
-                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[$key] = ".print_r($value,true));
+                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[$key] = " . print_r($value, true));
                     } else if (count($parts) === 2) {
                         // Nested 2 levels: TTS MELOTTS
-                        if (!isset($GLOBALS[$parts[0]])) $GLOBALS[$parts[0]] = [];
+                        if (! isset($GLOBALS[$parts[0]])) {
+                            $GLOBALS[$parts[0]] = [];
+                        }
+
                         $GLOBALS[$parts[0]][$parts[1]] = $value;
-                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}] = ".print_r($value,true));
+                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}] = " . print_r($value, true));
                     } else if (count($parts) === 3) {
                         // Nested 3 levels: TTS MELOTTS voiceid
-                        if (!isset($GLOBALS[$parts[0]])) $GLOBALS[$parts[0]] = [];
-                        if (!isset($GLOBALS[$parts[0]][$parts[1]])) $GLOBALS[$parts[0]][$parts[1]] = [];
+                        if (! isset($GLOBALS[$parts[0]])) {
+                            $GLOBALS[$parts[0]] = [];
+                        }
+
+                        if (! isset($GLOBALS[$parts[0]][$parts[1]])) {
+                            $GLOBALS[$parts[0]][$parts[1]] = [];
+                        }
+
                         $GLOBALS[$parts[0]][$parts[1]][$parts[2]] = $value;
-                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}][{$parts[2]}] = ".print_r($value,true));
+                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}][{$parts[2]}] = " . print_r($value, true));
                     }
                 }
             }
         }
 
-        
     }
 
-    public function getAllFk($field) {
+    public function getAllFk($field)
+    {
         // Map foreign key fields to their respective tables
         $fkMap = [
-            "profile_id"     => "core_profiles"
+            "profile_id" => "core_profiles",
         ];
-    
-        if (!array_key_exists($field, $fkMap)) {
+
+        if (! array_key_exists($field, $fkMap)) {
             return []; // Unknown field
         }
-    
+
         $table = $fkMap[$field];
         $query = "SELECT id, label FROM {$table} ORDER BY id ASC";
         return $GLOBALS["db"]->fetchAll($query);
     }
 
-    public function getExtendedData($currentNpcData): array {
+    public function getExtendedData($currentNpcData): array
+    {
         return json_decode($currentNpcData['extended_data'] ?? '{}', true) ?: [];
     }
 
-    public function setExtendedData($currentNpcData, array $data) {
-        
+    public function setExtendedData($currentNpcData, array $data)
+    {
+
         $currentNpcData['extended_data'] = json_encode($data);
         return $currentNpcData;
     }
 
-    public function getMetadata($currentNpcData): array {
+    public function getMetadata($currentNpcData): array
+    {
         return json_decode($currentNpcData['metadata'] ?? '{}', true) ?: [];
     }
 
-    public function setMetadata($currentNpcData, array $data) {
-        
+    public function setMetadata($currentNpcData, array $data)
+    {
+
         $currentNpcData['metadata'] = json_encode($data);
         return $currentNpcData;
     }
 
-    public function backupNpcById($id) {
-        $id = (int)$id;
-        
+    public function backupNpcById($id)
+    {
+        $id = (int) $id;
+
         // Retrieve the current NPC
         $npc = $this->getById($id);
-        if (!$npc) {
+        if (! $npc) {
             return false; // NPC not found
         }
         //error_log("[NPC BACKUP] Backup of {$npc["npc_name"]} ".print_r($npc,true));
         // Remove the original 'id' field, since the history table likely has its own auto-increment ID
         unset($npc['id']);
-    
+
         // Add a reference to the original NPC ID
         $npc['npc_id'] = $id;
-    
+
         // Add the current timestamp for tracking purposes (optional)
         $npc['created'] = date('Y-m-d H:i:s');
-    
+
         // Insert the data into the history table
         return $this->db->insert('core_npc_master_history', $npc);
     }
-    
 
-    public function backupAllNpcs($timestamp) {
+    public function backupAllNpcs($timestamp)
+    {
         // Validate the timestamp (ensure it's a float or numeric format, as per your schema)
-        if (!is_numeric($timestamp)) {
+        if (! is_numeric($timestamp)) {
             throw new InvalidArgumentException("Invalid timestamp value.");
         }
-        
+
         date_default_timezone_set('UTC');
-        
-        $startTime=time();
+
+        $startTime = time();
         // Fetch all current NPCs
         $npcs = $this->getAll();
-        error_log("[NPC BACKUP] ".date('Y-m-d H:i:s'));
+        error_log("[NPC BACKUP] " . date('Y-m-d H:i:s'));
 
         foreach ($npcs as $npc) {
             // Remove original ID
-            $npc_id = $npc['id'];
+            $npc_id                     = $npc['id'];
             $npc['gamets_last_updated'] = $timestamp;
 
-            $this->update($npc_id,$npc);
+            $this->update($npc_id, $npc);
 
             unset($npc['id']);
-    
+
             // Set the reference and override timestamps
-            $npc['npc_id'] = $npc_id;
+            $npc['npc_id']              = $npc_id;
             $npc['gamets_last_updated'] = $timestamp;
-            $npc['created'] = date('Y-m-d H:i:s'); // Current timestamp
-    
+            $npc['created']             = date('Y-m-d H:i:s'); // Current timestamp
+
             // Insert into history
             $this->db->insert('core_npc_master_history', $npc);
         }
-        error_log("[NPC BACKUP] ".date('Y-m-d H:i:s'). ", NPCs backup made in ".(time()-$startTime)." secs ");
+        error_log("[NPC BACKUP] " . date('Y-m-d H:i:s') . ", NPCs backup made in " . (time() - $startTime) . " secs ");
         return true;
     }
 
-     public function restoreNPC($timestamp) {
+    public function restoreNPC($timestamp)
+    {
         // Validate the timestamp (ensure it's a float or numeric format, as per your schema)
-        if (!is_numeric($timestamp)) {
+        if (! is_numeric($timestamp)) {
             throw new InvalidArgumentException("Invalid timestamp value.");
         }
-        $startTime=time();
-        $query=
-"WITH deleted AS (
+        $startTime = time();
+        $query     =
+            "WITH deleted AS (
     DELETE FROM core_npc_master
     WHERE npc_name<>'The Narrator'
     RETURNING id
@@ -597,14 +720,71 @@ SELECT
     md5, gamets_last_updated, core, base, tags, appearance
 FROM restore
 ";
-        
-        error_log("[NPC RESTORE] using gamets: $timestamp.. ".date('Y-m-d H:i:s'));
+
+        error_log("[NPC RESTORE] using gamets: $timestamp.. " . date('Y-m-d H:i:s'));
         $GLOBALS["db"]->query($query);
 
-        error_log("[NPC RESTORE] ".date('Y-m-d H:i:s'). ", NPCs restore made in ".(time()-$startTime)." secs ");
+        error_log("[NPC RESTORE] " . date('Y-m-d H:i:s') . ", NPCs restore made in " . (time() - $startTime) . " secs ");
         return true;
     }
 
-}
+    public function renameNPC($oldname, $newname)
+    {
 
-?>
+        $currentNpcData    = $this->getByName($newname);
+        $currentNpcDataAlt = $this->getByName($oldname);
+
+        $newId   = $currentNpcData["id"];
+        $newName = $currentNpcData["npc_name"];
+
+        $oldName = $GLOBALS["db"]->escape($currentNpcDataAlt["npc_name"]);
+        $newName = $GLOBALS["db"]->escape($currentNpcData["npc_name"]);
+
+        $currentNpcData = $currentNpcDataAlt; // Copy from old profile
+
+        $currentNpcData["id"]       = $newId;
+        $currentNpcData["npc_name"] = $newName;
+        $currentNpcData["md5"]      = md5($newName);
+
+        // eventlog.people (pipe-separated list)
+        $GLOBALS["db"]->execQuery("
+                    UPDATE eventlog
+                    SET people = REPLACE(people, '$oldName', '$newName')
+                    WHERE people LIKE CONCAT('%', '$oldName', '%')
+                ");
+
+        // speech.speaker and speech.listener
+        $GLOBALS["db"]->execQuery("
+                    UPDATE speech
+                    SET speaker = '$newName'
+                    WHERE speaker = '$oldName'
+                ");
+        $GLOBALS["db"]->execQuery("
+                    UPDATE speech
+                    SET listener = '$newName'
+                    WHERE listener = '$oldName'
+                ");
+
+        // memory.speaker and memory.listener
+        $GLOBALS["db"]->execQuery("
+                    UPDATE memory
+                    SET speaker = '$newName'
+                    WHERE speaker = '$oldName'
+                ");
+        $GLOBALS["db"]->execQuery("
+                    UPDATE memory
+                    SET listener = '$newName'
+                    WHERE listener = '$oldName'
+                ");
+
+        // memory_summary.companions (pipe-separated list)
+        $GLOBALS["db"]->execQuery("
+                    UPDATE memory_summary
+                    SET companions = REPLACE(companions, '$oldName', '$newName')
+                    WHERE companions LIKE CONCAT('%', '$oldName', '%')
+                ");
+
+        $currentNpcData["core"] .= ".Formerly known as {$currentNpcDataAlt["npc_name"]}";
+        $this->updateByArray($currentNpcData);
+    }
+}

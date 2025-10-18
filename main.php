@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 @define("STOPALL_MAGIC_WORD", "/wake up/i");
 
 @define("MAXIMUM_SENTENCE_SIZE", 125);
-@define("MINIMUM_SENTENCE_SIZE", 50);
+@define("MINIMUM_SENTENCE_SIZE", 75);
 
 date_default_timezone_set('Europe/Madrid');
 

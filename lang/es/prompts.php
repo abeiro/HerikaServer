@@ -4,7 +4,7 @@ error_log("[LANGUAGE] Using ".__FILE__." prompts");
 
 $TEMPLATE_DIALOG="Instrucción: Escribe la siguiente línea de diálogo de {$GLOBALS["HERIKA_NAME"]}." . 
 " Evita narraciones, sé original, creativo, informado, usa tus propios pensamientos. " . 
-" Revisa el historial de diálogo para centrarte en el tema de la conversación y evitar repetir frases y expresiones de líneas de diálogo anteriores." . 
+" Revisa el historial de diálogo para centrarte en el tema de la conversación (o los ultimo sucesos) y evitar repetir frases y expresiones de líneas de diálogo anteriores." . 
 "";
 
 $COMMAND_PROMPT_ENFORCE_ACTIONS_LANG="(Si {$GLOBALS["HERIKA_NAME"]} sólamente habla, usa la acción \"Talk\". Si otra acciones es contextualmente apropiada, úsala incluso si tienes dudas.)";
@@ -204,7 +204,7 @@ $PROMPTS=array(
         "player_request"=>["El Narrador: {$gameRequest[3]}"],
     ],
      "cheatmode"=>[ 
-        "cue"=>["The Narrator: Forced out of roleplay instruction, {$currentNpcData["npc_name"]} must do this:$gameRequest[3]}"],
+        "cue"=>["INSTRUCCION PRIORITARIA -  {$currentNpcData["npc_name"]} debe de hacer esto, incluso aunque rompa el roleplay: $gameRequest[3]}"],
         "player_request"=>[""],
     ],
 );

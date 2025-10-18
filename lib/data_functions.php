@@ -3864,13 +3864,16 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         $currentData['extended_data'] = json_encode(["chim_core_migrated" => 2]);
         $currentData['profile_id'] = 1; // Default profile
         $currentData['md5'] = md5($currentData["npc_name"]);
+        $currentData['gamets_last_updated'] = $GLOBALS["gameRequest"][2];
 
         if ($EMPTY_PROFILE) {
             error_log("[CREATEPROFILE] Created initial empty profile");
         }
 
         $npcMaster->updateByArray($currentData);
+        return 1;
     }
+    return 2;
 }
 
 function getConfFileFor($npcname) {
