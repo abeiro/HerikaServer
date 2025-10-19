@@ -151,7 +151,7 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             $totalBuffer .= $buffer;
         }
         
-        $connectionHandler->close();
+        $connectionHandler->close("generateNearbyDiary");
         
         // Restore original gameRequest after diary generation
         if ($originalGameRequest !== null) {
@@ -755,6 +755,7 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
             
         }
         
+        /*
         if (file_exists($configFile)) {
             // Create backup
             @copy($configFile, $path . "conf" . DIRECTORY_SEPARATOR . ".conf_{$newConfFile}_" . time() . ".php");
@@ -811,28 +812,14 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
                 
                 $currentConfContent[$fieldMapping[$field]]=$newValue;
                 
-                /*
-                $varName = $fieldMapping[$field];
-                $escapedValue = var_export($newValue, true);
-                
-                // Check if variable already exists in file
-                $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
-                
-                if (preg_match($pattern, $content)) {
-                    // Update existing variable
-                    $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
-                } else {
-                    // Add new variable before the closing 
-                    $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
-                }
-                */
+         
             }
             
             // Write updated content back to file
             //file_put_contents($configFile, $content, LOCK_EX);
             write_php_assignments($currentConfContent,$configFile);
         }
-        
+        */
         
         Logger::info("saveDynamicProfileUpdates: Successfully saved updates for $npcName");
         return true;

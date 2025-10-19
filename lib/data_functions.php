@@ -715,8 +715,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         // Figure out location form location field, and only add to context if changed    
         $printLocation=false;
         $string = $row["location"];
-        preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $string, $locationMatch);
-        preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $string, $holdMatch);
+        if (!empty($astring)) {
+            preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $string, $locationMatch);
+            preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $string, $holdMatch);
+        }
         
         if (!isset($holdMatch[1])) {
             //error_log(print_r($string,true));
@@ -949,12 +951,17 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
                     $compactedBuffer .=" ";
                     if ($m>0) {
                         //$regexpNpcName = strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]);
-                        preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $singleline, $matches);
+                        // Capture spoken text after a leading "Name:" (supports names with brackets and dashes)
+                        // and optionally strip a trailing parenthetical note like "(talking to X)".
+                        preg_match('/^\s*[^:]+:\s*(.*?)\s*(?:\([^)]*\))?\s*$/s', $singleline, $matches);
                         $extracted=$matches[1] ?? $singleline;
                         $compactedBuffer .= trim(removeTalkingToOccurrences($extracted));
+                        $compactedBuffer=str_replace("{$GLOBALS["HERIKA_NAME"]};","",$compactedBuffer);
 
-                    } else 
+                    } else {
                         $compactedBuffer .= trim(removeTalkingToOccurrences($singleline));
+                        $compactedBuffer=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$compactedBuffer);
+                    }
 
 
                 }
@@ -977,12 +984,17 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
             $compactedBuffer .=" ";
             if ($m>0) {
                 //$regexpNpcName = strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]);
-                preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $singleline, $matches);
+                // Same robust extraction for subsequent lines in the buffer
+                preg_match('/^\s*[^:]+:\s*(.*?)\s*(?:\([^)]*\))?\s*$/s', $singleline, $matches);
                 $extracted=$matches[1] ?? $singleline;
                 $compactedBuffer .= trim(removeTalkingToOccurrences($extracted));
+                $compactedBuffer=str_replace("{$GLOBALS["HERIKA_NAME"]};","",$compactedBuffer);
 
-            } else 
+            } else {
                 $compactedBuffer .= trim(removeTalkingToOccurrences($singleline));
+                $compactedBuffer=str_replace("{$GLOBALS["HERIKA_NAME"]};","",$compactedBuffer);
+            }
+
 
 
         }
@@ -1017,7 +1029,8 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
                 
                 // Clean talking to and npc name , only leave it on first line
                 $matches = [];
-                preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $line["content"], $matches);
+                // And for compacting other dialog lines: capture content after the speaker name
+                preg_match('/^\s*[^:]+:\s*(.*?)\s*(?:\([^)]*\))?\s*$/s', $line["content"], $matches);
                 $buffer[]=$matches[1] ?? $line["content"];
             } else {
 

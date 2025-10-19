@@ -127,7 +127,9 @@ $PROMPTS=array(
 
     ],
     "inputtext_s"=>[
-        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"], // Prompt is implicit
+        "cue"=>[
+            "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+        ],
         "extra"=>["mood"=>"whispering"]
     ],
     // Database Prompt (Memory)

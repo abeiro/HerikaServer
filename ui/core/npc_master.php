@@ -452,6 +452,7 @@ $totalRows = intval($rowCountRow['c'] ?? 0);
 $totalPages = max(1, (int)ceil($totalRows / max(1, $perPage)));
 if ($page > $totalPages) $page = $totalPages;
 $offset = ($page - 1) * $perPage;
+error_log("{$where} {$order} limit {$perPage} offset {$offset}");
 $data = $npc->getAll("{$where} {$order} limit {$perPage} offset {$offset}");
 $editItem = null;
 

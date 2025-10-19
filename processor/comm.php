@@ -1393,7 +1393,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
 } elseif (strpos($gameRequest[0], "core_profile_assign")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
-    logEvent($gameRequest);
+    // logEvent($gameRequest);
 
     if (isset($_GET["profile"])) {
         $npcMaster=new NpcMaster();

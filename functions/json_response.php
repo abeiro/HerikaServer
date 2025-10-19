@@ -28,7 +28,7 @@
     Function setActions() {
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             // inject the prompt here with the actions (original flat format)
-            $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>";
+            $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>\n";
             $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             foreach ($GLOBALS["FUNCTIONS"] as $function) {
                 if (!$function) {

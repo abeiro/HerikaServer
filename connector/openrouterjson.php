@@ -1304,7 +1304,7 @@ class openrouterjson
                             'request' => json_encode($data),
                             'result' => "Ok",
                             'usage'=>json_encode($text_response["usage"]),
-                            'connector'=>$this->name,
+                            'connector'=>$callName,
                             'url'=>$this->_url
                         ));
                 }
@@ -1317,7 +1317,7 @@ class openrouterjson
                         array(
                             'request' => json_encode($data),
                             'result' => "ERROR|INVALID JSON RESPONSE",
-                            'connector'=>$this->name,
+                            'connector'=>$callName,
                             'url'=>$this->_url
                         ));
                 }
