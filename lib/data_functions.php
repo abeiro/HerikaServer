@@ -715,7 +715,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         // Figure out location form location field, and only add to context if changed    
         $printLocation=false;
         $string = $row["location"];
-        if (!empty($astring)) {
+        if (!empty($string)) {
             preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $string, $locationMatch);
             preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $string, $holdMatch);
         }
