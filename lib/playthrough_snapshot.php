@@ -3,6 +3,7 @@
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'utils_game_timestamp.php');
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'logger.php');
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'playthrough_storage.php');
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'playthrough_schema.php');
 
 /**
  * Dragon Break autosnapshot helper.
@@ -36,6 +37,9 @@ function dragon_break_ensure_meta_schema($adminConn) {
 	@pg_query($adminConn, "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS eventlog_count BIGINT");
 	@pg_query($adminConn, "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS oghma_count BIGINT");
 	@pg_query($adminConn, "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS last_gamets BIGINT");
+	// Schema-based storage columns
+	@pg_query($adminConn, "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS schema_name TEXT");
+	@pg_query($adminConn, "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS storage_type TEXT DEFAULT 'dump'");
 
 	// If an older deployment created dump_data as BYTEA, migrate it to TEXT
 	$colTypeRes = @pg_query($adminConn, "SELECT data_type FROM information_schema.columns WHERE table_schema='chim_meta' AND table_name='playthrough_blobs' AND column_name='dump_data'");
@@ -46,12 +50,15 @@ function dragon_break_ensure_meta_schema($adminConn) {
 		}
 	}
 
-	// Ensure LOB storage support
+	// Ensure LOB storage support (for backward compatibility)
 	ptm_ensure_lob_schema($adminConn);
+	
+	// Ensure schema cloning functions exist
+	pts_ensure_functions($adminConn);
 }
 
 /**
- * Create a snapshot profile and blob using pg_dump (excluding chim_meta).
+ * Create a snapshot profile using fast schema cloning.
  * Returns the created profile id, or existing id on name collision, or 0 on failure.
  */
 function dragon_break_create_snapshot($name, $notes) {
@@ -83,12 +90,19 @@ function dragon_break_create_snapshot($name, $notes) {
 		}
 	}
 
-	$tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . ('dragon_break_' . time() . '_' . mt_rand(1000,9999) . '.sql');
-	$cmd = "PGPASSWORD=" . escapeshellarg($password) . " pg_dump -h " . escapeshellarg($host) . " -p " . escapeshellarg($port) . " -U " . escapeshellarg($username) . " -d " . escapeshellarg($dbname) . " -N chim_meta > " . escapeshellarg($tmpFile) . " 2>&1";
-	$output = shell_exec($cmd);
-	if (!file_exists($tmpFile) || filesize($tmpFile) === 0) {
-		Logger::error("DragonBreak: Failed to create snapshot dump. Output: " . substr((string)$output, 0, 1000));
-		@unlink($tmpFile);
+	// Use schema-based storage for fast snapshots
+	$schemaName = pts_sanitize_profile_name($finalName);
+	
+	// Check if schema already exists (unlikely but possible)
+	if (pts_schema_exists($adminConn, $schemaName)) {
+		Logger::warn("DragonBreak: Schema {$schemaName} already exists, appending unique suffix");
+		$schemaName = $schemaName . '_' . substr(uniqid('', true), -6);
+	}
+	
+	// Clone public schema to new profile schema
+	$cloneResult = pts_clone_schema($adminConn, 'public', $schemaName);
+	if (!$cloneResult['success']) {
+		Logger::error("DragonBreak: Failed to clone schema: " . $cloneResult['error']);
 		return 0;
 	}
 
@@ -107,25 +121,27 @@ function dragon_break_create_snapshot($name, $notes) {
 
 	$playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
 	$gameName = 'Skyrim';
+	
+	// Calculate schema size
+	$size = pts_get_schema_size($adminConn, $schemaName);
 
-	$cap = ptm_create_profile_with_lob(
+	// Insert profile record
+	@pg_query($adminConn, 'BEGIN');
+	$q1 = @pg_query_params(
 		$adminConn,
-		$finalName,
-		$notes,
-		false,
-		$playerName,
-		$gameName,
-		(int)$eventlogCount,
-		(int)$oghmaCount,
-		(int)$lastGamets,
-		$tmpFile
+		"INSERT INTO chim_meta.playthrough_profiles (name, size_bytes, storage_type, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets, schema_name) VALUES ($1,$2,$3,$4,false,$5,$6,$7,$8,$9,$10) RETURNING id",
+		[$finalName, (string)$size, 'schema', $notes, $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets, $schemaName]
 	);
-	@unlink($tmpFile);
-	if ($cap['success']) {
-		Logger::info("DragonBreak: Snapshot created with id {$cap['id']} and name '{$finalName}'");
-		return (int)$cap['id'];
+	if ($q1) {
+		$row = pg_fetch_assoc($q1);
+		$profileId = $row ? (int)$row['id'] : 0;
+		@pg_query($adminConn, 'COMMIT');
+		Logger::info("DragonBreak: Schema-based snapshot created with id {$profileId} and name '{$finalName}'");
+		return $profileId;
 	}
-	Logger::error("DragonBreak: Failed to store snapshot data: " . $cap['error']);
+	
+	@pg_query($adminConn, 'ROLLBACK');
+	Logger::error("DragonBreak: Failed to insert profile record");
 	return 0;
 }
 
