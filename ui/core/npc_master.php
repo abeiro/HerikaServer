@@ -625,6 +625,69 @@ if (isset($_GET['history'])) {
     exit;
 }
 
+// Restore NPC from history (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["restore_from_history"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $historyId = intval($_POST['history_id'] ?? 0);
+        if ($historyId <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid history_id"]); exit; }
+        
+        // Fetch the historical record
+        $histRow = $GLOBALS['db']->fetchOne("select * from core_npc_master_history where history_id = {$historyId}");
+        if (!$histRow) { echo json_encode(["ok"=>false, "error"=>"Historical record not found"]); exit; }
+        
+        $npcId = intval($histRow['npc_id'] ?? 0);
+        if ($npcId <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid NPC id in history"]); exit; }
+        
+        // Check if NPC is locked
+        $current = $npc->getById($npcId);
+        if ($current && !empty($current['lock_profile'])) {
+            echo json_encode(["ok"=>false, "error"=>"Cannot restore: NPC is locked"]);
+            exit;
+        }
+        
+        // Prepare data for update (copy relevant fields from history)
+        $updateData = [
+            'npc_name' => $histRow['npc_name'] ?? '',
+            'profile_id' => $histRow['profile_id'] ?? null,
+            'gender' => $histRow['gender'] ?? '',
+            'race' => $histRow['race'] ?? '',
+            'voiceid' => $histRow['voiceid'] ?? '',
+            'refid' => $histRow['refid'] ?? '',
+            'core' => $histRow['core'] ?? '',
+            'base' => $histRow['base'] ?? '',
+            'npc_static_bio' => $histRow['npc_static_bio'] ?? '',
+            'personality' => $histRow['personality'] ?? '',
+            'relationships' => $histRow['relationships'] ?? '',
+            'occupation' => $histRow['occupation'] ?? '',
+            'appearance' => $histRow['appearance'] ?? '',
+            'skills' => $histRow['skills'] ?? '',
+            'speechstyle' => $histRow['speechstyle'] ?? '',
+            'goals' => $histRow['goals'] ?? '',
+            'oghma_knowledge_tags' => $histRow['oghma_knowledge_tags'] ?? '',
+            'emote_moods' => $histRow['emote_moods'] ?? '',
+            'prompt_head' => $histRow['prompt_head'] ?? '',
+            'dynamic_profile' => !empty($histRow['dynamic_profile']) ? 1 : 0,
+            'tags' => $histRow['tags'] ?? '',
+            'md5' => $histRow['md5'] ?? md5($histRow['npc_name'] ?? '')
+        ];
+        
+        // Update the NPC
+        $ok = $npc->update($npcId, $updateData);
+        if ($ok === false) {
+            echo json_encode(["ok"=>false, "error"=>($npc->getLastError() ?? 'Restore failed')]);
+        } else {
+            // Create a backup of the restored state
+            $npc->backupNpcById($npcId);
+            echo json_encode(["ok"=>true, "npc_id"=>$npcId]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
 // Bio database: search existing templates (combined_bio_templates)
 if (isset($_GET['bio_search'])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
@@ -1743,7 +1806,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const f = entry.fields||{}; const prevF = (prev && prev.fields) ? prev.fields : {};
       const order = ['npc_name','profile_id','gender','race','voiceid','refid','core','npc_static_bio','appearance','personality','relationships','occupation','skills','speechstyle','goals','oghma_knowledge_tags','emote_moods','prompt_head','dynamic_profile','npc_favorite','lock_profile','tags','base'];
       let html = '';
-      html += '<div style="color:#cfd9ea; margin-bottom:8px;">'+(entry.when_tamrielic || (entry.created?('Created '+entry.created):'Unknown time'))+(entry.created?(' <span style="color:#9fb1c9">('+entry.created+')</span>'):'')+'</div>';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">';
+      html += '<div style="color:#cfd9ea;">'+(entry.when_tamrielic || (entry.created?('Created '+entry.created):'Unknown time'))+(entry.created?(' <span style="color:#9fb1c9">('+entry.created+')</span>'):'')+'</div>';
+      html += '<button class="btn-restore-history" data-history-id="'+String(entry.history_id||'')+'" style="background:rgb(242,124,17); color:#111; border:1px solid rgb(242,124,17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700;">Restore this version</button>';
+      html += '</div>';
       html += '<div style="display:grid; grid-template-columns: 220px 1fr; gap:6px;">';
       order.forEach(k=>{
         let v = f[k]; const has = (v!==null && v!==undefined && String(v).trim()!=='');
@@ -1756,6 +1822,39 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       });
       html += '</div>';
       detailBox.innerHTML = html;
+      // Wire up restore button
+      const restoreBtn = detailBox.querySelector('.btn-restore-history');
+      if (restoreBtn) {
+        restoreBtn.addEventListener('click', async function(){
+          const histId = this.getAttribute('data-history-id');
+          if (!histId) return;
+          const ok = confirm('Restore this historical version?\n\nThis will replace the current NPC profile with the selected snapshot. This action creates a new backup before restoring.');
+          if (!ok) return;
+          try {
+            this.disabled = true;
+            this.textContent = 'Restoring...';
+            const fd = new FormData();
+            fd.append('restore_from_history', '1');
+            fd.append('history_id', histId);
+            const res = await fetch('npc_master.php', { method:'POST', body: fd });
+            let j = {}; try { j = await res.json(); } catch(_e) { j = {ok:false}; }
+            if (j && j.ok) {
+              close();
+              try { const toast=document.getElementById('toast'); if (toast){ toast.querySelector('.message').textContent='NPC restored from history'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 2000); } } catch(_e){}
+              // Refresh the page to show updated NPC
+              window.location.reload();
+            } else {
+              alert('Restore failed: ' + (j && j.error ? j.error : 'Unknown error'));
+              this.disabled = false;
+              this.textContent = 'Restore this version';
+            }
+          } catch(_e) {
+            alert('Restore failed: ' + String(_e));
+            this.disabled = false;
+            this.textContent = 'Restore this version';
+          }
+        });
+      }
     }
     function openHistory(){
       try {
