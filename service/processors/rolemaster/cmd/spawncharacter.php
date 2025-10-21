@@ -133,7 +133,7 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
             
         }
         
-        $rawbuffer=$connectionHandler->close();
+        $rawbuffer=$connectionHandler->close("spawncharacter");
         
         unset($GLOBALS["_JSON_BUFFER"]);
         $response=__jpd_decode_lazy($rawbuffer);

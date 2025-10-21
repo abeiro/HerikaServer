@@ -3,9 +3,16 @@
 error_log("[LANGUAGE] Using ".__FILE__." prompts");
 
 $TEMPLATE_DIALOG="Instrucción: Escribe la siguiente línea de diálogo de {$GLOBALS["HERIKA_NAME"]}." . 
-" Evita narraciones, sé original, creativo, informado, usa tus propios pensamientos. " . 
-" Revisa el historial de diálogo para centrarte en el tema de la conversación (o los ultimos sucesos) y evitar repetir frases y expresiones de líneas de diálogo anteriores." . 
+"Evita narraciones, sé original, creativo, informado, usa tus propios pensamientos. " . 
+"Consulta seccion <nearby_actors> para saber a que personaje interpelar." . 
+"Revisa el historial de diálogo para centrarte en el tema de la conversación (o los ultimos sucesos) y evitar repetir frases y expresiones de líneas de diálogo anteriores." . 
 "";
+
+if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+    $TEMPLATE_ACTION="(Revisa <available_actions_list> para elegir una accion necesaria si es adecuado)";    // WIP
+} else {
+    $TEMPLATE_ACTION="";
+}
 
 $COMMAND_PROMPT_ENFORCE_ACTIONS_LANG="(Si {$GLOBALS["HERIKA_NAME"]} sólamente habla, usa la acción \"Talk\". Si otra acciones es contextualmente apropiada, úsala incluso si tienes dudas.)";
 

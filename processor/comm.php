@@ -493,6 +493,10 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
    
     // error_log(print_r($speech,true));
     if (is_array($speech)) {
+        if (isset($speech["companions"])&&!empty($speech["companions"])&&is_array($speech["companions"])) {
+            // Ensure companion field has same format as DataBeingsInCloseRange
+            $companionsReformatStr="|".(implode("|",$speech["companions"]))."|";
+        }
         $db->insert(
             'speech',
             array(
@@ -502,7 +506,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 'speaker' => $speech["speaker"],
                 'speech' => $speech["speech"],
                 'location' => $speech["location"],
-                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):DataBeingsInCloseRange(),
+                'companions'=>(isset($companionsReformatStr))?$companionsReformatStr:DataBeingsInCloseRange(),
                 'sess' => 'pending',
                 'audios' => isset($speech["audios"])?$speech["audios"]:null,
                 'topic' => isset($speech["debug"])?$speech["debug"]:null,

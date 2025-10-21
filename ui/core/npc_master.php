@@ -72,6 +72,8 @@ if (!function_exists('race_icon_web_path')) {
             $picturesRootFs = rtrim("{$GLOBALS["ENGINE_PATH"]}/data/pictures/", '/\\') . DIRECTORY_SEPARATOR;
             $picturesRootUrl = rtrim($webRoot . '/data/pictures/', '/');
             $fs = realpath($picturesRootFs . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $portraitRel));
+            $picturesRootFs=realpath($picturesRootFs);
+            error_log("<$picturesRootFs> <$fs>");
             if ($fs !== false && strpos($fs, $picturesRootFs) === 0 && is_file($fs)) {
                 return $picturesRootUrl . '/' . str_replace('%2F','/', rawurlencode($portraitRel));
             }
@@ -559,12 +561,20 @@ if (isset($_GET['race_icon'])) {
     $race = (string)($_GET['race'] ?? '');
     $refid = (string)($_GET['refid'] ?? '');
     $name = (string)($_GET['name'] ?? '');
+    
     $md5 = $name !== '' ? md5($name) : (string)($_GET['md5'] ?? '');
     $portraitRel = '';
     $id = intval($_GET['id'] ?? 0);
+    if ($id) {
+        $npcData=$npc->getById($id);
+        $refid=$npcData["refid"];
+    }
     if ($id > 0) {
         try { $row = $npc->getById($id); if ($row && !empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $portraitRel = (string)($tmp['portrait'] ?? ''); } } } catch (Throwable $e) {}
     }
+
+    error_log("$race, $webRoot, $refid, $md5, $name, $portraitRel");
+
     $url = race_icon_web_path($race, $webRoot, $refid, $md5, $name, $portraitRel);
     echo json_encode(['url' => $url]);
     exit;
@@ -2292,7 +2302,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         // Fetch and render race icon into the right container
         try {
           const race = (data.race||'');
-          const res = await fetch('npc_master.php?race_icon=1&race='+encodeURIComponent(race));
+          const res = await fetch('npc_master.php?race_icon=1&race='+encodeURIComponent(race)+"&id="+id);
           const j = await res.json();
           const right = card.querySelector('.npc-right');
           if (right){

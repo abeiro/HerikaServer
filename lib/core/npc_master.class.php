@@ -483,7 +483,7 @@ class NpcMaster
         }
 
         if (isset($currentNpcData['core'])) {
-            $GLOBALS['HERIKA_PERS'] = "Roleplay as {$currentNpcData['core']}";
+            $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}.\n{$currentNpcData['core']}";
         } else {
             $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}";
         }
@@ -670,7 +670,7 @@ class NpcMaster
         $query     =
             "WITH deleted AS (
     DELETE FROM core_npc_master
-    WHERE npc_name<>'The Narrator'
+    WHERE npc_name<>'The Narrator' and COALESCE(lock_profile,0)=1
     RETURNING id
 ),
 restore AS (

@@ -43,6 +43,7 @@ class openrouterjson
     private $_is_grok;
     private $_lastStreamedObject;
     
+    
     public function __construct()
     {
         $this->name="openrouterjson";
@@ -267,7 +268,7 @@ class openrouterjson
         }
 
         if (isset($GLOBALS["HERIKA_SPEECHSTYLE"])&&!empty($GLOBALS["HERIKA_SPEECHSTYLE"])) {
-            $speechReinforcement="Use #SpeechStyle.";
+            $speechReinforcement="Use <speech_style> for reference.";
         } else
             $speechReinforcement="";
 

@@ -1,49 +1,51 @@
 <?php 
-$currentConnectorData=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
-$connector=new LLMConnector();
-$connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
-$sqlfilter=" and type<>'prechat' "; // Will dismiss prechat entries by default. prechat are LLM responses still not displayed in-game
 
-error_log("[BACKGROUND EVENT] Using  model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
-$contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", 20 * -1,$sqlfilter);
-$minimalContext=[];
-        foreach ($contextDataHistoric as $ele) {
-            if (strpos($ele["content"],"#MEMORY")===false) {
-                $minimalContext[]="{$ele["content"]}";
-            }
-        }
 
-$localContextData=[
-            array('role' => 'system', 'content' => "
-You are a narrative generator for NPCs in a role-playing game (Skyrim).  
-The NPCs sometimes leave the player's view to perform background tasks.  
-Your job is to create a short, immersive description of what {$GLOBALS["HERIKA_NAME"]} did while off-screen, based on the last dialogue or intention they expressed before leaving.  
 
-### Instructions:
-- Read the {$GLOBALS["HERIKA_NAME"]}’s last dialogue or stated goal.  
-- Imagine what they realistically could have done during their absence.  
-- Write a concise but vivid description (2–4 sentences) of the outcome of their actions.  
-- Keep the style consistent with fantasy RPG storytelling.  
-- Avoid inventing things unrelated to their stated intentions.  
-- The description should feel like something the player could later hear as gossip, rumor, or a casual report.  
-- Last line should be {$GLOBALS["HERIKA_NAME"]} returning to their origin place.
+function convertSignedToUnsignedHexLocal($signedInt) {
+    // Keep only the lower 24 bits (force leading 00)
+    $masked = $signedInt & 0x00FFFFFF;
 
-### Input (example):
-NPC last dialogue: \"I’ll head to the forge and see if I can mend my sword before nightfall.\"  
+    // Format as 8-character zero-padded hex
+    return "0x" . strtoupper(sprintf("%08x", $masked));
+}
 
-### Output (example):
-\"During his time away, the blacksmith spent hours by the forge, hammering sparks into the air until the blade gleamed anew. By dusk, he returned with a sword sharpened and tempered, though his hands bore the marks of a long day’s toil. Finally, he went back to here it came from.\"
 
-"),
-            array('role' => 'user', 'content' => "# Historic context information:\n".implode("\n",$minimalContext)),
-            array('role' => 'user', 'content' => "Generate a short, immersive description of what {$GLOBALS["HERIKA_NAME"]} did while off-screen"),
+$bgevent=json_decode($gameRequest[3],true);
+if (is_array($bgevent)) {
+    $bgevent["pkgformid"] = convertSignedToUnsignedHexLocal($bgevent["pkgformid"]);
+
+    $packageDesc=$GLOBALS["db"]->fetchOne("select * from master_packages where mod ~* '{$bgevent["source"]}' and formid='{$bgevent["pkgformid"]}'");
+
+    // error_log("select * from master_packages where mod ~* '{$bgevent["source"]}' and formid='{$bgevent["pkgformid"]}'");
+
+    if (is_array($packageDesc) && isset($packageDesc[$bgevent["event"]])) {
+        $bgevent["description"] = $packageDesc[$bgevent["event"]];
+        $ubstitutions=[
+            "player"=>$GLOBALS["PLAYER_NAME"],
+            "location"=>$bgevent["location"],
+            "actor"=>$bgevent["actor"],
         ];
-$buffer=$connectionHandler->fast_request($localContextData,$overrideParameters);
-$gameRequest[0]="infoaction";
-$gameRequest[3]=$buffer;
+        foreach ($ubstitutions as $key => $value) {
+            $bgevent["description"] = str_replace("{" . $key . "}", $value, $bgevent["description"]);
+        }
+    }
+    else
+        $bgevent["description"] = 'unknown';
 
-logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
+    // Substitutions
 
-error_log("[BACKGROUND EVENT] $buffer");
+        
+
+
+    $gameRequest[3]=json_encode($bgevent);
+    // error_log("[BACKGROUND EVENT] {$gameRequest[3]}".print_r($bgevent,true));
+    logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
+} else  {
+    
+    logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
+}
+
 terminate();
+
 ?>

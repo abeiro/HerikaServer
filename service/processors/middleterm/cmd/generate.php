@@ -29,7 +29,7 @@ if (isset($extended_data["middle_term_memory"])&&sizeof($extended_data["middle_t
 
 $dbNpcName=$GLOBALS["db"]->escape($selectedNpc);
 
-$contextDataFull=$GLOBALS["db"]->fetchAll("SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and companions like '%$dbNpcName%' and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100");
+$contextDataFull=$GLOBALS["db"]->fetchAll("SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and companions like '%$dbNpcName,%' and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100");
 // $task=DataGetCurrentTask();
 
 if (sizeof($contextDataFull)==0 ||sizeof($contextDataFull)<10 ) {
@@ -113,7 +113,7 @@ $contextData = array_merge($head, $prompt);
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 $connectionHandler =$connector->getConnector($currentConnectorData);
-$buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>2048]);
+$buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>2048],"middleterm");
 
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 

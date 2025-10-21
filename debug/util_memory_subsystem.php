@@ -122,7 +122,7 @@ function resyncMemorySummaries($db, $forceAll = false) {
             }
         }
 
-        $peopleFmt = $db->escape(implode(",", $npcInMemory));
+        $peopleFmt = $db->escape("|".implode("|", $npcInMemory)."|");
         $db->query("UPDATE memory_summary SET companions='$peopleFmt' WHERE rowid={$row["rowid"]}");
     }
 
