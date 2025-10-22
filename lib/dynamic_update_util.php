@@ -334,11 +334,14 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         }
         
        
-        // Check if update connector is configured
+        // Check if diary connector is configured for dynamic profile updates
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($npcData["profile_id"]);
+        
         $connector = new LLMConnector();
-        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
+        $currentConnectorData = $connector->getById($currentProfileData["diary_connector_id"]);
         if (!$currentConnectorData) {
-            Logger::debug("processSingleDynamicProfile: No core connector configured while updating profile for $npcName");
+            Logger::debug("processSingleDynamicProfile: No diary connector configured while updating profile for $npcName");
             return false;
         }
         
@@ -671,35 +674,25 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         
         $contextData = array_merge($head, $prompt);
         
+        // Get diary connector from NPC's profile (same as diary generation)
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($npcData["profile_id"]);
+        
         $connector=new LLMConnector();
-        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
+        $currentConnectorData = $connector->getById($currentProfileData["diary_connector_id"]);
+        
+        if (!$currentConnectorData) {
+            Logger::warning("updateDynamicProfileField: No diary connector configured for $npcName");
+            return false;
+        }
+        
         $connectionHandler = $connector->getConnector($currentConnectorData);
         $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
         $connector->setOldGlobals($currentConnectorData);
 
-        // Get max tokens for this connector
-        $maxTokens = 800; // Default for field updates
-        switch($currentConnectorData["driver"]) {
-            case "openrouterjson":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "openaijson":
-
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "google_openaijson":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-
-            case "koboldcppjson":
-
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-        }
+        // Get max tokens from diary connector configuration
+        // Use connector's configured max_tokens, fallback to 4000 if not set
+        $maxTokens = !empty($currentConnectorData["max_tokens"]) ? (int)$currentConnectorData["max_tokens"] : 4000;
         
         $buffer=$connectionHandler->fast_request($contextData, ["max_tokens" => $maxTokens],"profile");
         
