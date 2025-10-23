@@ -28,6 +28,7 @@ require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
 require_once($path . "lib/memory_helper_vectordb.php");
+require_once($path . "lib/llm_randomizer.php");
 require_once($path . "lib/utils_game_timestamp.php");
 require_once($path . "lib/logger.php"); 
 requireFilesRecursively(__DIR__."/ext/","globals.php");
@@ -577,22 +578,12 @@ if (isset($_GET["profile"])) {
         $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
         $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
         $connector=new LLMConnector();
-        $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
-
-        if (isset($currentActiveModelProfile["value"])) {
-            if ($currentActiveModelProfile["value"]==1) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-            else if ($currentActiveModelProfile["value"]==2) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
-            else if ($currentActiveModelProfile["value"]==3) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
-            else if ($currentActiveModelProfile["value"]==4) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
-            else
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-
-        } else
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+        
+        // Use randomizer to determine which connector slot to use
+        $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $currentNpcData, $npcMaster);
+        $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+        
+        $currentConnectorData = $connector->getById($connectorId); 
         
     
         $connector->setOldGlobals($currentConnectorData);
@@ -630,22 +621,12 @@ if (isset($_GET["profile"])) {
             $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
 
             $connector=new LLMConnector();
-            $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
-
-            if (isset($currentActiveModelProfile["value"])) {
-                if ($currentActiveModelProfile["value"]==1) 
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-                else if ($currentActiveModelProfile["value"]==2) 
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
-                else if ($currentActiveModelProfile["value"]==3) 
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
-                else if ($currentActiveModelProfile["value"]==4) 
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
-                else
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-
-            } else
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+            
+            // Use randomizer to determine which connector slot to use
+            $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $currentNpcData, $npcMaster);
+            $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+            
+            $currentConnectorData = $connector->getById($connectorId); 
             
         
             $connector->setOldGlobals($currentConnectorData);
@@ -740,22 +721,12 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) 
     $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
 
     $connector=new LLMConnector();
-    $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
-
-    if (isset($currentActiveModelProfile["value"])) {
-        if ($currentActiveModelProfile["value"]==1) 
-            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-        else if ($currentActiveModelProfile["value"]==2) 
-            $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
-        else if ($currentActiveModelProfile["value"]==3) 
-            $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
-        else if ($currentActiveModelProfile["value"]==4) 
-            $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
-        else
-            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-
-    } else
-            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+    
+    // Use randomizer to determine which connector slot to use
+    $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $currentNpcData, $npcMaster);
+    $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+    
+    $currentConnectorData = $connector->getById($connectorId); 
     
 
     $connector->setOldGlobals($currentConnectorData);
