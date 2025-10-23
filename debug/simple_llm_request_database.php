@@ -56,7 +56,7 @@ $contextData = array_merge($head, $prompt);
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 $connectionHandler =$connector->getConnector($currentConnectorData);
-$buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>4096,"model"=>"openai/gpt-oss-120b"]);
+$buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>4096,"model"=>"openai/gpt-oss-120b"],"sqlassistant");
 
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 

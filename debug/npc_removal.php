@@ -16,6 +16,24 @@ WHERE type IN ('request', 'infonpc_close', 'infonpc')
   );
 ");
 
+
+// This isn't fast
+$db->execQuery("
+WITH ranked AS (
+    SELECT
+        history_id,
+        npc_id,
+        ROW_NUMBER() OVER (PARTITION BY npc_id ORDER BY gamets_last_updated DESC) AS rn
+    FROM core_npc_master_history
+    where COALESCE(npc_favorite,0)=0
+)
+DELETE FROM core_npc_master_history h
+USING ranked r
+WHERE h.history_id = r.history_id
+  AND r.rn > 5
+");
+
+
 Logger::info("Applied fast cleaning");
 
 /*

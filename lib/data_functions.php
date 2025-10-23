@@ -678,11 +678,18 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive'
     ".(($actorEscaped)?" 
-    and (people like '%|$actorEscaped|%' or people like '$actorEscaped' or people like '%|$actorEscaped (busy)|%' or type='info_timeforward') ":"")." 
+    and (
+     people like '%|$actorEscaped|%' 
+     or people like '$actorEscaped' 
+     or people like '%|$actorEscaped (busy)|%'
+     OR people LIKE '%|$actorEscaped (hostile)|%' 
+     or type='info_timeforward' )
+    ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
     " order by gamets desc, ts desc, rowid desc LIMIT $nRecordsLimit OFFSET 0";  
     
+    // OR people LIKE '%|$actorEscaped (far away)|%') this can be confusing in whisper mode
     $results = $db->fetchAll($query);
 
     //error_log($query);
@@ -1482,7 +1489,9 @@ function DataSpeechJournal($topic,$limit=50)
     $lastDialogFull = [];
     $tn=$db->escape($topic);
     $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest, convert_gamets2skyrim_date(gamets) AS sk_date, gamets FROM speech
-      where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  companions like '%$tn%' or  companions like '%$tn%') 
+      where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  
+      companions like '%|$tn|%' or  companions like '%$tn%' OR companions LIKE '%|$tn (busy)|%' 
+      OR people LIKE '%|$tn (hostile)|%' ) 
       and listener<>'unknown' 
       order by rowid desc");
     if (!$results) {
@@ -2640,7 +2649,7 @@ function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$con
     $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
    
-    Logger::info("DataSearchOghmaByVector Expanded keywords: <$currentOghmaTopic> <$locationCtx> <$contextKeywords>");
+    Logger::info("DataSearchOghmaByVector <$TEST_TEXT> Expanded keywords: <$currentOghmaTopic> <$locationCtx> <$contextKeywords>");
     /***/
 
     $embeddingFunction=function($text) {

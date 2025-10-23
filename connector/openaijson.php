@@ -481,6 +481,9 @@ class openaijson
                 unset($data['reasoning']); 
                 //$data['reasoning'] = array('effort' => 'low'); 
             }
+            if ($data['stream'])
+                $data['stream_options']['include_usage']=true;
+
         } elseif ($this->_is_groq_com) { // --- exception made for groq.com
 
             if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0
@@ -866,7 +869,7 @@ class openaijson
                     'audit_request',
                         array(
                             'request' => json_encode($this->_dataSent),
-                            'result' => "ERROR|INVALID JSON RESPONSE",
+                            'result' => (!empty($this->_buffer))?"Ok":"ERROR|INVALID JSON RESPONSE",
                             'connector'=>$this->name,
                             'url'=>$this->_url
                         ));
@@ -1052,6 +1055,8 @@ class openaijson
                 unset($data['reasoning']); 
                 //$data['reasoning'] = array('effort' => 'low'); 
             }
+            
+
         } elseif ($this->_is_groq_com) { // --- exception made for groq.com
 
             if ($temperature < 0.000001) $temperature = 0.000001; // groq.com want this > 1e-8, never 0.0

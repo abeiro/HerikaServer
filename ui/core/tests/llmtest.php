@@ -121,7 +121,7 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                             $accum .= $chunk;
                             if ($handler->isDone()) $done = true;
                         }
-                        $buffer = $handler->close();
+                        $buffer = $handler->close("llmtest");
                         $endTimeTrans = microtime(true) - $start;
                     } catch (Throwable $e) {
                         $errors[] = [ 'no' => E_ERROR, 'str' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine() ];

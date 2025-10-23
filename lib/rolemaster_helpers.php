@@ -735,6 +735,78 @@ function createBook($title,$content,$location) {
     );
 }
 
+
+function createLetter($title,$content) {
+
+    $width = 371;
+    $height = 471;
+    
+    $text = $content;
+    $name = $title;
+    
+
+    $fontPath = __DIR__.'/../data/fonts/GloriaHallelujah-Regular.ttf'; // Path to your TTF font file
+    $fontSize = 12; // Initial font size (we'll adjust if needed)
+
+    $backgroundPath = __DIR__ . '/../data/textures/chim.png';
+
+    $background = imagecreatefrompng($backgroundPath);
+
+    // Ensure the background has alpha transparency
+    imagesavealpha($background, true);
+
+    // Define the text color
+    $textColor = imagecolorallocate($background, 0, 0, 0); // Black color
+
+    // Split text into paragraphs based on newlines
+    $paragraphs = explode("\n", $text);
+
+    // Initialize variables for drawing
+    $x = 10; // Small left margin
+    $y = 10; // Small top margin, adjusted for font size
+
+    foreach ($paragraphs as $paragraph) {
+        // Split each paragraph into lines that fit within image width
+        $words = explode(" ", $paragraph);
+        $line = "";
+
+        foreach ($words as $word) {
+            $testLine = $line . $word . " ";
+            $bbox = imagettfbbox($fontSize, 0, $fontPath, $testLine);
+            $lineWidth = abs($bbox[4] - $bbox[0]);
+
+            if ($lineWidth > $width * 1) {
+                // Draw the current line and start a new line if it exceeds the boundary
+                imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
+                $line = $word . " ";
+                $y += $fontSize * 2; // Move down for the next line
+            } else {
+                $line = $testLine;
+            }
+        }
+
+        // Draw the last line of the paragraph
+        if (trim($line) !== "") {
+            imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
+            $y += $fontSize * 1.8;
+        }
+
+        // Add extra space between paragraphs
+        $y += $fontSize * 0.8;
+    }
+
+    // Output the final image with text overlay
+    @mkdir(__DIR__ . "/../data/books");
+    $filename = __DIR__ . "/../data/books/" . md5(strtolower($name)) . ".png";
+    imagepng($background, $filename);
+
+    // Free up memory
+    imagedestroy($background);
+
+    echo "Image saved as $filename" . PHP_EOL;
+   
+}
+
 function make_replacements($text) {
 
     return strtr($text,[
