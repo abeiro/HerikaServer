@@ -261,22 +261,35 @@ function processAutoDiary($gameRequest, $eventType) {
             }
         }
         
-        // Update cooldown timestamp for this follower
-        $db->upsertRowOnConflict(
-            'conf_opts',
-            array(
-                'id' => $cooldownKey,
-                'value' => time()
-            ),
-            "id"
-        );
-        
-        // Generate diary entry for this follower
-        if (generateFollowerDiary($followerName, $gameRequest, $eventType)) {
-            $generatedCount++;
-            Logger::info("AUTO_DIARY: Generated diary entry for $followerName");
+        $npcMaster=new NpcMaster();
+        $currentNpcData=$npcMaster->getByMD5($followerName);
+        $profile=new CoreProfile();
+        $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+        $profile->setOldGlobals($currentProfileData);
+        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+
+        if (isset($GLOBALS["AUTO_DIARY_WAIT"]) && $GLOBALS["AUTO_DIARY_WAIT"]) {
+            // Update cooldown timestamp for this follower
+            $db->upsertRowOnConflict(
+                'conf_opts',
+                array(
+                    'id' => $cooldownKey,
+                    'value' => time()
+                ),
+                "id"
+            );
+            
+            // Generate diary entry for this follower
+            if (generateFollowerDiary($followerName, $gameRequest, $eventType)) {
+                $generatedCount++;
+                Logger::info("AUTO_DIARY: Generated diary entry for $followerName");
+            } else {
+                Logger::info("AUTO_DIARY: Failed to generate diary entry for $followerName");
+            }
         } else {
-            Logger::info("AUTO_DIARY: Failed to generate diary entry for $followerName");
+            Logger::info("AUTO_DIARY: disabledfor $followerName");
+
         }
     }
     

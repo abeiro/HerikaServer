@@ -1337,6 +1337,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
         // Check if AUTO_DIARY_WAIT is enabled for wait events
         if (isset($GLOBALS["AUTO_DIARY_WAIT"]) && $GLOBALS["AUTO_DIARY_WAIT"]) {
+            error_log("[AUTODIARY WAIT] <{$GLOBALS["AUTO_DIARY_WAIT"]}> for {$GLOBALS["HERIKA_NAME"]}");
             processAutoDiary($gameRequest, "waitstart");
         }
     }
