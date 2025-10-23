@@ -95,26 +95,9 @@ if ($method === "POST") {
             $historyData .= trim("{$element["speaker"]}:" . trim($element["speech"]) . " $listener $place $dateTime") . PHP_EOL;
         }
 
-        // Get max tokens for speechstyle update
-        $maxTokens = 800;
-        switch($GLOBALS["CONNECTORS_DIARY"]) {
-            case "openrouter":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "openai":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "google_openaijson":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "koboldcpp":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-        }
+        // Get max tokens from diary connector configuration
+        $diaryConnectorConfig = $GLOBALS["CONNECTOR"][$GLOBALS["CONNECTORS_DIARY"]] ?? [];
+        $maxTokens = (int)($diaryConnectorConfig["max_tokens"] ?? $diaryConnectorConfig["MAX_TOKENS_MEMORY"] ?? 4000);
 
         // Get current speechstyle value and prompt
         $currentSpeechstyle = isset($jsonDataInput["HERIKA_SPEECHSTYLE"]) ? $jsonDataInput["HERIKA_SPEECHSTYLE"] : '';
