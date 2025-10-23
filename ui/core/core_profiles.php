@@ -663,6 +663,25 @@ $ittById = $byId($ittRows);
         <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
         <small class="hint">Optional: profile-specific system instructions appended to requests. Example is using this to hold specific instructions for followers and assigning the profile only to followers.</small>
 
+        <div style="height:8px;"></div>
+        <?php
+            $randomizerEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $randomizerEnabled = !empty($metaData['LLM_RANDOMIZER_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">LLM Randomizer
+            <input type="hidden" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="1" <?= $randomizerEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch ever 2-3 responses per NPC. Is useful to add more variety to NPC responses and make them more dynamic.</small>
+
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_profile_settings" class="btn-save">Save Profile Settings</button>
         </div>
@@ -670,7 +689,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','default_narrator'];
+        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
