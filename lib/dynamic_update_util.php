@@ -334,14 +334,11 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         }
         
        
-        // Check if diary connector is configured for dynamic profile updates
-        $profile = new CoreProfile();
-        $currentProfileData = $profile->getById($npcData["profile_id"]);
-        
+        // Check if core connector is configured for dynamic profile updates
         $connector = new LLMConnector();
-        $currentConnectorData = $connector->getById($currentProfileData["diary_connector_id"]);
+        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
         if (!$currentConnectorData) {
-            Logger::debug("processSingleDynamicProfile: No diary connector configured while updating profile for $npcName");
+            Logger::debug("processSingleDynamicProfile: No core connector configured while updating profile for $npcName");
             return false;
         }
         
@@ -674,24 +671,13 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         
         $contextData = array_merge($head, $prompt);
         
-        // Get diary connector from NPC's profile (same as diary generation)
-        $profile = new CoreProfile();
-        $currentProfileData = $profile->getById($npcData["profile_id"]);
-        
         $connector=new LLMConnector();
-        $currentConnectorData = $connector->getById($currentProfileData["diary_connector_id"]);
-        
-        if (!$currentConnectorData) {
-            Logger::warning("updateDynamicProfileField: No diary connector configured for $npcName");
-            return false;
-        }
-        
+        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
         $connectionHandler = $connector->getConnector($currentConnectorData);
         $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
         $connector->setOldGlobals($currentConnectorData);
 
-        // Get max tokens from diary connector configuration
-        // Use connector's configured max_tokens, fallback to 4000 if not set
+        // Get max tokens from core connector configuration (no hardcoded cap)
         $maxTokens = !empty($currentConnectorData["max_tokens"]) ? (int)$currentConnectorData["max_tokens"] : 4000;
         
         $buffer=$connectionHandler->fast_request($contextData, ["max_tokens" => $maxTokens],"profile");
