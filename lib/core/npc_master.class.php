@@ -670,7 +670,7 @@ class NpcMaster
         $query     =
             "WITH deleted AS (
     DELETE FROM core_npc_master
-    WHERE npc_name<>'The Narrator' and COALESCE(lock_profile,0)=1
+    WHERE npc_name<>'The Narrator' and COALESCE(lock_profile,0)=0
     RETURNING id
 ),
 restore AS (

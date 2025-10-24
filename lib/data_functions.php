@@ -1491,7 +1491,7 @@ function DataSpeechJournal($topic,$limit=50)
     $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest, convert_gamets2skyrim_date(gamets) AS sk_date, gamets FROM speech
       where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  
       companions like '%|$tn|%' or  companions like '%$tn%' OR companions LIKE '%|$tn (busy)|%' 
-      OR people LIKE '%|$tn (hostile)|%' ) 
+      OR companions LIKE '%|$tn (hostile)|%' ) 
       and listener<>'unknown' 
       order by rowid desc");
     if (!$results) {
@@ -4187,7 +4187,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             
             // Add skills right after HERIKA_SKILLS section
             if ($fieldName=="HERIKA_SKILLS") {
-                $dynamicBio.=!empty($SKILLS_ADD) ?"<skills>\n$SKILLS_ADD\n</skills>": "";
+                $dynamicBio.=!empty($SKILLS_ADD) ?"\n<rpg_skills>\n$SKILLS_ADD\n</rpg_skills>\n": "";
             }
             
             // Add equipment right after HERIKA_APPEARANCE section
@@ -4205,6 +4205,38 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     // Fall back to HERIKA_DYNAMIC if no new fields are set
     if (empty(trim($dynamicBio)) && isset($FOLLOWER_CONF["HERIKA_DYNAMIC"]) && !empty(trim($FOLLOWER_CONF["HERIKA_DYNAMIC"]))) {
         $dynamicBio = $FOLLOWER_CONF["HERIKA_DYNAMIC"];
+    }
+    
+    if (isset($GLOBALS["HOOKS"]["BIOGRAPHY_BUILDER"])) {
+        foreach ($GLOBALS["HOOKS"]["BIOGRAPHY_BUILDER"] as $fName => $builder) {
+            error_log("[buildDynamicBiography] BIOGRAPHY_BUILDER {$fName}");
+
+            if (!is_callable($builder)) {
+                error_log("[buildDynamicBiography] Builder {$fName} is not callable, skipping.");
+                continue;
+            }
+
+            // Call the builder. Support both styles:
+            //  - builder returns a new bio string
+            //  - builder modifies the first argument by-reference
+            // We call with call_user_func_array and pass $dynamicBio by-reference so
+            // builders that accept a reference can mutate it directly. If the builder
+            // returns a non-empty string, prefer that return value as the new bio.
+            $result = null;
+            try {
+                $result = call_user_func_array($builder, array(&$dynamicBio, $currentNpcData));
+            } catch (Throwable $e) {
+                // Protect against hook errors — log and continue with current bio
+                error_log("[buildDynamicBiography] Exception in builder {$fName}: " . $e->getMessage());
+                continue;
+            }
+
+            if (is_string($result) && strlen(trim($result)) > 0) {
+                // Builder returned a non-empty string -> use it
+                $dynamicBio = $result;
+            }
+            // otherwise assume builder mutated $dynamicBio by reference (or left it unchanged)
+        }
     }
     
     return $dynamicBio;

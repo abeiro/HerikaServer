@@ -21,6 +21,7 @@ if (is_array($bgevent)) {
 
     if (is_array($packageDesc) && isset($packageDesc[$bgevent["event"]])) {
         $bgevent["description"] = $packageDesc[$bgevent["event"]];
+        $bgevent["name"]=$packageDesc["name"];
         $ubstitutions=[
             "player"=>$GLOBALS["PLAYER_NAME"],
             "location"=>$bgevent["location"],
@@ -29,20 +30,33 @@ if (is_array($bgevent)) {
         foreach ($ubstitutions as $key => $value) {
             $bgevent["description"] = str_replace("{" . $key . "}", $value, $bgevent["description"]);
         }
+        
+        if ($bgevent["actor"]) {
+            $npcManager      = new NpcMaster();
+            $npcData         = $npcManager->getByName($bgevent["actor"]);
+            $cn=$GLOBALS["db"]->escape($npcData["npc_name"]);
+            $extended = json_decode($npcData["extended_data"], true);
+            if (isset($extended["background_life_enabled"]) && $extended["background_life_enabled"]==true) {
+                $lastAction=$GLOBALS["db"]->fetchOne("select * from actions_issued where actorname='$cn' order by gamets desc,ts desc limit 1 offset 0");
+                if (isset($lastAction) && ($lastAction["action"]==$bgevent["name"])) {
+                    // NPC finishes? last action issued
+                    if ($bgevent["event"]=="end")
+                        error_log("[BGL] {$npcData["npc_name"]} has finished action {$bgevent["name"]}");
+
+                }
+            }
+        }
     }
     else
         $bgevent["description"] = 'unknown';
 
     // Substitutions
 
-        
-
-
     $gameRequest[3]=json_encode($bgevent);
     // error_log("[BACKGROUND EVENT] {$gameRequest[3]}".print_r($bgevent,true));
     logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
 } else  {
-    
+    // Probably comment this when in production, to avoid unknown events
     logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
 }
 

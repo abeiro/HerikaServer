@@ -680,6 +680,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["restore_from_history"
             'prompt_head' => $histRow['prompt_head'] ?? '',
             'dynamic_profile' => !empty($histRow['dynamic_profile']) ? 1 : 0,
             'tags' => $histRow['tags'] ?? '',
+            'metadata' => $histRow['metadata'] ?? '',
+            'extended_data' => $histRow['extended_data'] ?? '',
             'md5' => $histRow['md5'] ?? md5($histRow['npc_name'] ?? '')
         ];
         
@@ -1567,6 +1569,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <?php if ($raceIcon !== ''): ?>
                     <img class="npc-race-art" src="<?= htmlspecialchars($raceIcon) ?>" alt="Race icon" />
                 <?php endif; ?>
+            </div>
+            <div class="npc-right-warn">
+                    <?php 
+                    if ($row["gamets_last_updated"] != $LAST_INFOSAVE_EVENT) {
+                        echo "<span title='This NPC is out of sync, this means current NPC sheet has been modified after last save. If you edit this NPC, changes will be lost if you reload a previous savegame. '>⚠️</span>";
+                    }
+                    ?>
             </div>
         </div>
         

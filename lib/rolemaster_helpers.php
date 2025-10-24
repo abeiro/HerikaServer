@@ -747,6 +747,8 @@ function createLetter($title,$content) {
 
     $fontPath = __DIR__.'/../data/fonts/GloriaHallelujah-Regular.ttf'; // Path to your TTF font file
     $fontSize = 12; // Initial font size (we'll adjust if needed)
+    $minFontSize = 8; // smallest allowed font size
+    $maxTextHeight = 271; // maximum allowed vertical space for text
 
     $backgroundPath = __DIR__ . '/../data/textures/chim.png';
 
@@ -761,9 +763,54 @@ function createLetter($title,$content) {
     // Split text into paragraphs based on newlines
     $paragraphs = explode("\n", $text);
 
-    // Initialize variables for drawing
+    // We'll try decreasing font size until the rendered text height fits inside $maxTextHeight
+    $fittingFontSize = $fontSize;
+    while ($fittingFontSize >= $minFontSize) {
+        $yTest = 10; // starting top margin for measurement
+        $fits = true;
+
+        foreach ($paragraphs as $paragraph) {
+            $words = explode(" ", $paragraph);
+            $line = "";
+
+            foreach ($words as $word) {
+                $testLine = $line . $word . " ";
+                $bbox = imagettfbbox($fittingFontSize, 0, $fontPath, $testLine);
+                $lineWidth = abs($bbox[4] - $bbox[0]);
+
+                if ($lineWidth > $width) {
+                    // new line
+                    $line = $word . " ";
+                    $yTest += $fittingFontSize * 1.9; // approximate line height for measurement
+                } else {
+                    $line = $testLine;
+                }
+            }
+
+            if (trim($line) !== "") {
+                $yTest += $fittingFontSize * 1.9;
+            }
+
+            // paragraph spacing
+            $yTest += $fittingFontSize * 0.8;
+
+            if ($yTest > $maxTextHeight) {
+                $fits = false;
+                break;
+            }
+        }
+
+        if ($fits) {
+            break; // $fittingFontSize fits
+        }
+
+        $fittingFontSize--;
+    }
+
+    // Use $fittingFontSize to actually render text
     $x = 10; // Small left margin
-    $y = 10; // Small top margin, adjusted for font size
+    $y = 10; // Small top margin
+    $fontSize = $fittingFontSize+2;
 
     foreach ($paragraphs as $paragraph) {
         // Split each paragraph into lines that fit within image width
@@ -775,11 +822,13 @@ function createLetter($title,$content) {
             $bbox = imagettfbbox($fontSize, 0, $fontPath, $testLine);
             $lineWidth = abs($bbox[4] - $bbox[0]);
 
-            if ($lineWidth > $width * 1) {
+            if ($lineWidth > $width) {
                 // Draw the current line and start a new line if it exceeds the boundary
+                $x=round($x,0);
+                $y=round($y,0);
                 imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
                 $line = $word . " ";
-                $y += $fontSize * 2; // Move down for the next line
+                $y += $fontSize * 1.9; // Move down for the next line
             } else {
                 $line = $testLine;
             }
@@ -787,8 +836,10 @@ function createLetter($title,$content) {
 
         // Draw the last line of the paragraph
         if (trim($line) !== "") {
+            $x=round($x,0);
+            $y=round($y,0);
             imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
-            $y += $fontSize * 1.8;
+            $y += $fontSize * 1.9;
         }
 
         // Add extra space between paragraphs
