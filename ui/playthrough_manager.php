@@ -554,9 +554,9 @@ if (!empty($timelineItems)) {
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
             <div style="font-size: 2.5em;">🎮</div>
             <div style="flex: 1;">
-                <h2 style="margin: 0;">Active Database (public schema)</h2>
+                <h2 style="margin: 0;">Active Database</h2>
                 <div style="font-size: 0.9em; color: #9fb1c9; margin-top: 4px;">
-                    This is the live database used by CHIM.
+                    This is the live database used by CHIM. It's on the Public Schema.
                 </div>
             </div>
         </div>
@@ -633,9 +633,7 @@ if (!empty($timelineItems)) {
                                         <?php } ?>
                                         <?php echo h($p['name']); ?>
                                         <?php if ($isSchemaType) { ?>
-                                            <span style="background:#0d4a2e; color:#4ade80; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:normal; margin-left:6px;">⚡ Fast</span>
                                         <?php } else { ?>
-                                            <span style="background:#4a3517; color:#fbbf24; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:normal; margin-left:6px;">Legacy</span>
                                         <?php } ?>
                                         <?php 
                                             $lg = isset($p['last_gamets']) ? intval($p['last_gamets']) : 0; 
