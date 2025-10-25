@@ -2048,6 +2048,8 @@ function DataBeingsInCloseRange($excludeFarAway=false)
                 continue;
             if (strpos($v,"(dead)")>0) //??
                 continue;
+            if (empty($v))
+                continue;
             //if (strpos($v,")")===false) 
                 if (strpos($v,"Horse")!==0) 
                     if (strpos($v,"Chicken")!==0) 
@@ -2087,7 +2089,8 @@ function FindClosestActorName($actorName)
     foreach ($beingsArray as $v) {
         // Remove all text within parentheses and trim whitespace
         $v = trim(preg_replace('/\s*\([^)]*\)/', '', $v));
-
+        if (empty($v))
+            continue;
         // Exclude certain entities
         if (strpos($v, "Horse") !== 0 && strpos($v, "Chicken") !== 0) {
             $beingsArrayCleaned[] = $v;
@@ -4238,7 +4241,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             // otherwise assume builder mutated $dynamicBio by reference (or left it unchanged)
         }
     }
-    
+
     return $dynamicBio;
 }
 

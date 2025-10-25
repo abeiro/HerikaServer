@@ -1431,6 +1431,9 @@ if (isset($GLOBALS["PROFILE_PROMPT"])) {
     $dynamicBiography.="\n<group>\n#Part of a group\n{$GLOBALS["PROFILE_PROMPT"]}\n</group>";
 }
 
+
+
+
 // Middle term memory experiment
 $npcMaster=new NpcMaster();
 $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
@@ -1441,11 +1444,23 @@ if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle
 
 }
 
+// Rumors and breaking news
+$currentHold=trim(DataLastKnownLocationHuman(true,true));
+if ($currentHold) {
+    error_log("[RUMORS] Current hold {$currentHold}");
+    error_log("SELECT * FROM rumors WHERE hold='{$currentHold}' and gamets>".($gameRequest[2]- ( (3600 * 7 ) / 0.00864 )));
+    $rumors = $db->fetchOne("SELECT * FROM rumors WHERE hold='{$currentHold}' and gamets>".($gameRequest[2]- ( (3600 * 7 ) / 0.00864 )));
+    if (isset($rumors["content"])) {
+        $tag=strtolower(str_replace(" ","_",$rumors["type"]));
+        $rumors="\n<$tag>\n{$rumors["content"]}\n</$tag>";
+    }
+} else
+    $rumors="";
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>\n",
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>\n$rumors\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -1453,7 +1468,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n",
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n$rumors\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended
