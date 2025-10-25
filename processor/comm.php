@@ -17,6 +17,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     }
     $now=time();
 
+    error_log("[INIT] Should delete everthing after {$gameRequest[2]}");
     // Dragon Break autosnapshot: detect large rollback and snapshot before pruning
     try {
         $prevGamets = DataLastKnownGameTS();
@@ -37,7 +38,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("currentmission", "gamets>={$gameRequest[2]}  ");
     $db->delete("currentmission", "localts>$now   ");
     $db->delete("diarylog", "gamets>={$gameRequest[2]}  ");
-    $db->delete("diarylog", "localts>=0$now ");
+    $db->delete("diarylog", "localts>=$now ");
     $db->delete("books", "gamets>=0{$gameRequest[2]}  ");
     $db->delete("books", "localts>$now ");
     $db->delete("responselog", " 1=1 ");
