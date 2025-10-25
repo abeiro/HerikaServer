@@ -896,6 +896,7 @@ function getTimeColor($time) {
             echo "<div class='memory-management-actions' style='margin: 15px 0;'>";
             echo "<button onclick=\"syncMemoriesConfirm()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Sync & Create Memory Summaries</button>";
             echo "<button onclick=\"deleteAllMemoriesConfirm()\" class='btn-base btn-danger' style='background-color: #dc2626; font-weight: bold;'>⚠️ Delete All Memory Summaries</button>";
+            echo "<button onclick=\"fixCompanions()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Fix Companions field</button>";
             echo "</div>";
             
             // Add JavaScript functions for confirmations
@@ -906,6 +907,12 @@ function getTimeColor($time) {
                 }
             }
             
+            function fixCompanions() {
+                if (confirm('Will NOT use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')) {
+                    window.location.href = '" . $webRoot . "/ui/tests/fix_companins_field.php';
+                }
+            }
+
             function deleteAllMemoriesConfirm() {
                 var userInput = prompt('THIS WILL DELETE ALL SUMMARIZED MEMORIES!\\n\\nThis action cannot be undone and will remove all AI memory summaries.\\n\\nTo confirm this dangerous operation, please type exactly: Delete');
                 if (userInput === 'Delete') {
