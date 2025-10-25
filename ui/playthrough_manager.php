@@ -298,6 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $resU = pg_query_params($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = true WHERE id=$1', [$profileId]);
                 if ($resU) {
                     pg_query($adminConn, 'COMMIT');
+                    pg_query($adminConn, 'TRUNCATE table public.database_versioning'); // So views and functiosn get recreated on next server starttup
                     $message .= '<p><strong>✅ Switched to profile:</strong> '.h($targetName).'</p>';
                     $message .= '<div style="background:#4a1e0d; border:2px solid #dc2626; border-radius:8px; padding:15px; margin-top:15px;">';
                     $message .= '<p style="color:#fbbf24; font-weight:bold; margin:0 0 10px 0;">⚠️ RESTART REQUIRED</p>';

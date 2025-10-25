@@ -456,68 +456,6 @@ UNION ALL
 }
 
 
-// Ensure speech_view exists
-$query = "
-    SELECT view_definition 
-    FROM information_schema.views 
-    WHERE table_name = 'speech_view'
-";
-
-
-$existsColumn=$db->fetchAll($query);
-if (!$existsColumn[0]["view_definition"]) {
-        $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
-  SELECT s.sess,
-    s.speaker,
-    s.speech,
-    s.location,
-    s.listener,
-    s.topic,
-    s.localts,
-    s.gamets,
-    s.ts,
-    s.rowid,
-    s.companions,
-    s.audios,
-    public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
-    public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
-    public.convert_gamets2days(s.gamets) AS sk_days,
-    public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
-   FROM public.speech s;
-");
-
-}
-
-
-// Ensure eventlog_view exists
-$query = "
-    SELECT view_definition 
-    FROM information_schema.views 
-    WHERE table_name = 'eventlog_view'
-";
-
-
-$existsColumn=$db->fetchAll($query);
-if (!$existsColumn[0]["view_definition"]) {
-        $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
- SELECT e.type,
-    e.data,
-    e.sess,
-    e.gamets,
-    e.localts,
-    e.ts,
-    e.rowid,
-    e.people,
-    e.location,
-    e.party,
-    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
-    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
-    public.convert_gamets2days(e.gamets) AS sk_days,
-    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
-   FROM public.eventlog e;
-");
-
-}
 // Npc profile backup
 
 $query = "
@@ -1272,6 +1210,71 @@ if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
     Logger::debug("Applied patch: sql_gamets_convert_functions 2 20250226001");
 }
 
+
+
+// Views dependant on sql_gamets_convert_functions
+// Ensure speech_view exists
+$query = "
+    SELECT view_definition 
+    FROM information_schema.views 
+    WHERE table_name = 'speech_view'
+";
+
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["view_definition"]) {
+        $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
+  SELECT s.sess,
+    s.speaker,
+    s.speech,
+    s.location,
+    s.listener,
+    s.topic,
+    s.localts,
+    s.gamets,
+    s.ts,
+    s.rowid,
+    s.companions,
+    s.audios,
+    public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
+    public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
+    public.convert_gamets2days(s.gamets) AS sk_days,
+    public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
+   FROM public.speech s;
+");
+
+}
+
+
+// Ensure eventlog_view exists
+$query = "
+    SELECT view_definition 
+    FROM information_schema.views 
+    WHERE table_name = 'eventlog_view'
+";
+
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["view_definition"]) {
+        $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
+ SELECT e.type,
+    e.data,
+    e.sess,
+    e.gamets,
+    e.localts,
+    e.ts,
+    e.rowid,
+    e.people,
+    e.location,
+    e.party,
+    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
+    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
+    public.convert_gamets2days(e.gamets) AS sk_days,
+    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
+   FROM public.eventlog e;
+");
+
+}
 
 //----------------------------------------------------
 // npc_template and oghma table. 1.1.0 update
