@@ -273,7 +273,7 @@ class sql
         $startTime = microtime(true);
         $this->re_connect();
         $result = pg_query(self::$link, $q);
-        error_log($q);
+        // error_log($q);
         if ($this->debug_level > 2) {
             $endTime = microtime(true);
             $elapsedTime = $endTime - $startTime;

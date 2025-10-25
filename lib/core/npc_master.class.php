@@ -534,7 +534,7 @@ class NpcMaster
                     if (count($parts) === 1) {
                         // Simple key
                         $GLOBALS[$key] = $value;
-                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[$key] = " . print_r($value, true));
+                        // error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[$key] = " . print_r($value, true));
                     } else if (count($parts) === 2) {
                         // Nested 2 levels: TTS MELOTTS
                         if (! isset($GLOBALS[$parts[0]])) {
@@ -542,7 +542,7 @@ class NpcMaster
                         }
 
                         $GLOBALS[$parts[0]][$parts[1]] = $value;
-                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}] = " . print_r($value, true));
+                        // error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}] = " . print_r($value, true));
                     } else if (count($parts) === 3) {
                         // Nested 3 levels: TTS MELOTTS voiceid
                         if (! isset($GLOBALS[$parts[0]])) {
@@ -554,7 +554,7 @@ class NpcMaster
                         }
 
                         $GLOBALS[$parts[0]][$parts[1]][$parts[2]] = $value;
-                        error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}][{$parts[2]}] = " . print_r($value, true));
+                        // error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}][{$parts[2]}] = " . print_r($value, true));
                     }
                 }
             }

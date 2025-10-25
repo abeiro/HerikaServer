@@ -1789,6 +1789,11 @@ if ($checkTableExists("import_rules") == -1) {
 // Usage column
 $db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
 
+if ($checkTableExists("rumors") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/add_rumors.sql"));
+} else
+    Logger::info(__FILE__." import_rules exists");
+
 
 //----------------------------------------------------
 
