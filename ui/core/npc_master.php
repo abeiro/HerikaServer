@@ -1613,6 +1613,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <div class="modal-actions">
         <button id="npc_modal_save_header" class="btn-save">Save</button>
         <button id="npc_modal_reset" class="btn-cancel" title="Reimport bio template fields">Reset NPC</button>
+        <button id="npc_modal_diary" class="btn-cancel">View Diary</button>
         <button id="npc_modal_history" class="btn-cancel">View History</button>
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
@@ -1804,6 +1805,30 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       } catch(_e){}
     });
   })();
+  // View Diary button wiring
+  (function(){
+    const btn = document.getElementById('npc_modal_diary');
+    if (btn) {
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        try {
+          const id = String(window.CURRENT_NPC_ID||'').trim();
+          if (!id) { alert('No NPC selected'); return; }
+          // Get NPC name from the form in iframe
+          const doc = iframe && iframe.contentDocument;
+          const nameEl = doc ? doc.getElementById('npc_name') : null;
+          const npcName = nameEl ? String(nameEl.value||'').trim() : '';
+          if (!npcName) { alert('Cannot determine NPC name'); return; }
+          // Open diary book page in new tab with person filter
+          const url = '<?php echo $webRoot; ?>/ui/diary_book.php?person=' + encodeURIComponent(npcName);
+          window.open(url, '_blank');
+        } catch(_e){
+          console.error('Failed to open diary:', _e);
+        }
+      });
+    }
+  })();
+  
   // View History button wiring
   (function(){
     const btn = document.getElementById('npc_modal_history');
