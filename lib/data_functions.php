@@ -1718,31 +1718,26 @@ function DataLastKnowDate()
 {
 
     global $db;
-
-    // try first with conversion from gamets in SQL 
-    $lastLoc=$db->fetchAll("SELECT convert_gamets2skyrim_long_date(a.gamets) AS data FROM eventlog a  WHERE (type in ('infoloc')) ORDER BY gamets desc, ts desc LIMIT 1");
-    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        // no dice, try old way
-        $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
-        if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-            return "";
-        }
-        $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
-        if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
-            return $matches[0][0];
-        } else {
-            Logger::info("DataLastKnowDate: NO match found");
-            return "";
-        }
-    } else { // ok, db is updated with new dts functions
-        if (isset($lastLoc[0]["data"]) && (strlen($lastLoc[0]["data"])>0)) {
-            Logger::debug("DataLastKnowDate: {$lastLoc[0]["data"]} ");
-            return $lastLoc[0]["data"];
-        } else {
-            Logger::error("DataLastKnowDate: NO match found");
-        }
+    
+    // Get gamets and use PHP conversion function (skip SQL function to avoid PostgreSQL errors)
+    $lastLoc=$db->fetchAll("SELECT a.gamets FROM eventlog a WHERE (type in ('infoloc')) ORDER BY gamets desc, ts desc LIMIT 1");
+    if (is_array($lastLoc) && sizeof($lastLoc) > 0 && !empty($lastLoc[0]["gamets"])) {
+        require_once(__DIR__ . "/utils_game_timestamp.php");
+        return convert_gamets2skyrim_long_date($lastLoc[0]["gamets"]);
     }
-    return "";
+    
+    // Fall back to parsing data field
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
+    if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
+        return $matches[0][0];
+    } else {
+        Logger::info("DataLastKnowDate: NO match found");
+        return "";
+    }
 }
 
 
