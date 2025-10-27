@@ -1,5 +1,9 @@
 <?php
 
+if (isset($GLOBALS["ONCE_PER_RUN"]) && $GLOBALS["ONCE_PER_RUN"]==true) {
+    return;
+
+}
 $startTime = microtime(true);
 
 $selectedNpc=$GLOBALS["SELECTED_NPC"];
@@ -29,7 +33,7 @@ if (isset($extended_data["middle_term_memory"])&&sizeof($extended_data["middle_t
 
 $dbNpcName=$GLOBALS["db"]->escape($selectedNpc);
 
-$contextDataFull=$GLOBALS["db"]->fetchAll("SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and companions like '%$dbNpcName,%' and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100");
+$contextDataFull=$GLOBALS["db"]->fetchAll("SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and companions like '%|$dbNpcName|%' and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100");
 // $task=DataGetCurrentTask();
 
 if (sizeof($contextDataFull)==0 ||sizeof($contextDataFull)<10 ) {
@@ -117,12 +121,15 @@ $buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>2048],"midd
 
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
-print_r($buffer);
+print_r($buffer).PHP_EOL;
 
-
-$extended_data=$npcMaster->getExtendedData($currentNpcData);
-$extended_data["middle_term_memory"][$lastgamets]=$buffer;
-$currentNpcData=$npcMaster->setExtendedData($currentNpcData,$extended_data);
-$npcMaster->updateByArray($currentNpcData);
+if ($buffer) {
+    $extended_data=$npcMaster->getExtendedData($currentNpcData);
+    $extended_data["middle_term_memory"][$lastgamets]=$buffer;
+    $currentNpcData=$npcMaster->setExtendedData($currentNpcData,$extended_data);
+    $npcMaster->updateByArray($currentNpcData);
+    $GLOBALS["ONCE_PER_RUN"]=true;
+} else 
+    Logger::error(__LINE__ . " Buffer was empty. not writing middleterm " . (microtime(true) - $startTime));
 
 ?>

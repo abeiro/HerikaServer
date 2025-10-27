@@ -1346,7 +1346,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                     obj.middle_term_enabled = mtm.checked ? 1 : 0;
                     form.extended_data.value = JSON.stringify(obj);
                   }
-                } catch(_e){}
+                } catch(_e){ console.error('Failed to sync extended data overrides:', _e); }
 
                 if (form.metadata!=undefined) {
                   const content = jsonEditor.get()
