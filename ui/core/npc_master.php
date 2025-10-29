@@ -1118,8 +1118,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         ?>
         <div class="form-item span-2">
             <label for="middle_term_latest">Recent Middle Term Memory</label>
-            <textarea id="middle_term_latest" placeholder="No middle term memory yet." readonly><?= htmlspecialchars($mtmLatest) ?></textarea>
-            <small class="hint">Read-only view from Extended Data → middle_term_memory (latest).</small>
+            <textarea id="middle_term_latest" name="middle_term_latest" placeholder="No middle term memory yet."><?= htmlspecialchars($mtmLatest) ?></textarea>
+            <small class="hint">Edit the most recent middle term memory entry. Changes are saved to Extended Data → middle_term_memory (latest).</small>
         </div>
 
         <?php
@@ -1370,6 +1370,27 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                     form.extended_data.value = JSON.stringify(obj);
                   }
                 } catch(_e){}
+
+                // Sync edited middle_term_latest back into extended_data JSON
+                try {
+                  const mtmLatest = form.querySelector('#middle_term_latest');
+                  if (mtmLatest && form.extended_data){
+                    let obj = {};
+                    try { obj = JSON.parse(String(form.extended_data.value||'')||'{}')||{}; } catch(_e){ obj = {}; }
+                    const editedVal = String(mtmLatest.value||'').trim();
+                    if (editedVal !== '') {
+                      if (!Array.isArray(obj.middle_term_memory)) {
+                        obj.middle_term_memory = [];
+                      }
+                      if (obj.middle_term_memory.length > 0) {
+                        obj.middle_term_memory[obj.middle_term_memory.length - 1] = editedVal;
+                      } else {
+                        obj.middle_term_memory.push(editedVal);
+                      }
+                    }
+                    form.extended_data.value = JSON.stringify(obj);
+                  }
+                } catch(_e){ console.error('Failed to sync middle term memory:', _e); }
 
                 if (form.metadata!=undefined) {
                   const content = jsonEditor.get()
