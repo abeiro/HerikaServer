@@ -43,14 +43,14 @@ if (!is_array($rawSchema)) $rawSchema = [];
 $providersTts = is_array($rawSchema['TTS'] ?? null) ? $rawSchema['TTS'] : [];
 $providersStt = is_array($rawSchema['STT'] ?? null) ? $rawSchema['STT'] : [];
 $ittProviders = is_array($rawSchema['ITT'] ?? null) ? $rawSchema['ITT'] : [];
-$ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram' ];
+$ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram','cartesia' ];
 $sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram' ];
 $ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_openai','openrouter','llamacpp' ];
 // Exclude llamacpp per existing ITT page behavior
 $ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return strtolower($v) !== 'llamacpp'; }));
 
 // Mappings
-$ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram' ];
+$ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram','cartesia' => 'CARTESIA' ];
 $sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM' ];
 $ittMap = [ 'openai' => 'openai','google_openai' => 'google_openai','openrouter' => 'openrouter' ];
 
@@ -102,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
     } else {
         // Only set default voices for providers that need them; let 11labs/openai/azure/deepgram use configured voice
         if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
+        else if ($selLower === 'cartesia') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
         else if (in_array($selLower, ['melotts','piper-tts','xvasynth'], true)) $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
     }
     try {
@@ -805,7 +806,8 @@ function current_value(string $flatName, array $currentConf) {
                                 'koboldcpp' => "KoboldCPP TTS routes to a local service. Use if you maintain a custom local TTS pipeline.",
                                 'zonos_gradio' => "Zonos TTS provides expressive voices with emotion controls. Recommended to use with cloud GPU hosting (Vast.ai). Uses roughly 6GB of VRAM.",
                                 'piper-tts' => "[Skyrim Voices]Piper-TTS is a middle quality and fast TTS. Requires manual installation of voices though. Under 1GB of VRAM. https://dwemerdynamics.hostwiki.io/en/TTS-Options",
-                                'deepgram' => "Deepgram TTS is a cloud option aimed at simple, quick voice generation. Requires API key."
+                                'deepgram' => "Deepgram TTS is a cloud option aimed at simple, quick voice generation. Requires API key.",
+                                'cartesia' => "Cartesia TTS provides high-quality voice cloning and generation. Automatically clones voices from your voice cache when first used. Supports emotions and multiple languages. Requires API key."
                             ];
                             $ttsLower = strtolower((string)$ttsSelRender);
                             echo htmlspecialchars($ttsDescMap[$ttsLower] ?? '');
@@ -837,7 +839,7 @@ function current_value(string $flatName, array $currentConf) {
                         foreach ($ttsSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='TTS '.$ttsKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??''; $lname=strtolower($fname); $lnameNorm=str_replace(['_','-'],'',$lname); if ($lnameNorm==='voiceid' || $lnameNorm==='voicelogic') continue; if ($ttsKeyCur==='XVASYNTH' && $lname==='model') continue; 
                             // API KEY badge handling for known providers
                             $provLower = strtolower($ttsKeyCur);
-                            if ($fname === 'API_KEY' && in_array($provLower, ['azure','eleven_labs','openai','deepgram'])) {
+                            if ($fname === 'API_KEY' && in_array($provLower, ['azure','eleven_labs','openai','deepgram','cartesia'])) {
                                 $badgeName = ($provLower==='eleven_labs') ? 'ElevenLabs' : ucfirst($provLower);
                                 $hasKey=false; foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
                                 echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
@@ -900,10 +902,10 @@ function current_value(string $flatName, array $currentConf) {
                             <div>Player TTS</div>
                         </div>
                     </div>
-					<?php $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
+                        <?php $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
                     <div class="provider-body grid">
                         <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
-                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio' ]; $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); ?>
+                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia' ]; $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); ?>
                         <select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
                             <?php foreach ($playerTtsOptions as $opt): ?>
                                 <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
@@ -943,14 +945,14 @@ function current_value(string $flatName, array $currentConf) {
                                     var voice = document.getElementById('tts_voiceid');
                                     if (sel && voice && !voice.value) {
                                         var v = (sel.value||'').toLowerCase();
-                                        if (v==='xtts-fastapi') voice.placeholder = 'TheNarrator';
+                                        if (v==='xtts-fastapi' || v==='cartesia') voice.placeholder = 'TheNarrator';
                                         else if (v==='melotts' || v==='piper-tts' || v==='xvasynth') voice.placeholder = 'malenord';
                                     }
                                     if (sel && voice){
                                         sel.addEventListener('change', function(){
                                             if (voice && !voice.value){
                                                 var vv = String(sel.value||'').toLowerCase();
-                                                voice.placeholder = (vv==='xtts-fastapi') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
+                                                voice.placeholder = (vv==='xtts-fastapi' || vv==='cartesia') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
                                             }
                                         });
                                     }
@@ -1269,7 +1271,7 @@ echo $buffer;
     function togglePlayerLanguage(){
       var sel = document.getElementById('TTSFUNCTION_PLAYER');
       var v = (sel && sel.value) ? String(sel.value).toLowerCase() : '';
-      var supported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio'];
+      var supported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia'];
       var show = supported.indexOf(v) >= 0;
       var nodes = document.querySelectorAll('.player-language-only');
       for (var i=0;i<nodes.length;i++){
