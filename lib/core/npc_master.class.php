@@ -502,6 +502,7 @@ class NpcMaster
             $GLOBALS['TTS']['KOKORO']['voiceid']       = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['openai']['voice']         = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['deepgram']['model']       = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['CARTESIA']['voiceid']     = $currentNpcData['voiceid'];
 
         }
 
